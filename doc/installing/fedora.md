@@ -1,10 +1,10 @@
 # Installing the OpenQuake Engine on Fedora
 
-<a href="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python-oq-engine/"><img src="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python-oq-engine/status_image/last_build.png" /></a>
+<a href="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python3-oq-engine/"><img src="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python3-oq-engine/status_image/last_build.png" /></a>
 
 The OpenQuake Engine is available in the form of *rpm* binary packages for [Fedora](http://getfedora.org/).
 
-The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
+For RHEL/CentOS please check ["Installing the OpenQuake Engine nightly builds on RHEL/CentOS"](fedora.md).
 
 ## Install packages from the OpenQuake repository
 
@@ -17,6 +17,8 @@ Then to install the OpenQuake Engine and its libraries run
 ```bash
 sudo dnf install python3-oq-engine
 ```
+
+If you want to install a **nightly build** please read the guide about installing the **[nightly build packages on Fedora](fedora-nightly.md)**.
 
 ### Upgrade from a previous release
 
@@ -31,6 +33,8 @@ If a full upgrade is performed on the system, the OpenQuake software is upgraded
 ```bash
 sudo dnf upgrade
 ```
+
+The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
 
 ## Configure the system services
 
