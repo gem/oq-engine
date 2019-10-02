@@ -186,13 +186,12 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     info = dstore['source_info']['source_id', 'grp_id', 'code', 'num_ruptures',
                                  'calc_time', 'num_sites', 'eff_ruptures']
-    info = info[info['calc_time'] > 0]
+    info = info[info['eff_ruptures'] > 0]
     info.sort(order='calc_time')
-    data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names]
-                       + [('speed', float)])
+    data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names])
     for name in info.dtype.names:
         data[name] = info[name]
-    data['speed'] = info['eff_ruptures'] / info['calc_time']
+    data['num_sites'] /= data['eff_ruptures']
     return rst_table(data[::-1][:maxrows])
 
 
