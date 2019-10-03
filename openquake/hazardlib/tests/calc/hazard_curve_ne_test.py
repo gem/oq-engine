@@ -1,12 +1,15 @@
 import os
+import numpy
 import unittest
+
+import openquake.hazardlib.calc.hazard_curve_ne as hcne
+import openquake.hazardlib.calc.hazard_curve as hc
 
 from openquake.hazardlib.const import TRT
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.calc.filters import SourceFilter
 
-import openquake.hazardlib.calc.hazard_curve_ne as hcne
-import openquake.hazardlib.calc.hazard_curve as hc
+from openquake.hazardlib.polynomial_chaos import get_hermite
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.source import CharacteristicFaultSource
@@ -33,26 +36,29 @@ class CalcHazardTest(unittest.TestCase):
         trt = TRT.ACTIVE_SHALLOW_CRUST
         mfd = EvenlyDiscretizedMFD(6.0, 0.1, [0.1])
         tom = PoissonTOM(1.0)
-        rup = Dummy.get_rupture(mag=6.0)
+        rup = Dummy.get_rupture(mag=6.0, hyp_lon=-121.0, hyp_lat=38.5)
         sfc = rup.surface
+        print(sfc.mesh.lons)
         rake = 90.
         self.src = CharacteristicFaultSource(id, nme, trt, mfd, tom, sfc, rake)
         # Creating the sites
-        self.sitesc = Dummy.get_site_collection(2, hyp_lon=0.05, hyp_lat=0.25,
-                                                vs30=500., vs30measured=True,
+        self.sitesc = Dummy.get_site_collection(2,
+                                                hyp_lon=-120.9,
+                                                hyp_lat=38.5,
+                                                vs30=500.,
+                                                vs30measured=True,
                                                 z1pt0=50.)
 
     def test_kuehn2019ne(self):
-        gsims = {TRT.ACTIVE_SHALLOW_CRUST: AbrahamsonEtAl2014NonErgodic()}
 
-        from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-        gsims = {TRT.ACTIVE_SHALLOW_CRUST: BooreAtkinson2008()}
+        PLOTTING = True
 
-        s_filter = SourceFilter(self.sitesc, {TRT.ACTIVE_SHALLOW_CRUST: 100.})
+        gsim = AbrahamsonEtAl2014NonErgodic()
+        gsims = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
+        s_filter = SourceFilter(self.sitesc, {TRT.ACTIVE_SHALLOW_CRUST: 200.})
         groups = [self.src, self.src]
         imtls = {'SA(0.01)': [0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4]}
 
-        """
         pce_list = []
         for i, pcec in enumerate(hcne.calc_hazard_curves(groups, s_filter,
                                                          imtls, gsims)):
@@ -61,24 +67,37 @@ class CalcHazardTest(unittest.TestCase):
             else:
                 pcea += pcec
             pce_list.append(pcec)
-        """
 
         res = hc.calc_hazard_curves(groups, s_filter, imtls, gsims)
 
-        if True:
+        # Compute samples of the Hermite polynomial
+        num_samples = 500
+        csi = numpy.random.normal(loc=0.0, scale=1.0, size=num_samples)
+        hercoef = get_hermite(csi)
+
+        # Computing epistemic uncertainty using Monte Carlo
+        scaling_mc = numpy.random.normal(loc=0.0, scale=1.0, size=num_samples)
+
+        if PLOTTING:
+
+            S = 0
+            key = 'SA(0.01)'
+
             import matplotlib.pyplot as plt
             fig = plt.figure(figsize=(10, 8))
-            # import pdb; pdb.set_trace()
-            """
-            plt.plot(imtls['SA(0.01)'], pcea[0, :, 0, 0],
-                     'sr', label='all', lw=3)
-            plt.plot(imtls['SA(0.01)'], pce_list[0][0, :, 0, 0],
-                     '--x', label='pce')
-            """
-            plt.plot(imtls['SA(0.01)'], res['SA(0.01)'][0],
-                     '-o', label='standard')
-            print(res)
 
+            curves = numpy.zeros((num_samples, len(imtls[key])))
+            for rlz in range(0, num_samples):
+                curves[rlz, :] = pcea[S, :, 0, 0]
+                for deg in range(1, 5):
+                    curves[rlz, :] += pcea[S, :, 0, deg] * hercoef[deg, rlz]
+                if PLOTTING:
+                    plt.plot(imtls[key], curves[rlz, :], ':', alpha=0.5,
+                             color='grey')
+            plt.plot(imtls[key], pcea[0, :, 0, 0], '--sr', label='all', lw=4)
+            plt.plot(imtls[key], pce_list[0][0, :, 0, 0], '--x', label='pce')
+            tmp = - numpy.log(1.-res[key][0])
+            plt.plot(imtls['SA(0.01)'], tmp, ':o', label='standard')
             plt.xscale('log')
             plt.yscale('log')
             plt.xlabel('IMLs')

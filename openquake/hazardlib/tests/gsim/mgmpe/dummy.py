@@ -51,10 +51,15 @@ class Dummy:
     def get_surface(self, hyp_lon=0.0, hyp_lat=0.5, mag=None, asp_ratio=None, **kwargs):
         """ """
         hyp = Line([Point(hyp_lon, hyp_lat)])
+        # Set mesh spacing
         if 'mesh_spacing' in kwargs:
             mesh_spacing = kwargs['mesh_spacing']
         else:
             mesh_spacing = 10.
+        # Set aspect ratio
+        if asp_ratio is None:
+            asp_ratio = 1.5
+        # Set trace
         if mag is None:
             trc = Line([Point(0, 0), Point(0, 1)])
         else:
@@ -75,27 +80,36 @@ class Dummy:
     def get_rupture(self, **kwargs):
         """
         """
-        # Parameters
+        # Set magnitude
         if 'mag' in kwargs:
             mag = kwargs['mag']
         else:
             mag = 6.0
+        # Set rake
         if 'rake' in kwargs:
             rake = kwargs['rake']
         else:
             rake = 0
+        # Set tectonic region
         if 'trt' in kwargs:
             trt = kwargs['trt']
         else:
             trt = 0
         # Get surface
         if 'surface' in kwargs:
-            sfc = kwargs['trt']
+            sfc = kwargs['surface']
         else:
-            sfc, hyp = self.get_surface()
-
+            if 'hyp_lon' in kwargs and 'hyp_lat' in kwargs:
+                hyp_lon = kwargs['hyp_lon']
+                hyp_lat = kwargs['hyp_lat']
+            else:
+                hyp_lon = 0.0
+                hyp_lat = 0.0
+            sfc, hyp = self.get_surface(mag=mag, hyp_lon=hyp_lon,
+                                        hyp_lat=hyp_lat)
 
         # Create rupture
         rup = BaseRupture(mag, rake, trt, hyp, sfc)
+
         # Set attributes
         return rup

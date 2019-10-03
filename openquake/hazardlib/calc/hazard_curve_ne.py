@@ -69,8 +69,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Compute the probability map. The probability map is a
     # :class:`openquake.baselib.general.AccumDict` instance i.e. a specialised
     # dictionary
-    pmap, pcec = cmaker.get_pmap_by_src(src_filter(group), src_mutex, rup_mutex)
-    return pmap, pcec
+    pmap, pce = cmaker.get_pmap_by_src(src_filter(group), src_mutex, rup_mutex)
+    return pmap, pce
 
 
 def calc_hazard_curves(
