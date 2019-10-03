@@ -161,7 +161,7 @@ def _update(params, items, base_path):
             if value.startswith('{'):
                 dic = ast.literal_eval(value)  # name -> relpath
                 input_type, fnames = normalize(key, dic.values(), base_path)
-                params['inputs'][input_type] = fnames
+                params['inputs'][input_type] = dict(zip(dic, fnames))
                 params[input_type] = ' '.join(dic)
             elif value:
                 input_type, [fname] = normalize(key, [value], base_path)
