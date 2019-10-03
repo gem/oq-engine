@@ -80,10 +80,15 @@ class BindiEtAl2014UKcoeffMed(BindiEtAl2014Rjb):
         """
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
+#        import pdb; pdb.set_trace()
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
-        C = COEFFS_UK_VSKAPPA[imt]
+        #use vs-kappa for T=2.0s if T>2.0s
+        if imt.period>2.0:
+            C = COEFFS_UK_VSKAPPA[SA(2.0)]
+        else:
+            C = COEFFS_UK_VSKAPPA[imt]
 
         kappa = C['k_med']
 
@@ -143,7 +148,11 @@ class BindiEtAl2014UKcoeffLow(BindiEtAl2014Rjb):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
-        C = COEFFS_UK_VSKAPPA[imt]
+        #use vs-kappa for T=2.0s if T>2.0s
+        if imt.period>2.0:
+            C = COEFFS_UK_VSKAPPA[SA(2.0)]
+        else:
+            C = COEFFS_UK_VSKAPPA[imt]
 
         kappa = C['k_low']
 
@@ -203,7 +212,11 @@ class BindiEtAl2014UKcoeffHigh(BindiEtAl2014Rjb):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
-        C = COEFFS_UK_VSKAPPA[imt]
+        #use vs-kappa for T=2.0s if T>2.0s
+        if imt.period>2.0:
+            C = COEFFS_UK_VSKAPPA[SA(2.0)]
+        else:
+            C = COEFFS_UK_VSKAPPA[imt]
 
         kappa = C['k_high']
 
