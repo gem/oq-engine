@@ -172,7 +172,7 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    pointsource_distance = valid.Param(valid.positivefloat, None)
+    pointsource_distance = valid.Param(valid.positivefloat, 2)
     task_duration = valid.Param(valid.positiveint, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)

@@ -157,6 +157,7 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        self.pointsource_distance = param.get('pointsource_distance', 2)
         filter_distance = param.get('filter_distance')
         if filter_distance is None:
             if 'rrup' in self.REQUIRES_DISTANCES:
@@ -313,9 +314,10 @@ class ContextMaker(object):
 
     def _gen_rup_sites(self, src, sites):
         # implements the collapse distance feature: the finite site effects
-        # are ignored for sites over 3 times the rupture length
+        # are ignored for sites over pointsource_distance x rupture_radius
         loc = getattr(src, 'location', None)
         if loc and src.count_nphc() > 1:
+            # TODO: add also a len(sites) > self.max_sites_disagg ?
             weights, depths = zip(*src.hypocenter_distribution.data)
             min_dep, max_dep = min(depths), max(depths)
             d_depth = max_dep - min_dep
@@ -325,7 +327,9 @@ class ContextMaker(object):
                 max_dist = self.maximum_distance(src.tectonic_region_type, mag)
                 p_radius = src._get_max_rupture_projection_radius(mag)
                 # the collapse distance has been decided heuristically by MS
-                collapse_distance = min(2 * max(p_radius, d_depth), max_dist)
+                collapse_distance = min(
+                    self.pointsource_distance * max(p_radius, d_depth),
+                    max_dist)
                 close_sites, far_sites = sites.split(loc, collapse_distance)
                 if close_sites is None:  # all is far
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
