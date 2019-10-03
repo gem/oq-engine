@@ -316,8 +316,7 @@ class ContextMaker(object):
         # implements the collapse distance feature: the finite site effects
         # are ignored for sites over pointsource_distance x rupture_radius
         loc = getattr(src, 'location', None)
-        if loc and src.count_nphc() > 1:
-            # TODO: add also a len(sites) > self.max_sites_disagg ?
+        if loc and src.count_nphc() > 1 and len(sites) > self.max_sites_disagg:
             weights, depths = zip(*src.hypocenter_distribution.data)
             min_dep, max_dep = min(depths), max(depths)
             d_depth = max_dep - min_dep
