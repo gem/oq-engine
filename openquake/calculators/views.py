@@ -298,16 +298,13 @@ def view_job_info(token, dstore):
     to the workers and back in a classical calculation.
     """
     data = [['task', 'sent', 'received']]
-    task_info = dstore['task_info']
-    task_info.refresh()
-    task_sent = dstore['task_sent']
-    task_sent.refresh()
-    task_sent = dict(task_sent[()])
-    for task, array in group_array(task_info[()], 'taskname').items():
-        sent = sorted(ast.literal_eval(task_sent[task]).items(),
+    task_info = dstore['task_info'][()]
+    task_sent = dict(dstore['task_sent'])
+    for task, json in task_sent.items():
+        sent = sorted(ast.literal_eval(json).items(),
                       key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
-        recv = array['received'].sum()
+        recv = get_array(task_info, taskname=task)['received'].sum()
         data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
 
