@@ -318,8 +318,6 @@ class ContextMaker(object):
         loc = getattr(src, 'location', None)
         if loc and src.count_nphc() > 1 and len(sites) > self.max_sites_disagg:
             weights, depths = zip(*src.hypocenter_distribution.data)
-            min_dep, max_dep = min(depths), max(depths)
-            d_depth = max_dep - min_dep
             loc = copy.copy(loc)  # average hypocenter used in sites.split
             loc.depth = numpy.average(depths, weights=weights)
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
@@ -327,8 +325,7 @@ class ContextMaker(object):
                 p_radius = src._get_max_rupture_projection_radius(mag)
                 # the collapse distance has been decided heuristically by MS
                 collapse_distance = min(
-                    self.collapse_distance * max(p_radius, d_depth),
-                    max_dist)
+                    self.collapse_distance * p_radius, max_dist)
                 close_sites, far_sites = sites.split(loc, collapse_distance)
                 if close_sites is None:  # all is far
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
