@@ -172,7 +172,7 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    pointsource_distance = valid.Param(valid.positivefloat, 2)
+    collapse_distance = valid.Param(valid.positivefloat, 2)
     task_duration = valid.Param(valid.positiveint, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -220,6 +220,8 @@ class OqParam(valid.ParamSet):
                 'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
+        if 'pointsource_distance' in names_vals:
+            raise InvalidFile('The pointsource_distance has been replaced by the collapse_distance, see https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#collapse-distance')
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
