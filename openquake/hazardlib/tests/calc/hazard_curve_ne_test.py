@@ -38,7 +38,6 @@ class CalcHazardTest(unittest.TestCase):
         tom = PoissonTOM(1.0)
         rup = Dummy.get_rupture(mag=6.0, hyp_lon=-121.0, hyp_lat=38.5)
         sfc = rup.surface
-        print(sfc.mesh.lons)
         rake = 90.
         self.src = CharacteristicFaultSource(id, nme, trt, mfd, tom, sfc, rake)
         # Creating the sites
@@ -52,6 +51,10 @@ class CalcHazardTest(unittest.TestCase):
     def test_kuehn2019ne(self):
 
         PLOTTING = True
+        S = 0
+        key = 'SA(0.01)'
+        num_samples = 500
+        num_samples_mc = 50
 
         gsim = AbrahamsonEtAl2014NonErgodic()
         gsims = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
@@ -69,22 +72,28 @@ class CalcHazardTest(unittest.TestCase):
             pce_list.append(pcec)
 
         res = hc.calc_hazard_curves(groups, s_filter, imtls, gsims)
-
         # Compute samples of the Hermite polynomial
-        num_samples = 500
         csi = numpy.random.normal(loc=0.0, scale=1.0, size=num_samples)
         hercoef = get_hermite(csi)
 
         # Computing epistemic uncertainty using Monte Carlo
-        scaling_mc = numpy.random.normal(loc=0.0, scale=1.0, size=num_samples)
+        std_epi = 0.047
+        scaling_mc = numpy.random.normal(loc=0.0, scale=std_epi,
+                                         size=num_samples_mc)
+        hcmc = []
+        for scl in scaling_mc:
+            gsim = AbrahamsonEtAl2014NonErgodic(scaling_log=scl)
+            gsims = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
+            res = hc.calc_hazard_curves(groups, s_filter, imtls, gsims)
+            hcmc.append(-numpy.log(1.-res[key][0]))
+        hcmc = numpy.array(hcmc)
+        mean_mc = numpy.mean(hcmc, axis=0)
+        std_mc = numpy.std(hcmc, axis=0)
 
         if PLOTTING:
 
-            S = 0
-            key = 'SA(0.01)'
-
             import matplotlib.pyplot as plt
-            fig = plt.figure(figsize=(10, 8))
+            _ = plt.figure(figsize=(10, 8))
 
             curves = numpy.zeros((num_samples, len(imtls[key])))
             for rlz in range(0, num_samples):
@@ -94,6 +103,9 @@ class CalcHazardTest(unittest.TestCase):
                 if PLOTTING:
                     plt.plot(imtls[key], curves[rlz, :], ':', alpha=0.5,
                              color='grey')
+
+            print(std_mc / numpy.std(curves, axis=0))
+
             plt.plot(imtls[key], pcea[0, :, 0, 0], '--sr', label='all', lw=4)
             plt.plot(imtls[key], pce_list[0][0, :, 0, 0], '--x', label='pce')
             tmp = - numpy.log(1.-res[key][0])

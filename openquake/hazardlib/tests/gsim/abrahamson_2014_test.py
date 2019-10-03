@@ -147,3 +147,8 @@ class Abrahamson2014EtAlNonErgodicTestCase(BaseGSIMTestCase):
         mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
         expected = numpy.log(numpy.array([0.13692151, 0.05288651]))
         numpy.testing.assert_almost_equal(mean, expected)
+        # Comparison with the original model
+        gmm = AbrahamsonEtAl2014()
+        stdt = [const.StdDev.TOTAL]
+        meano, stdso = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        print(mean, meano)

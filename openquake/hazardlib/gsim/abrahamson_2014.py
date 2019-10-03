@@ -573,8 +573,8 @@ class AbrahamsonEtAl2014NonErgodic(AbrahamsonEtAl2014):
     fname = 'kuehn_2019_inverted_file.hdf5'
     INVERTED_FILE = os.path.join(BASE_PATH, fname)
 
-    def __init__(self, scaling=1.0):
-        self.scaling = scaling
+    def __init__(self, scaling_log=0.0):
+        self.scaling = scaling_log
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
@@ -622,7 +622,7 @@ class AbrahamsonEtAl2014NonErgodic(AbrahamsonEtAl2014):
         stdout = []
         stdout.append(stds[0])
         stdout.append(std_epistemic)
-        return mean+mean_anelastic+np.log(self.scaling), stdout
+        return mean+mean_anelastic+self.scaling, stdout
 
 
 def _get_closest_index(reference, values):
