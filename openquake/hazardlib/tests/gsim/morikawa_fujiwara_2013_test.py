@@ -15,7 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+import os
+import unittest
 from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
         MorikawaFujiwara2013Crustal,
         MorikawaFujiwara2013SubInterfaceNE,
@@ -25,6 +26,7 @@ from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
+@unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
 class MorikawaFujiwara2013CrustalTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013Crustal
 
@@ -35,6 +37,7 @@ class MorikawaFujiwara2013CrustalTest(BaseGSIMTestCase):
         self.check('MF13/total_std_crustal.csv', max_discrep_percentage=0.1)
 
 
+@unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
 class MorikawaFujiwara2013InterfaceTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013SubInterfaceNE
 
@@ -42,6 +45,7 @@ class MorikawaFujiwara2013InterfaceTest(BaseGSIMTestCase):
         self.check('MF13/mean_interface_NE.csv', max_discrep_percentage=0.25)
 
 
+@unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
 class MorikawaFujiwara2013IntraSlabTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013SubSlabNE
 
@@ -49,6 +53,7 @@ class MorikawaFujiwara2013IntraSlabTest(BaseGSIMTestCase):
         self.check('MF13/mean_intraslab_NE.csv', max_discrep_percentage=0.2)
 
 
+@unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
 class MorikawaFujiwara2013IntraSlabSWTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013SubSlabSW
 
