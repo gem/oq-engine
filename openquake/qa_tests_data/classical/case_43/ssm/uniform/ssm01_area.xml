@@ -38,7 +38,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <ruptAspectRatio>
                     1.0
                 </ruptAspectRatio>
-                <truncGutenbergRichterMFD aValue="3.89" bValue="0.95" minMag="4.5" maxMag="8.5" />
+                <truncGutenbergRichterMFD aValue="3.89" bValue="0.95" minMag="6.5" maxMag="8.5" />
                 <nodalPlaneDist>
                     <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
                 </nodalPlaneDist>
