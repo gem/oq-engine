@@ -221,7 +221,7 @@ class OqParam(valid.ParamSet):
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
         if 'pointsource_distance' in names_vals:
-            raise InvalidFile('The pointsource_distance has been replaced by the collapse_distance, see https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#collapse-distance')
+            raise InvalidFile('%s: the pointsource_distance has been replaced by the collapse_distance, see https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#collapse-distance for an explanation' % job_ini)
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
