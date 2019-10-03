@@ -110,7 +110,6 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
-    insurance = valid.Param(valid.namelist, [])
     multi_peril = valid.Param(valid.namelist, [])
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -510,7 +509,7 @@ class OqParam(valid.ParamSet):
         names = []
         for lt, _ in self.loss_dt_list():
             names.append(lt)
-        for name in self.insurance:
+        for name in self.inputs.get('insurance', []):
             names.append(lt + '_ins')
         return names
 
