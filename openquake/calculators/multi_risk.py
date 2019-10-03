@@ -167,7 +167,7 @@ class MultiRiskCalculator(base.RiskCalculator):
         and create the `hazard` dataset.
         """
         oq = self.oqparam
-        fnames = oq.inputs['multi_peril']
+        fnames = oq.inputs['multi_peril'].values()
         dt = [(haz, float) for haz in oq.multi_peril]
         N = len(self.sitecol)
         self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
