@@ -344,7 +344,7 @@ class HazardCalculator(BaseCalculator):
         """
         if not hasattr(self, 'maxweight'):
             trt_sources = self.csm.get_trt_sources()
-            self.maxweight = self.csm.get_maxweight(
+            self.maxweight = source.get_maxweight(
                 trt_sources, get_weight, self.oqparam.concurrent_tasks,
                 source.MINWEIGHT)
             if self.maxweight == source.MINWEIGHT:
@@ -411,7 +411,7 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                self.datastore['csm_info'] = csm.info
+                self.csm_info = csm.info
                 res = views.view('dupl_sources', self.datastore)
                 logging.info(f'The composite source model has {res.val:,d} '
                              'ruptures')
@@ -743,7 +743,7 @@ class HazardCalculator(BaseCalculator):
                 self.oqparam.sm_lt_path)
             if not self.rlzs_assoc.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            self.datastore['csm_info'] = self.csm.info
+            self.datastore['csm_info'] = self.csm_info = self.csm.info
             self.datastore['source_model_lt'] = self.csm.source_model_lt
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
