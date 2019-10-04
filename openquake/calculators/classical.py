@@ -28,7 +28,7 @@ from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, ProbabilityCurve)
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, source
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -42,11 +42,11 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def estimate_duration(rups_per_task, maxdist, N):
+def estimate_duration(rups_per_task, maxdist, N, M):
     """
     Estimate the task duration with an heuristic formula
     """
-    return (rups_per_task * N) ** .333 * (maxdist / 300) ** 2
+    return (rups_per_task * N * M) ** .333 * (maxdist / 300) ** 2
 
 
 def get_src_ids(sources):
@@ -182,18 +182,18 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
-        csm_info = self.csm.info
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'srcidx', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_'}
-        for grp in self.csm.src_groups:
-            gsims = csm_info.gsim_lt.get_gsims(grp.trt)
-            cm = ContextMaker(grp.trt, gsims)
-            rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
-            for dparam in cm.REQUIRES_DISTANCES:
-                rparams.add(dparam + '_')
-            zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
+        for sm in self.csm_info.source_models:
+            for grp in sm.src_groups:
+                gsims = self.csm_info.gsim_lt.get_gsims(grp.trt)
+                cm = ContextMaker(grp.trt, gsims)
+                rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
+                for dparam in cm.REQUIRES_DISTANCES:
+                    rparams.add(dparam + '_')
+                zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
         self.sources_by_task = {}  # task_no => src_ids
@@ -243,13 +243,15 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         N = len(self.sitecol)
+        M = len(oq.imtls)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        maxweight = self.csm.get_maxweight(
+        del self.csm  # save memory
+        maxweight = source.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks)
         maxdist = int(max(oq.maximum_distance.values()))
         if oq.task_duration is None:  # inferred
             # from 1 minute up to 1 day
-            td = int(max(estimate_duration(maxweight, maxdist, N), 60))
+            td = int(max(estimate_duration(maxweight, maxdist, N, M), 60))
         else:  # user given
             td = int(oq.task_duration)
         param = dict(
@@ -265,9 +267,9 @@ class ClassicalCalculator(base.HazardCalculator):
             f1 = f2 = preclassical
         else:
             f1, f2 = classical, classical_split_filter
-        for trt, sources in trt_sources:
-            gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            if hasattr(sources, 'atomic') and sources.atomic:
+        for trt, sources, atomic in trt_sources:
+            gsims = self.csm_info.gsim_lt.get_gsims(trt)
+            if atomic:
                 # do not split atomic groups
                 yield f1, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
@@ -310,12 +312,8 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        try:
-            csm_info = self.csm.info
-        except AttributeError:
-            csm_info = self.datastore['csm_info']
-        trt_by_grp = csm_info.grp_by("trt")
-        grp_name = {grp.id: grp.name for sm in csm_info.source_models
+        trt_by_grp = self.csm_info.grp_by("trt")
+        grp_name = {grp.id: grp.name for sm in self.csm_info.source_models
                     for grp in sm.src_groups}
         data = []
         with self.monitor('saving probability maps'):
