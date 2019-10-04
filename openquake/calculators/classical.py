@@ -271,10 +271,10 @@ class ClassicalCalculator(base.HazardCalculator):
             gsims = self.csm_info.gsim_lt.get_gsims(trt)
             if atomic:
                 # do not split atomic groups
-                yield f1, sources, srcfilter, gsims, param
+                yield f1, (sources, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
-                    yield f2, block, srcfilter, gsims, param
+                    yield f2, (block, srcfilter, gsims, param)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
