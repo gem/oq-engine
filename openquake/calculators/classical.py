@@ -182,14 +182,13 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
-        csm_info = self.datastore['csm_info']
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'srcidx', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_'}
-        for sm in csm_info.source_models:
+        for sm in self.csm_info.source_models:
             for grp in sm.src_groups:
-                gsims = csm_info.gsim_lt.get_gsims(grp.trt)
+                gsims = self.csm_info.gsim_lt.get_gsims(grp.trt)
                 cm = ContextMaker(grp.trt, gsims)
                 rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
                 for dparam in cm.REQUIRES_DISTANCES:
@@ -312,12 +311,8 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        try:
-            csm_info = self.csm.info
-        except AttributeError:
-            csm_info = self.datastore['csm_info']
-        trt_by_grp = csm_info.grp_by("trt")
-        grp_name = {grp.id: grp.name for sm in csm_info.source_models
+        trt_by_grp = self.csm_info.grp_by("trt")
+        grp_name = {grp.id: grp.name for sm in self.csm_info.source_models
                     for grp in sm.src_groups}
         data = []
         with self.monitor('saving probability maps'):

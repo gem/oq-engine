@@ -80,16 +80,6 @@ class EventBasedCalculator(base.HazardCalculator):
     accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
     build_ruptures = sample_ruptures
 
-    @cached_property
-    def csm_info(self):
-        """
-        :returns: a cached CompositionInfo object
-        """
-        try:
-            return self.csm.info
-        except AttributeError:
-            return self.datastore.parent['csm_info']
-
     def init(self):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
@@ -314,7 +304,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
-            self.init_logic_tree(self.csm_info)
+            self.init_logic_tree(self.datastore.parent['csm_info'])
         else:  # from sources
             self.build_events_from_sources(srcfilter)
             if (oq.ground_motion_fields is False and
