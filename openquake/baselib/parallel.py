@@ -221,6 +221,15 @@ def oq_distribute(task=None):
     return dist
 
 
+if config.general.compress:
+    # must be a global config since every change requires a DbServer restart
+    compress = gzip.compress
+    decompress = gzip.decompress
+else:
+    compress = lambda x: x
+    decompress = lambda x: x
+
+
 class Pickled(object):
     """
     An utility to manually pickling/unpickling objects.
@@ -235,8 +244,7 @@ class Pickled(object):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
         try:
-            self.pik = gzip.compress(
-                pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+            self.pik = compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
         except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
 
@@ -251,7 +259,7 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
-        return pickle.loads(gzip.decompress(self.pik))
+        return pickle.loads(decompress(self.pik))
 
 
 def get_pickled_sizes(obj):
