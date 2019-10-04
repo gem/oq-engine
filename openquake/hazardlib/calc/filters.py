@@ -294,9 +294,8 @@ class SourceFilter(object):
             return
         elif not os.path.exists(self.filename):
             raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
-        h5 = hdf5.File(self.filename, 'r')
-        # NB: must not be closed on the workers for the case OQ_DISTRIBUTE=no
-        self.__dict__['sitecol'] = sc = h5.get('sitecol')
+        with hdf5.File(self.filename, 'r') as h5:
+            self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
 
     def get_rectangle(self, src):
