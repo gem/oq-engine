@@ -312,7 +312,7 @@ class Result(object):
             # store the size in bytes of the content
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
         elif isinstance(val, tuple) and callable(val[0]):
-            self.func_args = val
+            self.func_args = (val[0], val[1:])
         self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
