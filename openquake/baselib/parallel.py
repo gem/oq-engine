@@ -715,7 +715,8 @@ class Starmap(object):
         assert not isinstance(args[-1], Monitor)  # sanity check
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
-            args = pickle_sequence(args)
+            if not isinstance(args[0], Pickled):  # already pickled
+                args = pickle_sequence(args)
             if func is None:
                 fname = self.task_func.__name__
                 argnames = self.argnames[:-1]
@@ -731,7 +732,7 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
-        self.task_queue = [(self.task_func,) + args
+        self.task_queue = [(self.task_func, args)
                            for args in self.task_args]
         return self.get_results()
 
@@ -754,7 +755,7 @@ class Starmap(object):
     def _submit_many(self, queue, howmany):
         for _ in range(howmany):
             if queue:  # remove in FIFO order
-                func, *args = queue[0]
+                func, args = queue[0]
                 del queue[0]
                 self.submit(args, func=func)
                 self.todo += 1
@@ -766,7 +767,7 @@ class Starmap(object):
         if queue:
             first_args = queue[:self.num_cores]
             queue = self.task_queue = queue[self.num_cores:]
-            for func, *args in first_args:
+            for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
