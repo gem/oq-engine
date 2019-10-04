@@ -393,6 +393,7 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
                 self.csm_info = csm.info
+                self.datastore['source_model_lt'] = csm.source_model_lt
                 self.trt_sources = csm.get_trt_sources()
                 res = views.view('dupl_sources', self.datastore)
                 logging.info(f'The composite source model has {res.val:,d} '
@@ -720,13 +721,12 @@ class HazardCalculator(BaseCalculator):
         Save info about the composite source model inside the csm_info dataset
         """
         if hasattr(self, 'csm'):  # no scenario
-            self.csm.info.update_eff_ruptures(eff_ruptures)
-            self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+            self.csm_info.update_eff_ruptures(eff_ruptures)
+            self.rlzs_assoc = self.csm_info.get_rlzs_assoc(
                 self.oqparam.sm_lt_path)
             if not self.rlzs_assoc.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            self.datastore['csm_info'] = self.csm_info = self.csm.info
-            self.datastore['source_model_lt'] = self.csm.source_model_lt
+            self.datastore['csm_info'] = self.csm_info
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         rlzs_by_grp = self.rlzs_assoc.by_grp()
