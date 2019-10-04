@@ -20,7 +20,7 @@ import os
 import math
 import numpy as np
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GMPE, registry
+from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
         YenierAtkinson2015BSSA
@@ -208,7 +208,8 @@ class AlAtikSigmaModel(GMPE):
 
     def __init__(self, gmpe_name, tau_model="global", phi_model="global",
                  phi_s2ss_model=None, tau_quantile=None,
-                 phi_ss_quantile=None, phi_s2ss_quantile=None):
+                 phi_ss_quantile=None, phi_s2ss_quantile=None,
+                 kappa_file=None, kappa_val="med"):
         # this is taken from http://tiny.cc/krb5bz
         self.tau_model = tau_model
         self.phi_model = phi_model
@@ -224,6 +225,8 @@ class AlAtikSigmaModel(GMPE):
         self.phi_ss_quantile = phi_ss_quantile
         self.phi_s2ss_quantile = phi_s2ss_quantile
         self._setup_standard_deviations(fle=None)
+        self.kappa_file = kappa_file
+        self.kappa_val = kappa_val
 
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
@@ -248,7 +251,16 @@ class AlAtikSigmaModel(GMPE):
                                                  stds_types)
         nsites = len(sites)
         stddevs = self.get_stddevs(rup.mag, imt, stds_types, nsites)
-        return mean, stddevs
+
+        kappa = 0
+        if self.kappa_file is not None:
+            with open(self.kappa_file, 'r') as myfile:
+                data = myfile.read()
+            KAPPATAB = CoeffsTable(table=data, sa_damping=5)
+            kappa = KAPPATAB[imt][self.kappa_val]
+
+
+        return mean+kappa, stddevs
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """
