@@ -305,15 +305,18 @@ class Result(object):
     :param tb_str: traceback string (empty if there was no exception)
     :param msg: message string (default empty)
     """
-    func_args = ()
+    func = None
 
     def __init__(self, val, mon, tb_str='', msg='', count=0):
         if isinstance(val, dict):
             # store the size in bytes of the content
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
+            self.pik = Pickled(val)
         elif isinstance(val, tuple) and callable(val[0]):
-            self.func_args = (val[0], val[1:])
-        self.pik = Pickled(val)
+            self.func = val[0]
+            self.pik = pickle_sequence(val[1:])
+        else:
+            self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
@@ -471,7 +474,7 @@ class IterResult(object):
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result
-            elif isinstance(result, Result):
+            elif isinstance(result, Result) and not result.func:
                 val = result.get()
                 self.received.append(len(result.pik))
                 if hasattr(result, 'nbytes'):
@@ -486,7 +489,7 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            if not result.func_args:  # real output
+            if not result.func:  # real output
                 name = result.mon.operation[6:]  # strip 'total '
                 result.mon.save_task_info(self.h5, result, name, mem_gb)
                 result.mon.flush(self.h5)
@@ -712,10 +715,11 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-        assert not isinstance(args[-1], Monitor)  # sanity check
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
-            if not isinstance(args[0], Pickled):  # already pickled
+            pickled = isinstance(args[0], Pickled)
+            if not pickled:
+                assert not isinstance(args[-1], Monitor)  # sanity check
                 args = pickle_sequence(args)
             if func is None:
                 fname = self.task_func.__name__
@@ -786,8 +790,8 @@ class Starmap(object):
                 self.log_percent()
             elif res.msg:
                 logging.warning(res.msg)
-            elif res.func_args:  # add subtask
-                queue.append(res.func_args)
+            elif res.func:  # add subtask
+                queue.append((res.func, res.pik))
             else:
                 yield res
         self.log_percent()
