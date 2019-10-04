@@ -202,20 +202,23 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             grp_indices = parent['ruptures'].attrs['grp_indices']
             n_occ = parent['ruptures']['n_occ']
             dstore = parent
+            csm_info = parent['csm_info']
         else:
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
             n_occ = self.datastore['ruptures']['n_occ']
             dstore = self.datastore
+            csm_info = self.csm_info
         per_block = numpy.ceil(n_occ.sum() / (oq.concurrent_tasks or 1))
         self.set_param(
             hdf5path=self.datastore.filename,
             task_duration=oq.task_duration or 600,  # 10min
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
-        self.init_logic_tree(self.csm_info)
-        trt_by_grp = self.csm_info.grp_by("trt")
-        samples = self.csm_info.get_samples_by_grp()
-        rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
+
+        self.init_logic_tree(csm_info)
+        trt_by_grp = csm_info.grp_by("trt")
+        samples = csm_info.get_samples_by_grp()
+        rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
         ngroups = 0
         fe = 0
         eslices = self.datastore['eslices']
