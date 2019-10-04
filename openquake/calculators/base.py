@@ -539,8 +539,9 @@ class HazardCalculator(BaseCalculator):
                         len(discarded))
         self.policy_name = ''
         self.policy_dict = {}
-        if oq.insurance:
-            self.load_insurance_data(oq.insurance, oq.inputs['insurance'])
+        if oq.inputs.get('insurance'):
+            k, v = zip(*oq.inputs['insurance'].items())
+            self.load_insurance_data(k, v)
         return readinput.exposure
 
     def load_insurance_data(self, ins_types, ins_files):
