@@ -206,7 +206,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
-                self.before_export()
                 self.export(kw.get('exports', ''))
             except Exception:
                 if kw.get('pdb'):  # post-mortem debug
@@ -302,19 +301,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 logging.error('Could not export %s: %s', ekey, exc)
             if fnames:
                 logging.info('exported %s: %s', ekey[0], fnames)
-
-    def before_export(self):
-        """
-        Set the attributes nbytes
-        """
-        # sanity check that eff_ruptures have been set, i.e. are not -1
-        try:
-            csm_info = self.datastore['csm_info']
-        except KeyError:
-            csm_info = self.datastore['csm_info'] = self.csm.info
-        for sm in csm_info.source_models:
-            for sg in sm.src_groups:
-                assert sg.eff_ruptures != -1, sg
 
 
 def check_time_event(oqparam, occupancy_periods):
@@ -726,7 +712,13 @@ class HazardCalculator(BaseCalculator):
                 self.oqparam.sm_lt_path)
             if not self.rlzs_assoc.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
+
+            # sanity check that eff_ruptures have been set, i.e. are not -1
+            for sm in self.csm_info.source_models:
+                for sg in sm.src_groups:
+                    assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info
+
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         rlzs_by_grp = self.rlzs_assoc.by_grp()
