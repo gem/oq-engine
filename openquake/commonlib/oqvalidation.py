@@ -128,7 +128,7 @@ class OqParam(valid.ParamSet):
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
-    std_hazard_curves = valid.Param(valid.boolean, False)
+    std = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
     modal_damage_state = valid.Param(valid.boolean, False)
@@ -597,7 +597,7 @@ class OqParam(valid.ParamSet):
         if self.mean:
             names.append('mean')
             funcs.append(stats.mean_curve)
-        if self.std_hazard_curves:
+        if self.std:
             names.append('std')
             funcs.append(stats.std_curve)
         for q in self.quantiles:
