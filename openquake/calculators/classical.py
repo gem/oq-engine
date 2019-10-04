@@ -245,7 +245,7 @@ class ClassicalCalculator(base.HazardCalculator):
         N = len(self.sitecol)
         M = len(oq.imtls)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        #del self.csm
+        del self.csm  # save memory
         maxweight = source.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks)
         maxdist = int(max(oq.maximum_distance.values()))

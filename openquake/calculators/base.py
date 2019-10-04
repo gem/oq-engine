@@ -706,7 +706,7 @@ class HazardCalculator(BaseCalculator):
         """
         Save info about the composite source model inside the csm_info dataset
         """
-        if hasattr(self, 'csm'):  # no scenario
+        if hasattr(self, 'csm_info'):  # no scenario
             self.csm_info.update_eff_ruptures(eff_ruptures)
             self.rlzs_assoc = self.csm_info.get_rlzs_assoc(
                 self.oqparam.sm_lt_path)
