@@ -380,7 +380,6 @@ class HazardCalculator(BaseCalculator):
                     oq, self.datastore.hdf5)
                 self.csm_info = csm.info
                 self.datastore['source_model_lt'] = csm.source_model_lt
-                self.trt_sources = csm.get_trt_sources()
                 res = views.view('dupl_sources', self.datastore)
                 logging.info(f'The composite source model has {res.val:,d} '
                              'ruptures')
