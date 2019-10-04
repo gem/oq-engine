@@ -166,6 +166,18 @@ def _update(params, items, base_path):
             elif value:
                 input_type, [fname] = normalize(key, [value], base_path)
                 params['inputs'][input_type] = fname
+        elif isinstance(value, str) and value.endswith('.hdf5'):
+            logging.warning('The [reqv] syntax has been deprecated, see '
+                            'https://github.com/gem/oq-engine/blob/master/doc/'
+                            'adv-manual/equivalent-distance-app for the new '
+                            'syntax')
+            fname = os.path.normpath(os.path.join(base_path, value))
+            try:
+                reqv = params['inputs']['reqv']
+            except KeyError:
+                params['inputs']['reqv'] = {key: fname}
+            else:
+                reqv.update({key: fname})
         else:
             params[key] = value
 
@@ -561,8 +573,8 @@ def get_composite_source_model(oqparam, h5=None):
     trts = source_model_lt.tectonic_region_types
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
-    for trt in reqv:
-        if trt.lower() not in trts_lower:
+    for trt in reqv:  # these are lowercase because they come from the job.ini
+        if trt not in trts_lower:
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
