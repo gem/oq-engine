@@ -206,7 +206,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
-                self.before_export()
                 self.export(kw.get('exports', ''))
             except Exception:
                 if kw.get('pdb'):  # post-mortem debug
@@ -303,19 +302,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if fnames:
                 logging.info('exported %s: %s', ekey[0], fnames)
 
-    def before_export(self):
-        """
-        Set the attributes nbytes
-        """
-        # sanity check that eff_ruptures have been set, i.e. are not -1
-        try:
-            csm_info = self.datastore['csm_info']
-        except KeyError:
-            csm_info = self.datastore['csm_info'] = self.csm.info
-        for sm in csm_info.source_models:
-            for sg in sm.src_groups:
-                assert sg.eff_ruptures != -1, sg
-
 
 def check_time_event(oqparam, occupancy_periods):
     """
@@ -334,25 +320,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    # called multiple times in event_based/py
-    def block_splitter(self, sources, weight=get_weight, key=lambda src: 1):
-        """
-        :param sources: a list of sources
-        :param weight: a weight function (default .weight)
-        :param key: None or 'src_group_id'
-        :returns: an iterator over blocks of sources
-        """
-        if not hasattr(self, 'maxweight'):
-            trt_sources = self.csm.get_trt_sources()
-            self.maxweight = self.csm.get_maxweight(
-                trt_sources, get_weight, self.oqparam.concurrent_tasks,
-                source.MINWEIGHT)
-            if self.maxweight == source.MINWEIGHT:
-                logging.info('Using minweight=%d', source.MINWEIGHT)
-            else:
-                logging.info('Using maxweight=%d', self.maxweight)
-        return general.block_splitter(sources, self.maxweight, weight, key)
-
     def src_filter(self, filename=None):
         """
         :returns: a SourceFilter/UcerfFilter
@@ -409,8 +376,10 @@ class HazardCalculator(BaseCalculator):
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             with self.monitor('composite source model', measuremem=True):
-                self.csm = readinput.get_composite_source_model(
+                self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
+                self.csm_info = csm.info
+                self.datastore['source_model_lt'] = csm.source_model_lt
                 res = views.view('dupl_sources', self.datastore)
                 logging.info(f'The composite source model has {res.val:,d} '
                              'ruptures')
@@ -500,7 +469,7 @@ class HazardCalculator(BaseCalculator):
                 self.oqparam, self.datastore.calc_id)
             calc.run()
             for name in ('csm param sitecol assetcol crmodel rlzs_assoc '
-                         'policy_name policy_dict').split():
+                         'policy_name policy_dict csm_info').split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
@@ -736,14 +705,19 @@ class HazardCalculator(BaseCalculator):
         """
         Save info about the composite source model inside the csm_info dataset
         """
-        if hasattr(self, 'csm'):  # no scenario
-            self.csm.info.update_eff_ruptures(eff_ruptures)
-            self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+        if hasattr(self, 'csm_info'):  # no scenario
+            self.csm_info.update_eff_ruptures(eff_ruptures)
+            self.rlzs_assoc = self.csm_info.get_rlzs_assoc(
                 self.oqparam.sm_lt_path)
             if not self.rlzs_assoc.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            self.datastore['csm_info'] = self.csm.info
-            self.datastore['source_model_lt'] = self.csm.source_model_lt
+
+            # sanity check that eff_ruptures have been set, i.e. are not -1
+            for sm in self.csm_info.source_models:
+                for sg in sm.src_groups:
+                    assert sg.eff_ruptures != -1, sg
+            self.datastore['csm_info'] = self.csm_info
+
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         rlzs_by_grp = self.rlzs_assoc.by_grp()
