@@ -23,7 +23,7 @@ import operator
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, cached_property, get_indices
+from openquake.baselib.general import AccumDict, get_indices, block_splitter
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -31,7 +31,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, logs
+from openquake.commonlib import source, calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rupture_getters, sig_eps_dt)
@@ -102,6 +102,26 @@ class EventBasedCalculator(base.HazardCalculator):
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
+
+    # called multiple times
+    def block_splitter(self, sources, weight=operator.attrgetter('weight'),
+                       key=lambda src: 1):
+        """
+        :param sources: a list of sources
+        :param weight: a weight function (default .weight)
+        :param key: None or 'src_group_id'
+        :returns: an iterator over blocks of sources
+        """
+        if not hasattr(self, 'maxweight'):
+            trt_sources = self.csm.get_trt_sources()
+            self.maxweight = source.get_maxweight(
+                trt_sources, weight, self.oqparam.concurrent_tasks,
+                source.MINWEIGHT)
+            if self.maxweight == source.MINWEIGHT:
+                logging.info('Using minweight=%d', source.MINWEIGHT)
+            else:
+                logging.info('Using maxweight=%d', self.maxweight)
+        return block_splitter(sources, self.maxweight, weight, key)
 
     def build_events_from_sources(self, srcfilter):
         """
