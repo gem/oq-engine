@@ -701,7 +701,7 @@ class Starmap(object):
             self.prev_percent = percent
         return done
 
-    def submit(self, *args, func=None, monitor=None):
+    def submit(self, args, func=None, monitor=None):
         """
         Submit the given arguments to the underlying task
         """
@@ -756,7 +756,7 @@ class Starmap(object):
             if queue:  # remove in FIFO order
                 func, *args = queue[0]
                 del queue[0]
-                self.submit(*args, func=func)
+                self.submit(args, func=func)
                 self.todo += 1
                 logging.debug('%d tasks todo, %d in queue',
                               self.todo, len(queue))
@@ -767,7 +767,7 @@ class Starmap(object):
             first_args = queue[:self.num_cores]
             queue = self.task_queue = queue[self.num_cores:]
             for func, *args in first_args:
-                self.submit(*args, func=func)
+                self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
 
