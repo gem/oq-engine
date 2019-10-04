@@ -137,7 +137,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
 
     def format(val):
         col = scientificformat(val, fmt)
-        if sep in col:
+        if sep in col and not col.startswith('"'):
             return '"%s"' % col
         return col
 
