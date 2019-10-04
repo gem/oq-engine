@@ -482,11 +482,14 @@ class IterResult(object):
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result
-            elif isinstance(result, Result) and not result.func:
-                val = result.get()
-                self.received.append(len(result.pik))
-                if hasattr(result, 'nbytes'):
-                    self.nbytes += result.nbytes
+            elif isinstance(result, Result):
+                if result.func:  # result contains subtask arguments
+                    self.received.append(sum(len(p) for p in result.pik))
+                else:
+                    val = result.get()
+                    self.received.append(len(result.pik))
+                    if hasattr(result, 'nbytes'):
+                        self.nbytes += result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
             if sys.platform != 'darwin':
