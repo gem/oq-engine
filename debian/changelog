@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added short aliases for hazard statistics `mean`, `max` and `std`
   * Reduced substantially the memory occupation in the task queue
   * Added an API `/extract/sources` and an experimental `oq plot sources`
   * Added a check on valid input keys in the job.ini
