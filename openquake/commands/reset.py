@@ -36,11 +36,11 @@ def reset(yes):
     if not ok:
         return
 
-    status = dbserver.get_status()
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if not os.path.isfile(dbpath):
         sys.exit('%s does not exist' % dbpath)
-    elif status == 'running':
+    else:
+        dbserver.ensure_on()  # start the dbserver in a subprocess
         user = getpass.getuser()
         for calc_id in logs.dbcmd('get_calc_ids', user):
             purge_one(calc_id, user, force=True)
@@ -55,8 +55,6 @@ def reset(yes):
             # remove the database
             os.remove(dbpath)
             print('Removed %s' % dbpath)
-    else:
-        sys.exit('The dbserver is not running')
 
 
 reset.flg('yes', 'confirmation')
