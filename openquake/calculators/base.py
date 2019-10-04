@@ -334,25 +334,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    # called multiple times in event_based/py
-    def block_splitter(self, sources, weight=get_weight, key=lambda src: 1):
-        """
-        :param sources: a list of sources
-        :param weight: a weight function (default .weight)
-        :param key: None or 'src_group_id'
-        :returns: an iterator over blocks of sources
-        """
-        if not hasattr(self, 'maxweight'):
-            trt_sources = self.csm.get_trt_sources()
-            self.maxweight = source.get_maxweight(
-                trt_sources, get_weight, self.oqparam.concurrent_tasks,
-                source.MINWEIGHT)
-            if self.maxweight == source.MINWEIGHT:
-                logging.info('Using minweight=%d', source.MINWEIGHT)
-            else:
-                logging.info('Using maxweight=%d', self.maxweight)
-        return general.block_splitter(sources, self.maxweight, weight, key)
-
     def src_filter(self, filename=None):
         """
         :returns: a SourceFilter/UcerfFilter
@@ -412,6 +393,7 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
                 self.csm_info = csm.info
+                self.trt_sources = csm.get_trt_sources()
                 res = views.view('dupl_sources', self.datastore)
                 logging.info(f'The composite source model has {res.val:,d} '
                              'ruptures')
@@ -501,7 +483,7 @@ class HazardCalculator(BaseCalculator):
                 self.oqparam, self.datastore.calc_id)
             calc.run()
             for name in ('csm param sitecol assetcol crmodel rlzs_assoc '
-                         'policy_name policy_dict').split():
+                         'policy_name policy_dict csm_info').split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
