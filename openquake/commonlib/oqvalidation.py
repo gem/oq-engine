@@ -122,12 +122,12 @@ class OqParam(valid.ParamSet):
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
-    max_hazard_curves = valid.Param(valid.boolean, False)
+    max = valid.Param(valid.boolean, False)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
-    std_hazard_curves = valid.Param(valid.boolean, False)
+    std = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
     modal_damage_state = valid.Param(valid.boolean, False)
@@ -204,9 +204,14 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
+        # support legacy names
         for name in list(names_vals):
             if name == 'quantile_hazard_curves':
                 names_vals['quantiles'] = names_vals.pop(name)
+            elif name == 'mean_hazard_curves':
+                names_vals['mean'] = names_vals.pop(name)
+            elif name == 'max':
+                names_vals['max'] = names_vals.pop(name)
         super().__init__(**names_vals)
         job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
@@ -588,16 +593,16 @@ class OqParam(valid.ParamSet):
         """
         names = []  # name of statistical functions
         funcs = []  # statistical functions of kind func(values, weights)
-        if self.mean_hazard_curves:
+        if self.mean:
             names.append('mean')
             funcs.append(stats.mean_curve)
-        if self.std_hazard_curves:
+        if self.std:
             names.append('std')
             funcs.append(stats.std_curve)
         for q in self.quantiles:
             names.append('quantile-%s' % q)
             funcs.append(functools.partial(stats.quantile_curve, q))
-        if self.max_hazard_curves:
+        if self.max:
             names.append('max')
             funcs.append(stats.max_curve)
         return dict(zip(names, funcs))
