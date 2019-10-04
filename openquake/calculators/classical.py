@@ -266,9 +266,9 @@ class ClassicalCalculator(base.HazardCalculator):
             f1 = f2 = preclassical
         else:
             f1, f2 = classical, classical_split_filter
-        for trt, sources in trt_sources:
+        for trt, sources, atomic in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            if hasattr(sources, 'atomic') and sources.atomic:
+            if atomic:
                 # do not split atomic groups
                 yield f1, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
