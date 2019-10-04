@@ -28,7 +28,7 @@ from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, ProbabilityCurve)
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, source
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -246,7 +246,7 @@ class ClassicalCalculator(base.HazardCalculator):
         N = len(self.sitecol)
         M = len(oq.imtls)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        maxweight = self.csm.get_maxweight(
+        maxweight = source.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks)
         maxdist = int(max(oq.maximum_distance.values()))
         if oq.task_duration is None:  # inferred
