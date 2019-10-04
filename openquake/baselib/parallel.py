@@ -141,6 +141,7 @@ fast sources.
 import os
 import re
 import sys
+import gzip
 import time
 import socket
 import signal
@@ -234,7 +235,8 @@ class Pickled(object):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
         try:
-            self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+            self.pik = gzip.compress(
+                pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
         except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
 
@@ -249,7 +251,7 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
-        return pickle.loads(self.pik)
+        return pickle.loads(gzip.decompress(self.pik))
 
 
 def get_pickled_sizes(obj):
