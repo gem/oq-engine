@@ -141,6 +141,7 @@ fast sources.
 import os
 import re
 import sys
+import gzip
 import time
 import socket
 import signal
@@ -220,6 +221,15 @@ def oq_distribute(task=None):
     return dist
 
 
+if config.general.compress:
+    # must be a global config since every change requires a DbServer restart
+    compress = gzip.compress
+    decompress = gzip.decompress
+else:
+    compress = lambda x: x
+    decompress = lambda x: x
+
+
 class Pickled(object):
     """
     An utility to manually pickling/unpickling objects.
@@ -234,7 +244,7 @@ class Pickled(object):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
         try:
-            self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+            self.pik = compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
         except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
 
@@ -249,7 +259,7 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
-        return pickle.loads(self.pik)
+        return pickle.loads(decompress(self.pik))
 
 
 def get_pickled_sizes(obj):
@@ -303,15 +313,18 @@ class Result(object):
     :param tb_str: traceback string (empty if there was no exception)
     :param msg: message string (default empty)
     """
-    func_args = ()
+    func = None
 
     def __init__(self, val, mon, tb_str='', msg='', count=0):
         if isinstance(val, dict):
             # store the size in bytes of the content
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
+            self.pik = Pickled(val)
         elif isinstance(val, tuple) and callable(val[0]):
-            self.func_args = val
-        self.pik = Pickled(val)
+            self.func = val[0]
+            self.pik = pickle_sequence(val[1:])
+        else:
+            self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
@@ -470,10 +483,13 @@ class IterResult(object):
                 # this happens with WorkerLostError with celery
                 raise result
             elif isinstance(result, Result):
-                val = result.get()
-                self.received.append(len(result.pik))
-                if hasattr(result, 'nbytes'):
-                    self.nbytes += result.nbytes
+                if result.func:  # result contains subtask arguments
+                    self.received.append(sum(len(p) for p in result.pik))
+                else:
+                    val = result.get()
+                    self.received.append(len(result.pik))
+                    if hasattr(result, 'nbytes'):
+                        self.nbytes += result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
             if sys.platform != 'darwin':
@@ -484,7 +500,7 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            if not result.func_args:  # real output
+            if not result.func:  # real output
                 name = result.mon.operation[6:]  # strip 'total '
                 result.mon.save_task_info(self.h5, result, name, mem_gb)
                 result.mon.flush(self.h5)
@@ -699,7 +715,7 @@ class Starmap(object):
             self.prev_percent = percent
         return done
 
-    def submit(self, *args, func=None, monitor=None):
+    def submit(self, args, func=None, monitor=None):
         """
         Submit the given arguments to the underlying task
         """
@@ -710,10 +726,12 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-        assert not isinstance(args[-1], Monitor)  # sanity check
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
-            args = pickle_sequence(args)
+            pickled = isinstance(args[0], Pickled)
+            if not pickled:
+                assert not isinstance(args[-1], Monitor)  # sanity check
+                args = pickle_sequence(args)
             if func is None:
                 fname = self.task_func.__name__
                 argnames = self.argnames[:-1]
@@ -729,7 +747,7 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
-        self.task_queue = [(self.task_func,) + args
+        self.task_queue = [(self.task_func, args)
                            for args in self.task_args]
         return self.get_results()
 
@@ -752,9 +770,9 @@ class Starmap(object):
     def _submit_many(self, queue, howmany):
         for _ in range(howmany):
             if queue:  # remove in FIFO order
-                func, *args = queue[0]
+                func, args = queue[0]
                 del queue[0]
-                self.submit(*args, func=func)
+                self.submit(args, func=func)
                 self.todo += 1
                 logging.debug('%d tasks todo, %d in queue',
                               self.todo, len(queue))
@@ -764,8 +782,8 @@ class Starmap(object):
         if queue:
             first_args = queue[:self.num_cores]
             queue = self.task_queue = queue[self.num_cores:]
-            for func, *args in first_args:
-                self.submit(*args, func=func)
+            for func, args in first_args:
+                self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
 
@@ -783,8 +801,8 @@ class Starmap(object):
                 self.log_percent()
             elif res.msg:
                 logging.warning(res.msg)
-            elif res.func_args:  # add subtask
-                queue.append(res.func_args)
+            elif res.func:  # add subtask
+                queue.append((res.func, res.pik))
             else:
                 yield res
         self.log_percent()

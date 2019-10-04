@@ -300,7 +300,6 @@ class EbrCalculator(base.RiskCalculator):
         Build aggregate loss curves in process
         """
         dstore = self.datastore
-        self.before_export()  # set 'realizations'
         oq = self.oqparam
         stats = self.param['stats']
         # store avg_losses-stats

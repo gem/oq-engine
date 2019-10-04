@@ -34,7 +34,7 @@ def expo2csv(job_ini):
     oq = readinput.get_oqparam(job_ini)
     exposure = readinput.get_exposure(oq)
     rows = []
-    header = ['id', 'lon', 'lat', 'number']
+    header = ['lon', 'lat', 'number']
     area = exposure.area['type'] != '?'
     if area:
         header.append('area')
@@ -46,9 +46,8 @@ def expo2csv(job_ini):
     occupancy_periods = exposure.occupancy_periods.split()
     header.extend(occupancy_periods)
     header.extend(exposure.tagcol.tagnames)
-    for asset, asset_ref in zip(exposure.assets, exposure.asset_refs):
-        row = [asset_ref.decode('utf8'), asset.location[0], asset.location[1],
-               asset.number]
+    for asset in exposure.assets:
+        row = [asset.location[0], asset.location[1], asset.number]
         if area:
             row.append(asset.area)
         for costname in exposure.cost_types['name']:
