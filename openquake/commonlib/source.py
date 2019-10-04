@@ -303,6 +303,18 @@ class CompositionInfo(object):
             self.__class__.__name__, '\n'.join(summary))
 
 
+def get_maxweight(trt_sources, weight, concurrent_tasks,
+                  minweight=MINWEIGHT):
+    """
+    Return an appropriate maxweight for use in the block_splitter
+    """
+    totweight = sum(s.weight for trt, sources, atomic in trt_sources
+                    for s in sources)
+    ct = concurrent_tasks or 1
+    mw = math.ceil(totweight / ct)
+    return max(mw, minweight)
+
+
 class CompositeSourceModel(collections.abc.Sequence):
     """
     :param source_model_lt:
@@ -387,16 +399,6 @@ class CompositeSourceModel(collections.abc.Sequence):
         new.info.update_eff_ruptures(new.get_num_ruptures())
         return new
 
-    def get_weight(self, trt_sources, weight=operator.attrgetter('weight')):
-        """
-        :param weight: source weight function
-        :returns: total weight of the source model
-        """
-        # NB: I am looking at .trt_sources to count the weight coming
-        # from duplicated sources correctly
-        return sum(weight(s) for trt, sources, atomic in trt_sources
-                   for s in sources)
-
     @property
     def src_groups(self):
         """
@@ -480,16 +482,6 @@ class CompositeSourceModel(collections.abc.Sequence):
             nr = src.num_ruptures
             src.serial = serial
             serial += nr
-
-    def get_maxweight(self, trt_sources, weight, concurrent_tasks,
-                      minweight=MINWEIGHT):
-        """
-        Return an appropriate maxweight for use in the block_splitter
-        """
-        totweight = self.get_weight(trt_sources, weight)
-        ct = concurrent_tasks or 1
-        mw = math.ceil(totweight / ct)
-        return max(mw, minweight)
 
     def get_floating_spinning_factors(self):
         """
