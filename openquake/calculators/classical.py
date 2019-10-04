@@ -182,18 +182,19 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
-        csm_info = self.csm.info
+        csm_info = self.datastore['csm_info']
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'srcidx', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_'}
-        for grp in self.csm.src_groups:
-            gsims = csm_info.gsim_lt.get_gsims(grp.trt)
-            cm = ContextMaker(grp.trt, gsims)
-            rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
-            for dparam in cm.REQUIRES_DISTANCES:
-                rparams.add(dparam + '_')
-            zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
+        for sm in csm_info.source_models:
+            for grp in sm.src_groups:
+                gsims = csm_info.gsim_lt.get_gsims(grp.trt)
+                cm = ContextMaker(grp.trt, gsims)
+                rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
+                for dparam in cm.REQUIRES_DISTANCES:
+                    rparams.add(dparam + '_')
+                zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
         self.sources_by_task = {}  # task_no => src_ids
