@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import abc
 import sys
+import copy
 import time
 import numpy
 
@@ -151,12 +152,12 @@ class ContextMaker(object):
         self.maximum_distance = (
             param.get('maximum_distance') or IntegrationDistance({}))
         self.trunclevel = param.get('truncation_level')
-        self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        self.collapse_distance = param.get('collapse_distance', 2)
         filter_distance = param.get('filter_distance')
         if filter_distance is None:
             if 'rrup' in self.REQUIRES_DISTANCES:
@@ -312,21 +313,31 @@ class ContextMaker(object):
         return poemap
 
     def _gen_rup_sites(self, src, sites):
-        # implements the pointsource_distance feature
-        pdist = self.pointsource_distance.get(src.tectonic_region_type)
-        if hasattr(src, 'location') and pdist and src.count_nphc() > 1:
-            close_sites, far_sites = sites.split(src.location, pdist)
-            if close_sites is None:  # all is far
-                for rup in src.iter_ruptures(False, False):
-                    yield rup, far_sites
-            elif far_sites is None:  # all is close
-                for rup in src.iter_ruptures(True, True):
-                    yield rup, close_sites
-            else:
-                for rup in src.iter_ruptures(True, True):
-                    yield rup, close_sites
-                for rup in src.iter_ruptures(False, False):
-                    yield rup, far_sites
+        # implements the collapse distance feature: the finite site effects
+        # are ignored for sites over collapse_distance x rupture_radius
+        loc = getattr(src, 'location', None)
+        if loc and src.count_nphc() > 1 and len(sites) > self.max_sites_disagg:
+            weights, depths = zip(*src.hypocenter_distribution.data)
+            loc = copy.copy(loc)  # average hypocenter used in sites.split
+            loc.depth = numpy.average(depths, weights=weights)
+            for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+                max_dist = self.maximum_distance(src.tectonic_region_type, mag)
+                p_radius = src._get_max_rupture_projection_radius(mag)
+                # the collapse distance has been decided heuristically by MS
+                collapse_distance = min(
+                    self.collapse_distance * p_radius, max_dist)
+                close_sites, far_sites = sites.split(loc, collapse_distance)
+                if close_sites is None:  # all is far
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
+                        yield rup, far_sites
+                elif far_sites is None:  # all is close
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
+                        yield rup, close_sites
+                else:  # some sites are far, some are close
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
+                        yield rup, far_sites
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
+                        yield rup, close_sites
         else:
             for rup in src.iter_ruptures():
                 yield rup, sites
