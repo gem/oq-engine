@@ -297,12 +297,15 @@ class ContextMaker(object):
                     dctx_ = dctx.roundup(gsim.minimum_distance)
                     mean_std[i] = gsim.get_mean_std(sctx, rup, dctx_, imts)
             with self.poe_mon:
-                for sid, pne in self._make_pnes(rup, sctx.sids, mean_std):
-                    pcurve = poemap.setdefault(sid, rup_indep)
-                    if rup_indep:
-                        pcurve.array *= pne
-                    else:
-                        pcurve.array += (1.-pne) * rup.weight
+                pairs = zip(sctx.sids, self._make_pnes(rup, mean_std))
+                # _make_pnes is heavy, the part below is fast
+                if rup_indep:
+                    for sid, pne in pairs:
+                        poemap.setdefault(sid, rup_indep).array *= pne
+                else:
+                    for sid, pne in pairs:
+                        poemap.setdefault(sid, rup_indep).array += (
+                            1.-pne) * rup.weight
             nrups += 1
             nsites += len(sctx)
             if fewsites:  # store rupdata
@@ -311,6 +314,20 @@ class ContextMaker(object):
         poemap.nsites = nsites
         poemap.data = rupdata.data
         return poemap
+
+    # NB: it is important for this to be fast since it is inside an inner loop
+    def _make_pnes(self, rupture, mean_std):
+        imtls = self.imtls
+        nsites = mean_std.shape[2]
+        poes = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
+        for g, gsim in enumerate(self.gsims):
+            for m, imt in enumerate(imtls):
+                if not (hasattr(gsim, 'weight') and gsim.weight[imt] == 0):
+                    # set by the engine when parsing the gsim logictree;
+                    # when 0 ignore the gsim: see _build_trts_branches
+                    poes[:, imtls(imt), g] = gsim.get_poes(
+                        mean_std[g, :, :, m], imtls[imt], self.trunclevel)
+        return rupture.get_probability_no_exceedance(poes)
 
     def _gen_rup_sites(self, src, sites):
         # implements the collapse distance feature: the finite site effects
@@ -381,25 +398,6 @@ class ContextMaker(object):
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
         rdata['grp_id'] = numpy.uint16(gids)
         return pmap, rdata, calc_times
-
-    # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, sids, mean_std):
-        imtls = self.imtls
-        nsites = len(sids)
-        pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
-        for i, gsim in enumerate(self.gsims):
-            for m, imt in enumerate(imtls):
-                slc = imtls(imt)
-                if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
-                    # set by the engine when parsing the gsim logictree;
-                    # when 0 ignore the gsim: see _build_trts_branches
-                    pno = numpy.ones((nsites, slc.stop - slc.start))
-                else:
-                    poes = gsim.get_poes(
-                        mean_std[i, :, :, m], imtls[imt], self.trunclevel)
-                    pno = rupture.get_probability_no_exceedance(poes)
-                pne_array[:, slc, i] = pno
-        return zip(sids, pne_array)
 
 
 class BaseContext(metaclass=abc.ABCMeta):
