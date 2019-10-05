@@ -224,10 +224,10 @@ class MultiPointTestCase(unittest.TestCase):
         hcurves = calc_hazard_curves(groups, sitecol, imtls, gsim_by_trt)
         expected = [0.99999778, 0.9084039, 0.148975348,
                     0.0036909656, 2.76326e-05]
-        npt.assert_almost_equal(hcurves['PGA'][0], expected)
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=1E-6, atol=1E-6)
 
         # splitting in point sources
         [[mps1, mps2]] = groups
         psources = list(mps1) + list(mps2)
         hcurves = calc_hazard_curves(psources, sitecol, imtls, gsim_by_trt)
-        npt.assert_almost_equal(hcurves['PGA'][0], expected)
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=1E-4, atol=1E-6)
