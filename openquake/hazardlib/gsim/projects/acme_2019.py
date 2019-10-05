@@ -209,7 +209,7 @@ class AlAtikSigmaModel(GMPE):
     def __init__(self, gmpe_name, tau_model="global", phi_model="global",
                  phi_s2ss_model=None, tau_quantile=None,
                  phi_ss_quantile=None, phi_s2ss_quantile=None,
-                 kappa_file=None, kappa_val="med"):
+                 kappa_file=None, kappa_val=None):
         # this is taken from http://tiny.cc/krb5bz
         self.tau_model = tau_model
         self.phi_model = phi_model
@@ -252,15 +252,14 @@ class AlAtikSigmaModel(GMPE):
         nsites = len(sites)
         stddevs = self.get_stddevs(rup.mag, imt, stds_types, nsites)
 
-        kappa = 0
+        kappa = 1
         if self.kappa_file is not None:
             with open(self.kappa_file, 'r') as myfile:
                 data = myfile.read()
             KAPPATAB = CoeffsTable(table=data, sa_damping=5)
             kappa = KAPPATAB[imt][self.kappa_val]
 
-
-        return mean+kappa, stddevs
+        return mean+np.log(kappa), stddevs
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """
