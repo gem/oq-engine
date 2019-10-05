@@ -162,7 +162,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     Build source models from the logic tree and to store
     them inside the `source_info` dataset.
     """
-    spinning_off = oq.pointsource_distance == {'default': 0.0}
+    spinning_off = oq.collapse_distance == 0
     if spinning_off:
         logging.info('Removing nodal plane and hypocenter distributions')
     # NB: the source models file are often NOT in the shared directory
