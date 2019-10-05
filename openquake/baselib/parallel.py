@@ -221,7 +221,7 @@ def oq_distribute(task=None):
     return dist
 
 
-if config.general.compress:
+if False:  #config.general.compress
     # must be a global config since every change requires a DbServer restart
     compress = gzip.compress
     decompress = gzip.decompress
