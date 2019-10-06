@@ -26,6 +26,10 @@ import numpy
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
 
+# NB: one can use vstr fields in extensible datasets, but then reading
+# them on-the-fly in SWMR mode will fail with an OSError:
+# Can't read data (address of object past end of allocation)
+# this is why below I am using '<S50' byte strings
 perf_dt = numpy.dtype([('operation', '<S50'), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
 task_info_dt = numpy.dtype(
@@ -33,7 +37,7 @@ task_info_dt = numpy.dtype(
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
-task_sent_dt = numpy.dtype([('taskname', '<S50'), ('sent', hdf5.vstr)])
+task_sent_dt = numpy.dtype([('taskname', '<S50'), ('sent', '<S255')])
 
 
 def init_performance(hdf5file, swmr=False):
