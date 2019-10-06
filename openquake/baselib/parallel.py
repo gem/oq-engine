@@ -140,6 +140,7 @@ fast sources.
 """
 import os
 import re
+import ast
 import sys
 import gzip
 import time
@@ -164,7 +165,7 @@ except ImportError:
 from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
-    Monitor, memory_rss, init_performance, task_sent_dt)
+    Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp)
@@ -501,10 +502,10 @@ class IterResult(object):
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
             if not result.func:  # real output
-                if self.sent:
-                    sent = numpy.array(list(self.sent.items()), task_sent_dt)
-                    self.h5['task_sent'].resize(sent.shape)
-                    self.h5['task_sent'][:] = sent
+                task_sent = ast.literal_eval(self.h5['task_sent'][()])
+                task_sent.update(self.sent)
+                del self.h5['task_sent']
+                self.h5['task_sent'] = str(task_sent)
                 name = result.mon.operation[6:]  # strip 'total '
                 result.mon.save_task_info(self.h5, result, name, mem_gb)
                 result.mon.flush(self.h5)
