@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced the sent data transfer in ebrisk calculations
   * Replaced the `pointsource_distance` concept with a `collapse_distance`
   * Deprecated the old syntax for the `reqv` feature
   * Added short aliases for hazard statistics `mean`, `max` and `std`
