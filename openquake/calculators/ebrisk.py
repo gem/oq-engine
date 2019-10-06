@@ -224,7 +224,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         eslices = self.datastore['eslices']
         allargs = []
         allpairs = list(enumerate(n_occ))
-        srcfilter = self.src_filter()
+        srcfilter = self.src_filter(self.datastore.tempname)
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
