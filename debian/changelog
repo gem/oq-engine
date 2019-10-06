@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * `oq show job_info` now works while the calculation is running
   * Reduced the sent data transfer in ebrisk calculations
   * Replaced the `pointsource_distance` concept with a `collapse_distance`
   * Deprecated the old syntax for the `reqv` feature
