@@ -37,8 +37,6 @@ task_info_dt = numpy.dtype(
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
-task_sent_dt = numpy.dtype([('taskname', '<S50'), ('sent', '<S255')])
-
 
 def init_performance(hdf5file, swmr=False):
     """
@@ -51,7 +49,7 @@ def init_performance(hdf5file, swmr=False):
     if 'task_info' not in h5:
         hdf5.create(h5, 'task_info', task_info_dt)
     if 'task_sent' not in h5:
-        hdf5.create(h5, 'task_sent', task_sent_dt)
+        h5['task_sent'] = '{}'
     if swmr:
         try:
             h5.swmr_mode = True
