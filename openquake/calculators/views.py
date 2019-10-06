@@ -29,7 +29,7 @@ from openquake.baselib.general import (
     humansize, groupby, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg, fast_agg3)
 from openquake.baselib.performance import perf_dt
-from openquake.baselib.python3compat import decode
+from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, calc
@@ -299,12 +299,11 @@ def view_job_info(token, dstore):
     """
     data = [['task', 'sent', 'received']]
     task_info = dstore['task_info'][()]
-    task_sent = dict(dstore['task_sent'])
-    for task, json in task_sent.items():
-        sent = sorted(ast.literal_eval(decode(json)).items(),
-                      key=operator.itemgetter(1), reverse=True)
+    task_sent = ast.literal_eval(dstore['task_sent'][()])
+    for task, dic in task_sent.items():
+        sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
-        recv = get_array(task_info, taskname=task)['received'].sum()
+        recv = get_array(task_info, taskname=encode(task))['received'].sum()
         data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
 
