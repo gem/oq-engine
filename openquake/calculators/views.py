@@ -301,7 +301,7 @@ def view_job_info(token, dstore):
     task_info = dstore['task_info'][()]
     task_sent = dict(dstore['task_sent'])
     for task, json in task_sent.items():
-        sent = sorted(ast.literal_eval(json).items(),
+        sent = sorted(ast.literal_eval(decode(json)).items(),
                       key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
         recv = get_array(task_info, taskname=task)['received'].sum()
