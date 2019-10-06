@@ -200,6 +200,7 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
                 numpy.random.seed(seed)
                 eps[:, i] = numpy.random.normal(size=A)
     with hdf5.File(dstore.tempname, 'w') as cache:
+        cache['sitecol'] = dstore['sitecol']
         cache['epsilon_matrix'] = eps
     return dstore.tempname
 
