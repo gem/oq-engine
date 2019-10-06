@@ -211,7 +211,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         per_block = numpy.ceil(n_occ.sum() / (oq.concurrent_tasks or 1))
         self.set_param(
             hdf5path=self.datastore.filename,
-            task_duration=oq.task_duration or 600,  # 10min
+            task_duration=oq.task_duration or 1200,  # 20min
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
 
