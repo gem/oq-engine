@@ -333,13 +333,14 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
-        self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
-        self.datastore.create_dset('gmf_data/sigma_epsilon',
-                                   sig_eps_dt(oq.imtls))
         N = len(self.sitecol.complete)
-        self.datastore.create_dset(
-            'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
-        self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
+        if oq.ground_motion_fields:
+            self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
+            self.datastore.create_dset('gmf_data/sigma_epsilon',
+                                       sig_eps_dt(oq.imtls))
+            self.datastore.create_dset(
+                'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
+            self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
 
