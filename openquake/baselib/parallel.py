@@ -806,10 +806,10 @@ class Starmap(object):
                 logging.warning(res.msg)
             elif res.func:  # add subtask
                 queue.append((res.func, res.pik))
-                if self.oversubmit:
-                    self._submit_many(queue, 1)
-                elif self.todo < self.num_cores:
+                if self.todo < self.num_cores:
                     self._submit_many(queue, self.num_cores - self.todo)
+                elif self.oversubmit:
+                    self._submit_many(queue, 1)
             else:
                 yield res
         self.log_percent()
