@@ -167,11 +167,11 @@ class MultiRiskCalculator(base.RiskCalculator):
         and create the `hazard` dataset.
         """
         oq = self.oqparam
-        fnames = oq.inputs['multi_peril']
-        dt = [(haz, float) for haz in oq.multi_peril]
+        perils, fnames = zip(*oq.inputs['multi_peril'].items())
+        dt = [(haz, float) for haz in perils]
         N = len(self.sitecol)
         self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
-        for name, fname in zip(oq.multi_peril, fnames):
+        for name, fname in zip(perils, fnames):
             tofloat = (valid.positivefloat if name == 'ASH'
                        else valid.probability)
             with open(fname) as f:
@@ -189,14 +189,15 @@ class MultiRiskCalculator(base.RiskCalculator):
     def execute(self):
         dstates = self.crmodel.damage_states
         ltypes = self.crmodel.loss_types
-        P = len(self.oqparam.multi_peril) + 1
+        theperils = self.oqparam.inputs['multi_peril']
+        P = len(theperils) + 1
         L = len(ltypes)
         D = len(dstates)
         A = len(self.assetcol)
         ampl = self.oqparam.ash_wet_amplification_factor
         dmg_csq = numpy.zeros((A, P, L, 1, D + 1), F32)
         perils = []
-        if 'ASH' in self.oqparam.multi_peril:
+        if 'ASH' in theperils:
             assets = self.assetcol.assets_by_site()
             gmf = self.datastore['multi_peril']['ASH']
             dmg_csq[:, 0] = get_dmg_csq(self.crmodel, assets, gmf)
@@ -205,7 +206,7 @@ class MultiRiskCalculator(base.RiskCalculator):
             perils.append('ASH_WET')
         hazard = self.datastore['multi_peril']
         binary_perils = []
-        for peril in self.oqparam.multi_peril:
+        for peril in theperils:
             if peril != 'ASH':
                 binary_perils.append(peril)
         self.datastore['asset_risk'] = arr = build_asset_risk(

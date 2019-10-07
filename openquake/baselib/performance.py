@@ -26,14 +26,16 @@ import numpy
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
 
-perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
+# NB: one can use vstr fields in extensible datasets, but then reading
+# them on-the-fly in SWMR mode will fail with an OSError:
+# Can't read data (address of object past end of allocation)
+# this is why below I am using '<S50' byte strings
+perf_dt = numpy.dtype([('operation', '<S50'), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
 task_info_dt = numpy.dtype(
-    [('taskname', hdf5.vstr), ('taskno', numpy.uint32),
+    [('taskname', '<S50'), ('taskno', numpy.uint32),
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
-
-task_sent_dt = numpy.dtype([('taskname', hdf5.vstr), ('sent', hdf5.vstr)])
 
 
 def init_performance(hdf5file, swmr=False):
@@ -47,7 +49,7 @@ def init_performance(hdf5file, swmr=False):
     if 'task_info' not in h5:
         hdf5.create(h5, 'task_info', task_info_dt)
     if 'task_sent' not in h5:
-        hdf5.create(h5, 'task_sent', task_sent_dt)
+        h5['task_sent'] = '{}'
     if swmr:
         try:
             h5.swmr_mode = True

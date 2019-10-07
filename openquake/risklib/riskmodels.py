@@ -626,7 +626,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     for rm in self.values():
                         if rm.loss_ratios[loss_type] != allratios[-1]:
                             rm.loss_ratios[loss_type] = allratios[-1]
-                            logging.debug('Redefining loss ratios for %s', rm)
+                            # logging.debug(f'Redefining loss ratios for {rm}')
                 cp = scientific.CurveParams(
                     l, loss_type, max(curve_resolutions), allratios[-1], True
                 ) if curve_resolutions else scientific.CurveParams(

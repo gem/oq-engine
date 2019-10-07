@@ -23,16 +23,15 @@ import operator
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, cached_property, get_indices
+from openquake.baselib.general import AccumDict, get_indices, block_splitter
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, logs
+from openquake.commonlib import source, calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rupture_getters, sig_eps_dt)
@@ -81,16 +80,6 @@ class EventBasedCalculator(base.HazardCalculator):
     accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
     build_ruptures = sample_ruptures
 
-    @cached_property
-    def csm_info(self):
-        """
-        :returns: a cached CompositionInfo object
-        """
-        try:
-            return self.csm.info
-        except AttributeError:
-            return self.datastore.parent['csm_info']
-
     def init(self):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
@@ -114,18 +103,37 @@ class EventBasedCalculator(base.HazardCalculator):
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
-    def build_events_from_sources(self):
+    # called multiple times
+    def block_splitter(self, sources, weight=operator.attrgetter('weight'),
+                       key=lambda src: 1):
+        """
+        :param sources: a list of sources
+        :param weight: a weight function (default .weight)
+        :param key: None or 'src_group_id'
+        :returns: an iterator over blocks of sources
+        """
+        if not hasattr(self, 'maxweight'):
+            trt_sources = self.csm.get_trt_sources()
+            self.maxweight = source.get_maxweight(
+                trt_sources, weight, self.oqparam.concurrent_tasks,
+                source.MINWEIGHT)
+            if self.maxweight == source.MINWEIGHT:
+                logging.info('Using minweight=%d', source.MINWEIGHT)
+            else:
+                logging.info('Using maxweight=%d', self.maxweight)
+        return block_splitter(sources, self.maxweight, weight, key)
+
+    def build_events_from_sources(self, srcfilter):
         """
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
         gsims_by_trt = self.csm.gsim_lt.values
         logging.info('Building ruptures')
-        smap = parallel.Starmap(
-            self.build_ruptures.__func__, h5=self.datastore.hdf5)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         ses_idx = 0
+        allargs = []
         for sm_id, sm in enumerate(self.csm.source_models):
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
@@ -134,17 +142,20 @@ class EventBasedCalculator(base.HazardCalculator):
                 par = self.param.copy()
                 par['gsims'] = gsims_by_trt[sg.trt]
                 if sg.atomic:  # do not split the group
-                    smap.submit(sg, self.src_filter, par)
+                    allargs.append((sg, srcfilter, par))
                 else:  # traditional groups
                     for block in self.block_splitter(sg.sources, key=by_grp):
                         if 'ucerf' in oq.calculation_mode:
                             for i in range(oq.ses_per_logic_tree_path):
+                                par = par.copy()  # avoid mutating the dict
                                 par['ses_seeds'] = [
                                     (ses_idx, oq.ses_seed + i + 1)]
-                                smap.submit(block, self.src_filter, par)
+                                allargs.append((block, srcfilter, par))
                                 ses_idx += 1
                         else:
-                            smap.submit(block, self.src_filter, par)
+                            allargs.append((block, srcfilter, par))
+        smap = parallel.Starmap(
+            self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
         for dic in smap:
             if dic['calc_times']:
@@ -309,60 +320,53 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.set_param()
         self.offset = 0
+        srcfilter = self.src_filter(self.datastore.tempname)
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
-        if oq.hazard_calculation_id:
-            # from ruptures
+        if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
-            self.init_logic_tree(self.csm_info)
-            srcfilter = SourceFilter(
-                self.sitecol, oq.maximum_distance,
-                self.datastore.parent.filename)
-        else:
-            # from sources
-            srcfilter = self.src_filter
-            self.build_events_from_sources()
+            self.init_logic_tree(self.datastore.parent['csm_info'])
+        else:  # from sources
+            self.build_events_from_sources(srcfilter)
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
-        self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
-        self.datastore.create_dset('gmf_data/sigma_epsilon',
-                                   sig_eps_dt(oq.imtls))
+        N = len(self.sitecol.complete)
+        if oq.ground_motion_fields:
+            self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
+            self.datastore.create_dset('gmf_data/sigma_epsilon',
+                                       sig_eps_dt(oq.imtls))
+            self.datastore.create_dset(
+                'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
+            self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
+
+        # compute_gmfs in parallel
+        self.datastore.swmr_on()
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
-        self.datastore.swmr_on()
-        # call compute_gmfs in parallel
         acc = parallel.Starmap(
-            self.core_task.__func__, iterargs, h5=self.datastore.hdf5
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
+            num_cores=oq.num_cores
         ).reduce(self.agg_dicts, self.acc0())
 
         if self.indices:
-            N = len(self.sitecol.complete)
+            dset = self.datastore['gmf_data/indices']
+            num_evs = self.datastore['gmf_data/events_by_sid']
             logging.info('Saving gmf_data/indices')
-            with self.monitor('saving gmf_data/indices', measuremem=True,
-                              autoflush=True):
+            with self.monitor('saving gmf_data/indices', measuremem=True):
                 self.datastore['gmf_data/imts'] = ' '.join(oq.imtls)
-                dset = self.datastore.create_dset(
-                    'gmf_data/indices', hdf5.vuint32,
-                    shape=(N, 2), fillvalue=None)
-                num_evs = self.datastore.create_dset(
-                    'gmf_data/events_by_sid', U32, (N,))
                 for sid in self.sitecol.complete.sids:
                     start = numpy.array(self.indices[sid, 0])
                     stop = numpy.array(self.indices[sid, 1])
                     dset[sid, 0] = start
                     dset[sid, 1] = stop
                     num_evs[sid] = (stop - start).sum()
-                num_evs = num_evs[()]
-                avg_events_by_sid = num_evs.sum() / N
-                logging.info('Found ~%d GMVs per site', avg_events_by_sid)
-                self.datastore.set_attrs(
-                    'gmf_data', avg_events_by_sid=avg_events_by_sid,
-                    max_events_by_sid=num_evs.max())
+            avg_events_by_sid = num_evs[()].sum() / N
+            logging.info('Found ~%d GMVs per site', avg_events_by_sid)
         elif oq.ground_motion_fields:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')

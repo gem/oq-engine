@@ -3,8 +3,8 @@ Hazard Japan (HERP model 2014) reduced
 
 ============== ===================
 checksum32     2,896,463,652      
-date           2019-07-30T15:03:50
-engine_version 3.7.0-git3b3dff46da
+date           2019-10-02T10:07:19
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 5, num_levels = 1, num_rlzs = ?
@@ -40,12 +40,21 @@ site_model              `Site_model_Japan.xml <Site_model_Japan.xml>`_
 source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_                      
 ======================= ==============================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       26           0.0         
+1      0.0       1            0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -60,20 +69,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00154 NaN    0.00154 0.00154 1      
+SourceReader       0.00678 NaN    0.00678 0.00678 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=314 B fnames=112 B 6.62 KB 
-================== ============================ ========
+============ ==== ========
+task         sent received
+SourceReader      14.17 KB
+============ ==== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_15470               time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.00154  0.0       1     
-======================== ======== ========= ======
+====================== ======== ========= ======
+calc_29480             time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.01783  0.24609   1     
+total SourceReader     0.00678  0.0       1     
+====================== ======== ========= ======

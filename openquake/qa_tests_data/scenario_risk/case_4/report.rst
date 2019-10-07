@@ -3,8 +3,8 @@ Scenario Risk for Nepal with 20 assets
 
 ============== ===================
 checksum32     486,158,159        
-date           2019-07-30T15:03:54
-engine_version 3.7.0-git3b3dff46da
+date           2019-10-02T10:07:11
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 20, num_levels = 8, num_rlzs = 1
@@ -56,14 +56,6 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Exposure model
 --------------
 =========== ==
@@ -80,14 +72,24 @@ Unreinforced-Brick-Masonry 1.00000 0.0    1   1   5         5
 *ALL*                      1.00000 0.0    1   1   20        20        
 ========================== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_15492             time_sec  memory_mb counts
+calc_29418             time_sec  memory_mb counts
 ====================== ========= ========= ======
-ScenarioCalculator.run 0.06719   0.50781   1     
-building riskinputs    0.02766   0.0       1     
-saving gmfs            0.00861   0.25781   1     
-computing gmfs         0.00157   0.0       1     
-reading exposure       8.106E-04 0.0       1     
+ScenarioCalculator.run 0.05499   1.25391   1     
+building riskinputs    0.03111   0.0       1     
+saving gmfs            0.00880   0.22266   1     
+computing gmfs         0.00140   0.0       1     
+reading exposure       7.656E-04 0.0       1     
 ====================== ========= ========= ======
