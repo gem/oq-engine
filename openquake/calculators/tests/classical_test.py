@@ -532,6 +532,6 @@ hazard_uhs-std.csv
 
     def test_case_43(self):
         # this is a test for
-        # collapse_distance = 3 * rupture radius > maximum_distance
+        # collapse_factor = 3 * rupture radius > maximum_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)

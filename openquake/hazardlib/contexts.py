@@ -157,7 +157,8 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        self.collapse_distance = param.get('collapse_distance', 2)
+        self.collapse_factor = param.get('collapse_factor', 2)
+        self.pointsource_distance = param.get('pointsource_distance')
         filter_distance = param.get('filter_distance')
         if filter_distance is None:
             if 'rrup' in self.REQUIRES_DISTANCES:
@@ -331,19 +332,22 @@ class ContextMaker(object):
 
     def _gen_rup_sites(self, src, sites):
         # implements the collapse distance feature: the finite site effects
-        # are ignored for sites over collapse_distance x rupture_radius
+        # are ignored for sites over collapse_factor x rupture_radius
         loc = getattr(src, 'location', None)
         if loc and src.count_nphc() > 1 and len(sites) > self.max_sites_disagg:
             weights, depths = zip(*src.hypocenter_distribution.data)
             loc = copy.copy(loc)  # average hypocenter used in sites.split
             loc.depth = numpy.average(depths, weights=weights)
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
-                max_dist = self.maximum_distance(src.tectonic_region_type, mag)
-                p_radius = src._get_max_rupture_projection_radius(mag)
-                # the collapse distance has been decided heuristically by MS
-                collapse_distance = min(
-                    self.collapse_distance * p_radius, max_dist)
-                close_sites, far_sites = sites.split(loc, collapse_distance)
+                if self.pointsource_distance is None:
+                    # dynamically compute the pointsource distance
+                    max_dist = self.maximum_distance(
+                        src.tectonic_region_type, mag)
+                    p_radius = src._get_max_rupture_projection_radius(mag)
+                    psdist = min(self.collapse_factor * p_radius, max_dist)
+                else:  # legacy approach
+                    psdist = self.pointsource_distance
+                close_sites, far_sites = sites.split(loc, psdist)
                 if close_sites is None:  # all is far
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
                         yield rup, far_sites
