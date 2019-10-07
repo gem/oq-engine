@@ -26,7 +26,7 @@ from openquake.hazardlib.polynomial_chaos import get_coeff, get_hermite
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
-PLOTTING = False
+PLOTTING = True
 
 
 class GetHermiteTest(unittest.TestCase):
@@ -63,7 +63,6 @@ class GetCoeffTest(unittest.TestCase):
         sigma_mu = np.array([0.15, 0.20])
         imls = np.array([0.6, 0.7, 0.8, 0.9])
         cff = np.squeeze(get_coeff(m_mu, sigma, sigma_mu, imls))
-        print(cff.shape)
 
 
 class PCEScenarioTest(unittest.TestCase):
@@ -78,7 +77,7 @@ class PCEScenarioTest(unittest.TestCase):
     def setUp(self):
         # Set ground-motion model and imls
         self.gsim = BooreAtkinson2008()
-        self.imls = np.logspace(-2, 0, num=40)
+        self.imls = np.logspace(-2, -0.1, num=40)
         self.epistemic_std = 0.2  # same value used by L&A2019
         # Set rupture parameters and distances
         dists = DistancesContext()
@@ -128,7 +127,7 @@ class PCEScenarioTest(unittest.TestCase):
         np.testing.assert_almost_equal(mean_epi, np.squeeze(self.poes_comb),
                                        decimal=2)
         # ---- REMOVE this
-        if 0:
+        if PLOTTING:
             import matplotlib.pyplot as plt
             _ = plt.figure()
             plt.plot(self.imls, mean_epi)
@@ -136,6 +135,7 @@ class PCEScenarioTest(unittest.TestCase):
             plt.xscale('log')
             plt.xlabel('IMLs')
             plt.ylabel('PoEs')
+            plt.grid(which='both')
             plt.show()
 
     def test_fractile(self):
@@ -159,6 +159,7 @@ class PCEScenarioTest(unittest.TestCase):
             for deg in range(0, 6):
                 label = 'PC {:d}'.format(deg)
                 plt.plot(np.log(self.imls), pc_coef[deg-1, :], label=label)
+            plt.grid(which='both')
             plt.show()
 
         # Compute samples of the Hermite polynomial
@@ -179,13 +180,15 @@ class PCEScenarioTest(unittest.TestCase):
                          color='grey')
 
         if PLOTTING:
-            plt.plot(self.imls, mean_epi, label='Mean classical approach')
             plt.plot(self.imls, np.squeeze(self.poes_comb), lw=3,
                      label='PC coeff 0')
             plt.plot(self.imls, np.mean(curves, axis=0), '.g', lw=3,
                      label='Mean PC')
+            plt.plot(self.imls, mean_epi, label='Mean classical approach')
             plt.xscale('log')
             plt.yscale('log')
             plt.xlabel('IMLs')
             plt.ylabel('PoEs')
+            plt.legend()
+            plt.grid(which='both')
             plt.show()

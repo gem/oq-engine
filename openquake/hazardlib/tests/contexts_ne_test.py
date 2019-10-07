@@ -19,9 +19,6 @@
 import os
 import unittest
 
-
-from openquake.hazardlib.pmf import PMF
-
 from openquake.hazardlib.const import TRT
 from openquake.baselib.general import DictArray
 
@@ -81,4 +78,3 @@ class GetPmapTest(unittest.TestCase):
         cm = ContextMakerNonErgodic(self.trt, gsims, param=self.param)
         # Computing probability map
         poemap = cm.get_pmap(self.src, self.sitesc)
-        # print(poemap)

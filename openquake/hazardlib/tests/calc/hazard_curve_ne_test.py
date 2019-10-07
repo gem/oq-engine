@@ -19,6 +19,7 @@ from openquake.hazardlib.gsim.abrahamson_2014 import \
     AbrahamsonEtAl2014NonErgodic
 
 BASE_PATH = os.path.dirname(__file__)
+PLOTTING = True
 
 
 class CalcHazardTest(unittest.TestCase):
@@ -49,12 +50,10 @@ class CalcHazardTest(unittest.TestCase):
                                                 z1pt0=50.)
 
     def test_kuehn2019ne(self):
-
-        PLOTTING = True
         S = 0
         key = 'SA(0.01)'
         num_samples = 500
-        num_samples_mc = 50
+        num_samples_mc = 100
 
         gsim = AbrahamsonEtAl2014NonErgodic()
         gsims = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
@@ -62,6 +61,7 @@ class CalcHazardTest(unittest.TestCase):
         groups = [self.src, self.src]
         imtls = {'SA(0.01)': [0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4]}
 
+        # Process the sources and sum contributions
         pce_list = []
         for i, pcec in enumerate(hcne.calc_hazard_curves(groups, s_filter,
                                                          imtls, gsims)):
@@ -71,7 +71,9 @@ class CalcHazardTest(unittest.TestCase):
                 pcea += pcec
             pce_list.append(pcec)
 
+        # Classical calculation
         res = hc.calc_hazard_curves(groups, s_filter, imtls, gsims)
+
         # Compute samples of the Hermite polynomial
         csi = numpy.random.normal(loc=0.0, scale=1.0, size=num_samples)
         hercoef = get_hermite(csi)
@@ -91,7 +93,6 @@ class CalcHazardTest(unittest.TestCase):
         std_mc = numpy.std(hcmc, axis=0)
 
         if PLOTTING:
-
             import matplotlib.pyplot as plt
             _ = plt.figure(figsize=(10, 8))
 
@@ -104,15 +105,16 @@ class CalcHazardTest(unittest.TestCase):
                     plt.plot(imtls[key], curves[rlz, :], ':', alpha=0.5,
                              color='grey')
 
+            # Ratio of standard deviation from MC and from PCE
             print(std_mc / numpy.std(curves, axis=0))
 
-            plt.plot(imtls[key], pcea[0, :, 0, 0], '--sr', label='all', lw=4)
-            plt.plot(imtls[key], pce_list[0][0, :, 0, 0], '--x', label='pce')
-            tmp = - numpy.log(1.-res[key][0])
-            plt.plot(imtls['SA(0.01)'], tmp, ':o', label='standard')
+            plt.plot(imtls[key], pcea[0, :, 0, 0], '--sr', label='pc 0', lw=4)
+            # plt.plot(imtls[key], pce_list[0][0, :, 0, 0], '--x', label='pce')
+            plt.plot(imtls['SA(0.01)'], mean_mc, ':o', label='mean_mc')
             plt.xscale('log')
             plt.yscale('log')
             plt.xlabel('IMLs')
             plt.ylabel('PoE')
             plt.grid(which='both')
+            plt.legend()
             plt.show()
