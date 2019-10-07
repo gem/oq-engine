@@ -944,14 +944,15 @@ def fast_agg2(tags, values=None, axis=0):
 
 def fast_agg3(structured_array, kfield, vfields):
     """
-    Aggregate a structured array with an index field (the kfield)
+    Aggregate a structured array with a key field (the kfield)
     and some value fields (the vfields).
     """
     allnames = structured_array.dtype.names
     assert kfield in allnames, kfield
     for vfield in vfields:
         assert vfield in allnames, vfield
-    indices = structured_array[kfield]
+    tags = structured_array[kfield]
+    uniq, indices = numpy.unique(tags, return_inverse=True)
     uniq = numpy.unique(indices)
     dic = {}
     dtlist = [(kfield, structured_array.dtype[kfield])]
@@ -959,7 +960,7 @@ def fast_agg3(structured_array, kfield, vfields):
         dic[name] = fast_agg(indices, structured_array[name])
         dtlist.append((name, structured_array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
-    res[kfield] = uniq
+    res[kfield] = tags[uniq]
     for name in dic:
         res[name] = dic[name]
     return res
