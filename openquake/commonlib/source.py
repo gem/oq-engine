@@ -303,6 +303,18 @@ class CompositionInfo(object):
             self.__class__.__name__, '\n'.join(summary))
 
 
+def get_maxweight(trt_sources, weight, concurrent_tasks,
+                  minweight=MINWEIGHT):
+    """
+    Return an appropriate maxweight for use in the block_splitter
+    """
+    totweight = sum(s.weight for trt, sources, atomic in trt_sources
+                    for s in sources)
+    ct = concurrent_tasks or 1
+    mw = math.ceil(totweight / ct)
+    return max(mw, minweight)
+
+
 class CompositeSourceModel(collections.abc.Sequence):
     """
     :param source_model_lt:
@@ -387,15 +399,6 @@ class CompositeSourceModel(collections.abc.Sequence):
         new.info.update_eff_ruptures(new.get_num_ruptures())
         return new
 
-    def get_weight(self, trt_sources, weight=operator.attrgetter('weight')):
-        """
-        :param weight: source weight function
-        :returns: total weight of the source model
-        """
-        # NB: I am looking at .trt_sources to count the weight coming
-        # from duplicated sources correctly
-        return sum(weight(s) for trt, sources in trt_sources for s in sources)
-
     @property
     def src_groups(self):
         """
@@ -432,21 +435,21 @@ class CompositeSourceModel(collections.abc.Sequence):
     def get_trt_sources(self, optimize_dupl=False):
         """
         :param optimize_dupl: if True change src_group_id to a list
-        :returns: a list of pairs [(trt, group of sources)]
+        :returns: a list of triples [(trt, group of sources, atomic flag)]
         """
         atomic = []
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
                 if grp and grp.atomic:
-                    atomic.append((grp.trt, grp))
+                    atomic.append((grp.trt, grp, True))
                 elif grp:
                     acc[grp.trt].extend(grp)
         if not acc:
             return atomic
         elif not hasattr(grp.sources[0], 'checksum') or not optimize_dupl:
             # for UCERF or for event_based
-            return atomic + list(acc.items())
+            return atomic + [kv + (False,) for kv in acc.items()]
         # extract a single source from multiple sources with the same ID
         dic = {}
         key = operator.attrgetter('source_id', 'checksum')
@@ -459,7 +462,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 if len(srcs) > 1 and not isinstance(src.src_group_id, list):
                     src.src_group_id = [s.src_group_id for s in srcs]
                 dic[trt].append(src)
-        return atomic + list(dic.items())
+        return atomic + [kv + (False,) for kv in acc.items()]
 
     def get_num_ruptures(self):
         """
@@ -479,16 +482,6 @@ class CompositeSourceModel(collections.abc.Sequence):
             nr = src.num_ruptures
             src.serial = serial
             serial += nr
-
-    def get_maxweight(self, trt_sources, weight, concurrent_tasks,
-                      minweight=MINWEIGHT):
-        """
-        Return an appropriate maxweight for use in the block_splitter
-        """
-        totweight = self.get_weight(trt_sources, weight)
-        ct = concurrent_tasks or 1
-        mw = math.ceil(totweight / ct)
-        return max(mw, minweight)
 
     def get_floating_spinning_factors(self):
         """

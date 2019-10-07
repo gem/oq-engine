@@ -75,7 +75,7 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
         a dictionary of numpy arrays of shape (L, R)
     """
     L = len(crmodel.lti)
-    epspath = param['epspath']
+    tempname = param['tempname']
     for ri in riskinputs:
         with monitor('getting hazard'):
             ri.hazard_getter.init()
@@ -96,7 +96,7 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
         # update the result dictionary and the agg array with each output
-        for out in ri.gen_outputs(crmodel, monitor, epspath, hazard):
+        for out in ri.gen_outputs(crmodel, monitor, tempname, hazard):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
@@ -186,7 +186,7 @@ class EbrCalculator(base.RiskCalculator):
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.riskinputs = self.build_riskinputs('gmf')
-        self.param['epspath'] = riskinput.cache_epsilons(
+        self.param['tempname'] = riskinput.cache_epsilons(
             self.datastore, oq, self.assetcol, self.crmodel, self.E)
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
@@ -300,7 +300,6 @@ class EbrCalculator(base.RiskCalculator):
         Build aggregate loss curves in process
         """
         dstore = self.datastore
-        self.before_export()  # set 'realizations'
         oq = self.oqparam
         stats = self.param['stats']
         # store avg_losses-stats

@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import abc
 import sys
+import copy
 import time
 import numpy
 
@@ -151,12 +152,13 @@ class ContextMaker(object):
         self.maximum_distance = (
             param.get('maximum_distance') or IntegrationDistance({}))
         self.trunclevel = param.get('truncation_level')
-        self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        self.collapse_factor = param.get('collapse_factor', 2)
+        self.pointsource_distance = param.get('pointsource_distance')
         filter_distance = param.get('filter_distance')
         if filter_distance is None:
             if 'rrup' in self.REQUIRES_DISTANCES:
@@ -296,12 +298,15 @@ class ContextMaker(object):
                     dctx_ = dctx.roundup(gsim.minimum_distance)
                     mean_std[i] = gsim.get_mean_std(sctx, rup, dctx_, imts)
             with self.poe_mon:
-                for sid, pne in self._make_pnes(rup, sctx.sids, mean_std):
-                    pcurve = poemap.setdefault(sid, rup_indep)
-                    if rup_indep:
-                        pcurve.array *= pne
-                    else:
-                        pcurve.array += (1.-pne) * rup.weight
+                pairs = zip(sctx.sids, self._make_pnes(rup, mean_std))
+                # _make_pnes is heavy, the part below is fast
+                if rup_indep:
+                    for sid, pne in pairs:
+                        poemap.setdefault(sid, rup_indep).array *= pne
+                else:
+                    for sid, pne in pairs:
+                        poemap.setdefault(sid, rup_indep).array += (
+                            1.-pne) * rup.weight
             nrups += 1
             nsites += len(sctx)
             if fewsites:  # store rupdata
@@ -311,22 +316,49 @@ class ContextMaker(object):
         poemap.data = rupdata.data
         return poemap
 
+    # NB: it is important for this to be fast since it is inside an inner loop
+    def _make_pnes(self, rupture, mean_std):
+        imtls = self.imtls
+        nsites = mean_std.shape[2]
+        poes = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
+        for g, gsim in enumerate(self.gsims):
+            for m, imt in enumerate(imtls):
+                if not (hasattr(gsim, 'weight') and gsim.weight[imt] == 0):
+                    # set by the engine when parsing the gsim logictree;
+                    # when 0 ignore the gsim: see _build_trts_branches
+                    poes[:, imtls(imt), g] = gsim.get_poes(
+                        mean_std[g, :, :, m], imtls[imt], self.trunclevel)
+        return rupture.get_probability_no_exceedance(poes)
+
     def _gen_rup_sites(self, src, sites):
-        # implements the pointsource_distance feature
-        pdist = self.pointsource_distance.get(src.tectonic_region_type)
-        if hasattr(src, 'location') and pdist:
-            close_sites, far_sites = sites.split(src.location, pdist)
-            if close_sites is None:  # all is far
-                for rup in src.iter_ruptures(False, False):
-                    yield rup, far_sites
-            elif far_sites is None:  # all is close
-                for rup in src.iter_ruptures(True, True):
-                    yield rup, close_sites
-            else:
-                for rup in src.iter_ruptures(True, True):
-                    yield rup, close_sites
-                for rup in src.iter_ruptures(False, False):
-                    yield rup, far_sites
+        # implements the collapse distance feature: the finite site effects
+        # are ignored for sites over collapse_factor x rupture_radius
+        loc = getattr(src, 'location', None)
+        if loc and src.count_nphc() > 1 and len(sites) > self.max_sites_disagg:
+            weights, depths = zip(*src.hypocenter_distribution.data)
+            loc = copy.copy(loc)  # average hypocenter used in sites.split
+            loc.depth = numpy.average(depths, weights=weights)
+            for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+                if self.pointsource_distance is None:
+                    # dynamically compute the pointsource distance
+                    max_dist = self.maximum_distance(
+                        src.tectonic_region_type, mag)
+                    p_radius = src._get_max_rupture_projection_radius(mag)
+                    psdist = min(self.collapse_factor * p_radius, max_dist)
+                else:  # legacy approach
+                    psdist = self.pointsource_distance
+                close_sites, far_sites = sites.split(loc, psdist)
+                if close_sites is None:  # all is far
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
+                        yield rup, far_sites
+                elif far_sites is None:  # all is close
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
+                        yield rup, close_sites
+                else:  # some sites are far, some are close
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
+                        yield rup, far_sites
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
+                        yield rup, close_sites
         else:
             for rup in src.iter_ruptures():
                 yield rup, sites
@@ -370,25 +402,6 @@ class ContextMaker(object):
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
         rdata['grp_id'] = numpy.uint16(gids)
         return pmap, rdata, calc_times
-
-    # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, sids, mean_std):
-        imtls = self.imtls
-        nsites = len(sids)
-        pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
-        for i, gsim in enumerate(self.gsims):
-            for m, imt in enumerate(imtls):
-                slc = imtls(imt)
-                if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
-                    # set by the engine when parsing the gsim logictree;
-                    # when 0 ignore the gsim: see _build_trts_branches
-                    pno = numpy.ones((nsites, slc.stop - slc.start))
-                else:
-                    poes = gsim.get_poes(
-                        mean_std[i, :, :, m], imtls[imt], self.trunclevel)
-                    pno = rupture.get_probability_no_exceedance(poes)
-                pne_array[:, slc, i] = pno
-        return zip(sids, pne_array)
 
 
 class BaseContext(metaclass=abc.ABCMeta):

@@ -3,8 +3,8 @@ Subduction backbone logic tree - 9 branch
 
 ============== ===================
 checksum32     347,202,642        
-date           2019-07-30T15:04:31
-engine_version 3.7.0-git3b3dff46da
+date           2019-10-02T10:07:29
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 2, num_levels = 8, num_rlzs = 9
@@ -62,54 +62,54 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=81, rlzs=9)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================================ ====== ==================== ============ ============
-source_model                     grp_id trt                  eff_ruptures tot_ruptures
-================================ ====== ==================== ============ ============
-PEERInterface_Characteristic.xml 0      Subduction Interface 1            1           
-================================ ====== ==================== ============ ============
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      2.00000   1            1.00000     
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-============ ====== ==== ============ ========= ========= ======= =====
-source_id    grp_id code num_ruptures calc_time num_sites weight  speed
-============ ====== ==== ============ ========= ========= ======= =====
-PEERS3C3_TOR 0      X    1            0.00164   2.00000   1.00000 609  
-============ ====== ==== ============ ========= ========= ======= =====
+============ ====== ==== ============ ========= ========= ============
+source_id    grp_id code num_ruptures calc_time num_sites eff_ruptures
+============ ====== ==== ============ ========= ========= ============
+PEERS3C3_TOR 0      X    1            0.00196   2.00000   1.00000     
+============ ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.00164   1     
+X    0.00196   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-preclassical       0.00223 NaN    0.00223 0.00223 1      
-read_source_models 0.02746 NaN    0.02746 0.02746 1      
+SourceReader       0.02950 NaN    0.02950 0.02950 1      
+preclassical       0.00238 NaN    0.00238 0.00238 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================= ========
-task               sent                                                    received
-preclassical       srcs=5.27 KB gsims=1.09 KB params=557 B srcfilter=220 B 342 B   
-read_source_models converter=314 B fnames=116 B                            5.71 KB 
-================== ======================================================= ========
+============ ======================================= ========
+task         sent                                    received
+SourceReader                                         8.29 KB 
+preclassical srcs=5.26 KB gsims=1.09 KB params=557 B 342 B   
+============ ======================================= ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_15543               time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 0.02746   0.0       1     
-total preclassical       0.00223   0.0       1     
-store source_info        0.00200   0.0       1     
-managing sources         0.00103   0.0       1     
-aggregate curves         1.421E-04 0.0       1     
-======================== ========= ========= ======
+====================== ========= ========= ======
+calc_29506             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.03995   0.0       1     
+total SourceReader     0.02950   0.0       1     
+total preclassical     0.00238   0.0       1     
+store source_info      0.00212   0.0       1     
+aggregate curves       1.929E-04 0.0       1     
+====================== ========= ========= ======

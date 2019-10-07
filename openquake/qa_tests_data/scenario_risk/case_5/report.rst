@@ -3,8 +3,8 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     3,193,187,389      
-date           2019-07-30T15:03:53
-engine_version 3.7.0-git3b3dff46da
+date           2019-10-02T10:07:11
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 8, num_levels = 106, num_rlzs = 1
@@ -57,14 +57,6 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Exposure model
 --------------
 =========== =
@@ -81,14 +73,24 @@ steel_spl    1.00000 0.0     1   1   3         3
 *ALL*        0.03704 0.20995 0   2   243       9         
 ============ ======= ======= === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_15488             time_sec memory_mb counts
+calc_29417             time_sec memory_mb counts
 ====================== ======== ========= ======
-ScenarioCalculator.run 0.15700  2.21875   1     
-building riskinputs    0.01166  0.0       1     
-saving gmfs            0.00508  0.0       1     
-reading exposure       0.00278  1.03125   1     
-computing gmfs         0.00257  0.42578   1     
+ScenarioCalculator.run 0.15104  0.60547   1     
+building riskinputs    0.01273  0.0       1     
+saving gmfs            0.00505  0.34375   1     
+computing gmfs         0.00404  0.06641   1     
+reading exposure       0.00288  0.0       1     
 ====================== ======== ========= ======

@@ -399,7 +399,7 @@ class ArrayWrapper(object):
             array, attrs = obj[()], dict(obj.attrs)
             shape_descr = attrs.get('shape_descr', [])
             for descr in map(decode, shape_descr):
-                attrs[descr] = ['?'] + list(attrs[descr])
+                attrs[descr] = list(attrs[descr])
         else:  # assume obj is an array
             array, attrs = obj, {}
         return cls(array, attrs, (extra,))
@@ -435,6 +435,12 @@ class ArrayWrapper(object):
         self.__init__(array, attrs)
 
     def __repr__(self):
+        if hasattr(self, 'shape_descr'):
+            assert len(self.shape) == len(self.shape_descr), (
+                self.shape_descr, self.shape)
+            lst = ['%s=%d' % (descr, size)
+                   for descr, size in zip(self.shape_descr, self.shape)]
+            return '<%s(%s)>' % (self.__class__.__name__, ', '.join(lst))
         return '<%s%s>' % (self.__class__.__name__, self.shape)
 
     @property
@@ -483,8 +489,8 @@ class ArrayWrapper(object):
 
         >>> from pprint import pprint
         >>> dic = dict(shape_descr=['taxonomy', 'occupancy'],
-        ...            taxonomy=['?', 'RC', 'WOOD'],
-        ...            occupancy=['?', 'RES', 'IND', 'COM'])
+        ...            taxonomy=['RC', 'WOOD'],
+        ...            occupancy=['RES', 'IND', 'COM'])
         >>> arr = numpy.zeros((2, 3))
         >>> arr[0, 0] = 2000
         >>> arr[0, 1] = 5000
@@ -513,7 +519,7 @@ class ArrayWrapper(object):
         tags = []
         idxs = []
         for i, tagname in enumerate(shape_descr):
-            values = getattr(self, tagname)[1:]
+            values = getattr(self, tagname)
             if len(values) != shape[i]:
                 raise ValueError(
                     'The tag %s with %d values is inconsistent with %s'

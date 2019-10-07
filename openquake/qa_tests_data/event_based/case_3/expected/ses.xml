@@ -12,7 +12,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <singlePlaneRupture
             id="1066"
-            multiplicity="4"
+            multiplicity="8"
             >
                 <stochasticEventSets>
                     <SES

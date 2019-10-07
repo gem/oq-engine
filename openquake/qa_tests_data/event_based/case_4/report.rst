@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 4
 
 ============== ===================
 checksum32     336,991,371        
-date           2019-07-30T15:03:51
-engine_version 3.7.0-git3b3dff46da
+date           2019-10-02T10:07:17
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -39,12 +39,20 @@ job_ini                 `job.ini <job.ini>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       5            0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -58,20 +66,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00191 NaN    0.00191 0.00191 1      
+SourceReader       0.00351 NaN    0.00351 0.00351 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=314 B fnames=101 B 1.48 KB 
-================== ============================ ========
+============ ==== ========
+task         sent received
+SourceReader      2.7 KB  
+============ ==== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_15474               time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.00191  0.0       1     
-======================== ======== ========= ======
+====================== ======== ========= ======
+calc_29468             time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.01372  0.0       1     
+total SourceReader     0.00351  0.0       1     
+====================== ======== ========= ======

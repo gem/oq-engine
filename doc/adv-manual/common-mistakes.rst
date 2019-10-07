@@ -72,7 +72,7 @@ It could very well be that using only 20 levels per each intensity
 measure type produces good enough results, while potentially
 reducing the computation time by a factor of 5.
 
-pointsource_distance
+collapse_factor
 ----------------------------
 
 PointSources (and MultiPointSources and AreaSources,
@@ -80,8 +80,10 @@ which are split into PointSources and therefore are effectively
 the same thing) have an hypocenter distribution and
 a nodal plane distribution, which are used to model the uncertainties on
 the hypocenter location and on the orientation of the underlying ruptures.
-Since PointSources produce rectangular surfaces, thery are really
-not pointwise for the engine.
+You should remember that for the engine point sources are not pointwise
+and they actually generate ruptures with rectangular surfaces, which size
+is dominated by the magnitude scaling relationship.
+
 Is the effect of the hypocenter/nodal planes distributions relevant?
 It depends on the calculation, but if you are interested in points that
 are far from the rupture the effect is minimal. So if you have a nodal
@@ -90,39 +92,35 @@ hypocenters, the engine will consider 20 x 5 ruptures and perform 100
 times more calculations than needed, since at large distance the hazard
 will be more or less the same for each rupture.
 
-To avoid this performance problem it is a good practice to set the
-``pointsource_distance`` parameter. For instance, setting
-
-``pointsource_distance = 50``
-
-means: for the points that are distant more than 50 km from the ruptures
-ignore the hypocenter and nodal plane distributions and consider only the
-first rupture in the distribution. This will give you a substantial speedup
-if your model is dominated by PointSources and there are several
+To avoid this performance problem there is a ``collapse_factor`` parameter
+which is a pure number, a multiple of the `rupture radius`_, with a default
+value of 2. It means that for the points that are distant more than 2 times
+the rupture radius from the ruptures the engine ignores the hypocenter and
+nodal plane distributions and consider only the first rupture in the
+distribution. For closer points instead all the ruptures are considered.
+This approximation can give a substantial speedup
+if the model is dominated by PointSources and there are several
 nodal planes/hypocenters in the distribution. In some situations it also
 makes sense to set
 
-``pointsource_distance = 0``
+``collapse_factor = 0``
 
 to completely remove the nodal plane/hypocenter distributions. For instance
 the Indonesia model has 20 nodal planes for each point sources; however such
 model uses the so-called `equivalent distance approximation`_ which considers
 the point sources to be really pointwise. In this case the contribution to
 the hazard is totally independent from the nodal plane and by using
-
-``pointsource_distance = 0``
-
-one can get *exactly* the same numbers and run the model in 1 hour instead
+``collapse_factor = 0`` one can get *exactly* the same numbers and run
+the model in 1 hour instead
 of 20 hours. Actually, starting from engine 3.3 the engine is smart enough to
 recognize the cases where the equivalent distance approximation is used and
-automatically set ``pointsource_distance = 0``.
+automatically set ``collapse_factor = 0``.
 
 Even if you not using the equivalent distance approximation, the
 effect of the nodal plane/hypocenter distribution can be negligible: I
-have seen case when setting setting ``pointsource_distance = 0``
-changed the result only by 0.1% and gained an order of magnitude of
-speedup. You have to check on a case by case basis.
-
+have seen case when setting setting ``collapse_factor = 0``
+changed the result in the hazard maps only by 0.1% and gained an order of
+magnitude of speedup. You have to check on a case by case basis.
 
 concurrent_tasks parameter
 ---------------------------
@@ -149,3 +147,4 @@ tasks. Again, it is best not to touch this parameter unless you know what
 you are doing.
 
 .. _equivalent distance approximation: equivalent_distance_approximation.rst
+.. _rupture radius: https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/source/point.py
