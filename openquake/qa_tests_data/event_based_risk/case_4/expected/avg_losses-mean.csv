@@ -1,3 +1,4 @@
+#,,,,"generated_by='OpenQuake engine 3.8.0-git406c50eb99', start_date='2019-10-02T16:13:52', checksum=39734555, investigation_time=10.0, risk_investigation_time=10.0"
 id,taxonomy,lon,lat,structural
 "a684","RC_LR",34.81906,37.05974,0.00000E+00
 "a124","RC_LR",27.31028,37.80813,0.00000E+00

@@ -173,6 +173,7 @@ class DataStore(collections.abc.MutableMapping):
                 self.calc_id = calc_id
             self.filename = os.path.join(
                 datadir, 'calc_%s.hdf5' % self.calc_id)
+        self.tempname = self.filename[:-5] + '_tmp.hdf5'
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         self.params = params
@@ -209,12 +210,6 @@ class DataStore(collections.abc.MutableMapping):
         """
         self._export_dir = value
 
-    def cachepath(self):
-        """
-        :returns: the path to the .hdf5 cache file associated to the calc_id
-        """
-        return os.path.join(self.datadir, 'cache_%d.hdf5' % self.calc_id)
-
     def getitem(self, name):
         """
         Return a dataset by using h5py.File.__getitem__
@@ -225,6 +220,8 @@ class DataStore(collections.abc.MutableMapping):
         """
         Enable the SWMR mode on the underlying HDF5 file
         """
+        self.close()  # flush everything
+        self.open('a')
         try:
             self.hdf5.swmr_mode = True
         except ValueError:  # already set

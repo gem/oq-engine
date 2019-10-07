@@ -38,6 +38,27 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
+KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
+                'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
+                'source_model_logic_tree', 'hazard_curves', 'insurance',
+                'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
+                'fragility', 'reqv', 'input_zip',
+                'nonstructural_vulnerability',
+                'nonstructural_fragility',
+                'nonstructural_consequence',
+                'structural_vulnerability',
+                'structural_fragility',
+                'structural_consequence',
+                'contents_vulnerability',
+                'contents_fragility',
+                'contents_consequence',
+                'business_interruption_vulnerability',
+                'business_interruption_fragility',
+                'business_interruption_consequence',
+                'structural_vulnerability_retrofitted',
+                'occupants_vulnerability',
+                }
+
 
 class OqParam(valid.ParamSet):
     siteparam = dict(
@@ -89,8 +110,6 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
-    insurance = valid.Param(valid.namelist, [])
-    multi_peril = valid.Param(valid.namelist, [])
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
@@ -102,20 +121,23 @@ class OqParam(valid.ParamSet):
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
-    max_hazard_curves = valid.Param(valid.boolean, False)
+    max = valid.Param(valid.boolean, False)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
-    std_hazard_curves = valid.Param(valid.boolean, False)
+    std = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
+    num_cores = valid.Param(valid.positiveint, None)
     num_epsilon_bins = valid.Param(valid.positiveint)
+    oversubmit = valid.Param(valid.boolean, False)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
+    pointsource_distance = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -150,7 +172,7 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    pointsource_distance = valid.Param(valid.maximum_distance, {})
+    collapse_factor = valid.Param(valid.positivefloat, 2)
     task_duration = valid.Param(valid.positiveint, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -183,9 +205,14 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
+        # support legacy names
         for name in list(names_vals):
             if name == 'quantile_hazard_curves':
                 names_vals['quantiles'] = names_vals.pop(name)
+            elif name == 'mean_hazard_curves':
+                names_vals['mean'] = names_vals.pop(name)
+            elif name == 'max':
+                names_vals['max'] = names_vals.pop(name)
         super().__init__(**names_vals)
         job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
@@ -198,6 +225,8 @@ class OqParam(valid.ParamSet):
                 'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
+        if 'pointsource_distance' in names_vals:
+            logging.warning('The pointsource_distance parameter is obsolete: you should removed it or use a collapse factor, see https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#collapse-factor')
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
@@ -251,6 +280,12 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([valid.gsim(self.gsim)])
+
+        # check inputs
+        unknown = set(self.inputs) - KNOWN_INPUTS
+        if unknown:
+            raise ValueError('Unknown key %s_file in %s' %
+                             (unknown.pop(), self.inputs['job_ini']))
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -307,11 +342,9 @@ class OqParam(valid.ParamSet):
                                  self.number_of_logic_tree_samples)
 
         # check grid + sites
-        if (self.region_grid_spacing and 'site_model' in self.inputs
-                and 'exposure' in self.inputs):
-            logging.warning(
-                'You are specifying a grid, a site model and an exposure at '
-                'the same time: consider using `oq prepare_site_model`')
+        if self.region_grid_spacing and ('sites' in self.inputs or self.sites):
+            raise ValueError('You are specifying grid and sites at the same '
+                             'time: which one do you want?')
 
     def check_gsims(self, gsims):
         """
@@ -484,7 +517,7 @@ class OqParam(valid.ParamSet):
         names = []
         for lt, _ in self.loss_dt_list():
             names.append(lt)
-        for name in self.insurance:
+        for name in self.inputs.get('insurance', []):
             names.append(lt + '_ins')
         return names
 
@@ -563,16 +596,16 @@ class OqParam(valid.ParamSet):
         """
         names = []  # name of statistical functions
         funcs = []  # statistical functions of kind func(values, weights)
-        if self.mean_hazard_curves:
+        if self.mean:
             names.append('mean')
             funcs.append(stats.mean_curve)
-        if self.std_hazard_curves:
+        if self.std:
             names.append('std')
             funcs.append(stats.std_curve)
         for q in self.quantiles:
             names.append('quantile-%s' % q)
             funcs.append(functools.partial(stats.quantile_curve, q))
-        if self.max_hazard_curves:
+        if self.max:
             names.append('max')
             funcs.append(stats.max_curve)
         return dict(zip(names, funcs))
@@ -598,12 +631,30 @@ class OqParam(valid.ParamSet):
         """
         return self.hazard_calculation_id if self.shakemap_id else True
 
+    def is_valid_truncation_level(self):
+        """
+        In presence of a correlation model the truncation level must be nonzero
+        """
+        if self.ground_motion_correlation_model:
+            return self.truncation_level != 0
+        else:
+            return True
+
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
         """
         if self.calculation_mode == 'disaggregation':
             return self.truncation_level is not None
+        else:
+            return True
+
+    def is_valid_aggregate_by(self):
+        """
+        aggregate_by is implemented only for the ebrisk calculator
+        """
+        if self.aggregate_by:
+            return self.calculation_mode == 'ebrisk'
         else:
             return True
 

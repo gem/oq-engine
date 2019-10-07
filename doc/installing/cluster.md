@@ -1,5 +1,7 @@
 # Running the OpenQuake Engine on multiple nodes (cluster configuration)
 
+This configuration is supported only by Linux.
+
 ## Overall architecture
 The nodes must all be able to communicate with the OpenQuake Engine *DbServer* and a *RabbitMQ* server.
 Both services run on a single "master" node. It is not necessary and not recommended to run *RabbitMQ* on a worker node and *Celery* on master node.
@@ -155,7 +157,7 @@ Cluster utilization: 0.00%
 
 OpenQuake 2.4 introduced the concept of _shared directory_ (aka _shared_dir_). This _shared directory_ allows the workers to read directly from the master's filesystem, thus increasing scalability and performance; starting with OpenQuake 3.3 this feature is **mandatory** on a multi-node deployment.
 
-The _shared directory_ must be exported from the master node to the workers via a _POSIX_ compliant filesystem (like **NFS**). The export may be (and _should_ be) exported and/or mounted as **read-only** by the workers.
+The _shared directory_ must be exported from the master node to the workers via a _POSIX_ compliant filesystem (**NFSv4** is recommended). The export may be (and _should_ be) exported and/or mounted as **read-only** by the workers.
 
 As soon as the shared export is in place, the `shared_dir` config parameter in `openquake.cfg` must be configured to point to the path of the exported dir on the _master_ node and to where the export is mounted on each _worker_ node.
 
