@@ -205,6 +205,14 @@ def view_ruptures_per_grp(token, dstore):
     return rst_table(agg)
 
 
+@view.add('eff_ruptures')
+def view_eff_ruptures(token, dstore):
+    header = ['num_ruptures', 'eff_ruptures']
+    info = dstore['source_info']['num_ruptures', 'eff_ruptures']
+    return rst_table([[info['num_ruptures'].sum(),
+                       info['eff_ruptures'].sum()]], header)
+
+
 @view.add('short_source_info')
 def view_short_source_info(token, dstore, maxrows=20):
     return rst_table(dstore['source_info'][:maxrows])
