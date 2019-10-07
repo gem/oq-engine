@@ -257,7 +257,8 @@ class ClassicalCalculator(base.HazardCalculator):
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            collapse_distance=oq.collapse_distance,
+            collapse_factor=oq.collapse_factor,
+            pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
             task_duration=td, maxweight=maxweight)
         logging.info(f'ruptures_per_task={maxweight}, '
