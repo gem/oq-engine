@@ -942,6 +942,29 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
+def fast_agg3(structured_array, kfield, vfields):
+    """
+    Aggregate a structured array with a key field (the kfield)
+    and some value fields (the vfields).
+    """
+    allnames = structured_array.dtype.names
+    assert kfield in allnames, kfield
+    for vfield in vfields:
+        assert vfield in allnames, vfield
+    tags = structured_array[kfield]
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    dic = {}
+    dtlist = [(kfield, structured_array.dtype[kfield])]
+    for name in vfields:
+        dic[name] = fast_agg(indices, structured_array[name])
+        dtlist.append((name, structured_array.dtype[name]))
+    res = numpy.zeros(len(uniq), dtlist)
+    res[kfield] = uniq
+    for name in dic:
+        res[name] = dic[name]
+    return res
+
+
 def count(groupiter):
     return sum(1 for row in groupiter)
 

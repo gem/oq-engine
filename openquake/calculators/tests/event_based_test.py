@@ -205,7 +205,10 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # check the rupture multiplicity
         [f] = export(('ruptures', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.xml', f)
+        self.assertEqualFiles('expected/ses.xml', f)
+
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', f)
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
@@ -351,6 +354,10 @@ class EventBasedTestCase(CalculatorTestCase):
         rupcoll = nrml.to_python(fname, RuptureConverter(1))
         self.assertEqual(list(rupcoll), [1])  # one group
         self.assertEqual(len(rupcoll[1]), 3)  # three EBRuptures
+
+        # check that GMFs are not stored
+        with self.assertRaises(KeyError):
+            self.calc.datastore['gmf_data']
 
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')

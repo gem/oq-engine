@@ -2,9 +2,9 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     2,583,369,442      
-date           2019-07-30T15:04:09
-engine_version 3.7.0-git3b3dff46da
+checksum32     43,259,339         
+date           2019-10-02T10:07:09
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 13, num_levels = 170, num_rlzs = 1
@@ -57,17 +57,9 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Estimated data transfer for the avglosses
 -----------------------------------------
-120 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 8 tasks = 7.5 KB
+120 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 20 tasks = 18.75 KB
 
 Exposure model
 --------------
@@ -91,10 +83,20 @@ MR/LWALL+DLO/HEX:1/YBET:1980-2010    1.00000 0.0     1   1   4         4
 *ALL*                                9.23077 9.16655 2   36  13        120       
 ==================================== ======= ======= === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ================ ======== ========= ======
-calc_15514       time_sec memory_mb counts
+calc_29403       time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00759  0.0       1     
+reading exposure 0.01199  0.26953   1     
 ================ ======== ========= ======

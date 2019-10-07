@@ -140,7 +140,9 @@ fast sources.
 """
 import os
 import re
+import ast
 import sys
+import gzip
 import time
 import socket
 import signal
@@ -163,12 +165,11 @@ except ImportError:
 from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
-    Monitor, memory_rss, init_performance, task_sent_dt)
+    Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp)
 
-cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
 submit = CallableDict()
 
@@ -221,6 +222,15 @@ def oq_distribute(task=None):
     return dist
 
 
+if False:  #config.general.compress
+    # must be a global config since every change requires a DbServer restart
+    compress = gzip.compress
+    decompress = gzip.decompress
+else:
+    compress = lambda x: x
+    decompress = lambda x: x
+
+
 class Pickled(object):
     """
     An utility to manually pickling/unpickling objects.
@@ -235,7 +245,7 @@ class Pickled(object):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
         try:
-            self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+            self.pik = compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
         except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
 
@@ -250,7 +260,7 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
-        return pickle.loads(self.pik)
+        return pickle.loads(decompress(self.pik))
 
 
 def get_pickled_sizes(obj):
@@ -304,15 +314,18 @@ class Result(object):
     :param tb_str: traceback string (empty if there was no exception)
     :param msg: message string (default empty)
     """
-    func_args = ()
+    func = None
 
     def __init__(self, val, mon, tb_str='', msg='', count=0):
         if isinstance(val, dict):
             # store the size in bytes of the content
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
+            self.pik = Pickled(val)
         elif isinstance(val, tuple) and callable(val[0]):
-            self.func_args = val
-        self.pik = Pickled(val)
+            self.func = val[0]
+            self.pik = pickle_sequence(val[1:])
+        else:
+            self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
@@ -471,10 +484,13 @@ class IterResult(object):
                 # this happens with WorkerLostError with celery
                 raise result
             elif isinstance(result, Result):
-                val = result.get()
-                self.received.append(len(result.pik))
-                if hasattr(result, 'nbytes'):
-                    self.nbytes += result.nbytes
+                if result.func:  # result contains subtask arguments
+                    self.received.append(sum(len(p) for p in result.pik))
+                else:
+                    val = result.get()
+                    self.received.append(len(result.pik))
+                    if hasattr(result, 'nbytes'):
+                        self.nbytes += result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
             if sys.platform != 'darwin':
@@ -485,10 +501,15 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            if not result.func_args:  # real output
+            if not result.func:  # real output
+                task_sent = ast.literal_eval(self.h5['task_sent'][()])
+                task_sent.update(self.sent)
+                del self.h5['task_sent']
+                self.h5['task_sent'] = str(task_sent)
                 name = result.mon.operation[6:]  # strip 'total '
                 result.mon.save_task_info(self.h5, result, name, mem_gb)
                 result.mon.flush(self.h5)
+                self.h5.flush()
                 yield val
 
     def __iter__(self):
@@ -500,8 +521,6 @@ class IterResult(object):
         try:
             yield from self._iter()
         finally:
-            sent = numpy.array(list(self.sent.items()), task_sent_dt)
-            hdf5.extend(self.h5['task_sent'], sent)
             tot = sum(self.received)
             max_per_output = max(self.received) if self.received else 0
             logging.info(
@@ -565,6 +584,8 @@ def getargnames(task_func):
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
+    num_cores = multiprocessing.cpu_count()
+    oversubmit = False
 
     @classmethod
     def init(cls, poolsize=None, distribute=None):
@@ -602,7 +623,7 @@ class Starmap(object):
             del cls.dask_client
 
     @classmethod
-    def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
+    def apply(cls, task, args, concurrent_tasks=None,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               distribute=None, progress=logging.info, h5=None,
@@ -622,7 +643,7 @@ class Starmap(object):
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
         :param h5: an open hdf5.File where to store the performance info
-        :param num_cores: the number of available cores (or None)
+        :param num_cores: the number of available cores
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
@@ -631,6 +652,8 @@ class Starmap(object):
             taskargs = ((blk,) + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
+            if concurrent_tasks is None:
+                concurrent_tasks = cls.num_cores * 2
             taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(
@@ -654,8 +677,8 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
-        self.num_cores = num_cores
-        self.queue = []
+        self.num_cores = num_cores or self.__class__.num_cores
+        self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
         except TypeError:  # generators have no len
@@ -678,22 +701,24 @@ class Starmap(object):
         """
         Log the progress of the computation in percentage
         """
-        total = len(self.tasks)
-        done = total - self.todo
+        submitted = len(self.tasks)
+        queued = len(self.task_queue)
+        total = submitted + queued
+        done = submitted - self.todo
         percent = int(float(done) / total * 100)
         fname = self.task_func.__name__
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
             nbytes = sum(self.sent[fname].values())
-            self.progress('Sent %s of data in %d %s task(s)',
-                          humansize(nbytes), total, self.name)
+            self.progress('%s %s sent, %d tasks submitted, %d queued',
+                          self.name, humansize(nbytes), submitted, queued)
         elif percent > self.prev_percent:
-            self.progress('%s %3d%% [of %d tasks]',
-                          self.name, percent, len(self.tasks))
+            self.progress('%s %3d%% [%d tasks submitted, %d queued]',
+                          self.name, percent, submitted, queued)
             self.prev_percent = percent
         return done
 
-    def submit(self, *args, func=None, monitor=None):
+    def submit(self, args, func=None, monitor=None):
         """
         Submit the given arguments to the underlying task
         """
@@ -704,10 +729,12 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-        assert not isinstance(args[-1], Monitor)  # sanity check
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
-            args = pickle_sequence(args)
+            pickled = isinstance(args[0], Pickled)
+            if not pickled:
+                assert not isinstance(args[-1], Monitor)  # sanity check
+                args = pickle_sequence(args)
             if func is None:
                 fname = self.task_func.__name__
                 argnames = self.argnames[:-1]
@@ -723,11 +750,8 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
-        if self.num_cores is None:  # submit all tasks
-            for args in self.task_args:
-                self.submit(*args)
-        else:  # submit at most num_cores task
-            self.queue = [(self.task_func,) + args for args in self.task_args]
+        self.task_queue = [(self.task_func, args)
+                           for args in self.task_args]
         return self.get_results()
 
     def get_results(self):
@@ -746,12 +770,23 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
+    def _submit_many(self, queue, howmany):
+        for _ in range(howmany):
+            if queue:  # remove in FIFO order
+                func, args = queue[0]
+                del queue[0]
+                self.submit(args, func=func)
+                self.todo += 1
+                logging.debug('%d tasks todo, %d in queue',
+                              self.todo, len(queue))
+
     def _loop(self):
-        if self.queue:  # called from reduce_queue
-            first_args = self.queue[:self.num_cores]
-            self.queue = self.queue[self.num_cores:]
-            for func, *args in first_args:
-                self.submit(*args, func=func)
+        queue = self.task_queue
+        if queue:
+            first_args = queue[:self.num_cores]
+            queue = self.task_queue = queue[self.num_cores:]
+            for func, args in first_args:
+                self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
 
@@ -763,22 +798,18 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
-                if self.queue:
-                    func, *args = self.queue.pop()
-                    self.submit(*args, func=func)
-                    if self.queue:
-                        func, *args = self.queue.pop()
-                        self.submit(*args, func=func)
-                        self.todo += 1
-                    logging.debug('%d tasks in queue', len(self.queue))
-                else:
-                    self.todo -= 1
-                    logging.debug('%d tasks to do', self.todo)
+                self.todo -= 1
+                self._submit_many(
+                    queue, max(self.num_cores - self.todo, 1))
                 self.log_percent()
             elif res.msg:
                 logging.warning(res.msg)
-            elif res.func_args:  # add subtask
-                self.queue.append(res.func_args)
+            elif res.func:  # add subtask
+                queue.append((res.func, res.pik))
+                if self.todo < self.num_cores:
+                    self._submit_many(queue, self.num_cores - self.todo)
+                elif self.oversubmit:
+                    self._submit_many(queue, 1)
             else:
                 yield res
         self.log_percent()
@@ -786,7 +817,7 @@ class Starmap(object):
         self.tasks.clear()
 
 
-def sequential_apply(task, args, concurrent_tasks=cpu_count * 2,
+def sequential_apply(task, args, concurrent_tasks=Starmap.num_cores * 2,
                      weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks

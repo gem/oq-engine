@@ -109,7 +109,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
-        self.assertEqual(aw.stats, [b'mean'])
+        self.assertEqual(aw.stats, ['mean'])
         self.assertEqual(aw.array, numpy.float32([767.82324]))
 
         fnames = export(('agg_curves-stats', 'csv'), self.calc.datastore)
@@ -125,7 +125,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
-        # extract agg_curves
+        # extract agg_curves, no tags
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1')
         tmp = gettemp(rst_table(aw.to_table()))
@@ -147,6 +147,31 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_curves4.csv', tmp)
 
         # TODO: fix extract agg_curves for insured types
+
+        # extract agg_curves with tags
+        self.run_calc(case_1.__file__, 'job_eb.ini',
+                      aggregate_by='policy,taxonomy',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+
+        aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
+                     'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
+        tmp = gettemp(rst_table(aw.to_table()))
+        self.assertEqualFiles('expected/agg_curves5.csv', tmp)
+
+        aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
+                     'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
+        tmp = gettemp(rst_table(aw.to_table()))
+        self.assertEqualFiles('expected/agg_curves6.csv', tmp)
+
+        aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
+                     'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
+        tmp = gettemp(rst_table(aw.to_table()))
+        self.assertEqualFiles('expected/agg_curves7.csv', tmp)
+
+        aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
+                     'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
+        tmp = gettemp(rst_table(aw.to_table()))
+        self.assertEqualFiles('expected/agg_curves8.csv', tmp)
 
     def test_case_1f(self):
         # vulnerability function with BT

@@ -3,8 +3,8 @@ Scenario Damage
 
 ============== ===================
 checksum32     711,595,636        
-date           2019-07-30T15:03:48
-engine_version 3.7.0-git3b3dff46da
+date           2019-10-02T10:07:14
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 26, num_rlzs = 1
@@ -56,14 +56,6 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Exposure model
 --------------
 =========== =
@@ -76,14 +68,24 @@ taxonomy mean    stddev min max num_sites num_assets
 Wood     1.00000 NaN    1   1   1         1         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_15459             time_sec  memory_mb counts
+calc_29445             time_sec  memory_mb counts
 ====================== ========= ========= ======
-ScenarioCalculator.run 0.05563   1.25000   1     
-saving gmfs            0.00372   0.0       1     
-building riskinputs    0.00210   0.0       1     
-computing gmfs         0.00191   0.0       1     
-reading exposure       6.120E-04 0.0       1     
+ScenarioCalculator.run 0.04642   0.0       1     
+saving gmfs            0.00314   0.0       1     
+building riskinputs    0.00214   0.0       1     
+computing gmfs         0.00138   0.0       1     
+reading exposure       5.865E-04 0.0       1     
 ====================== ========= ========= ======

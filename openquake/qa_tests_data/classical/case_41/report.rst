@@ -3,8 +3,8 @@ PEER 2015 Validation Project, Set 3, Test 3.1a as Characteristic Source w/SERA S
 
 ============== ===================
 checksum32     2,245,592,391      
-date           2019-08-15T17:07:15
-engine_version 3.7.0-git3bf6725555
+date           2019-10-02T10:07:34
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 2, num_levels = 12, num_rlzs = 6
@@ -12,7 +12,7 @@ num_sites = 2, num_levels = 12, num_rlzs = 6
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              1.0               
@@ -63,78 +63,54 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=36, rlzs=6)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============================== ====== ==================== ============ ============
-source_model                   grp_id trt                  eff_ruptures tot_ruptures
-============================== ====== ==================== ============ ============
-PEERBending_Characteristic.xml 0      Active Shallow Crust 1            1           
-============================== ====== ==================== ============ ============
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      2.00000   1            1.00000     
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-======================= ====== ==== ============ ========= ========= ============ =====
-source_id               grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-======================= ====== ==== ============ ========= ========= ============ =====
-PEERWestDipBendingFault 0      X    1            0.00981   2.00000   1.00000      101  
-======================= ====== ==== ============ ========= ========= ============ =====
+======================= ====== ==== ============ ========= ========= ============
+source_id               grp_id code num_ruptures calc_time num_sites eff_ruptures
+======================= ====== ==== ============ ========= ========= ============
+PEERWestDipBendingFault 0      X    1            0.00250   2.00000   1.00000     
+======================= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.00981   1     
+X    0.00250   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-====================== ======= ========= ======= ======= =======
-operation-duration     mean    stddev    min     max     outputs
-build_hazard           0.00809 1.704E-04 0.00797 0.00821 2      
-classical_split_filter 0.01487 NaN       0.01487 0.01487 1      
-read_source_models     0.00946 NaN       0.00946 0.00946 1      
-====================== ======= ========= ======= ======= =======
-
-Fastest task
-------------
-taskno=0, eff_ruptures=1, eff_sites=2, duration=0 s
-sources="PEERWestDipBendingFault"
-
-Slowest task
-------------
-taskno=0, eff_ruptures=1, eff_sites=2, duration=0 s
-sources="PEERWestDipBendingFault"
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+SourceReader       0.01190 NaN    0.01190 0.01190 1      
+preclassical       0.00303 NaN    0.00303 0.00303 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-====================== ============================================================================== ========
-task                   sent                                                                           received
-build_hazard           pgetter=856 B hstats=130 B max_sites_disagg=28 B N=28 B individual_curves=26 B 1.04 KB 
-classical_split_filter srcs=7.29 KB gsims=3.88 KB params=660 B srcfilter=219 B                        2.39 KB 
-read_source_models     converter=314 B fnames=112 B                                                   7.74 KB 
-====================== ============================================================================== ========
+============ ======================================= ========
+task         sent                                    received
+SourceReader                                         10.6 KB 
+preclassical srcs=7.28 KB gsims=3.88 KB params=660 B 342 B   
+============ ======================================= ========
 
 Slowest operations
 ------------------
-============================ ========= ========= ======
-calc_94                      time_sec  memory_mb counts
-============================ ========= ========= ======
-ClassicalCalculator.run      3.43142   5.49219   1     
-export                       0.03384   0.11719   1     
-total build_hazard           0.01618   2.77344   2     
-total classical_split_filter 0.01487   2.22266   1     
-read PoEs                    0.01477   2.72656   2     
-aggregate curves             0.01239   0.08984   1     
-total read_source_models     0.00946   0.39062   1     
-make_contexts                0.00570   0.0       1     
-managing sources             0.00520   0.01562   1     
-filtering/splitting sources  0.00460   1.44531   1     
-store source_info            0.00409   0.05078   1     
-computing mean_std           0.00300   0.0       1     
-saving probability maps      0.00228   0.00391   1     
-saving statistics            0.00195   0.00781   2     
-compute stats                5.903E-04 0.0       2     
-get_poes                     5.381E-04 0.0       1     
-combine pmaps                2.306E-04 0.0       2     
-============================ ========= ========= ======
+====================== ========= ========= ======
+calc_29525             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.02478   0.0       1     
+total SourceReader     0.01190   0.0       1     
+total preclassical     0.00303   0.0       1     
+store source_info      0.00247   0.0       1     
+aggregate curves       2.480E-04 0.0       1     
+====================== ========= ========= ======

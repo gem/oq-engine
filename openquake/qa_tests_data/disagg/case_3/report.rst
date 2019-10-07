@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     3,490,620,350      
-date           2019-07-30T15:03:56
-engine_version 3.7.0-git3b3dff46da
+date           2019-10-02T10:07:13
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 200, num_rlzs = 6
@@ -64,65 +64,60 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=18, rlzs=6)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============================= ====== ==================== ============ ============
-source_model                  grp_id trt                  eff_ruptures tot_ruptures
-============================= ====== ==================== ============ ============
-source_model_test_complex.xml 0      Active Shallow Crust 2,308        2,308       
-source_model_test_point.xml   1      Active Shallow Crust 624          624         
-============================= ====== ==================== ============ ============
-
-============= =====
-#TRT models   2    
-#eff_ruptures 2,932
-#tot_ruptures 2,932
-============= =====
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      1.00000   2,308        2,308       
+1      4.00000   624          624         
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =======
-source_id grp_id code num_ruptures calc_time num_sites weight speed  
-========= ====== ==== ============ ========= ========= ====== =======
-f1        0      C    2,308        0.00494   2.00000   2,464  498,854
-p2        1      P    156          0.00220   1.00000   156    70,782 
-p3        1      P    156          1.926E-04 1.00000   156    809,791
-p1        1      P    156          1.662E-04 1.00000   156    938,754
-========= ====== ==== ============ ========= ========= ====== =======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+f1        0      C    2,308        0.00448   4.333E-04 2,308       
+p2        1      P    156          0.00287   0.00641   156         
+p1        1      P    156          0.00241   0.00641   156         
+p3        1      P    156          0.00186   0.00641   156         
+p4        1      P    156          0.00124   0.00641   156         
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    0.00494   1     
-P    0.00256   4     
+C    0.00448   1     
+P    0.00837   4     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-preclassical       0.00288 0.00105 0.00182 0.00393 3      
-read_source_models 0.04238 0.05704 0.00205 0.08271 2      
+SourceReader       0.05278 0.06288 0.00831 0.09725 2      
+preclassical       0.00301 0.00133 0.00151 0.00501 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ========================================================== ========
-task               sent                                                       received
-preclassical       params=6.8 KB srcs=6.31 KB gsims=1.41 KB srcfilter=1.07 KB 1.09 KB 
-read_source_models converter=628 B fnames=216 B                               6.27 KB 
-================== ========================================================== ========
+============ =========================================== ========
+task         sent                                        received
+SourceReader apply_unc=2.43 KB ltmodel=406 B fname=224 B 14.46 KB
+preclassical params=11.33 KB srcs=7.9 KB gsims=2.34 KB   1.67 KB 
+============ =========================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_15502               time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 0.08476   0.0       2     
-total preclassical       0.00863   0.54297   3     
-store source_info        0.00209   0.0       1     
-managing sources         0.00130   0.0       1     
-aggregate curves         4.241E-04 0.0       3     
-======================== ========= ========= ======
+====================== ======== ========= ======
+calc_29436             time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.11660  0.0       1     
+total SourceReader     0.10556  0.44531   2     
+total preclassical     0.01504  0.0       5     
+store source_info      0.00246  0.0       1     
+aggregate curves       0.00172  0.0       5     
+====================== ======== ========= ======

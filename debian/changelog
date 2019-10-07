@@ -1,4 +1,51 @@
   [Michele Simionato]
+  * If `ground_motion_fields=false` is set, the GMFs are not stored even
+    if `hazard_curves_from_gmfs=true`
+  * `oq show job_info` now works while the calculation is running
+  * Reduced the sent data transfer in ebrisk calculations
+  * Replaced the `pointsource_distance` concept with a `collapse_distance`
+  * Deprecated the old syntax for the `reqv` feature
+  * Added short aliases for hazard statistics `mean`, `max` and `std`
+  * Reduced substantially the memory occupation in the task queue
+  * Added an API `/extract/sources` and an experimental `oq plot sources`
+  * Added a check on valid input keys in the job.ini
+  * Fixed the check on dependent calculations
+  * Specifying at the same time both a grid and individual sites is an error
+
+  [Daniele Viganò]
+  * Docker containers rebased on CentOS 8
+  * Fixed an issue causing zombie `ssh` processes
+    when using `zmq` as task distribution mechanism
+  * Introduced support for RHEL/CentOS 8
+
+  [Michele Simionato]
+  * Added a check for no GMFs in event_based_risk
+  * Avoided transferring the site collection
+  * Storing the sources in TOML format
+
+python3-oq-engine (3.7.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Hiding calculations that fail before the pre-execute phase (for instance,
+    because of missing files); they already give a clear error
+  * Added an early check on truncation_level in presence of correlation model
+
+  [Guillaume Daniel]
+  * Implemented Ameri (2017) GMPE
+
+  [Michele Simionato]
+  * Changed the ruptures CSV exporter to use commas instead of tabs
+  * Added a check forbidding `aggregate_by` for non-ebrisk calculators
+  * Introduced a task queue
+  * Removed the `cache_XXX.hdf5` files by using the SWMR mode of h5py
+
+  [Kris Vanneste]
+  * Updated the coefficients table for the atkinson_2015 to the actual
+    values in the paper.
+
+  [Michele Simionato]
+  * Added an `/extract/agg_curves` API to extract both absolute and relative
+    loss curves from an ebrisk calculation
   * Changed `oq reset --yes` to remove oqdata/user only in single-user mode
   * Now the engine automatically sorts the user-provided intensity_measure_types
   * Optimized the aggregation by tag
@@ -104,6 +151,8 @@
   * Moved `max_sites_disagg` from openquake.cfg into the job.ini
   * Fixed a bug with the --config option: serialize_jobs could not be overridden
   * Implemented insured losses
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 26 Sep 2019 08:51:44 +0000
 
 python3-oq-engine (3.6.0-1~xenial01) xenial; urgency=low
 
