@@ -585,6 +585,7 @@ class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
     num_cores = multiprocessing.cpu_count()
+    oversubmit = False
 
     @classmethod
     def init(cls, poolsize=None, distribute=None):
@@ -807,6 +808,8 @@ class Starmap(object):
                 queue.append((res.func, res.pik))
                 if self.todo < self.num_cores:
                     self._submit_many(queue, self.num_cores - self.todo)
+                elif self.oversubmit:
+                    self._submit_many(queue, 1)
             else:
                 yield res
         self.log_percent()
