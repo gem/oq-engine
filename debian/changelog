@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * If `ground_motion_fields=false` is set, the GMFs are not stored even
+    if `hazard_curves_from_gmfs=true`
   * `oq show job_info` now works while the calculation is running
   * Reduced the sent data transfer in ebrisk calculations
   * Replaced the `pointsource_distance` concept with a `collapse_distance`
