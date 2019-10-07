@@ -119,6 +119,11 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)
 
+else:
+
+    def set_concurrent_tasks_default(calc):
+        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
+
 
 def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     """
@@ -339,8 +344,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         if OQ_DISTRIBUTE == 'zmq':
             logs.dbcmd('zmq_start')  # start zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
-        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-            set_concurrent_tasks_default(calc)
+        set_concurrent_tasks_default(calc)
         t0 = time.time()
         calc.run(exports=exports,
                  hazard_calculation_id=hazard_calculation_id, **kw)
