@@ -183,7 +183,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, **kw):
+    def run(self, pre_execute=True, concurrent_tasks=None, remove=False, **kw):
         """
         Run the calculation and return the exported outputs.
         """
@@ -227,8 +227,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.gmfs = None
                 readinput.eids = None
 
-                # cleanup epsilons, if any
-                if os.path.exists(self.datastore.tempname):
+                # remove temporary hdf5 file, if any
+                if os.path.exists(self.datastore.tempname) and remove:
                     os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
 
@@ -466,7 +466,7 @@ class HazardCalculator(BaseCalculator):
         elif self.__class__.precalc:
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
-            calc.run()
+            calc.run(remove=False)
             for name in ('csm param sitecol assetcol crmodel rlzs_assoc '
                          'policy_name policy_dict csm_info').split():
                 if hasattr(calc, name):
