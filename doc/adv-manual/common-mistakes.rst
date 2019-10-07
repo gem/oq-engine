@@ -72,7 +72,7 @@ It could very well be that using only 20 levels per each intensity
 measure type produces good enough results, while potentially
 reducing the computation time by a factor of 5.
 
-collapse_distance
+collapse_factor
 ----------------------------
 
 PointSources (and MultiPointSources and AreaSources,
@@ -92,7 +92,7 @@ hypocenters, the engine will consider 20 x 5 ruptures and perform 100
 times more calculations than needed, since at large distance the hazard
 will be more or less the same for each rupture.
 
-To avoid this performance problem there is a ``collapse_distance`` parameter
+To avoid this performance problem there is a ``collapse_factor`` parameter
 which is a pure number, a multiple of the `rupture radius`_, with a default
 value of 2. It means that for the points that are distant more than 2 times
 the rupture radius from the ruptures the engine ignores the hypocenter and
@@ -103,22 +103,22 @@ if the model is dominated by PointSources and there are several
 nodal planes/hypocenters in the distribution. In some situations it also
 makes sense to set
 
-``collapse_distance = 0``
+``collapse_factor = 0``
 
 to completely remove the nodal plane/hypocenter distributions. For instance
 the Indonesia model has 20 nodal planes for each point sources; however such
 model uses the so-called `equivalent distance approximation`_ which considers
 the point sources to be really pointwise. In this case the contribution to
 the hazard is totally independent from the nodal plane and by using
-``collapse_distance = 0`` one can get *exactly* the same numbers and run
+``collapse_factor = 0`` one can get *exactly* the same numbers and run
 the model in 1 hour instead
 of 20 hours. Actually, starting from engine 3.3 the engine is smart enough to
 recognize the cases where the equivalent distance approximation is used and
-automatically set ``collapse_distance = 0``.
+automatically set ``collapse_factor = 0``.
 
 Even if you not using the equivalent distance approximation, the
 effect of the nodal plane/hypocenter distribution can be negligible: I
-have seen case when setting setting ``collapse_distance = 0``
+have seen case when setting setting ``collapse_factor = 0``
 changed the result in the hazard maps only by 0.1% and gained an order of
 magnitude of speedup. You have to check on a case by case basis.
 

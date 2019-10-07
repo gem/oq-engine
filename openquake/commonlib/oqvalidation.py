@@ -136,6 +136,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
+    pointsource_distance = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -170,7 +171,7 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    collapse_distance = valid.Param(valid.positivefloat, 2)
+    collapse_factor = valid.Param(valid.positivefloat, 2)
     task_duration = valid.Param(valid.positiveint, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -224,7 +225,7 @@ class OqParam(valid.ParamSet):
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
         if 'pointsource_distance' in names_vals:
-            raise InvalidFile('%s: the pointsource_distance has been replaced by the collapse_distance, see https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#collapse-distance for an explanation' % job_ini)
+            logging.warning('The pointsource_distance parameter is obsolete: you should removed it or use a collapse factor, see https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#collapse-factor')
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
