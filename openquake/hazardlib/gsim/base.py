@@ -75,7 +75,7 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-def get_poes(mean_std, imls, truncation_level):
+def get_poes(mean_std, imls, truncation_level, gsims=None):
     """
     Calculate and return probabilities of exceedance (PoEs) of one or more
     intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -121,17 +121,16 @@ def get_poes(mean_std, imls, truncation_level):
         raise ValueError('truncation level must be zero, positive number '
                          'or None')
     mean, stddev = mean_std
-    mean = mean.reshape(mean.shape + (1, ))
-    stddev = stddev.reshape(stddev.shape + (1, ))
+    shp = mean.shape + (1,)
     with warnings.catch_warnings():
         # avoid RuntimeWarning: divide by zero encountered in log
         warnings.simplefilter("ignore")
         imls = numpy.log(imls)
 
     if truncation_level == 0:  # just compare imls to mean
-        return imls <= mean
+        return imls <= mean.reshape(shp)
     # else use real normal distribution
-    values = (imls - mean) / stddev
+    values = (imls - mean.reshape(shp)) / stddev.reshape(shp)
     if truncation_level is None:
         return _norm_sf(values)
     else:
