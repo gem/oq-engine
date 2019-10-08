@@ -75,17 +75,17 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-def get_poes(mean_std, imls, truncation_level, gsims=None):
+def get_poes(mean_std, imtls, truncation_level, gsims=None):
     """
     Calculate and return probabilities of exceedance (PoEs) of one or more
     intensity measure levels (IMLs) of one intensity measure type (IMT)
     for one or more pairs "site -- rupture".
 
     :param mean_std:
-        An array of shape (2, N) with mean and standard deviation for
+        An array of shape (2, N, M) with mean and standard deviation for
         the current intensity measure type
-    :param imls:
-        Logarithms of interested intensity measure levels
+    :param imtls:
+        A DictArray imt -> logs of intensity measure levels
     :param truncation_level:
         Can be ``None``, which means that the distribution of intensity
         is treated as Gaussian distribution with possible values ranging
@@ -120,17 +120,23 @@ def get_poes(mean_std, imls, truncation_level, gsims=None):
     if truncation_level is not None and truncation_level < 0:
         raise ValueError('truncation level must be zero, positive number '
                          'or None')
-    mean, stddev = mean_std
-    shp = mean.shape + (1,)
-    if truncation_level == 0:  # just compare imls to mean
-        return imls <= mean.reshape(shp)
-
-    # else use real normal distribution
-    values = (imls - mean.reshape(shp)) / stddev.reshape(shp)
-    if truncation_level is None:
-        return _norm_sf(values)
+    mean, stddev = mean_std  # shape (N, M) each
+    N, L = len(mean), len(imtls.array)
+    out = numpy.zeros((N, L))
+    lvl = 0
+    for m, imt in enumerate(imtls):
+        for iml in imtls[imt]:
+            if truncation_level == 0:  # just compare imls to mean
+                out[:, lvl] = imtls[imt] <= mean[:, m]
+            else:
+                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
+            lvl += 1
+    if truncation_level == 0:
+        return out
+    elif truncation_level is None:
+        return _norm_sf(out)
     else:
-        return _truncnorm_sf(truncation_level, values)
+        return _truncnorm_sf(truncation_level, out)
 
 
 class MetaGSIM(abc.ABCMeta):
