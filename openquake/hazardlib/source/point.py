@@ -166,7 +166,6 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        print('>>>>>', kwargs)
         shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             yield from self.gen_ruptures(mag, mag_occ_rate, collapse=False,
