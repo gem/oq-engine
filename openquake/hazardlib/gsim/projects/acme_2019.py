@@ -254,12 +254,9 @@ class AlAtikSigmaModel(GMPE):
         where D_sigma = 80 bars (8 MPa)
         """
         D_sigma = 80
-
         cornerf = 10**(-1.884 - np.log10(D_sigma)/3 + 0.5*mag)
-
         if cornerf < 1.0:
             cornerf = 1.0
-
         return cornerf
 
     def get_capping_frequency(self, cornerf, gmpe):
@@ -267,12 +264,10 @@ class AlAtikSigmaModel(GMPE):
         Capping frequency is the smaller of the corner frequency and the
         max period of coefficents provided by the GMPE
         """
-
         try:
             highest_period = max(gmpe.COEFFS.sa_coeffs.keys()).period
         except AttributeError:
             highest_period = max(gmpe.TAB2.sa_coeffs.keys()).period
-
         cappingf = min(highest_period, cornerf)
         return(cappingf)
 
