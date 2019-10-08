@@ -254,7 +254,7 @@ def _digitize_lons(lons, lon_bins):
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.nofilter, filter_distance='rjb'):
+        source_filter=filters.nofilter, filter_distance='rjb', **kwargs):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
@@ -337,7 +337,7 @@ def disaggregation(
              'filter_distance': filter_distance, 'imtls': {str(imt): [iml]}})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
-        rdata = contexts.RupData(cmaker).from_srcs(srcs, sitecol)
+        rdata = contexts.RupData(cmaker, **kwargs).from_srcs(srcs, sitecol)
         idxs = _site_indices(rdata['sid_'], 1)[0]
         bdata[trt] = _disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
 
