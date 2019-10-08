@@ -356,7 +356,7 @@ class UCERFSource(BaseSeismicSource):
 
         return rupture
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         Yield ruptures for the current set of indices
         """
