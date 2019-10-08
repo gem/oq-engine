@@ -301,10 +301,11 @@ class ContextMaker(object):
             except FarAwayRupture:
                 continue
             with self.gmf_mon:
-                mean_std = numpy.zeros((G, 2, len(sctx), M))
-                for i, gsim in enumerate(self.gsims):
+                mean_std = numpy.zeros((2, len(sctx), M, G))
+                for g, gsim in enumerate(self.gsims):
                     dctx_ = dctx.roundup(gsim.minimum_distance)
-                    mean_std[i] = gsim.get_mean_std(sctx, rup, dctx_, imts)
+                    mean_std[:, :, :, g] = gsim.get_mean_std(
+                        sctx, rup, dctx_, imts)
             with self.poe_mon:
                 pairs = zip(sctx.sids, self._make_pnes(rup, mean_std))
                 # _make_pnes is heavy, the part below is fast
@@ -327,10 +328,8 @@ class ContextMaker(object):
     # NB: it is important for this to be fast since it is inside an inner loop
     def _make_pnes(self, rupture, mean_std):
         ll = self.loglevels
-        nsites = mean_std.shape[2]
-        poes = numpy.zeros((nsites, len(ll.array), len(self.gsims)))
+        poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
         for g, gsim in enumerate(self.gsims):
-            poes[:, :, g] = gsim.get_poes(mean_std[g], ll, self.trunclevel)
             for m, imt in enumerate(ll):
                 if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
                     # set by the engine when parsing the gsim logictree;

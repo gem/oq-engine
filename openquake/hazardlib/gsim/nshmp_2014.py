@@ -121,27 +121,6 @@ def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
 DEFAULT_WEIGHTING = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
 
 
-def get_weighted_poes(gsim, mean_std, imtls, truncation_level,
-                      weighting=DEFAULT_WEIGHTING):
-    """
-    This function implements the NGA West 2 GMPE epistemic uncertainty
-    adjustment factor without re-calculating the actual GMPE each time.
-
-    :param gsim:
-        Instance of the GMPE
-    :param list weighting:
-        Weightings as a list of tuples of (weight, number standard deviations
-        of the epistemic uncertainty adjustment)
-    """
-    mean = np.array(mean_std[0])  # make a copy, shape (N, M)
-    output = np.zeros([len(mean), len(imtls.array)])
-    for w, s in weighting:
-        for m in range(len(imtls)):
-            mean_std[0, :, m] = mean[:, m] + s * gsim.adjustment
-        output += base.get_poes(mean_std, imtls, truncation_level) * w
-    return output
-
-
 class AbrahamsonEtAl2014NSHMPUpper(AbrahamsonEtAl2014):
     """
     Implements the positive NSHMP adjustment factor for the Abrahamson et al.
@@ -164,7 +143,7 @@ class AbrahamsonEtAl2014NSHMPMean(AbrahamsonEtAl2014):
     weighted mean case
     """
     get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
+    ns_weights = DEFAULT_WEIGHTING
 
 
 class BooreEtAl2014NSHMPUpper(BooreEtAl2014):
@@ -196,7 +175,7 @@ class BooreEtAl2014NSHMPMean(BooreEtAl2014):
     # See similar comment above
     REQUIRES_DISTANCES = set(("rjb", "rrup"))
     get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
+    ns_weights = DEFAULT_WEIGHTING
 
 
 class CampbellBozorgnia2014NSHMPUpper(CampbellBozorgnia2014):
@@ -221,7 +200,7 @@ class CampbellBozorgnia2014NSHMPMean(CampbellBozorgnia2014):
     weighted mean case
     """
     get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
+    ns_weights = DEFAULT_WEIGHTING
 
 
 class ChiouYoungs2014NSHMPUpper(ChiouYoungs2014):
@@ -246,7 +225,7 @@ class ChiouYoungs2014NSHMPMean(ChiouYoungs2014):
     weighted mean case
     """
     get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
+    ns_weights = DEFAULT_WEIGHTING
 
 
 class Idriss2014NSHMPUpper(Idriss2014):
@@ -271,4 +250,4 @@ class Idriss2014NSHMPMean(Idriss2014):
     weighted mean case
     """
     get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
+    ns_weights = DEFAULT_WEIGHTING
