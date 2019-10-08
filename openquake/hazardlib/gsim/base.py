@@ -75,6 +75,69 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
+def get_poes(mean_std, imtls, truncation_level, gsims=None):
+    """
+    Calculate and return probabilities of exceedance (PoEs) of one or more
+    intensity measure levels (IMLs) of one intensity measure type (IMT)
+    for one or more pairs "site -- rupture".
+
+    :param mean_std:
+        An array of shape (2, N, M) with mean and standard deviation for
+        the current intensity measure type
+    :param imtls:
+        A DictArray imt -> logs of intensity measure levels
+    :param truncation_level:
+        Can be ``None``, which means that the distribution of intensity
+        is treated as Gaussian distribution with possible values ranging
+        from minus infinity to plus infinity.
+
+        When set to zero, the mean intensity is treated as an exact
+        value (standard deviation is not even computed for that case)
+        and resulting array contains 0 in places where IMT is strictly
+        lower than the mean value of intensity and 1.0 where IMT is equal
+        or greater.
+
+        When truncation level is positive number, the intensity
+        distribution is processed as symmetric truncated Gaussian with
+        range borders being ``mean - truncation_level * stddev`` and
+        ``mean + truncation_level * stddev``. That is, the truncation
+        level expresses how far the range borders are from the mean
+        value and is defined in units of sigmas. The resulting PoEs
+        for that mode are values of complementary cumulative distribution
+        function of that truncated Gaussian applied to IMLs.
+
+    :returns:
+        A dictionary of the same structure as parameter ``imts`` (see
+        above). Instead of lists of IMLs values of the dictionaries
+        have 2d numpy arrays of corresponding PoEs, first dimension
+        represents sites and the second represents IMLs.
+
+    :raises ValueError:
+        If truncation level is not ``None`` and neither non-negative
+        float number, and if ``imts`` dictionary contain wrong or
+        unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
+    """
+    if truncation_level is not None and truncation_level < 0:
+        raise ValueError('truncation level must be zero, positive number '
+                         'or None')
+    mean, stddev = mean_std  # shape (N, M) each
+    N, L = len(mean), len(imtls.array)
+    out = numpy.zeros((N, L))
+    for m, imt in enumerate(imtls):
+        imls = imtls[imt]
+        if truncation_level == 0:  # just compare imls to mean
+            out[:, imtls(imt)] = imls <= mean[:, m].reshape(N, 1)
+        else:
+            m, s = mean[:, m].reshape(N, 1), stddev[:, m].reshape(N, 1)
+            out[:, imtls(imt)] = (imls - m) / s
+    if truncation_level == 0:
+        return out
+    elif truncation_level is None:
+        return _norm_sf(out)
+    else:
+        return _truncnorm_sf(truncation_level, out)
+
+
 class MetaGSIM(abc.ABCMeta):
     """
     A metaclass converting set class attributes into frozensets, to avoid
@@ -190,6 +253,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     superseded_by = None
     non_verified = False
     experimental = False
+    get_poes = staticmethod(get_poes)
 
     @classmethod
     def __init_subclass__(cls):
@@ -291,65 +355,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             arr[0, :, m] = mean
             arr[1, :, m] = std
         return arr
-
-    def get_poes(self, mean_std, imls, truncation_level):
-        """
-        Calculate and return probabilities of exceedance (PoEs) of one or more
-        intensity measure levels (IMLs) of one intensity measure type (IMT)
-        for one or more pairs "site -- rupture".
-
-        :param mean_std:
-            An array of shape (2, N) with mean and standard deviation for
-            the current intensity measure type
-        :param imls:
-            List of interested intensity measure levels
-        :param truncation_level:
-            Can be ``None``, which means that the distribution of intensity
-            is treated as Gaussian distribution with possible values ranging
-            from minus infinity to plus infinity.
-
-            When set to zero, the mean intensity is treated as an exact
-            value (standard deviation is not even computed for that case)
-            and resulting array contains 0 in places where IMT is strictly
-            lower than the mean value of intensity and 1.0 where IMT is equal
-            or greater.
-
-            When truncation level is positive number, the intensity
-            distribution is processed as symmetric truncated Gaussian with
-            range borders being ``mean - truncation_level * stddev`` and
-            ``mean + truncation_level * stddev``. That is, the truncation
-            level expresses how far the range borders are from the mean
-            value and is defined in units of sigmas. The resulting PoEs
-            for that mode are values of complementary cumulative distribution
-            function of that truncated Gaussian applied to IMLs.
-
-        :returns:
-            A dictionary of the same structure as parameter ``imts`` (see
-            above). Instead of lists of IMLs values of the dictionaries
-            have 2d numpy arrays of corresponding PoEs, first dimension
-            represents sites and the second represents IMLs.
-
-        :raises ValueError:
-            If truncation level is not ``None`` and neither non-negative
-            float number, and if ``imts`` dictionary contain wrong or
-            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
-        """
-        if truncation_level is not None and truncation_level < 0:
-            raise ValueError('truncation level must be zero, positive number '
-                             'or None')
-        mean, stddev = mean_std
-        mean = mean.reshape(mean.shape + (1, ))
-        stddev = stddev.reshape(stddev.shape + (1, ))
-        imls = self.to_distribution_values(imls)
-        if truncation_level == 0:  # just compare imls to mean
-            return imls <= mean
-
-        # else use real normal distribution
-        values = (imls - mean) / stddev
-        if truncation_level is None:
-            return _norm_sf(values)
-        else:
-            return _truncnorm_sf(truncation_level, values)
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
