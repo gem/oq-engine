@@ -85,7 +85,7 @@ def get_poes(mean_std, imls, truncation_level, gsims=None):
         An array of shape (2, N) with mean and standard deviation for
         the current intensity measure type
     :param imls:
-        List of interested intensity measure levels
+        Logarithms of interested intensity measure levels
     :param truncation_level:
         Can be ``None``, which means that the distribution of intensity
         is treated as Gaussian distribution with possible values ranging
@@ -122,13 +122,9 @@ def get_poes(mean_std, imls, truncation_level, gsims=None):
                          'or None')
     mean, stddev = mean_std
     shp = mean.shape + (1,)
-    with warnings.catch_warnings():
-        # avoid RuntimeWarning: divide by zero encountered in log
-        warnings.simplefilter("ignore")
-        imls = numpy.log(imls)
-
     if truncation_level == 0:  # just compare imls to mean
         return imls <= mean.reshape(shp)
+
     # else use real normal distribution
     values = (imls - mean.reshape(shp)) / stddev.reshape(shp)
     if truncation_level is None:
