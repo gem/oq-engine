@@ -167,6 +167,8 @@ class PointSource(ParametricSeismicSource):
         and hypocenter depth.
         """
         shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
+
+        print(shift_hypo)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             yield from self.gen_ruptures(mag, mag_occ_rate, collapse=False,
                                          shift_hypo=shift_hypo)
