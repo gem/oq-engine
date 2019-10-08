@@ -164,6 +164,7 @@ class OqParam(valid.ParamSet):
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     shakemap_id = valid.Param(valid.nice_string, None)
+    shift_hypo = valid.Param(valid.boolean, False) 
     site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
