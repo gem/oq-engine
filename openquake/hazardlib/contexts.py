@@ -185,6 +185,7 @@ class ContextMaker(object):
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
+        self.shift_hypo = param.get('shift_hypo')
 
     def filter(self, sites, rupture):
         """
@@ -349,18 +350,22 @@ class ContextMaker(object):
                     psdist = self.pointsource_distance
                 close_sites, far_sites = sites.split(loc, psdist)
                 if close_sites is None:  # all is far
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1,
+                                                shift_hypo=self.shift_hypo):
                         yield rup, far_sites
                 elif far_sites is None:  # all is close
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0,
+                                                shift_hypo=self.shift_hypo):
                         yield rup, close_sites
                 else:  # some sites are far, some are close
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1,
+                                                shift_hypo=self.shift_hypo):
                         yield rup, far_sites
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0,
+                                                shift_hypo=self.shift_hypo):
                         yield rup, close_sites
         else:
-            for rup in src.iter_ruptures():
+            for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 yield rup, sites
 
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
