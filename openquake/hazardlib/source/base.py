@@ -324,7 +324,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         idx = numpy.random.choice(num_ruptures)
         # NOTE Would be nice to have a method generating a rupture given two
         # indexes, one for magnitude and one setting the position
-        for i, rup in enumerate(self.tures()):
+        for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
                 if hasattr(self, 'rup_id'):
                     rup.rup_id = self.rup_id
