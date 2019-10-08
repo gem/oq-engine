@@ -19,11 +19,13 @@ import abc
 import sys
 import copy
 import time
+import warnings
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, DictArray
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib.gsim import base
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -185,6 +187,12 @@ class ContextMaker(object):
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
+        self.loglevels = DictArray(self.imtls)
+        with warnings.catch_warnings():
+            # avoid RuntimeWarning: divide by zero encountered in log
+            warnings.simplefilter("ignore")
+            for imt, imls in self.imtls.items():
+                self.loglevels[imt] = numpy.log(imls)
 
     def filter(self, sites, rupture):
         """
@@ -318,16 +326,16 @@ class ContextMaker(object):
 
     # NB: it is important for this to be fast since it is inside an inner loop
     def _make_pnes(self, rupture, mean_std):
-        imtls = self.imtls
+        ll = self.loglevels
         nsites = mean_std.shape[2]
-        poes = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
+        poes = numpy.zeros((nsites, len(ll.array), len(self.gsims)))
         for g, gsim in enumerate(self.gsims):
-            for m, imt in enumerate(imtls):
-                if not (hasattr(gsim, 'weight') and gsim.weight[imt] == 0):
+            poes[:, :, g] = gsim.get_poes(mean_std[g], ll, self.trunclevel)
+            for m, imt in enumerate(ll):
+                if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
                     # set by the engine when parsing the gsim logictree;
                     # when 0 ignore the gsim: see _build_trts_branches
-                    poes[:, imtls(imt), g] = gsim.get_poes(
-                        mean_std[g, :, :, m], imtls[imt], self.trunclevel)
+                    poes[:, ll(imt), g] = 0
         return rupture.get_probability_no_exceedance(poes)
 
     def _gen_rup_sites(self, src, sites):
@@ -538,8 +546,7 @@ class RuptureContext(BaseContext):
             rupture occurrence causes a ground shaking value exceeding a
             ground motion level at a site. First dimension represent sites,
             second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :meth:`method
-            <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>
+            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>
         """
         if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
             # Uses the formula
