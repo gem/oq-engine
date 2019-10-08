@@ -143,7 +143,7 @@ class AbrahamsonEtAl2014NSHMPMean(AbrahamsonEtAl2014):
     weighted mean case
     """
     get_mean_and_stddevs = get_mean_and_stddevs
-    ns_weights = DEFAULT_WEIGHTING
+    weights_signs = DEFAULT_WEIGHTING
 
 
 class BooreEtAl2014NSHMPUpper(BooreEtAl2014):
@@ -175,7 +175,7 @@ class BooreEtAl2014NSHMPMean(BooreEtAl2014):
     # See similar comment above
     REQUIRES_DISTANCES = set(("rjb", "rrup"))
     get_mean_and_stddevs = get_mean_and_stddevs
-    ns_weights = DEFAULT_WEIGHTING
+    weights_signs = DEFAULT_WEIGHTING
 
 
 class CampbellBozorgnia2014NSHMPUpper(CampbellBozorgnia2014):
@@ -200,7 +200,7 @@ class CampbellBozorgnia2014NSHMPMean(CampbellBozorgnia2014):
     weighted mean case
     """
     get_mean_and_stddevs = get_mean_and_stddevs
-    ns_weights = DEFAULT_WEIGHTING
+    weights_signs = DEFAULT_WEIGHTING
 
 
 class ChiouYoungs2014NSHMPUpper(ChiouYoungs2014):
@@ -225,7 +225,7 @@ class ChiouYoungs2014NSHMPMean(ChiouYoungs2014):
     weighted mean case
     """
     get_mean_and_stddevs = get_mean_and_stddevs
-    ns_weights = DEFAULT_WEIGHTING
+    weights_signs = DEFAULT_WEIGHTING
 
 
 class Idriss2014NSHMPUpper(Idriss2014):
@@ -250,4 +250,4 @@ class Idriss2014NSHMPMean(Idriss2014):
     weighted mean case
     """
     get_mean_and_stddevs = get_mean_and_stddevs
-    ns_weights = DEFAULT_WEIGHTING
+    weights_signs = DEFAULT_WEIGHTING
