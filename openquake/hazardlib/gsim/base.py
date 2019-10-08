@@ -127,7 +127,7 @@ def get_poes(mean_std, imtls, truncation_level, gsims=None):
     for m, imt in enumerate(imtls):
         for iml in imtls[imt]:
             if truncation_level == 0:  # just compare imls to mean
-                out[:, lvl] = imtls[imt] <= mean[:, m]
+                out[:, lvl] = iml <= mean[:, m]
             else:
                 out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
