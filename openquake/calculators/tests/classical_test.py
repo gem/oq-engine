@@ -61,6 +61,11 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertIn('sent', info)
             self.assertIn('received', info)
 
+            slow = view('task:classical_split_filter:-1', self.calc.datastore)
+            self.assertIn('taskno', slow)
+            self.assertIn('duration', slow)
+            self.assertIn('sources', slow)
+
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
 
