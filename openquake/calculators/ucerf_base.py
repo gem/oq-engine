@@ -172,7 +172,6 @@ class UCERFSource(BaseSeismicSource):
     code = b'U'
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
-    RUPTURE_WEIGHT = 1  # not very heavy
 
     def __init__(
             self, source_file, investigation_time, start_date, min_mag,
