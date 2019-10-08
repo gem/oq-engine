@@ -102,7 +102,8 @@ class RupData(object):
     def __init__(self, cmaker, **kwargs):
         self.cmaker = cmaker
         self.data = AccumDict(accum=[])
-        self.shift_hypo = True if 'shift_hypo' in kwargs else False
+        self.shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs \
+            else False
 
     def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
         """
