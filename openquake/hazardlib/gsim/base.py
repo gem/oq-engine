@@ -123,14 +123,13 @@ def get_poes(mean_std, imtls, truncation_level, gsims=None):
     mean, stddev = mean_std  # shape (N, M) each
     N, L = len(mean), len(imtls.array)
     out = numpy.zeros((N, L))
-    lvl = 0
     for m, imt in enumerate(imtls):
-        for iml in imtls[imt]:
-            if truncation_level == 0:  # just compare imls to mean
-                out[:, lvl] = iml <= mean[:, m]
-            else:
-                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
-            lvl += 1
+        imls = imtls[imt]
+        if truncation_level == 0:  # just compare imls to mean
+            out[:, imtls(imt)] = imls <= mean[:, m].reshape(N, 1)
+        else:
+            m, s = mean[:, m].reshape(N, 1), stddev[:, m].reshape(N, 1)
+            out[:, imtls(imt)] = (imls - m) / s
     if truncation_level == 0:
         return out
     elif truncation_level is None:
