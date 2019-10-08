@@ -110,7 +110,7 @@ class RupData(object):
         :returns: param -> array
         """
         for src in srcs:
-            for rup in src.iter_ruptures({'shift_hypo': self.shift_hypo}):
+            for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 self.cmaker.add_rup_params(rup)
                 self.add(rup, src.id, sites)
         return {k: numpy.array(v) for k, v in self.data.items()}
