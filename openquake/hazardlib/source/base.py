@@ -90,10 +90,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.id = None  # set by the engine
 
     @abc.abstractmethod
-    def iter_ruptures(self):
+    def iter_ruptures(self, shift_hypo=False):
         """
         Get a generator object that yields probabilistic ruptures the source
         consists of.
+
+        :param shift_hypo:
+            The hypocenter is shifted accordingly with the rupture
 
         :returns:
             Generator of instances of sublclass of :class:
@@ -160,7 +163,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 hc = Point(latitude=src.location.latitude,
                            longitude=src.location.longitude,
                            depth=hc_depth)
-                surface = src._get_rupture_surface(mag, np, hc)
+                surface, nhc = src._get_rupture_surface(mag, np, hc)
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)
@@ -321,7 +324,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         idx = numpy.random.choice(num_ruptures)
         # NOTE Would be nice to have a method generating a rupture given two
         # indexes, one for magnitude and one setting the position
-        for i, rup in enumerate(self.iter_ruptures()):
+        for i, rup in enumerate(self.tures()):
             if i == idx:
                 if hasattr(self, 'rup_id'):
                     rup.rup_id = self.rup_id
