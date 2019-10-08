@@ -110,7 +110,6 @@ class RupData(object):
         :returns: param -> array
         """
         for src in srcs:
-            import pdb; pdb.set_trace()
             for rup in src.iter_ruptures({'shift_hypo': self.shift_hypo}):
                 self.cmaker.add_rup_params(rup)
                 self.add(rup, src.id, sites)
