@@ -355,6 +355,10 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(list(rupcoll), [1])  # one group
         self.assertEqual(len(rupcoll[1]), 3)  # three EBRuptures
 
+        # check that GMFs are not stored
+        with self.assertRaises(KeyError):
+            self.calc.datastore['gmf_data']
+
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
         [fname, _, _] = out['gmf_data', 'csv']

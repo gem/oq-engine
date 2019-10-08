@@ -60,7 +60,7 @@ AND is_running=1 AND pid > 0 ORDER BY id'''
 
 if OQ_DISTRIBUTE == 'zmq':
 
-    def set_concurrent_tasks_default(job_id):
+    def set_concurrent_tasks_default(calc):
         """
         Set the default for concurrent_tasks based on the available
         worker pools .
@@ -75,13 +75,14 @@ if OQ_DISTRIBUTE == 'zmq':
                     continue
                 num_workers += sock.send('get_num_workers')
         parallel.Starmap.num_cores = num_workers
+        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
         OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.warn('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control  # noqa: E402
 
-    def set_concurrent_tasks_default(job_id):
+    def set_concurrent_tasks_default(calc):
         """
         Set the default for concurrent_tasks based on the number of available
         celery workers.
@@ -89,10 +90,11 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
             logs.LOG.critical("No live compute nodes, aborting calculation")
-            logs.dbcmd('finish', job_id, 'failed')
+            logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         parallel.Starmap.num_cores = ncores
+        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
         OqParam.concurrent_tasks.default = ncores * 2
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
@@ -116,6 +118,11 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)
+
+else:
+
+    def set_concurrent_tasks_default(calc):
+        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
 
 
 def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
@@ -337,8 +344,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         if OQ_DISTRIBUTE == 'zmq':
             logs.dbcmd('zmq_start')  # start zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
-        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-            set_concurrent_tasks_default(job_id)
+        set_concurrent_tasks_default(calc)
         t0 = time.time()
         calc.run(exports=exports,
                  hazard_calculation_id=hazard_calculation_id, **kw)
