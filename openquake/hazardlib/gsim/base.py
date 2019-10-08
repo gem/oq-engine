@@ -253,6 +253,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     superseded_by = None
     non_verified = False
     experimental = False
+    get_poes = staticmethod(get_poes)
 
     @classmethod
     def __init_subclass__(cls):
