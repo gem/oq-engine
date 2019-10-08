@@ -26,7 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, countby, AccumDict, CallableDict,
+    humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg, fast_agg3)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import encode, decode
@@ -142,40 +142,13 @@ def rst_table(data, header=None, fmt=None):
     return '\n'.join(lines)
 
 
-def sum_tbl(tbl, kfield, vfields):
-    """
-    Aggregate a composite array and compute the totals on a given key.
-
-    >>> dt = numpy.dtype([('name', (bytes, 10)), ('value', int)])
-    >>> tbl = numpy.array([('a', 1), ('a', 2), ('b', 3)], dt)
-    >>> sum_tbl(tbl, 'name', ['value'])['value']
-    array([3, 3])
-    """
-    pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
-    dt = numpy.dtype(pairs + [('counts', int)])
-
-    def sum_all(group):
-        vals = numpy.zeros(1, dt)[0]
-        for rec in group:
-            for vfield in vfields:
-                vals[vfield] += rec[vfield]
-            vals['counts'] += 1
-        vals[kfield] = rec[kfield]
-        return vals
-    rows = groupby(tbl, operator.itemgetter(kfield), sum_all).values()
-    array = numpy.zeros(len(rows), dt)
-    for i, row in enumerate(rows):
-        for j, name in enumerate(dt.names):
-            array[i][name] = row[j]
-    return array
-
-
 @view.add('times_by_source_class')
 def view_times_by_source_class(token, dstore):
     """
     Returns the calculation times depending on the source typology
     """
-    totals = sum_tbl(dstore['source_info'], 'code', ['calc_time'])
+    totals = fast_agg3(dstore['source_info']['code', 'calc_time'],
+                       'code', ['calc_time'])
     return rst_table(totals)
 
 
@@ -230,6 +203,14 @@ def view_ruptures_per_grp(token, dstore):
         info, 'grp_id', ['num_sites', 'num_ruptures', 'eff_ruptures'])
     agg['num_sites'] /= agg['eff_ruptures']
     return rst_table(agg)
+
+
+@view.add('eff_ruptures')
+def view_eff_ruptures(token, dstore):
+    header = ['num_ruptures', 'eff_ruptures']
+    info = dstore['source_info']['num_ruptures', 'eff_ruptures']
+    return rst_table([[info['num_ruptures'].sum(),
+                       info['eff_ruptures'].sum()]], header)
 
 
 @view.add('short_source_info')

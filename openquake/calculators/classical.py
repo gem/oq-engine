@@ -108,12 +108,12 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
-    for src, _sites in srcfilter(srcs):
+    for src in srcs:
         t0 = time.time()
-        splits, _stime = split_sources([src])
-        for s, _sites in srcfilter(splits):
-            calc_times[src.id] += F32([s.num_ruptures, s.nsites, 0])
-        calc_times[src.id][2] = time.time() - t0  # delta t
+        if srcfilter.get_close_sites(src) is None:
+            continue
+        dt = time.time() - t0
+        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
@@ -257,7 +257,8 @@ class ClassicalCalculator(base.HazardCalculator):
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            collapse_distance=oq.collapse_distance,
+            collapse_factor=oq.collapse_factor,
+            pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
             task_duration=td, maxweight=maxweight)
         logging.info(f'ruptures_per_task={maxweight}, '
