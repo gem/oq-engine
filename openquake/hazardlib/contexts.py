@@ -22,7 +22,7 @@ import time
 import warnings
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, DictArray
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim import base
@@ -187,7 +187,7 @@ class ContextMaker(object):
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.loglevels = copy.copy(self.imtls)
+        self.loglevels = DictArray(self.imtls)
         with warnings.catch_warnings():
             # avoid RuntimeWarning: divide by zero encountered in log
             warnings.simplefilter("ignore")
