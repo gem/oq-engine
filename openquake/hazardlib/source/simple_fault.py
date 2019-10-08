@@ -130,7 +130,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
