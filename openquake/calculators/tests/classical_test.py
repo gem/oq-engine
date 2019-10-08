@@ -221,7 +221,7 @@ class ClassicalTestCase(CalculatorTestCase):
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.33557   447          447         
+0      0.02237   447          447         
 ====== ========= ============ ============""")
 
     def test_case_15(self):
@@ -537,6 +537,6 @@ hazard_uhs-std.csv
 
     def test_case_43(self):
         # this is a test for
-        # collapse_distance = 3 * rupture radius > maximum_distance
+        # collapse_factor = 3 * rupture radius > maximum_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
