@@ -121,7 +121,7 @@ def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
 DEFAULT_WEIGHTING = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
 
 
-def get_weighted_poes(gsim, mean_std, imls, truncation_level,
+def get_weighted_poes(gsim, mean_std, imtls, truncation_level,
                       weighting=DEFAULT_WEIGHTING):
     """
     This function implements the NGA West 2 GMPE epistemic uncertainty
@@ -133,11 +133,12 @@ def get_weighted_poes(gsim, mean_std, imls, truncation_level,
         Weightings as a list of tuples of (weight, number standard deviations
         of the epistemic uncertainty adjustment)
     """
-    mean = np.array(mean_std[0])  # make a copy
-    output = np.zeros([len(mean), len(imls)])
+    mean = np.array(mean_std[0])  # make a copy, shape (N, M)
+    output = np.zeros([len(mean), len(imtls.array)])
     for w, s in weighting:
-        mean_std[0] = mean + s * gsim.adjustment
-        output += base.get_poes(mean_std, imls, truncation_level) * w
+        for m in range(len(imtls)):
+            mean_std[0, :, m] = mean[:, m] + s * gsim.adjustment
+        output += base.get_poes(mean_std, imtls, truncation_level) * w
     return output
 
 
