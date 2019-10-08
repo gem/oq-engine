@@ -24,6 +24,7 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib.gsim import base
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -326,7 +327,7 @@ class ContextMaker(object):
                 if not (hasattr(gsim, 'weight') and gsim.weight[imt] == 0):
                     # set by the engine when parsing the gsim logictree;
                     # when 0 ignore the gsim: see _build_trts_branches
-                    poes[:, imtls(imt), g] = gsim.get_poes(
+                    poes[:, imtls(imt), g] = base.get_poes(
                         mean_std[g, :, :, m], imtls[imt], self.trunclevel)
         return rupture.get_probability_no_exceedance(poes)
 
@@ -538,8 +539,7 @@ class RuptureContext(BaseContext):
             rupture occurrence causes a ground shaking value exceeding a
             ground motion level at a site. First dimension represent sites,
             second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :meth:`method
-            <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>
+            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>
         """
         if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
             # Uses the formula
