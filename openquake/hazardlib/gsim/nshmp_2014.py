@@ -28,9 +28,9 @@ Module exports :class:`AbrahamsonEtAl2014NSHMPUpper`
                :class:`Idriss2014NSHMPUpper`
                :class:`Idriss2014NSHMPLower`
 """
-import copy
 import numpy as np
 # NGA West 2 GMPEs
+from openquake.hazardlib.gsim import base
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
@@ -137,8 +137,7 @@ def get_weighted_poes(gsim, mean_std, imls, truncation_level,
     output = np.zeros([len(mean), len(imls)])
     for w, s in weighting:
         mean_std[0] = mean + s * gsim.adjustment
-        output += gsim.__class__.__base__.get_poes(
-            gsim, mean_std, imls, truncation_level) * w
+        output += base.get_poes(mean_std, imls, truncation_level) * w
     return output
 
 
