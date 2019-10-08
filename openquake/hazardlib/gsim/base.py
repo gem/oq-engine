@@ -122,14 +122,14 @@ def get_poes(mean_std, imtls, truncation_level, gsims=()):
                          'or None')
     if len(gsims):
         assert mean_std.shape[-1] == len(gsims)
-    if any(hasattr(gsim, 'ns_weights') for gsim in gsims):
+    if any(hasattr(gsim, 'weights_signs') for gsim in gsims):
         shp = list(mean_std[0].shape)  # (N, M, G)
         shp[1] = len(imtls.array)  # L
         arr = numpy.zeros(shp)
         for g, gsim in enumerate(gsims):
-            if hasattr(gsim, 'ns_weights'):
+            if hasattr(gsim, 'weights_signs'):
                 outs = []
-                weights, signs = zip(*gsim.ns_weights)
+                weights, signs = zip(*gsim.weights_signs)
                 for s in signs:
                     ms = numpy.array(mean_std[:, :, :, g])  # make a copy
                     for m in range(len(imtls)):
