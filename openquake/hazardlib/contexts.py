@@ -99,16 +99,18 @@ class RupData(object):
     """
     A class to collect rupture information into an array
     """
-    def __init__(self, cmaker):
+    def __init__(self, cmaker, **kwargs):
         self.cmaker = cmaker
         self.data = AccumDict(accum=[])
+        self.shift_hypo = True if 'shift_hypo' in kwargs else False
 
     def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
         """
         :returns: param -> array
         """
         for src in srcs:
-            for rup in src.iter_ruptures():
+            import pdb; pdb.set_trace()
+            for rup in src.iter_ruptures({'shift_hypo': self.shift_hypo}):
                 self.cmaker.add_rup_params(rup)
                 self.add(rup, src.id, sites)
         return {k: numpy.array(v) for k, v in self.data.items()}
