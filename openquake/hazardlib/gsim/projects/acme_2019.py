@@ -233,8 +233,6 @@ class AlAtikSigmaModel(GMPE):
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
 
-
-
     def _setup_standard_deviations(self, fle):
         # setup tau
         self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
@@ -259,7 +257,7 @@ class AlAtikSigmaModel(GMPE):
 
         cornerf = 10**(-1.884 - np.log10(D_sigma)/3 + 0.5*mag)
 
-        if cornerf<1.0:
+        if cornerf < 1.0:
             cornerf = 1.0
 
         return cornerf
@@ -270,15 +268,12 @@ class AlAtikSigmaModel(GMPE):
         max period of coefficents provided by the GMPE
         """
 
-        highest_periods = {"BindiEtAl2014Rjb": 3,
-                 "CauzziEtAl2014": 10,
-                 "ChiouYoungs2014ACME2019": 10,
-                 "RietbrockEdwards2019Low": 5,
-                 "RietbrockEdwards2019Mean": 5,
-                 "YenierAtkinson2015ACME2019": 10}
+        try:
+            highest_period = max(gmpe.COEFFS.sa_coeffs.keys()).period
+        except AttributeError:
+            highest_period = max(gmpe.TAB2.sa_coeffs.keys()).period
 
-        highest_period = highest_periods[gmpe]
-        cappingf= min(highest_period, cornerf)
+        cappingf = min(highest_period, cornerf)
         return(cappingf)
 
     def get_disp_from_acc(self, acc, imt):
@@ -296,10 +291,9 @@ class AlAtikSigmaModel(GMPE):
         nsites = len(sites)
         stddevs = self.get_stddevs(rup.mag, imt, stds_types, nsites)
 
-        #compute corner frequency and capping frequency
+        # compute corner frequency and capping frequency
         cornerf = self.get_corner_frequency(rup.mag)
-        gmpe_name = self.gmpe.__class__.__name__
-        cappingf = self.get_capping_frequency(cornerf, gmpe_name)
+        cappingf = self.get_capping_frequency(cornerf, self.gmpe)
 
         # apply extrapolation in spectral displacement domain
         if imt.period > cappingf:
