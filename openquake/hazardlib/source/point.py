@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
-import numpy
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
@@ -106,10 +105,7 @@ class PointSource(ParametricSeismicSource):
     lower_seismogenic_depth location nodal_plane_distribution
     hypocenter_distribution
     '''.split()
-
     MODIFICATIONS = set(())
-
-    RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
