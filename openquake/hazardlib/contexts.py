@@ -327,7 +327,7 @@ class ContextMaker(object):
                 if not (hasattr(gsim, 'weight') and gsim.weight[imt] == 0):
                     # set by the engine when parsing the gsim logictree;
                     # when 0 ignore the gsim: see _build_trts_branches
-                    poes[:, imtls(imt), g] = base.get_poes(
+                    poes[:, imtls(imt), g] = gsim.get_poes(
                         mean_std[g, :, :, m], imtls[imt], self.trunclevel)
         return rupture.get_probability_no_exceedance(poes)
 
