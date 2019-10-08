@@ -19,6 +19,7 @@ import abc
 import sys
 import copy
 import time
+import warnings
 import numpy
 
 from openquake.baselib.general import AccumDict
@@ -186,6 +187,12 @@ class ContextMaker(object):
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
+        if self.imtls:
+            self.loglevels = copy.copy(self.imtls)
+            with warnings.catch_warnings():
+                # avoid RuntimeWarning: divide by zero encountered in log
+                warnings.simplefilter("ignore")
+                self.loglevels.array = numpy.log(self.imtls.array)
 
     def filter(self, sites, rupture):
         """
@@ -319,16 +326,16 @@ class ContextMaker(object):
 
     # NB: it is important for this to be fast since it is inside an inner loop
     def _make_pnes(self, rupture, mean_std):
-        imtls = self.imtls
+        ll = self.loglevels
         nsites = mean_std.shape[2]
-        poes = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
+        poes = numpy.zeros((nsites, len(ll.array), len(self.gsims)))
         for g, gsim in enumerate(self.gsims):
-            for m, imt in enumerate(imtls):
+            for m, imt in enumerate(ll):
                 if not (hasattr(gsim, 'weight') and gsim.weight[imt] == 0):
                     # set by the engine when parsing the gsim logictree;
                     # when 0 ignore the gsim: see _build_trts_branches
-                    poes[:, imtls(imt), g] = gsim.get_poes(
-                        mean_std[g, :, :, m], imtls[imt], self.trunclevel)
+                    poes[:, ll(imt), g] = gsim.get_poes(
+                        mean_std[g, :, :, m], ll[imt], self.trunclevel)
         return rupture.get_probability_no_exceedance(poes)
 
     def _gen_rup_sites(self, src, sites):
