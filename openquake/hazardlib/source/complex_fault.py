@@ -170,7 +170,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.edges = edges
         self.rake = rake
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.

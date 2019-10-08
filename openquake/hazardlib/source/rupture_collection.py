@@ -46,7 +46,7 @@ class RuptureCollectionSource(ParametricSeismicSource):
     def count_ruptures(self):
         return self.num_ruptures
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         return iter(self.ruptures)
 
     def get_bounding_box(self, maxdist):
