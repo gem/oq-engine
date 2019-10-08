@@ -75,14 +75,14 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-def get_poes(mean_std, imtls, truncation_level, gsims=None):
+def get_poes(mean_std, imtls, truncation_level, gsims=()):
     """
     Calculate and return probabilities of exceedance (PoEs) of one or more
     intensity measure levels (IMLs) of one intensity measure type (IMT)
     for one or more pairs "site -- rupture".
 
     :param mean_std:
-        An array of shape (2, N, M) with mean and standard deviation for
+        An array of shape (2, N, M, G) with mean and standard deviation for
         the current intensity measure type
     :param imtls:
         A DictArray imt -> logs of intensity measure levels
@@ -120,16 +120,42 @@ def get_poes(mean_std, imtls, truncation_level, gsims=None):
     if truncation_level is not None and truncation_level < 0:
         raise ValueError('truncation level must be zero, positive number '
                          'or None')
-    mean, stddev = mean_std  # shape (N, M) each
-    N, L = len(mean), len(imtls.array)
-    out = numpy.zeros((N, L))
+    if len(gsims):
+        assert mean_std.shape[-1] == len(gsims)
+    if any(hasattr(gsim, 'ns_weights') for gsim in gsims):
+        shp = list(mean_std[0].shape)  # (N, M, G)
+        shp[1] = len(imtls.array)  # L
+        arr = numpy.zeros(shp)
+        for g, gsim in enumerate(gsims):
+            if hasattr(gsim, 'ns_weights'):
+                outs = []
+                weights, signs = zip(*gsim.ns_weights)
+                for s in signs:
+                    ms = numpy.array(mean_std[:, :, :, g])  # make a copy
+                    for m in range(len(imtls)):
+                        ms[0, :, m] += s * gsim.adjustment
+                    outs.append(get_poes(ms, imtls, truncation_level))
+                arr[:, :, g] = numpy.average(outs, weights=weights, axis=0)
+            else:
+                ms = mean_std[:, :, :, g]
+                arr[:, :, g] = _get_poes(ms, imtls, truncation_level)
+        return arr
+    else:
+        return _get_poes(mean_std, imtls, truncation_level, gsims)
+
+
+def _get_poes(mean_std, imtls, truncation_level, gsims=()):
+    mean, stddev = mean_std  # shape (N, M, G) each
+    N, L, G = len(mean), len(imtls.array), len(gsims)
+    out = numpy.zeros((N, L, G) if gsims else (N, L))
+    lvl = 0
     for m, imt in enumerate(imtls):
-        imls = imtls[imt]
-        if truncation_level == 0:  # just compare imls to mean
-            out[:, imtls(imt)] = imls <= mean[:, m].reshape(N, 1)
-        else:
-            m, s = mean[:, m].reshape(N, 1), stddev[:, m].reshape(N, 1)
-            out[:, imtls(imt)] = (imls - m) / s
+        for iml in imtls[imt]:
+            if truncation_level == 0:  # just compare imls to mean
+                out[:, lvl] = iml <= mean[:, m]
+            else:
+                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
+            lvl += 1
     if truncation_level == 0:
         return out
     elif truncation_level is None:
