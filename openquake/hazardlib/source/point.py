@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
-import numpy
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
@@ -162,11 +161,15 @@ class PointSource(ParametricSeismicSource):
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
         return max(radius)
 
-    def iter_ruptures(self, shift_hypo=False):
+    def iter_ruptures(self, **kwargs):
         """
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
+
+        if 'shift_hypo' in kwargs:
+            shift_hypo = True
+
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             yield from self.gen_ruptures(mag, mag_occ_rate, collapse=False,
                                          shift_hypo=shift_hypo)

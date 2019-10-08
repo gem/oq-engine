@@ -60,7 +60,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         super().__init__(source_id, name, tectonic_region_type)
         self.data = data
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         Get a generator object that yields probabilistic ruptures the source
         consists of.
