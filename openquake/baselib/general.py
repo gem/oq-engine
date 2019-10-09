@@ -759,7 +759,8 @@ class DictArray(Mapping):
         lenset = set()
         for imt, imls in imtls.items():
             self[imt] = imls
-            lenset.add(len(imls))
+            if imls is not None:
+                lenset.add(len(imls))
         if len(lenset) == 1:
             self.L1 = lenset.pop()
         else:
