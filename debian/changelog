@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the computation of PoEs in classical calculations
   * If `ground_motion_fields=false` is set, the GMFs are not stored even
     if `hazard_curves_from_gmfs=true`
   * `oq show job_info` now works while the calculation is running
