@@ -47,6 +47,8 @@ def urlextract(url, fname):
     """
     Download and unzip an archive and extract the underlying fname
     """
+    if not fname.endswith('.zip'):
+        return urlopen(url)
     with urlopen(url) as f:
         data = io.BytesIO(f.read())
     with zipfile.ZipFile(data) as z:
@@ -76,7 +78,8 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
     grid = contents.get('download/grid.xml')
     if grid is None:
         raise MissingLink('Could not find grid.xml link in %s' % url)
-    uncertainty = contents.get('download/uncertainty.xml.zip')
+    uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
+        'download/uncertainty.xml')
     if uncertainty is None:
         with urlopen(grid['url']) as f:
             return get_shakemap_array(f)
@@ -296,13 +299,16 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     dmatrix = geo.geodetic.distance_matrix(
         shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts_, spatialcorr)
-    stddev = [std[str(imt)] for imt in imts_]
-    for im, std in zip(imts_, stddev):
-        if std.sum() == 0:
-            raise ValueError('Cannot decompose the spatial covariance '
-                             'because stddev==0 for IMT=%s' % im)
-    spatial_cov = spatial_covariance_array(stddev, spatial_corr)
-    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
+    if spatialcorr == 'no':
+        L = 0
+    else:
+        stddev = [std[str(imt)] for imt in imts_]
+        for im, std in zip(imts_, stddev):
+            if std.sum() == 0:
+                raise ValueError('Cannot decompose the spatial covariance '
+                                 'because stddev==0 for IMT=%s' % im)
+        spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+        L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                           size=(M * N, num_gmfs), random_state=seed)
