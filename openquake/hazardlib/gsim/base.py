@@ -161,10 +161,7 @@ def _get_poes(mean_std, imtls, truncation_level):
         for iml in imtls[imt]:
             out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
-    if truncation_level is None:
-        return _norm_sf(out)
-    else:
-        return _truncnorm_sf(truncation_level, out)
+    return _truncnorm_sf(truncation_level, out)
 
 
 class MetaGSIM(abc.ABCMeta):
@@ -455,7 +452,7 @@ def _truncnorm_sf(truncation_level, values):
 
     :param truncation_level:
         Positive float number representing the truncation on both sides
-        around the mean, in units of sigma.
+        around the mean, in units of sigma, or None, for non-truncation
     :param values:
         Numpy array of values as input to a survival function for the given
         distribution.
@@ -465,7 +462,13 @@ def _truncnorm_sf(truncation_level, values):
     >>> from scipy.stats import truncnorm
     >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
     True
+    >>> from scipy.stats import norm
+    >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345)
+    True
     """
+    if truncation_level is None:
+        return ndtr(- values)
+
     # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
     # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
 
@@ -491,28 +494,6 @@ def _truncnorm_sf(truncation_level, values):
     # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
     # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
     return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
-
-
-def _norm_sf(values):
-    """
-    Survival function for normal distribution.
-
-    Assumes zero mean and standard deviation equal to one.
-
-    ``values`` parameter and the return value are the same
-    as in :func:`_truncnorm_sf`.
-
-    >>> from scipy.stats import norm
-    >>> norm.sf(0.12345) == _norm_sf(0.12345)
-    True
-    """
-    # survival function by definition is ``SF(x) = 1 - CDF(x)``,
-    # which is equivalent to ``SF(x) = CDF(- x)``, since (given
-    # that the normal distribution is symmetric with respect to 0)
-    # the integral between ``[x, +infinity]`` (that is the survival
-    # function) is equal to the integral between ``[-infinity, -x]``
-    # (that is the CDF at ``- x``).
-    return ndtr(- values)
 
 
 class GMPE(GroundShakingIntensityModel):
