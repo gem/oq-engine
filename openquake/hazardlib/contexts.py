@@ -208,14 +208,13 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rupture, sites, self.filter_distance)
-        if self.maximum_distance:
-            mask = distances <= self.maximum_distance(
-                rupture.tectonic_region_type, rupture.mag)
-            if mask.any():
-                sites, distances = sites.filter(mask), distances[mask]
-            else:
-                raise FarAwayRupture(
-                    '%d: %d km' % (rupture.rup_id, distances.min()))
+        mask = distances <= self.maximum_distance(
+            rupture.tectonic_region_type, rupture.mag)
+        if mask.any():
+            sites, distances = sites.filter(mask), distances[mask]
+        else:
+            raise FarAwayRupture(
+                '%d: %d km' % (rupture.rup_id, distances.min()))
         return sites, DistancesContext([(self.filter_distance, distances)])
 
     def add_rup_params(self, rupture):
