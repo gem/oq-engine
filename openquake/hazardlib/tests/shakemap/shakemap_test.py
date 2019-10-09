@@ -107,6 +107,14 @@ class ShakemapTestCase(unittest.TestCase):
         aae(gmfs[..., 0].sum(axis=0), [0.5127171, 0.7800206])  # PGA
         aae(gmfs[..., 2].sum(axis=0), [0.4932519, 0.6731384])  # SA(1.0)
 
+        # set stddev to zero
+        shakemap['std'] = 0
+        _, gmfs = to_gmfs(
+            shakemap, 'no', 'yes', site_effects=True,
+            trunclevel=3, num_gmfs=2, seed=42)
+        aae(gmfs[..., 0].sum(axis=0), [0.669971, 0.669971])  # PGA
+        aae(gmfs[..., 2].sum(axis=0), [0.5838542, 0.5838542])  # SA(1.0)
+
     def test_from_files(self):
         # files provided by Vitor Silva, without site amplification
         f1 = os.path.join(CDIR, 'test_shaking.xml')
