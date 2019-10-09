@@ -123,6 +123,7 @@ def get_poes(mean_std, imtls, truncation_level, gsims=()):
     if len(gsims):
         assert mean_std.shape[-1] == len(gsims)
     if any(hasattr(gsim, 'weights_signs') for gsim in gsims):
+        # implement average get_poes for the nshmp_2014 model
         shp = list(mean_std[0].shape)  # (N, M, G)
         shp[1] = len(imtls.array)  # L
         arr = numpy.zeros(shp)
@@ -141,24 +142,26 @@ def get_poes(mean_std, imtls, truncation_level, gsims=()):
                 arr[:, :, g] = _get_poes(ms, imtls, truncation_level)
         return arr
     else:
-        return _get_poes(mean_std, imtls, truncation_level, gsims)
+        # regular case
+        return _get_poes(mean_std, imtls, truncation_level)
 
 
-def _get_poes(mean_std, imtls, truncation_level, gsims=()):
+def _get_poes(mean_std, imtls, truncation_level):
     mean, stddev = mean_std  # shape (N, M, G) each
-    N, L, G = len(mean), len(imtls.array), len(gsims)
-    out = numpy.zeros((N, L, G) if gsims else (N, L))
+    N, L, G = len(mean), len(imtls.array), mean.shape[-1]
+    out = numpy.zeros((N, L, G))
     lvl = 0
+    if truncation_level == 0:  # just compare imls to mean
+        for m, imt in enumerate(imtls):
+            for iml in imtls[imt]:
+                out[:, lvl] = iml <= mean[:, m]
+                lvl += 1
+        return out
     for m, imt in enumerate(imtls):
         for iml in imtls[imt]:
-            if truncation_level == 0:  # just compare imls to mean
-                out[:, lvl] = iml <= mean[:, m]
-            else:
-                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
+            out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
-    if truncation_level == 0:
-        return out
-    elif truncation_level is None:
+    if truncation_level is None:
         return _norm_sf(out)
     else:
         return _truncnorm_sf(truncation_level, out)
