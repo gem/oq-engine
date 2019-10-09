@@ -128,8 +128,8 @@ class _GeographicObjects(object):
         if not dic:
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
-        return (sitecol.filtered(dic),
-                numpy.array([dic[sid] for sid in sorted(dic)]),
+        sids = sorted(dic)
+        return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
     def assoc2(self, assets_by_site, assoc_dist, mode, asset_refs):
