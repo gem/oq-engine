@@ -85,9 +85,10 @@ def _truncnorm_sf(truncation_level, iml, mean_std):
     :param truncation_level:
         Positive float number representing the truncation on both sides
         around the mean, in units of sigma, or None, for non-truncation
-    :param values:
-        Numpy array of values as input to a survival function for the given
-        distribution.
+    :param iml:
+        a scalar intensity measure level
+    :param mean_std:
+        an array with means and standard deviations
     :returns:
         Numpy array of survival function results in a range between 0 and 1.
 
@@ -205,13 +206,14 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
         return _get_poes(mean_std, loglevels, truncation_level)
 
 
-def _get_poes(mean_std, loglevels, tl, squeeze=False):
+def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
     N, L, G = mean_std.shape[1], len(loglevels.array), mean_std.shape[-1]
     out = numpy.zeros((N, L) if squeeze else (N, L, G))
     lvl = 0
     for m, imt in enumerate(loglevels):
+        ms = mean_std[:, m]
         for iml in loglevels[imt]:
-            out[:, lvl] = _truncnorm_sf(tl, iml, mean_std[:, m])
+            out[:, lvl] = _truncnorm_sf(truncation_level, iml, ms)
             lvl += 1
     return out
 
