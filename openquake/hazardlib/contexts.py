@@ -186,6 +186,7 @@ class ContextMaker(object):
                     self.gsim_by_rlzi[rlzi] = gsim
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
+        self.pne_mon = monitor('composing pnes', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.loglevels = DictArray(self.imtls)
         with warnings.catch_warnings():
@@ -308,7 +309,7 @@ class ContextMaker(object):
                         sctx, rup, dctx_, imts)
             with self.poe_mon:
                 pairs = zip(sctx.sids, self._make_pnes(rup, mean_std))
-                # _make_pnes is heavy, the part below is fast
+            with self.pne_mon:
                 if rup_indep:
                     for sid, pne in pairs:
                         poemap.setdefault(sid, rup_indep).array *= pne
