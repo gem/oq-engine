@@ -75,65 +75,6 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-def _truncnorm_sf(truncation_level, iml, mean_std):
-    """
-    Survival function for truncated normal distribution.
-
-    Assumes zero mean, standard deviation equal to one and symmetric
-    truncation.
-
-    :param truncation_level:
-        Positive float number representing the truncation on both sides
-        around the mean, in units of sigma, or None, for non-truncation
-    :param iml:
-        a scalar intensity measure level
-    :param mean_std:
-        an array with means and standard deviations
-    :returns:
-        Numpy array of survival function results in a range between 0 and 1.
-
-    >>> from scipy.stats import truncnorm
-    >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345, 0, 1)
-    True
-    >>> from scipy.stats import norm
-    >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345, 0, 1)
-    True
-    """
-    if truncation_level == 0:
-        return iml <= mean_std[0]
-
-    values = (iml - mean_std[0]) / mean_std[1]
-
-    if truncation_level is None:
-        return ndtr(- values)
-
-    # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
-    # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
-
-    # "CDF" in comments refers to cumulative distribution function
-    # of non-truncated distribution with that mu and sigma values.
-
-    # assume symmetric truncation, that is ``a = - truncation_level``
-    # and ``b = + truncation_level``.
-
-    # calculate CDF of b
-    phi_b = ndtr(truncation_level)
-
-    # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
-    # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
-    z = phi_b * 2 - 1
-
-    # calculate the result of survival function of ``values``,
-    # and restrict it to the interval where probability is defined --
-    # 0..1. here we use some transformations of the original formula
-    # that is ``SF(x) = 1 - (CDF(x) - CDF(a)) / Z`` in order to minimize
-    # number of arithmetic operations and function calls:
-    # ``SF(x) = (Z - CDF(x) + CDF(a)) / Z``,
-    # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
-    # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
-    return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
-
-
 def get_poes(mean_std, loglevels, truncation_level, gsims=()):
     """
     Calculate and return probabilities of exceedance (PoEs) of one or more
@@ -207,15 +148,18 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
 
 
 def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
-    N, L, G = mean_std.shape[1], len(loglevels.array), mean_std.shape[-1]
+    mean, stddev = mean_std  # shape (N, M, G) each
+    N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
     out = numpy.zeros((N, L) if squeeze else (N, L, G))
     lvl = 0
     for m, imt in enumerate(loglevels):
-        ms = mean_std[:, m]
         for iml in loglevels[imt]:
-            out[:, lvl] = _truncnorm_sf(truncation_level, iml, ms)
+            if truncation_level == 0:  # just compare imls to mean
+                out[:, lvl] = iml <= mean[:, m]
+            else:
+                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
-    return out
+    return _truncnorm_sf(truncation_level, out)
 
 
 class MetaGSIM(abc.ABCMeta):
@@ -495,6 +439,62 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         if self._toml:
             return self._toml
         return '[%s]' % self.__class__.__name__
+
+
+def _truncnorm_sf(truncation_level, values):
+    """
+    Survival function for truncated normal distribution.
+
+    Assumes zero mean, standard deviation equal to one and symmetric
+    truncation.
+
+    :param truncation_level:
+        Positive float number representing the truncation on both sides
+        around the mean, in units of sigma, or None, for non-truncation
+    :param values:
+        Numpy array of values as input to a survival function for the given
+        distribution.
+    :returns:
+        Numpy array of survival function results in a range between 0 and 1.
+
+    >>> from scipy.stats import truncnorm
+    >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
+    True
+    >>> from scipy.stats import norm
+    >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345)
+    True
+    """
+    if truncation_level == 0:
+        return values
+
+    if truncation_level is None:
+        return ndtr(- values)
+
+    # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
+    # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
+
+    # "CDF" in comments refers to cumulative distribution function
+    # of non-truncated distribution with that mu and sigma values.
+
+    # assume symmetric truncation, that is ``a = - truncation_level``
+    # and ``b = + truncation_level``.
+
+    # calculate CDF of b
+    phi_b = ndtr(truncation_level)
+
+    # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
+    # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
+    z = phi_b * 2 - 1
+
+    # calculate the result of survival function of ``values``,
+    # and restrict it to the interval where probability is defined --
+    # 0..1. here we use some transformations of the original formula
+    # that is ``SF(x) = 1 - (CDF(x) - CDF(a)) / Z`` in order to minimize
+    # number of arithmetic operations and function calls:
+    # ``SF(x) = (Z - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
+    return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
 
 
 class GMPE(GroundShakingIntensityModel):
