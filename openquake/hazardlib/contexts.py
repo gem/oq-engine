@@ -298,17 +298,17 @@ class ContextMaker(object):
         for rup, sites in self._gen_rup_sites(src, s_sites):
             try:
                 with self.ctx_mon:
-                    sctx, dctx = self.make_contexts(sites, rup)
+                    r_sites, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             with self.gmf_mon:
-                mean_std = numpy.zeros((2, len(sctx), M, G))
+                mean_std = numpy.zeros((2, len(r_sites), M, G))
                 for g, gsim in enumerate(self.gsims):
                     dctx_ = dctx.roundup(gsim.minimum_distance)
                     mean_std[:, :, :, g] = gsim.get_mean_std(
-                        sctx, rup, dctx_, imts)
+                        r_sites, rup, dctx_, imts)
             with self.poe_mon:
-                pairs = zip(sctx.sids, self._make_pnes(rup, mean_std))
+                pairs = zip(r_sites.sids, self._make_pnes(rup, mean_std))
             with self.pne_mon:
                 if rup_indep:
                     for sid, pne in pairs:
@@ -318,9 +318,9 @@ class ContextMaker(object):
                         poemap.setdefault(sid, rup_indep).array += (
                             1.-pne) * rup.weight
             nrups += 1
-            nsites += len(sctx)
+            nsites += len(r_sites)
             if fewsites:  # store rupdata
-                rupdata.add(rup, src.id, sctx, dctx)
+                rupdata.add(rup, src.id, r_sites, dctx)
         poemap.nrups = nrups
         poemap.nsites = nsites
         poemap.data = rupdata.data
