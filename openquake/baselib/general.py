@@ -756,8 +756,17 @@ class DictArray(Mapping):
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
+        lenset = set()
         for imt, imls in imtls.items():
             self[imt] = imls
+            try:
+                lenset.add(len(imls))
+            except TypeError:
+                lenset.add(1)
+        if len(lenset) == 1:
+            self.L1 = lenset.pop()
+        else:
+            self.L1 = None
 
     def new(self, array):
         """
