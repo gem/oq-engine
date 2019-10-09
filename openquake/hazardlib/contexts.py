@@ -195,7 +195,7 @@ class ContextMaker(object):
             for imt, imls in self.imtls.items():
                 self.loglevels[imt] = numpy.log(imls)
 
-    def filter(self, sites, rupture):
+    def filter(self, sites, rupture, psdist):
         """
         Filter the site collection with respect to the rupture.
 
@@ -204,13 +204,20 @@ class ContextMaker(object):
         :param rupture:
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
+        :param psdist:
+            collapse distance for point ruptures or None
         :returns:
             (filtered sites, distance context)
         """
         distances = get_distances(rupture, sites, self.filter_distance)
-        if self.maximum_distance:
-            mask = distances <= self.maximum_distance(
+        if psdist is not None:
+            dist = min(10 * psdist, self.maximum_distance(
+                rupture.tectonic_region_type, rupture.mag))
+            print(dist)
+        else:
+            dist = self.maximum_distance(
                 rupture.tectonic_region_type, rupture.mag)
+            mask = distances <= dist
             if mask.any():
                 sites, distances = sites.filter(mask), distances[mask]
             else:
@@ -246,7 +253,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture):
+    def make_contexts(self, sites, rupture, psdist=None):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -265,7 +272,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        sites, dctx = self.filter(sites, rupture)
+        sites, dctx = self.filter(sites, rupture, psdist)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -295,10 +302,10 @@ class ContextMaker(object):
         nrups, nsites = 0, 0
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
-        for rup, sites in self._gen_rup_sites(src, s_sites):
+        for rup, sites, psdist in self._gen_rup_sites(src, s_sites):
             try:
                 with self.ctx_mon:
-                    r_sites, dctx = self.make_contexts(sites, rup)
+                    r_sites, dctx = self.make_contexts(sites, rup, psdist)
             except FarAwayRupture:
                 continue
             with self.gmf_mon:
@@ -358,18 +365,18 @@ class ContextMaker(object):
                 close_sites, far_sites = sites.split(loc, psdist)
                 if close_sites is None:  # all is far
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
-                        yield rup, far_sites
+                        yield rup, far_sites, psdist
                 elif far_sites is None:  # all is close
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
-                        yield rup, close_sites
+                        yield rup, close_sites, psdist
                 else:  # some sites are far, some are close
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
-                        yield rup, far_sites
+                        yield rup, far_sites, psdist
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
-                        yield rup, close_sites
+                        yield rup, close_sites, psdist
         else:
             for rup in src.iter_ruptures():
-                yield rup, sites
+                yield rup, sites, None
 
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
         """
