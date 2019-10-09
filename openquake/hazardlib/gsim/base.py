@@ -75,16 +75,16 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-def get_poes(mean_std, imtls, truncation_level, gsims=None):
+def get_poes(mean_std, loglevels, truncation_level, gsims=()):
     """
     Calculate and return probabilities of exceedance (PoEs) of one or more
     intensity measure levels (IMLs) of one intensity measure type (IMT)
     for one or more pairs "site -- rupture".
 
     :param mean_std:
-        An array of shape (2, N, M) with mean and standard deviation for
+        An array of shape (2, N, M, G) with mean and standard deviation for
         the current intensity measure type
-    :param imtls:
+    :param loglevels:
         A DictArray imt -> logs of intensity measure levels
     :param truncation_level:
         Can be ``None``, which means that the distribution of intensity
@@ -120,22 +120,46 @@ def get_poes(mean_std, imtls, truncation_level, gsims=None):
     if truncation_level is not None and truncation_level < 0:
         raise ValueError('truncation level must be zero, positive number '
                          'or None')
-    mean, stddev = mean_std  # shape (N, M) each
-    N, L = len(mean), len(imtls.array)
-    out = numpy.zeros((N, L))
-    for m, imt in enumerate(imtls):
-        imls = imtls[imt]
-        if truncation_level == 0:  # just compare imls to mean
-            out[:, imtls(imt)] = imls <= mean[:, m].reshape(N, 1)
-        else:
-            m, s = mean[:, m].reshape(N, 1), stddev[:, m].reshape(N, 1)
-            out[:, imtls(imt)] = (imls - m) / s
-    if truncation_level == 0:
-        return out
-    elif truncation_level is None:
-        return _norm_sf(out)
+    if len(gsims):
+        assert mean_std.shape[-1] == len(gsims)
+    tl = truncation_level
+    if any(hasattr(gsim, 'weights_signs') for gsim in gsims):
+        # implement average get_poes for the nshmp_2014 model
+        shp = list(mean_std[0].shape)  # (N, M, G)
+        shp[1] = len(loglevels.array)  # L
+        arr = numpy.zeros(shp)
+        for g, gsim in enumerate(gsims):
+            if hasattr(gsim, 'weights_signs'):
+                outs = []
+                weights, signs = zip(*gsim.weights_signs)
+                for s in signs:
+                    ms = numpy.array(mean_std[:, :, :, g])  # make a copy
+                    for m in range(len(loglevels)):
+                        ms[0, :, m] += s * gsim.adjustment
+                    outs.append(_get_poes(ms, loglevels, tl, squeeze=1))
+                arr[:, :, g] = numpy.average(outs, weights=weights, axis=0)
+            else:
+                ms = mean_std[:, :, :, g]
+                arr[:, :, g] = _get_poes(ms, loglevels, tl, squeeze=1)
+        return arr
     else:
-        return _truncnorm_sf(truncation_level, out)
+        # regular case
+        return _get_poes(mean_std, loglevels, truncation_level)
+
+
+def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
+    mean, stddev = mean_std  # shape (N, M, G) each
+    N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
+    out = numpy.zeros((N, L) if squeeze else (N, L, G))
+    lvl = 0
+    for m, imt in enumerate(loglevels):
+        for iml in loglevels[imt]:
+            if truncation_level == 0:  # just compare imls to mean
+                out[:, lvl] = iml <= mean[:, m]
+            else:
+                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
+            lvl += 1
+    return _truncnorm_sf(truncation_level, out)
 
 
 class MetaGSIM(abc.ABCMeta):
@@ -426,7 +450,7 @@ def _truncnorm_sf(truncation_level, values):
 
     :param truncation_level:
         Positive float number representing the truncation on both sides
-        around the mean, in units of sigma.
+        around the mean, in units of sigma, or None, for non-truncation
     :param values:
         Numpy array of values as input to a survival function for the given
         distribution.
@@ -436,7 +460,16 @@ def _truncnorm_sf(truncation_level, values):
     >>> from scipy.stats import truncnorm
     >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
     True
+    >>> from scipy.stats import norm
+    >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345)
+    True
     """
+    if truncation_level == 0:
+        return values
+
+    if truncation_level is None:
+        return ndtr(- values)
+
     # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
     # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
 
@@ -462,28 +495,6 @@ def _truncnorm_sf(truncation_level, values):
     # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
     # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
     return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
-
-
-def _norm_sf(values):
-    """
-    Survival function for normal distribution.
-
-    Assumes zero mean and standard deviation equal to one.
-
-    ``values`` parameter and the return value are the same
-    as in :func:`_truncnorm_sf`.
-
-    >>> from scipy.stats import norm
-    >>> norm.sf(0.12345) == _norm_sf(0.12345)
-    True
-    """
-    # survival function by definition is ``SF(x) = 1 - CDF(x)``,
-    # which is equivalent to ``SF(x) = CDF(- x)``, since (given
-    # that the normal distribution is symmetric with respect to 0)
-    # the integral between ``[x, +infinity]`` (that is the survival
-    # function) is equal to the integral between ``[-infinity, -x]``
-    # (that is the CDF at ``- x``).
-    return ndtr(- values)
 
 
 class GMPE(GroundShakingIntensityModel):
