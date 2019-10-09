@@ -170,6 +170,8 @@ class EbrCalculator(base.RiskCalculator):
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
             self.events = parent['events'][('id', 'rlz_id')]
+            logging.info('There are %d ruptures and %d events',
+                         len(parent['ruptures']), len(self.events))
         else:
             self.events = self.datastore['events'][('id', 'rlz_id')]
         if oq.return_periods != [0]:
