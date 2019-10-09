@@ -122,6 +122,7 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
                          'or None')
     if len(gsims):
         assert mean_std.shape[-1] == len(gsims)
+    tl = truncation_level
     if any(hasattr(gsim, 'weights_signs') for gsim in gsims):
         # implement average get_poes for the nshmp_2014 model
         shp = list(mean_std[0].shape)  # (N, M, G)
@@ -135,31 +136,28 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
                     ms = numpy.array(mean_std[:, :, :, g])  # make a copy
                     for m in range(len(loglevels)):
                         ms[0, :, m] += s * gsim.adjustment
-                    outs.append(get_poes(ms, loglevels, truncation_level))
+                    outs.append(_get_poes(ms, loglevels, tl, squeeze=1))
                 arr[:, :, g] = numpy.average(outs, weights=weights, axis=0)
             else:
                 ms = mean_std[:, :, :, g]
-                arr[:, :, g] = _get_poes(ms, loglevels, truncation_level)
+                arr[:, :, g] = _get_poes(ms, loglevels, tl, squeeze=1)
         return arr
     else:
         # regular case
         return _get_poes(mean_std, loglevels, truncation_level)
 
 
-def _get_poes(mean_std, loglevels, truncation_level):
+def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
     mean, stddev = mean_std  # shape (N, M, G) each
     N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
-    out = numpy.zeros((N, L, G))
+    out = numpy.zeros((N, L) if squeeze else (N, L, G))
     lvl = 0
-    if truncation_level == 0:  # just compare imls to mean
-        for m, imt in enumerate(loglevels):
-            for iml in loglevels[imt]:
-                out[:, lvl] = iml <= mean[:, m]
-                lvl += 1
-        return out
     for m, imt in enumerate(loglevels):
         for iml in loglevels[imt]:
-            out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
+            if truncation_level == 0:  # just compare imls to mean
+                out[:, lvl] = iml <= mean[:, m]
+            else:
+                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
     return _truncnorm_sf(truncation_level, out)
 
@@ -466,6 +464,9 @@ def _truncnorm_sf(truncation_level, values):
     >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345)
     True
     """
+    if truncation_level == 0:
+        return values
+
     if truncation_level is None:
         return ndtr(- values)
 
