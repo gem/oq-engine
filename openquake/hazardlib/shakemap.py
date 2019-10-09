@@ -299,16 +299,16 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     dmatrix = geo.geodetic.distance_matrix(
         shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts_, spatialcorr)
-    if spatialcorr == 'no':
-        L = 0
-    else:
-        stddev = [std[str(imt)] for imt in imts_]
-        for im, std in zip(imts_, stddev):
-            if std.sum() == 0:
-                raise ValueError('Cannot decompose the spatial covariance '
-                                 'because stddev==0 for IMT=%s' % im)
-        spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+    stddev = [std[str(imt)] for imt in imts_]
+    for im, std in zip(imts_, stddev):
+        if spatialcorr != 'no' and std.sum() == 0:
+            raise ValueError('Cannot decompose the spatial covariance '
+                             'because stddev==0 for IMT=%s' % im)
+    spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+    if spatial_cov.sum():
         L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
+    else:
+        L = 0  # stddev all zeros
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                           size=(M * N, num_gmfs), random_state=seed)
