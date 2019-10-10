@@ -345,36 +345,37 @@ class ContextMaker(object):
         # implements the collapse distance feature: the finite site effects
         # are ignored for sites over collapse_factor x rupture_radius
         loc = getattr(src, 'location', None)
-        if (loc and (src.count_nphc() > 1 or self.max_radius)
-                and len(sites) > self.max_sites_disagg):
+        if loc and len(sites) > self.max_sites_disagg:
+            simple = src.count_nphc() == 1
             trt = src.tectonic_region_type
             weights, depths = zip(*src.hypocenter_distribution.data)
             loc = copy.copy(loc)  # average hypocenter used in sites.split
             loc.depth = numpy.average(depths, weights=weights)
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
-                if self.pointsource_distance is None:
-                    # dynamically compute the pointsource distance
-                    max_dist = self.maximum_distance(trt, mag)
-                    radius = src._get_max_rupture_projection_radius(mag)
-                    cdist = min(self.collapse_factor * radius, max_dist)
-                else:  # legacy approach
-                    cdist = self.pointsource_distance
-                if self.max_radius is None:
-                    mdist = None
+                mdist = self.maximum_distance(trt, mag)
+                radius = src._get_max_rupture_projection_radius(mag)
+                if self.max_radius is not None:
+                    mdist = min(self.max_radius * radius, mdist)
+                if simple:
+                    for rup in src.gen_ruptures(mag, mag_occ_rate):
+                        yield rup, sites, mdist
                 else:
-                    mdist = min(self.max_radius * radius, max_dist)
-                close_sites, far_sites = sites.split(loc, cdist)
-                if close_sites is None:  # all is far
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
-                        yield rup, far_sites, mdist
-                elif far_sites is None:  # all is close
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
-                        yield rup, close_sites, mdist
-                else:  # some sites are far, some are close
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
-                        yield rup, far_sites, mdist
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
-                        yield rup, close_sites, mdist
+                    if self.pointsource_distance is None:
+                        cdist = min(self.collapse_factor * radius, mdist)
+                    else:  # legacy approach
+                        cdist = min(self.pointsource_distance, mdist)
+                    close_sites, far_sites = sites.split(loc, cdist)
+                    if close_sites is None:  # all is far
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                            yield rup, far_sites, mdist
+                    elif far_sites is None:  # all is close
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                            yield rup, close_sites, mdist
+                    else:  # some sites are far, some are close
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                            yield rup, far_sites, mdist
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                            yield rup, close_sites, mdist
         else:
             for rup in src.iter_ruptures():
                 yield rup, sites, None
