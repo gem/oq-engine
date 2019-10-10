@@ -265,6 +265,20 @@ class CompositionInfo(object):
                 if src_group.id == src_group_id:
                     return smodel
 
+    def get_gsims_by_trt(self):
+        """
+        :returns: a dictionary trt -> gsims
+        """
+        if self.num_samples:
+            gsims_by_trt = AccumDict(accum=set())
+            for sm in self.source_models:
+                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+                for i, br in enumerate(self.gsim_lt.branches):
+                    import pdb; pdb.set_trace()
+                    gsims_by_trt[br.trt].update([rlz.value[i] for rlz in rlzs])
+            return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
+        return self.gsim_lt.values
+
     def get_grp_ids(self, sm_id):
         """
         :returns: a list of source group IDs for the given source model ID

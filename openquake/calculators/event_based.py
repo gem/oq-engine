@@ -128,7 +128,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        gsims_by_trt = self.csm.gsim_lt.values
+        gsims_by_trt = self.csm.info.get_gsims_by_trt()
         logging.info('Building ruptures')
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
