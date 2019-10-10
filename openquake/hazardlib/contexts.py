@@ -196,7 +196,7 @@ class ContextMaker(object):
             for imt, imls in self.imtls.items():
                 self.loglevels[imt] = numpy.log(imls)
 
-    def filter(self, sites, rupture, psdist):
+    def filter(self, sites, rupture, mdist=None):
         """
         Filter the site collection with respect to the rupture.
 
@@ -205,17 +205,15 @@ class ContextMaker(object):
         :param rupture:
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
-        :param psdist:
-            collapse distance for point ruptures or None
+        :param mdist:
+           if not None, use it as maximum distance
         :returns:
             (filtered sites, distance context)
         """
         distances = get_distances(rupture, sites, self.filter_distance)
-        maxdist = self.maximum_distance(
+        mdist = mdist or self.maximum_distance(
             rupture.tectonic_region_type, rupture.mag)
-        if psdist and self.max_radius:
-            maxdist = min(self.max_radius * psdist, maxdist)
-        mask = distances <= maxdist
+        mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
         else:
@@ -251,7 +249,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture, psdist=None):
+    def make_contexts(self, sites, rupture, radius_dist=None):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -270,7 +268,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        sites, dctx = self.filter(sites, rupture, psdist)
+        sites, dctx = self.filter(sites, rupture, radius_dist)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -300,10 +298,10 @@ class ContextMaker(object):
         nrups, nsites = 0, 0
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
-        for rup, sites, psdist in self._gen_rup_sites(src, s_sites):
+        for rup, sites, radius_dist in self._gen_rup_sites(src, s_sites):
             try:
                 with self.ctx_mon:
-                    r_sites, dctx = self.make_contexts(sites, rup, psdist)
+                    r_sites, dctx = self.make_contexts(sites, rup, radius_dist)
             except FarAwayRupture:
                 continue
             with self.gmf_mon:
@@ -357,22 +355,26 @@ class ContextMaker(object):
                 if self.pointsource_distance is None:
                     # dynamically compute the pointsource distance
                     max_dist = self.maximum_distance(trt, mag)
-                    p_radius = src._get_max_rupture_projection_radius(mag)
-                    psdist = min(self.collapse_factor * p_radius, max_dist)
+                    radius = src._get_max_rupture_projection_radius(mag)
+                    cdist = min(self.collapse_factor * radius, max_dist)
                 else:  # legacy approach
-                    psdist = self.pointsource_distance
-                close_sites, far_sites = sites.split(loc, psdist)
+                    cdist = self.pointsource_distance
+                if self.max_radius is None:
+                    mdist = None
+                else:
+                    mdist = min(self.max_radius * radius, max_dist)
+                close_sites, far_sites = sites.split(loc, cdist)
                 if close_sites is None:  # all is far
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
-                        yield rup, far_sites, psdist
+                        yield rup, far_sites, mdist
                 elif far_sites is None:  # all is close
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
-                        yield rup, close_sites, psdist
+                        yield rup, close_sites, mdist
                 else:  # some sites are far, some are close
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
-                        yield rup, far_sites, psdist
+                        yield rup, far_sites, mdist
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
-                        yield rup, close_sites, psdist
+                        yield rup, close_sites, mdist
         else:
             for rup in src.iter_ruptures():
                 yield rup, sites, None
