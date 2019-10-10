@@ -56,7 +56,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
                      filter_distance=oq.filter_distance, maxweight=1E10,
                      task_duration=1000)
         self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
-        [gsims] = sorted(self.csm.info.gsim_lt.values.values())
+        [gsims] = self.csm.info.get_gsims_by_trt().values()
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         srcfilter = self.src_filter()
         for sm in self.csm.source_models:  # one branch at the time
