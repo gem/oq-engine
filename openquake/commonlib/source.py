@@ -273,9 +273,8 @@ class CompositionInfo(object):
             gsims_by_trt = AccumDict(accum=set())
             for sm in self.source_models:
                 rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
-                for i, br in enumerate(self.gsim_lt.branches):
-                    import pdb; pdb.set_trace()
-                    gsims_by_trt[br.trt].update([rlz.value[i] for rlz in rlzs])
+                for t, trt in enumerate(self.gsim_lt.values):
+                    gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
             return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
         return self.gsim_lt.values
 
