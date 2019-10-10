@@ -250,19 +250,19 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 200 samples * 10 SES
+        # 2 models x 3 GMPEs, 1000 samples * 10 SES
         expected = [
             'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
-        self.assertEqual({b'b11~BA': 59,   # w = .6 * .5 = .30
-                          b'b11~CB': 36,   # w = .6 * .3 = .18
-                          b'b11~CY': 26,   # w = .6 * .2 = .12
-                          b'b12~BA': 43,   # w = .4 * .5 = .20
-                          b'b12~CB': 21,   # w = .4 * .3 = .12
-                          b'b12~CY': 15},  # w = .4 * .2 = .08
+        self.assertEqual({b'b11~BA': 332,  # w = .6 * .5 = .30
+                          b'b11~CB': 169,  # w = .6 * .3 = .18
+                          b'b11~CY': 108,  # w = .6 * .2 = .12
+                          b'b12~BA': 193,  # w = .4 * .5 = .20
+                          b'b12~CB': 115,  # w = .4 * .3 = .12
+                          b'b12~CY': 83},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']
