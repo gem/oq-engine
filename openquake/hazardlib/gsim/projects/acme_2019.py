@@ -316,7 +316,6 @@ class AlAtikSigmaModel(GMPE):
         else:
             mean, _ = self.gmpe.get_mean_and_stddevs(sites, rup,
                     dists, imt, stds_types)
-            disp = self.get_disp_from_acc(mean, imt.period)
 
         kappa = 1
         if self.kappa_file is not None:
