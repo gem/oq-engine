@@ -117,7 +117,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
-                task_no=monitor.task_no)
+                task_no=monitor.task_no, maxdist=None)
 
 
 @base.calculators.add('classical')
@@ -136,6 +136,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param dic: dict with keys pmap, calc_times, rup_data
         """
         with self.monitor('aggregate curves'):
+            if dic['maxdist']:
+                self.maxdists.append(dic['maxdist'])
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
             srcids = []
@@ -218,10 +220,15 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        self.maxdists = []
         try:
             acc = smap.get_results().reduce(self.agg_dicts, self.acc0())
             self.store_rlz_info(acc.eff_ruptures)
         finally:
+            if self.maxdists:
+                maxdist = numpy.mean(self.maxdists)
+                logging.info('Using effective maximum distance for '
+                             'point sources%d km', maxdist)
             with self.monitor('store source_info'):
                 self.store_source_info(self.calc_times)
             if self.sources_by_task:
@@ -260,7 +267,7 @@ class ClassicalCalculator(base.HazardCalculator):
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            collapse_factor=oq.collapse_factor,
+            collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
             task_duration=td, maxweight=maxweight)

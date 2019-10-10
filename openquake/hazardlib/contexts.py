@@ -159,7 +159,8 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        self.collapse_factor = param.get('collapse_factor', 2)
+        self.collapse_factor = param.get('collapse_factor', 3)
+        self.max_radius = param.get('max_radius')
         self.pointsource_distance = param.get('pointsource_distance')
         filter_distance = param.get('filter_distance')
         if filter_distance is None:
@@ -195,7 +196,7 @@ class ContextMaker(object):
             for imt, imls in self.imtls.items():
                 self.loglevels[imt] = numpy.log(imls)
 
-    def filter(self, sites, rupture):
+    def filter(self, sites, rupture, mdist=None):
         """
         Filter the site collection with respect to the rupture.
 
@@ -204,12 +205,15 @@ class ContextMaker(object):
         :param rupture:
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
+        :param mdist:
+           if not None, use it as maximum distance
         :returns:
             (filtered sites, distance context)
         """
         distances = get_distances(rupture, sites, self.filter_distance)
-        mask = distances <= self.maximum_distance(
+        mdist = mdist or self.maximum_distance(
             rupture.tectonic_region_type, rupture.mag)
+        mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
         else:
@@ -245,7 +249,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture):
+    def make_contexts(self, sites, rupture, radius_dist=None):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -264,7 +268,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        sites, dctx = self.filter(sites, rupture)
+        sites, dctx = self.filter(sites, rupture, radius_dist)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -294,10 +298,13 @@ class ContextMaker(object):
         nrups, nsites = 0, 0
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
-        for rup, sites in self._gen_rup_sites(src, s_sites):
+        dists = []
+        for rup, sites, maxdist in self._gen_rup_sites(src, s_sites):
+            if maxdist is not None:
+                dists.append(maxdist)
             try:
                 with self.ctx_mon:
-                    r_sites, dctx = self.make_contexts(sites, rup)
+                    r_sites, dctx = self.make_contexts(sites, rup, maxdist)
             except FarAwayRupture:
                 continue
             with self.gmf_mon:
@@ -322,6 +329,7 @@ class ContextMaker(object):
                 rupdata.add(rup, src.id, r_sites, dctx)
         poemap.nrups = nrups
         poemap.nsites = nsites
+        poemap.maxdist = numpy.mean(dists) if dists else None
         poemap.data = rupdata.data
         return poemap
 
@@ -338,37 +346,48 @@ class ContextMaker(object):
         return rupture.get_probability_no_exceedance(poes)
 
     def _gen_rup_sites(self, src, sites):
-        # implements the collapse distance feature: the finite site effects
-        # are ignored for sites over collapse_factor x rupture_radius
         loc = getattr(src, 'location', None)
-        if loc and src.count_nphc() > 1 and len(sites) > self.max_sites_disagg:
-            weights, depths = zip(*src.hypocenter_distribution.data)
-            loc = copy.copy(loc)  # average hypocenter used in sites.split
-            loc.depth = numpy.average(depths, weights=weights)
+        if loc and len(sites) > self.max_sites_disagg:
+            # implements the collapse distance feature: the finite site effects
+            # are ignored for sites over collapse_factor x rupture_radius
+            # implements the max_radius feature: sites above
+            # max_radius * rupture_radius are discarded
+            trt = src.tectonic_region_type
+            simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
+            if not simple:
+                weights, depths = zip(*src.hypocenter_distribution.data)
+                loc = copy.copy(loc)  # average hypocenter used in sites.split
+                loc.depth = numpy.average(depths, weights=weights)
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
-                if self.pointsource_distance is None:
-                    # dynamically compute the pointsource distance
-                    max_dist = self.maximum_distance(
-                        src.tectonic_region_type, mag)
-                    p_radius = src._get_max_rupture_projection_radius(mag)
-                    psdist = min(self.collapse_factor * p_radius, max_dist)
-                else:  # legacy approach
-                    psdist = self.pointsource_distance
-                close_sites, far_sites = sites.split(loc, psdist)
-                if close_sites is None:  # all is far
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
-                        yield rup, far_sites
-                elif far_sites is None:  # all is close
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
-                        yield rup, close_sites
-                else:  # some sites are far, some are close
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
-                        yield rup, far_sites
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
-                        yield rup, close_sites
-        else:
+                mdist = self.maximum_distance(trt, mag)
+                radius = src._get_max_rupture_projection_radius(mag)
+                if self.max_radius is not None:
+                    mdist = min(self.max_radius * radius, mdist)
+                if simple:
+                    # there is nothing to collapse
+                    for rup in src.gen_ruptures(mag, mag_occ_rate):
+                        yield rup, sites, mdist
+                else:
+                    # compute the collapse distance and use it
+                    if self.pointsource_distance is None:
+                        cdist = min(self.collapse_factor * radius, mdist)
+                    else:  # legacy approach
+                        cdist = min(self.pointsource_distance, mdist)
+                    close_sites, far_sites = sites.split(loc, cdist)
+                    if close_sites is None:  # all is far
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                            yield rup, far_sites, mdist
+                    elif far_sites is None:  # all is close
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                            yield rup, close_sites, mdist
+                    else:  # some sites are far, some are close
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                            yield rup, far_sites, mdist
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                            yield rup, close_sites, mdist
+        else:  # no point source or site-specific analysis
             for rup in src.iter_ruptures():
-                yield rup, sites
+                yield rup, sites, None
 
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
         """
@@ -385,6 +404,7 @@ class ContextMaker(object):
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         it = iter(src_sites)
+        dists = []
         while True:
             t0 = time.time()
             try:
@@ -397,6 +417,8 @@ class ContextMaker(object):
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
                 raise etype(msg).with_traceback(tb)
+            if poemap.maxdist:
+                dists.append(poemap.maxdist)
             if len(poemap.data):
                 nr = len(poemap.data['sid_'])
                 for gid in src.src_group_ids:
@@ -408,7 +430,8 @@ class ContextMaker(object):
 
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
         rdata['grp_id'] = numpy.uint16(gids)
-        return pmap, rdata, calc_times
+        maxdist = numpy.mean(dists) if dists else None
+        return pmap, rdata, calc_times, maxdist
 
 
 class BaseContext(metaclass=abc.ABCMeta):

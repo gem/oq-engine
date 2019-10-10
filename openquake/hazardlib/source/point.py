@@ -166,7 +166,7 @@ class PointSource(ParametricSeismicSource):
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             yield from self.gen_ruptures(mag, mag_occ_rate, collapse=False)
 
-    def gen_ruptures(self, mag, mag_occ_rate, collapse):
+    def gen_ruptures(self, mag, mag_occ_rate, collapse=False):
         """
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
