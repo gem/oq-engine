@@ -222,6 +222,13 @@ class MMI(IMT):
     and on humans and their structures.
     """
 
+class JMA(IMT):
+    """
+    Modified Mercalli intensity, a Roman numeral describing the severity
+    of an earthquake in terms of its effects on the earth's surface
+    and on humans and their structures.
+    """
+
 # geotechnical IMTs
 
 
