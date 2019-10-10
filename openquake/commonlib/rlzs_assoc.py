@@ -231,8 +231,8 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
     :param trts: tectonic region types to accept
     """
     assoc = RlzsAssoc(cinfo)
-    offset = 0
     trtset = set(cinfo.gsim_lt.values)
+    offset = 0
     for smodel in cinfo.source_models:
         # discard source models with non-acceptable lt_path
         if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
@@ -256,11 +256,11 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                 logging.warning('Reducing the logic tree of %s from %d to %d '
                                 'realizations', smodel.name, before, after)
             rlzs = _get_rlzs(cinfo.num_samples, smodel, gsim_lt,
-                             cinfo.seed + offset)
+                             cinfo.seed + smodel.ordinal)
             all_trts = list(gsim_lt.values)
         else:
             rlzs = _get_rlzs(cinfo.num_samples, smodel, cinfo.gsim_lt,
-                             cinfo.seed + offset)
+                             cinfo.seed + smodel.ordinal)
             all_trts = list(cinfo.gsim_lt.values)
 
         assoc._add_realizations(offset, smodel, all_trts, rlzs)
