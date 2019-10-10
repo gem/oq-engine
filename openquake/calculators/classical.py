@@ -46,7 +46,7 @@ def estimate_duration(rups_per_task, maxdist, N, M, G):
     """
     Estimate the task duration with an heuristic formula
     """
-    return .1 * M * G * (rups_per_task * N) ** .3 * (maxdist / 300) ** 2
+    return .1 * M * G * (rups_per_task * N) ** .333 * (maxdist / 300) ** 2
 
 
 def get_src_ids(sources):
@@ -228,7 +228,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.maxdists:
                 maxdist = numpy.mean(self.maxdists)
                 logging.info('Using effective maximum distance for '
-                             'point sources%d km', maxdist)
+                             'point sources %d km', maxdist)
             with self.monitor('store source_info'):
                 self.store_source_info(self.calc_times)
             if self.sources_by_task:
