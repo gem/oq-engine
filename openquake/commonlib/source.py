@@ -267,7 +267,7 @@ class CompositionInfo(object):
 
     def get_gsims_by_trt(self):
         """
-        :returns: a dictionary trt -> gsims
+        :returns: a dictionary trt -> sorted gsims
         """
         if self.num_samples:
             gsims_by_trt = AccumDict(accum=set())
@@ -275,8 +275,9 @@ class CompositionInfo(object):
                 rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
                 for t, trt in enumerate(self.gsim_lt.values):
                     gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
-            return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
-        return self.gsim_lt.values
+        else:
+            gsims_by_trt = self.gsim_lt.values
+        return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
 
     def get_grp_ids(self, sm_id):
         """
