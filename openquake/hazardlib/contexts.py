@@ -298,10 +298,13 @@ class ContextMaker(object):
         nrups, nsites = 0, 0
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
-        for rup, sites, radius_dist in self._gen_rup_sites(src, s_sites):
+        dists = []
+        for rup, sites, maxdist in self._gen_rup_sites(src, s_sites):
+            if maxdist is not None:
+                dists.append(maxdist)
             try:
                 with self.ctx_mon:
-                    r_sites, dctx = self.make_contexts(sites, rup, radius_dist)
+                    r_sites, dctx = self.make_contexts(sites, rup, maxdist)
             except FarAwayRupture:
                 continue
             with self.gmf_mon:
@@ -326,6 +329,7 @@ class ContextMaker(object):
                 rupdata.add(rup, src.id, r_sites, dctx)
         poemap.nrups = nrups
         poemap.nsites = nsites
+        poemap.maxdist = numpy.mean(dists) if dists else None
         poemap.data = rupdata.data
         return poemap
 
@@ -400,6 +404,7 @@ class ContextMaker(object):
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         it = iter(src_sites)
+        dists = []
         while True:
             t0 = time.time()
             try:
@@ -412,6 +417,8 @@ class ContextMaker(object):
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
                 raise etype(msg).with_traceback(tb)
+            if poemap.maxdist:
+                dists.append(poemap.maxdist)
             if len(poemap.data):
                 nr = len(poemap.data['sid_'])
                 for gid in src.src_group_ids:
@@ -423,7 +430,8 @@ class ContextMaker(object):
 
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
         rdata['grp_id'] = numpy.uint16(gids)
-        return pmap, rdata, calc_times
+        maxdist = numpy.mean(dists) if dists else None
+        return pmap, rdata, calc_times, maxdist
 
 
 class BaseContext(metaclass=abc.ABCMeta):
