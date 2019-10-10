@@ -42,11 +42,11 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def estimate_duration(rups_per_task, maxdist, N, M):
+def estimate_duration(rups_per_task, maxdist, N, M, G):
     """
     Estimate the task duration with an heuristic formula
     """
-    return (rups_per_task * N * M) ** .333 * (maxdist / 300) ** 2
+    return .1 * M * G * (rups_per_task * N) ** .3 * (maxdist / 300) ** 2
 
 
 def get_src_ids(sources):
@@ -252,6 +252,8 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol)
         M = len(oq.imtls)
+        gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        G = max(len(gsims) for gsims in gsims_by_trt.values())
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         del self.csm  # save memory
         maxweight = source.get_maxweight(
@@ -259,7 +261,7 @@ class ClassicalCalculator(base.HazardCalculator):
         maxdist = int(max(oq.maximum_distance.values()))
         if oq.task_duration is None:  # inferred
             # from 1 minute up to 1 day
-            td = int(max(estimate_duration(maxweight, maxdist, N, M), 60))
+            td = int(max(estimate_duration(maxweight, maxdist, N, M, G), 60))
         else:  # user given
             td = int(oq.task_duration)
         param = dict(
@@ -276,7 +278,6 @@ class ClassicalCalculator(base.HazardCalculator):
             f1 = f2 = preclassical
         else:
             f1, f2 = classical, classical_split_filter
-        gsims_by_trt = self.csm_info.get_gsims_by_trt()
         for trt, sources, atomic in trt_sources:
             gsims = gsims_by_trt[trt]
             if atomic:
