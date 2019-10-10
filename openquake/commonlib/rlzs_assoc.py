@@ -237,31 +237,34 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
         # discard source models with non-acceptable lt_path
         if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
             continue
-
-        # collect the effective tectonic region types and ruptures
-        trts_ = set()
-        for sg in smodel.src_groups:
-            if sg.eff_ruptures:
-                if (trts and sg.trt in trts) or not trts:
-                    trts_.add(sg.trt)
-
-        # recompute the GSIM logic tree if needed
-        if trts_ != {'*'} and trtset != trts_:
-            before = cinfo.gsim_lt.get_num_paths()
-            gsim_lt = cinfo.gsim_lt.reduce(trts_)
-            after = gsim_lt.get_num_paths()
-            if sm_lt_path and before > after:
-                # print the warning only when saving the logic tree,
-                # i.e. when called with sm_lt_path in store_rlz_info
-                logging.warning('Reducing the logic tree of %s from %d to %d '
-                                'realizations', smodel.name, before, after)
-            rlzs = _get_rlzs(cinfo.num_samples, smodel, gsim_lt,
-                             cinfo.seed + smodel.ordinal)
-            all_trts = list(gsim_lt.values)
-        else:
-            rlzs = _get_rlzs(cinfo.num_samples, smodel, cinfo.gsim_lt,
-                             cinfo.seed + smodel.ordinal)
+        elif cinfo.num_samples:  # sampling, do not reduce the logic tree
+            rlzs = cinfo.gsim_lt.sample(
+                smodel.samples, cinfo.seed + smodel.ordinal)
             all_trts = list(cinfo.gsim_lt.values)
+        else:  # full enumeration
+            # collect the effective tectonic region types and ruptures
+            trts_ = set()
+            for sg in smodel.src_groups:
+                if sg.eff_ruptures:
+                    if (trts and sg.trt in trts) or not trts:
+                        trts_.add(sg.trt)
+
+            # recompute the GSIM logic tree if needed
+            if trts_ != {'*'} and trtset != trts_:
+                before = cinfo.gsim_lt.get_num_paths()
+                gsim_lt = cinfo.gsim_lt.reduce(trts_)
+                after = gsim_lt.get_num_paths()
+                if sm_lt_path and before > after:
+                    # print the warning only when saving the logic tree,
+                    # i.e. when called with sm_lt_path in store_rlz_info
+                    logging.warning(
+                        'Reducing the logic tree of %s from %d to %d '
+                        'realizations', smodel.name, before, after)
+                rlzs = get_effective_rlzs(gsim_lt)
+                all_trts = list(gsim_lt.values)
+            else:
+                rlzs = get_effective_rlzs(cinfo.gsim_lt)
+                all_trts = list(cinfo.gsim_lt.values)
 
         assoc._add_realizations(offset, smodel, all_trts, rlzs)
         offset += len(rlzs)
@@ -269,11 +272,3 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
     if assoc.realizations:
         assoc._init()
     return assoc
-
-
-def _get_rlzs(num_samples, smodel, gsim_lt, seed):
-    if num_samples:
-        rlzs = gsim_lt.sample(smodel.samples, seed)
-    else:  # full enumeration
-        rlzs = get_effective_rlzs(gsim_lt)
-    return rlzs
