@@ -186,9 +186,10 @@ class ClassicalCalculator(base.HazardCalculator):
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'srcidx', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_'}
+        gsims_by_trt = self.csm_info.get_gsims_by_trt()
         for sm in self.csm_info.source_models:
             for grp in sm.src_groups:
-                gsims = self.csm_info.gsim_lt.get_gsims(grp.trt)
+                gsims = gsims_by_trt[grp.trt]
                 cm = ContextMaker(grp.trt, gsims)
                 rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
                 for dparam in cm.REQUIRES_DISTANCES:
@@ -268,8 +269,9 @@ class ClassicalCalculator(base.HazardCalculator):
             f1 = f2 = preclassical
         else:
             f1, f2 = classical, classical_split_filter
+        gsims_by_trt = self.csm_info.get_gsims_by_trt()
         for trt, sources, atomic in trt_sources:
-            gsims = self.csm_info.gsim_lt.get_gsims(trt)
+            gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
                 yield f1, (sources, srcfilter, gsims, param)
