@@ -167,3 +167,15 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
                                np.min(self.cat.data['year']))
         self.assertAlmostEqual(
             self.cat.end_year, np.max(self.cat.data['year']))
+
+    def test_read_centroid_from_ndk_string(self):
+        import datetime
+        from openquake.hmtk.seismicity.gcmt_catalogue import GCMTHypocentre
+
+        tmps = """CENTROID:      1.060.0  10.47 0.03  127.42 0.03  15.0  0.0 BDY  O-00000000000000"""
+
+        prs = ParseNDKtoGCMT('pippo')
+        hypo = GCMTHypocentre()
+        hypo.date = datetime.date(2000, 1, 2)
+        hypo.time = datetime.time(1, 2, 3)
+        prs._read_centroid_from_ndk_string(tmps, hypo)
