@@ -207,10 +207,14 @@ class ClassicalTestCase(CalculatorTestCase):
                           '0.145', '0.203', '0.284'))
 
     def test_case_14(self):
-        # test classical
-        self.assert_curves_ok([
-            'hazard_curve-rlz-000_PGA.csv', 'hazard_curve-rlz-001_PGA.csv'
-        ], case_14.__file__)
+        # test classical with 2 gsims and 1 sample
+        self.assert_curves_ok(['hazard_curve-rlz-000_PGA.csv'],
+                              case_14.__file__)
+
+        # test sampling use the right number of gsims by looking at
+        # the poes datasets which have shape (N, L, G)
+        G = 1  # and not 2
+        self.calc.datastore['poes/grp-00'].array.shape[-1] == G
 
         # test preclassical and OQ_SAMPLE_SOURCES
         with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
