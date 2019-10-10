@@ -342,24 +342,29 @@ class ContextMaker(object):
         return rupture.get_probability_no_exceedance(poes)
 
     def _gen_rup_sites(self, src, sites):
-        # implements the collapse distance feature: the finite site effects
-        # are ignored for sites over collapse_factor x rupture_radius
         loc = getattr(src, 'location', None)
         if loc and len(sites) > self.max_sites_disagg:
-            simple = src.count_nphc() == 1
+            # implements the collapse distance feature: the finite site effects
+            # are ignored for sites over collapse_factor x rupture_radius
+            # implements the max_radius feature: sites above
+            # max_radius * rupture_radius are discarded
             trt = src.tectonic_region_type
-            weights, depths = zip(*src.hypocenter_distribution.data)
-            loc = copy.copy(loc)  # average hypocenter used in sites.split
-            loc.depth = numpy.average(depths, weights=weights)
+            simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
+            if not simple:
+                weights, depths = zip(*src.hypocenter_distribution.data)
+                loc = copy.copy(loc)  # average hypocenter used in sites.split
+                loc.depth = numpy.average(depths, weights=weights)
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
                 mdist = self.maximum_distance(trt, mag)
                 radius = src._get_max_rupture_projection_radius(mag)
                 if self.max_radius is not None:
                     mdist = min(self.max_radius * radius, mdist)
                 if simple:
+                    # there is nothing to collapse
                     for rup in src.gen_ruptures(mag, mag_occ_rate):
                         yield rup, sites, mdist
                 else:
+                    # compute the collapse distance and use it
                     if self.pointsource_distance is None:
                         cdist = min(self.collapse_factor * radius, mdist)
                     else:  # legacy approach
@@ -376,7 +381,7 @@ class ContextMaker(object):
                             yield rup, far_sites, mdist
                         for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
                             yield rup, close_sites, mdist
-        else:
+        else:  # no point source or site-specific analysis
             for rup in src.iter_ruptures():
                 yield rup, sites, None
 
