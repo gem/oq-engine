@@ -271,7 +271,7 @@ class ClassicalCalculator(base.HazardCalculator):
             f1, f2 = classical, classical_split_filter
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         for trt, sources, atomic in trt_sources:
-            gsims = sorted(gsims_by_trt[trt])
+            gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
                 yield f1, (sources, srcfilter, gsims, param)
