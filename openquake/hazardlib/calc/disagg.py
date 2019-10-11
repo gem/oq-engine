@@ -80,15 +80,14 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
             (par, val[ridx]) for par, val in rupdata.items())
         dctx = contexts.DistancesContext(
             (param, getattr(rctx, param + '_')[[sidx]])
-            for param in cmaker.REQUIRES_DISTANCES).roundup(
-                    gsim.minimum_distance)
+            for param in cmaker.REQUIRES_DISTANCES)
         acc['mags'].append(rctx.mag)
         acc['lons'].append(rctx.lon_[sidx])
         acc['lats'].append(rctx.lat_[sidx])
         acc['dists'].append(dist)
         with gmf_mon:
             mean_std = get_mean_std(
-                rctx, sitecol, dctx, iml2.imts, [gsim])[:, :, 0]  # shp (N, M)
+                rctx, sitecol, dctx, iml2.imts, [gsim])[..., 0]  # (2, N, M)
         with pne_mon:
             iml = gsim.to_distribution_values(iml2)
             pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)
