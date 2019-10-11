@@ -269,6 +269,8 @@ class AlAtikSigmaModel(GMPE):
         except AttributeError:
             highest_period = max(gmpe.TAB2.sa_coeffs.keys()).period
         cappingp = min(highest_period, cornerp)
+        if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
+            cappingp = 1.0
         return cappingp
 
     def get_disp_from_acc(self, acc, imt):
