@@ -190,8 +190,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shp))]
         self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
-        shp = self.get_shape(self.L, self.R)  # shape L, R, T...
-        self.datastore.create_dset('agg_losses-rlzs', F32, shp)
         self.datastore.create_dset('gmf_info', gmf_info_dt)
 
     def execute(self):
@@ -297,6 +295,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         for tagname in oq.aggregate_by:
             aggregate_by[tagname] = getattr(self.assetcol.tagcol, tagname)[1:]
         units = self.datastore['cost_calculator'].get_units(loss_types)
+        shp = self.get_shape(self.L, self.R)  # shape L, R, T...
+        self.datastore.create_dset('agg_losses-rlzs', F32, shp)
         shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
         shape_descr = (['return_periods', 'rlzs', 'loss_types'] +
                        oq.aggregate_by)
@@ -348,18 +348,38 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 for rlzi in range(self.R)]
         acc = list(parallel.Starmap(postprocess, args,
                                     h5=self.datastore.hdf5))
-        for r, (curves, maps), agg_losses in acc:
+        for dic in acc:
+            r = dic['rlzi']
+            curves, maps = dic['agg_curves_maps']
+            agg_losses = dic['agg_losses']
             if len(curves):  # some realization can give zero contribution
                 self.datastore['agg_curves-rlzs'][:, r] = curves
             if len(maps):  # conditional_loss_poes can be empty
                 self.datastore['agg_maps-rlzs'][:, r] = maps
             self.datastore['agg_losses-rlzs'][:, r] = agg_losses
+            '''
+            if 'tot_curves_maps' in dic:
+                curves, maps = dic['tot_curves_maps']
+                tot_losses = dic['tot_losses']
+                if len(curves):  # some realization can give zero contribution
+                    self.datastore['tot_curves-rlzs'][:, r] = curves
+                if len(maps):  # conditional_loss_poes can be empty
+                    self.datastore['tot_maps-rlzs'][:, r] = maps
+                self.datastore['tot_losses-rlzs'][:, r] = tot_losses
+            '''
         if self.R > 1:
             logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
             set_rlzs_stats(self.datastore, 'agg_losses')
             if oq.conditional_loss_poes:
                 set_rlzs_stats(self.datastore, 'agg_maps')
+            '''
+            if 'tot_curves_maps' in dic:
+                set_rlzs_stats(self.datastore, 'tot_curves')
+                set_rlzs_stats(self.datastore, 'tot_losses')
+                if oq.conditional_loss_poes:
+                    set_rlzs_stats(self.datastore, 'tot_maps')
+            '''
 
         # sanity check with the asset_loss_table
         if oq.asset_loss_table and len(oq.aggregate_by) == 1:
@@ -397,10 +417,19 @@ def postprocess(filename, builder, ses_ratio, rlzi, monitor):
     :param builder: LossCurvesMapsBuilder instance
     :param rlzi: realization index
     :param monitor: Monitor instance
-    :returns: rlzi, (curves, maps), agg_losses
+    :returns: a dictionary with keys rlzi, curves_maps, agg_losses
     """
     with datastore.read(filename) as dstore:
         rlzs = dstore['losses_by_event']['rlzi']
         losses = dstore['losses_by_event'][rlzs == rlzi]['loss']
+    # aggregate on the events
     agg_losses = losses.sum(axis=0) * ses_ratio  # shape (L, T, ...)
-    return rlzi, builder.build_curves_maps(losses, rlzi), agg_losses
+    res = dict(rlzi=rlzi, agg_losses=agg_losses)
+    num_axis = len(agg_losses.shape)
+    if num_axis > 1:  # there are tags, compute the totals
+        axis = tuple(range(1, num_axis))
+        res['tot_losses'] = agg_losses.sum(axis=axis)
+        res['tot_curves_maps'] = builder.build_curves_maps(
+            losses.sum(axis=axis), rlzi)
+    res['agg_curves_maps'] = builder.build_curves_maps(losses, rlzi)
+    return res
