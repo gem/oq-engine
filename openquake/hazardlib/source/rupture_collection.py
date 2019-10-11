@@ -31,9 +31,7 @@ class RuptureCollectionSource(ParametricSeismicSource):
     # the mosaic test for Canada is sensitive to such _slots_
     _slots_ = ['source_id', 'name', 'tectonic_region_type', 'num_ruptures',
                'min_mag', 'mfd']
-
     MODIFICATIONS = set()
-    RUPTURE_WEIGHT = 4.0  # the same as ComplexFaultSources
 
     def __init__(self, source_id, name, tectonic_region_type, mfd, ruptures):
         self.source_id = source_id
