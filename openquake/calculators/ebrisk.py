@@ -35,6 +35,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO32 = 2 ** 32
 get_n_occ = operator.itemgetter(1)
 
 gmf_info_dt = numpy.dtype([('ridx', U32), ('task_no', U16),
@@ -191,6 +192,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         elt_nbytes = 4 * self.E * numpy.prod(shp)
         logging.info('Approx size of the event loss table: %s',
                      general.humansize(elt_nbytes))
+        if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
+            raise RuntimeError('The calculation is too big!')
         self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
         self.datastore.create_dset('gmf_info', gmf_info_dt)
