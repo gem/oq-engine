@@ -193,7 +193,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Approx size of the event loss table: %s',
                      general.humansize(elt_nbytes))
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
-            raise RuntimeError('The calculation is too big!')
+            raise RuntimeError('The event loss table is too big to be transfer'
+                               'red with %d tasks' % oq.concurrent_tasks)
         self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
         self.datastore.create_dset('gmf_info', gmf_info_dt)
