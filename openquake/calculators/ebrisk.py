@@ -188,6 +188,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shp))]
+        elt_nbytes = 4 * self.E * numpy.prod(shp)
+        logging.info('Approx size of the event loss table: %s',
+                     general.humansize(elt_nbytes))
         self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
         self.datastore.create_dset('gmf_info', gmf_info_dt)
