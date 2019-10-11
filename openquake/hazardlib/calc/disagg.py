@@ -34,7 +34,7 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, get_mean_std
 
 
 def _eps3(truncation_level, n_epsilons):
@@ -87,7 +87,8 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
         acc['lats'].append(rctx.lat_[sidx])
         acc['dists'].append(dist)
         with gmf_mon:
-            mean_std = gsim.get_mean_std(sitecol, rctx, dctx, iml2.imts)
+            mean_std = get_mean_std(
+                rctx, sitecol, dctx, iml2.imts, [gsim])[:, :, 0]  # shp (N, M)
         with pne_mon:
             iml = gsim.to_distribution_values(iml2)
             pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)
