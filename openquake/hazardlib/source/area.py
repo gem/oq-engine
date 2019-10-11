@@ -68,7 +68,7 @@ class AreaSource(ParametricSeismicSource):
         self.area_discretization = area_discretization
         self.max_radius = 0
 
-    def iter_ruptures(self, shift_hypo=False):
+    def iter_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`
@@ -111,8 +111,6 @@ class AreaSource(ParametricSeismicSource):
                                        * rate_scaling_factor)
                     surface, nhc = PointSource._get_rupture_surface(
                         self, mag, np, hypocenter)
-                    if shift_hypo:
-                        hc_depth = nhc.depth
                     ref_ruptures.append((mag, np.rake, hc_depth,
                                          surface, occurrence_rate))
 
