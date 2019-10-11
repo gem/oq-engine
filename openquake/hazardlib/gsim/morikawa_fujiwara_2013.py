@@ -189,7 +189,21 @@ class MorikawaFujiwara2013Crustal(GMPE):
         "Mw1": 16.0}
 
 
-class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013Crustal):
+class MorikawaFujiwara2013SubInterface(MorikawaFujiwara2013Crustal):
+
+    #: Supported tectonic region type is active shallow crust
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    def _set_params(self):
+        self.region = None
+        self.model = 'model1'
+
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
+        return (C['a']*(mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
+                np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
+
+
+class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013SubInterface):
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
@@ -198,12 +212,36 @@ class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013Crustal):
         self.region = 'NE'
         self.model = 'model1'
 
+
+class MorikawaFujiwara2013SubInterfaceSW(MorikawaFujiwara2013SubInterface):
+
+    #: Supported tectonic region type is active shallow crust
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    def _set_params(self):
+        self.region = 'SW'
+        self.model = 'model1'
+
     def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
-        return (C['a']*(mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
+        return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] + C['PH']
+                - np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
+
+
+class MorikawaFujiwara2013SubSlab(MorikawaFujiwara2013Crustal):
+
+    #: Supported tectonic region type is active shallow crust
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
+    def _set_params(self):
+        self.region = None
+        self.model = 'model1'
+
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
+        return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
                 np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
 
 
-class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013Crustal):
+class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013SubSlab):
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
@@ -211,10 +249,6 @@ class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013Crustal):
     def _set_params(self):
         self.region = 'NE'
         self.model = 'model1'
-
-    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
-        return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
-                np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
 
 
 class MorikawaFujiwara2013SubSlabSW(MorikawaFujiwara2013SubSlabNE):
