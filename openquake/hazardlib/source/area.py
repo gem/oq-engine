@@ -109,7 +109,7 @@ class AreaSource(ParametricSeismicSource):
                                            depth=hc_depth)
                     occurrence_rate = (mag_occ_rate * np_prob * hc_prob
                                        * rate_scaling_factor)
-                    surface, nhc = PointSource._get_rupture_surface(
+                    surface = PointSource._get_rupture_surface(
                         self, mag, np, hypocenter)
                     ref_ruptures.append((mag, np.rake, hc_depth,
                                          surface, occurrence_rate))
