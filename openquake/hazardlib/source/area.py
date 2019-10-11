@@ -111,8 +111,6 @@ class AreaSource(ParametricSeismicSource):
                                        * rate_scaling_factor)
                     surface = PointSource._get_rupture_surface(
                         self, mag, np, hypocenter)
-                    if shift_hypo:
-                        hc_depth = nhc.depth
                     ref_ruptures.append((mag, np.rake, hc_depth,
                                          surface, occurrence_rate))
 
