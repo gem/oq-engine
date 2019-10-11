@@ -42,11 +42,11 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def estimate_duration(rups_per_task, maxdist, N, M):
+def estimate_duration(rups_per_task, maxdist, N, M, G):
     """
     Estimate the task duration with an heuristic formula
     """
-    return (rups_per_task * N * M) ** .333 * (maxdist / 300) ** 2
+    return .1 * M * G * (rups_per_task * N) ** .333 * (maxdist / 300) ** 2
 
 
 def get_src_ids(sources):
@@ -117,7 +117,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
-                task_no=monitor.task_no)
+                task_no=monitor.task_no, maxdist=None)
 
 
 @base.calculators.add('classical')
@@ -136,6 +136,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param dic: dict with keys pmap, calc_times, rup_data
         """
         with self.monitor('aggregate curves'):
+            if dic['maxdist']:
+                self.maxdists.append(dic['maxdist'])
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
             srcids = []
@@ -186,9 +188,10 @@ class ClassicalCalculator(base.HazardCalculator):
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'srcidx', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_'}
+        gsims_by_trt = self.csm_info.get_gsims_by_trt()
         for sm in self.csm_info.source_models:
             for grp in sm.src_groups:
-                gsims = self.csm_info.gsim_lt.get_gsims(grp.trt)
+                gsims = gsims_by_trt[grp.trt]
                 cm = ContextMaker(grp.trt, gsims)
                 rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
                 for dparam in cm.REQUIRES_DISTANCES:
@@ -217,10 +220,15 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        self.maxdists = []
         try:
             acc = smap.get_results().reduce(self.agg_dicts, self.acc0())
             self.store_rlz_info(acc.eff_ruptures)
         finally:
+            if self.maxdists:
+                maxdist = numpy.mean(self.maxdists)
+                logging.info('Using effective maximum distance for '
+                             'point sources %d km', maxdist)
             with self.monitor('store source_info'):
                 self.store_source_info(self.calc_times)
             if self.sources_by_task:
@@ -244,6 +252,8 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol)
         M = len(oq.imtls)
+        gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        G = max(len(gsims) for gsims in gsims_by_trt.values())
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         del self.csm  # save memory
         maxweight = source.get_maxweight(
@@ -251,13 +261,13 @@ class ClassicalCalculator(base.HazardCalculator):
         maxdist = int(max(oq.maximum_distance.values()))
         if oq.task_duration is None:  # inferred
             # from 1 minute up to 1 day
-            td = int(max(estimate_duration(maxweight, maxdist, N, M), 60))
+            td = int(max(estimate_duration(maxweight, maxdist, N, M, G), 60))
         else:  # user given
             td = int(oq.task_duration)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            collapse_factor=oq.collapse_factor,
+            collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
             task_duration=td, maxweight=maxweight)
@@ -269,7 +279,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             f1, f2 = classical, classical_split_filter
         for trt, sources, atomic in trt_sources:
-            gsims = self.csm_info.gsim_lt.get_gsims(trt)
+            gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
                 yield f1, (sources, srcfilter, gsims, param)

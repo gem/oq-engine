@@ -568,7 +568,9 @@ def view_task_hazard(token, dstore):
     _, name, index = token.split(':')
     if 'sources_by_task' not in dstore:
         return 'Missing sources_by_task'
-    data = get_array(dstore['task_info'][()], taskname=name)
+    data = get_array(dstore['task_info'][()], taskname=encode(name))
+    if len(data) == 0:
+        raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['taskno']
