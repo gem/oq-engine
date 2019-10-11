@@ -318,9 +318,8 @@ class Result(object):
 
     def __init__(self, val, mon, tb_str='', msg='', count=0):
         if isinstance(val, dict):
-            # store the size in bytes of the content
-            self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
             self.pik = Pickled(val)
+            self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
         elif isinstance(val, tuple) and callable(val[0]):
             self.func = val[0]
             self.pik = pickle_sequence(val[1:])
