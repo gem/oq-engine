@@ -75,7 +75,7 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-def get_mean_std(rctx, sctx, dctx, imts, gsims):
+def get_mean_std(sctx, rctx, dctx, imts, gsims):
     """
     :returns: an array of shape (2, N, M, G) with means and stddevs
     """

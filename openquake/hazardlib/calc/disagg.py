@@ -87,7 +87,7 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
         acc['dists'].append(dist)
         with gmf_mon:
             mean_std = get_mean_std(
-                rctx, sitecol, dctx, iml2.imts, [gsim])[..., 0]  # (2, N, M)
+                sitecol, rctx, dctx, iml2.imts, [gsim])[..., 0]  # (2, N, M)
         with pne_mon:
             iml = gsim.to_distribution_values(iml2)
             pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)

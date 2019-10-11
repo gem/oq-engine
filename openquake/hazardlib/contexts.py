@@ -307,7 +307,7 @@ class ContextMaker(object):
                 continue
             with self.gmf_mon:
                 mean_std = base.get_mean_std(  # shape (2, N, M, G)
-                    rup, r_sites, dctx, imts, self.gsims)
+                    r_sites, rup, dctx, imts, self.gsims)
             with self.poe_mon:
                 pairs = zip(r_sites.sids, self._make_pnes(rup, mean_std))
             with self.pne_mon:
