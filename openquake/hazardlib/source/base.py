@@ -41,7 +41,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
                'src_group_id', 'num_ruptures', 'id', 'min_mag']
-    RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
@@ -57,7 +56,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        return self.num_ruptures * math.sqrt(self.nsites)
+        if hasattr(self, 'nodal_plane_distribution'):  # point source
+            nr = len(self.get_annual_occurrence_rates())  # ignore hcd, npd
+        else:
+            nr = self.num_ruptures
+        return nr * math.sqrt(self.nsites)
 
     @property
     def nsites(self):

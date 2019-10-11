@@ -361,7 +361,6 @@ class ParseNDKtoGCMT(object):
                                 hypocentre.time)
         centroid.centroid_type = ndk_string[0:8]
         time_diff = float(ndk_string[10:18])
-        print(ndk_string[10:18])
         if fabs(time_diff) > 1E-6:
             centroid._get_centroid_time(time_diff)
         centroid.time_error = float(ndk_string[19:22])

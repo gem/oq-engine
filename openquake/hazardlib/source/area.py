@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
-import numpy
 from copy import deepcopy
 from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
@@ -46,10 +45,7 @@ class AreaSource(ParametricSeismicSource):
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth nodal_plane_distribution hypocenter_distribution
     polygon area_discretization'''.split()
-
     MODIFICATIONS = set(())
-
-    RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
