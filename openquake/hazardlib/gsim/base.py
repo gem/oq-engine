@@ -75,6 +75,24 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
+def get_mean_std(rctx, sctx, dctx, imts, gsims):
+    """
+    :returns: an array of shape (2, N, M, G) with means and stddevs
+    """
+    N = len(sctx.sids)
+    M = len(imts)
+    G = len(gsims)
+    arr = numpy.zeros((2, N, M, G))
+    for g, gsim in enumerate(gsims):
+        d = dctx.roundup(gsim.minimum_distance)
+        for m, imt in enumerate(imts):
+            mean, [std] = gsim.get_mean_and_stddevs(sctx, rctx, d, imt,
+                                                    [const.StdDev.TOTAL])
+            arr[0, :, m, g] = mean
+            arr[1, :, m, g] = std
+    return arr
+
+
 def get_poes(mean_std, loglevels, truncation_level, gsims=()):
     """
     Calculate and return probabilities of exceedance (PoEs) of one or more
@@ -365,20 +383,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         and make ``get_mean_and_stddevs()`` just combine both (and possibly
         compute interim steps).
         """
-
-    def get_mean_std(self, sctx, rctx, dctx, imts):
-        """
-        :returns: an array of shape (2, N, M) with means and stddevs
-        """
-        N = len(sctx.sids)
-        M = len(imts)
-        arr = numpy.zeros((2, N, M))
-        for m, imt in enumerate(imts):
-            mean, [std] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                    [const.StdDev.TOTAL])
-            arr[0, :, m] = mean
-            arr[1, :, m] = std
-        return arr
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
