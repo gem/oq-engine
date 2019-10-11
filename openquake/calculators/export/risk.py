@@ -174,7 +174,8 @@ def export_avg_losses(ekey, dstore):
 
 
 # this is used by ebrisk
-@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
+@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'),
+            ('tot_losses-rlzs', 'csv'), ('tot_losses-stats', 'csv'))
 def export_agg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -185,7 +186,8 @@ def export_agg_losses(ekey, dstore):
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assetcol = dstore['assetcol']
-    aggname = '_'.join(['agg'] + oq.aggregate_by)
+    aggname = '_'.join(['agg'] + oq.aggregate_by if dskey.startswith('agg_')
+                       else [])
     expvalue = dstore['exposed_values/' + aggname][()]
     # shape (T1, T2, ..., L)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
