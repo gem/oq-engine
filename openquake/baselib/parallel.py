@@ -324,10 +324,10 @@ class Result(object):
         elif isinstance(val, tuple) and callable(val[0]):
             self.func = val[0]
             self.pik = pickle_sequence(val[1:])
-            self.nbytes = sum(len(p) for p in self.pik)
+            self.nbytes = {'tot': sum(len(p) for p in self.pik)}
         else:
             self.pik = Pickled(val)
-            self.nbytes = len(self.pik)
+            self.nbytes = {'tot': len(self.pik)}
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
@@ -348,7 +348,8 @@ class Result(object):
         return val
 
     def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name__, humansize(self.nbytes))
+        nbytes = sum(self.nbytes.values())
+        return '<%s %s>' % (self.__class__.__name__, humansize(nbytes))
 
     @classmethod
     def new(cls, func, args, mon, count=0):
