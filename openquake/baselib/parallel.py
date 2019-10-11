@@ -348,8 +348,8 @@ class Result(object):
         return val
 
     def __repr__(self):
-        nbytes = sum(self.nbytes.values())
-        return '<%s %s>' % (self.__class__.__name__, humansize(nbytes))
+        nbytes = ['%s: %s' % (k, humansize(v)) for k, v in self.nbytes.items()]
+        return '<%s %s>' % (self.__class__.__name__, ' '.join(nbytes))
 
     @classmethod
     def new(cls, func, args, mon, count=0):
