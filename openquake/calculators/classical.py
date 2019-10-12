@@ -299,6 +299,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield f1, (sources, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
+                    logging.debug('Sending %d sources with weight %d',
+                                  len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
 
     def save_hazard(self, acc, pmap_by_kind):
