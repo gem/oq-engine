@@ -28,7 +28,7 @@ from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, ProbabilityCurve)
-from openquake.commonlib import calc, util, source
+from openquake.commonlib import calc, util
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -42,11 +42,15 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def estimate_duration(rups_per_task, maxdist, N, M, G):
+def estimate_duration(weight_by_trt, maxdist, N, M, G):
     """
     Estimate the task duration with an heuristic formula
     """
-    return .1 * M * G * (rups_per_task * N) ** .333 * (maxdist / 300) ** 2
+    T = len(weight_by_trt)
+    factor = 0
+    for trt in weight_by_trt:
+        factor += weight_by_trt[trt] ** .333 * (maxdist[trt] / 300) ** 2 / T
+    return .1 * M * G * N ** .333 * factor
 
 
 def get_src_ids(sources):
@@ -255,24 +259,25 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         G = max(len(gsims) for gsims in gsims_by_trt.values())
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
+        weight_by_trt = {trt: sum(src.weight for src in sources)
+                         for trt, sources, atomic in trt_sources}
+        maxweight = sum(w for w in weight_by_trt.values()) / (
+            oq.concurrent_tasks or 1)
         del self.csm  # save memory
-        maxweight = source.get_maxweight(
-            trt_sources, weight, oq.concurrent_tasks)
-        maxdist = int(max(oq.maximum_distance.values()))
+        maxdist = oq.maximum_distance
         if oq.task_duration is None:  # inferred
             # from 1 minute up to 1 day
-            td = int(max(estimate_duration(maxweight, maxdist, N, M, G), 60))
+            td = max(estimate_duration(weight_by_trt, maxdist, N, M, G), 60)
         else:  # user given
-            td = int(oq.task_duration)
+            td = oq.task_duration
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
-            task_duration=td, maxweight=maxweight)
-        logging.info(f'ruptures_per_task={maxweight}, '
-                     f'maxdist={maxdist} km, task_duration={td} s')
+            task_duration=td)
+        logging.info(f'maxweight={maxweight}, task_duration={td} s')
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
