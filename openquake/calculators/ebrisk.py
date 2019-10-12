@@ -67,14 +67,11 @@ def _calc_risk(hazard, param, monitor):
         weights = dstore['weights'][()]
     E = len(events)
     L = len(param['lba'].loss_names)
-    A = sum(len(assets) for assets in assets_by_site)
     shape = assetcol.tagcol.agg_shape((E, L), param['aggregate_by'])
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     acc = dict(elt=numpy.zeros(shape, F32),  # shape (E, L, T...)
-               alt=numpy.zeros((A, E, L), F32) if param['asset_loss_table']
-               else None, gmf_info=[], events_per_sid=0, lossbytes=0)
+               gmf_info=[], events_per_sid=0, lossbytes=0)
     arr = acc['elt']
-    alt = acc['alt']
     lba = param['lba']
     tempname = param['tempname']
     tagnames = param['aggregate_by']
@@ -104,8 +101,6 @@ def _calc_risk(hazard, param, monitor):
                         losses = lratios * asset['occupants_None']
                     else:
                         losses = lratios * asset['value-' + lt]
-                    if param['asset_loss_table']:
-                        alt[aid, eidx, lti] = losses
                     losses_by_lt[lt] = losses
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     arr[(eidx, loss_idx) + tagidxs] += losses
@@ -123,8 +118,6 @@ def _calc_risk(hazard, param, monitor):
         acc['losses_by_A'] = param['lba'].losses_by_A
         # without resetting the cache the sequential avg_losses would be wrong!
         del param['lba'].__dict__['losses_by_A']
-    if param['asset_loss_table']:
-        acc['alt'] = alt, events['id']
     return acc
 
 
@@ -180,13 +173,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                           self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
-        self.param['asset_loss_table'] = oq.asset_loss_table
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
-        if oq.asset_loss_table:
-            self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shp))]
         elt_nbytes = 4 * self.E * numpy.prod(shp)
@@ -276,11 +266,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
-        if self.oqparam.asset_loss_table:
-            with self.monitor('saving asset_loss_table'):
-                alt, eids = dic['alt']
-                idx = numpy.argsort(eids)  # indices sorting the eids
-                self.datastore['asset_loss_table'][:, eids[idx]] = alt[:, idx]
         self.events_per_sid.append(dic['events_per_sid'])
         self.lossbytes += dic['lossbytes']
         return 1
@@ -391,31 +376,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 set_rlzs_stats(self.datastore, 'tot_losses')
                 if oq.conditional_loss_poes:
                     set_rlzs_stats(self.datastore, 'tot_maps')
-
-        # sanity check with the asset_loss_table
-        if oq.asset_loss_table and len(oq.aggregate_by) == 1:
-            alt = self.datastore['asset_loss_table'][()]
-            if alt.sum() == 0:  # nothing was saved
-                return
-            logging.info('Checking the loss curves')
-            tags = getattr(self.assetcol.tagcol, oq.aggregate_by[0])[1:]
-            T = len(tags)
-            P = len(builder.return_periods)
-            # sanity check on the loss curves for simple tag aggregation
-            arr = self.assetcol.aggregate_by(oq.aggregate_by, alt)
-            # shape (T, E, L)
-            rlzs = self.datastore['events']['rlz_id']
-            curves = numpy.zeros((P, self.R, self.L, T))
-            for t in range(T):
-                for r in range(self.R):
-                    for l in range(self.L):
-                        curves[:, r, l, t] = losses_by_period(
-                            arr[t, rlzs == r, l],
-                            builder.return_periods,
-                            builder.num_events[r],
-                            builder.eff_time)
-            numpy.testing.assert_allclose(
-                curves, self.datastore['agg_curves-rlzs'][()])
 
 
 # 1) parallelizing by events does not work, we need all the events
