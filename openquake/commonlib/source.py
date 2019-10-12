@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import copy
-import math
-import logging
 import operator
 import collections
 import numpy
@@ -315,18 +313,6 @@ class CompositionInfo(object):
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
-
-
-def get_maxweight(trt_sources, weight, concurrent_tasks,
-                  minweight=MINWEIGHT):
-    """
-    Return an appropriate maxweight for use in the block_splitter
-    """
-    totweight = sum(s.weight for trt, sources, atomic in trt_sources
-                    for s in sources)
-    ct = concurrent_tasks or 1
-    mw = math.ceil(totweight / ct)
-    return max(mw, minweight)
 
 
 class CompositeSourceModel(collections.abc.Sequence):
