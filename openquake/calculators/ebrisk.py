@@ -35,6 +35,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO32 = 2 ** 32
 get_n_occ = operator.itemgetter(1)
 
 gmf_info_dt = numpy.dtype([('ridx', U32), ('task_no', U16),
@@ -188,10 +189,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shp))]
+        elt_nbytes = 4 * self.E * numpy.prod(shp)
+        logging.info('Approx size of the event loss table: %s',
+                     general.humansize(elt_nbytes))
+        if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
+            raise RuntimeError('The event loss table is too big to be transfer'
+                               'red with %d tasks' % oq.concurrent_tasks)
         self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
-        shp = self.get_shape(self.L, self.R)  # shape L, R, T...
-        self.datastore.create_dset('agg_losses-rlzs', F32, shp)
         self.datastore.create_dset('gmf_info', gmf_info_dt)
 
     def execute(self):
@@ -280,49 +285,57 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.lossbytes += dic['lossbytes']
         return 1
 
-    def get_shape(self, *sizes):
+    def get_shape(self, *sizes, aggregate_by=None):
         """
         :returns: a shape (S1, ... SN, T1 ... TN)
         """
-        return self.assetcol.tagcol.agg_shape(sizes, self.oqparam.aggregate_by)
+        if aggregate_by is None:
+            aggregate_by = self.oqparam.aggregate_by
+        return self.assetcol.tagcol.agg_shape(sizes, aggregate_by)
 
-    def build_datasets(self, builder):
+    def build_datasets(self, builder, aggregate_by, prefix):
         oq = self.oqparam
         stats = oq.hazard_stats().items()
         S = len(stats)
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
         loss_types = oq.loss_names
-        aggregate_by = {'aggregate_by': oq.aggregate_by}
-        for tagname in oq.aggregate_by:
-            aggregate_by[tagname] = getattr(self.assetcol.tagcol, tagname)[1:]
+        aggby = {'aggregate_by': aggregate_by}
+        for tagname in aggregate_by:
+            aggby[tagname] = getattr(self.assetcol.tagcol, tagname)[1:]
         units = self.datastore['cost_calculator'].get_units(loss_types)
-        shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
-        shape_descr = (['return_periods', 'rlzs', 'loss_types'] +
-                       oq.aggregate_by)
-        self.datastore.create_dset('agg_curves-rlzs', F32, shp)
+        shp = self.get_shape(self.L, self.R, aggregate_by=aggregate_by)
+        # shape L, R, T...
+        self.datastore.create_dset(prefix + 'losses-rlzs', F32, shp)
+        shp = self.get_shape(P, self.R, self.L, aggregate_by=aggregate_by)
+        # shape P, R, L, T...
+        shape_descr = ['return_periods', 'rlzs', 'loss_types'] + aggregate_by
+        self.datastore.create_dset(prefix + 'curves-rlzs', F32, shp)
         self.datastore.set_attrs(
-            'agg_curves-rlzs', return_periods=builder.return_periods,
+            prefix + 'curves-rlzs', return_periods=builder.return_periods,
             shape_descr=shape_descr, loss_types=loss_types, units=units,
-            rlzs=numpy.arange(self.R), **aggregate_by)
+            rlzs=numpy.arange(self.R), **aggby)
         if oq.conditional_loss_poes:
-            shp = self.get_shape(C, self.R, self.L)  # shape C, R, L, T...
-            self.datastore.create_dset('agg_maps-rlzs', F32, shp)
+            shp = self.get_shape(C, self.R, self.L, aggregate_by=aggregate_by)
+            # shape C, R, L, T...
+            self.datastore.create_dset(prefix + 'maps-rlzs', F32, shp)
         if self.R > 1:
             shape_descr = (['return_periods', 'stats', 'loss_types'] +
-                           oq.aggregate_by)
-            shp = self.get_shape(P, S, self.L)  # shape P, S, L, T...
-            self.datastore.create_dset('agg_curves-stats', F32, shp)
+                           aggregate_by)
+            shp = self.get_shape(P, S, self.L, aggregate_by=aggregate_by)
+            # shape P, S, L, T...
+            self.datastore.create_dset(prefix + 'curves-stats', F32, shp)
             self.datastore.set_attrs(
-                'agg_curves-stats', return_periods=builder.return_periods,
+                prefix + 'curves-stats', return_periods=builder.return_periods,
                 stats=[encode(name) for (name, func) in stats],
                 shape_descr=shape_descr, loss_types=loss_types, units=units,
-                **aggregate_by)
+                **aggby)
             if oq.conditional_loss_poes:
-                shp = self.get_shape(C, S, self.L)  # shape C, S, L, T...
-                self.datastore.create_dset('agg_maps-stats', F32, shp)
+                shp = self.get_shape(C, S, self.L, aggregate_by=aggregate_by)
+                # shape C, S, L, T...
+                self.datastore.create_dset(prefix + 'maps-stats', F32, shp)
                 self.datastore.set_attrs(
-                    'agg_maps-stats',
+                    prefix + 'maps-stats',
                     stats=[encode(name) for (name, func) in stats],
                     loss_types=loss_types, units=units)
 
@@ -342,24 +355,42 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
         logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
         builder = get_loss_builder(self.datastore)
-        self.build_datasets(builder)
+        self.build_datasets(builder, oq.aggregate_by, 'agg_')
+        if oq.aggregate_by:
+            self.build_datasets(builder, [], 'tot_')
         self.datastore.swmr_on()
         args = [(self.datastore.filename, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
         acc = list(parallel.Starmap(postprocess, args,
                                     h5=self.datastore.hdf5))
-        for r, (curves, maps), agg_losses in acc:
+        for dic in acc:
+            r = dic['rlzi']
+            curves, maps = dic['agg_curves_maps']
+            agg_losses = dic['agg_losses']
             if len(curves):  # some realization can give zero contribution
                 self.datastore['agg_curves-rlzs'][:, r] = curves
             if len(maps):  # conditional_loss_poes can be empty
                 self.datastore['agg_maps-rlzs'][:, r] = maps
             self.datastore['agg_losses-rlzs'][:, r] = agg_losses
+            if oq.aggregate_by:
+                curves, maps = dic['tot_curves_maps']
+                tot_losses = dic['tot_losses']
+                if len(curves):  # some realization can give zero contribution
+                    self.datastore['tot_curves-rlzs'][:, r] = curves
+                if len(maps):  # conditional_loss_poes can be empty
+                    self.datastore['tot_maps-rlzs'][:, r] = maps
+                self.datastore['tot_losses-rlzs'][:, r] = tot_losses
         if self.R > 1:
             logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
             set_rlzs_stats(self.datastore, 'agg_losses')
             if oq.conditional_loss_poes:
                 set_rlzs_stats(self.datastore, 'agg_maps')
+            if oq.aggregate_by:
+                set_rlzs_stats(self.datastore, 'tot_curves')
+                set_rlzs_stats(self.datastore, 'tot_losses')
+                if oq.conditional_loss_poes:
+                    set_rlzs_stats(self.datastore, 'tot_maps')
 
         # sanity check with the asset_loss_table
         if oq.asset_loss_table and len(oq.aggregate_by) == 1:
@@ -397,10 +428,18 @@ def postprocess(filename, builder, ses_ratio, rlzi, monitor):
     :param builder: LossCurvesMapsBuilder instance
     :param rlzi: realization index
     :param monitor: Monitor instance
-    :returns: rlzi, (curves, maps), agg_losses
+    :returns: a dictionary with keys rlzi, curves_maps, agg_losses
     """
     with datastore.read(filename) as dstore:
         rlzs = dstore['losses_by_event']['rlzi']
         losses = dstore['losses_by_event'][rlzs == rlzi]['loss']
+    # aggregate on the events
     agg_losses = losses.sum(axis=0) * ses_ratio  # shape (L, T, ...)
-    return rlzi, builder.build_curves_maps(losses, rlzi), agg_losses
+    res = dict(rlzi=rlzi, agg_losses=agg_losses)
+    num_axis = len(losses.shape)
+    if num_axis > 2:  # there are tags, compute the totals
+        res['tot_losses'] = agg_losses.sum(axis=tuple(range(1, num_axis - 1)))
+        res['tot_curves_maps'] = builder.build_curves_maps(
+            losses.sum(axis=tuple(range(2, num_axis))), rlzi)
+    res['agg_curves_maps'] = builder.build_curves_maps(losses, rlzi)
+    return res

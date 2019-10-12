@@ -70,20 +70,26 @@ def tag2idx(tags):
 
 
 # this is used by event_based_risk and ebrisk
-@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
+@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'),
+            ('tot_curves-rlzs', 'csv'), ('tot_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
+    if ekey[0].startswith('agg_'):
+        aggregate_by = oq.aggregate_by
+    else:  # tot_curves
+        aggregate_by = []
+
     name = '_'.join(['agg'] + oq.aggregate_by)
     aggvalue = dstore['exposed_values/' + name][()]
 
     lti = tag2idx(oq.loss_names)
     tagi = {tagname: tag2idx(getattr(assetcol.tagcol, tagname))
-            for tagname in oq.aggregate_by}
+            for tagname in aggregate_by}
 
     def get_loss_ratio(rec):
         idxs = tuple(tagi[tagname][getattr(rec, tagname)] - 1
-                     for tagname in oq.aggregate_by) + (lti[rec.loss_types],)
+                     for tagname in aggregate_by) + (lti[rec.loss_types],)
         return rec.loss_value / aggvalue[idxs]
 
     # shape (T1, T2, ..., L)
@@ -168,7 +174,8 @@ def export_avg_losses(ekey, dstore):
 
 
 # this is used by ebrisk
-@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
+@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'),
+            ('tot_losses-rlzs', 'csv'), ('tot_losses-stats', 'csv'))
 def export_agg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -179,7 +186,8 @@ def export_agg_losses(ekey, dstore):
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assetcol = dstore['assetcol']
-    aggname = '_'.join(['agg'] + oq.aggregate_by)
+    aggname = '_'.join(['agg'] + oq.aggregate_by if dskey.startswith('agg_')
+                       else [])
     expvalue = dstore['exposed_values/' + aggname][()]
     # shape (T1, T2, ..., L)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
