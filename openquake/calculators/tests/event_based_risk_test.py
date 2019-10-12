@@ -188,9 +188,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
     def test_case_12(self):
-        # 1 assets, 2 samples
+        # 2 assets, 2 samples, aggregate_by=id
         self.run_calc(case_master.__file__, 'job12.ini', exports='csv')
-        # alt = extract(self.calc.datastore, 'asset_loss_table')
+        # check size of the event_loss_table
+        arr = self.calc.datastore['losses_by_event'][()]
+        self.assertEqual(len(arr), 16)
+        self.assertEqual(arr['event_id'].nbytes, 64)
+        self.assertEqual(arr['rlzi'].nbytes, 32)
+        self.assertEqual(arr['loss'].nbytes, 128)
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_loss_12.csv', fname)
 
@@ -369,9 +374,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
-        # check asset_loss_table
-        tot = self.calc.datastore['asset_loss_table'][()].sum()
-        self.assertEqual(tot, 15787827.0)
 
         # this is a case with exposure, site model and region_grid_spacing
         self.run_calc(case_miriam.__file__, 'job2.ini')
