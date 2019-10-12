@@ -42,15 +42,22 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def estimate_duration(weight_by_trt, maxdist, N, M, G):
+def estimate_duration(weight_by_trt, maxdist, N, M, G, C):
     """
     Estimate the task duration with an heuristic formula
+
+    :param weight_by_trt: source weights per TRT
+    :param maxdist: maximum distance per TRT
+    :param N: number of sites
+    :param M: number of IMTs
+    :param G: number of GSIMs
+    :param C: number of concurrent_tasks
     """
     T = len(weight_by_trt)
     factor = 0
     for trt in weight_by_trt:
         factor += weight_by_trt[trt] ** .333 * (maxdist[trt] / 300) ** 2 / T
-    return .1 * M * G * N ** .333 * factor
+    return M * G * N ** .333 * factor / C
 
 
 def get_src_ids(sources):
@@ -258,16 +265,17 @@ class ClassicalCalculator(base.HazardCalculator):
         M = len(oq.imtls)
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         G = max(len(gsims) for gsims in gsims_by_trt.values())
+        C = oq.concurrent_tasks or 1
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         weight_by_trt = {trt: sum(src.weight for src in sources)
                          for trt, sources, atomic in trt_sources}
-        maxweight = sum(w for w in weight_by_trt.values()) / (
-            oq.concurrent_tasks or 1)
+        maxweight = sum(w for w in weight_by_trt.values()) / C
         del self.csm  # save memory
         maxdist = oq.maximum_distance
         if oq.task_duration is None:  # inferred
             # from 1 minute up to 1 day
-            td = max(estimate_duration(weight_by_trt, maxdist, N, M, G), 60)
+            ed = estimate_duration(weight_by_trt, maxdist, N, M, G, C)
+            td = max(ed, 60)
         else:  # user given
             td = oq.task_duration
         param = dict(
@@ -277,7 +285,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
             task_duration=td)
-        logging.info(f'maxweight={maxweight}, task_duration={td} s')
+        logging.info(f'maxweight=%d, task_duration=%d s', maxweight, td)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
