@@ -117,7 +117,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
-                task_no=monitor.task_no, maxdist=None)
+                task_no=monitor.task_no)
 
 
 @base.calculators.add('classical')
@@ -136,7 +136,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param dic: dict with keys pmap, calc_times, rup_data
         """
         with self.monitor('aggregate curves'):
-            if dic['maxdist']:
+            if dic.get('maxdist'):
                 self.maxdists.append(dic['maxdist'])
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
