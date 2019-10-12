@@ -42,7 +42,7 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def estimate_duration(weight_by_trt, gsims_by_trt, maxdist, N, M, G, C):
+def estimate_duration(weight_by_trt, gsims_by_trt, maxdist, N, M, C):
     """
     Estimate the task duration with an heuristic formula
 
@@ -51,7 +51,6 @@ def estimate_duration(weight_by_trt, gsims_by_trt, maxdist, N, M, G, C):
     :param maxdist: maximum distance per TRT
     :param N: number of sites
     :param M: number of IMTs
-    :param G: number of GSIMs
     :param C: number of concurrent_tasks
     """
     factor = 0
