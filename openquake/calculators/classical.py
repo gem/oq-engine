@@ -57,7 +57,7 @@ def estimate_duration(weight_by_trt, maxdist, N, M, G, C):
     factor = 0
     for trt in weight_by_trt:
         factor += weight_by_trt[trt] ** .333 * (maxdist[trt] / 300) ** 2 / T
-    return M * G * N ** .5 * factor / C
+    return 10 * M * G * N ** .333 * factor / C
 
 
 def get_src_ids(sources):
