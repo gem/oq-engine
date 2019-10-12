@@ -30,6 +30,21 @@
       </occupancies>
       <tags state="01" cresta="0.11" occupancy="Res" />
     </asset>
+    <asset id="a2" number="1" area="100" taxonomy="tax1">
+      <location lon="-122.000" lat="38.103" />
+      <costs>
+        <cost type="structural" value="1000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="nonstructural" value="1500" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="contents" value="500" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="business_interruption" value="200" deductible="0.1" insuranceLimit="0.8" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="6" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="2" period="night" />
+      </occupancies>
+      <tags state="01" cresta="0.11" occupancy="Res" />
+    </asset>
   </assets>
 </exposureModel>
 
