@@ -318,14 +318,15 @@ class Result(object):
 
     def __init__(self, val, mon, tb_str='', msg='', count=0):
         if isinstance(val, dict):
-            # store the size in bytes of the content
-            self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
             self.pik = Pickled(val)
+            self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
         elif isinstance(val, tuple) and callable(val[0]):
             self.func = val[0]
             self.pik = pickle_sequence(val[1:])
+            self.nbytes = {'tot': sum(len(p) for p in self.pik)}
         else:
             self.pik = Pickled(val)
+            self.nbytes = {'tot': len(self.pik)}
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
@@ -344,6 +345,10 @@ class Result(object):
             else:
                 raise etype(msg)
         return val
+
+    def __repr__(self):
+        nbytes = ['%s: %s' % (k, humansize(v)) for k, v in self.nbytes.items()]
+        return '<%s %s>' % (self.__class__.__name__, ' '.join(nbytes))
 
     @classmethod
     def new(cls, func, args, mon, count=0):
