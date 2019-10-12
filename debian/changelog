@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Extended the ebrisk calculator to compute at the same time both the
+    aggregate curves by tag and the total curves
+
   [Marco Pagani]
   * Implemented Morikawa and Fujiwara (2013) GMM
 
