@@ -114,7 +114,6 @@ class PostRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         logging.info('Building loss tables')
         build_loss_tables(self.datastore)
-        self.datastore.flush()  # just to be sure
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
