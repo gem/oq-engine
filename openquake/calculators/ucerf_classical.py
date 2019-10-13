@@ -52,6 +52,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         oq = self.oqparam
         acc = self.acc0()
         self.nsites = []  # used in agg_dicts
+        self.maxdists = []
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance, maxweight=1E10,
                      task_duration=1000)
