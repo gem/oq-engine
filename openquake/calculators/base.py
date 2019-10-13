@@ -57,6 +57,21 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
 
 
+# this is used for the minimum_intensity dictionaries
+def equivalent(dic1, dic2):
+    """
+    Check if two dictionaries name -> value are equivalent
+    """
+    if dic1 == dic2:
+        return True
+    v1 = set(dic1.values())
+    v2 = set(dic2.values())
+    if len(v1) == 1 and len(v2) == 1 and v1.pop() == v2.pop():
+        # {'PGA': 0.05, 'SA(0.3)': 0.05} is equivalent to {'default': 0.05}
+        return True
+    return False
+
+
 def get_stats(seq):
     std = numpy.nan if len(seq) == 1 else numpy.std(seq, ddof=1)
     tup = (numpy.mean(seq), std, numpy.min(seq), numpy.max(seq), len(seq))
@@ -448,7 +463,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            if oqp.minimum_intensity != oq.minimum_intensity:
+            if not equivalent(oqp.minimum_intensity, oq.minimum_intensity):
                 raise ValueError(
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
