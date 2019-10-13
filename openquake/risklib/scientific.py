@@ -1421,18 +1421,18 @@ class LossCurvesMapsBuilder(object):
             self.num_events[rlzi], self.eff_time)
 
     # used in event_based_risk
-    def build_maps(self, losses, clp, stats=()):
+    def build_maps(self, curves, clp, stats=()):
         """
-        :param losses: an array of shape (A, R, P)
+        :param curves: a composite array of shape (A, R, P)
         :param clp: a list of C conditional loss poes
         :param stats: list of pairs [(statname, statfunc), ...]
         :returns: an array of loss_maps of shape (A, R, C, LI)
         """
-        shp = losses.shape[:2] + (len(clp), len(losses.dtype))  # (A, R, C, LI)
+        shp = curves.shape[:2] + (len(clp), len(curves.dtype))  # (A, R, C, LI)
         array = numpy.zeros(shp, F32)
-        for lti, lt in enumerate(losses.dtype.names):
-            for a, losses_ in enumerate(losses[lt]):
-                for r, ls in enumerate(losses_):
+        for lti, lt in enumerate(curves.dtype.names):
+            for a, curves_ in enumerate(curves[lt]):
+                for r, ls in enumerate(curves_):
                     for c, poe in enumerate(clp):
                         clratio = conditional_loss_ratio(ls, self.poes, poe)
                         array[a, r, c, lti] = clratio
