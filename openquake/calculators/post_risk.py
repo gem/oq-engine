@@ -77,7 +77,7 @@ def build_loss_tables(dstore):
 # 2) parallelizing by multi_index slows down everything with warnings
 # kernel:NMI watchdog: BUG: soft lockup - CPU#26 stuck for 21s!
 # due to excessive reading, and then we run out of memory
-def postrisk(filename, builder, ses_ratio, rlzi, monitor):
+def post_risk(filename, builder, ses_ratio, rlzi, monitor):
     """
     :param filename: path to the datastore
     :param builder: LossCurvesMapsBuilder instance
@@ -101,7 +101,7 @@ def postrisk(filename, builder, ses_ratio, rlzi, monitor):
 
 
 @base.calculators.add('post_risk')
-class PostRiskCalculator(base.RiskCalculator):
+class Post_RiskCalculator(base.RiskCalculator):
     """
     Compute losses, loss curves and loss maps starting from an
     event loss table.
@@ -126,7 +126,7 @@ class PostRiskCalculator(base.RiskCalculator):
         self.datastore.swmr_on()
         args = [(self.datastore.filename, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
-        acc = list(parallel.Starmap(postrisk, args,
+        acc = list(parallel.Starmap(post_risk, args,
                                     h5=self.datastore.hdf5))
         for dic in acc:
             r = dic['rlzi']
