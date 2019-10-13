@@ -101,7 +101,7 @@ def post_risk(filename, builder, ses_ratio, rlzi, monitor):
 
 
 @base.calculators.add('post_risk')
-class Post_RiskCalculator(base.RiskCalculator):
+class PostRiskCalculator(base.RiskCalculator):
     """
     Compute losses, loss curves and loss maps starting from an
     event loss table.
