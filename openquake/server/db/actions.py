@@ -282,6 +282,8 @@ DISPLAY_NAME = {
     'tot_losses-stats': 'Total Losses Statistics',
     'tot_curves-rlzs': 'Total Loss Curves',
     'tot_curves-stats': 'Total Loss Curves Statistics',
+    'tot_maps-rlzs': 'Total Loss Maps',
+    'tot_maps-stats': 'Total Loss Maps Statistics',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'ruptures': 'Earthquake Ruptures',
