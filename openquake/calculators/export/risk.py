@@ -127,7 +127,8 @@ def _get_data(dstore, dskey, stats):
 
 
 # used by ebrisk
-@export.add(('agg_maps-rlzs', 'csv'), ('agg_maps-stats', 'csv'))
+@export.add(('agg_maps-rlzs', 'csv'), ('agg_maps-stats', 'csv'),
+            ('tot_maps-rlzs', 'csv'), ('tot_maps-stats', 'csv'))
 def export_agg_maps_csv(ekey, dstore):
     name, kind = ekey[0].split('-')
     oq = dstore['oqparam']
