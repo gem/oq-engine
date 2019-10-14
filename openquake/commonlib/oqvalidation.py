@@ -470,6 +470,14 @@ class OqParam(valid.ParamSet):
         self.risk_imtls = imtls
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
+        if (self.calculation_mode.startswith('classical')
+                and not getattr(self, 'hazard_imtls', [])):
+            logging.warning(
+                'You MUST provide the intensity measure levels explicitly in '
+                'the job.ini, otherwise this calculation will break in future '
+                'versions of the engine')
+            for imt in imtls:
+                logging.warning('Using implicitly %s=%s', imt, imtls[imt])
 
     def hmap_dt(self):  # used for CSV export
         """
