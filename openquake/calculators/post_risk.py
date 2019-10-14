@@ -112,6 +112,14 @@ class PostRiskCalculator(base.RiskCalculator):
 
     def execute(self):
         oq = self.oqparam
+        if oq.return_periods != [0]:
+            # setting return_periods = 0 disable loss curves and maps
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            if eff_time < 2:
+                logging.warning(
+                    'eff_time=%s is too small to compute loss curves',
+                    eff_time)
+                return
         logging.info('Building loss tables')
         build_loss_tables(self.datastore)
         shp = self.get_shape(self.L)  # (L, T...)
