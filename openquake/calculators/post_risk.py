@@ -19,7 +19,7 @@
 import logging
 import numpy
 
-from openquake.baselib import datastore, general, parallel
+from openquake.baselib import general, parallel
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific
@@ -48,18 +48,13 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
 
 def build_loss_tables(dstore):
     """
-    Compute the total losses by rupture and losses by rlzi.
+    Compute the total losses by rupture
     """
     oq = dstore['oqparam']
     R = dstore['csm_info'].get_num_rlzs()
     lbe = dstore['losses_by_event'][()]
     loss = lbe['loss']
     shp = (R,) + lbe.dtype['loss'].shape
-    lbr = numpy.zeros(shp, F32)  # losses by rlz
-    losses_by_rlz = general.fast_agg(lbe['rlzi'], loss)
-    lbr[:len(losses_by_rlz)] = losses_by_rlz
-    dstore['losses_by_rlzi'] = lbr
-
     rup_id = dstore['events']['rup_id']
     if len(shp) > 2:
         loss = loss.sum(axis=tuple(range(1, len(shp) - 1)))
