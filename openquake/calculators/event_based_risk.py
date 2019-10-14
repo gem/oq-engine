@@ -53,7 +53,6 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
         with monitor('getting hazard'):
             ri.hazard_getter.init()
             hazard = ri.hazard_getter.get_hazard()
-        mon = monitor('build risk curves', measuremem=False)
         A = len(ri.aids)
         R = ri.hazard_getter.num_rlzs
         try:
@@ -127,13 +126,6 @@ class EbrCalculator(base.RiskCalculator):
                          len(parent['ruptures']), len(self.events))
         else:
             self.events = self.datastore['events'][('id', 'rlz_id')]
-        if oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves and maps
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            if eff_time < 2:
-                logging.warning(
-                    'eff_time=%s is too small to compute loss curves',
-                    eff_time)
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.riskinputs = self.build_riskinputs('gmf')
