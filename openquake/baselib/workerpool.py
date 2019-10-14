@@ -191,16 +191,16 @@ class WorkerPool(object):
         self.executing = Value('i', 0)
         self.pid = os.getpid()
 
-    def worker(self, sock):
+    def worker(self, sock, executing):
         """
         :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
         """
         setproctitle('oq-zworker')
         with sock:
             for cmd, args, taskno, mon in sock:
-                self.executing.value += 1
+                executing.value += 1
                 parallel.safely_call(cmd, args, taskno, mon)
-                self.executing.value -= 1
+                executing.value -= 1
 
     def start(self):
         """
@@ -211,7 +211,8 @@ class WorkerPool(object):
         self.workers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.task_server_url, z.zmq.PULL, 'connect')
-            proc = multiprocessing.Process(target=self.worker, args=(sock,))
+            proc = multiprocessing.Process(
+                target=self.worker, args=(sock, self.executing))
             proc.start()
             sock.pid = proc.pid
             self.workers.append(sock)
