@@ -174,6 +174,19 @@ class WorkerMaster(object):
         return 'restarted'
 
 
+def worker(sock, executing):
+    """
+    :param sock: a zeromq.Socket of kind PULL
+    :param executing: a sharedctypes.Value with the number of executing tasks
+    """
+    setproctitle('oq-zworker')
+    with sock:
+        for cmd, args, taskno, mon in sock:
+            executing.value += 1
+            parallel.safely_call(cmd, args, taskno, mon)
+            executing.value -= 1
+
+
 class WorkerPool(object):
     """
     A pool of workers accepting the command 'stop' and 'kill' and reading
@@ -191,17 +204,6 @@ class WorkerPool(object):
         self.executing = Value('i', 0)
         self.pid = os.getpid()
 
-    def worker(self, sock, executing):
-        """
-        :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
-        """
-        setproctitle('oq-zworker')
-        with sock:
-            for cmd, args, taskno, mon in sock:
-                executing.value += 1
-                parallel.safely_call(cmd, args, taskno, mon)
-                executing.value -= 1
-
     def start(self):
         """
         Start worker processes and a control loop
@@ -212,7 +214,7 @@ class WorkerPool(object):
         for _ in range(self.num_workers):
             sock = z.Socket(self.task_server_url, z.zmq.PULL, 'connect')
             proc = multiprocessing.Process(
-                target=self.worker, args=(sock, self.executing))
+                target=worker, args=(sock, self.executing))
             proc.start()
             sock.pid = proc.pid
             self.workers.append(sock)
