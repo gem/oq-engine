@@ -47,6 +47,7 @@ from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
 from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
@@ -274,6 +275,34 @@ def validate_nrml(request):
             error_msg=error_msg, error_line=error_line, valid=False)
     else:
         return _make_response(error_msg=None, error_line=None, valid=True)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def validate_zip(request):
+    """
+    Leverage the engine libraries to check if a given zip archive is a valid
+    calculation input
+
+    :param request:
+        a `django.http.HttpRequest` object containing a zip archive
+
+    :returns: a JSON object, containing:
+        * 'valid': a boolean indicating if the provided archive is valid
+        * 'error_msg': the error message, if any error was found
+                       (None otherwise)
+    """
+    archive = request.FILES.get('archive')
+    if not archive:
+        return HttpResponseBadRequest('Missing archive file')
+    job_zip = archive.temporary_file_path()
+    try:
+        base.calculators(readinput.get_oqparam(job_zip)).read_inputs()
+    except Exception as exc:
+        return _make_response(str(exc), None, valid=False)
+    else:
+        return _make_response(None, None, valid=True)
 
 
 @require_http_methods(['GET'])
