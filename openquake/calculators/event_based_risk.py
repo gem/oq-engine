@@ -19,12 +19,12 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.general import AccumDict, group_array, fast_agg
+from openquake.baselib.general import AccumDict, group_array
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskinput, riskmodels
 from openquake.calculators import base
-from openquake.calculators.export.loss_curves import get_loss_builder
+from openquake.calculators.post_risk import build_loss_tables, get_loss_builder
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -32,33 +32,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 getweight = operator.attrgetter('weight')
-
-
-def build_loss_tables(dstore):
-    """
-    Compute the total losses by rupture and losses by rlzi.
-    """
-    oq = dstore['oqparam']
-    R = dstore['csm_info'].get_num_rlzs()
-    lbe = dstore['losses_by_event'][()]
-    loss = lbe['loss']
-    shp = (R,) + lbe.dtype['loss'].shape
-    lbr = numpy.zeros(shp, F32)  # losses by rlz
-    losses_by_rlz = fast_agg(lbe['rlzi'], loss)
-    lbr[:len(losses_by_rlz)] = losses_by_rlz
-    dstore['losses_by_rlzi'] = lbr
-
-    rup_id = dstore['events']['rup_id']
-    if len(shp) > 2:
-        loss = loss.sum(axis=tuple(range(1, len(shp) - 1)))
-    losses_by_rupid = fast_agg(rup_id[lbe['event_id']], loss)
-    lst = [('rup_id', U32)] + [(name, F32) for name in oq.loss_names]
-    tbl = numpy.zeros(len(losses_by_rupid), lst)
-    tbl['rup_id'] = numpy.arange(len(tbl))
-    for li, name in enumerate(oq.loss_names):
-        tbl[name] = losses_by_rupid[:, li]
-    tbl.sort(order=oq.loss_names[0])
-    dstore['rup_loss_table'] = tbl
 
 
 def event_based_risk(riskinputs, crmodel, param, monitor):

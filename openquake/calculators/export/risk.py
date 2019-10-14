@@ -285,7 +285,7 @@ def year_dict(eids, investigation_time, ses_seed):
     return dict(zip(numpy.sort(eids), years))  # eid -> year
 
 
-# this is used by classical_risk and event_based_risk
+# this is used by classical_risk
 @export.add(('loss_curves-rlzs', 'csv'), ('loss_curves-stats', 'csv'),
             ('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
@@ -296,7 +296,7 @@ def export_loss_curves(ekey, dstore):
     return loss_curves.LossCurveExporter(dstore).export('csv', kind)
 
 
-# used by classical_risk and event_based_risk
+# used by classical_risk
 @export.add(('loss_maps-rlzs', 'csv'), ('loss_maps-stats', 'csv'))
 def export_loss_maps_csv(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats
@@ -318,7 +318,7 @@ def export_loss_maps_csv(ekey, dstore):
     return writer.getsaved()
 
 
-# used by classical_risk and event_based_risk
+# used by classical_risk
 @export.add(('loss_maps-rlzs', 'npz'), ('loss_maps-stats', 'npz'))
 def export_loss_maps_npz(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats
