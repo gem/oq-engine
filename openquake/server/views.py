@@ -282,19 +282,20 @@ def validate_nrml(request):
 @require_http_methods(['POST'])
 def validate_zip(request):
     """
-    Leverage the engine libraries to check if a given job.zip file is valid
+    Leverage the engine libraries to check if a given zip archive is a valid
+    calculation input
 
     :param request:
         a `django.http.HttpRequest` object containing a zip archive
 
     :returns: a JSON object, containing:
-        * 'valid': a boolean indicating if the provided job.zip is valid
+        * 'valid': a boolean indicating if the provided archive is valid
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
     archive = request.FILES.get('archive')
     if not archive:
-        return HttpResponseBadRequest('Missing job.zip file')
+        return HttpResponseBadRequest('Missing archive file')
     job_zip = archive.temporary_file_path()
     try:
         base.calculators(readinput.get_oqparam(job_zip)).read_inputs()
