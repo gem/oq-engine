@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the deprecated generation of loss curves and maps for each asset
+    from the event_based_risk calculator
   * Fixed a too strict check on the minimum intensities of parent an child
     calculations
   * Extended the ebrisk calculator to compute at the same time both the
