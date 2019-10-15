@@ -110,8 +110,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             sources.extend(srcfilter.filter(splits))
     light = []
     for src in sources:
-        if src.nsites > 1000:
-            # run a task for each heavy source
+        if src.weight > params['max_weight']:
             yield classical, [src], srcfilter, gsims, params
         else:
             light.append(src)
@@ -291,7 +290,7 @@ class ClassicalCalculator(base.HazardCalculator):
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
-            max_sites_disagg=oq.max_sites_disagg,
+            max_sites_disagg=oq.max_sites_disagg, max_weight=maxweight,
             task_duration=td)
         logging.info(f'maxweight=%d, task_duration=%d s', maxweight, td)
         srcfilter = self.src_filter(self.datastore.tempname)
