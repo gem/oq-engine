@@ -162,8 +162,8 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                n = sock.send('get_executing')
-                executing.append((host, n))
+                tasks = sock.send('get_executing')
+                executing.append((host, tasks))
         return executing
 
     def restart(self):
@@ -233,7 +233,7 @@ class WorkerPool(object):
                 elif cmd == 'get_num_workers':
                     ctrlsock.send(self.num_workers)
                 elif cmd == 'get_executing':
-                    ctrlsock.send(len(os.listdir(self.executing)))
+                    ctrlsock.send(os.listdir(self.executing))
         shutil.rmtree(self.executing)
 
     def stop(self):
