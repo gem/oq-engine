@@ -244,19 +244,20 @@ class ClassicalCalculator(base.HazardCalculator):
         Build a task queue to be attached to the Starmap instance
         """
         oq = self.oqparam
+        C = oq.concurrent_tasks or 1
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         weight_by_trt = {trt: sum(src.weight for src in sources)
                          for trt, sources, atomic in trt_sources}
-        maxweight = sum(w for w in weight_by_trt.values()) ** .666
+        totweight = sum(w for w in weight_by_trt.values())
         del self.csm  # save memory
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
-            max_sites_disagg=oq.max_sites_disagg, max_weight=maxweight)
-        logging.info(f'maxweight=%d', maxweight)
+            max_sites_disagg=oq.max_sites_disagg, max_weight=totweight**.666)
+        logging.info(f'totweight=%d', totweight)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
@@ -268,7 +269,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 # do not split atomic groups
                 yield f1, (sources, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
-                for block in block_splitter(sources, maxweight, weight):
+                for block in block_splitter(sources, totweight / C, weight):
                     logging.debug('Sending %d sources with weight %d',
                                   len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
