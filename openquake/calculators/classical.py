@@ -257,7 +257,7 @@ class ClassicalCalculator(base.HazardCalculator):
             collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg, max_weight=totweight**.666)
-        logging.info(f'totweight=%d', totweight)
+        logging.info(f'max_weight=%d', totweight**.666)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
