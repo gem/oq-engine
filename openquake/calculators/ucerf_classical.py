@@ -54,7 +54,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         self.nsites = []  # used in agg_dicts
         self.maxdists = []
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
-                     filter_distance=oq.filter_distance, maxweight=1E10,
+                     filter_distance=oq.filter_distance, max_weight=1E10,
                      task_duration=1000)
         self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
         [gsims] = self.csm.info.get_gsims_by_trt().values()
