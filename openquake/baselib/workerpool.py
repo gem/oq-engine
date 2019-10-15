@@ -184,8 +184,7 @@ def worker(sock, executing):
     with sock:
         for cmd, args, taskno, mon in sock:
             fname = os.path.join(executing, str(taskno))
-            with open(fname, 'w') as f:
-                f.write(repr(args[0]))
+            open(fname, 'w').close()
             parallel.safely_call(cmd, args, taskno, mon)
             os.remove(fname)
 
@@ -204,11 +203,7 @@ class WorkerPool(object):
         self.task_server_url = task_server_url
         self.num_workers = (multiprocessing.cpu_count()
                             if num_workers == '-1' else int(num_workers))
-        self.executing = os.path.join(tempfile.gettempdir(), 'zmqtasks')
-        if os.path.exists(self.executing):  # previous calc
-            shutil.rmtree(self.executing)
-        else:
-            os.mkdir(self.executing)
+        self.executing = tempfile.mkdtemp()
         self.pid = os.getpid()
 
     def start(self):
@@ -239,6 +234,7 @@ class WorkerPool(object):
                     ctrlsock.send(self.num_workers)
                 elif cmd == 'get_executing':
                     ctrlsock.send(' '.join(os.listdir(self.executing)))
+        shutil.rmtree(self.executing)
 
     def stop(self):
         """
