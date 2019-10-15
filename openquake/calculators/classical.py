@@ -108,12 +108,17 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         for src, _sites in srcfilter(srcs):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
-    light = []
+    heavy, light = [], []
     for src in sources:
         if src.weight > params['max_weight']:
-            yield classical, [src], srcfilter, gsims, params
+            heavy.append(src)
         else:
             light.append(src)
+    if heavy:
+        # produce at max 10 subtasks for the heavy sources
+        maxw = sum(weight(src) for src in heavy) / 10
+        for block in block_splitter(heavy, maxw, weight):
+            yield classical, block, srcfilter, gsims, params
     if light:
         yield from parallel.split_task(
                 classical, light, srcfilter, gsims, params, monitor,
