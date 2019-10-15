@@ -61,7 +61,7 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertIn('sent', info)
             self.assertIn('received', info)
 
-            slow = view('task:classical:-1', self.calc.datastore)
+            slow = view('task:classical_split_filter:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
             self.assertIn('duration', slow)
             self.assertIn('sources', slow)
