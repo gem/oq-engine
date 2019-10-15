@@ -58,7 +58,7 @@ def estimate_duration(weight_by_trt, gsims_by_trt, maxdist, N, L, C):
     for trt in weight_by_trt:
         factor += weight_by_trt[trt] ** .333 * (maxdist[trt] / 300) ** 2 \
                   * len(gsims_by_trt[trt]) / T
-    return 2 * L * N ** .333 * factor / C
+    return 10 * (L * N) ** .333 * factor / C
 
 
 def get_src_ids(sources):
@@ -108,9 +108,20 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         for src, _sites in srcfilter(srcs):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
-    if sources:
+    heavy, light = [], []
+    for src in sources:
+        if src.weight > params['max_weight']:
+            heavy.append(src)
+        else:
+            light.append(src)
+    if heavy:
+        # produce at max 20 subtasks for the heavy sources
+        maxw = sum(weight(src) for src in heavy) / 20
+        for block in block_splitter(heavy, maxw, weight):
+            yield classical, block, srcfilter, gsims, params
+    if light:
         yield from parallel.split_task(
-                classical, sources, srcfilter, gsims, params, monitor,
+                classical, light, srcfilter, gsims, params, monitor,
                 duration=params['task_duration'])
 
 
@@ -284,7 +295,7 @@ class ClassicalCalculator(base.HazardCalculator):
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
-            max_sites_disagg=oq.max_sites_disagg,
+            max_sites_disagg=oq.max_sites_disagg, max_weight=maxweight,
             task_duration=td)
         logging.info(f'maxweight=%d, task_duration=%d s', maxweight, td)
         srcfilter = self.src_filter(self.datastore.tempname)
