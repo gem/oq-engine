@@ -203,7 +203,7 @@ class WorkerPool(object):
         self.task_server_url = task_server_url
         self.num_workers = (multiprocessing.cpu_count()
                             if num_workers == '-1' else int(num_workers))
-        self.executing = tempfile.gettempdir()
+        self.executing = tempfile.mkdtemp()
         self.pid = os.getpid()
 
     def start(self):
