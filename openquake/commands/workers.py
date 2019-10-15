@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import getpass
+from pprint import pprint
 from openquake.baselib import sap, config, workerpool
 
 
@@ -34,7 +35,7 @@ def workers(cmd):
 
     master = workerpool.WorkerMaster(config.dbserver.host,
                                      **config.zworkers)
-    print(getattr(master, cmd)())
+    pprint(getattr(master, cmd)())
 
 
 workers.arg('cmd', 'command',
