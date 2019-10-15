@@ -115,8 +115,8 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         else:
             light.append(src)
     if heavy:
-        # produce at max 10 subtasks for the heavy sources
-        maxw = sum(weight(src) for src in heavy) / 10
+        # produce at max 20 subtasks for the heavy sources
+        maxw = sum(weight(src) for src in heavy) / 20
         for block in block_splitter(heavy, maxw, weight):
             yield classical, block, srcfilter, gsims, params
     if light:
