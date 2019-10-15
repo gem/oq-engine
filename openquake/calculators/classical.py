@@ -90,7 +90,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
     if sources:
-        blocks = list(block_splitter(sources, 1E5, weight))
+        blocks = list(block_splitter(sources, params['max_weight'], weight))
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
@@ -245,11 +245,10 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        C = oq.concurrent_tasks or 1
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         weight_by_trt = {trt: sum(src.weight for src in sources)
                          for trt, sources, atomic in trt_sources}
-        maxweight = sum(w for w in weight_by_trt.values()) / C
+        maxweight = sum(w for w in weight_by_trt.values()) ** .666
         del self.csm  # save memory
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
