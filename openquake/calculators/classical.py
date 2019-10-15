@@ -111,7 +111,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     blocks = list(block_splitter(sources, params['max_weight'], weight))
     for block in blocks[:-1]:
         yield classical, block, srcfilter, gsims, params
-    yield classical(block, srcfilter, gsims, params, monitor)
+    yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
