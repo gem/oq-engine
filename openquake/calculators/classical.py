@@ -108,9 +108,16 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         for src, _sites in srcfilter(srcs):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
-    if sources:
+    light = []
+    for src in sources:
+        if src.nsites > 1000:
+            # run a task for each heavy source
+            yield classical, [src], srcfilter, gsims, params
+        else:
+            light.append(src)
+    if light:
         yield from parallel.split_task(
-                classical, sources, srcfilter, gsims, params, monitor,
+                classical, light, srcfilter, gsims, params, monitor,
                 duration=params['task_duration'])
 
 
