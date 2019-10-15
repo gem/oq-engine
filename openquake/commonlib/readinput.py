@@ -430,7 +430,7 @@ def get_site_collection(oqparam):
             grid_sites = site.SiteCollection.from_points(
                 grid.lons, grid.lats, req_site_params=req_site_params)
             sitecol, params, _ = geo.utils.assoc(
-                sm, grid_sites, oqparam.region_grid_spacing * 1.414, 'filter')
+                sm, grid_sites, oqparam.region_grid_spacing * 1.414, 'warn')
             logging.info('Associating %d site model sites to %d grid sites',
                          len(sm), len(sitecol))
             sitecol.make_complete()
