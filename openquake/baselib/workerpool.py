@@ -233,7 +233,7 @@ class WorkerPool(object):
                 elif cmd == 'get_num_workers':
                     ctrlsock.send(self.num_workers)
                 elif cmd == 'get_executing':
-                    ctrlsock.send(os.listdir(self.executing))
+                    ctrlsock.send([int(t) for t in os.listdir(self.executing)])
         shutil.rmtree(self.executing)
 
     def stop(self):
