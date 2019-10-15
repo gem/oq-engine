@@ -42,7 +42,7 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def estimate_duration(weight_by_trt, gsims_by_trt, maxdist, N, M, C):
+def estimate_duration(weight_by_trt, gsims_by_trt, maxdist, N, L, C):
     """
     Estimate the task duration with an heuristic formula
 
@@ -50,7 +50,7 @@ def estimate_duration(weight_by_trt, gsims_by_trt, maxdist, N, M, C):
     :param gsims_by_trt: GSIMs per TRT
     :param maxdist: maximum distance per TRT
     :param N: number of sites
-    :param M: number of IMTs
+    :param L: number of hazard levels
     :param C: number of concurrent_tasks
     """
     factor = 0
@@ -58,7 +58,7 @@ def estimate_duration(weight_by_trt, gsims_by_trt, maxdist, N, M, C):
     for trt in weight_by_trt:
         factor += weight_by_trt[trt] ** .333 * (maxdist[trt] / 300) ** 2 \
                   * len(gsims_by_trt[trt]) / T
-    return 15 * M * N ** .333 * factor / C
+    return 2 * L * N ** .333 * factor / C
 
 
 def get_src_ids(sources):
@@ -263,7 +263,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         N = len(self.sitecol)
-        M = len(oq.imtls)
+        L = len(oq.imtls.array)
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         C = oq.concurrent_tasks or 1
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
@@ -275,7 +275,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.task_duration is None:  # inferred
             # from 1 minute up to 1 day
             ed = estimate_duration(weight_by_trt, gsims_by_trt, maxdist,
-                                   N, M, C)
+                                   N, L, C)
             td = max(ed, 60)
         else:  # user given
             td = oq.task_duration
