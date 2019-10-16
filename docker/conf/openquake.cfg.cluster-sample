@@ -69,7 +69,8 @@ username =
 password =
 
 [zworkers]
-host_cores = 127.0.0.1 -1
+# FIXME
+host_cores = 172.17.0.3 -1
 ctrl_port = 1909
 remote_python =
 
