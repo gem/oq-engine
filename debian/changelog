@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Adding the shift_hypo option for distributed seismicity
+
   [Michele Simionato]
   * If `ground_motion_fields=false` is set, the GMFs are not stored even
     if `hazard_curves_from_gmfs=true`
