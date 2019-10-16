@@ -174,7 +174,7 @@ class OqParam(valid.ParamSet):
     specific_assets = valid.Param(valid.namelist, [])
     collapse_factor = valid.Param(valid.positivefloat, 3)
     max_radius = valid.Param(valid.positivefloat, None)
-    task_duration = valid.Param(valid.positiveint, None)
+    task_multiplier = valid.Param(valid.positiveint, 10)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
