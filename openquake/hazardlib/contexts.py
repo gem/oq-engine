@@ -99,7 +99,7 @@ class RupData(object):
     """
     A class to collect rupture information into an array
     """
-    def __init__(self, cmaker, **kwargs):
+    def __init__(self, cmaker):
         self.cmaker = cmaker
         self.data = AccumDict(accum=[])
         # self.shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs \
@@ -110,7 +110,7 @@ class RupData(object):
         :returns: param -> array
         """
         for src in srcs:
-            for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
+            for rup in src.iter_ruptures(shift_hypo=self.cmaker.shift_hypo):
                 self.cmaker.add_rup_params(rup)
                 self.add(rup, src.id, sites)
         return {k: numpy.array(v) for k, v in self.data.items()}
