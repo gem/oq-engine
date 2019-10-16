@@ -20,7 +20,7 @@
 export PYTHONPATH=$HOME
 
 if [ ! -f $HOME/.ssh/id_rsa ]; then
-    ssh-keygen -q -f $HOME/.ssh/id_rsa -n ""
+    ssh-keygen -q -f $HOME/.ssh/id_rsa -N ""
 fi
 
 oq dbserver start &
