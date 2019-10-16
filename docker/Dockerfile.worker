@@ -21,8 +21,12 @@ FROM openquake/engine
 LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
       vendor="GEM Foundation"
 
-ADD scripts/celery-wait.sh ${HOME}
+USER root
 ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
+RUN dnf install -y openssh-server && \
+    dnf clean all
 
-ENTRYPOINT ["/opt/openquake/bin/python3", "-m", "celery"]
-CMD ["worker", "--workdir", "/opt/openquake/lib/python3.6/site-packages/openquake/engine", "--purge", "-O", "fair"]
+USER openquake
+RUN mkdir .ssh && chmod 700 .ssh
+
+ENTRYPOINT ["/usr/sbin/sshd" ,"-D"]
