@@ -55,7 +55,8 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         self.maxdists = []
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance, max_weight=1E10,
-                     max_sites_disagg=oq.max_sites_disagg)
+                     max_sites_disagg=oq.max_sites_disagg,
+                     task_multiplier=oq.task_multiplier)
         self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
         [gsims] = self.csm.info.get_gsims_by_trt().values()
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
