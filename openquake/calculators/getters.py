@@ -600,6 +600,7 @@ class RuptureGetter(object):
                 ebr.sids = sids
                 ebr.ridx = rec['id']
                 ebr.e0 = 0 if self.e0 is None else e0
+                ebr.id = rec['id']  # rup_id  in the datastore
                 ebrs.append(ebr)
         return ebrs
 
