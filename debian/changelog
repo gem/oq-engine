@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the non-interesting `agg_maps` outputs
   * Changed the task distribution in the classical calculator and added
     a `task_multiplier` parameter
 
