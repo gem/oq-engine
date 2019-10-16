@@ -1,5 +1,5 @@
   [Marco Pagani]
-  * Fixing a bug in the GenericGmpeAvgSA
+  * Fixed a bug in the GenericGmpeAvgSA
 
 python3-oq-engine (3.7.0-1~xenial01) xenial; urgency=low
 
