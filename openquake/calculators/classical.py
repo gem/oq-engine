@@ -92,7 +92,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     if sources:
         sources.sort(key=weight)
         totsites = len(srcfilter.sitecol)
-        mw = 500 if totsites <= params['max_sites_disagg'] else 50000
+        mw = 1000 if totsites <= params['max_sites_disagg'] else 50000
         mweight = max(mw, sum(src.weight for src in sources) / 30)
         blocks = list(block_splitter(sources, mweight, weight))
         for block in blocks[:-1]:
