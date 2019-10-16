@@ -90,7 +90,9 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
     if sources:
-        blocks = list(block_splitter(sources, params['max_weight'], weight))
+        mweight = max(1E5, sum(src.weight for src in sources) / 20)
+        print('----------', mweight)
+        blocks = list(block_splitter(sources, mweight, weight))
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
@@ -244,10 +246,10 @@ class ClassicalCalculator(base.HazardCalculator):
         Build a task queue to be attached to the Starmap instance
         """
         oq = self.oqparam
-        C = oq.concurrent_tasks or 1
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        weight_by_trt = {trt: sum(src.weight for src in sources)
+        C = oq.concurrent_tasks or 1
+        weight_by_trt = {trt: sum(weight(src) for src in sources)
                          for trt, sources, atomic in trt_sources}
         totweight = sum(w for w in weight_by_trt.values())
         del self.csm  # save memory
@@ -256,8 +258,7 @@ class ClassicalCalculator(base.HazardCalculator):
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
-            max_sites_disagg=oq.max_sites_disagg, max_weight=totweight**.666)
-        logging.info(f'max_weight=%d', totweight**.666)
+            max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
