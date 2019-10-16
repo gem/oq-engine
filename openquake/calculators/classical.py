@@ -90,7 +90,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
     if sources:
-        mweight = max(1E5, sum(src.weight for src in sources) / 30)
+        mweight = max(5E4, sum(src.weight for src in sources) / 30)
         blocks = list(block_splitter(sources, mweight, weight))
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
