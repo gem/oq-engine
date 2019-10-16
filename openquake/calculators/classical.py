@@ -248,7 +248,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        C = oq.concurrent_tasks or 1
+        C = oq.concurrent_tasks // 2 or 1
         weight_by_trt = {trt: sum(weight(src) for src in sources)
                          for trt, sources, atomic in trt_sources}
         totweight = sum(w for w in weight_by_trt.values())
