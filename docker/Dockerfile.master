@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-FROM openquake/engine
+FROM openquake/engine:3.7
 MAINTAINER Daniele Viganò <daniele@openquake.org>
 
 ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
