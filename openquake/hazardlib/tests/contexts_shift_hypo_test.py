@@ -34,15 +34,12 @@ class ShiftHypoTestCase(unittest.TestCase):
     def test01(self):
         job_ini = os.path.join(BASE_PATH, 'job.ini')
         oq = readinput.get_oqparam(job_ini)
-        assert oq.shift_hypo == True
+        assert oq.shift_hypo is True
 
-        csm = readinput.get_composite_source_model(oq)
-        lt = readinput.get_gsim_lt(oq)
         sitecol = readinput.get_site_collection(oq)
-        gsims = lt.get_gsims(TRT.ACTIVE_SHALLOW_CRUST)
         src_filter = SourceFilter(sitecol, oq.maximum_distance)
+        csm = readinput.get_composite_source_model(oq)
         rlzs_assoc = csm.info.get_rlzs_assoc()
-        ##
         for i, sm in enumerate(csm.source_models):
             for rlz in rlzs_assoc.rlzs_by_smodel[i]:
                 gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz.ordinal]
@@ -50,4 +47,4 @@ class ShiftHypoTestCase(unittest.TestCase):
                     sm.src_groups, src_filter, oq.imtls,
                     gsim_by_trt, oq.truncation_level,
                     parallel.Starmap.apply)
-            print('rlz=%s, hcurves=%s' % (rlz, hcurves))
+        print(hcurves)

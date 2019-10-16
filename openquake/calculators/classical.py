@@ -260,6 +260,7 @@ class ClassicalCalculator(base.HazardCalculator):
             collapse_factor=oq.collapse_factor,
             pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
+            shift_hypo=oq.shift_hypo,
             task_duration=td, maxweight=maxweight)
         logging.info(f'ruptures_per_task={maxweight}, '
                      f'maxdist={maxdist} km, task_duration={td} s')
