@@ -29,6 +29,7 @@ ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
 USER openquake
 RUN mkdir .ssh && chmod 700 .ssh
 
+# FIXME we should run sshd as normal user, not root
 USER root
 RUN /usr/bin/ssh-keygen -A
 ENTRYPOINT ["/usr/sbin/sshd" ,"-D"]
