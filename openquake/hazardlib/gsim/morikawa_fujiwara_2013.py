@@ -223,10 +223,6 @@ class MorikawaFujiwara2013SubInterfaceSW(MorikawaFujiwara2013SubInterface):
         self.region = 'SW'
         self.model = 'model1'
 
-    def _get_magnitude_term(self, C, rrup, mw1prime, mw1, rhypo):
-        return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] + C['PH']
-                - np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
-
 
 class MorikawaFujiwara2013SubSlab(MorikawaFujiwara2013Crustal):
 
