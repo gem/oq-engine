@@ -1441,7 +1441,7 @@ class LossCurvesMapsBuilder(object):
     # used in ebrisk
     def build_curves(self, loss_arrays, rlzi):
         if len(loss_arrays) == 0:
-            return (), ()
+            return ()
         shp = loss_arrays[0].shape  # (L, T...)
         P = len(self.return_periods)
         curves = numpy.zeros((P,) + shp, F32)
