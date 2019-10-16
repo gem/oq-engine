@@ -57,7 +57,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         if hasattr(self, 'nodal_plane_distribution'):  # point source
-            nr = len(self.get_annual_occurrence_rates())  # ignore hcd, npd
+            rescale = len(self.nodal_plane_distribution.data) * len(
+                self.hypocenter_distribution.data)
+            nr = self.num_ruptures / rescale
         else:
             nr = self.num_ruptures
         return nr * math.sqrt(self.nsites)
