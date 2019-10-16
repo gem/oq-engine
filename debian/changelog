@@ -1,6 +1,6 @@
   [Marco Pagani]
   * Implemented Morikawa and Fujiwara (2013) GMM
-  * Fixing a bug in the GenericGmpeAvgSA
+  * Fixed a bug in the GenericGmpeAvgSA
 
   [Michele Simionato]
   * Changed the seed algorithm in sampling with more than one source model,
