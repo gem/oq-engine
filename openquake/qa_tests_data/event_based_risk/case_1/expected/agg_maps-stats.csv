@@ -1,5 +1,0 @@
-clp,kind,loss_type,value
-0.1,mean,nonstructural,7.07312E+02
-0.1,mean,structural,1.41277E+03
-0.1,quantile-0.25,nonstructural,6.35610E+02
-0.1,quantile-0.25,structural,1.13859E+03
