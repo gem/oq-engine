@@ -93,7 +93,8 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         sources.sort(key=weight)
         totsites = len(srcfilter.sitecol)
         mw = 1000 if totsites <= params['max_sites_disagg'] else 50000
-        mweight = max(mw, sum(src.weight for src in sources) / 30)
+        mweight = max(mw, sum(src.weight for src in sources) /
+                      params['task_multiplier'])
         blocks = list(block_splitter(sources, mweight, weight))
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
@@ -260,6 +261,7 @@ class ClassicalCalculator(base.HazardCalculator):
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
+            task_multiplier=oq.task_multiplier,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
