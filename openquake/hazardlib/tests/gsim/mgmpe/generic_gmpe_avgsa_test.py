@@ -18,7 +18,10 @@ import pathlib
 import unittest
 import numpy as np
 
+from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib import gsim, imt, const
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 
 data = pathlib.Path(__file__).parent / 'data'
 
@@ -37,6 +40,19 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         msg = 'The class name is incorrect'
         self.assertTrue(gmm.__class__.__name__ == 'GenericGmpeAvgSA', msg=msg)
 
+        sites = Dummy.get_site_collection(4, vs30=760.)
+        rup = Dummy.get_rupture(mag=6.0)
+        rup.hypo_depth = 10.
+        dists = DistancesContext()
+        dists.rrup = np.array([1., 10., 30., 70.])
+        imtype = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, _ = gmm.get_mean_and_stddevs(sites, rup, dists, imtype, stdt)
+        expected = np.array([-1.33735637, -2.62649473, -3.64500654,
+                             -4.60067093])
+        np.testing.assert_almost_equal(mean, expected)
+
     def test02(self):
         avg_periods = [0.05, 0.15, 1.0, 2.0, 4.0]
         gmm = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
@@ -45,6 +61,17 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
             corr_func='akkar')
         msg = 'The class name is incorrect'
         self.assertTrue(gmm.__class__.__name__ == 'GenericGmpeAvgSA', msg=msg)
+
+        sites = Dummy.get_site_collection(4, vs30=760.)
+        rup = Dummy.get_rupture(mag=6.0)
+        dists = DistancesContext()
+        dists.repi = np.array([1., 10., 30., 70.])
+        imtype = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, _ = gmm.get_mean_and_stddevs(sites, rup, dists, imtype, stdt)
+        expected = np.array([-2.0383581, -2.6548699, -3.767237 , -4.7775653])
+        np.testing.assert_almost_equal(mean, expected)
 
     def test_calculation_akkar(self, avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0]):
 
