@@ -775,21 +775,20 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
-    def _submit_many(self, queue, howmany):
+    def _submit_many(self, howmany):
         for _ in range(howmany):
-            if queue:  # remove in FIFO order
-                func, args = queue[0]
-                del queue[0]
+            if self.task_queue:  # remove in FIFO order
+                func, args = self.task_queue[0]
+                del self.task_queue[0]
                 self.submit(args, func=func)
                 self.todo += 1
                 logging.debug('%d tasks todo, %d in queue',
-                              self.todo, len(queue))
+                              self.todo, len(self.task_queue))
 
     def _loop(self):
-        queue = self.task_queue
-        if queue:
-            first_args = queue[:self.num_cores]
-            queue = self.task_queue = queue[self.num_cores:]
+        if self.task_queue:
+            first_args = self.task_queue[:self.num_cores]
+            self.task_queue[:] = self.task_queue[self.num_cores:]
             for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -804,17 +803,16 @@ class Starmap(object):
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
                 self.todo -= 1
-                self._submit_many(
-                    queue, max(self.num_cores - self.todo, 1))
+                self._submit_many(max(self.num_cores - self.todo, 1))
                 self.log_percent()
             elif res.msg:
                 logging.warning(res.msg)
             elif res.func:  # add subtask
-                queue.append((res.func, res.pik))
+                self.task_queue.append((res.func, res.pik))
                 if self.todo < self.num_cores:
-                    self._submit_many(queue, self.num_cores - self.todo)
+                    self._submit_many(self.num_cores - self.todo)
                 elif self.oversubmit:
-                    self._submit_many(queue, 1)
+                    self._submit_many(1)
             else:
                 yield res
         self.log_percent()
