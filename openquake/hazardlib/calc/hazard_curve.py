@@ -98,6 +98,9 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     :returns:
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
     """
+
+    print(param)
+
     if not hasattr(src_filter, 'sitecol'):  # do not filter
         src_filter = SourceFilter(src_filter, {})
 
