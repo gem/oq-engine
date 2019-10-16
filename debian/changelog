@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Changed the task distribution in the classical calculator and added
+    a `task_multiplier` parameter
+
+  [Marco Pagani]
+  * Fixed a bug in the GenericGmpeAvgSA
+
+  [Michele Simionato]
   * Added a `/v1/calc/validate_zip` endpoint to validate input archives
   * Deprecated inferring the intensity measure levels from the risk functions
   * Removed the deprecated generation of loss curves and maps for each asset
@@ -10,7 +17,6 @@
 
   [Marco Pagani]
   * Implemented Morikawa and Fujiwara (2013) GMM
-  * Fixed a bug in the GenericGmpeAvgSA
 
   [Michele Simionato]
   * Changed the seed algorithm in sampling with more than one source model,
