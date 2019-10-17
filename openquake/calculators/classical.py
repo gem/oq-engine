@@ -252,11 +252,16 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         del self.csm  # save memory
+        for trt, sources, atomic in trt_sources:
+            nr = sum(src.weight for src in sources)
+            logging.info('TRT = %s', trt)
+            logging.info('max_dist=%d km, num_gsims=%d, num_ruptures=%d',
+                         oq.maximum_distance(trt), len(gsims_by_trt[trt]), nr)
 
         def srcweight(src):
             trt = src.tectonic_region_type
             g = len(gsims_by_trt[trt])
-            m = (oq.maximum_distance[trt] / 300) ** 2
+            m = (oq.maximum_distance(trt) / 300) ** 2
             return src.weight * g * m
 
         totweight = sum(sum(srcweight(src) for src in sources)
