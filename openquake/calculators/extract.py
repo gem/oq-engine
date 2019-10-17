@@ -451,7 +451,7 @@ def extract_uhs(dstore, what):
 def extract_sources(dstore, what):
     """
     Extract information about a source model.
-    Use it as /extract/source_info?sm_id=0
+    Use it as /extract/sources?sm_id=0
     """
     qdict = parse(what)
     sm_id = int(qdict['sm_id'][0])
