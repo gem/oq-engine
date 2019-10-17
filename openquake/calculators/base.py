@@ -526,7 +526,7 @@ class HazardCalculator(BaseCalculator):
         except AttributeError:  # no self.csm
             return self.datastore['csm_info'].get_num_rlzs()
 
-    def read_exposure(self, haz_sitecol=None):  # after load_risk_model
+    def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
         Read the exposure, the risk models and update the attributes
         .sitecol, .assetcol
