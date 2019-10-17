@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -37,7 +38,7 @@ def plot_assets(calc_id=-1, site_model=False):
         region = None
     sitecol = dstore['sitecol']
     try:
-        assetcol = dstore['assetcol'].value
+        assetcol = dstore['assetcol'][()]
     except AttributeError:
         assetcol = dstore['assetcol'].array
     fig = p.figure()
@@ -57,7 +58,7 @@ def plot_assets(calc_id=-1, site_model=False):
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')
     p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black')
     if 'discarded' in dstore:
-        disc = numpy.unique(dstore['discarded'].value[['lon', 'lat']])
+        disc = numpy.unique(dstore['discarded']['lon', 'lat'])
         p.scatter(disc['lon'], disc['lat'], marker='x', color='red')
     p.show()
 

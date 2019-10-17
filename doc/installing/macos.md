@@ -1,10 +1,10 @@
 # Installing the OpenQuake Engine on macOS
 The OpenQuake Engine is available for macOS in the form of **self-installable binary distribution**.
 
-- this distribution uses Python 3.6 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-368/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
+- this distribution requires the Python 3.6 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-368/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
     - pip, numpy, scipy, h5py, django, shapely, and few more
 - can be installed without `root` permission (i.e. in the user home)
-- multiple versions can be installed alongside
+- multiple versions can be installed and run on the same machine
 - currently does not support Celery (and will never do)
 - Python from _Anaconda_ **is not supported**
 
@@ -12,7 +12,7 @@ The OpenQuake Engine is available for macOS in the form of **self-installable bi
 
 Requirements are:
 
-- Mac OS X 10.10 (Yosemite), Mac OS X 10.11 (El Capitan), macOS 10.12 (Sierra), macOS 10.13 (High Sierra), or macOS 10.14 (Mojave)
+- Mac OS X 10.10 (Yosemite), Mac OS X 10.11 (El Capitan), macOS 10.12 (Sierra), macOS 10.13 (High Sierra), macOS 10.14 (Mojave), or macOS 10.15 (Catalina)
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 - [Terminal](https://support.apple.com/guide/terminal/welcome) or [iTerm2](https://www.iterm2.com/) app
@@ -23,9 +23,9 @@ Make sure to run the script located under `/Applications/Python 3.6/Install Cert
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.7.0-1.run using any browser
+Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.7.0-1.run using any browser.
 
-From the Terminal app (or using iTerm) run
+From the Terminal app (or using iTerm) run:
 
 ```bash
 cd Downloads
@@ -50,7 +50,7 @@ The demo files are located in `~/openquake/demos`.
 
 ### Upgrade from a previous installation
 
-To upgrade from a previous installation you need to manually remove it first
+To upgrade from a previous installation you need to manually remove it first:
 
 ```bash
 # default is ~/openquake
@@ -63,7 +63,7 @@ rm -Rf ~/openquake
 If _make the 'oq' command available by default_ as been set to 'Y' (default) during the installation
 the 'oq' command will be available by default after Terminal has been restarted.
 
-To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, you must run
+To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, you must run:
 
 ```bash
 # default is ~/openquake
@@ -72,20 +72,20 @@ source ~/openquake/env.sh
 
 before the OpenQuake Engine can be properly used.
 
-To run the OpenQuake via command line use
+To run the OpenQuake Engine via the command line, use:
 
 ```bash
 oq engine --run </path/to/job.ini>
 ```
 
-to start the [WebUI](../running/server.md) use instead
+To start the OpenQuake [WebUI](../running/server.md) use:
 
 ```bash
 oq webui start
 ```
 The WebUI will be started and a new browser window will be opened.
 
-More information are available on [How to run the OpenQuake Engine](../running/unix.md) and [The OpenQuake Engine server and WebUI](../running/server.md).
+More information is available at the pages [How to run the OpenQuake Engine](../running/unix.md) and [The OpenQuake Engine server and WebUI](../running/server.md).
 
 ***
 
