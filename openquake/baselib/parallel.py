@@ -318,14 +318,15 @@ class Result(object):
 
     def __init__(self, val, mon, tb_str='', msg='', count=0):
         if isinstance(val, dict):
-            # store the size in bytes of the content
-            self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
             self.pik = Pickled(val)
+            self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
         elif isinstance(val, tuple) and callable(val[0]):
             self.func = val[0]
             self.pik = pickle_sequence(val[1:])
+            self.nbytes = {'tot': sum(len(p) for p in self.pik)}
         else:
             self.pik = Pickled(val)
+            self.nbytes = {'tot': len(self.pik)}
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
@@ -344,6 +345,10 @@ class Result(object):
             else:
                 raise etype(msg)
         return val
+
+    def __repr__(self):
+        nbytes = ['%s: %s' % (k, humansize(v)) for k, v in self.nbytes.items()]
+        return '<%s %s>' % (self.__class__.__name__, ' '.join(nbytes))
 
     @classmethod
     def new(cls, func, args, mon, count=0):
@@ -710,10 +715,10 @@ class Starmap(object):
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
             nbytes = sum(self.sent[fname].values())
-            self.progress('%s %s sent, %d tasks submitted, %d queued',
+            self.progress('%s %s sent, %d submitted, %d queued',
                           self.name, humansize(nbytes), submitted, queued)
         elif percent > self.prev_percent:
-            self.progress('%s %3d%% [%d tasks submitted, %d queued]',
+            self.progress('%s %3d%% [%d submitted, %d queued]',
                           self.name, percent, submitted, queued)
             self.prev_percent = percent
         return done
@@ -770,21 +775,21 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
-    def _submit_many(self, queue, howmany):
+    def _submit_many(self, howmany):
         for _ in range(howmany):
-            if queue:  # remove in FIFO order
-                func, args = queue[0]
-                del queue[0]
+            if self.task_queue:
+                # remove in LIFO order to avoid too many subtasks upfront
+                func, args = self.task_queue[-1]
+                del self.task_queue[-1]
                 self.submit(args, func=func)
                 self.todo += 1
                 logging.debug('%d tasks todo, %d in queue',
-                              self.todo, len(queue))
+                              self.todo, len(self.task_queue))
 
     def _loop(self):
-        queue = self.task_queue
-        if queue:
-            first_args = queue[:self.num_cores]
-            queue = self.task_queue = queue[self.num_cores:]
+        if self.task_queue:
+            first_args = self.task_queue[:self.num_cores]
+            self.task_queue[:] = self.task_queue[self.num_cores:]
             for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -799,17 +804,14 @@ class Starmap(object):
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
                 self.todo -= 1
-                self._submit_many(
-                    queue, max(self.num_cores - self.todo, 1))
+                self._submit_many(max(self.num_cores - self.todo, 2))
                 self.log_percent()
-            elif res.msg:
-                logging.warning(res.msg)
             elif res.func:  # add subtask
-                queue.append((res.func, res.pik))
+                self.task_queue.append((res.func, res.pik))
                 if self.todo < self.num_cores:
-                    self._submit_many(queue, self.num_cores - self.todo)
+                    self._submit_many(self.num_cores - self.todo)
                 elif self.oversubmit:
-                    self._submit_many(queue, 1)
+                    self._submit_many(1)
             else:
                 yield res
         self.log_percent()
