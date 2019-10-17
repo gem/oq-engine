@@ -777,7 +777,8 @@ class Starmap(object):
 
     def _submit_many(self, howmany):
         for _ in range(howmany):
-            if self.task_queue:  # remove in LIFO order
+            if self.task_queue:
+                # remove in LIFO order to avoid too many subtasks upfront
                 func, args = self.task_queue[-1]
                 del self.task_queue[-1]
                 self.submit(args, func=func)
