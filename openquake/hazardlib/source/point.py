@@ -312,7 +312,7 @@ class PointSource(ParametricSeismicSource):
         surface = PlanarSurface(
             nodal_plane.strike, nodal_plane.dip, left_top, right_top,
             right_bottom, left_bottom)
-        return surface
+        return surface, rupture_center
 
     @property
     def polygon(self):
@@ -347,7 +347,7 @@ def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
     ps.upper_seismogenic_depth = seismo[0]
     ps.lower_seismogenic_depth = seismo[1]
     ps.rupture_aspect_ratio = aspect_ratio
-    surface = ps._get_rupture_surface(mag, np, hc)
+    surface, nhc = ps._get_rupture_surface(mag, np, hc)
     rup = ParametricProbabilisticRupture(
         mag, np.rake, trt, hc, surface, occurrence_rate, tom)
     return rup
