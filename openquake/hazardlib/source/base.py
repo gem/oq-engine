@@ -94,6 +94,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.seed = None  # set by the engine
         self.id = None  # set by the engine
 
+    @abc.abstractmethod
     def iter_ruptures(self, **kwargs):
         """
         Get a generator object that yields probabilistic ruptures the source
