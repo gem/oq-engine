@@ -870,6 +870,7 @@ def get_checksum32(oqparam, hazard=False):
                        'random_seed', 'ses_seed', 'truncation_level',
                        'maximum_distance', 'investigation_time',
                        'number_of_logic_tree_samples', 'imtls',
+                       'collapse_factor', 'pointsource_distance',
                        'ses_per_logic_tree_path', 'minimum_magnitude',
                        'sites', 'collapse_factor', 'filter_distance'):
                 hazard_params.append('%s = %s' % (key, val))
