@@ -140,7 +140,11 @@ class Socket(object):
         :param obj:
             the Python object to send
         """
-        self.zsocket.send_pyobj(obj)
+        try:
+            self.zsocket.send_pyobj(obj)
+        except Exception as exc:
+            # usual for objects bigger than 4 GB
+            raise exc.__class__('%s: %r' % (exc, obj))
         self.num_sent += 1
         if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj()
