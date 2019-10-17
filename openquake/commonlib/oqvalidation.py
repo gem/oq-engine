@@ -175,7 +175,7 @@ class OqParam(valid.ParamSet):
     collapse_factor = valid.Param(valid.positivefloat, 3)
     max_radius = valid.Param(valid.positivefloat, None)
     task_duration = valid.Param(valid.positiveint, None)  # used in ebrisk
-    task_multiplier = valid.Param(valid.positiveint, 10)
+    task_multiplier = valid.Param(valid.positiveint, 5)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
