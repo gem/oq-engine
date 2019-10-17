@@ -290,9 +290,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
             nr = sum(src.weight for src in sources)
             logging.info('TRT = %s', trt)
-            logging.info(
-                'max_dist=%d km, num_gsims=%d, num_ruptures=%d, num_blocks=%d',
-                oq.maximum_distance(trt), len(gsims), nr, nb)
+            logging.info('max_dist=%d km, gsims=%d, ruptures=%d, blocks=%d',
+                         oq.maximum_distance(trt), len(gsims), nr, nb)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
