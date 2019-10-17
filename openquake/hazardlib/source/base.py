@@ -41,7 +41,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
                'src_group_id', 'num_ruptures', 'id', 'min_mag']
-    RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
@@ -57,7 +56,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        return self.num_ruptures * math.sqrt(self.nsites)
+        if hasattr(self, 'nodal_plane_distribution'):  # point source
+            rescale = len(self.nodal_plane_distribution.data) * len(
+                self.hypocenter_distribution.data)
+            nr = self.num_ruptures / rescale
+        else:
+            nr = self.num_ruptures
+        return nr * math.sqrt(self.nsites)
 
     @property
     def nsites(self):
@@ -94,9 +99,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         Get a generator object that yields probabilistic ruptures the source
         consists of.
-
-        :param shift_hypo:
-            The hypocenter is shifted accordingly with the rupture
 
         :returns:
             Generator of instances of sublclass of :class:
@@ -163,7 +165,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 hc = Point(latitude=src.location.latitude,
                            longitude=src.location.longitude,
                            depth=hc_depth)
-                surface, nhc = src._get_rupture_surface(mag, np, hc)
+                surface = src._get_rupture_surface(mag, np, hc)
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)

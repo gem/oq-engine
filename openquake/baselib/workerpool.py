@@ -2,9 +2,10 @@ import os
 import sys
 import time
 import signal
+import shutil
+import tempfile
 import subprocess
 import multiprocessing
-from multiprocessing.sharedctypes import Value
 from openquake.baselib import zeromq as z, general, parallel, config
 try:
     from setproctitle import setproctitle
@@ -161,8 +162,8 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                n = sock.send('get_executing')
-                executing.append((host, n))
+                tasks = sock.send('get_executing')
+                executing.append((host, tasks))
         return executing
 
     def restart(self):
@@ -172,6 +173,20 @@ class WorkerMaster(object):
         self.stop()
         self.start()
         return 'restarted'
+
+
+def worker(sock, executing):
+    """
+    :param sock: a zeromq.Socket of kind PULL
+    :param executing: a path inside /tmp/calc_XXX
+    """
+    setproctitle('oq-zworker')
+    with sock:
+        for cmd, args, taskno, mon in sock:
+            fname = os.path.join(executing, str(taskno))
+            open(fname, 'w').close()
+            parallel.safely_call(cmd, args, taskno, mon)
+            os.remove(fname)
 
 
 class WorkerPool(object):
@@ -188,19 +203,8 @@ class WorkerPool(object):
         self.task_server_url = task_server_url
         self.num_workers = (multiprocessing.cpu_count()
                             if num_workers == '-1' else int(num_workers))
-        self.executing = Value('i', 0)
+        self.executing = tempfile.mkdtemp()
         self.pid = os.getpid()
-
-    def worker(self, sock):
-        """
-        :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
-        """
-        setproctitle('oq-zworker')
-        with sock:
-            for cmd, args, taskno, mon in sock:
-                self.executing.value += 1
-                parallel.safely_call(cmd, args, taskno, mon)
-                self.executing.value -= 1
 
     def start(self):
         """
@@ -211,7 +215,8 @@ class WorkerPool(object):
         self.workers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.task_server_url, z.zmq.PULL, 'connect')
-            proc = multiprocessing.Process(target=self.worker, args=(sock,))
+            proc = multiprocessing.Process(
+                target=worker, args=(sock, self.executing))
             proc.start()
             sock.pid = proc.pid
             self.workers.append(sock)
@@ -228,7 +233,8 @@ class WorkerPool(object):
                 elif cmd == 'get_num_workers':
                     ctrlsock.send(self.num_workers)
                 elif cmd == 'get_executing':
-                    ctrlsock.send(self.executing.value)
+                    ctrlsock.send(' '.join(os.listdir(self.executing)))
+        shutil.rmtree(self.executing)
 
     def stop(self):
         """

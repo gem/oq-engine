@@ -117,7 +117,9 @@ site_param_dt = {
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
+    'z1pt4': numpy.float64,
     'backarc': numpy.bool,
+    'xvf': numpy.float64,
 
     # Parameters for site amplification
     'ec8': (numpy.string_, 1),
@@ -255,7 +257,7 @@ class SiteCollection(object):
         if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
-        indices = numpy.uint32(sorted(indices))
+        indices = numpy.uint32(indices)
         new.array = self.array[indices]
         new.complete = self.complete
         return new
