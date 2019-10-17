@@ -36,5 +36,6 @@ urlpatterns = [
     url(r'^(\d+)/remove$', views.calc_remove),
     url(r'^result/(\d+)$', views.calc_result),
     url(r'^run$', views.calc_run),
+    url(r'^validate_zip$', views.validate_zip),
     url(r'^(\d+)/result/list$', views.calc_results),
 ]

@@ -15,28 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import numpy
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import countby
 from openquake.commonlib import writers
-from openquake.risklib import scientific
-
-
-def get_loss_builder(dstore, return_periods=None, loss_dt=None):
-    """
-    :param dstore: datastore for an event based risk calculation
-    :returns: a LossCurvesMapsBuilder instance
-    """
-    oq = dstore['oqparam']
-    weights = dstore['weights'][()]
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = countby(dstore['events'][()], 'rlz_id')
-    periods = return_periods or oq.return_periods or scientific.return_periods(
-        eff_time, max(num_events.values()))
-    return scientific.LossCurvesMapsBuilder(
-        oq.conditional_loss_poes, numpy.array(periods),
-        loss_dt or oq.loss_dt(), weights, num_events,
-        eff_time, oq.risk_investigation_time)
+from openquake.calculators.post_risk import get_loss_builder
 
 
 class LossCurveExporter(object):

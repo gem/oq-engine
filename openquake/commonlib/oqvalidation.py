@@ -172,8 +172,10 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    collapse_factor = valid.Param(valid.positivefloat, 2)
-    task_duration = valid.Param(valid.positiveint, None)
+    collapse_factor = valid.Param(valid.positivefloat, 3)
+    max_radius = valid.Param(valid.positivefloat, None)
+    task_duration = valid.Param(valid.positiveint, None)  # used in ebrisk
+    task_multiplier = valid.Param(valid.positiveint, 10)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
@@ -469,6 +471,14 @@ class OqParam(valid.ParamSet):
         self.risk_imtls = imtls
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
+        if (self.calculation_mode.startswith('classical')
+                and not getattr(self, 'hazard_imtls', [])):
+            logging.warning(
+                'You MUST provide the intensity measure levels explicitly in '
+                'the job.ini, otherwise this calculation will break in future '
+                'versions of the engine')
+            for imt in imtls:
+                logging.warning('Using implicitly %s=%s', imt, imtls[imt])
 
     def hmap_dt(self):  # used for CSV export
         """
