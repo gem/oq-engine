@@ -57,7 +57,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 if 'rlz' in fname:
                     continue
                 elif fname.endswith('.csv') and any(x in fname for x in (
-                        'agg_curves', 'agg_maps', 'agg_loss', 'avg_loss')):
+                        'agg_curves', 'agg_loss', 'avg_loss')):
                     all_csv.append(fname)
         assert all_csv, 'Could not find any CSV file??'
         for fname in all_csv:
@@ -75,13 +75,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # make sure the agg_curves-stats has the right attrs
         self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
         self.check_attr('units', [b'EUR', b'EUR'])
-
-        # test the loss maps exporter
-        fnames = export(('agg_maps-stats', 'csv'), self.calc.datastore)
-        assert fnames
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname),
-                                  fname, delta=1E-5)
 
         # test portfolio loss
         tmp = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -263,12 +256,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-        fnames = export(('agg_maps-rlzs', 'csv'), self.calc.datastore)
-        assert fnames, 'agg_maps-rlzs not exported?'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname),
-                                  fname, delta=1E-5)
-
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
@@ -283,12 +270,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
-
-        fnames = export(('agg_maps-rlzs', 'csv'), self.calc.datastore)
-        assert fnames, 'agg_maps-rlzs not exported?'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname),
-                                  fname, delta=1E-5)
 
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
@@ -320,9 +301,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-5)
-
-        fname = export(('agg_maps-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/aggmaps.csv', fname, delta=1E-5)
 
         fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/avg_losses-mean.csv',
@@ -421,8 +399,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv')
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
-        [fname] = out['agg_maps-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_maps.csv', fname, delta=1E-5)
 
         # regenerate loss curves and maps
         out = self.run_calc(
@@ -430,5 +406,3 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
-        [fname] = out['agg_maps-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_maps.csv', fname, delta=1E-5)
