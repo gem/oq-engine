@@ -252,11 +252,6 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         del self.csm  # save memory
-        for trt, sources, atomic in trt_sources:
-            nr = sum(src.weight for src in sources)
-            logging.info('TRT = %s', trt)
-            logging.info('max_dist=%d km, num_gsims=%d, num_ruptures=%d',
-                         oq.maximum_distance(trt), len(gsims_by_trt[trt]), nr)
 
         def srcweight(src):
             trt = src.tectonic_region_type
@@ -283,12 +278,21 @@ class ClassicalCalculator(base.HazardCalculator):
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
+                nb = 1
                 yield f1, (sources, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
-                for block in block_splitter(sources, totweight / C, srcweight):
+                blocks = list(block_splitter(sources, totweight/C, srcweight))
+                nb = len(blocks)
+                for block in blocks:
                     logging.debug('Sending %d sources with weight %d',
                                   len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
+
+            nr = sum(src.weight for src in sources)
+            logging.info('TRT = %s', trt)
+            logging.info(
+                'max_dist=%d km, num_gsims=%d, num_ruptures=%d, num_blocks=%d',
+                oq.maximum_distance(trt), len(gsims), nr, nb)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
