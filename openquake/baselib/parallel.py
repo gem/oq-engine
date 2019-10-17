@@ -715,10 +715,10 @@ class Starmap(object):
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
             nbytes = sum(self.sent[fname].values())
-            self.progress('%s %s sent, %d tasks submitted, %d queued',
+            self.progress('%s %s sent, %d submitted, %d queued',
                           self.name, humansize(nbytes), submitted, queued)
         elif percent > self.prev_percent:
-            self.progress('%s %3d%% [%d tasks submitted, %d queued]',
+            self.progress('%s %3d%% [%d submitted, %d queued]',
                           self.name, percent, submitted, queued)
             self.prev_percent = percent
         return done
@@ -777,9 +777,10 @@ class Starmap(object):
 
     def _submit_many(self, howmany):
         for _ in range(howmany):
-            if self.task_queue:  # remove in FIFO order
-                func, args = self.task_queue[0]
-                del self.task_queue[0]
+            if self.task_queue:
+                # remove in LIFO order to avoid too many subtasks upfront
+                func, args = self.task_queue[-1]
+                del self.task_queue[-1]
                 self.submit(args, func=func)
                 self.todo += 1
                 logging.debug('%d tasks todo, %d in queue',
