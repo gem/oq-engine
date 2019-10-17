@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the rupture exporters to export the rupture ID and not the
+    rupture serial
   * Removed the non-interesting `agg_maps` outputs
   * Changed the task distribution in the classical calculator and added
     a `task_multiplier` parameter
