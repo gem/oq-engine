@@ -190,7 +190,7 @@ class ContextMaker():
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.loglevels = DictArray(self.imtls)
-        self.shift_hypo = param.get('shift_hypo')
+        self.shift_hypo = param.get('shift_hypo', False)
         with warnings.catch_warnings():
             # avoid RuntimeWarning: divide by zero encountered in log
             warnings.simplefilter("ignore")
