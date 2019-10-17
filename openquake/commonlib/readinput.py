@@ -346,6 +346,7 @@ def get_mesh(oqparam):
                               'nor a site model, nor an exposure in %s' %
                               oqparam.inputs['job_ini'])
         try:
+            logging.info('Inferring the hazard grid from the exposure')
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
