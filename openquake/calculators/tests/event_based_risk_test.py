@@ -21,6 +21,7 @@ import unittest
 import numpy
 
 from openquake.baselib.general import gettemp
+from openquake.baselib.hdf5 import read_csv
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -352,9 +353,16 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
+        rup_ids = set(read_csv(fname, {None: '<S50'})['rup_id'])
 
         [fname] = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_curves.csv', fname)
+
+        # check that the IDs in losses_by_event.csv exist in ruptures.csv
+        [fname] = export(('ruptures', 'csv'), self.calc.datastore)
+        rupids = set(read_csv(fname, {None: '<S50'})['rupid'])
+        self.assertTrue(rup_ids <= rupids, 'There are non-existing rupture IDs'
+                        ' in losses_by_event!')
 
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
