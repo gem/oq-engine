@@ -190,7 +190,7 @@ class ContextMaker():
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.loglevels = DictArray(self.imtls)
-        self.shift_hypo = param.get('shift_hypo', False)
+        self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
             # avoid RuntimeWarning: divide by zero encountered in log
             warnings.simplefilter("ignore")
@@ -384,7 +384,7 @@ class ContextMaker():
                         for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
                             yield rup, close_sites, mdist
         else:  # no point source or site-specific analysis
-            for rup in src.iter_ruptures():
+            for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 yield rup, sites, None
 
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
