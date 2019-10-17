@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the rupture exporters to export the rupture ID and not the
+    rupture serial
+
   [Marco Pagani]
   * Fixed a bug in the GenericGmpeAvgSA
 
