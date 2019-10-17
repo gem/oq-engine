@@ -251,11 +251,16 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        C = oq.concurrent_tasks // 2 or 1
-        weight_by_trt = {trt: sum(weight(src) for src in sources)
-                         for trt, sources, atomic in trt_sources}
-        totweight = sum(w for w in weight_by_trt.values())
         del self.csm  # save memory
+
+        def srcweight(src):
+            trt = src.tectonic_region_type
+            g = len(gsims_by_trt[trt])
+            m = (oq.maximum_distance[trt] / 300) ** 2
+            return src.weight * g * m
+
+        totweight = sum(sum(srcweight(src) for src in sources)
+                        for trt, sources, atomic in trt_sources)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -268,13 +273,14 @@ class ClassicalCalculator(base.HazardCalculator):
             f1 = f2 = preclassical
         else:
             f1, f2 = classical, classical_split_filter
+        C = oq.concurrent_tasks or 1
         for trt, sources, atomic in trt_sources:
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
                 yield f1, (sources, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
-                for block in block_splitter(sources, totweight / C, weight):
+                for block in block_splitter(sources, totweight / C, srcweight):
                     logging.debug('Sending %d sources with weight %d',
                                   len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
