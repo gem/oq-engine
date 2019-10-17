@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the ShakeMap downloader to find also unzipped `uncertaintly.xml`
+    files
   * Fixed the rupture exporters to export the rupture ID and not the
     rupture serial
 
