@@ -109,11 +109,10 @@ class ShakemapTestCase(unittest.TestCase):
 
         # set stddev to zero
         shakemap['std'] = 0
-        _, gmfs = to_gmfs(
-            shakemap, 'no', 'yes', site_effects=True,
-            trunclevel=3, num_gmfs=2, seed=42)
-        aae(gmfs[..., 0].sum(axis=0), [0.669971, 0.669971])  # PGA
-        aae(gmfs[..., 2].sum(axis=0), [0.5838542, 0.5838542])  # SA(1.0)
+        with self.assertRaises(ValueError) as ctx:
+            to_gmfs(shakemap, 'no', 'yes', site_effects=True,
+                    trunclevel=3, num_gmfs=2, seed=42)
+        self.assertIn('stddev==0 for IMT=PGA', str(ctx.exception))
 
     def test_from_files(self):
         # files provided by Vitor Silva, without site amplification

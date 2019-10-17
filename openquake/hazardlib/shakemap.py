@@ -301,14 +301,11 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     spatial_corr = spatial_correlation_array(dmatrix, imts_, spatialcorr)
     stddev = [std[str(imt)] for imt in imts_]
     for im, std in zip(imts_, stddev):
-        if spatialcorr != 'no' and std.sum() == 0:
+        if std.sum() == 0:
             raise ValueError('Cannot decompose the spatial covariance '
                              'because stddev==0 for IMT=%s' % im)
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
-    if spatial_cov.sum():
-        L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
-    else:
-        L = 0  # stddev all zeros
+    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                           size=(M * N, num_gmfs), random_state=seed)
