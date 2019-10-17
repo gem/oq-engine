@@ -104,8 +104,6 @@ class RupData(object):
     def __init__(self, cmaker):
         self.cmaker = cmaker
         self.data = AccumDict(accum=[])
-        # self.shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs \
-        #    else False
 
     def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
         """
@@ -192,6 +190,7 @@ class ContextMaker():
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.loglevels = DictArray(self.imtls)
+        self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
             # avoid RuntimeWarning: divide by zero encountered in log
             warnings.simplefilter("ignore")
@@ -362,7 +361,8 @@ class ContextMaker():
                     mdist = min(self.max_radius * radius, mdist)
                 if simple:
                     # there is nothing to collapse
-                    for rup in src.gen_ruptures(mag, mag_occ_rate):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, 
+                                                shift_hypo=self.shift_hypo):
                         yield rup, sites, mdist
                 else:
                     # compute the collapse distance and use it
