@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 import shapely
+import numpy
 from openquake.baselib import sap
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo.utils import get_bounding_box
@@ -72,7 +73,38 @@ def make_figure_hmaps(extractors, what):
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ncalcs = len(extractors)
-    for i, ex in enumerate(extractors):
+    if ncalcs > 2:
+        raise RuntimeError('Could not plot more than two calculations at once')
+    elif ncalcs == 2:  # plot the differences
+        ex1, ex2 = extractors
+        oq1 = ex1.oqparam
+        oq2 = ex2.oqparam
+        n_poes = len(oq1.poes)
+        assert n_poes == len(oq2.poes)
+        itime = oq1.investigation_time
+        assert oq2.investigation_time == itime
+        sitecol = ex1.get('sitecol')
+        assert ex1.get('sitecol') == sitecol
+        hmaps1 = ex1.get(what)
+        hmaps2 = ex2.get(what)
+        [imt] = hmaps1.imt
+        assert [imt] == hmaps2.imt
+        [kind] = hmaps1.kind
+        assert hmaps1.kind == [kind]
+        for j, poe in enumerate(oq1.poes):
+            diff = hmaps1[kind][:, 0, j] - hmaps2[kind][:, 0, j]
+            maxdiff = numpy.abs(diff).max()
+            ax = fig.add_subplot(1, n_poes, j + 1)
+            ax.grid(True)
+            ax.set_xlabel('IMT=%s, kind=%s, poe=%s\ncalcs %d-%d, '
+                          'inv_time=%dy\nmaxdiff=%s' %
+                          (imt, kind, poe, ex1.calc_id, ex2.calc_id,
+                           itime, maxdiff))
+            bmap = basemap('cyl', sitecol)
+            bmap.scatter(sitecol['lon'], sitecol['lat'],
+                         c=diff, cmap='jet')
+    elif ncalcs == 1:  # plot the hmap
+        [ex] = extractors
         oq = ex.oqparam
         n_poes = len(oq.poes)
         sitecol = ex.get('sitecol')
@@ -80,7 +112,7 @@ def make_figure_hmaps(extractors, what):
         [imt] = hmaps.imt
         [kind] = hmaps.kind
         for j, poe in enumerate(oq.poes):
-            ax = fig.add_subplot(n_poes, ncalcs, j * ncalcs + i + 1)
+            ax = fig.add_subplot(1, n_poes, j + 1)
             ax.grid(True)
             ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
                           'inv_time=%dy' %

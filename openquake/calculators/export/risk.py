@@ -70,20 +70,26 @@ def tag2idx(tags):
 
 
 # this is used by event_based_risk and ebrisk
-@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
+@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'),
+            ('tot_curves-rlzs', 'csv'), ('tot_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
+    if ekey[0].startswith('agg_'):
+        aggregate_by = oq.aggregate_by
+    else:  # tot_curves
+        aggregate_by = []
+
     name = '_'.join(['agg'] + oq.aggregate_by)
     aggvalue = dstore['exposed_values/' + name][()]
 
     lti = tag2idx(oq.loss_names)
     tagi = {tagname: tag2idx(getattr(assetcol.tagcol, tagname))
-            for tagname in oq.aggregate_by}
+            for tagname in aggregate_by}
 
     def get_loss_ratio(rec):
         idxs = tuple(tagi[tagname][getattr(rec, tagname)] - 1
-                     for tagname in oq.aggregate_by) + (lti[rec.loss_types],)
+                     for tagname in aggregate_by) + (lti[rec.loss_types],)
         return rec.loss_value / aggvalue[idxs]
 
     # shape (T1, T2, ..., L)
@@ -120,28 +126,6 @@ def _get_data(dstore, dskey, stats):
     return name, value, tags
 
 
-# used by ebrisk
-@export.add(('agg_maps-rlzs', 'csv'), ('agg_maps-stats', 'csv'))
-def export_agg_maps_csv(ekey, dstore):
-    name, kind = ekey[0].split('-')
-    oq = dstore['oqparam']
-    tagcol = dstore['assetcol/tagcol']
-    agg_maps = dstore[ekey[0]][()]  # shape (C, R, L, T...)
-    R = agg_maps.shape[1]
-    kinds = (['rlz-%03d' % r for r in range(R)] if ekey[0].endswith('-rlzs')
-             else list(oq.hazard_stats()))
-    clp = [str(p) for p in oq.conditional_loss_poes]
-    dic = dict(shape_descr=['clp', 'kind', 'loss_type'] + oq.aggregate_by,
-               clp=clp, kind=kinds, loss_type=oq.loss_dt().names)
-    for tagname in oq.aggregate_by:
-        dic[tagname] = getattr(tagcol, tagname)[1:]
-    aw = hdf5.ArrayWrapper(agg_maps, dic)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    fname = dstore.export_path('%s.%s' % ekey)
-    writer.save(aw.to_table(), fname)
-    return [fname]
-
-
 # this is used by event_based_risk and classical_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
@@ -168,7 +152,8 @@ def export_avg_losses(ekey, dstore):
 
 
 # this is used by ebrisk
-@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
+@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'),
+            ('tot_losses-rlzs', 'csv'), ('tot_losses-stats', 'csv'))
 def export_agg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -179,7 +164,8 @@ def export_agg_losses(ekey, dstore):
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assetcol = dstore['assetcol']
-    aggname = '_'.join(['agg'] + oq.aggregate_by)
+    aggname = '_'.join(['agg'] + oq.aggregate_by if dskey.startswith('agg_')
+                       else [])
     expvalue = dstore['exposed_values/' + aggname][()]
     # shape (T1, T2, ..., L)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
@@ -277,7 +263,7 @@ def year_dict(eids, investigation_time, ses_seed):
     return dict(zip(numpy.sort(eids), years))  # eid -> year
 
 
-# this is used by classical_risk and event_based_risk
+# this is used by classical_risk
 @export.add(('loss_curves-rlzs', 'csv'), ('loss_curves-stats', 'csv'),
             ('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
@@ -288,7 +274,7 @@ def export_loss_curves(ekey, dstore):
     return loss_curves.LossCurveExporter(dstore).export('csv', kind)
 
 
-# used by classical_risk and event_based_risk
+# used by classical_risk
 @export.add(('loss_maps-rlzs', 'csv'), ('loss_maps-stats', 'csv'))
 def export_loss_maps_csv(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats
@@ -310,7 +296,7 @@ def export_loss_maps_csv(ekey, dstore):
     return writer.getsaved()
 
 
-# used by classical_risk and event_based_risk
+# used by classical_risk
 @export.add(('loss_maps-rlzs', 'npz'), ('loss_maps-stats', 'npz'))
 def export_loss_maps_npz(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats

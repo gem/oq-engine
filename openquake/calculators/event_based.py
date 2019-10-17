@@ -114,10 +114,11 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         if not hasattr(self, 'maxweight'):
             trt_sources = self.csm.get_trt_sources()
-            self.maxweight = source.get_maxweight(
-                trt_sources, weight, self.oqparam.concurrent_tasks,
-                source.MINWEIGHT)
-            if self.maxweight == source.MINWEIGHT:
+            self.maxweight = sum(sum(weight(s) for s in srcs)
+                                 for _, srcs, _ in trt_sources) / (
+                self.oqparam.concurrent_tasks or 1)
+            if self.maxweight < source.MINWEIGHT:
+                self.maxweight = source.MINWEIGHT
                 logging.info('Using minweight=%d', source.MINWEIGHT)
             else:
                 logging.info('Using maxweight=%d', self.maxweight)
@@ -128,7 +129,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        gsims_by_trt = self.csm.gsim_lt.values
+        gsims_by_trt = self.csm.info.get_gsims_by_trt()
         logging.info('Building ruptures')
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
@@ -247,8 +248,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Building associations event_id -> rlz_id for %d events'
-                     ' and %d ruptures', len(events), len(rup_array))
+        logging.info('Building assocs event_id -> rlz_id for {:,d} events'
+                     ' and {:,d} ruptures'.format(len(events), len(rup_array)))
         if len(events) < 1E5:
             it = map(RuptureGetter.get_eid_rlz, rgetters)
         else:
