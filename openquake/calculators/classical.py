@@ -42,25 +42,6 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def estimate_duration(weight_by_trt, gsims_by_trt, maxdist, N, L, C):
-    """
-    Estimate the task duration with an heuristic formula
-
-    :param weight_by_trt: source weights per TRT
-    :param gsims_by_trt: GSIMs per TRT
-    :param maxdist: maximum distance per TRT
-    :param N: number of sites
-    :param L: number of hazard levels
-    :param C: number of concurrent_tasks
-    """
-    factor = 0
-    T = len(weight_by_trt)
-    for trt in weight_by_trt:
-        factor += weight_by_trt[trt] ** .4 * (maxdist[trt] / 300) ** 2 \
-                  * len(gsims_by_trt[trt]) / T
-    return 10 * (L * N) ** .333 * factor / C
-
-
 def get_src_ids(sources):
     """
     :returns:
@@ -108,21 +89,16 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         for src, _sites in srcfilter(srcs):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
-    heavy, light = [], []
-    for src in sources:
-        if src.weight > params['max_weight']:
-            heavy.append(src)
-        else:
-            light.append(src)
-    if heavy:
-        # produce at max 20 subtasks for the heavy sources
-        maxw = sum(weight(src) for src in heavy) / 20
-        for block in block_splitter(heavy, maxw, weight):
+    if sources:
+        sources.sort(key=weight)
+        totsites = len(srcfilter.sitecol)
+        mw = 1000 if totsites <= params['max_sites_disagg'] else 50000
+        mweight = max(mw, sum(src.weight for src in sources) /
+                      params['task_multiplier'])
+        blocks = list(block_splitter(sources, mweight, weight))
+        for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
-    if light:
-        yield from parallel.split_task(
-                classical, light, srcfilter, gsims, params, monitor,
-                duration=params['task_duration'])
+        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
@@ -273,46 +249,49 @@ class ClassicalCalculator(base.HazardCalculator):
         Build a task queue to be attached to the Starmap instance
         """
         oq = self.oqparam
-        N = len(self.sitecol)
-        L = len(oq.imtls.array)
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        C = oq.concurrent_tasks or 1
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        weight_by_trt = {trt: sum(src.weight for src in sources)
-                         for trt, sources, atomic in trt_sources}
-        maxweight = sum(w for w in weight_by_trt.values()) / C
         del self.csm  # save memory
-        maxdist = oq.maximum_distance
-        if oq.task_duration is None:  # inferred
-            # from 1 minute up to 1 day
-            ed = estimate_duration(weight_by_trt, gsims_by_trt, maxdist,
-                                   N, L, C)
-            td = max(ed, 60)
-        else:  # user given
-            td = oq.task_duration
+
+        def srcweight(src):
+            trt = src.tectonic_region_type
+            g = len(gsims_by_trt[trt])
+            m = (oq.maximum_distance(trt) / 300) ** 2
+            return src.weight * g * m
+
+        totweight = sum(sum(srcweight(src) for src in sources)
+                        for trt, sources, atomic in trt_sources)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
             pointsource_distance=oq.pointsource_distance,
-            max_sites_disagg=oq.max_sites_disagg, max_weight=maxweight,
-            task_duration=td)
-        logging.info(f'maxweight=%d, task_duration=%d s', maxweight, td)
+            task_multiplier=oq.task_multiplier,
+            max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
         else:
             f1, f2 = classical, classical_split_filter
+        C = oq.concurrent_tasks or 1
         for trt, sources, atomic in trt_sources:
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
+                nb = 1
                 yield f1, (sources, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
-                for block in block_splitter(sources, maxweight, weight):
+                blocks = list(block_splitter(sources, totweight/C, srcweight))
+                nb = len(blocks)
+                for block in blocks:
                     logging.debug('Sending %d sources with weight %d',
                                   len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
+
+            nr = sum(src.weight for src in sources)
+            logging.info('TRT = %s', trt)
+            logging.info('max_dist=%d km, gsims=%d, ruptures=%d, blocks=%d',
+                         oq.maximum_distance(trt), len(gsims), nr, nb)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
