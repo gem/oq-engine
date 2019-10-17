@@ -1414,21 +1414,6 @@ class LossCurvesMapsBuilder(object):
                 array[:, r, l] = lbp
         return self.pair(array, stats)
 
-    def build_pair(self, losses, stats):
-        """
-        :param losses: a list of lists with R elements
-        :returns: two arrays of shape (P, R) and (P, S) respectively
-        """
-        P, R = len(self.return_periods), len(self.weights)
-        assert len(losses) == R, len(losses)
-        array = numpy.zeros((P, R), F32)
-        for r, ls in enumerate(losses):
-            ne = self.num_events.get(r, 0)
-            if ne:
-                array[:, r] = losses_by_period(
-                    ls, self.return_periods, ne, self.eff_time)
-        return self.pair(array, stats)
-
     # used in event_based_risk
     def build_curve(self, asset_value, loss_ratios, rlzi):
         return asset_value * losses_by_period(
@@ -1436,60 +1421,39 @@ class LossCurvesMapsBuilder(object):
             self.num_events[rlzi], self.eff_time)
 
     # used in event_based_risk
-    def build_maps(self, losses, clp, stats=()):
+    def build_maps(self, curves, clp, stats=()):
         """
-        :param losses: an array of shape (A, R, P)
+        :param curves: a composite array of shape (A, R, P)
         :param clp: a list of C conditional loss poes
         :param stats: list of pairs [(statname, statfunc), ...]
         :returns: an array of loss_maps of shape (A, R, C, LI)
         """
-        shp = losses.shape[:2] + (len(clp), len(losses.dtype))  # (A, R, C, LI)
+        shp = curves.shape[:2] + (len(clp), len(curves.dtype))  # (A, R, C, LI)
         array = numpy.zeros(shp, F32)
-        for lti, lt in enumerate(losses.dtype.names):
-            for a, losses_ in enumerate(losses[lt]):
-                for r, ls in enumerate(losses_):
+        for lti, lt in enumerate(curves.dtype.names):
+            for a, curves_ in enumerate(curves[lt]):
+                for r, ls in enumerate(curves_):
                     for c, poe in enumerate(clp):
                         clratio = conditional_loss_ratio(ls, self.poes, poe)
                         array[a, r, c, lti] = clratio
         return self.pair(array, stats)
 
     # used in ebrisk
-    def build_loss_maps(self, losses, clp, stats=()):
-        """
-        :param losses: an array of shape R, E
-        :param clp: a list of C conditional loss poes
-        :param stats: list of pairs [(statname, statfunc), ...]
-        :returns: two arrays of shape (C, R) and (C, S)
-        """
-        array = numpy.zeros((len(clp), len(losses)), F32)
-        for r, ls in enumerate(losses):
-            if len(ls) < 2:
-                continue
-            for c, poe in enumerate(clp):
-                array[c, r] = conditional_loss_ratio(ls, self.poes, poe)
-        return self.pair(array, stats)
-
-    # used in ebrisk
-    def build_curves_maps(self, loss_arrays, rlzi):
+    def build_curves(self, loss_arrays, rlzi):
         if len(loss_arrays) == 0:
-            return (), ()
+            return ()
         shp = loss_arrays[0].shape  # (L, T...)
         P = len(self.return_periods)
         curves = numpy.zeros((P,) + shp, F32)
-        C = len(self.conditional_loss_poes)
-        maps = numpy.zeros((C,) + shp, F32)
         num_events = self.num_events[rlzi]
         acc = collections.defaultdict(list)
         for loss_array in loss_arrays:
             for idx, loss in numpy.ndenumerate(loss_array):
                 acc[idx].append(loss)
         for idx, losses in acc.items():
-            curves[(slice(None),) + idx] = lbp = losses_by_period(
+            curves[(slice(None),) + idx] = losses_by_period(
                 losses, self.return_periods, num_events, self.eff_time)
-            for p, poe in enumerate(self.conditional_loss_poes):
-                maps[(p,) + idx] = conditional_loss_ratio(
-                    lbp, self.poes, poe)
-        return curves, maps
+        return curves
 
 
 class LossesByAsset(object):

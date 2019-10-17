@@ -268,6 +268,12 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.c.get('/v1/available_gsims')
         self.assertIn(b'ChiouYoungs2014PEER', resp.content)
 
+    def test_validate_zip(self):
+        with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
+            resp = self.post('validate_zip', dict(archive=a))
+        err = json.loads(resp.content.decode('utf8'))['error_msg']
+        self.assertIn('Could not convert insuranceLimit->positivefloat', err)
+
     # tests for nrml validation
 
     def test_validate_nrml_valid(self):

@@ -45,10 +45,7 @@ class AreaSource(ParametricSeismicSource):
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth nodal_plane_distribution hypocenter_distribution
     polygon area_discretization'''.split()
-
     MODIFICATIONS = set(())
-
-    RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -114,10 +111,8 @@ class AreaSource(ParametricSeismicSource):
                                            depth=hc_depth)
                     occurrence_rate = (mag_occ_rate * np_prob * hc_prob
                                        * rate_scaling_factor)
-                    surface, nhc = PointSource._get_rupture_surface(
+                    surface = PointSource._get_rupture_surface(
                         self, mag, np, hypocenter)
-                    if shift_hypo:
-                        hc_depth = nhc.depth
                     ref_ruptures.append((mag, np.rake, hc_depth,
                                          surface, occurrence_rate))
 

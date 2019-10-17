@@ -47,7 +47,6 @@ class MultiPointSource(ParametricSeismicSource):
     """
     code = b'M'
     MODIFICATIONS = set(())
-    RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, magnitude_scaling_relationship, rupture_aspect_ratio,
