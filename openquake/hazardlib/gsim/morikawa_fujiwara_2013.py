@@ -81,7 +81,8 @@ class MorikawaFujiwara2013Crustal(GMPE):
         mw1prime = np.min([rup.mag, mw01])
 
         if self.model == 'model1':
-            mag_term = self._get_magnitude_term(C, dists.rrup, mw1prime, mw1)
+            mag_term = self._get_magnitude_term(C, dists.rrup, mw1prime, mw1,
+                                                rup.hypo_depth)
         else:
             msg = "Model not supported"
             raise ValueError(msg)
@@ -102,7 +103,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
             stddevs.append(np.zeros(num_sites) + C['sigma'] * np.log(10))
         return stddevs
 
-    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1, rhypo):
         return (C['a']*(mw1prime - mw1)**2 + C['b1'] * rrup + C['c1'] -
                 np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
 
@@ -189,7 +190,21 @@ class MorikawaFujiwara2013Crustal(GMPE):
         "Mw1": 16.0}
 
 
-class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013Crustal):
+class MorikawaFujiwara2013SubInterface(MorikawaFujiwara2013Crustal):
+
+    #: Supported tectonic region type is active shallow crust
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    def _set_params(self):
+        self.region = None
+        self.model = 'model1'
+
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1, rhypo):
+        return (C['a']*(mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
+                np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
+
+
+class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013SubInterface):
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
@@ -198,12 +213,32 @@ class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013Crustal):
         self.region = 'NE'
         self.model = 'model1'
 
-    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
-        return (C['a']*(mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
+
+class MorikawaFujiwara2013SubInterfaceSW(MorikawaFujiwara2013SubInterface):
+
+    #: Supported tectonic region type is active shallow crust
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    def _set_params(self):
+        self.region = 'SW'
+        self.model = 'model1'
+
+
+class MorikawaFujiwara2013SubSlab(MorikawaFujiwara2013Crustal):
+
+    #: Supported tectonic region type is active shallow crust
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
+    def _set_params(self):
+        self.region = None
+        self.model = 'model1'
+
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1, rhypo):
+        return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
                 np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
 
 
-class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013Crustal):
+class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013SubSlab):
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
@@ -211,10 +246,6 @@ class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013Crustal):
     def _set_params(self):
         self.region = 'NE'
         self.model = 'model1'
-
-    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
-        return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
-                np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
 
 
 class MorikawaFujiwara2013SubSlabSW(MorikawaFujiwara2013SubSlabNE):
@@ -226,6 +257,9 @@ class MorikawaFujiwara2013SubSlabSW(MorikawaFujiwara2013SubSlabNE):
         self.region = 'SW'
         self.model = 'model1'
 
-    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
-        return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] + C['PH']
-                - np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1, rhypo):
+        tmp = (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
+               np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
+        if rhypo < 80:
+            tmp += C['PH']
+        return tmp
