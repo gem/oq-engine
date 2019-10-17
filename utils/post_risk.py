@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2019, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,28 +15,30 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import sys
-import getpass
-from pprint import pprint
-from openquake.baselib import sap, config, workerpool
 
-
-ro_commands = ('status', 'inspect')
+import logging
+from openquake.baselib import sap
+from openquake.commonlib import util
+from openquake.calculators.post_risk import PostRiskCalculator
+from openquake.server import dbserver
 
 
 @sap.script
-def workers(cmd):
+def post_risk(ebr_id):
     """
-    start/stop/restart the workers, or return their status
+    Generate loss curves and maps from an event loss table
     """
-    if (cmd not in ro_commands and config.dbserver.multi_user and
-            getpass.getuser() != 'openquake'):
-        sys.exit('oq workers only works in single user mode')
+    dbserver.ensure_on()
+    dstore = util.read(ebr_id)
+    oq = dstore['oqparam']
+    prc = PostRiskCalculator(oq)
+    prc.datastore.parent = dstore
+    prc.run()
+    logging.info('Generated %s', prc.datastore.filename)
 
-    master = workerpool.WorkerMaster(config.dbserver.host,
-                                     **config.zworkers)
-    pprint(getattr(master, cmd)())
+
+post_risk.arg('ebr_id', 'event based risk calculation ID', type=int)
 
 
-workers.arg('cmd', 'command',
-            choices='start stop status restart inspect'.split())
+if __name__ == '__main__':
+    post_risk.callfunc()

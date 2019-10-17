@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import copy
-import math
-import logging
 import operator
 import collections
 import numpy
@@ -265,6 +263,20 @@ class CompositionInfo(object):
                 if src_group.id == src_group_id:
                     return smodel
 
+    def get_gsims_by_trt(self):
+        """
+        :returns: a dictionary trt -> sorted gsims
+        """
+        if self.num_samples:
+            gsims_by_trt = AccumDict(accum=set())
+            for sm in self.source_models:
+                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+                for t, trt in enumerate(self.gsim_lt.values):
+                    gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
+        else:
+            gsims_by_trt = self.gsim_lt.values
+        return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
+
     def get_grp_ids(self, sm_id):
         """
         :returns: a list of source group IDs for the given source model ID
@@ -301,18 +313,6 @@ class CompositionInfo(object):
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
-
-
-def get_maxweight(trt_sources, weight, concurrent_tasks,
-                  minweight=MINWEIGHT):
-    """
-    Return an appropriate maxweight for use in the block_splitter
-    """
-    totweight = sum(s.weight for trt, sources, atomic in trt_sources
-                    for s in sources)
-    ct = concurrent_tasks or 1
-    mw = math.ceil(totweight / ct)
-    return max(mw, minweight)
 
 
 class CompositeSourceModel(collections.abc.Sequence):
