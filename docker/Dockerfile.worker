@@ -21,15 +21,7 @@ FROM openquake/engine
 LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
       vendor="GEM Foundation"
 
-USER root
-RUN dnf install -y openssh-server && \
-    dnf clean all
 ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
 
 USER openquake
-RUN mkdir .ssh && chmod 700 .ssh
-
-# FIXME we should run sshd as normal user, not root
-USER root
-RUN /usr/bin/ssh-keygen -A
-ENTRYPOINT ["/usr/sbin/sshd" ,"-D"]
+ENTRYPOINT ["/opt/openquake/bin/python3.6", "-m", "openquake.baselib.workerpool", "tcp://172.31.0.3:1909", "tcp://172.31.0.2:1910", "-1"]
