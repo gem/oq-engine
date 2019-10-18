@@ -294,7 +294,7 @@ def get_csv_header(fname, sep=','):
 def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
-    the sites_csv, or the region.
+    the sites_csv, the region, the exposure, the site model, in this order.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -356,6 +356,9 @@ def get_mesh(oqparam):
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
         return exposure.mesh
+    elif 'site_model' in oqparam.inputs:
+        sm = get_site_model(oqparam)
+        return geo.Mesh(sm['lon'], sm['lat'])
 
 
 def get_site_model(oqparam):
@@ -373,6 +376,9 @@ def get_site_model(oqparam):
         if isinstance(fname, str) and fname.endswith('.csv'):
             sm = hdf5.read_csv(
                  fname, {None: float, 'vs30measured': numpy.uint8}).array
+            n = numpy.unique(sm[['lon', 'lat']])
+            if n < len(sm):
+                raise InvalidFile('There are duplicated sites in %s' % fname)
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
