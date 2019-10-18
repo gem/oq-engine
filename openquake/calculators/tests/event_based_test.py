@@ -38,8 +38,8 @@ from openquake.qa_tests_data.classical import case_18 as gmpe_tables
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
-    case_17,  case_18, case_19, case_20, case_21, case_22, mutex, case_24)
-    case_17,  case_18, case_19, case_20, case_21, case_22, case_23, mutex, case_24)
+    case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
+    mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
