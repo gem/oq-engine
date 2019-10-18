@@ -21,14 +21,9 @@ FROM openquake/engine
 LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
       vendor="GEM Foundation"
 
-USER root
-RUN dnf install -y openssh-clients && \
-    dnf clean all
-ADD conf/ssh_config /etc/ssh/ssh_config
 ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
 
 USER openquake
-RUN mkdir .ssh && chmod 700 .ssh
 
 EXPOSE 8800:8800
 ENTRYPOINT ["/bin/bash"]
