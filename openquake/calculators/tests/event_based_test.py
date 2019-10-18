@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import io
 import os
 import re
 import math
@@ -25,6 +27,7 @@ from openquake.baselib.general import group_array, countby, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
+from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.calculators.views import view
 from openquake.calculators.export import export
@@ -36,6 +39,7 @@ from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
     case_17,  case_18, case_19, case_20, case_21, case_22, mutex, case_24)
+    case_17,  case_18, case_19, case_20, case_21, case_22, case_23, mutex, case_24)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -415,6 +419,16 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_24.__file__, 'job.ini')
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
+
+    def test_case_23(self):
+        # case with implicit grid and site model on a larger grid
+        out = self.run_calc(case_23.__file__, 'job.ini', exports='csv')
+        [fname] = out['ruptures', 'csv']
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-6)
+        arr = self.calc.datastore.getitem('sitecol')
+        tmp = gettemp(write_csv(io.BytesIO(), arr).decode('utf8'))
+        self.assertEqualFiles('expected/sitecol.csv', tmp)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
