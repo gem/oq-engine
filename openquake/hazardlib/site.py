@@ -22,7 +22,8 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 from shapely import geometry
 from openquake.baselib.general import split_in_blocks, not_equal
-from openquake.hazardlib.geo.utils import fix_lon, cross_idl
+from openquake.hazardlib.geo.utils import (
+    fix_lon, cross_idl, _GeographicObjects)
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -211,6 +212,7 @@ class SiteCollection(object):
                                                        len(depths))
         self = object.__new__(cls)
         self.complete = self
+        self.req_site_params = req_site_params
         req = ['sids', 'lon', 'lat', 'depth'] + sorted(
             par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
@@ -377,6 +379,24 @@ class SiteCollection(object):
         # extract indices of Trues from the mask
         indices, = mask.nonzero()
         return self.filtered(indices)
+
+    def assoc(self, site_model, assoc_dist, ignore=()):
+        """
+        Associate the `site_model` parameters to the sites.
+        Log a warning if the site parameters are more distant than
+        `assoc_dist`.
+
+        :returns: the site model array reduced to the hazard sites
+        """
+        m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
+        if len(m1) != len(m2) or (m1 != m2).any():  # associate
+            _sitecol, site_model, _discarded = _GeographicObjects(
+                site_model).assoc(self, assoc_dist, 'warn')
+        ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
+            ignore)
+        for name in ok:
+            self._set(name, site_model[name])
+        return site_model
 
     def within(self, region):
         """
