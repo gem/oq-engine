@@ -47,6 +47,8 @@ def urlextract(url, fname):
     """
     Download and unzip an archive and extract the underlying fname
     """
+    if not fname.endswith('.zip'):
+        return urlopen(url)
     with urlopen(url) as f:
         data = io.BytesIO(f.read())
     with zipfile.ZipFile(data) as z:
@@ -76,7 +78,8 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
     grid = contents.get('download/grid.xml')
     if grid is None:
         raise MissingLink('Could not find grid.xml link in %s' % url)
-    uncertainty = contents.get('download/uncertainty.xml.zip')
+    uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
+        'download/uncertainty.xml')
     if uncertainty is None:
         with urlopen(grid['url']) as f:
             return get_shakemap_array(f)

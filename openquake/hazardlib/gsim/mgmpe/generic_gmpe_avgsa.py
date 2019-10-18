@@ -59,7 +59,6 @@ class GenericGmpeAvgSA(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([AvgSA])
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
-    DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, gmpe_name, avg_periods, corr_func='none'):
 
