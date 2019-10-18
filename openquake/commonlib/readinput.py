@@ -426,22 +426,13 @@ def get_site_collection(oqparam):
             # this is the normal case
             depth = None
         if grid_spacing:  # the mesh comes from the grid
-            grid_sites = site.SiteCollection.from_points(
+            sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, req_site_params=req_site_params)
-            logging.info('Associating %d site model sites to %d grid sites',
-                         len(sm), len(grid_sites))
-            sitecol, params, _ = geo.utils.assoc(
-                sm, grid_sites, oqparam.region_grid_spacing * 1.414, 'warn')
         else:
+            # the mesh comes from the site_model
             sitecol = site.SiteCollection.from_points(
                 sm['lon'], sm['lat'], depth, sm, req_site_params)
-            params = sm
-        for name in req_site_params:
-            if name in ('vs30measured', 'backarc') \
-                   and name not in params.dtype.names:
-                sitecol._set(name, 0)  # the default
-            else:
-                sitecol._set(name, params[name])
+
     elif mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
