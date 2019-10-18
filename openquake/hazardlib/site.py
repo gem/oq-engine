@@ -237,7 +237,8 @@ class SiteCollection(object):
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
                     self._set(name, sitemodel[name])
-        assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
+        if len(numpy.unique(self[['lon', 'lat']])) < len(self):
+            raise ValueError('There are duplicated points!')
         return self
 
     def _set(self, param, value):
