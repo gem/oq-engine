@@ -349,7 +349,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         if OQ_DISTRIBUTE.endswith('pool'):
             logs.LOG.warning('Using %d cores on %s',
                              parallel.Starmap.num_cores, platform.node())
-        if OQ_DISTRIBUTE == 'zmq' and hasattr(config.workers, 'host_cores'):
+        if OQ_DISTRIBUTE == 'zmq' and 'host_cores' in config.zworkers:
             logs.dbcmd('zmq_start')  # start the zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
         set_concurrent_tasks_default(calc)
@@ -381,7 +381,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         # if there was an error in the calculation, this part may fail;
         # in such a situation, we simply log the cleanup error without
         # taking further action, so that the real error can propagate
-        if OQ_DISTRIBUTE == 'zmq' and hasattr(config.workers, 'host_cores'):
+        if OQ_DISTRIBUTE == 'zmq' and 'host_cores' in config.zworkers:
             logs.dbcmd('zmq_stop')  # stop the zworkers
         try:
             if OQ_DISTRIBUTE.startswith('celery'):
