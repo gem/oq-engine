@@ -190,7 +190,7 @@ def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
     :returns: (filtered site collection, filtered objects)
     """
     if isinstance(objects, numpy.ndarray) or hasattr(objects, 'lons'):
-        # objects is a geo array with lon, lat fields or a mesh-like instance
+        # objects is a geo array with lon, lat fields; used for ShakeMaps
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
         return _GeographicObjects(sitecol).assoc2(
