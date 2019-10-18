@@ -18,7 +18,7 @@ services:
     # environment:
     #   - LOCKDOWN=true
     volumes:
-      - sshdata:/home/openquake/.ssh
+      - ../demos:/io:ro
       - oqdata:/home/openquake/oqdata
     # Uncomment to use a local copy of the oq-engine
     #   - ./path/to/oq-engine/openquake:/opt/openquake/lib/python3.6/site-packages/openquake
@@ -35,13 +35,10 @@ services:
     image: openquake/engine-worker
     volumes:
       - oqdata:/home/openquake/oqdata:ro
-      - sshdata:/home/openquake/.ssh
     # Uncomment to use a local copy of the oq-engine
     #   - ./path/to/oq-engine/openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
     #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
-    # environment:
-    #   - OQ_RABBITMQ_HOST=rabbitmq
     networks:
       - cluster
     depends_on:
@@ -50,7 +47,6 @@ services:
 # When running on multiple host the volume must be shared between every node
 # see the 'oqdata-nfs' example below
 volumes:
-  sshdata:
   oqdata:
   # oqdata-nfs:
   #   driver: local
@@ -61,3 +57,6 @@ volumes:
 
 networks:
   cluster:
+    ipam:
+      config:
+        - subnet: 172.31.0.0/16
