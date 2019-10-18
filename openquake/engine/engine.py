@@ -67,6 +67,7 @@ if OQ_DISTRIBUTE == 'zmq':
         """
         num_workers = 0
         w = config.zworkers
+        import pdb; pdb.set_trace()
         try:
             host_cores = [hc.split() for hc in w.host_cores.split(',')]
         except AttributeError:
