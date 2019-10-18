@@ -78,6 +78,10 @@ if OQ_DISTRIBUTE == 'zmq':
                     logs.LOG.warn('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
+        if num_workers == 0:
+            num_workers = os.cpu_count()
+            logs.LOG.warn('Missing host_cores, no idea about how many cores '
+                          'are available, using %d', num_workers)
         parallel.Starmap.num_cores = num_workers
         parallel.Starmap.oversubmit = calc.oqparam.oversubmit
         OqParam.concurrent_tasks.default = num_workers * 2
