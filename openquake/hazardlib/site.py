@@ -212,7 +212,6 @@ class SiteCollection(object):
                                                        len(depths))
         self = object.__new__(cls)
         self.complete = self
-        self.req_site_params = req_site_params
         req = ['sids', 'lon', 'lat', 'depth'] + sorted(
             par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
