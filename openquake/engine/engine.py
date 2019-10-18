@@ -67,7 +67,11 @@ if OQ_DISTRIBUTE == 'zmq':
         """
         num_workers = 0
         w = config.zworkers
-        for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
+        try:
+            host_cores = [hc.split() for hc in w.host_cores.split(',')]
+        except AttributeError:
+            host_cores = []
+        for host, _cores in host_cores:
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
             with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                 if not general.socket_ready(url):
