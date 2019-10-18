@@ -395,6 +395,11 @@ class SiteCollection(object):
             ignore)
         for name in ok:
             self._set(name, site_model[name])
+        for name in set(self.array.dtype.names) - set(site_model.dtype.names):
+            if name in ('vs30measured', 'backarc'):
+                self._set(name, 0)  # default
+                # NB: by default reference_vs30_type == 'measured' is 1
+                # but vs30measured is 0 (the opposite!!)
         return site_model
 
     def within(self, region):
