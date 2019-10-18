@@ -122,11 +122,11 @@ def jbcorrelation(sites_or_distances, imt, vs30_clustering=False):
 
      :param sites_or_distances:
          SiteCollection instance o ristance matrix
-      :param imt:
-          Intensity Measure Type (PGA or SA)
-      :param vs30_clustering:
-          flag, defalt false
-      """
+     :param imt:
+         Intensity Measure Type (PGA or SA)
+     :param vs30_clustering:
+         flag, defalt false
+    """
     if hasattr(sites_or_distances, 'mesh'):
         distances = sites_or_distances.mesh.get_distance_matrix()
     else:
