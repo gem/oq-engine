@@ -2,6 +2,8 @@
   * Adding the shift_hypo option for distributed seismicity
 
   [Michele Simionato]
+  * Fixed the case of implicit grid with a site model: sites could be
+    incorrectly discarded
   * Fixed the ShakeMap downloader to find also unzipped `uncertaintly.xml`
     files
   * Fixed the rupture exporters to export the rupture ID and not the

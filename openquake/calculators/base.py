@@ -526,7 +526,7 @@ class HazardCalculator(BaseCalculator):
         except AttributeError:  # no self.csm
             return self.datastore['csm_info'].get_num_rlzs()
 
-    def read_exposure(self, haz_sitecol=None):  # after load_risk_model
+    def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
         Read the exposure, the risk models and update the attributes
         .sitecol, .assetcol
@@ -701,6 +701,11 @@ class HazardCalculator(BaseCalculator):
                 self.crmodel.tmap = tmap_lst
 
         if hasattr(self, 'sitecol') and self.sitecol:
+            if 'site_model' in oq.inputs:
+                assoc_dist = (oq.region_grid_spacing * 1.414
+                              if oq.region_grid_spacing else 0)
+                sm = readinput.get_site_model(oq)
+                self.sitecol.complete.assoc(sm, assoc_dist)
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
