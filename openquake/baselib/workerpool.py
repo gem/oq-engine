@@ -54,12 +54,13 @@ class WorkerMaster(object):
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, master_host, ctrl_port, host_cores,
+    def __init__(self, master_host, ctrl_port, host_cores=None,
                  remote_python=None, receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
         self.master_host = master_host
         self.ctrl_port = int(ctrl_port)
-        self.host_cores = [hc.split() for hc in host_cores.split(',')]
+        self.host_cores = ([hc.split() for hc in host_cores.split(',')]
+                           if host_cores else [])
         self.remote_python = remote_python or sys.executable
         self.task_server_url = 'tcp://%s:%d' % (
             master_host, self.ctrl_port + 1)
