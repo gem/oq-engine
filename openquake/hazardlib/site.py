@@ -237,6 +237,7 @@ class SiteCollection(object):
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
                     self._set(name, sitemodel[name])
+        assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
         return self
 
     def _set(self, param, value):
@@ -296,6 +297,7 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         arr.flags.writeable = False
+        assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
 
     def __eq__(self, other):
         return not self.__ne__(other)
@@ -392,7 +394,7 @@ class SiteCollection(object):
             _sitecol, site_model, _discarded = _GeographicObjects(
                 site_model).assoc(self, assoc_dist, 'warn')
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
-            ignore)
+            ignore) - {'lon', 'lat', 'depth'}
         for name in ok:
             self._set(name, site_model[name])
         for name in set(self.array.dtype.names) - set(site_model.dtype.names):
