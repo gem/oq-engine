@@ -416,24 +416,7 @@ def get_site_collection(oqparam):
     """
     mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
-    grid_spacing = oqparam.region_grid_spacing
-    if oqparam.inputs.get('site_model'):
-        sm = get_site_model(oqparam)
-        try:
-            # in the future we could have elevation in the site model
-            depth = sm['depth']
-        except ValueError:
-            # this is the normal case
-            depth = None
-        if grid_spacing:  # the mesh comes from the grid
-            sitecol = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, req_site_params=req_site_params)
-        else:
-            # the mesh comes from the site_model
-            sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm, req_site_params)
-
-    elif mesh is None and oqparam.ground_motion_fields:
+    if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
     elif mesh is None:
