@@ -52,14 +52,19 @@ def plot_assets(calc_id=-1, site_model=False):
         sm_lons, sm_lats = sm['lon'], sm['lat']
         if len(sm_lons) > 1 and cross_idl(*sm_lons):
             sm_lons %= 360
-        p.scatter(sm_lons, sm_lats, marker='.', color='orange')
-    p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
-              color='gray')
-    p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')
-    p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black')
+        p.scatter(sm_lons, sm_lats, marker='.', color='orange',
+                  label='site model')
+    # p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
+    #           color='gray', label='grid')
+    p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green',
+              label='assets')
+    p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black',
+              label='sites')
     if 'discarded' in dstore:
         disc = numpy.unique(dstore['discarded']['lon', 'lat'])
-        p.scatter(disc['lon'], disc['lat'], marker='x', color='red')
+        p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
+                  label='discarded')
+    ax.legend()
     p.show()
 
 
