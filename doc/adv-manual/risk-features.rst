@@ -3,8 +3,7 @@ Advanced risk features
 
 Here we document some new risk features which have not yet made it
 into the engine manual. These are new features and cannot be
-considered fully-tested and stable yet. Once they become stable,
-these features will be documented in the manual.
+considered fully-tested and stable yet.
 
 
 Taxonomy mapping

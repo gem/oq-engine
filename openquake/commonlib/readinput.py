@@ -425,16 +425,13 @@ def get_site_collection(oqparam):
         except ValueError:
             # this is the normal case
             depth = None
-        if grid_spacing:
-            grid = mesh.get_convex_hull().dilate(
-                grid_spacing).discretize(grid_spacing)
+        if grid_spacing:  # the mesh comes from the grid
             grid_sites = site.SiteCollection.from_points(
-                grid.lons, grid.lats, req_site_params=req_site_params)
-            sitecol, params, _ = geo.utils.assoc(
-                sm, grid_sites, oqparam.region_grid_spacing * 1.414, 'filter')
+                mesh.lons, mesh.lats, req_site_params=req_site_params)
             logging.info('Associating %d site model sites to %d grid sites',
-                         len(sm), len(sitecol))
-            sitecol.make_complete()
+                         len(sm), len(grid_sites))
+            sitecol, params, _ = geo.utils.assoc(
+                sm, grid_sites, oqparam.region_grid_spacing * 1.414, 'warn')
         else:
             sitecol = site.SiteCollection.from_points(
                 sm['lon'], sm['lat'], depth, sm, req_site_params)
