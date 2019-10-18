@@ -78,7 +78,7 @@ def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
     :param builder: LossCurvesMapsBuilder instance
     :param rlzi: realization index
     :param monitor: Monitor instance
-    :returns: a dictionary with keys rlzi, curves_maps, agg_losses
+    :returns: a dictionary with keys rlzi, curves, agg_losses
     """
     with dstore:
         rlzs = dstore['losses_by_event']['rlzi']
@@ -89,17 +89,16 @@ def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
     num_axis = len(losses.shape)
     if num_axis > 2:  # there are tags, compute the totals
         res['tot_losses'] = agg_losses.sum(axis=tuple(range(1, num_axis - 1)))
-        res['tot_curves_maps'] = builder.build_curves_maps(
+        res['tot_curves'] = builder.build_curves(
             losses.sum(axis=tuple(range(2, num_axis))), rlzi)
-    res['agg_curves_maps'] = builder.build_curves_maps(losses, rlzi)
+    res['agg_curves'] = builder.build_curves(losses, rlzi)
     return res
 
 
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
-    Compute losses, loss curves and loss maps starting from an
-    event loss table.
+    Compute losses and loss curves starting from an event loss table.
     """
     def pre_execute(self):
         self.L = len(self.oqparam.loss_names)
@@ -108,7 +107,7 @@ class PostRiskCalculator(base.RiskCalculator):
     def execute(self):
         oq = self.oqparam
         if oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves and maps
+            # setting return_periods = 0 disable loss curves
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
             if eff_time < 2:
                 logging.warning(
@@ -132,32 +131,24 @@ class PostRiskCalculator(base.RiskCalculator):
                                     h5=self.datastore.hdf5))
         for dic in acc:
             r = dic['rlzi']
-            curves, maps = dic['agg_curves_maps']
+            curves = dic['agg_curves']
             agg_losses = dic['agg_losses']
             if len(curves):  # some realization can give zero contribution
                 self.datastore['agg_curves-rlzs'][:, r] = curves
-            if len(maps):  # conditional_loss_poes can be empty
-                self.datastore['agg_maps-rlzs'][:, r] = maps
             self.datastore['agg_losses-rlzs'][:, r] = agg_losses
             if oq.aggregate_by:
-                curves, maps = dic['tot_curves_maps']
+                curves = dic['tot_curves']
                 tot_losses = dic['tot_losses']
                 if len(curves):  # some realization can give zero contribution
                     self.datastore['tot_curves-rlzs'][:, r] = curves
-                if len(maps):  # conditional_loss_poes can be empty
-                    self.datastore['tot_maps-rlzs'][:, r] = maps
                 self.datastore['tot_losses-rlzs'][:, r] = tot_losses
         if self.R > 1:
             logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
             set_rlzs_stats(self.datastore, 'agg_losses')
-            if oq.conditional_loss_poes:
-                set_rlzs_stats(self.datastore, 'agg_maps')
             if oq.aggregate_by:
                 set_rlzs_stats(self.datastore, 'tot_curves')
                 set_rlzs_stats(self.datastore, 'tot_losses')
-                if oq.conditional_loss_poes:
-                    set_rlzs_stats(self.datastore, 'tot_maps')
 
     def post_execute(self, dummy):
         pass
@@ -192,10 +183,6 @@ class PostRiskCalculator(base.RiskCalculator):
             prefix + 'curves-rlzs', return_periods=builder.return_periods,
             shape_descr=shape_descr, loss_types=loss_types, units=units,
             rlzs=numpy.arange(self.R), **aggby)
-        if oq.conditional_loss_poes:
-            shp = self.get_shape(C, self.R, self.L, aggregate_by=aggregate_by)
-            # shape C, R, L, T...
-            self.datastore.create_dset(prefix + 'maps-rlzs', F32, shp)
         if self.R > 1:
             shape_descr = (['return_periods', 'stats', 'loss_types'] +
                            aggregate_by)
@@ -207,11 +194,3 @@ class PostRiskCalculator(base.RiskCalculator):
                 stats=[encode(name) for (name, func) in stats],
                 shape_descr=shape_descr, loss_types=loss_types, units=units,
                 **aggby)
-            if oq.conditional_loss_poes:
-                shp = self.get_shape(C, S, self.L, aggregate_by=aggregate_by)
-                # shape C, S, L, T...
-                self.datastore.create_dset(prefix + 'maps-stats', F32, shp)
-                self.datastore.set_attrs(
-                    prefix + 'maps-stats',
-                    stats=[encode(name) for (name, func) in stats],
-                    loss_types=loss_types, units=units)
