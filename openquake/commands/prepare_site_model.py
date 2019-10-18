@@ -141,20 +141,17 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
         vs30orig = read_vs30(vs30_csv)
         logging.info('Associating %d hazard sites to %d site parameters',
                      len(haz_sitecol), len(vs30orig))
-        sitecol, vs30, _ = assoc(
-            vs30orig, haz_sitecol, assoc_distance, 'warn')
-        sitecol.array['vs30'] = vs30['vs30']
+        vs30 = haz_sitecol.assoc(vs30orig, assoc_distance,
+                                 ignore={'z1pt0', 'z2pt5'})
         if z1pt0:
-            sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
+            haz_sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
         if z2pt5:
-            sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
-        if vs30measured:
-            sitecol.array['vs30measured'] = False  # it is inferred
-        hdf5['sitecol'] = sitecol
-        write_csv(output, sitecol.array[fields])
-    logging.info('Saved %d rows in %s' % (len(sitecol), output))
+            haz_sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
+        hdf5['sitecol'] = haz_sitecol
+        write_csv(output, haz_sitecol.array[fields])
+    logging.info('Saved %d rows in %s' % (len(haz_sitecol), output))
     logging.info(mon)
-    return sitecol
+    return haz_sitecol
 
 
 prepare_site_model.opt('exposure_xml', 'exposure(s) in XML format', nargs='*')
