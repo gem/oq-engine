@@ -19,7 +19,8 @@ Contents:
    event-based-with-large-logic-tree
    extract-api
    parametric-gmpes
+   multipoint
    parallelization
    special-features
+   asset-site-association
    risk-features
-   multipoint

@@ -1377,7 +1377,11 @@ class LossCurvesMapsBuilder(object):
         self.weights = weights
         self.num_events = num_events
         self.eff_time = eff_time
-        self.poes = 1. - numpy.exp(- risk_investigation_time / return_periods)
+        if return_periods.sum() == 0:
+            self.poes = 1
+        else:
+            self.poes = 1. - numpy.exp(
+                - risk_investigation_time / return_periods)
 
     def pair(self, array, stats):
         """
