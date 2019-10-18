@@ -24,4 +24,4 @@ LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
 ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
 
 USER openquake
-ENTRYPOINT ["/opt/openquake/bin/python3.6", "-m", "openquake.baselib.workerpool", "tcp://172.31.0.3:1909", "tcp://172.31.0.2:1910", "-1"]
+ENTRYPOINT ["/opt/openquake/bin/python3.6", "-m", "openquake.baselib.workerpool", "tcp://0.0.0.0:1909", "tcp://master:1910", "-1"]
