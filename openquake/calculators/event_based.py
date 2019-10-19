@@ -44,7 +44,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = numpy.float64(2 ** 32)
-MAX_NO_GMFS = 1E11  # heuristic
 by_grp = operator.attrgetter('src_group_id')
 
 
@@ -280,8 +279,8 @@ class EventBasedCalculator(base.HazardCalculator):
         Raise a ValueError if the number of sites is larger than 65,536 or the
         number of IMTs is larger than 256 or the number of ruptures is larger
         than 4,294,967,296. The limits are due to the numpy dtype used to
-        store the GMFs (gmv_dt). There also a limit of 1E11 on the
-        number of sites times the number of events, to avoid producing too
+        store the GMFs (gmv_dt). There also a limit of max_potential_gmfs on
+        the number of sites times the number of events, to avoid producing too
         many GMFs. In that case split the calculation or be smarter.
         """
         oq = self.oqparam
@@ -293,7 +292,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 raise ValueError(
                     'You cannot compute the GMFs for %d > %d sites' %
                     (n, oq.max_sites_per_gmf))
-            elif n * self.E > MAX_NO_GMFS:
+            elif n * self.E > oq.max_potential_gmfs:
                 raise ValueError(
                     'A GMF calculation with %d sites and %d events is '
                     'impossibly large' % (n, self.E))
