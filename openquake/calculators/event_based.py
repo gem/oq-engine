@@ -220,9 +220,6 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.indices[sid, 0].append(start + self.offset)
                     self.indices[sid, 1].append(stop + self.offset)
                 self.offset += len(data)
-                if self.offset >= TWO32:
-                    raise RuntimeError(
-                        'The gmf_data table has more than %d rows' % TWO32)
         imtls = self.oqparam.imtls
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
@@ -284,13 +281,16 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
         num_ = dict(events=self.E, imts=len(self.oqparam.imtls))
-        if self.sitecol:
-            num_['sites'] = n = len(self.sitecol)
-            if (oq.calculation_mode == 'event_based'
-                    and oq.ground_motion_fields and n > oq.max_sites_per_gmf):
+        num_['sites'] = n = len(self.sitecol) if self.sitecol else 0
+        if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
+            if n > oq.max_sites_per_gmf:
                 raise ValueError(
                     'You cannot compute the GMFs for %d > %d sites' %
                     (n, oq.max_sites_per_gmf))
+            elif n * self.E > TWO32:
+                raise ValueError(
+                    'A calculation with %d sites and %d events is impossibly '
+                    'large' % (n, self.E))
         for var in num_:
             if num_[var] > max_[var]:
                 raise ValueError(
