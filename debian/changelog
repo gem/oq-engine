@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extract the hazard sites from the exposure and not from the site model
   * Raised an error in case of duplicated sites in the site model
   * Fixed the case of implicit grid with a site model: sites could be
     incorrectly discarded
