@@ -1,6 +1,5 @@
   [Michele Simionato]
-  * Changed the priority: now the hazard sites are extracted in preference
-    from the exposure and not from the site model
+  * Raised an error in case of duplicated sites in the site model
   * Fixed the case of implicit grid with a site model: sites could be
     incorrectly discarded
   * Fixed the ShakeMap downloader to find also unzipped `uncertaintly.xml`

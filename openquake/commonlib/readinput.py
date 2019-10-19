@@ -294,7 +294,7 @@ def get_csv_header(fname, sep=','):
 def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
-    the sites_csv, the region, the exposure, the site model, in this order.
+    the sites_csv, the region, the site model, the exposure in this order.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -337,8 +337,12 @@ def get_mesh(oqparam):
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
         elif exposure:
+            # in case of implicit grid the exposure takes precedence over
+            # the site model
             poly = exposure.mesh.get_convex_hull()
         elif 'site_model' in oqparam.inputs:
+            # this happens in event_based/case_19, where there is an implicit
+            # grid over the site model
             sm = get_site_model(oqparam)
             poly = geo.Mesh(sm['lon'], sm['lat']).get_convex_hull()
         else:
@@ -354,11 +358,11 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
-    elif 'exposure' in oqparam.inputs:
-        return exposure.mesh
     elif 'site_model' in oqparam.inputs:
         sm = get_site_model(oqparam)
         return geo.Mesh(sm['lon'], sm['lat'])
+    elif 'exposure' in oqparam.inputs:
+        return exposure.mesh
 
 
 def get_site_model(oqparam):
