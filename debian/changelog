@@ -1,6 +1,5 @@
   [Michele Simionato]
   * Raised an error in case of duplicated sites in the site model
-  * Raised an error in case of region_grid_spacing without region and exposure
   * Fixed the case of implicit grid with a site model: sites could be
     incorrectly discarded
   * Fixed the ShakeMap downloader to find also unzipped `uncertaintly.xml`
