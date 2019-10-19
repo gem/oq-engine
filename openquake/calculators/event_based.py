@@ -276,7 +276,9 @@ class EventBasedCalculator(base.HazardCalculator):
         Raise a ValueError if the number of sites is larger than 65,536 or the
         number of IMTs is larger than 256 or the number of ruptures is larger
         than 4,294,967,296. The limits are due to the numpy dtype used to
-        store the GMFs (gmv_dt). They could be relaxed in the future.
+        store the GMFs (gmv_dt). There also a limit of 4,294,967,296 on the
+        number of sites times the number of events, to avoid producing too
+        many GMFs. In that case split the calculation or be smarter.
         """
         oq = self.oqparam
         max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
@@ -289,8 +291,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     (n, oq.max_sites_per_gmf))
             elif n * self.E > TWO32:
                 raise ValueError(
-                    'A calculation with %d sites and %d events is impossibly '
-                    'large' % (n, self.E))
+                    'A GMF calculation with %d sites and %d events is '
+                    'impossibly large' % (n, self.E))
         for var in num_:
             if num_[var] > max_[var]:
                 raise ValueError(
