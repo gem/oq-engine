@@ -338,12 +338,9 @@ def get_mesh(oqparam):
             poly = geo.Polygon.from_wkt(oqparam.region)
         elif exposure:
             poly = exposure.mesh.get_convex_hull()
-        elif 'site_model' in oqparam.inputs:
-            sm = get_site_model(oqparam)
-            poly = geo.Mesh(sm['lon'], sm['lat']).get_convex_hull()
         else:
             raise InvalidFile('There is a grid spacing but not a region, '
-                              'nor a site model, nor an exposure in %s' %
+                              'nor an exposure in %s' %
                               oqparam.inputs['job_ini'])
         try:
             logging.info('Inferring the hazard grid from the exposure')
