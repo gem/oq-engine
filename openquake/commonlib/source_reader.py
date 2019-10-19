@@ -271,7 +271,7 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                 hdf5.extend(sources, sg.info)
 
     if h5:
-        h5['source_mags'] = sorted(dic['mags'])
+        h5['source_mags'] = sorted(mags)
 
     # log if some source file is being used more than once
     dupl = 0
