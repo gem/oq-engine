@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Raised an early error for extra-large GMF calculations
+  * Reduced the GMF storage by using 32 bit per event ID instead of 64 bit
   * Raised an error in case of duplicated sites in the site model
   * Fixed the case of implicit grid with a site model: sites could be
     incorrectly discarded
