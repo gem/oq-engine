@@ -298,7 +298,10 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         arr.flags.writeable = False
-        assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
+
+        # NB: in test_correlation.py we define a SiteCollection with
+        # non-unique sites, so we cannot do an
+        # assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
 
     def __eq__(self, other):
         return not self.__ne__(other)
