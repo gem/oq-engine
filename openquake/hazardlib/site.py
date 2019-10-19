@@ -237,6 +237,8 @@ class SiteCollection(object):
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
                     self._set(name, sitemodel[name])
+        if len(numpy.unique(self[['lon', 'lat']])) < len(self):
+            raise ValueError('There are duplicated points!')
         return self
 
     def _set(self, param, value):
@@ -296,6 +298,7 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         arr.flags.writeable = False
+        assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
 
     def __eq__(self, other):
         return not self.__ne__(other)
@@ -392,9 +395,14 @@ class SiteCollection(object):
             _sitecol, site_model, _discarded = _GeographicObjects(
                 site_model).assoc(self, assoc_dist, 'warn')
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
-            ignore)
+            ignore) - {'lon', 'lat', 'depth'}
         for name in ok:
             self._set(name, site_model[name])
+        for name in set(self.array.dtype.names) - set(site_model.dtype.names):
+            if name in ('vs30measured', 'backarc'):
+                self._set(name, 0)  # default
+                # NB: by default reference_vs30_type == 'measured' is 1
+                # but vs30measured is 0 (the opposite!!)
         return site_model
 
     def within(self, region):
