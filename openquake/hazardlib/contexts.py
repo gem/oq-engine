@@ -29,6 +29,7 @@ from openquake.hazardlib.gsim import base
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.scalerel import PointMSR
 
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
@@ -342,7 +343,8 @@ class ContextMaker(object):
 
     def _gen_rup_sites(self, src, sites):
         loc = getattr(src, 'location', None)
-        if loc and len(sites) > self.max_sites_disagg:
+        if loc and len(sites) > self.max_sites_disagg and not isinstance(
+                src.magnitude_scaling_relationship, PointMSR):
             # implements the collapse distance feature: the finite site effects
             # are ignored for sites over collapse_factor x rupture_radius
             # implements the max_radius feature: sites above
