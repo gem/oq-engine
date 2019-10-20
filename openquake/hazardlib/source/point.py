@@ -158,15 +158,17 @@ class PointSource(ParametricSeismicSource):
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
         return max(radius)
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
+        shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            yield from self.gen_ruptures(mag, mag_occ_rate, collapse=False)
+            yield from self.gen_ruptures(mag, mag_occ_rate, collapse=False,
+                                         shift_hypo=shift_hypo)
 
-    def gen_ruptures(self, mag, mag_occ_rate, collapse=False):
+    def gen_ruptures(self, mag, mag_occ_rate, collapse, shift_hypo=False):
         """
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
@@ -183,7 +185,9 @@ class PointSource(ParametricSeismicSource):
                 occurrence_rate = (mag_occ_rate *
                                    (1 if collapse else np_prob) *
                                    (1 if collapse else hc_prob))
-                surface = self._get_rupture_surface(mag, np, hypocenter)
+                surface, nhc = self._get_rupture_surface(mag, np, hypocenter)
+                if shift_hypo:
+                    hypocenter = nhc
                 yield ParametricProbabilisticRupture(
                     mag, np.rake, self.tectonic_region_type, hypocenter,
                     surface, occurrence_rate,
@@ -308,7 +312,7 @@ class PointSource(ParametricSeismicSource):
         surface = PlanarSurface(
             nodal_plane.strike, nodal_plane.dip, left_top, right_top,
             right_bottom, left_bottom)
-        return surface
+        return surface, rupture_center
 
     @property
     def polygon(self):
@@ -343,7 +347,7 @@ def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
     ps.upper_seismogenic_depth = seismo[0]
     ps.lower_seismogenic_depth = seismo[1]
     ps.rupture_aspect_ratio = aspect_ratio
-    surface = ps._get_rupture_surface(mag, np, hc)
+    surface, nhc = ps._get_rupture_surface(mag, np, hc)
     rup = ParametricProbabilisticRupture(
         mag, np.rake, trt, hc, surface, occurrence_rate, tom)
     return rup
