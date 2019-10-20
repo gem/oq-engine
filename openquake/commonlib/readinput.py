@@ -359,6 +359,7 @@ def get_mesh(oqparam):
                 'Could not discretize region with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'site_model' in oqparam.inputs:
+        logging.info('Extracting the hazard sites from the site model')
         sm = get_site_model(oqparam)
         return geo.Mesh(sm['lon'], sm['lat'])
     elif 'exposure' in oqparam.inputs:
