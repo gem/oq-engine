@@ -43,7 +43,7 @@ MAX_RUPTURES = 2000
 
 
 # this is used in acceptance/stochastic_test.py, not in the engine
-def stochastic_event_set(sources, source_site_filter=nofilter):
+def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
     """
     Generates a 'Stochastic Event Set' (that is a collection of earthquake
     ruptures) representing a possible *realization* of the seismicity as
@@ -69,9 +69,10 @@ def stochastic_event_set(sources, source_site_filter=nofilter):
         objects that are contained in an event set. Some ruptures can be
         missing from it, others can appear one or more times in a row.
     """
+    shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     for source, s_sites in source_site_filter(sources):
         try:
-            for rupture in source.iter_ruptures():
+            for rupture in source.iter_ruptures(shift_hypo=shift_hypo):
                 [n_occ] = rupture.sample_number_of_occurrences()
                 for _ in range(n_occ):
                     yield rupture
