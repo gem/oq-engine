@@ -95,7 +95,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.id = None  # set by the engine
 
     @abc.abstractmethod
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         Get a generator object that yields probabilistic ruptures the source
         consists of.
@@ -165,7 +165,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 hc = Point(latitude=src.location.latitude,
                            longitude=src.location.longitude,
                            depth=hc_depth)
-                surface = src._get_rupture_surface(mag, np, hc)
+                surface, _ = src._get_rupture_surface(mag, np, hc)
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)
