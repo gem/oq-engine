@@ -326,15 +326,12 @@ class OqParam(valid.ParamSet):
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
-                and not self.sites
-                and 'sites' not in self.inputs
-                and 'site_model' not in self.inputs):
-            raise InvalidFile('%s: You forgot sites|sites_csv|site_model_file'
+                and 'sites' not in self.inputs):
+            raise InvalidFile('%s: You forgot sites.csv_file'
                               % job_ini)
-        elif (self.inputs.get('gmfs', '').endswith('.xml') and
-                'sites' in self.inputs):
-            raise InvalidFile('%s: You cannot have both sites_csv and '
-                              'gmfs_file' % job_ini)
+        elif self.inputs.get('gmfs', '').endswith('.xml'):
+            raise InvalidFile('%s: GMFs in XML are not supported anymore'
+                              % job_ini)
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
@@ -677,7 +674,8 @@ class OqParam(valid.ParamSet):
         You did set more than one, or nothing.
         """
         if 'hazard_curves' in self.inputs and (
-                self.sites is not None or 'sites' in self.inputs):
+                self.sites is not None or 'sites' in self.inputs
+                or 'site_model' in self.inputs):
             return False
         has_sites = (self.sites is not None or 'sites' in self.inputs
                      or 'site_model' in self.inputs)
