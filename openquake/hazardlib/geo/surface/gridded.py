@@ -33,7 +33,7 @@ def bbox2poly(bbox):
     """
     :returns: a list of pairs corrisponding to a polygon
     """
-    x1, y1, x2, y2 = bbox
+    x1, x2, y2, y1 = bbox  # west, east, north, south
     return (x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)
 
 
@@ -99,7 +99,7 @@ class GriddedSurface(BaseSurface):
         :returns: (min_max lons, min_max lats)
         """
         xs, ys = zip(*bbox2poly(self.get_bounding_box()))
-        return [xs], [ys], [[0, 0, 0, 0, 0]]
+        return [xs], [ys], [(0, 0, 0, 0, 0)]
 
     def get_rx_distance(self, mesh):
         """
