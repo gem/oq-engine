@@ -346,7 +346,7 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='scenario_damage',
                 inputs=inputs,
                 maximum_distance='400')
-        self.assertIn('You forgot sites|sites_csv', str(ctx.exception))
+        self.assertIn('You forgot sites_csv', str(ctx.exception))
 
     def test_disaggregation(self):
         with self.assertRaises(InvalidFile) as ctx:
