@@ -326,8 +326,8 @@ class OqParam(valid.ParamSet):
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
-                and 'sites' not in self.inputs):
-            raise InvalidFile('%s: You forgot sites_csv'
+                and 'sites' not in self.inputs and self.sites is None):
+            raise InvalidFile('%s: You forgot sites|sites_csv'
                               % job_ini)
         elif self.inputs.get('gmfs', '').endswith('.xml'):
             raise InvalidFile('%s: GMFs in XML are not supported anymore'
