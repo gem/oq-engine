@@ -673,18 +673,18 @@ class OqParam(valid.ParamSet):
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly
-        one of sites, sites_csv, hazard_curves_csv, gmfs_csv,
-        region is set. You did set more than one, or nothing.
+        one of sites, sites_csv, hazard_curves_csv, region is set.
+        You did set more than one, or nothing.
         """
+        if 'hazard_curves' in self.inputs and (
+                self.sites is not None or 'sites' in self.inputs):
+            return False
         has_sites = (self.sites is not None or 'sites' in self.inputs
                      or 'site_model' in self.inputs)
         if not has_sites and not self.ground_motion_fields:
             # when generating only the ruptures you do not need the sites
             return True
-        if ('gmfs' in self.inputs and not has_sites and
-                not self.inputs['gmfs'].endswith('.xml')):
-            raise ValueError('Missing sites or sites_csv in the .ini file')
-        elif ('risk' in self.calculation_mode or
+        if ('risk' in self.calculation_mode or
                 'damage' in self.calculation_mode or
                 'bcr' in self.calculation_mode):
             return True  # no check on the sites for risk
@@ -812,16 +812,11 @@ class OqParam(valid.ParamSet):
         """
         The sites are overdetermined
         """
-        if 'site_model' in self.inputs and 'sites' in self.inputs:
+        if 'site_model' in self.inputs and (
+                self.sites or 'sites' in self.inputs
+                or 'hazard_curves' in self.inputs):
             return False
-        elif 'site_model' in self.inputs and self.sites:
-            return False
-        elif 'sites' in self.inputs and self.sites:
-            return False
-        elif self.sites and self.region and self.region_grid_spacing:
-            return False
-        else:
-            return True
+        return True
 
     def is_valid_complex_fault_mesh_spacing(self):
         """
