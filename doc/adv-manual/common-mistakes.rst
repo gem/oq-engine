@@ -94,7 +94,7 @@ will be more or less the same for each rupture.
 
 To avoid this performance problem there is a ``collapse_factor`` parameter
 which is a pure number, a multiple of the `rupture radius`_, with a default
-value of 2. It means that for the points that are distant more than 2 times
+value of 3. It means that for the points that are distant more than 3 times
 the rupture radius from the ruptures the engine ignores the hypocenter and
 nodal plane distributions and consider only the first rupture in the
 distribution. For closer points instead all the ruptures are considered.
