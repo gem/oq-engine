@@ -325,6 +325,8 @@ def get_mesh(oqparam):
         start, stop = oqparam.sites_slice
         c = (coords[start:stop] if header[0] == 'site_id'
              else sorted(coords[start:stop]))
+        # NB: notice the sort=False below; without it the coordinates
+        # would be reordered and we would lose the association gmvs and sites
         return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
@@ -429,7 +431,6 @@ def get_site_collection(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     mesh = get_mesh(oqparam)
-    req_site_params = get_gsim_lt(oqparam).req_site_params
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
@@ -437,6 +438,7 @@ def get_site_collection(oqparam):
         # a None sitecol is okay when computing the ruptures only
         return
     else:  # use the default site params
+        req_site_params = get_gsim_lt(oqparam).req_site_params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -686,6 +688,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
+        # for predefined hazard you cannot reduce the site collection; instead
+        # you can in other cases, typically with a grid which is mostly empty
+        # (i.e. there are many hazard sites with no assets)
         assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded
 
