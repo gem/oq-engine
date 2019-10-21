@@ -33,18 +33,6 @@ $ docker build -t openquake/engine -f Dockerfile.engine .
 
 ## Master/worker images (clustered setup)
 
-### OpenQuake Engine master node container (zmq)
-
-```bash
-$ docker build -t openquake/engine-master-zmq -f zmq/Dockerfile.master .
-```
-
-### OpenQuake Engine worker node container (zmq)
-
-```bash
-$ docker build -t openquake/engine-worker-zmq -f zmq/Dockerfile.worker .
-```
-
 ### OpenQuake Engine master node container (celery)
 
 ```bash
@@ -56,18 +44,31 @@ $ docker build -t openquake/engine-master-celery -f celery/Dockerfile.master .
 ```bash
 $ docker build -t openquake/engine-worker-celery -f celery/Dockerfile.worker .
 ```
-## Master/worker images (clustered setup) via 'docker-compose'
 
-### ZMQ
+### OpenQuake Engine master node container (zmq, experimental)
 
 ```bash
-$ docker-compose <up,build> [--scale worker=N]
+$ docker build -t openquake/engine-master-zmq -f zmq/Dockerfile.master .
 ```
+
+### OpenQuake Engine worker node container (zmq, experimental)
+
+```bash
+$ docker build -t openquake/engine-worker-zmq -f zmq/Dockerfile.worker .
+```
+
+## Master/worker images (clustered setup) via 'docker-compose'
 
 ### Celery
 
 ```bash
-$ docker-compose -f docker-compose.yml -f docker-compose.celery.yml <up,build> [--scale worker=N]
+$ docker-compose -f docker-compose.yml -f docker-compose.celery.yml <build,up,down...> [--scale worker=N]
+```
+
+### ZMQ (experimental)
+
+```bash
+$ docker-compose -f docker-compose.yml <build,up,down...> [--scale worker=N]
 ```
 
 ### Debug
