@@ -20,11 +20,9 @@ services:
     volumes:
       - oqdata:/home/openquake/oqdata
     # Uncomment to expose demos inside the container
-    #   - ../demos:/home/openquake/demos:ro  
-      - ../demos:/home/openquake/demos:ro  
+    #   - ../demos:/home/openquake/demos:ro
     # Uncomment to use a local copy of the oq-engine
     #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
-      - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
     #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
     networks:
@@ -40,7 +38,6 @@ services:
       - oqdata:/home/openquake/oqdata:ro
     # Uncomment to use a local copy of the oq-engine
     #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
-      - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
     #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
     networks:
