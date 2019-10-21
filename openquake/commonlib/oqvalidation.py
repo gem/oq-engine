@@ -326,15 +326,12 @@ class OqParam(valid.ParamSet):
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
-                and not self.sites
-                and 'sites' not in self.inputs
-                and 'site_model' not in self.inputs):
-            raise InvalidFile('%s: You forgot sites|sites_csv|site_model_file'
+                and 'sites' not in self.inputs and self.sites is None):
+            raise InvalidFile('%s: You forgot sites|sites_csv'
                               % job_ini)
-        elif (self.inputs.get('gmfs', '').endswith('.xml') and
-                'sites' in self.inputs):
-            raise InvalidFile('%s: You cannot have both sites_csv and '
-                              'gmfs_file' % job_ini)
+        elif self.inputs.get('gmfs', '').endswith('.xml'):
+            raise InvalidFile('%s: GMFs in XML are not supported anymore'
+                              % job_ini)
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
@@ -673,18 +670,19 @@ class OqParam(valid.ParamSet):
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly
-        one of sites, sites_csv, hazard_curves_csv, gmfs_csv,
-        region is set. You did set more than one, or nothing.
+        one of sites, sites_csv, hazard_curves_csv, region is set.
+        You did set more than one, or nothing.
         """
+        if 'hazard_curves' in self.inputs and (
+                self.sites is not None or 'sites' in self.inputs
+                or 'site_model' in self.inputs):
+            return False
         has_sites = (self.sites is not None or 'sites' in self.inputs
                      or 'site_model' in self.inputs)
         if not has_sites and not self.ground_motion_fields:
             # when generating only the ruptures you do not need the sites
             return True
-        if ('gmfs' in self.inputs and not has_sites and
-                not self.inputs['gmfs'].endswith('.xml')):
-            raise ValueError('Missing sites or sites_csv in the .ini file')
-        elif ('risk' in self.calculation_mode or
+        if ('risk' in self.calculation_mode or
                 'damage' in self.calculation_mode or
                 'bcr' in self.calculation_mode):
             return True  # no check on the sites for risk
@@ -812,16 +810,11 @@ class OqParam(valid.ParamSet):
         """
         The sites are overdetermined
         """
-        if 'site_model' in self.inputs and 'sites' in self.inputs:
+        if 'site_model' in self.inputs and (
+                self.sites or 'sites' in self.inputs
+                or 'hazard_curves' in self.inputs):
             return False
-        elif 'site_model' in self.inputs and self.sites:
-            return False
-        elif 'sites' in self.inputs and self.sites:
-            return False
-        elif self.sites and self.region and self.region_grid_spacing:
-            return False
-        else:
-            return True
+        return True
 
     def is_valid_complex_fault_mesh_spacing(self):
         """
