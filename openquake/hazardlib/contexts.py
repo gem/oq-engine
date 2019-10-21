@@ -364,6 +364,7 @@ class ContextMaker():
                 if simple:
                     # there is nothing to collapse
                     for rup in src.gen_ruptures(mag, mag_occ_rate,
+                                                collapse=False,
                                                 shift_hypo=self.shift_hypo):
                         yield rup, sites, mdist
                 else:
