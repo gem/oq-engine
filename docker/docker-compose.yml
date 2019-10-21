@@ -12,16 +12,19 @@ services:
   master:
     build:
       context: .
-      dockerfile: Dockerfile.master
-    image: openquake/engine-master
+      dockerfile: zmq/Dockerfile.master
+    image: openquake/engine-master-zmq
     # Uncomment to enable auth in WebUI/API
     # environment:
     #   - LOCKDOWN=true
     volumes:
-      - ../demos:/home/openquake/demos:ro
       - oqdata:/home/openquake/oqdata
+    # Uncomment to expose demos inside the container
+    #   - ../demos:/home/openquake/demos:ro  
+      - ../demos:/home/openquake/demos:ro  
     # Uncomment to use a local copy of the oq-engine
-    #   - ./path/to/oq-engine/openquake:/opt/openquake/lib/python3.6/site-packages/openquake
+    #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
+      - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
     #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
     networks:
@@ -31,12 +34,13 @@ services:
   worker:
     build:
       context: .
-      dockerfile: Dockerfile.worker
-    image: openquake/engine-worker
+      dockerfile: zmq/Dockerfile.worker
+    image: openquake/engine-worker-zmq
     volumes:
       - oqdata:/home/openquake/oqdata:ro
     # Uncomment to use a local copy of the oq-engine
-    #   - ./path/to/oq-engine/openquake:/opt/openquake/lib/python3.6/site-packages/openquake
+    #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
+      - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
     #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
     networks:
