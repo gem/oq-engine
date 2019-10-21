@@ -38,6 +38,7 @@ services:
     # Uncomment to use a local copy of the oq-engine
     #   - ./path/to/oq-engine/openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
+    #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
     networks:
       - cluster
     depends_on:
