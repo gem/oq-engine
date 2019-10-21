@@ -18,13 +18,12 @@ services:
     # environment:
     #   - LOCKDOWN=true
     volumes:
-      - ../demos:/io:ro
+      - ../demos:/home/openquake/demos:ro
       - oqdata:/home/openquake/oqdata
     # Uncomment to use a local copy of the oq-engine
-      - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
+    #   - ./path/to/oq-engine/openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
     #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
-      - ./conf/openquake.cfg.cluster-sample:/etc/openquake/openquake.cfg
     networks:
       - cluster
     ports:
@@ -36,11 +35,9 @@ services:
     image: openquake/engine-worker
     volumes:
       - oqdata:/home/openquake/oqdata:ro
-      - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a local copy of the oq-engine
     #   - ./path/to/oq-engine/openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
-      - ./conf/openquake.cfg.cluster-sample:/etc/openquake/openquake.cfg
     networks:
       - cluster
     depends_on:
@@ -59,6 +56,3 @@ volumes:
 
 networks:
   cluster:
-    ipam:
-      config:
-        - subnet: 172.31.0.0/16
