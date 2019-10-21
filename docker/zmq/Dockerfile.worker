@@ -21,8 +21,8 @@ FROM openquake/engine
 LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
       vendor="GEM Foundation"
 
-ADD scripts/celery-wait.sh ${HOME}
-ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
+ADD ./zmq/openquake.cfg /etc/openquake/openquake.cfg
 
-ENTRYPOINT ["/opt/openquake/bin/python3", "-m", "celery"]
-CMD ["worker", "--workdir", "/opt/openquake/lib/python3.6/site-packages/openquake/engine", "--purge", "-O", "fair"]
+STOPSIGNAL SIGTERM
+ENTRYPOINT ["/opt/openquake/bin/python3", "-m", "openquake.baselib.workerpool"]
+CMD ["tcp://0.0.0.0:1909", "tcp://master:1910", "-1"]
