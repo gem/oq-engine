@@ -21,7 +21,8 @@ FROM openquake/engine
 LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
       vendor="GEM Foundation"
 
-ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
+ADD ./zmq/openquake.cfg /etc/openquake/openquake.cfg
 
-STOPSIGNAL SIGTERM
-ENTRYPOINT ["/opt/openquake/bin/python3.6", "-m", "openquake.baselib.workerpool", "tcp://0.0.0.0:1909", "tcp://master:1910", "-1"]
+EXPOSE 8800:8800
+ENTRYPOINT ["/bin/bash"]
+CMD ["./oq-start.sh"]
