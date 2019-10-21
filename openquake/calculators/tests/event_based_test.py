@@ -413,13 +413,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
 
-    def test_case_24(self):
-        # This is a test for shift_hypo = true - The expected results are the
-        # same ones defined for the case_44 of the classical methodology
-        self.run_calc(case_24.__file__, 'job.ini')
-        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
-
     def test_case_23(self):
         # case with implicit grid and site model on a larger grid
         out = self.run_calc(case_23.__file__, 'job.ini', exports='csv')
@@ -429,6 +422,13 @@ class EventBasedTestCase(CalculatorTestCase):
         arr = self.calc.datastore.getitem('sitecol')
         tmp = gettemp(write_csv(io.BytesIO(), arr).decode('utf8'))
         self.assertEqualFiles('expected/sitecol.csv', tmp)
+
+    def test_case_24(self):
+        # This is a test for shift_hypo = true - The expected results are the
+        # same ones defined for the case_44 of the classical methodology
+        self.run_calc(case_24.__file__, 'job.ini')
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
