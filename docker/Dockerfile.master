@@ -23,8 +23,6 @@ LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
 
 ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
 
-USER openquake
-
 EXPOSE 8800:8800
 ENTRYPOINT ["/bin/bash"]
 CMD ["./oq-start.sh"]
