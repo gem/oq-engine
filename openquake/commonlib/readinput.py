@@ -325,8 +325,15 @@ def get_mesh(oqparam):
         start, stop = oqparam.sites_slice
         c = (coords[start:stop] if header[0] == 'site_id'
              else sorted(coords[start:stop]))
-        # NB: notice the sort=False below; without it the coordinates
-        # would be reordered and we would lose the association gmvs and sites
+        # NB: Notice the sort=False below
+        # Calculations starting from ground motion fields input by the user 
+        # require at least two input files related to the gmf data:
+        #   1. A sites.csv file, listing {site_id, lon, lat} tuples
+        #   2. A gmfs.csv file, listing {event_id, site_id, gmv[IMT1], gmv[IMT2], ...} tuples
+        # The site coordinates defined in the sites file do not need to be in sorted order.
+        # We must only ensure uniqueness of the provided site_ids and coordinates.
+        # When creating the site mesh from the site coordinates read from the csv file, 
+        # the sort=False flag maintains the user-specified site_ids instead of reassigning them after sorting.
         return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
