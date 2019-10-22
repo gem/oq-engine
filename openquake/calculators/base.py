@@ -395,7 +395,7 @@ class HazardCalculator(BaseCalculator):
                 self.csm_info = csm.info
                 self.datastore['source_model_lt'] = csm.source_model_lt
                 res = views.view('dupl_sources', self.datastore)
-                logging.info(f'The composite source model has {res.val:,d} '
+                logging.info(f'The composite source model has {res.val:_d} '
                              'ruptures')
             if res:
                 logging.info(res)

@@ -575,7 +575,7 @@ def get_composite_source_model(oqparam, h5=None):
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     p = source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
-        logging.info('Considering {:,d} logic tree paths out of {:,d}'.format(
+        logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
             oqparam.number_of_logic_tree_samples, p))
     else:  # full enumeration
         if (oqparam.is_event_based() and
@@ -585,7 +585,7 @@ def get_composite_source_model(oqparam, h5=None):
                 'There are too many potential logic tree paths (%d):'
                 'use sampling instead of full enumeration or reduce the '
                 'source model with oq reduce_sm' % p)
-        logging.info('Potential number of logic tree paths = {:,d}'.format(p))
+        logging.info('Potential number of logic tree paths = {:_d}'.format(p))
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
