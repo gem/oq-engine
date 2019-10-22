@@ -45,6 +45,7 @@ oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
 
 # run ebrisk
 oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv
+MPLBACKEND=Agg oq plot rupture_info?
 echo "Displaying the exposed values in the ebrisk demo"
 oq show exposed_values/agg_NAME_1_taxonomy
 oq show exposed_values/agg_NAME_1
