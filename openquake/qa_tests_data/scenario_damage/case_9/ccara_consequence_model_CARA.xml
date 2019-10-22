@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<consequenceModel id="consequence-from-IPT" assetCategory="" lossCategory="structural">
+		<description></description>
+		<limitStates>slight moderate extensive collapse</limitStates>
+		<consequenceFunction id="CR-PC_LWAL-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LDUAL-DUH_H12" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LDUAL-DUH_H12-24" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LDUAL-DUH_H7" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DNO_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DNO_H3" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DNO_H4" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DNO_H5" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUH_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUH_H3" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUH_H4" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUH_H5" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUH_H6" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUM_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUM_H3" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUM_H4" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUM_H5" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFINF-DUM_H6" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFM-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="CR_LFM-DNO_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MCF_LWAL-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MCF_LWAL-DNO_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MCF_LWAL-DNO_H3" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MCF_LWAL-DUH_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MCF_LWAL-DUH_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MCF_LWAL-DUH_H3" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MCF_LWAL-DUM_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MCF_LWAL-DUM_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MCF_LWAL-DUM_H3" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MR_LWAL-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MR_LWAL-DNO_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MR_LWAL-DNO_H3" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MR_LWAL-DUH_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MR_LWAL-DUH_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MR_LWAL-DUH_H3" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MR_LWAL-DUM_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MR_LWAL-DUM_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MR_LWAL-DUM_H3" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MUR-ADO_LWAL-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MUR-ADO_LWAL-DNO_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MUR-ST_LWAL-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MUR-ST_LWAL-DNO_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MUR_LWAL-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="MUR_LWAL-DNO_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="UNK_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="W-WBB_LPB-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="W-WLI_LWAL-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="W-WLI_LWAL-DNO_H2" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="W-WLI_LWAL-DNO_H2_SOS" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="W-WS_LPB-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="W-WWD_LWAL-DNO_H1" dist="LN">
+			<params ls="slight" mean="0.05" stddev="0"/>
+			<params ls="moderate" mean="0.25" stddev="0"/>
+			<params ls="extensive" mean="0.6" stddev="0"/>
+			<params ls="collapse" mean="1" stddev="0"/>
+		</consequenceFunction>
+	</consequenceModel>
+</nrml>
