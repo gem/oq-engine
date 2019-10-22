@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Updates SERA craton GMPE to reflect updates to NGA East site response model
+  
   [Michele Simionato]
   * Fixed the case of implicit grid with a site model: sites could be
     incorrectly discarded
