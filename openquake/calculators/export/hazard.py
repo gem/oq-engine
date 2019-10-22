@@ -18,17 +18,18 @@
 
 import re
 import os
+import logging
 import operator
 import collections
 
+import shapely.wkt
 import numpy
 
 from openquake.baselib.general import group_array, deprecated
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, filters
 from openquake.calculators.views import view
-from openquake.calculators.extract import (
-    extract, get_mesh, get_info, RuptureData)
+from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util
@@ -81,6 +82,15 @@ def export_ruptures_csv(ekey, dstore):
         return []
     dest = dstore.export_path('ruptures.csv')
     arr = extract(dstore, 'rupture_info')
+    if export.sanity_check:
+        for r in arr:
+            poly = r['boundary'].decode('utf8')
+            obj = shapely.wkt.loads(poly)
+            if not obj.is_valid:
+                # this happens when the bounding box collapse to a line
+                # or a point, i.e. maxlon=minlon or maxlat=minlat
+                print('Rupture %d has an invalid %s' % (r['rupid'], poly))
+
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
