@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed an issue with missing noDamageLimit causing NaN values in
+    scenario_damage calculations
   * Changed the ruptures exporter: now we export only the bounding boxes
   * Added more validations for predefined hazard, like forbidding the site model
 
