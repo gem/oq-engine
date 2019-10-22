@@ -30,9 +30,11 @@ from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, get_array, println
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
 
+U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
@@ -1020,6 +1022,50 @@ def extract_disagg_layer(dstore, what):
             rec['poes'] = grp[label][()]
     return ArrayWrapper(out, edges)
 
+# ######################### extracting ruptures ##############################
+
+
+class RuptureData(object):
+    """
+    Container for information about the ruptures of a given
+    tectonic region type.
+    """
+    def __init__(self, trt, gsims):
+        self.trt = trt
+        self.cmaker = ContextMaker(trt, gsims)
+        self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
+                             set('mag strike dip rake hypo_depth'.split()))
+        self.dt = numpy.dtype([
+            ('rup_id', U32), ('srcidx', U32), ('multiplicity', U16),
+            ('occurrence_rate', F64),
+            ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
+            ('strike', F32), ('dip', F32), ('rake', F32),
+            ('boundary', hdf5.vstr)] + [(param, F32) for param in self.params])
+
+    def to_array(self, ebruptures):
+        """
+        Convert a list of ebruptures into an array of dtype RuptureRata.dt
+        """
+        data = []
+        for ebr in ebruptures:
+            rup = ebr.rupture
+            self.cmaker.add_rup_params(rup)
+            ruptparams = tuple(getattr(rup, param) for param in self.params)
+            point = rup.surface.get_middle_point()
+            mlons, mlats, mdeps = rup.surface.get_surface_boundaries_3d()
+            bounds = ','.join('((%s))' % ','.join(
+                '%.5f %.5f %.3f' % coords for coords in zip(lons, lats, deps))
+                              for lons, lats, deps in zip(mlons, mlats, mdeps))
+            try:
+                rate = ebr.rupture.occurrence_rate
+            except AttributeError:  # for nonparametric sources
+                rate = numpy.nan
+            data.append(
+                (ebr.id, ebr.srcidx, ebr.n_occ, rate,
+                 rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
+                 rup.surface.get_dip(), rup.rake,
+                 'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
+        return numpy.array(data, self.dt)
 
 # #####################  extraction from the WebAPI ###################### #
 

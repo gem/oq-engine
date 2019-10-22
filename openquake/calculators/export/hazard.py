@@ -27,7 +27,8 @@ from openquake.baselib.general import group_array, deprecated
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, filters
 from openquake.calculators.views import view
-from openquake.calculators.extract import extract, get_mesh, get_info
+from openquake.calculators.extract import (
+    extract, get_mesh, get_info, RuptureData)
 from openquake.calculators.export import export
 from openquake.calculators.getters import gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util
@@ -85,7 +86,7 @@ def export_ruptures_csv(ekey, dstore):
     sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     for rgetter in gen_rupture_getters(dstore):
         rups = rgetter.get_ruptures(sf)
-        rup_data = calc.RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
+        rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
