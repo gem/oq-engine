@@ -19,7 +19,6 @@ import logging
 import shapely
 import numpy
 from openquake.baselib import sap
-from openquake.hazardlib import mfd
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -220,36 +219,6 @@ def make_figure_memory(extractors, what):
     return plt
 
 
-# FIXME: not working right now
-def make_figure_event_based_mfd(extractors, what):
-    """
-    :param plots: list of pairs (task_name, memory array)
-    """
-    # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
-
-    num_plots = len(extractors)
-    fig = plt.figure()
-    for i, ex in enumerate(extractors):
-        mfd_dict = ex.get(what).to_dict()
-        mags = mfd_dict.pop('magnitudes')
-        duration = mfd_dict.pop('duration')
-        ax = fig.add_subplot(1, num_plots, i + 1)
-        ax.grid(True)
-        ax.set_xlabel('magnitude')
-        ax.set_ylabel('annual frequency [on %dy]' % duration)
-        for label, freqs in mfd_dict.items():
-            ax.plot(mags, freqs, label=label)
-        mfds = ex.get('source_mfds').array
-        if len(mfds) == 1:
-            expected = mfd.from_toml(mfds[0], ex.oqparam.width_of_mfd_bin)
-            magnitudes, frequencies = zip(
-                *expected.get_annual_occurrence_rates())
-            ax.plot(magnitudes, frequencies, label='expected')
-        ax.legend()
-    return plt
-
-
 @sap.script
 def make_figure_sources(extractors, what):
     """
@@ -264,7 +233,7 @@ def make_figure_sources(extractors, what):
     ax.grid(True)
     # sitecol = ex.get('sitecol')
     # bmap = basemap('cyl', sitecol)
-    # bmap.plot(sitecol['lon'], sitecol['lat'], 'x')
+    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     minxs = []
     maxxs = []
     minys = []
@@ -290,6 +259,35 @@ def make_figure_sources(extractors, what):
     ax.set_xlim(min(minxs), max(maxxs))
     ax.set_ylim(min(minys), max(maxys))
     ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
+    return plt
+
+
+@sap.script
+def make_figure_rupture_info(extractors, what):
+    """
+    Plot the rupture bounding boxes
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    from openquake.hmtk.plotting.patch import PolygonPatch
+    [ex] = extractors
+    info = ex.get(what)
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    # sitecol = ex.get('sitecol')
+    # bmap = basemap('cyl', sitecol)
+    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
+    n = 0
+    tot = 0
+    for rec in info:
+        poly = shapely.wkt.loads(rec['boundary'].decode('utf8'))
+        if poly.is_valid:
+            ax.add_patch(PolygonPatch(poly))
+            n += 1
+        else:
+            print('Invalid %s' % rec['boundary'].decode('utf8'))
+        tot += 1
+    ax.set_title('%d/%d valid ruptures' % (n, tot))
     return plt
 
 
