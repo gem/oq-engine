@@ -31,6 +31,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, get_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.geo.utils import bbox2poly
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -1041,7 +1042,7 @@ class RuptureData(object):
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
-            ('boundary', hdf5.vstr)] + [(param, F32) for param in self.params])
+            ('bbox', (F32, 4))] + [(param, F32) for param in self.params])
 
     def to_array(self, ebruptures):
         """
@@ -1053,10 +1054,7 @@ class RuptureData(object):
             self.cmaker.add_rup_params(rup)
             ruptparams = tuple(getattr(rup, param) for param in self.params)
             point = rup.surface.get_middle_point()
-            mlons, mlats = rup.surface.get_surface_boundaries()
-            bounds = ','.join('((%s))' % ','.join(
-                '%.5f %.5f' % coords for coords in zip(lons, lats))
-                              for lons, lats in zip(mlons, mlats))
+            bbox = rup.surface.get_bounding_box()
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
@@ -1064,8 +1062,7 @@ class RuptureData(object):
             data.append(
                 (ebr.id, ebr.srcidx, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
-                 rup.surface.get_dip(), rup.rake,
-                 'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
+                 rup.surface.get_dip(), rup.rake, bbox) + ruptparams)
         return numpy.array(data, self.dt)
 
 
@@ -1088,11 +1085,13 @@ def extract_rupture_info(dstore, what):
         rups = rgetter.get_ruptures(sf)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
+            coords = ['%.5f %.5f' % xy for xy in bbox2poly(r['bbox'])]
+            boundary = 'POLYGON((%s))' % ', '.join(coords)
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
                  rgetter.trt, r['strike'], r['dip'], r['rake'],
-                 r['boundary']))
+                 boundary))
     arr = numpy.array(rows, dtlist)
     arr.sort(order='rupid')
     return arr
