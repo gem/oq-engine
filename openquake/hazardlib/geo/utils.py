@@ -620,3 +620,12 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
+
+
+def bbox2poly(bbox):
+    """
+    :param bbox: a geographic bounding box West-East-North-South
+    :returns: a list of pairs corrisponding to the bbox polygon
+    """
+    x1, x2, y2, y1 = bbox  # west, east, north, south
+    return (x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)
