@@ -1078,7 +1078,7 @@ def extract_rupture_info(dstore, what):
               ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32),
-              ('boundary', '<S100')]
+              ('boundary', '<S120')]
     rows = []
     sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     for rgetter in getters.gen_rupture_getters(dstore):
