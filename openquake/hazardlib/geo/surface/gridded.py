@@ -29,14 +29,6 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 
 
-def bbox2poly(bbox):
-    """
-    :returns: a list of pairs corrisponding to a polygon
-    """
-    x1, x2, y2, y1 = bbox  # west, east, north, south
-    return (x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)
-
-
 class GriddedSurface(BaseSurface):
     """
     Gridded surface defined by an unstructured cloud of points. This surface
@@ -89,16 +81,16 @@ class GriddedSurface(BaseSurface):
 
     def get_surface_boundaries(self):
         """
-        :returns: (min_max lons, min_max lats)
+        :returns: (lons, lats) for the 5 points of the bounding box
         """
-        xs, ys = zip(*bbox2poly(self.get_bounding_box()))
+        xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
         return [xs], [ys]
 
     def get_surface_boundaries_3d(self):
         """
-        :returns: (min_max lons, min_max lats)
+        :returns: (lons, lats, depths) for the 5 points of the bounding box
         """
-        xs, ys = zip(*bbox2poly(self.get_bounding_box()))
+        xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
         return [xs], [ys], [(0, 0, 0, 0, 0)]
 
     def get_rx_distance(self, mesh):
