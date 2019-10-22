@@ -1053,10 +1053,10 @@ class RuptureData(object):
             self.cmaker.add_rup_params(rup)
             ruptparams = tuple(getattr(rup, param) for param in self.params)
             point = rup.surface.get_middle_point()
-            mlons, mlats, mdeps = rup.surface.get_surface_boundaries_3d()
+            mlons, mlats = rup.surface.get_surface_boundaries()
             bounds = ','.join('((%s))' % ','.join(
-                '%.5f %.5f %.3f' % coords for coords in zip(lons, lats, deps))
-                              for lons, lats, deps in zip(mlons, mlats, mdeps))
+                '%.5f %.5f' % coords for coords in zip(lons, lats))
+                              for lons, lats in zip(mlons, mlats))
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
@@ -1069,8 +1069,13 @@ class RuptureData(object):
         return numpy.array(data, self.dt)
 
 
-@extract.add('ruptures')
-def extract_ruptures(dstore, what):
+@extract.add('rupture_info')
+def extract_rupture_info(dstore, what):
+    """
+    Extract some information about the ruptures, including the boundary.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/rupture_info
+    """
     oq = dstore['oqparam']
     dtlist = [('rupid', U32), ('multiplicity', U16), ('mag', F32),
               ('centroid_lon', F32), ('centroid_lat', F32),
