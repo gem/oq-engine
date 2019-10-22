@@ -89,8 +89,7 @@ def export_ruptures_csv(ekey, dstore):
             if not obj.is_valid:
                 # this happens when the bounding box collapse to a line
                 # or a point, i.e. maxlon=minlon or maxlat=minlat
-                logging.warning('Rupture %d has an invalid %s',
-                                r['rupid'], poly)
+                print('Rupture %d has an invalid %s' % (r['rupid'], poly))
 
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
