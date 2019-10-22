@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Fix: the boundaries for nonparametric ruptures were incorrectly exported
+  * Changed the ruptures exporter: now we export only the bounding boxes
   * Added more validations for predefined hazard, like forbidding the site model
 
   [Marco Pagani]
