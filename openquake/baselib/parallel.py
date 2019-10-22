@@ -170,8 +170,10 @@ from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp)
 
-GB = 1024 ** 3
+sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
+# see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
+GB = 1024 ** 3
 
 
 @submit.add('no')
