@@ -312,8 +312,7 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
                 attr = dict(imt=IML['IMT'],
                             minIML=IML['minIML'],
                             maxIML=IML['maxIML'])
-                if nodamage is not None:
-                    attr['noDamageLimit'] = nodamage
+                attr['noDamageLimit'] = nodamage
                 ff.append(Node('imls', attr))
             for ffc in ffs[2:]:
                 with context(fname, ffc):
@@ -326,7 +325,6 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
             with context(fname, IML):
                 imls = ' '.join(map(str, (~IML)[1]))
                 attr = dict(imt=IML['IMT'])
-            if nodamage is not None:
                 attr['noDamageLimit'] = nodamage
             ff.append(Node('imls', attr, imls))
             for ffd in ffs[2:]:
