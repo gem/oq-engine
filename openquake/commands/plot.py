@@ -274,9 +274,9 @@ def make_figure_rupture_info(extractors, what):
     info = ex.get(what)
     fig, ax = plt.subplots()
     ax.grid(True)
-    sitecol = ex.get('sitecol')
-    bmap = basemap('cyl', sitecol)
-    bmap.plot(sitecol['lon'], sitecol['lat'], '+')
+    # sitecol = ex.get('sitecol')
+    # bmap = basemap('cyl', sitecol)
+    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     n = 0
     tot = 0
     for rec in info:
