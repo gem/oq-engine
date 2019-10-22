@@ -19,7 +19,6 @@ import logging
 import shapely
 import numpy
 from openquake.baselib import sap
-from openquake.hazardlib import mfd
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -234,7 +233,7 @@ def make_figure_sources(extractors, what):
     ax.grid(True)
     # sitecol = ex.get('sitecol')
     # bmap = basemap('cyl', sitecol)
-    # bmap.plot(sitecol['lon'], sitecol['lat'], 'x')
+    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     minxs = []
     maxxs = []
     minys = []
@@ -277,16 +276,18 @@ def make_figure_rupture_info(extractors, what):
     ax.grid(True)
     sitecol = ex.get('sitecol')
     bmap = basemap('cyl', sitecol)
-    bmap.plot(sitecol['lon'], sitecol['lat'], 'x')
+    bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     n = 0
     tot = 0
     for rec in info:
-        for poly in shapely.wkt.loads(rec['boundary'].decode('utf8')):
-            pp = PolygonPatch(poly)
-            ax.add_patch(pp)
-        n += 1
+        poly = shapely.wkt.loads(rec['boundary'].decode('utf8'))
+        if poly.is_valid:
+            ax.add_patch(PolygonPatch(poly))
+            n += 1
+        else:
+            print('Invalid %s' % rec['boundary'].decode('utf8'))
         tot += 1
-    ax.set_title('%d/%d ruptures' % (n, tot))
+    ax.set_title('%d/%d valid ruptures' % (n, tot))
     return plt
 
 
