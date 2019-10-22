@@ -81,14 +81,14 @@ class GriddedSurface(BaseSurface):
 
     def get_surface_boundaries(self):
         """
-        :returns: (lons, lats) for 5 points
+        :returns: (lons, lats) for the 5 points of the bounding box
         """
         xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
         return [xs], [ys]
 
     def get_surface_boundaries_3d(self):
         """
-        :returns: (lons, lats, depths) for 5 points
+        :returns: (lons, lats, depths) for the 5 points of the bounding box
         """
         xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
         return [xs], [ys], [(0, 0, 0, 0, 0)]
