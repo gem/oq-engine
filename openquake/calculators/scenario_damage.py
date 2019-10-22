@@ -60,8 +60,6 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     dmg = fractions[:, :D] * asset['number']  # shape (E, D)
-                    if numpy.isnan(dmg).any():
-                        raise ValueError('NaN value!')
                     result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
