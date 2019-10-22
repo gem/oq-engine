@@ -21,6 +21,7 @@ import os
 import operator
 import collections
 
+import shapely.wkt
 import numpy
 
 from openquake.baselib.general import group_array, deprecated
@@ -92,6 +93,12 @@ def export_ruptures_csv(ekey, dstore):
                  r['lon'], r['lat'], r['depth'],
                  rgetter.trt, r['strike'], r['dip'], r['rake'],
                  r['boundary']))
+            if export.sanity_check:
+                obj = shapely.wkt.loads(r['boundary'])
+                if not obj.is_valid:
+                    raise ValueError('Rupture %d has an invalid MultiPolygon'
+                                     % r['rup_id'])
+
     rows.sort()  # by rupture rup_id
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
