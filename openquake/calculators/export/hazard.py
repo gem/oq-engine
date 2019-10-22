@@ -80,24 +80,11 @@ def export_ruptures_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('rupid multiplicity mag centroid_lon centroid_lat '
-              'centroid_depth trt strike dip rake boundary').split()
-    rows = []
-    sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
-    for rgetter in gen_rupture_getters(dstore):
-        rups = rgetter.get_ruptures(sf)
-        rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
-        for r, rup in zip(rup_data.to_array(rups), rups):
-            rows.append(
-                (r['rup_id'], r['multiplicity'], r['mag'],
-                 r['lon'], r['lat'], r['depth'],
-                 rgetter.trt, r['strike'], r['dip'], r['rake'],
-                 r['boundary']))
-    rows.sort()  # by rupture rup_id
+    arr = extract(dstore, 'ruptures')
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-    writers.write_csv(dest, rows, header=header, comment=comment)
+    writers.write_csv(dest, arr, comment=comment)
     return [dest]
 
 

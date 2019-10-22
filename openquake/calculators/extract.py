@@ -30,6 +30,7 @@ from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, get_array, println
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -1066,6 +1067,30 @@ class RuptureData(object):
                  rup.surface.get_dip(), rup.rake,
                  'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
         return numpy.array(data, self.dt)
+
+
+@extract.add('ruptures')
+def extract_ruptures(dstore, what):
+    oq = dstore['oqparam']
+    dtlist = [('rupid', U32), ('multiplicity', U16), ('mag', F32),
+              ('centroid_lon', F32), ('centroid_lat', F32),
+              ('centroid_depth', F32), ('trt', '<S50'),
+              ('strike', F32), ('dip', F32), ('rake', F32),
+              ('boundary', '<S100')]
+    rows = []
+    sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
+    for rgetter in getters.gen_rupture_getters(dstore):
+        rups = rgetter.get_ruptures(sf)
+        rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
+        for r, rup in zip(rup_data.to_array(rups), rups):
+            rows.append(
+                (r['rup_id'], r['multiplicity'], r['mag'],
+                 r['lon'], r['lat'], r['depth'],
+                 rgetter.trt, r['strike'], r['dip'], r['rake'],
+                 r['boundary']))
+    arr = numpy.array(rows, dtlist)
+    arr.sort(order='rupid')
+    return arr
 
 # #####################  extraction from the WebAPI ###################### #
 
