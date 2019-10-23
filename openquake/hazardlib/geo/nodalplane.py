@@ -82,3 +82,6 @@ class NodalPlane(object):
         """
         if not (rake == 'undefined' or -180 < rake <= 180):
             raise ValueError('rake %g is out of range (-180, 180]' % rake)
+
+    def __hash__(self):
+        return hash(tuple(self))
