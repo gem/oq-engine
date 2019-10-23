@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Models with duplicated values in the hypocenter and/or nodal plane
+    distributions are now automatically optimized
   * Fixed an issue with missing noDamageLimit causing NaN values in
     scenario_damage calculations
   * Changed the ruptures exporter: now we export only the bounding boxes
