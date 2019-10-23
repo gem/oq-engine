@@ -162,6 +162,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     with context(fname, ff):
         ffs = ff[1:]
         imls = ff.imls
+    # NB: noDamageLimit=None is now treated as noDamageLimit=0
     nodamage = imls.attrib.get('noDamageLimit', 0)
     if nodamage == 0:
         # use a cutoff to avoid log(0) in GMPE.to_distribution_values
@@ -302,7 +303,7 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
     new.append((Node('limitStates', {}, ' '.join(limit_states))))
     for ffs in node[2:]:
         IML = ffs.IML
-        # NB: noDamageLimit = None is different than zero
+        # NB: noDamageLimit=None is now treated as noDamageLimit=0
         nodamage = ffs.attrib.get('noDamageLimit', 0)
         ff = Node('fragilityFunction', {'format': fmt})
         ff['id'] = ~ffs.taxonomy
