@@ -164,8 +164,8 @@ def export_agg_losses(ekey, dstore):
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assetcol = dstore['assetcol']
-    aggname = '_'.join(['agg'] + oq.aggregate_by if dskey.startswith('agg_')
-                       else [])
+    aggname = '_'.join(['agg'] + (oq.aggregate_by if dskey.startswith(
+        'agg_') else []))
     expvalue = dstore['exposed_values/' + aggname][()]
     # shape (T1, T2, ..., L)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
