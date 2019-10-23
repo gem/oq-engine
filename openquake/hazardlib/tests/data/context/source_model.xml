@@ -27,7 +27,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </nodalPlaneDist>
                 <hypoDepthDist>
                     <hypoDepth depth="2.0" probability="0.2" />
-                    <hypoDepth depth="4.0" probability="0.2" />
+                    <hypoDepth depth="2.0" probability="0.1" />
+                    <hypoDepth depth="2.0" probability="0.1" />
                     <hypoDepth depth="6.0" probability="0.2" />
                     <hypoDepth depth="8.0" probability="0.2" />
                     <hypoDepth depth="10.0" probability="0.2" />
