@@ -266,7 +266,7 @@ def build_nodal_plane_dist(npd):
             "nodalPlane", {"dip": npd.dip, "probability": prob,
                            "strike": npd.strike, "rake": npd.rake})
         npds.append(nodal_plane)
-    sourceconverter.check_dupl(dist)
+    sourceconverter.fix_dupl(dist)
     return Node("nodalPlaneDist", nodes=npds)
 
 
@@ -285,7 +285,7 @@ def build_hypo_depth_dist(hdd):
     for (prob, depth) in hdd.data:
         dist.append((prob, depth))
         hdds.append(Node("hypoDepth", {"depth": depth, "probability": prob}))
-    sourceconverter.check_dupl(dist)
+    sourceconverter.fix_dupl(dist)
     return Node("hypoDepthDist", nodes=hdds)
 
 
