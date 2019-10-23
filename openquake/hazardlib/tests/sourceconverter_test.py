@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import io
+import mock
 import unittest
 import numpy
 from openquake.baselib import hdf5, config
@@ -248,20 +249,17 @@ class SourceConverterTestCase(unittest.TestCase):
 
     def test_dupl_values_npdist(self):
         testfile = os.path.join(testdir, 'wrong-npdist.xml')
-        with self.assertRaises(ValueError) as ctx:
-            config.general.strict = True
+        with mock.patch('logging.warning') as w:
             nrml.to_python(testfile)
-        self.assertIn('There are repeated values in '
-                      '[(135.0, 90.0, -90.0), (135.0, 90.0, -90.0)]',
-                      str(ctx.exception))
+        self.assertEqual(
+            'There were repeated values %s in %s:%s', w.call_args[0][0])
 
     def test_dupl_values_hddist(self):
         testfile = os.path.join(testdir, 'wrong-hddist.xml')
-        with self.assertRaises(ValueError) as ctx:
-            config.general.strict = True
+        with mock.patch('logging.warning') as w:
             nrml.to_python(testfile)
-        self.assertIn('There are repeated values in [5.5, 16.5, 16.5]',
-                      str(ctx.exception))
+        self.assertEqual(
+            'There were repeated values %s in %s:%s', w.call_args[0][0])
 
 
 class SourceGroupHDF5TestCase(unittest.TestCase):

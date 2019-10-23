@@ -22,7 +22,7 @@ import time
 import logging
 import numpy
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source, tom
@@ -36,26 +36,39 @@ source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 
 
-def check_dupl(dist, fname=None, lineno=None):
+def fix_dupl(dist, fname=None, lineno=None):
     """
-    Raise a ValueError if the distribution contains two identical values.
+    Fix the distribution if it contains identical values or raise an error.
 
-    :param dist: a list of pairs [(prob, value)...]
+    :param dist:
+        a list of pairs [(prob, value)...] for a hypocenter or nodal plane dist
+    :param fname:
+        the file which is being read; if it is None, it means you are writing
+        the distribution: in that case raise an error for duplicated values
+    param lineno:
+        the line number of the file which is being read (None in writing mode)
     """
     n = len(dist)
-    values = set()
+    values = collections.defaultdict(float)  # dict value -> probability
+    # value can be a scalar (hypocenter depth) or a triple
+    # (strike, dip, rake) for a nodal plane distribution
     got = []
     for prob, value in dist:
-        if hasattr(value, '_slots_'):
-            value = tuple(getattr(value, s) for s in value._slots_)
-        values.add(value)
+        values[value] += prob
         got.append(value)
     if len(values) < n:
-        if config.general.strict:
+        if fname is None:  # when called from the sourcewriter
             raise ValueError('There are repeated values in %s' % got)
         else:
-            logging.error('There are repeated values in %s %s:%s',
-                          got, fname, lineno)
+            logging.warning('There were repeated values %s in %s:%s',
+                            got, fname, lineno)
+            newdist = sorted([(p, v) for v, p in values.items()])
+            if isinstance(newdist[0][1], tuple):
+                newdist = [(p, geo.nodal_plane.NodalPlane(*v))
+                           for p, v in newdist]
+            # run hazardlib/tests/data/context/job.ini to check this;
+            # you will get [(0.2, 6.0), (0.2, 8.0), (0.2, 10.0), (0.4, 2.0)]
+            dist[:] = newdist
 
 
 class SourceGroup(collections.abc.Sequence):
@@ -633,7 +646,7 @@ class SourceConverter(RuptureConverter):
                     np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
         with context(self.fname, npnode):
-            check_dupl(npdist, self.fname, npnode.lineno)
+            fix_dupl(npdist, self.fname, npnode.lineno)
             if not self.spinning_floating:
                 npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
@@ -650,7 +663,7 @@ class SourceConverter(RuptureConverter):
             hdnode = node.hypoDepthDist
             hddist = [(hd['probability'], hd['depth']) for hd in hdnode]
         with context(self.fname, hdnode):
-            check_dupl(hddist, self.fname, hdnode.lineno)
+            fix_dupl(hddist, self.fname, hdnode.lineno)
             if not self.spinning_floating:  # consider the first hypocenter
                 hddist = [(1, hddist[0][1])]
             return pmf.PMF(hddist)
