@@ -2,9 +2,9 @@ event based hazard
 ==================
 
 ============== ===================
-checksum32     4,102,228,417      
-date           2019-10-02T10:07:28
-engine_version 3.8.0-git6f03622c6e
+checksum32     3,216,054,233      
+date           2019-10-23T16:26:30
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = ?
@@ -46,7 +46,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       482          0.0         
+0      NaN       482          0.0         
 ====== ========= ============ ============
 
 Exposure model
@@ -70,32 +70,31 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-S    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+S    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00438 NaN    0.00438 0.00438 1      
+SourceReader       0.00479 NaN    0.00479 0.00479 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============ ==== ========
-task         sent received
-SourceReader      2.92 KB 
-============ ==== ========
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29501             time_sec  memory_mb counts
+calc_44513             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.01266   0.0       1     
-total SourceReader     0.00438   0.0       1     
-reading exposure       6.306E-04 0.0       1     
+composite source model 0.01435   0.0       1     
+total SourceReader     0.00479   0.0       1     
+reading exposure       5.538E-04 0.0       1     
 ====================== ========= ========= ======
