@@ -2,9 +2,9 @@ Event Based Hazard QA Test, Case 17
 ===================================
 
 ============== ===================
-checksum32     2,756,942,605      
-date           2019-10-02T10:07:18
-engine_version 3.8.0-git6f03622c6e
+checksum32     1,693,427,193      
+date           2019-10-23T16:26:12
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -44,8 +44,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       39           0.0         
-1      0.0       7            0.0         
+0      NaN       39           0.0         
+1      NaN       7            0.0         
 ====== ========= ============ ============
 
 Slowest sources
@@ -57,31 +57,31 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-P    0.0       2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+P    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.00230 1.618E-04 0.00219 0.00242 2      
+SourceReader       0.00141 4.754E-04 0.00107 0.00175 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.29 KB ltmodel=378 B fname=216 B 6.14 KB 
+SourceReader apply_unc=2.29 KB ltmodel=378 B fname=216 B 6.05 KB 
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_29477             time_sec memory_mb counts
+calc_44487             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.01661  1.28906   1     
-total SourceReader     0.00460  0.0       2     
+composite source model 0.03497  0.0       1     
+total SourceReader     0.00282  0.0       2     
 ====================== ======== ========= ======

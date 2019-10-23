@@ -2,9 +2,9 @@ Event-based PSHA with logic tree sampling
 =========================================
 
 ============== ===================
-checksum32     1,264,506,295      
-date           2019-10-02T10:07:19
-engine_version 3.8.0-git6f03622c6e
+checksum32     1,207,358,898      
+date           2019-10-23T16:26:15
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 3, num_levels = 7, num_rlzs = ?
@@ -13,10 +13,10 @@ Parameters
 ----------
 =============================== ==================
 calculation_mode                'event_based'     
-number_of_logic_tree_samples    100               
+number_of_logic_tree_samples    1000              
 maximum_distance                {'default': 200.0}
-investigation_time              50.0              
-ses_per_logic_tree_path         20                
+investigation_time              1.0               
+ses_per_logic_tree_path         10                
 truncation_level                3.0               
 rupture_mesh_spacing            2.0               
 complex_fault_mesh_spacing      2.0               
@@ -44,8 +44,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       2,456        0.0         
-1      0.0       2,456        0.0         
+0      NaN       2,456        0.0         
+1      NaN       2,456        0.0         
 ====== ========= ============ ============
 
 Slowest sources
@@ -57,31 +57,31 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.0       2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.06131 0.00253 0.05952 0.06310 2      
+SourceReader       0.09382 0.01185 0.08544 0.10221 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.28 KB ltmodel=378 B fname=212 B 14.76 KB
+SourceReader apply_unc=2.28 KB ltmodel=382 B fname=212 B 14.7 KB 
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_29482             time_sec memory_mb counts
+calc_44493             time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.12262  0.0       2     
-composite source model 0.09400  0.0       1     
+composite source model 0.22669  0.0       1     
+total SourceReader     0.18765  0.0       2     
 ====================== ======== ========= ======

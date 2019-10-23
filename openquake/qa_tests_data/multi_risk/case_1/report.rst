@@ -3,8 +3,8 @@ Volcano example
 
 ============== ===================
 checksum32     3,488,609,606      
-date           2019-10-02T10:07:11
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:25:56
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 173, num_levels = 45, num_rlzs = 1
@@ -32,15 +32,18 @@ avg_losses                      True
 
 Input files
 -----------
-====================== =======================================================================================================================================
-Name                   File                                                                                                                                   
-====================== =======================================================================================================================================
-exposure               `exposure_model.xml <exposure_model.xml>`_                                                                                             
-job_ini                `job.ini <job.ini>`_                                                                                                                   
-multi_peril            `ash_fall.csv <ash_fall.csv>`_ `lava_flow.csv <lava_flow.csv>`_ `lahar.csv <lahar.csv>`_ `pyroclastic_flow.csv <pyroclastic_flow.csv>`_
-structural_consequence `consequence_model.xml <consequence_model.xml>`_                                                                                       
-structural_fragility   `fragility_model.xml <fragility_model.xml>`_                                                                                           
-====================== =======================================================================================================================================
+====================== ================================================
+Name                   File                                            
+====================== ================================================
+exposure               `exposure_model.xml <exposure_model.xml>`_      
+job_ini                `job.ini <job.ini>`_                            
+reqv:ASH               `ash_fall.csv <ash_fall.csv>`_                  
+reqv:LAHAR             `lahar.csv <lahar.csv>`_                        
+reqv:LAVA              `lava_flow.csv <lava_flow.csv>`_                
+reqv:PYRO              `pyroclastic_flow.csv <pyroclastic_flow.csv>`_  
+structural_consequence `consequence_model.xml <consequence_model.xml>`_
+structural_fragility   `fragility_model.xml <fragility_model.xml>`_    
+====================== ================================================
 
 Composite source model
 ----------------------
@@ -86,7 +89,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ======== ========= ======
-calc_29415       time_sec memory_mb counts
+calc_44424       time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00298  0.0       1     
+reading exposure 0.00304  0.0       1     
 ================ ======== ========= ======

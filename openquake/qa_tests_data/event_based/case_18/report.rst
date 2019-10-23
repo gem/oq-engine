@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 18
 ===================================
 
 ============== ===================
-checksum32     3,669,072,072      
-date           2019-10-02T10:07:20
-engine_version 3.8.0-git6f03622c6e
+checksum32     3,365,178,779      
+date           2019-10-23T16:26:17
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = ?
@@ -44,7 +44,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       3,000        0.0         
+0      NaN       3,000        0.0         
 ====== ========= ============ ============
 
 Slowest sources
@@ -56,31 +56,30 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-P    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+P    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00673 NaN    0.00673 0.00673 1      
+SourceReader       0.00760 NaN    0.00760 0.00760 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============ ==== ========
-task         sent received
-SourceReader      29.03 KB
-============ ==== ========
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_29488             time_sec memory_mb counts
+calc_44499             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.01636  0.0       1     
-total SourceReader     0.00673  0.0       1     
+composite source model 0.03457  0.0       1     
+total SourceReader     0.00760  0.0       1     
 ====================== ======== ========= ======

@@ -2,9 +2,9 @@ Subduction backbone logic tree - 9 branch
 =========================================
 
 ============== ===================
-checksum32     347,202,642        
-date           2019-10-02T10:07:29
-engine_version 3.8.0-git6f03622c6e
+checksum32     4,289,257,090      
+date           2019-10-23T16:26:31
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 2, num_levels = 8, num_rlzs = 9
@@ -75,41 +75,40 @@ Slowest sources
 ============ ====== ==== ============ ========= ========= ============
 source_id    grp_id code num_ruptures calc_time num_sites eff_ruptures
 ============ ====== ==== ============ ========= ========= ============
-PEERS3C3_TOR 0      X    1            0.00196   2.00000   1.00000     
+PEERS3C3_TOR 0      X    1            0.00128   2.00000   1.00000     
 ============ ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-X    0.00196   1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+X    0.00128  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.02950 NaN    0.02950 0.02950 1      
-preclassical       0.00238 NaN    0.00238 0.00238 1      
+SourceReader       0.06507 NaN    0.06507 0.06507 1      
+preclassical       0.00154 NaN    0.00154 0.00154 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ======================================= ========
 task         sent                                    received
-SourceReader                                         8.29 KB 
-preclassical srcs=5.26 KB gsims=1.09 KB params=557 B 342 B   
+preclassical srcs=5.26 KB gsims=1.09 KB params=599 B 342 B   
 ============ ======================================= ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29506             time_sec  memory_mb counts
+calc_44518             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.03995   0.0       1     
-total SourceReader     0.02950   0.0       1     
-total preclassical     0.00238   0.0       1     
-store source_info      0.00212   0.0       1     
-aggregate curves       1.929E-04 0.0       1     
+composite source model 0.08878   0.0       1     
+total SourceReader     0.06507   0.0       1     
+store source_info      0.00215   0.0       1     
+total preclassical     0.00154   0.0       1     
+aggregate curves       2.222E-04 0.0       1     
 ====================== ========= ========= ======

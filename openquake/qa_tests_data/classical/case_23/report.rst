@@ -3,8 +3,8 @@ Classical PSHA with NZ NSHM
 
 ============== ===================
 checksum32     3,211,843,635      
-date           2019-10-02T10:07:41
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:26:51
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 29, num_rlzs = 1
@@ -68,8 +68,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      2.00000   40           40          
-1      2.00000   2            2.00000     
+0      0.05000   40           40          
+1      1.00000   2            2.00000     
 ====== ========= ============ ============
 
 Slowest sources
@@ -77,45 +77,44 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-21444     1      X    1            0.00233   1.00000   1.00000     
-1         0      P    20           0.00231   0.05000   20          
-21445     1      X    1            2.789E-04 1.00000   1.00000     
-2         0      P    20           2.608E-04 0.05000   20          
+1         0      P    20           0.00128   0.05000   20          
+2         0      P    20           0.00125   0.05000   20          
+21444     1      X    1            0.00123   1.00000   1.00000     
+21445     1      X    1            1.233E-04 1.00000   1.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-P    0.00257   2     
-X    0.00261   2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+P    0.00254  
+X    0.00135  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.42124 NaN       0.42124 0.42124 1      
-preclassical       0.00316 5.698E-05 0.00312 0.00320 2      
+SourceReader       0.61136 NaN       0.61136 0.61136 1      
+preclassical       0.00156 5.713E-05 0.00152 0.00163 3      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ ============================================= ========
 task         sent                                          received
-SourceReader                                               840.3 KB
-preclassical srcs=808.95 KB params=1.42 KB srcfilter=446 B 774 B   
+preclassical srcs=809.71 KB params=2.25 KB srcfilter=669 B 1.05 KB 
 ============ ============================================= ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29544             time_sec  memory_mb counts
+calc_44558             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.43328   0.80469   1     
-total SourceReader     0.42124   0.53906   1     
-total preclassical     0.00632   0.0       2     
-store source_info      0.00238   0.0       1     
-aggregate curves       5.658E-04 0.0       2     
+composite source model 0.63246   1.60156   1     
+total SourceReader     0.61136   1.51172   1     
+total preclassical     0.00469   0.0       3     
+store source_info      0.00230   0.0       1     
+aggregate curves       7.131E-04 0.0       3     
 ====================== ========= ========= ======
