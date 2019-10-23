@@ -2,9 +2,9 @@ Event-based PSHA producing hazard curves only
 =============================================
 
 ============== ===================
-checksum32     1,437,466,600      
-date           2019-10-02T10:07:17
-engine_version 3.8.0-git6f03622c6e
+checksum32     2,319,316,155      
+date           2019-10-23T16:26:09
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 5, num_rlzs = ?
@@ -44,8 +44,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       2,456        0.0         
-1      0.0       2,456        0.0         
+0      NaN       2,456        0.0         
+1      NaN       2,456        0.0         
 ====== ========= ============ ============
 
 Slowest sources
@@ -57,31 +57,31 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.0       2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-SourceReader       0.06716 8.910E-04 0.06653 0.06779 2      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+SourceReader       0.10679 0.01768 0.09428 0.11929 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.28 KB ltmodel=378 B fname=212 B 14.76 KB
+SourceReader apply_unc=2.28 KB ltmodel=378 B fname=212 B 14.7 KB 
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_29466             time_sec memory_mb counts
+calc_44476             time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.13431  0.53516   2     
-composite source model 0.08701  0.0       1     
+total SourceReader     0.21357  0.10938   2     
+composite source model 0.13156  0.0       1     
 ====================== ======== ========= ======

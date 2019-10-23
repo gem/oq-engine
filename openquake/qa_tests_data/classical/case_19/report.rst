@@ -2,9 +2,9 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ============== ===================
-checksum32     561,276,680        
-date           2019-10-02T10:07:41
-engine_version 3.8.0-git6f03622c6e
+checksum32     1,919,574,328      
+date           2019-10-23T16:26:52
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 78, num_rlzs = 4
@@ -71,11 +71,11 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       42,624       0.0         
-1      0.0       210          0.0         
-2      0.0       96,804       0.0         
-3      0.0       81,154       0.0         
-4      1.00000   93,219       7,770       
+0      NaN       42,624       0.0         
+1      NaN       210          0.0         
+2      NaN       96,804       0.0         
+3      NaN       81,154       0.0         
+4      1.287E-04 93,219       7,770       
 ====== ========= ============ ============
 
 Slowest sources
@@ -83,42 +83,41 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-s46       4      A    7,770        0.00235   1.287E-04 7,770       
+s46       4      A    7,770        0.00117   1.287E-04 7,770       
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.00235   16    
-C    0.0       2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.00117  
+C    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       5.60654 NaN     5.60654 5.60654 1      
-preclassical       0.00348 0.00231 0.00163 0.01077 17     
+SourceReader       6.65975 NaN     6.65975 6.65975 1      
+preclassical       0.00247 0.00188 0.00140 0.00765 17     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader                                             86.46 KB
-preclassical srcs=58.66 KB params=21.05 KB gsims=7.63 KB 4.9 KB  
+preclassical srcs=58.66 KB params=21.73 KB gsims=7.63 KB 4.9 KB  
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_29545             time_sec memory_mb counts
+calc_44559             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 5.62539  0.47656   1     
-total SourceReader     5.60654  0.72656   1     
-total preclassical     0.05909  0.25781   17    
-aggregate curves       0.00442  0.0       17    
-store source_info      0.00264  0.0       1     
+composite source model 6.70067  0.39844   1     
+total SourceReader     6.65975  0.39844   1     
+total preclassical     0.04194  0.23828   17    
+aggregate curves       0.01322  0.0       17    
+store source_info      0.00249  0.0       1     
 ====================== ======== ========= ======

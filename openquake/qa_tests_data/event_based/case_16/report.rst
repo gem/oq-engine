@@ -3,8 +3,8 @@ Reduced Hazard Italy
 
 ============== ===================
 checksum32     1,879,307,037      
-date           2019-10-02T10:07:18
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:26:12
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 148, num_levels = 30, num_rlzs = ?
@@ -46,7 +46,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       2,295        0.0         
+0      NaN       2,295        0.0         
 ====== ========= ============ ============
 
 Exposure model
@@ -87,32 +87,31 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.01871 NaN    0.01871 0.01871 1      
+SourceReader       0.02131 NaN    0.02131 0.02131 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============ ==== ========
-task         sent received
-SourceReader      5.17 KB 
-============ ==== ========
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_29475             time_sec memory_mb counts
+calc_44485             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.03088  0.51172   1     
-total SourceReader     0.01871  0.0       1     
-reading exposure       0.00261  0.0       1     
+composite source model 0.03674  0.0       1     
+total SourceReader     0.02131  0.0       1     
+reading exposure       0.00303  0.0       1     
 ====================== ======== ========= ======

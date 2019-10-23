@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     4,156,250,378      
-date           2019-10-02T10:07:39
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:26:48
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 2, num_levels = 133, num_rlzs = 8
@@ -70,8 +70,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      1.00000   460          460         
-1      1.00000   460          460         
+0      0.00217   460          460         
+1      0.00217   460          460         
 ====== ========= ============ ============
 
 Slowest sources
@@ -79,17 +79,17 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-21        0      M    460          0.00277   0.00217   460         
-21        1      M    460          0.00151   0.00217   460         
+21        0      M    460          0.00147   0.00217   460         
+21        1      M    460          0.00145   0.00217   460         
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-M    0.00428   2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+M    0.00292  
+==== =========
 
 Duplicated sources
 ------------------
@@ -99,26 +99,26 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.00563 3.405E-05 0.00561 0.00566 2      
-preclassical       0.00253 0.00106   0.00178 0.00328 2      
+SourceReader       0.00268 2.647E-05 0.00266 0.00270 2      
+preclassical       0.00172 5.226E-06 0.00172 0.00172 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.57 KB ltmodel=433 B fname=206 B 8.41 KB 
-preclassical params=3.89 KB srcs=3.06 KB gsims=1.23 KB   684 B   
+SourceReader apply_unc=2.57 KB ltmodel=433 B fname=206 B 8.35 KB 
+preclassical params=3.97 KB srcs=3.06 KB gsims=1.23 KB   684 B   
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29538             time_sec  memory_mb counts
+calc_44552             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.02261   0.0       1     
-total SourceReader     0.01127   0.0       2     
-total preclassical     0.00506   0.0       2     
-store source_info      0.00205   0.0       1     
-aggregate curves       8.471E-04 0.0       2     
+composite source model 0.03579   0.0       1     
+store source_info      0.01823   0.0       1     
+total SourceReader     0.00535   0.0       2     
+total preclassical     0.00344   0.0       2     
+aggregate curves       4.318E-04 0.0       2     
 ====================== ========= ========= ======

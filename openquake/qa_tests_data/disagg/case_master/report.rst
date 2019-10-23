@@ -2,9 +2,9 @@ disaggregation with a complex logic tree
 ========================================
 
 ============== ===================
-checksum32     2,607,118,707      
-date           2019-10-02T10:07:13
-engine_version 3.8.0-git6f03622c6e
+checksum32     217,019,414        
+date           2019-10-23T16:26:00
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 2, num_levels = 102, num_rlzs = 8
@@ -71,9 +71,9 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      2.00000   543          543         
-1      2.00000   4            4.00000     
-2      2.00000   543          543         
+0      0.00368   543          543         
+1      0.50000   4            4.00000     
+2      0.00368   543          543         
 3      2.00000   1            1.00000     
 ====== ========= ============ ============
 
@@ -82,20 +82,20 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-1         2      S    543          0.00617   0.00368   543         
-2         1      S    4            0.00578   0.50000   4.00000     
-1         0      S    543          0.00491   0.00368   543         
-2         3      X    1            2.201E-04 2.00000   1.00000     
+1         0      S    543          0.00289   0.00368   543         
+2         1      S    4            0.00287   0.50000   4.00000     
+1         2      S    543          0.00282   0.00368   543         
+2         3      X    1            9.966E-05 2.00000   1.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-S    0.01686   3     
-X    2.201E-04 1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+S    0.00858  
+X    9.966E-05
+==== =========
 
 Duplicated sources
 ------------------
@@ -105,26 +105,26 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.02127 0.00687   0.01640 0.02613 2      
-preclassical       0.00622 7.499E-04 0.00536 0.00673 3      
+SourceReader       0.01231 0.00686   0.00746 0.01716 2      
+preclassical       0.00316 8.264E-05 0.00309 0.00325 3      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.41 KB ltmodel=378 B fname=214 B 20.35 KB
-preclassical srcs=13.56 KB params=4.08 KB gsims=810 B    1.05 KB 
+SourceReader apply_unc=2.41 KB ltmodel=378 B fname=214 B 20.29 KB
+preclassical srcs=13.56 KB params=4.2 KB gsims=810 B     1.05 KB 
 ============ =========================================== ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_29434             time_sec memory_mb counts
-====================== ======== ========= ======
-composite source model 0.04254  0.0       1     
-total SourceReader     0.04253  0.0       2     
-total preclassical     0.01867  0.51562   3     
-store source_info      0.00258  0.0       1     
-aggregate curves       0.00102  0.0       3     
-====================== ======== ========= ======
+====================== ========= ========= ======
+calc_44443             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.03976   0.0       1     
+total SourceReader     0.02462   0.21875   2     
+total preclassical     0.00949   0.0       3     
+store source_info      0.00215   0.0       1     
+aggregate curves       6.564E-04 0.0       3     
+====================== ========= ========= ======
