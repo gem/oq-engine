@@ -166,8 +166,8 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     nodamage = imls.attrib.get('noDamageLimit', 0)
     if nodamage == 0:
         # use a cutoff to avoid log(0) in GMPE.to_distribution_values
-        logging.warning('Found a noDamageLimit=0 in %s, line %s, '
-                        'using %g instead', fname, ff.lineno, min_iml)
+        logging.debug('Using noDamageLimit=%g in %s, line %s', min_iml,
+                      fname, ff.lineno)
         nodamage = min_iml
     with context(fname, imls):
         attrs = dict(format=ff['format'],
