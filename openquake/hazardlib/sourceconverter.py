@@ -32,6 +32,7 @@ from openquake.hazardlib.source import NonParametricSeismicSource
 
 U32 = numpy.uint32
 F32 = numpy.float32
+EPSILON = 1E-12
 source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 
@@ -62,6 +63,7 @@ def fix_dupl(dist, fname=None, lineno=None):
         else:
             logging.warning('There were repeated values %s in %s:%s',
                             got, fname, lineno)
+            assert abs(sum(values.values()) - 1) < EPSILON  # sanity check
             newdist = sorted([(p, v) for v, p in values.items()])
             if isinstance(newdist[0][1], tuple):
                 newdist = [(p, geo.nodal_plane.NodalPlane(*v))
