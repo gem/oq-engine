@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed disaggregation with a parent calculation
   * Models with duplicated values in the hypocenter and/or nodal plane
     distributions are now automatically optimized
   * Fixed an issue with missing noDamageLimit causing NaN values in
