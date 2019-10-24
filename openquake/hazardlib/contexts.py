@@ -52,34 +52,34 @@ def _update(pmap, pm, src, src_mutex, rup_mutex):
             pmap[grp_id] |= pm
 
 
-def get_distances(rupture, mesh, param):
+def get_distances(rupture, sites, param):
     """
     :param rupture: a rupture
-    :param mesh: a mesh of points or a site collection
+    :param sites: a mesh of points or a site collection
     :param param: the kind of distance to compute (default rjb)
-    :returns: an array of distances from the given mesh
+    :returns: an array of distances from the given sites
     """
     if param == 'rrup':
-        dist = rupture.surface.get_min_distance(mesh)
+        dist = rupture.surface.get_min_distance(sites)
     elif param == 'rx':
-        dist = rupture.surface.get_rx_distance(mesh)
+        dist = rupture.surface.get_rx_distance(sites)
     elif param == 'ry0':
-        dist = rupture.surface.get_ry0_distance(mesh)
+        dist = rupture.surface.get_ry0_distance(sites)
     elif param == 'rjb':
-        dist = rupture.surface.get_joyner_boore_distance(mesh)
+        dist = rupture.surface.get_joyner_boore_distance(sites)
     elif param == 'rhypo':
-        dist = rupture.hypocenter.distance_to_mesh(mesh)
+        dist = rupture.hypocenter.distance_to_sites(sites)
     elif param == 'repi':
-        dist = rupture.hypocenter.distance_to_mesh(mesh, with_depths=False)
+        dist = rupture.hypocenter.distance_to_sites(sites, with_depths=False)
     elif param == 'rcdpp':
-        dist = rupture.get_cdppvalue(mesh)
+        dist = rupture.get_cdppvalue(sites)
     elif param == 'azimuth':
-        dist = rupture.surface.get_azimuth(mesh)
+        dist = rupture.surface.get_azimuth(sites)
     elif param == 'azimuth_cp':
-        dist = rupture.surface.get_azimuth_of_closest_point(mesh)
+        dist = rupture.surface.get_azimuth_of_closest_point(sites)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
-        dist = numpy.zeros_like(mesh.lons)
+        dist = numpy.zeros_like(sites.lons)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     dist.flags.writeable = False
