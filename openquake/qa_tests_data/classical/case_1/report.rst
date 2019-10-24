@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 1
 ================================
 
 ============== ===================
-checksum32     141,718,627        
-date           2019-10-02T10:07:36
-engine_version 3.8.0-git6f03622c6e
+checksum32     2,251,255,443      
+date           2019-10-23T16:26:44
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 6, num_rlzs = 1
@@ -75,41 +75,40 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-1         0      P    1            0.00109   1.00000   1.00000     
+1         0      P    1            0.00122   1.00000   1.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-P    0.00109   1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+P    0.00122  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =======
 operation-duration mean      stddev min       max       outputs
-SourceReader       9.897E-04 NaN    9.897E-04 9.897E-04 1      
-preclassical       0.00133   NaN    0.00133   0.00133   1      
+SourceReader       9.546E-04 NaN    9.546E-04 9.546E-04 1      
+preclassical       0.00147   NaN    0.00147   0.00147   1      
 ================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
 ============ ========================================= ========
 task         sent                                      received
-SourceReader                                           2.64 KB 
-preclassical srcs=1.15 KB params=612 B srcfilter=223 B 342 B   
+preclassical srcs=1.13 KB params=654 B srcfilter=223 B 342 B   
 ============ ========================================= ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29533             time_sec  memory_mb counts
+calc_44547             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.00916   0.0       1     
-store source_info      0.00209   0.0       1     
-total preclassical     0.00133   0.0       1     
-total SourceReader     9.897E-04 0.0       1     
-aggregate curves       4.654E-04 0.0       1     
+composite source model 0.00997   0.0       1     
+store source_info      0.00217   0.0       1     
+total preclassical     0.00147   0.0       1     
+total SourceReader     9.546E-04 0.0       1     
+aggregate curves       2.213E-04 0.0       1     
 ====================== ========= ========= ======

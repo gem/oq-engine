@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 
 ============== ===================
 checksum32     2,162,355,116      
-date           2019-10-02T10:07:18
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:26:11
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -44,7 +44,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       1            0.0         
+0      NaN       1            0.0         
 ====== ========= ============ ============
 
 Slowest sources
@@ -56,31 +56,30 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-P    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+P    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =======
 operation-duration mean      stddev min       max       outputs
-SourceReader       8.967E-04 NaN    8.967E-04 8.967E-04 1      
+SourceReader       9.241E-04 NaN    9.241E-04 9.241E-04 1      
 ================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-============ ==== ========
-task         sent received
-SourceReader      2.65 KB 
-============ ==== ========
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29472             time_sec  memory_mb counts
+calc_44482             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.00948   0.0       1     
-total SourceReader     8.967E-04 0.0       1     
+composite source model 0.01045   0.0       1     
+total SourceReader     9.241E-04 0.0       1     
 ====================== ========= ========= ======
