@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed and HDF5 SWMR issue in large disaggregation calculations
+  * Made `rrup` the unique acceptable `filter_distance`
   * Fixed disaggregation with a parent calculation
   * Models with duplicated values in the hypocenter and/or nodal plane
     distributions are now automatically optimized
