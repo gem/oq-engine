@@ -258,9 +258,10 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         aac(sctx.lons, [1, -2])
         aac(dctx.rx, (4, 5))
         self.assertEqual(self.fake_surface.call_counts,
-                         {'get_rx_distance': 1,
+                         {'get_min_distance': 1,
                           'get_joyner_boore_distance': 1,
-                          'get_strike': 1})
+                          'get_rx_distance': 1, 'get_strike': 1})
+
 
 
 class ContextTestCase(unittest.TestCase):
