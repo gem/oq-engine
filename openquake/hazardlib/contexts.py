@@ -188,6 +188,7 @@ class ContextMaker():
             for gsim, rlzis in gsims.items():
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
+        self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls)
         self.shift_hypo = param.get('shift_hypo')
@@ -347,9 +348,9 @@ class PmapMaker():
         self.src = src
         self.s_sites = s_sites
         self.rup_indep = rup_indep
-        self.poe_mon = cmaker.ctx_mon('get_poes', measuremem=False)
-        self.pne_mon = cmaker.ctx_mon('composing pnes', measuremem=False)
-        self.gmf_mon = cmaker.ctx_mon('computing mean_std', measuremem=False)
+        self.poe_mon = cmaker.mon('get_poes', measuremem=False)
+        self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
+        self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
         self.mag_rups = (
             (mag, list(ruptures)) for mag, ruptures in itertools.groupby(
                 src.iter_ruptures(shift_hypo=self.shift_hypo),
