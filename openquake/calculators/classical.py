@@ -195,7 +195,9 @@ class ClassicalCalculator(base.HazardCalculator):
         for k in self.rparams:
             # variable length arrays
             vlen = k.endswith('_') or k == 'probs_occur'
-            if k == 'sid_':
+            if k == 'grp_id':
+                dt = U16
+            elif k == 'sid_':
                 dt = hdf5.vuint16
             elif vlen:
                 dt = hdf5.vfloat32
