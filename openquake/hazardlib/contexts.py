@@ -20,6 +20,8 @@ import sys
 import copy
 import time
 import warnings
+import operator
+import itertools
 import numpy
 
 from openquake.baselib.general import AccumDict, DictArray
@@ -328,6 +330,13 @@ class ContextMaker():
         return pmap, rdata, calc_times, maxdist
 
 
+def _collapse(rups):
+    # collapse a list of ruptures into a single rupture
+    rup = copy.copy(rups[0])
+    rup.occurrence_rate = sum(r.occurrence_rate for r in rups)
+    return [rup]
+
+
 class PmapMaker():
     """
     A class to compute the PoEs from a given source
@@ -341,6 +350,10 @@ class PmapMaker():
         self.poe_mon = cmaker.ctx_mon('get_poes', measuremem=False)
         self.pne_mon = cmaker.ctx_mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.ctx_mon('computing mean_std', measuremem=False)
+        self.mag_rups = (
+            (mag, list(ruptures)) for mag, ruptures in itertools.groupby(
+                src.iter_ruptures(shift_hypo=self.shift_hypo),
+                key=operator.attrgetter('mag')))
 
     def make(self):
         """
@@ -355,32 +368,33 @@ class PmapMaker():
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
         dists = []
-        for rup, sites, maxdist in self._gen_rup_sites():
+        for rups, sites, maxdist in self._gen_rups_sites():
             if maxdist is not None:
                 dists.append(maxdist)
-            try:
-                with self.ctx_mon:
-                    r_sites, dctx = self.cmaker.make_contexts(
-                        sites, rup, maxdist)
-            except FarAwayRupture:
-                continue
-            with self.gmf_mon:
-                mean_std = base.get_mean_std(  # shape (2, N, M, G)
-                    r_sites, rup, dctx, imts, self.gsims)
-            with self.poe_mon:
-                pairs = zip(r_sites.sids, self._make_pnes(rup, mean_std))
-            with self.pne_mon:
-                if self.rup_indep:
-                    for sid, pne in pairs:
-                        poemap.setdefault(sid, self.rup_indep).array *= pne
-                else:
-                    for sid, pne in pairs:
-                        poemap.setdefault(sid, self.rup_indep).array += (
-                            1.-pne) * rup.weight
-            nrups += 1
-            nsites += len(r_sites)
-            if fewsites:  # store rupdata
-                rupdata.add(rup, self.src.id, r_sites, dctx)
+            for rup in rups:
+                try:
+                    with self.ctx_mon:
+                        r_sites, dctx = self.cmaker.make_contexts(
+                            sites, rup, maxdist)
+                except FarAwayRupture:
+                    continue
+                with self.gmf_mon:
+                    mean_std = base.get_mean_std(  # shape (2, N, M, G)
+                        r_sites, rup, dctx, imts, self.gsims)
+                with self.poe_mon:
+                    pairs = zip(r_sites.sids, self._make_pnes(rup, mean_std))
+                with self.pne_mon:
+                    if self.rup_indep:
+                        for sid, pne in pairs:
+                            poemap.setdefault(sid, self.rup_indep).array *= pne
+                    else:
+                        for sid, pne in pairs:
+                            poemap.setdefault(sid, self.rup_indep).array += (
+                                1.-pne) * rup.weight
+                nrups += 1
+                nsites += len(r_sites)
+                if fewsites:  # store rupdata
+                    rupdata.add(rup, self.src.id, r_sites, dctx)
         poemap.nrups = nrups
         poemap.nsites = nsites
         poemap.maxdist = numpy.mean(dists) if dists else None
@@ -399,7 +413,7 @@ class PmapMaker():
                     poes[:, ll(imt), g] = 0
         return rupture.get_probability_no_exceedance(poes)
 
-    def _gen_rup_sites(self):
+    def _gen_rups_sites(self):
         src = self.src
         sites = self.s_sites
         loc = getattr(src, 'location', None)
@@ -415,17 +429,13 @@ class PmapMaker():
                 weights, depths = zip(*src.hypocenter_distribution.data)
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
                 loc.depth = numpy.average(depths, weights=weights)
-            for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+            for mag, rups in self.mag_rups:
                 mdist = self.maximum_distance(trt, mag)
                 radius = src._get_max_rupture_projection_radius(mag)
                 if self.max_radius is not None:
                     mdist = min(self.max_radius * radius, mdist)
                 if simple:
-                    # there is nothing to collapse
-                    for rup in src.gen_ruptures(mag, mag_occ_rate,
-                                                collapse=False,
-                                                shift_hypo=self.shift_hypo):
-                        yield rup, sites, mdist
+                    yield rups, sites, mdist
                 else:
                     # compute the collapse distance and use it
                     if self.pointsource_distance is None:
@@ -434,23 +444,15 @@ class PmapMaker():
                         cdist = min(self.pointsource_distance, mdist)
                     close_sites, far_sites = sites.split(loc, cdist)
                     if close_sites is None:  # all is far
-                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1,
-                                                    shift_hypo=self.shift_hypo):
-                            yield rup, far_sites, mdist
+                        yield _collapse(rups), far_sites, mdist
                     elif far_sites is None:  # all is close
-                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0,
-                                                    shift_hypo=self.shift_hypo):
-                            yield rup, close_sites, mdist
+                        yield rups, close_sites, mdist
                     else:  # some sites are far, some are close
-                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1,
-                                                    shift_hypo=self.shift_hypo):
-                            yield rup, far_sites, mdist
-                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0,
-                                                    shift_hypo=self.shift_hypo):
-                            yield rup, close_sites, mdist
+                        yield _collapse(rups), far_sites, mdist
+                        yield rups, close_sites, mdist
         else:  # no point source or site-specific analysis
-            for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                yield rup, sites, None
+            for mag, rups in self.mag_rups:
+                yield rups, sites, None
 
 
 class BaseContext(metaclass=abc.ABCMeta):
