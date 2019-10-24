@@ -68,9 +68,9 @@ def get_distances(rupture, sites, param):
     elif param == 'rjb':
         dist = rupture.surface.get_joyner_boore_distance(sites)
     elif param == 'rhypo':
-        dist = rupture.hypocenter.distance_to_sites(sites)
+        dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'repi':
-        dist = rupture.hypocenter.distance_to_sites(sites, with_depths=False)
+        dist = rupture.hypocenter.distance_to_mesh(sites, with_depths=False)
     elif param == 'rcdpp':
         dist = rupture.get_cdppvalue(sites)
     elif param == 'azimuth':
