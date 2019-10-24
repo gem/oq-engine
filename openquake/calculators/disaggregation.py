@@ -294,7 +294,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         # submit disagg tasks
         gid = self.datastore['rup/grp_id'][()]
         indices_by_grp = get_indices(gid)  # grp_id -> [(start, stop),...]
-        blocksize = len(gid) // (oq.concurrent_tasks or 1) + 1
         allargs = []
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
@@ -307,9 +306,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'maximum_distance': src_filter.integration_distance,
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
             for start, stop in indices_by_grp[grp_id]:
-                for slc in gen_slices(start, stop, blocksize):
-                    allargs.append((dstore, slc, self.sitecol, oq, cmaker,
-                                    self.iml2s, trti, self.bin_edges))
+                allargs.append((dstore, slice(start, stop), self.sitecol, oq,
+                                cmaker, self.iml2s, trti, self.bin_edges))
         results = parallel.Starmap(
             compute_disagg, allargs, h5=self.datastore.hdf5
         ).reduce(self.agg_result, AccumDict(accum={}))
