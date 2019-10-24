@@ -413,6 +413,7 @@ hazard_uhs-std.csv
         self.assertEqual(checksum, 3211843635)
 
     def test_case_24(self):  # UHS
+        # this is a case with rjb and an hypocenter distribution
         self.assert_curves_ok([
             'hazard_curve-PGA.csv', 'hazard_curve-PGV.csv',
             'hazard_curve-SA(0.025).csv', 'hazard_curve-SA(0.05).csv',
