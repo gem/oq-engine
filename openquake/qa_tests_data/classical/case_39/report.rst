@@ -2,9 +2,9 @@ Reduced USGS 1998 Hawaii model
 ==============================
 
 ============== ===================
-checksum32     4,283,469,194      
-date           2019-10-02T10:07:30
-engine_version 3.8.0-git6f03622c6e
+checksum32     1,744,669,526      
+date           2019-10-23T16:26:34
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 80, num_rlzs = 8
@@ -69,9 +69,9 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      1.00000   6,945        6,945       
-1      1.00000   104          104         
-2      1.00000   45           45          
+0      1.440E-04 6,945        6,945       
+1      0.00962   104          104         
+2      0.02222   45           45          
 ====== ========= ============ ============
 
 Slowest sources
@@ -79,45 +79,45 @@ Slowest sources
 ========== ====== ==== ============ ========= ========= ============
 source_id  grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========== ====== ==== ============ ========= ========= ============
-HLEKAOSFL  1      C    104          0.00477   0.00962   104         
-Deep_10014 2      P    45           0.00231   0.02222   45          
-HLE        0      A    6,945        0.00222   1.440E-04 6,945       
+HLEKAOSFL  1      C    104          0.00267   0.00962   104         
+Deep_10014 2      P    45           0.00143   0.02222   45          
+HLE        0      A    6,945        0.00119   1.440E-04 6,945       
 ========== ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.00222   1     
-C    0.00477   1     
-P    0.00231   1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.00119  
+C    0.00267  
+P    0.00143  
+==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-SourceReader       0.04767 0.05370 0.00281 0.10717 3      
-preclassical       0.00366 0.00143 0.00279 0.00531 3      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+SourceReader       0.05875 0.08093   0.00133 0.15131 3      
+preclassical       0.00204 7.864E-04 0.00148 0.00294 3      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=4.15 KB ltmodel=813 B fname=362 B 12.29 KB
-preclassical srcs=5.17 KB params=4.28 KB gsims=1.87 KB   1 KB    
+SourceReader apply_unc=4.15 KB ltmodel=813 B fname=362 B 12.19 KB
+preclassical srcs=5.15 KB params=4.11 KB gsims=1.87 KB   1 KB    
 ============ =========================================== ========
 
 Slowest operations
 ------------------
-====================== ========= ========= ======
-calc_29515             time_sec  memory_mb counts
-====================== ========= ========= ======
-total SourceReader     0.14302   0.43750   3     
-composite source model 0.12808   0.0       1     
-total preclassical     0.01097   0.0       3     
-store source_info      0.00221   0.0       1     
-aggregate curves       6.900E-04 0.0       3     
-====================== ========= ========= ======
+====================== ======== ========= ======
+calc_44528             time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.17991  0.0       1     
+total SourceReader     0.17625  0.0       3     
+aggregate curves       0.00963  0.0       3     
+total preclassical     0.00611  0.0       3     
+store source_info      0.00224  0.0       1     
+====================== ======== ========= ======

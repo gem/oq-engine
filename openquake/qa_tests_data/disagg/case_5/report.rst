@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     1,136,041,000      
-date           2019-10-02T10:07:12
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:26:00
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 19, num_rlzs = 1
@@ -68,8 +68,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      1.00000   7            7.00000     
-1      1.00000   8            8.00000     
+0      0.14286   7            7.00000     
+1      0.12500   8            8.00000     
 ====== ========= ============ ============
 
 Slowest sources
@@ -77,42 +77,42 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-buc06pt05 0      N    7            0.00159   0.14286   7.00000     
-buc16pt75 1      N    8            3.474E-04 0.12500   8.00000     
+buc06pt05 0      N    7            0.00146   0.14286   7.00000     
+buc16pt75 1      N    8            0.00121   0.12500   8.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-N    0.00193   2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+N    0.00266  
+==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-SourceReader       0.01691 0.00439 0.01380 0.02002 2      
-preclassical       0.00226 NaN     0.00226 0.00226 1      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+SourceReader       0.01095 0.00370   0.00833 0.01356 2      
+preclassical       0.00157 2.026E-04 0.00143 0.00172 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-============ =========================================== ========
-task         sent                                        received
-SourceReader apply_unc=2.27 KB ltmodel=420 B fname=206 B 35.85 KB
-preclassical srcs=11.14 KB params=647 B srcfilter=223 B  392 B   
-============ =========================================== ========
+============ ============================================ ========
+task         sent                                         received
+SourceReader apply_unc=2.27 KB ltmodel=420 B fname=206 B  35.78 KB
+preclassical srcs=11.78 KB params=1.35 KB srcfilter=446 B 684 B   
+============ ============================================ ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29432             time_sec  memory_mb counts
+calc_44441             time_sec  memory_mb counts
 ====================== ========= ========= ======
-total SourceReader     0.03382   0.24609   2     
-composite source model 0.03369   0.0       1     
-store source_info      0.00262   0.0       1     
-total preclassical     0.00226   0.0       1     
-aggregate curves       4.816E-04 0.0       1     
+composite source model 0.03948   0.0       1     
+total SourceReader     0.02190   0.0       2     
+total preclassical     0.00314   0.0       2     
+store source_info      0.00229   0.0       1     
+aggregate curves       4.871E-04 0.0       2     
 ====================== ========= ========= ======

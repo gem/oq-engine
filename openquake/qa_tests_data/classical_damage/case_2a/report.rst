@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     4,131,675,209      
-date           2019-10-02T10:07:14
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:26:04
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 29, num_rlzs = 1
@@ -69,7 +69,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      1.00000   482          482         
+0      0.00207   482          482         
 ====== ========= ============ ============
 
 Exposure model
@@ -89,42 +89,41 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-1         0      S    482          0.00555   0.00207   482         
+1         0      S    482          0.00280   0.00207   482         
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-S    0.00555   1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+S    0.00280  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00439 NaN    0.00439 0.00439 1      
-preclassical       0.00607 NaN    0.00607 0.00607 1      
+SourceReader       0.00512 NaN    0.00512 0.00512 1      
+preclassical       0.00306 NaN    0.00306 0.00306 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ========================================= ========
 task         sent                                      received
-SourceReader                                           2.92 KB 
-preclassical srcs=1.12 KB params=727 B srcfilter=223 B 342 B   
+preclassical srcs=1.12 KB params=769 B srcfilter=223 B 342 B   
 ============ ========================================= ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29448             time_sec  memory_mb counts
+calc_44458             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.01257   0.0       1     
-total preclassical     0.00607   0.0       1     
-total SourceReader     0.00439   0.0       1     
-store source_info      0.00228   0.0       1     
-reading exposure       3.707E-04 0.0       1     
-aggregate curves       2.329E-04 0.0       1     
+composite source model 0.01400   0.0       1     
+total SourceReader     0.00512   0.0       1     
+total preclassical     0.00306   0.0       1     
+store source_info      0.00212   0.0       1     
+reading exposure       4.375E-04 0.0       1     
+aggregate curves       2.215E-04 0.0       1     
 ====================== ========= ========= ======

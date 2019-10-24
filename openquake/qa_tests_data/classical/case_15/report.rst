@@ -2,9 +2,9 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
 ============== ===================
-checksum32     905,885,649        
-date           2019-10-02T10:07:36
-engine_version 3.8.0-git6f03622c6e
+checksum32     3,271,861,857      
+date           2019-10-23T16:26:43
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 3, num_levels = 17, num_rlzs = 8
@@ -72,10 +72,10 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      3.00000   15           15          
-1      3.00000   15           15          
-2      3.00000   240          240         
-3      3.00000   240          240         
+0      0.20000   15           15          
+1      0.20000   15           15          
+2      0.01250   240          240         
+3      0.01250   240          240         
 ====== ========= ============ ============
 
 Slowest sources
@@ -83,45 +83,45 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-1         0      P    15           0.00239   0.20000   15          
-1         3      A    240          0.00235   0.01250   240         
-1         2      A    240          0.00139   0.01250   240         
-2         1      P    15           0.00137   0.20000   15          
+2         1      P    15           0.00142   0.20000   15          
+1         3      A    240          0.00133   0.01250   240         
+1         0      P    15           0.00128   0.20000   15          
+1         2      A    240          0.00121   0.01250   240         
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.00374   2     
-P    0.00376   2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.00254  
+P    0.00271  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.00824 0.00550   0.00334 0.01418 3      
-preclassical       0.00229 7.055E-04 0.00166 0.00292 4      
+SourceReader       0.00472 0.00273   0.00157 0.00637 3      
+preclassical       0.00157 9.454E-05 0.00147 0.00169 4      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ ========================================== ========
 task         sent                                       received
-SourceReader apply_unc=4.4 KB ltmodel=590 B fname=318 B 11.25 KB
-preclassical srcs=6.12 KB params=2.74 KB gsims=1.09 KB  1.34 KB 
+SourceReader apply_unc=4.4 KB ltmodel=590 B fname=318 B 11.14 KB
+preclassical srcs=6.1 KB params=2.9 KB gsims=1.09 KB    1.34 KB 
 ============ ========================================== ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_29531             time_sec memory_mb counts
-====================== ======== ========= ======
-composite source model 0.03230  0.0       1     
-total SourceReader     0.02473  0.0       3     
-total preclassical     0.00918  0.0       4     
-store source_info      0.00239  0.0       1     
-aggregate curves       0.00141  0.0       4     
-====================== ======== ========= ======
+====================== ========= ========= ======
+calc_44545             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.02861   0.0       1     
+total SourceReader     0.01415   0.0       3     
+total preclassical     0.00629   0.0       4     
+store source_info      0.00225   0.0       1     
+aggregate curves       9.215E-04 0.0       4     
+====================== ========= ========= ======

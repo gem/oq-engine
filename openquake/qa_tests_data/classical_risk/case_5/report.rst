@@ -2,9 +2,9 @@ Hazard Calculation for end-to-end hazard+risk
 =============================================
 
 ============== ===================
-checksum32     2,783,587,006      
-date           2019-10-02T10:06:58
-engine_version 3.8.0-git6f03622c6e
+checksum32     1,526,146,286      
+date           2019-10-23T16:25:36
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 50, num_rlzs = 4
@@ -68,8 +68,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      1.00000   23           23          
-1      1.00000   23           23          
+0      0.04348   23           23          
+1      0.04348   23           23          
 ====== ========= ============ ============
 
 Slowest sources
@@ -77,42 +77,41 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-B         1      P    23           0.00182   0.04348   23          
-A         0      P    23           0.00173   0.04348   23          
+B         1      P    23           0.00189   0.04348   23          
+A         0      P    23           0.00186   0.04348   23          
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-P    0.00356   2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+P    0.00375  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.00275 NaN       0.00275 0.00275 1      
-preclassical       0.00218 5.108E-05 0.00215 0.00222 2      
+SourceReader       0.00282 NaN       0.00282 0.00282 1      
+preclassical       0.00227 1.989E-05 0.00226 0.00229 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ ======================================= ========
 task         sent                                    received
-SourceReader                                         3.94 KB 
-preclassical srcs=2.31 KB params=1.77 KB gsims=658 B 684 B   
+preclassical srcs=2.28 KB params=1.85 KB gsims=658 B 684 B   
 ============ ======================================= ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29397             time_sec  memory_mb counts
+calc_44406             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.06923   2.10547   1     
-total preclassical     0.00437   1.31250   2     
-total SourceReader     0.00275   0.04297   1     
-store source_info      0.00200   0.0       1     
-aggregate curves       7.346E-04 0.0       2     
+composite source model 0.12676   0.92578   1     
+total preclassical     0.00455   1.26953   2     
+total SourceReader     0.00282   0.05078   1     
+store source_info      0.00223   0.0       1     
+aggregate curves       4.563E-04 0.0       2     
 ====================== ========= ========= ======
