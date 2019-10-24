@@ -179,7 +179,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
-        rparams = {'grp_id', 'srcidx', 'occurrence_rate',
+        rparams = {'grp_id', 'srcidx', 'occurrence_rate', 'rrup_',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_'}
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         for sm in self.csm_info.source_models:
@@ -192,6 +192,20 @@ class ClassicalCalculator(base.HazardCalculator):
                 zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
+        for k in self.rparams:
+            # variable length arrays
+            vlen = k.endswith('_') or k == 'probs_occur'
+            if k == 'sid_':
+                dt = hdf5.vuint16
+            elif vlen:
+                dt = hdf5.vfloat32
+            else:
+                dt = F32
+            self.datastore.create_dset('rup/' + k, dt, shape=(None,))
+        rparams = [p for p in self.rparams if not p.endswith('_')]
+        dparams = [p[:-1] for p in self.rparams if p.endswith('_')]
+        logging.info('Scalar parameters %s', rparams)
+        logging.info('Vector parameters %s', dparams)
         self.sources_by_task = {}  # task_no => src_ids
         return zd
 
@@ -211,16 +225,6 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(self.core_task.__func__)
         smap.task_queue = list(self.gen_task_queue())  # really fast
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
-        for k in self.rparams:
-            # variable length arrays
-            vlen = k.endswith('_') or k == 'probs_occur'
-            if k == 'sid_':
-                dt = hdf5.vuint16
-            elif vlen:
-                dt = hdf5.vfloat32
-            else:
-                dt = F32
-            self.datastore.create_dset('rup/' + k, dt, shape=(None,))
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
