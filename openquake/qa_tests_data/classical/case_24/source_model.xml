@@ -19,7 +19,7 @@
                     </gml:exterior>
                 </gml:Polygon>
                 <upperSeismoDepth>0.0</upperSeismoDepth>
-                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
             </areaGeometry>
             <magScaleRel>WC1994</magScaleRel>
             <ruptAspectRatio>1.0</ruptAspectRatio>
@@ -29,8 +29,8 @@
             </nodalPlaneDist>
             <hypoDepthDist>
                 <hypoDepth probability=".5" depth="5.0" />
-                <hypoDepth probability=".3" depth="10.0" />
-                <hypoDepth probability=".2" depth="15.0" />
+                <hypoDepth probability=".3" depth="6.0" />
+                <hypoDepth probability=".2" depth="8.0" />
             </hypoDepthDist>
         </areaSource>
 
