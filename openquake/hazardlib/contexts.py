@@ -359,11 +359,10 @@ class PmapMaker():
                     src.iter_ruptures(shift_hypo=self.shift_hypo),
                     key=operator.attrgetter('mag'))]
 
-    def _sids_pnes(self, rup, mdist):
+    def _sids_pnes(self, sites, rup, mdist):
         # return sids and pnes of shape (N, L, G)
         with self.ctx_mon:
-            r_sites, dctx = self.cmaker.make_contexts(
-                self.s_sites, rup, mdist)
+            r_sites, dctx = self.cmaker.make_contexts(sites, rup, mdist)
         if self.fewsites:  # store rupdata
             self.rupdata.add(rup, self.src.id, r_sites, dctx)
         with self.gmf_mon:
@@ -399,7 +398,7 @@ class PmapMaker():
                 dists.append(mdist)
             for rup in rups:
                 try:
-                    sids, pnes = self._sids_pnes(rup, mdist)
+                    sids, pnes = self._sids_pnes(sites, rup, mdist)
                 except FarAwayRupture:
                     continue
                 with self.pne_mon:
