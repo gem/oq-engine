@@ -90,7 +90,8 @@ def _iml2s(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return lst
 
 
-def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
+def compute_disagg(dstore, slc, sitecol, oq, cmaker, iml2s, trti, bin_edges,
+                   monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -98,6 +99,10 @@ def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
         a :class:`openquake.baselib.datastore.DataStore` instance
     :param slc:
         a slice of ruptures
+    :param sitecol:
+        a SiteCollection instance with the disaggregation sites
+    :param oq:
+        a :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param iml2s:
@@ -112,8 +117,6 @@ def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
         a dictionary sid -> 7D-array
     """
     dstore.open('r')
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
     rupdata = {k: dstore['rup/' + k][slc] for k in dstore['rup']}
     result = {'trti': trti}
     # all the time is spent in collect_bin_data
@@ -305,7 +308,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
             for start, stop in indices_by_grp[grp_id]:
                 for slc in gen_slices(start, stop, blocksize):
-                    allargs.append((dstore, slc, cmaker,
+                    allargs.append((dstore, slc, self.sitecol, oq, cmaker,
                                     self.iml2s, trti, self.bin_edges))
         results = parallel.Starmap(
             compute_disagg, allargs, h5=self.datastore.hdf5
