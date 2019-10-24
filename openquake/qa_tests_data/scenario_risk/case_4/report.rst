@@ -3,8 +3,8 @@ Scenario Risk for Nepal with 20 assets
 
 ============== ===================
 checksum32     486,158,159        
-date           2019-10-02T10:07:11
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:25:57
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 20, num_levels = 8, num_rlzs = 1
@@ -85,11 +85,11 @@ task sent received
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29418             time_sec  memory_mb counts
+calc_44427             time_sec  memory_mb counts
 ====================== ========= ========= ======
-ScenarioCalculator.run 0.05499   1.25391   1     
-building riskinputs    0.03111   0.0       1     
-saving gmfs            0.00880   0.22266   1     
-computing gmfs         0.00140   0.0       1     
-reading exposure       7.656E-04 0.0       1     
+ScenarioCalculator.run 0.07110   0.25000   1     
+building riskinputs    0.03516   0.0       1     
+saving gmfs            0.00987   0.25000   1     
+computing gmfs         0.00168   0.0       1     
+reading exposure       8.061E-04 0.0       1     
 ====================== ========= ========= ======

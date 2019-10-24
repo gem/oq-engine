@@ -1,32 +1,32 @@
-QA test for blocksize independence (hazard)
-===========================================
+Example EB Hazard. Infer region from exposure model
+===================================================
 
 ============== ===================
-checksum32     62,194,572         
-date           2019-10-23T16:26:08
+checksum32     1,469,780,630      
+date           2019-10-23T16:26:17
 engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
-num_sites = 2, num_levels = 4, num_rlzs = ?
+num_sites = 93, num_levels = 0, num_rlzs = ?
 
 Parameters
 ----------
 =============================== ==================
 calculation_mode                'event_based'     
-number_of_logic_tree_samples    1                 
-maximum_distance                {'default': 400.0}
-investigation_time              5.0               
-ses_per_logic_tree_path         1                 
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              1.0               
+ses_per_logic_tree_path         5                 
 truncation_level                3.0               
-rupture_mesh_spacing            20.0              
-complex_fault_mesh_spacing      20.0              
+rupture_mesh_spacing            5.0               
+complex_fault_mesh_spacing      5.0               
 width_of_mfd_bin                0.5               
-area_source_discretization      20.0              
+area_source_discretization      10.0              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
-ses_seed                        1024              
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -34,8 +34,10 @@ Input files
 ======================= ============================================================
 Name                    File                                                        
 ======================= ============================================================
+exposure                `exposure_model.xml <exposure_model.xml>`_                  
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
+site_model              `site_model.csv <site_model.csv>`_                          
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -44,8 +46,25 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      NaN       5,572        0.0         
+0      NaN       23,314       0.0         
 ====== ========= ============ ============
+
+Exposure model
+--------------
+=========== ==
+#assets     96
+#taxonomies 5 
+=========== ==
+
+========================== ======= ======= === === ========= ==========
+taxonomy                   mean    stddev  min max num_sites num_assets
+Wood                       1.00000 0.0     1   1   23        23        
+Adobe                      1.00000 0.0     1   1   29        29        
+Stone-Masonry              1.00000 0.0     1   1   16        16        
+Unreinforced-Brick-Masonry 1.00000 0.0     1   1   27        27        
+Concrete                   1.00000 NaN     1   1   1         1         
+*ALL*                      0.03601 0.19229 0   2   2,666     96        
+========================== ======= ======= === === ========= ==========
 
 Slowest sources
 ---------------
@@ -66,7 +85,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.60876 NaN    0.60876 0.60876 1      
+SourceReader       1.33519 NaN    1.33519 1.33519 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -78,8 +97,9 @@ task sent received
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44475             time_sec memory_mb counts
+calc_44500             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.62622  0.0       1     
-total SourceReader     0.60876  0.0       1     
+composite source model 1.34992  0.0       1     
+total SourceReader     1.33519  0.0       1     
+reading exposure       0.01463  0.0       1     
 ====================== ======== ========= ======
