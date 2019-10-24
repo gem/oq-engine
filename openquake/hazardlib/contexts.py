@@ -165,7 +165,7 @@ class ContextMaker():
         self.collapse_factor = param.get('collapse_factor', 3)
         self.max_radius = param.get('max_radius')
         self.pointsource_distance = param.get('pointsource_distance')
-        self.filter_distance = param.get('filter_distance', 'rrup')
+        self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
         self.reqv = param.get('reqv')
