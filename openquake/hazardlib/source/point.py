@@ -164,18 +164,35 @@ class PointSource(ParametricSeismicSource):
         and hypocenter depth.
         """
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            for np_prob, np in self.nodal_plane_distribution.data:
-                for hc_prob, hc_depth in self.hypocenter_distribution.data:
-                    hc = Point(latitude=self.location.latitude,
-                               longitude=self.location.longitude,
-                               depth=hc_depth)
-                    occurrence_rate = mag_occ_rate * np_prob * hc_prob
-                    surface, nhc = self._get_rupture_surface(mag, np, hc)
-                    yield ParametricProbabilisticRupture(
-                        mag, np.rake, self.tectonic_region_type,
-                        nhc if kwargs.get('shift_hypo') else hc,
-                        surface, occurrence_rate,
-                        self.temporal_occurrence_model)
+            yield from self.get_ruptures(mag, mag_occ_rate, **kwargs)
+
+    def get_ruptures(self, mag, mag_occ_rate, **kwargs):
+        """
+        Generate one rupture for each combination of nodal plane
+        and hypocenter depth.
+        """
+        if kwargs.get('collapse'):
+            npd = [self.nodal_plane_distribution.data[0]]
+            hcd = [self.hypocenter_distribution.data[0]]
+        else:
+            npd = self.nodal_plane_distribution.data
+            hcd = self.hypocenter_distribution.data
+        rups = []
+        for np_prob, np in npd:
+            for hc_prob, hc_depth in hcd:
+                hc = Point(latitude=self.location.latitude,
+                           longitude=self.location.longitude,
+                           depth=hc_depth)
+                occurrence_rate = mag_occ_rate
+                if not kwargs.get('collapse'):
+                    occurrence_rate *= np_prob * hc_prob
+                surface, nhc = self._get_rupture_surface(mag, np, hc)
+                rup = ParametricProbabilisticRupture(
+                    mag, np.rake, self.tectonic_region_type,
+                    nhc if kwargs.get('shift_hypo') else hc,
+                    surface, occurrence_rate, self.temporal_occurrence_model)
+                rups.append(rup)
+        return rups
 
     def count_nphc(self):
         """
