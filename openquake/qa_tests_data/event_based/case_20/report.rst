@@ -3,8 +3,8 @@ British Columbia With Vs30
 
 ============== ===================
 checksum32     226,163,923        
-date           2019-10-02T10:07:19
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:26:13
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -46,11 +46,11 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       8,778        0.0         
-1      0.0       15,618       0.0         
-2      0.0       8,778        0.0         
-3      0.0       8,778        0.0         
-4      0.0       15,618       0.0         
+0      NaN       8,778        0.0         
+1      NaN       15,618       0.0         
+2      NaN       8,778        0.0         
+3      NaN       8,778        0.0         
+4      NaN       15,618       0.0         
 ====== ========= ============ ============
 
 Exposure model
@@ -76,11 +76,11 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.0       5     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.0      
+==== =========
 
 Duplicated sources
 ------------------
@@ -90,22 +90,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.05781 0.01443 0.04257 0.07552 5      
+SourceReader       0.09775 0.04013 0.06138 0.15518 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=8.64 KB ltmodel=985 B fname=570 B 23.67 KB
+SourceReader apply_unc=8.64 KB ltmodel=985 B fname=570 B 23.52 KB
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_29479             time_sec memory_mb counts
+calc_44489             time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.28904  0.0       5     
-composite source model 0.09604  0.0       1     
-reading exposure       0.00187  0.0       1     
+total SourceReader     0.48875  0.0       5     
+composite source model 0.17017  0.0       1     
+reading exposure       0.00173  0.0       1     
 ====================== ======== ========= ======

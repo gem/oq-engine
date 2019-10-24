@@ -2,9 +2,9 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============== ===================
-checksum32     4,129,458,072      
-date           2019-10-02T10:07:23
-engine_version 3.8.0-git6f03622c6e
+checksum32     232,881,259        
+date           2019-10-23T16:26:23
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 281, num_levels = 50, num_rlzs = 1
@@ -71,8 +71,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      281       2,348        2.00000     
-1      281       3,345        2.00000     
+0      140       2,348        2.00000     
+1      140       3,345        2.00000     
 ====== ========= ============ ============
 
 Exposure model
@@ -103,45 +103,44 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-D         1      C    3,345        3.93102   140       2.00000     
-F         0      C    2,348        2.57370   140       2.00000     
+D         1      C    3,345        4.93697   140       2.00000     
+F         0      C    2,348        3.95452   140       2.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-C    6.50472   2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+C    8.89150  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.20213 NaN     0.20213 0.20213 1      
-sample_ruptures    3.27122 0.97213 2.58382 3.95862 2      
+SourceReader       0.21521 NaN     0.21521 0.21521 1      
+sample_ruptures    4.46311 0.70850 3.96213 4.96409 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-=============== ============================================ ========
-task            sent                                         received
-SourceReader                                                 4.52 KB 
-sample_ruptures param=9.4 KB sources=2.39 KB srcfilter=446 B 45.82 KB
-=============== ============================================ ========
+=============== ============================================= ========
+task            sent                                          received
+sample_ruptures param=9.39 KB sources=2.39 KB srcfilter=446 B 45.82 KB
+=============== ============================================= ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_29498               time_sec memory_mb counts
+calc_44510               time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    6.54245  3.76562   2     
-EventBasedCalculator.run 4.62999  1.86328   1     
-composite source model   0.21190  0.14453   1     
-total SourceReader       0.20213  0.14453   1     
-reading exposure         0.05207  0.0       1     
-saving events            0.02632  0.18359   1     
-saving ruptures          0.00748  0.0       2     
-store source_info        0.00250  0.0       1     
+total sample_ruptures    8.92622  2.28516   2     
+EventBasedCalculator.run 5.71425  0.0       1     
+composite source model   0.22679  0.0       1     
+total SourceReader       0.21521  0.0       1     
+reading exposure         0.05190  0.0       1     
+saving events            0.04967  0.0       1     
+saving ruptures          0.00422  0.0       2     
+store source_info        0.00232  0.0       1     
 ======================== ======== ========= ======

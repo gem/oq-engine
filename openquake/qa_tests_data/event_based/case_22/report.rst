@@ -3,8 +3,8 @@ Test case for the SplitSigma modified GMPE
 
 ============== ===================
 checksum32     4,125,479,680      
-date           2019-10-02T10:07:16
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:26:08
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 36, num_levels = 40, num_rlzs = ?
@@ -44,7 +44,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       416          0.0         
+0      NaN       416          0.0         
 ====== ========= ============ ============
 
 Slowest sources
@@ -56,31 +56,30 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.01227 NaN    0.01227 0.01227 1      
+SourceReader       0.02981 NaN    0.02981 0.02981 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============ ==== ========
-task         sent received
-SourceReader      3.53 KB 
-============ ==== ========
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_29464             time_sec memory_mb counts
+calc_44474             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.02054  0.0       1     
-total SourceReader     0.01227  0.0       1     
+composite source model 0.05054  0.0       1     
+total SourceReader     0.02981  0.0       1     
 ====================== ======== ========= ======

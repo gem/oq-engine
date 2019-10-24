@@ -2,9 +2,9 @@ event based two source models
 =============================
 
 ============== ===================
-checksum32     1,852,256,743      
-date           2019-10-02T10:07:09
-engine_version 3.8.0-git6f03622c6e
+checksum32     1,291,658,938      
+date           2019-10-23T16:25:52
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 11, num_rlzs = ?
@@ -46,10 +46,10 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       482          0.0         
-1      0.0       4            0.0         
-2      0.0       482          0.0         
-3      0.0       1            0.0         
+0      NaN       482          0.0         
+1      NaN       4            0.0         
+2      NaN       482          0.0         
+3      NaN       1            0.0         
 ====== ========= ============ ============
 
 Exposure model
@@ -73,12 +73,12 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-S    0.0       3     
-X    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+S    0.0      
+X    0.0      
+==== =========
 
 Duplicated sources
 ------------------
@@ -88,22 +88,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.01893 0.00393 0.01615 0.02171 2      
+SourceReader       0.01242 0.00602 0.00816 0.01668 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ ========================================== ========
 task         sent                                       received
-SourceReader apply_unc=2.4 KB ltmodel=378 B fname=212 B 20.3 KB 
+SourceReader apply_unc=2.4 KB ltmodel=378 B fname=212 B 20.24 KB
 ============ ========================================== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29402             time_sec  memory_mb counts
+calc_44411             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.03788   0.48438   1     
-total SourceReader     0.03786   0.28125   2     
-reading exposure       6.256E-04 0.0       1     
+composite source model 0.02833   0.0       1     
+total SourceReader     0.02484   0.43359   2     
+reading exposure       5.648E-04 0.0       1     
 ====================== ========= ========= ======

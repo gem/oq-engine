@@ -3,8 +3,8 @@ Event Based Bogota
 
 ============== ===================
 checksum32     4,020,014,859      
-date           2019-10-02T10:07:17
-engine_version 3.8.0-git6f03622c6e
+date           2019-10-23T16:26:10
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 5, num_levels = 104, num_rlzs = ?
@@ -47,8 +47,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.0       5,370        0.0         
-1      0.0       7,860        0.0         
+0      NaN       5,370        0.0         
+1      NaN       7,860        0.0         
 ====== ========= ============ ============
 
 Exposure model
@@ -76,33 +76,33 @@ source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-C    0.0       1     
-P    0.0       122   
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+C    0.0      
+P    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.29128 0.29436 0.08313 0.49943 2      
+SourceReader       0.39023 0.37015 0.12850 0.65197 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== =========
 task         sent                                        received 
-SourceReader apply_unc=5.08 KB ltmodel=454 B fname=235 B 206.99 KB
+SourceReader apply_unc=5.08 KB ltmodel=454 B fname=235 B 205.63 KB
 ============ =========================================== =========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_29469             time_sec  memory_mb counts
+calc_44479             time_sec  memory_mb counts
 ====================== ========= ========= ======
-total SourceReader     0.58256   1.41406   2     
-composite source model 0.53819   1.51172   1     
-reading exposure       6.251E-04 0.0       1     
+total SourceReader     0.78047   1.33594   2     
+composite source model 0.69368   0.0       1     
+reading exposure       5.169E-04 0.0       1     
 ====================== ========= ========= ======
