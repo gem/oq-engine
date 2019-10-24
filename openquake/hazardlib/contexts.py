@@ -375,15 +375,19 @@ class ContextMaker():
                         cdist = min(self.pointsource_distance, mdist)
                     close_sites, far_sites = sites.split(loc, cdist)
                     if close_sites is None:  # all is far
-                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1,
+                                                    shift_hypo=self.shift_hypo):
                             yield rup, far_sites, mdist
                     elif far_sites is None:  # all is close
-                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0,
+                                                    shift_hypo=self.shift_hypo):
                             yield rup, close_sites, mdist
                     else:  # some sites are far, some are close
-                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 1,
+                                                    shift_hypo=self.shift_hypo):
                             yield rup, far_sites, mdist
-                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                        for rup in src.gen_ruptures(mag, mag_occ_rate, 0,
+                                                    shift_hypo=self.shift_hypo):
                             yield rup, close_sites, mdist
         else:  # no point source or site-specific analysis
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
