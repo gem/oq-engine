@@ -351,8 +351,9 @@ class PmapMaker():
                     src.iter_ruptures(shift_hypo=self.shift_hypo),
                     key=operator.attrgetter('mag'))]
 
-    def _sids_pnes(self, sites, rup, mdist):
-        # return sids and pnes of shape (N, L, G)
+    def _sids_poes(self, sites, rup, mdist):
+        # return sids and poes of shape (N, L, G)
+        # NB: this must be fast since it is inside an inner loop
         with self.ctx_mon:
             r_sites, dctx = self.cmaker.make_contexts(sites, rup, mdist)
         if self.fewsites:  # store rupdata
@@ -361,19 +362,15 @@ class PmapMaker():
             mean_std = base.get_mean_std(  # shape (2, N, M, G)
                 r_sites, rup, dctx, self.imts, self.gsims)
         with self.poe_mon:
-            return r_sites.sids, self._make_pnes(rup, mean_std)
-
-    # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, mean_std):
-        ll = self.loglevels
-        poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
-        for g, gsim in enumerate(self.gsims):
-            for m, imt in enumerate(ll):
-                if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
-                    # set by the engine when parsing the gsim logictree;
-                    # when 0 ignore the gsim: see _build_trts_branches
-                    poes[:, ll(imt), g] = 0
-        return rupture.get_probability_no_exceedance(poes)
+            ll = self.loglevels
+            poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
+            for g, gsim in enumerate(self.gsims):
+                for m, imt in enumerate(ll):
+                    if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
+                        # set by the engine when parsing the gsim logictree;
+                        # when 0 ignore the gsim: see _build_trts_branches
+                        poes[:, ll(imt), g] = 0
+            return r_sites.sids, poes
 
     def make(self):
         """
@@ -390,10 +387,11 @@ class PmapMaker():
                 dists.append(mdist)
             for rup in rups:
                 try:
-                    sids, pnes = self._sids_pnes(sites, rup, mdist)
+                    sids, poes = self._sids_poes(sites, rup, mdist)
                 except FarAwayRupture:
                     continue
                 with self.pne_mon:
+                    pnes = rup.get_probability_no_exceedance(poes)
                     if self.rup_indep:
                         for sid, pne in zip(sids, pnes):
                             poemap.setdefault(sid, self.rup_indep).array *= pne
