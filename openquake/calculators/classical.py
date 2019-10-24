@@ -201,7 +201,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 dt = hdf5.vfloat32
             else:
                 dt = F32
-            self.datastore.create_dset('rup/' + k, dt, shape=(None,))
+            self.datastore.create_dset('rup/' + k, dt)
         rparams = [p for p in self.rparams if not p.endswith('_')]
         dparams = [p[:-1] for p in self.rparams if p.endswith('_')]
         logging.info('Scalar parameters %s', rparams)
