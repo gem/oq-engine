@@ -369,14 +369,14 @@ class PmapMaker():
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
         dists = []
-        for rups, sites, maxdist in self._gen_rups_sites():
-            if maxdist is not None:
-                dists.append(maxdist)
+        for rups, sites, mdist in self._gen_rups_sites():
+            if mdist is not None:
+                dists.append(mdist)
             for rup in rups:
                 try:
                     with self.ctx_mon:
                         r_sites, dctx = self.cmaker.make_contexts(
-                            sites, rup, maxdist)
+                            sites, rup, mdist)
                 except FarAwayRupture:
                     continue
                 with self.gmf_mon:
