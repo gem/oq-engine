@@ -424,10 +424,10 @@ class PmapMaker():
                 radius = src._get_max_rupture_projection_radius(mag)
                 if self.max_radius is not None:
                     mdist = min(self.max_radius * radius, mdist)
-                rups = self.src.get_ruptures(
-                    mag, mag_rate, shift_hypo=self.shift_hypo)
-                if simple:
-                    yield rups, sites, mdist
+                coll_rups = self.src.get_ruptures(
+                    mag, mag_rate, collapse=True, shift_hypo=self.shift_hypo)
+                if simple:  # rups and coll_rups are the same rupture
+                    yield coll_rups, sites, mdist
                 else:
                     # compute the collapse distance and use it
                     if self.pointsource_distance is None:
@@ -435,9 +435,8 @@ class PmapMaker():
                     else:  # legacy approach
                         cdist = min(self.pointsource_distance, mdist)
                     close_sites, far_sites = sites.split(loc, cdist)
-                    coll_rups = self.src.get_ruptures(  # collapsed rupture
-                        mag, mag_rate, collapse=True,
-                        shift_hypo=self.shift_hypo)
+                    rups = self.src.get_ruptures(  # all ruptures
+                        mag, mag_rate, shift_hypo=self.shift_hypo)
                     if close_sites is None:  # all is far
                         yield coll_rups, far_sites, mdist
                     elif far_sites is None:  # all is close
