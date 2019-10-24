@@ -169,13 +169,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     if vlen:
                         self.datastore.hdf5.save_vlen('rup/' + k, v)
                     else:
-                        # NB: creating dataset on the fly is ugly
-                        try:
-                            dset = self.datastore['rup/' + k]
-                        except KeyError:
-                            dset = self.datastore.create_dset(
-                                'rup/' + k, v.dtype,
-                                shape=(None,) + v.shape[1:])
+                        dset = self.datastore['rup/' + k]
                         hdf5.extend(dset, v)
         return acc
 
@@ -198,6 +192,20 @@ class ClassicalCalculator(base.HazardCalculator):
                 zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
+        for k in self.rparams:
+            # variable length arrays
+            vlen = k.endswith('_') or k == 'probs_occur'
+            if k == 'sid_':
+                dt = hdf5.vuint16
+            elif vlen:
+                dt = hdf5.vfloat32
+            else:
+                dt = F32
+            self.datastore.create_dset('rup/' + k, dt, shape=(None,))
+        rparams = [p for p in self.rparams if not p.endswith('_')]
+        dparams = [p[:-1] for p in self.rparams if p.endswith('_')]
+        logging.info('Scalar parameters %s', rparams)
+        logging.info('Vector parameters %s', dparams)
         self.sources_by_task = {}  # task_no => src_ids
         return zd
 
@@ -216,12 +224,13 @@ class ClassicalCalculator(base.HazardCalculator):
 
         smap = parallel.Starmap(self.core_task.__func__)
         smap.task_queue = list(self.gen_task_queue())  # really fast
+        acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         self.maxdists = []
         try:
-            acc = smap.get_results().reduce(self.agg_dicts, self.acc0())
+            acc = smap.get_results().reduce(self.agg_dicts, acc0)
             self.store_rlz_info(acc.eff_ruptures)
         finally:
             if self.maxdists:
