@@ -346,6 +346,11 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             del data  # save memory
 
         poll_queue(job_id, _PID, poll_time=15)
+    except BaseException:
+        # the job aborted even before starting
+        logs.dbcmd('finish', job_id, 'aborted')
+        return
+    try:
         if OQ_DISTRIBUTE.endswith('pool'):
             logs.LOG.warning('Using %d cores on %s',
                              parallel.Starmap.num_cores, platform.node())
