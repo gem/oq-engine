@@ -273,10 +273,22 @@ class ContextMaker():
             if 'rjb' in self.REQUIRES_DISTANCES:
                 dctx.rjb = reqv
             if 'rrup' in self.REQUIRES_DISTANCES:
-                reqv_rup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
-                dctx.rrup = reqv_rup
+                dctx.rrup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
         self.add_rup_params(rupture)
         return sites, dctx
+
+    def make_ctxs(self, ruptures, sites, radius_dist=None):
+        """
+        :returns: a list of triples (rctx, sctx, dctx)
+        """
+        ctxs = []
+        for rup in ruptures:
+            try:
+                sctx, dctx = self.make_contexts(sites, rup, radius_dist)
+            except FarAwayRupture:
+                continue
+            ctxs.append((rup, sctx, dctx))
+        return ctxs
 
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
         """
@@ -351,11 +363,9 @@ class PmapMaker():
                     src.iter_ruptures(shift_hypo=self.shift_hypo),
                     key=operator.attrgetter('mag'))]
 
-    def _sids_poes(self, sites, rup, mdist):
+    def _sids_poes(self, rup, r_sites, dctx):
         # return sids and poes of shape (N, L, G)
         # NB: this must be fast since it is inside an inner loop
-        with self.ctx_mon:
-            r_sites, dctx = self.cmaker.make_contexts(sites, rup, mdist)
         if self.fewsites:  # store rupdata
             self.rupdata.add(rup, self.src.id, r_sites, dctx)
         with self.gmf_mon:
@@ -385,11 +395,10 @@ class PmapMaker():
         for rups, sites, mdist in self._gen_rups_sites():
             if mdist is not None:
                 dists.append(mdist)
-            for rup in rups:
-                try:
-                    sids, poes = self._sids_poes(sites, rup, mdist)
-                except FarAwayRupture:
-                    continue
+            with self.ctx_mon:
+                ctxs = self.cmaker.make_ctxs(rups, sites, mdist)
+            for rup, r_sites, dctx in ctxs:
+                sids, poes = self._sids_poes(rup, r_sites, dctx)
                 with self.pne_mon:
                     pnes = rup.get_probability_no_exceedance(poes)
                     if self.rup_indep:
