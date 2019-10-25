@@ -296,9 +296,10 @@ class ContextMaker():
         """
         acc = AccumDict(accum=[])
         for rup, sctx, dctx in ctxs:
-            tup = [rup.rake]
+            tup = [getattr(rup, p) for p in self.REQUIRES_RUPTURE_PARAMETERS]
             for name in self.REQUIRES_DISTANCES:
-                tup.extend(numpy.round(getattr(dctx, name), decimals))
+                round_dists = numpy.round(getattr(dctx, name), decimals)
+                tup.extend(round_dists)
             acc[tuple(tup)].append((rup, sctx, dctx))
         new_ctxs = []
         for vals in acc.values():
