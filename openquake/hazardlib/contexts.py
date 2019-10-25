@@ -132,7 +132,7 @@ class RupData(object):
             self.data[rup_param].append(getattr(rup, rup_param))
 
         self.data['sid_'].append(numpy.int16(sctx.sids))
-        for dst_param in self.cmaker.REQUIRES_DISTANCES:
+        for dst_param in (self.cmaker.REQUIRES_DISTANCES | {'rrup'}):
             if dctx is None:  # compute the distances
                 dists = get_distances(rup, sctx, dst_param)
             else:  # reuse already computed distances
@@ -169,7 +169,6 @@ class ContextMaker():
         self.imtls = param.get('imtls', {})
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
         self.reqv = param.get('reqv')
-        self.REQUIRES_DISTANCES.add(self.filter_distance)
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
         if hasattr(gsims, 'items'):
