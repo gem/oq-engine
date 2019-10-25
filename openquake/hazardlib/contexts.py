@@ -294,18 +294,12 @@ class ContextMaker():
         Collapse the contexts if their distances are equivalent up to 1
         decimal (i.e. 100 m)
         """
-        names = set()
-        for gsim in self.gsims:
-            names.update(gsim.REQUIRES_DISTANCES)
-        names = sorted(names)
         acc = AccumDict(accum=[])
         for rup, sctx, dctx in ctxs:
-            tup = []
-            for name in names:
+            tup = [rup.rake]
+            for name in self.REQUIRES_DISTANCES:
                 tup.extend(numpy.round(getattr(dctx, name), decimals))
             acc[tuple(tup)].append((rup, sctx, dctx))
-        if all(len(vals) == 1 for vals in acc.values()):  # nothing to collapse
-            return ctxs
         new_ctxs = []
         for vals in acc.values():
             new_ctxs.extend(_collapse_ctxs(vals))
