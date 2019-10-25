@@ -287,7 +287,9 @@ class ContextMaker():
             except FarAwayRupture:
                 continue
             ctxs.append((rup, sctx, dctx))
-        return self.collapse(ctxs) if rup_indep else ctxs
+        if len(ctxs) == 1 or not rup_indep:  # nothing to collapse
+            return ctxs
+        return self.collapse(ctxs)
 
     def collapse(self, ctxs, decimals=1):
         """
