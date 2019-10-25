@@ -288,7 +288,29 @@ class ContextMaker():
             except FarAwayRupture:
                 continue
             ctxs.append((rup, sctx, dctx))
-        return ctxs
+        return self.collapse(ctxs)
+
+    def collapse(self, ctxs, decimals=1):
+        """
+        Collapse the contexts if their distances are equivalent up to 1
+        decimal (i.e. 100 m)
+        """
+        names = set()
+        for gsim in self.gsims:
+            names.update(gsim.REQUIRES_DISTANCES)
+        names = sorted(names)
+        acc = AccumDict(accum=[])
+        for rup, sctx, dctx in ctxs:
+            tup = []
+            for name in names:
+                tup.extend(numpy.round(getattr(dctx, name), decimals))
+            acc[tuple(tup)].append((rup, sctx, dctx))
+        if all(len(vals) == 1 for vals in acc.values()):  # nothing to collapse
+            return ctxs
+        new_ctxs = []
+        for vals in acc.values():
+            new_ctxs.extend(_collapse_ctxs(vals))
+        return new_ctxs
 
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
         """
@@ -340,6 +362,15 @@ def _collapse(rups):
     rup = copy.copy(rups[0])
     rup.occurrence_rate = sum(r.occurrence_rate for r in rups)
     return [rup]
+
+
+def _collapse_ctxs(ctxs):
+    if len(ctxs) == 1:
+        return ctxs
+    rup, sites, dctx = ctxs[0]
+    rups = [ctx[0] for ctx in ctxs]
+    [rup] = _collapse(rups)
+    return [(rup, sites, dctx)]
 
 
 class PmapMaker():
