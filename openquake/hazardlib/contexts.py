@@ -276,7 +276,7 @@ class ContextMaker():
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def make_ctxs(self, ruptures, sites, radius_dist=None):
+    def make_ctxs(self, ruptures, sites, radius_dist=None, rup_indep=True):
         """
         :returns: a list of triples (rctx, sctx, dctx)
         """
@@ -287,7 +287,7 @@ class ContextMaker():
             except FarAwayRupture:
                 continue
             ctxs.append((rup, sctx, dctx))
-        return self.collapse(ctxs)
+        return self.collapse(ctxs) if rup_indep else ctxs
 
     def collapse(self, ctxs, decimals=1):
         """
@@ -420,7 +420,8 @@ class PmapMaker():
             if mdist is not None:
                 dists.append(mdist)
             with self.ctx_mon:
-                ctxs = self.cmaker.make_ctxs(rups, sites, mdist)
+                ctxs = self.cmaker.make_ctxs(
+                    rups, sites, mdist, self.rup_indep)
             for rup, r_sites, dctx in ctxs:
                 sids, poes = self._sids_poes(rup, r_sites, dctx)
                 with self.pne_mon:
