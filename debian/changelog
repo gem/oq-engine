@@ -1,3 +1,5 @@
+python3-oq-engine (3.7.1-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Fixed disaggregation with a parent calculation
   * Fixed the case of implicit grid with a site model: sites could be
@@ -9,6 +11,8 @@
 
   [Marco Pagani]
   * Fixed a bug in the GenericGmpeAvgSA
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 25 Oct 2019 08:05:41 +0000
 
 python3-oq-engine (3.7.0-1~xenial01) xenial; urgency=low
 
