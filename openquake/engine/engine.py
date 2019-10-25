@@ -329,23 +329,25 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         logs.LOG.warn(msg)
     calc.from_engine = True
     tb = 'None\n'
-    try:
-        if not oqparam.hazard_calculation_id:
-            if 'input_zip' in oqparam.inputs:  # starting from an archive
-                with open(oqparam.inputs['input_zip'], 'rb') as arch:
-                    data = numpy.array(arch.read())
-            else:
-                logs.LOG.info('Zipping the input files')
-                bio = io.BytesIO()
-                oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
-                              logging.debug)
-                data = numpy.array(bio.getvalue())
-                del bio
-            calc.datastore['input/zip'] = data
-            calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
-            del data  # save memory
 
-        poll_queue(job_id, _PID, poll_time=15)
+    if not oqparam.hazard_calculation_id:
+        if 'input_zip' in oqparam.inputs:  # starting from an archive
+            with open(oqparam.inputs['input_zip'], 'rb') as arch:
+                data = numpy.array(arch.read())
+        else:
+            logs.LOG.info('Zipping the input files')
+            bio = io.BytesIO()
+            oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
+                          logging.debug)
+            data = numpy.array(bio.getvalue())
+            del bio
+        calc.datastore['input/zip'] = data
+        calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
+        del data  # save memory
+
+    poll_queue(job_id, _PID, poll_time=15)
+
+    try:
         if OQ_DISTRIBUTE.endswith('pool'):
             logs.LOG.warning('Using %d cores on %s',
                              parallel.Starmap.num_cores, platform.node())
