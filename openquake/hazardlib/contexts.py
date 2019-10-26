@@ -107,6 +107,7 @@ class RupData(object):
     def __init__(self, cmaker):
         self.cmaker = cmaker
         self.data = AccumDict(accum=[])
+        self.data.collapsed = 0
 
     def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
         """
@@ -276,7 +277,7 @@ class ContextMaker():
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def make_ctxs(self, ruptures, sites, radius_dist=None, rup_indep=True):
+    def make_ctxs(self, ruptures, sites, radius_dist=None):
         """
         :returns: a list of triples (rctx, sctx, dctx)
         """
@@ -287,26 +288,7 @@ class ContextMaker():
             except FarAwayRupture:
                 continue
             ctxs.append((rup, sctx, dctx))
-        if len(ctxs) == 1 or not rup_indep:  # nothing to collapse
-            return ctxs
-        return self.collapse(ctxs)
-
-    def collapse(self, ctxs, decimals=1):
-        """
-        Collapse the contexts if their distances are equivalent up to 1
-        decimal (i.e. 100 m)
-        """
-        acc = AccumDict(accum=[])
-        for rup, sctx, dctx in ctxs:
-            tup = [getattr(rup, p) for p in self.REQUIRES_RUPTURE_PARAMETERS]
-            for name in self.REQUIRES_DISTANCES:
-                round_dists = numpy.round(getattr(dctx, name), decimals)
-                tup.extend(round_dists)
-            acc[tuple(tup)].append((rup, sctx, dctx))
-        new_ctxs = []
-        for vals in acc.values():
-            new_ctxs.extend(_collapse_ctxs(vals))
-        return new_ctxs
+        return ctxs
 
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
         """
@@ -423,8 +405,7 @@ class PmapMaker():
             if mdist is not None:
                 dists.append(mdist)
             with self.ctx_mon:
-                ctxs = self.cmaker.make_ctxs(
-                    rups, sites, mdist, self.rup_indep)
+                ctxs = self.collapse(self.cmaker.make_ctxs(rups, sites, mdist))
             for rup, r_sites, dctx in ctxs:
                 sids, poes = self._sids_poes(rup, r_sites, dctx)
                 with self.pne_mon:
@@ -443,6 +424,26 @@ class PmapMaker():
         poemap.maxdist = numpy.mean(dists) if dists else None
         poemap.data = self.rupdata.data
         return poemap
+
+    def collapse(self, ctxs, decimals=1):
+        """
+        Collapse the contexts if their distances are equivalent up to 1
+        decimal (i.e. 100 m)
+        """
+        if len(ctxs) == 1 or not self.rup_indep:  # nothing to collapse
+            return ctxs
+        acc = AccumDict(accum=[])
+        for rup, sctx, dctx in ctxs:
+            tup = [getattr(rup, p) for p in self.REQUIRES_RUPTURE_PARAMETERS]
+            for name in self.REQUIRES_DISTANCES:
+                round_dists = numpy.round(getattr(dctx, name), decimals)
+                tup.extend(round_dists)
+            acc[tuple(tup)].append((rup, sctx, dctx))
+        new_ctxs = []
+        for vals in acc.values():
+            new_ctxs.extend(_collapse_ctxs(vals))
+        self.rupdata.data.collapsed += len(ctxs) - len(new_ctxs)
+        return new_ctxs
 
     def _gen_rups_sites(self):
         src = self.src
