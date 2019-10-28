@@ -316,7 +316,10 @@ def get_bounding_box(obj, maxdist):
             lons %= 360
         bbox = lons.min(), lats.min(), lons.max(), lats.max()
     a1 = min(maxdist * KM_TO_DEGREES, 90)
-    a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
+    a2 = angular_distance(maxdist, bbox[1], bbox[3])
+    if bbox[2] - bbox[0] + 2 * a2 > 180:
+        raise ValueError('The maximum distance %d is too large, the bounding '
+                         'box is larger than half the globe' % maxdist)
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 
