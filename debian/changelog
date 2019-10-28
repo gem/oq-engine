@@ -1,6 +1,11 @@
+  [Michele Simionato]
+  * Optimized the case of point sources with an hypocenter distribution and
+    GSIMs independent from it and in general the case of ruptures with
+    similar distances
+
   [Graeme Weatherill]
   * Updates SERA craton GMPE to reflect updates to NGA East site response model
-  
+
   [Michele Simionato]
   * Fixed and HDF5 SWMR issue in large disaggregation calculations
   * Made `rrup` the unique acceptable `filter_distance`
