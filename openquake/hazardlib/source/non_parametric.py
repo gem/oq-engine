@@ -58,6 +58,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def __init__(self, source_id, name, tectonic_region_type, data):
         super().__init__(source_id, name, tectonic_region_type)
+        self.magnitude_scaling_relationship = None
         self.data = data
 
     def iter_ruptures(self, **kwargs):
