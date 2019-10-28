@@ -163,11 +163,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         Get the hazard curve for the given site ID.
         """
-        imtls = self.oqparam.imtls
         pmap = self.pgetter.get(rlz_by_sid[sid])
         if sid not in pmap:
             return
-        poes = pmap[sid].convert(imtls)
+        poes = pmap[sid].convert(self.oqparam.imtls)
         return poes
 
     def check_poes_disagg(self, curves, rlzs):
