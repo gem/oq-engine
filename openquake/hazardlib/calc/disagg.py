@@ -203,7 +203,7 @@ def _build_disagg_matrix(bdata, bins):
 
 
 # called by the engine
-def build_matrices(rupdata, sitecol, cmaker, iml2s,
+def build_matrices(rupdata, sitecol, cmaker, iml3,
                    num_epsilon_bins, bin_edges,
                    pne_mon, mat_mon, gmf_mon):
     """
@@ -213,7 +213,9 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s,
         raise ValueError('You can disaggregate at max 32,768 sites')
     indices = _site_indices(rupdata['sid_'], len(sitecol))
     eps3 = _eps3(cmaker.trunclevel, num_epsilon_bins)  # this is slow
-    for sid, iml2 in zip(sitecol.sids, iml2s):
+    for sid, iml2 in zip(sitecol.sids, iml3):
+        iml2 = hdf5.ArrayWrapper(
+            iml2, dict(rlzi=iml3.rlzs[sid], imts=iml3.imts))
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
         bdata = _disaggregate(cmaker, singlesitecol, rupdata,
