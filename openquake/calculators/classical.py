@@ -256,7 +256,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['sources_by_task'] = sbt
                 self.sources_by_task.clear()
         numrups = sum(arr[0] for arr in self.calc_times.values())
-        logging.info('Considered %d/%d ruptures', numrups, self.totrups)
+        if self.totrups != numrups:
+            logging.info('Considered %d/%d ruptures', numrups, self.totrups)
         self.calc_times.clear()  # save a bit of memory
         return acc
 
