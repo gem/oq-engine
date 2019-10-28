@@ -21,6 +21,7 @@ import math
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
+from openquake.hazardlib.imt import SA
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
         YenierAtkinson2015BSSA
@@ -209,7 +210,7 @@ class AlAtikSigmaModel(GMPE):
     def __init__(self, gmpe_name, tau_model="global", phi_model="global",
                  phi_s2ss_model=None, tau_quantile=None,
                  phi_ss_quantile=None, phi_s2ss_quantile=None,
-                 kappa_file=None, kappa_val="med"):
+                 kappa_file=None, kappa_val=None):
         # this is taken from http://tiny.cc/krb5bz
         self.tau_model = tau_model
         self.phi_model = phi_model
@@ -246,21 +247,90 @@ class AlAtikSigmaModel(GMPE):
                 PHI_S2SS_MODEL[self.phi_s2ss_model],
                 self.phi_s2ss_quantile)
 
+    def get_corner_period(self, mag):
+        """
+        Corner period given as:
+        10^(-1.884 - log10(D_sigma)/3 + 0.5*Mw)
+        where D_sigma = 80 bars (8 MPa)
+        """
+        D_sigma = 80
+        cornerp = 10**(-1.884 - np.log10(D_sigma)/3 + 0.5*mag)
+        if cornerp < 1.0:
+            cornerp = 1.0
+        return cornerp
+
+    def get_capping_period(self, cornerp, gmpe):
+        """
+        Capping period is the smaller of the corner period and the
+        max period of coefficents provided by the GMPE
+        """
+        try:
+            highest_period = max(gmpe.COEFFS.sa_coeffs.keys()).period
+        except AttributeError:
+            highest_period = max(gmpe.TAB2.sa_coeffs.keys()).period
+        cappingp = min(highest_period, cornerp)
+        if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
+            cappingp = 1.0
+        return cappingp
+
+    def get_disp_from_acc(self, acc, imt):
+        """
+        Method is only called when imt.period > cappingp
+       :param acc:
+            Acceleration in log space
+       :param imt:
+            The period
+       :returns:
+            Displacement
+        """
+        disp = np.exp(acc) * imt**2 / (2 * np.pi)**2
+        return disp
+
+    def get_acc_from_disp(self, disp, imt):
+        """
+        Method is only called when imt.period > cappingp
+        :param imt:
+            The period
+        :param disp:
+            Displacement
+        :returns:
+            Acceleration in log space
+        """
+        acc = np.log(disp * (2 * np.pi / imt)**2)
+        return acc
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
-        mean, _ = self.gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                 stds_types)
         nsites = len(sites)
         stddevs = self.get_stddevs(rup.mag, imt, stds_types, nsites)
 
-        kappa = 0
+        # compute corner frequency and capping period
+        cornerp = self.get_corner_period(rup.mag)
+        cappingp = self.get_capping_period(cornerp, self.gmpe)
+
+        # apply extrapolation to periods > cappingp
+        if imt.period > cappingp:
+            # compute acceleration at the capping period
+            mean, _ = self.gmpe.get_mean_and_stddevs(sites, rup,
+                    dists, SA(cappingp), stds_types)
+            # convert to spectral displacement at the capping period
+            disp = self.get_disp_from_acc(mean, cappingp)
+            mean = self.get_acc_from_disp(disp, imt.period)
+        else:
+            mean, _ = self.gmpe.get_mean_and_stddevs(sites, rup,
+                    dists, imt, stds_types)
+
+        kappa = 1
         if self.kappa_file is not None:
             with open(self.kappa_file, 'r') as myfile:
                 data = myfile.read()
             KAPPATAB = CoeffsTable(table=data, sa_damping=5)
-            kappa = KAPPATAB[imt][self.kappa_val]
-
-
-        return mean+kappa, stddevs
+            if imt.period == 0:
+                kappa = KAPPATAB[SA(0.01)][self.kappa_val]
+            elif imt.period > 2.0:
+                kappa = KAPPATAB[SA(2.0)][self.kappa_val]
+            else:
+                kappa = KAPPATAB[imt][self.kappa_val]
+        return mean+np.log(kappa), stddevs
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """
