@@ -425,7 +425,7 @@ class DisaggregationCalculator(base.HazardCalculator):
     def build_disagg_by_src(self):
         """
         :param dstore: a datastore
-        :param iml3: N arrays of IMLs with shape (M, P)
+        :param iml3: array of IMLs with shape (N, M, P)
         """
         logging.warning('Disaggregation by source is experimental')
         oq = self.oqparam
