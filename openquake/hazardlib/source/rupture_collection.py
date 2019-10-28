@@ -40,7 +40,6 @@ class RuptureCollectionSource(ParametricSeismicSource):
         self.mfd = mfd
         self.ruptures = ruptures
         self.num_ruptures = len(ruptures)
-        self.magnitude_scaling_relationship = None
 
     def count_ruptures(self):
         return self.num_ruptures
