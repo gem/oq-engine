@@ -122,11 +122,11 @@ def compute_disagg(dstore, slc, sitecol, oq, cmaker, iml3, trti, bin_edges,
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=False)
     gmf_mon = monitor('computing mean_std', measuremem=False)
-    for sid, arr in disagg.build_matrices(
+    for sid, rlz, arr in disagg.build_matrices(
             rupdata, sitecol, cmaker, iml3,
             oq.num_epsilon_bins, bin_edges, pne_mon, mat_mon, gmf_mon):
-        result[sid] = arr
-    return result  # sid -> array
+        result[sid, rlz] = arr
+    return result  # sid, rlz -> array
 
 
 def agg_probs(*probs):
@@ -229,11 +229,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.imts = list(oq.imtls)
         if oq.rlz_index is None:
             try:
-                self.rlzs = rlzs = self.datastore['best_rlz'][()]
+                rlzs = self.datastore['best_rlz'][()]
             except KeyError:
-                self.rlzs = rlzs = numpy.zeros(self.N, int)
+                rlzs = numpy.zeros(self.N, int)
         else:
-            self.rlzs = rlzs = [oq.rlz_index] * self.N
+            rlzs = [oq.rlz_index] * self.N
 
         if oq.iml_disagg:
             self.poe_id = {None: 0}
@@ -246,7 +246,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.iml3 = _iml3(rlzs, oq.iml_disagg, oq.imtls,
                           self.poes_disagg, curves)
         if oq.disagg_by_src:
-            self.build_disagg_by_src()
+            self.build_disagg_by_src(rlzs)
 
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
@@ -310,7 +310,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         results = parallel.Starmap(
             compute_disagg, allargs, h5=self.datastore.hdf5
         ).reduce(self.agg_result, AccumDict(accum={}))
-        return results  # sid -> trti-> 7D array
+        return results  # sid, rlz -> trti-> 7D array
 
     def agg_result(self, acc, result):
         """
@@ -321,8 +321,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         # this is fast
         trti = result.pop('trti')
-        for sid, arr in result.items():
-            acc[sid][trti] = agg_probs(acc[sid].get(trti, 0), arr)
+        for (sid, rlz), arr in result.items():
+            acc[sid, rlz][trti] = agg_probs(acc[sid, rlz].get(trti, 0), arr)
         return acc
 
     def save_bin_edges(self):
@@ -357,8 +357,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             a dictionary sid -> trti -> disagg matrix
         """
         T = len(self.trts)
-        # build a dictionary sid -> 8D matrix of shape (T, ..., M, P)
-        results = {sid: _8d_matrix(dic, T) for sid, dic in results.items()}
+        # build a dictionary sid, rlz -> 8D matrix of shape (T, ..., M, P)
+        results = {(sid, rlz): _8d_matrix(dic, T)
+                   for (sid, rlz), dic in results.items()}
 
         # get the number of outputs
         shp = (len(self.sitecol), len(self.poes_disagg), len(self.imts))
@@ -373,12 +374,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             an 8D-matrix of shape (T, .., M, P)
         """
-        for sid, matrix8 in results.items():
-            rlzi = self.rlzs[sid]
+        for (sid, rlz), matrix8 in results.items():
             for p, poe in enumerate(self.poes_disagg):
                 for m, imt in enumerate(self.imts):
                     self._save_result(
-                        'disagg', sid, rlzi, poe, imt, matrix8[..., m, p, :])
+                        'disagg', sid, rlz, poe, imt, matrix8[..., m, p, :])
         self.datastore.set_attrs('disagg', **attrs)
 
     def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
@@ -422,11 +422,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     ' poe=%s; perhaps the number of intensity measure'
                     ' levels is too small?', site_id, poe_agg, poe)
 
-    def build_disagg_by_src(self):
-        """
-        :param dstore: a datastore
-        :param iml3: array of IMLs with shape (N, M, P)
-        """
+    def build_disagg_by_src(self, rlzs):
         logging.warning('Disaggregation by source is experimental')
         oq = self.oqparam
         ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
@@ -437,7 +433,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         for sid in self.sitecol.sids:
             poes = numpy.zeros((M, P, len(groups)))
             iml2 = self.iml3[sid]
-            rlzi = self.rlzs[sid]
+            rlzi = rlzs[sid]
             for g, grp_id in enumerate(groups):
                 pcurve = pgetter.get_pcurve(sid, rlzi, int(grp_id[4:]))
                 if pcurve is None:
