@@ -119,9 +119,9 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
-    pmap, rup_data, calc_times, attrs = cmaker.get_pmap_by_grp(
+    pmap, rup_data, calc_times, extra = cmaker.get_pmap_by_grp(
         src_filter(group), src_mutex, rup_mutex)
-    attrs['task_no'] = getattr(monitor, 'task_no', 0)
+    extra['task_no'] = getattr(monitor, 'task_no', 0)
 
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
@@ -132,7 +132,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         pmap = _cluster(param['imtls'], tom, gsims, pmap)
 
     return dict(pmap=pmap, calc_times=calc_times, rup_data=rup_data,
-                attrs=attrs)
+                extra=extra)
 
 
 def calc_hazard_curves(
