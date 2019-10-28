@@ -214,8 +214,8 @@ def build_matrices(rupdata, sitecol, cmaker, iml3,
     indices = _site_indices(rupdata['sid_'], len(sitecol))
     eps3 = _eps3(cmaker.trunclevel, num_epsilon_bins)  # this is slow
     for sid, iml2 in zip(sitecol.sids, iml3):
-        iml2 = hdf5.ArrayWrapper(
-            iml2, dict(rlzi=iml3.rlzs[sid], imts=iml3.imts))
+        rlz = iml3.rlzs[sid]
+        iml2 = hdf5.ArrayWrapper(iml2, dict(rlzi=rlz, imts=iml3.imts))
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
         bdata = _disaggregate(cmaker, singlesitecol, rupdata,
@@ -224,7 +224,7 @@ def build_matrices(rupdata, sitecol, cmaker, iml3,
             with mat_mon:
                 mat = _build_disagg_matrix(bdata, bins)
                 if mat.any():  # nonzero
-                    yield sid, mat
+                    yield sid, rlz, mat
 
 
 def _digitize_lons(lons, lon_bins):
