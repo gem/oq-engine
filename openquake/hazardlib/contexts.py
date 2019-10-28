@@ -358,7 +358,7 @@ class PmapMaker():
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
         with cmaker.mon('iter_ruptures', measuremem=False):
             self.mag_rups = [
-                (mag, list(ruptures)) for mag, ruptures in itertools.groupby(
+                (mag, list(rups)) for mag, rups in itertools.groupby(
                     src.iter_ruptures(shift_hypo=self.shift_hypo),
                     key=operator.attrgetter('mag'))]
 
@@ -419,43 +419,47 @@ class PmapMaker():
         src = self.src
         sites = self.s_sites
         loc = getattr(src, 'location', None)
-        pointmsr = isinstance(src.magnitude_scaling_relationship, PointMSR)
-        if loc and not pointmsr:
+        triples = ((rups, sites, None) for mag, rups in self.mag_rups)
+        if loc:
             # implements the collapse distance feature: the finite site effects
             # are ignored for sites over collapse_factor x rupture_radius
             # implements the max_radius feature: sites above
             # max_radius * rupture_radius are discarded
-            trt = src.tectonic_region_type
             simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
-            if not simple:
+            if simple:
+                yield from triples  # there is nothing to collapse
+            elif self.pointsource_distance is None and (
+                    len(sites) < self.max_sites_disagg):
+                yield from triples  # do not collapse for few sites
+            elif self.pointsource_distance is None and not isinstance(
+                    src.magnitude_scaling_relationship, PointMSR):
+                yield from triples  # do not collapse for 0 radius
+            else:
                 weights, depths = zip(*src.hypocenter_distribution.data)
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
                 loc.depth = numpy.average(depths, weights=weights)
-            for mag, rups in self.mag_rups:
-                mdist = self.maximum_distance(trt, mag)
-                radius = src._get_max_rupture_projection_radius(mag)
-                if self.max_radius is not None:
-                    mdist = min(self.max_radius * radius, mdist)
-                if (simple or self.pointsource_distance is None and
-                        len(sites) < self.max_sites_disagg):
-                    yield rups, sites, mdist  # do not collapse for few sites
-                else:
-                    # compute the collapse distance and use it
-                    if self.pointsource_distance is None:
-                        cdist = min(self.collapse_factor * radius, mdist)
-                    else:  # legacy approach
-                        cdist = min(self.pointsource_distance, mdist)
-                    close_sites, far_sites = sites.split(loc, cdist)
-                    if close_sites is None:  # all is far
-                        yield _collapse(rups), far_sites, mdist
-                    elif far_sites is None:  # all is close
-                        yield rups, close_sites, mdist
-                    else:  # some sites are far, some are close
-                        yield _collapse(rups), far_sites, mdist
-                        yield rups, close_sites, mdist
+                trt = src.tectonic_region_type
+                for mag, rups in self.mag_rups:
+                    mdist = self.maximum_distance(trt, mag)
+                    radius = src._get_max_rupture_projection_radius(mag)
+                    if self.max_radius is not None:
+                        mdist = min(self.max_radius * radius, mdist)
+                    else:
+                        # compute the collapse distance and use it
+                        if self.pointsource_distance is None:
+                            cdist = min(self.collapse_factor * radius, mdist)
+                        else:  # legacy approach
+                            cdist = min(self.pointsource_distance, mdist)
+                        close_sites, far_sites = sites.split(loc, cdist)
+                        if close_sites is None:  # all is far
+                            yield _collapse(rups), far_sites, mdist
+                        elif far_sites is None:  # all is close
+                            yield rups, close_sites, mdist
+                        else:  # some sites are far, some are close
+                            yield _collapse(rups), far_sites, mdist
+                            yield rups, close_sites, mdist
         else:  # no point source or site-specific analysis
-            for mag, rups in self.mag_rups:
-                yield rups, sites, None
+            yield from triples
 
 
 class BaseContext(metaclass=abc.ABCMeta):
