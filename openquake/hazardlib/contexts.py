@@ -419,8 +419,8 @@ class PmapMaker():
         src = self.src
         sites = self.s_sites
         loc = getattr(src, 'location', None)
-        if loc and len(sites) > self.max_sites_disagg and not isinstance(
-                src.magnitude_scaling_relationship, PointMSR):
+        pointmsr = isinstance(src.magnitude_scaling_relationship, PointMSR)
+        if loc and not pointmsr:
             # implements the collapse distance feature: the finite site effects
             # are ignored for sites over collapse_factor x rupture_radius
             # implements the max_radius feature: sites above
@@ -436,8 +436,9 @@ class PmapMaker():
                 radius = src._get_max_rupture_projection_radius(mag)
                 if self.max_radius is not None:
                     mdist = min(self.max_radius * radius, mdist)
-                if simple:
-                    yield rups, sites, mdist
+                if (simple or self.pointsource_distance is None and
+                        len(sites) < self.max_sites_disagg):
+                    yield rups, sites, mdist  # do not collapse for few sites
                 else:
                     # compute the collapse distance and use it
                     if self.pointsource_distance is None:
