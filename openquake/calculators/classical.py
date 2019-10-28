@@ -116,7 +116,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
-                extra=dict(task_no=monitor.task_no, tups=src.num_ruptures))
+                extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures))
 
 
 @base.calculators.add('classical')
@@ -136,6 +136,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         with self.monitor('aggregate curves'):
             extra = dic['extra']
+            self.totrups += extra['totrups']
             if extra.get('maxdist'):
                 self.maxdists.append(extra['maxdist'])
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
@@ -210,6 +211,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Scalar parameters %s', rparams)
         logging.info('Vector parameters %s', dparams)
         self.sources_by_task = {}  # task_no => src_ids
+        self.totrups = 0  # total number of ruptures before collapsing
         return zd
 
     def execute(self):
@@ -253,6 +255,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         task_no, (0, 0, U32([])))
                 self.datastore['sources_by_task'] = sbt
                 self.sources_by_task.clear()
+        numrups = sum(arr[0] for arr in self.calc_times.values())
+        logging.info('Considered %d/%d ruptures', numrups, self.totrups)
         self.calc_times.clear()  # save a bit of memory
         return acc
 
