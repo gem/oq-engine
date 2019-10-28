@@ -442,22 +442,19 @@ class PmapMaker():
                 for mag, rups in self.mag_rups:
                     mdist = self.maximum_distance(trt, mag)
                     radius = src._get_max_rupture_projection_radius(mag)
-                    if self.max_radius is not None:
+                    if self.pointsource_distance:  # legacy approach
+                        cdist = min(self.pointsource_distance, mdist)
+                    elif self.max_radius is not None:
                         mdist = min(self.max_radius * radius, mdist)
-                    else:
-                        # compute the collapse distance and use it
-                        if self.pointsource_distance is None:
-                            cdist = min(self.collapse_factor * radius, mdist)
-                        else:  # legacy approach
-                            cdist = min(self.pointsource_distance, mdist)
-                        close_sites, far_sites = sites.split(loc, cdist)
-                        if close_sites is None:  # all is far
-                            yield _collapse(rups), far_sites, mdist
-                        elif far_sites is None:  # all is close
-                            yield rups, close_sites, mdist
-                        else:  # some sites are far, some are close
-                            yield _collapse(rups), far_sites, mdist
-                            yield rups, close_sites, mdist
+                        cdist = min(self.collapse_factor * radius, mdist)
+                    close_sites, far_sites = sites.split(loc, cdist)
+                    if close_sites is None:  # all is far
+                        yield _collapse(rups), far_sites, mdist
+                    elif far_sites is None:  # all is close
+                        yield rups, close_sites, mdist
+                    else:  # some sites are far, some are close
+                        yield _collapse(rups), far_sites, mdist
+                        yield rups, close_sites, mdist
         else:  # no point source or site-specific analysis
             yield from triples
 
