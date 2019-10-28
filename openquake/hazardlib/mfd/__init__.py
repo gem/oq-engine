@@ -27,7 +27,7 @@ implementations:
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
-    YoungsCoppersmith1985MFD
-)
+    YoungsCoppersmith1985MFD)
 from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
 from openquake.hazardlib.mfd import multi_mfd
+from openquake.hazardlib.mfd.tapered_gr_mfd import TaperedGRMFD
