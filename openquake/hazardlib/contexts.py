@@ -429,11 +429,9 @@ class PmapMaker():
             if simple:
                 yield from triples  # there is nothing to collapse
             elif self.pointsource_distance is None and (
-                    len(sites) < self.max_sites_disagg):
-                yield from triples  # do not collapse for few sites
-            elif self.pointsource_distance is None and not isinstance(
-                    src.magnitude_scaling_relationship, PointMSR):
-                yield from triples  # do not collapse for 0 radius
+                    len(sites) < self.max_sites_disagg or isinstance(
+                        src.magnitude_scaling_relationship, PointMSR)):
+                yield from triples  # do not collapse for few sites or 0 radius
             else:
                 weights, depths = zip(*src.hypocenter_distribution.data)
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
@@ -442,10 +440,11 @@ class PmapMaker():
                 for mag, rups in self.mag_rups:
                     mdist = self.maximum_distance(trt, mag)
                     radius = src._get_max_rupture_projection_radius(mag)
+                    if self.max_radius is not None:
+                        mdist = min(self.max_radius * radius, mdist)
                     if self.pointsource_distance:  # legacy approach
                         cdist = min(self.pointsource_distance, mdist)
-                    elif self.max_radius is not None:
-                        mdist = min(self.max_radius * radius, mdist)
+                    else:
                         cdist = min(self.collapse_factor * radius, mdist)
                     close_sites, far_sites = sites.split(loc, cdist)
                     if close_sites is None:  # all is far
