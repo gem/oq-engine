@@ -164,26 +164,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         Get the hazard curve for the given site ID.
         """
         imtls = self.oqparam.imtls
-        ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        pgetter = getters.PmapGetter(self.datastore, ws, numpy.array([sid]))
-        rlz = rlz_by_sid[sid]
-        try:
-            pmap = pgetter.get(rlz)
-        except ValueError:  # empty pmaps
-            logging.info(
-                'hazard curve contains all zero probabilities; '
-                'skipping site %d, rlz=%d', sid, rlz.ordinal)
-            return
+        pmap = self.pgetter.get(rlz_by_sid[sid])
         if sid not in pmap:
             return
         poes = pmap[sid].convert(imtls)
-        for imt_str in imtls:
-            if all(x == 0.0 for x in poes[imt_str]):
-                logging.info(
-                    'hazard curve contains all zero probabilities; '
-                    'skipping site %d, rlz=%d, IMT=%s',
-                    sid, rlz.ordinal, imt_str)
-                return
         return poes
 
     def check_poes_disagg(self, curves, rlzs):
@@ -234,6 +218,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                 rlzs = numpy.zeros(self.N, int)
         else:
             rlzs = [oq.rlz_index] * self.N
+
+        ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        self.pgetter = getters.PmapGetter(
+            self.datastore, ws, self.sitecol.sids)
 
         if oq.iml_disagg:
             self.poe_id = {None: 0}
@@ -425,8 +413,6 @@ class DisaggregationCalculator(base.HazardCalculator):
     def build_disagg_by_src(self, rlzs):
         logging.warning('Disaggregation by source is experimental')
         oq = self.oqparam
-        ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        pgetter = getters.PmapGetter(self.datastore, ws, self.sitecol.sids)
         groups = list(self.datastore['rlzs_by_grp'])
         M = len(oq.imtls)
         P = len(self.poes_disagg)
@@ -435,7 +421,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             iml2 = self.iml3[sid]
             rlzi = rlzs[sid]
             for g, grp_id in enumerate(groups):
-                pcurve = pgetter.get_pcurve(sid, rlzi, int(grp_id[4:]))
+                pcurve = self.pgetter.get_pcurve(sid, rlzi, int(grp_id[4:]))
                 if pcurve is None:
                     continue
                 for m, imt in enumerate(oq.imtls):
