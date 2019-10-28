@@ -152,20 +152,22 @@ def make_figure_uhs(extractors, what):
 
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot 'disagg?by=Dist&imt=PGA'
+    $ oq plot 'disagg?kind=Dist&imt=PGA'
     """
-    assert len(extractors) == 1
     import matplotlib.pyplot as plt
     fig = plt.figure()
-    disagg = extractors[0].get(what)
-    [sid] = disagg.site_id
-    [poe_id] = disagg.poe_id
-    oq = extractors[0].oqparam
-    poe = oq.poes_disagg[poe_id]
     ax = fig.add_subplot(1, 1, 1)
+    oq = extractors[0].oqparam
+    disaggs = [ex.get(what) for ex in extractors]
+    [sid] = disaggs[0].site_id
+    [poe_id] = disaggs[0].poe_id
+    poe = oq.poes_disagg[poe_id]
     ax.set_xlabel('Disagg%s on site %s, poe=%s, inv_time=%dy' %
-                  (disagg.by, sid, poe, oq.investigation_time))
-    ax.plot(disagg.array)
+                  (disaggs[0].kind, sid, poe, oq.investigation_time))
+    for ex, disagg in zip(extractors, disaggs):
+        x, y = disagg.array.T
+        print(y)
+        ax.plot(x, y, label=ex.calc_id)
     ax.legend()
     return plt
 
