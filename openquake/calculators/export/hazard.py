@@ -518,8 +518,10 @@ def export_disagg_csv(ekey, dstore):
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     for key in group:
         attrs = group[key].attrs
-        iml = attrs['iml']
         rlz = rlzs[attrs['rlzi']]
+        if not key.startswith('rlz-%d-' % rlz.ordinal):
+            continue
+        iml = attrs['iml']
         try:
             poe = attrs['poe']
         except Exception:  # no poes_disagg were given
@@ -550,9 +552,9 @@ def export_disagg_csv(ekey, dstore):
                    if value is not None and key not in skip_keys}
             com.update(poe='%.7f' % poe, iml='%.7e' % iml, rlz=rlz.ordinal)
             fname = dstore.export_path(key + '_%s.csv' % label)
-            values = extract(dstore,
-                             'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d' %
-                             (label, imt, site_id, poe_id))
+            values = extract(
+                dstore, 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&rlz=%d' %
+                (label, imt, site_id, poe_id, rlz.ordinal))
             writers.write_csv(fname, values, header=header, comment=com,
                               fmt='%.5E')
             fnames.append(fname)
