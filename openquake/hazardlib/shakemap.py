@@ -47,7 +47,7 @@ def urlextract(url, fname):
     """
     Download and unzip an archive and extract the underlying fname
     """
-    if not fname.endswith('.zip'):
+    if not url.endswith('.zip'):
         return urlopen(url)
     with urlopen(url) as f:
         data = io.BytesIO(f.read())
