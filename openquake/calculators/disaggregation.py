@@ -214,26 +214,29 @@ class DisaggregationCalculator(base.HazardCalculator):
             if not self.csm.get_sources():
                 raise RuntimeError('All sources were filtered away!')
 
-        N = len(self.sitecol)
         csm_info = self.datastore['csm_info']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
         if oq.rlz_index is None:
+            Z = 1
             try:
-                rlzs = self.datastore['best_rlz'][()].reshape(N, 1)
+                rlzs = self.datastore['best_rlz'][()].reshape(self.N, Z)
             except KeyError:
-                rlzs = numpy.zeros((self.N, 1), int)
+                rlzs = numpy.zeros((self.N, Z), int)
         else:
-            rlzs = numpy.zeros((self.N, 1), int)
-            rlzs[:] = oq.rlz_index
+            Z = len(oq.rlz_index)
+            rlzs = numpy.zeros((self.N, Z), int)
+            for z in range(Z):
+                rlzs[:, z] = oq.rlz_index[z]
 
         ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self.pgetter = getters.PmapGetter(
             self.datastore, ws, self.sitecol.sids)
 
         if oq.iml_disagg:
+            # no hazard curves are needed
             self.poe_id = {None: 0}
-            curves = [[None]] * N  # no hazard curves are needed
+            curves = [[None for z in range(Z)] for s in range(self.N)]
             self.ok_sites = set(self.sitecol.sids)
         else:
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
@@ -359,9 +362,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                    for (sid, rlz), dic in results.items()}
 
         # get the number of outputs
-        shp = (len(self.sitecol), len(self.poes_disagg), len(self.imts))
+        Z = len(self.oqparam.rlz_index)
+        shp = (len(self.sitecol), len(self.poes_disagg), len(self.imts), Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
-                     '(N=%s, P=%d, M=%d)', numpy.prod(shp), *shp)
+                     '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         self.save_disagg_result(results, trts=encode(self.trts))
 
     def save_disagg_result(self, results, **attrs):
