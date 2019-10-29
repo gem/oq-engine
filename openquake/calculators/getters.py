@@ -22,7 +22,7 @@ import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib import calc, geo, probability_map
+from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import (
     EBRupture, BaseRupture, events_dt)
@@ -34,6 +34,22 @@ U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
+
+
+def _build_stat_curve(poes, imtls, stat, weights):
+    L = len(imtls.array)
+    array = numpy.zeros((L, 1))
+    if isinstance(weights, list):  # IMT-dependent weights
+        # this is slower since the arrays are shorter
+        for imt in imtls:
+            slc = imtls(imt)
+            ws = [w[imt] for w in weights]
+            if sum(ws) == 0:  # expect no data for this IMT
+                continue
+            array[slc] = stat(poes[:, slc], ws)
+    else:
+        array = stat(poes, weights)
+    return probability_map.ProbabilityCurve(array)
 
 
 def sig_eps_dt(imts):
@@ -108,6 +124,7 @@ class PmapGetter(object):
                 self.nbytes += pmap.nbytes
         return self._pmap_by_grp
 
+    # used in risk calculation where there is a single site per getter
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
@@ -220,8 +237,15 @@ class PmapGetter(object):
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
-        else:
+        elif grp:
             raise NotImplementedError('multiple realizations')
+        L = len(self.imtls.array)
+        pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
+        for sid in self.sids:
+            pmap[sid] = _build_stat_curve(
+                [pc.array for pc in self.get_pcurves(sid)],
+                self.imtls, stats.mean_curve, self.weights)
+        return pmap
 
 
 class GmfDataGetter(collections.abc.Mapping):
