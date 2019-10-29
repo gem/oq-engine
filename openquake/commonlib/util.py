@@ -122,7 +122,7 @@ def closest_to_ref(arrays, ref, nclosest=1, cutoff=1E-12):
     for idx, array in enumerate(arrays):
         diff = log(array, cutoff) - logref
         dist = numpy.sqrt((diff * diff).sum())
-        pairs.append((dist, idx, array))
+        pairs.append((dist, idx))
     return sorted(pairs)
 
 
