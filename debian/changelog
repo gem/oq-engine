@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed downloading the ShakeMaps (again)
   * Better error message in case of too large maximum_distance
   * Optimized the case of point sources with an hypocenter distribution and
     GSIMs independent from it and in general the case of ruptures with
