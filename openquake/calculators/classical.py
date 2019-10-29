@@ -410,22 +410,6 @@ class PreCalculator(ClassicalCalculator):
     core_task = preclassical
 
 
-def _build_stat_curve(poes, imtls, stat, weights):
-    L = len(imtls.array)
-    array = numpy.zeros((L, 1))
-    if isinstance(weights, list):  # IMT-dependent weights
-        # this is slower since the arrays are shorter
-        for imt in imtls:
-            slc = imtls(imt)
-            ws = [w[imt] for w in weights]
-            if sum(ws) == 0:  # expect no data for this IMT
-                continue
-            array[slc] = stat(poes[:, slc], ws)
-    else:
-        array = stat(poes, weights)
-    return ProbabilityCurve(array)
-
-
 def build_hazard(pgetter, N, hstats, individual_curves,
                  max_sites_disagg, monitor):
     """
@@ -464,7 +448,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
             if hstats:
                 arr = numpy.array([pc.array for pc in pcurves])
                 for s, (statname, stat) in enumerate(hstats.items()):
-                    pc = _build_stat_curve(arr, imtls, stat, weights)
+                    pc = getters._build_stat_curve(arr, imtls, stat, weights)
                     pmap_by_kind['hcurves-stats'][s][sid] = pc
                     if poes:
                         hmap = calc.make_hmap(pc, pgetter.imtls, poes, sid)
@@ -472,7 +456,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
                     if statname == 'mean' and R > 1 and N <= max_sites_disagg:
                         rlz = pmap_by_kind['rlz_by_sid']
                         rlz[sid] = util.closest_to_ref(
-                            [p.array for p in pcurves], pc.array)['rlz']
+                            [p.array for p in pcurves], pc.array)[0][1]
             if R > 1 and individual_curves or not hstats:
                 for pmap, pc in zip(pmap_by_kind['hcurves-rlzs'], pcurves):
                     pmap[sid] = pc
