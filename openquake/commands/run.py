@@ -95,7 +95,7 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     # set the logs first of all
     calc_id = logs.init(level=getattr(logging, loglevel.upper()))
     with performance.Monitor('total runtime', measuremem=True) as monitor:
-        with unittest.mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
+        with unittest.mock.patch.dict(os.environ, OQ_DISTRIBUTE='processpool'):
             if len(job_inis) == 1:  # run hazard or risk
                 if hc:
                     hc_id = hc[0]
