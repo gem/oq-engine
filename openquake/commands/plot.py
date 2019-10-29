@@ -152,22 +152,21 @@ def make_figure_uhs(extractors, what):
 
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot 'disagg?kind=Dist&imt=PGA'
+    $ oq plot 'disagg?kind=Mag&imt=PGA'
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     oq = extractors[0].oqparam
-    disaggs = [ex.get(what) for ex in extractors]
-    [sid] = disaggs[0].site_id
-    [poe_id] = disaggs[0].poe_id
-    poe = oq.poes_disagg[poe_id]
-    ax.set_xlabel('Disagg%s on site %s, poe=%s, inv_time=%dy' %
-                  (disaggs[0].kind, sid, poe, oq.investigation_time))
-    for ex, disagg in zip(extractors, disaggs):
-        x, y = disagg.array.T
+    disagg = extractors[0].get(what)
+    [sid] = disagg.site_id
+    [poe_id] = disagg.poe_id
+    ax.set_xlabel('Disagg%s on site %s, poe_id=%d, inv_time=%dy' %
+                  (disagg.kind, sid, poe_id, oq.investigation_time))
+    for name, values in zip(disagg.names, disagg.array):
+        x, y = values.T
         print(y)
-        ax.plot(x, y, label=ex.calc_id)
+        ax.plot(x, y, label=name)
     ax.legend()
     return plt
 
