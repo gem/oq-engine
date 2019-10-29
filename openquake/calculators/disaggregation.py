@@ -362,7 +362,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                    for (sid, rlz), dic in results.items()}
 
         # get the number of outputs
-        Z = len(self.oqparam.rlz_index)
+        Z = len(self.oqparam.rlz_index or [0])
         shp = (len(self.sitecol), len(self.poes_disagg), len(self.imts), Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
