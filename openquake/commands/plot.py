@@ -160,13 +160,14 @@ def make_figure_disagg(extractors, what):
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
     [sid] = disagg.site_id
+    [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    ax.set_xlabel('Disagg%s on site %s, poe_id=%d, inv_time=%dy' %
-                  (disagg.kind, sid, poe_id, oq.investigation_time))
+    ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
+                  (disagg.kind, sid, imt, poe_id, oq.investigation_time))
     for name, values in zip(disagg.names, disagg.array):
         x, y = values.T
         print(y)
-        ax.plot(x, y, label=name)
+        ax.plot(x, y, label=name.split('-')[1])
     ax.legend()
     return plt
 
