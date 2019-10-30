@@ -292,7 +292,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
             for z, rlz in enumerate(rlzs[s]):
-                import pdb; pdb.set_trace()
                 logging.info('Site #%d, disaggregating for rlz=#%d', s, rlz)
                 for p, poe in enumerate(self.poes_disagg):
                     for m, imt in enumerate(oq.imtls):
