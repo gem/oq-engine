@@ -162,11 +162,12 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     with context(fname, ff):
         ffs = ff[1:]
         imls = ff.imls
-    nodamage = imls.attrib.get('noDamageLimit')
+    # NB: noDamageLimit=None is now treated as noDamageLimit=0
+    nodamage = imls.attrib.get('noDamageLimit', 0)
     if nodamage == 0:
         # use a cutoff to avoid log(0) in GMPE.to_distribution_values
-        logging.warning('Found a noDamageLimit=0 in %s, line %s, '
-                        'using %g instead', fname, ff.lineno, min_iml)
+        logging.debug('Using noDamageLimit=%g in %s, line %s', min_iml,
+                      fname, ff.lineno)
         nodamage = min_iml
     with context(fname, imls):
         attrs = dict(format=ff['format'],
@@ -302,8 +303,8 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
     new.append((Node('limitStates', {}, ' '.join(limit_states))))
     for ffs in node[2:]:
         IML = ffs.IML
-        # NB: noDamageLimit = None is different than zero
-        nodamage = ffs.attrib.get('noDamageLimit')
+        # NB: noDamageLimit=None is now treated as noDamageLimit=0
+        nodamage = ffs.attrib.get('noDamageLimit', 0)
         ff = Node('fragilityFunction', {'format': fmt})
         ff['id'] = ~ffs.taxonomy
         ff['shape'] = convert_type[ffs.attrib.get('type', 'lognormal')]
@@ -312,8 +313,7 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
                 attr = dict(imt=IML['IMT'],
                             minIML=IML['minIML'],
                             maxIML=IML['maxIML'])
-                if nodamage is not None:
-                    attr['noDamageLimit'] = nodamage
+                attr['noDamageLimit'] = nodamage
                 ff.append(Node('imls', attr))
             for ffc in ffs[2:]:
                 with context(fname, ffc):
@@ -326,7 +326,6 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
             with context(fname, IML):
                 imls = ' '.join(map(str, (~IML)[1]))
                 attr = dict(imt=IML['IMT'])
-            if nodamage is not None:
                 attr['noDamageLimit'] = nodamage
             ff.append(Node('imls', attr, imls))
             for ffd in ffs[2:]:

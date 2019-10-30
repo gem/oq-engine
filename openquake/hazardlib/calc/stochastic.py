@@ -43,7 +43,7 @@ MAX_RUPTURES = 2000
 
 
 # this is used in acceptance/stochastic_test.py, not in the engine
-def stochastic_event_set(sources, source_site_filter=nofilter):
+def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
     """
     Generates a 'Stochastic Event Set' (that is a collection of earthquake
     ruptures) representing a possible *realization* of the seismicity as
@@ -69,9 +69,10 @@ def stochastic_event_set(sources, source_site_filter=nofilter):
         objects that are contained in an event set. Some ruptures can be
         missing from it, others can appear one or more times in a row.
     """
+    shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     for source, s_sites in source_site_filter(sources):
         try:
-            for rupture in source.iter_ruptures():
+            for rupture in source.iter_ruptures(shift_hypo=shift_hypo):
                 [n_occ] = rupture.sample_number_of_occurrences()
                 for _ in range(n_occ):
                     yield rupture
@@ -85,8 +86,9 @@ def stochastic_event_set(sources, source_site_filter=nofilter):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('rup_id', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
-    ('n_occ', U16), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
+    ('id', U32), ('serial', U32), ('srcidx', U16), ('grp_id', U16),
+    ('code', U8), ('n_occ', U16), ('mag', F32), ('rake', F32),
+    ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
     ('hypo', (F32, 3)), ('gidx1', U32), ('gidx2', U32),
     ('sy', U16), ('sz', U16)])
@@ -123,7 +125,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             continue
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (ebrupture.rup_id, ebrupture.srcidx, ebrupture.grp_id,
+        tup = (0, ebrupture.rup_id, ebrupture.srcidx, ebrupture.grp_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
                rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat'],
                hypo, offset, offset + len(points), sy, sz)

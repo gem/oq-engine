@@ -64,11 +64,11 @@ def source_model_info(nodes):
 
 def print_csm_info(fname):
     """
-    Parse the composite source model without instantiating the sources and
+    Parse the composite source model and
     prints information about its composition and the full logic tree
     """
     oqparam = readinput.get_oqparam(fname)
-    csm = readinput.get_composite_source_model(oqparam, in_memory=False)
+    csm = readinput.get_composite_source_model(oqparam)
     print(csm.info)
     print('See http://docs.openquake.org/oq-engine/stable/'
           'effective-realizations.html for an explanation')

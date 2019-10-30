@@ -427,19 +427,6 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
 
 
 class GetCompositeSourceModelTestCase(unittest.TestCase):
-    # test the case in_memory=False, used when running `oq info job.ini`
-
-    def test_nrml04(self):
-        oq = readinput.get_oqparam('job.ini', case_1)
-        csm = readinput.get_composite_source_model(oq, in_memory=False)
-        srcs = csm.get_sources()  # a single PointSource
-        self.assertEqual(len(srcs), 1)
-
-    def test_nrml05(self):
-        oq = readinput.get_oqparam('job.ini', case_2)
-        csm = readinput.get_composite_source_model(oq, in_memory=False)
-        srcs = csm.get_sources()  # two PointSources
-        self.assertEqual(len(srcs), 2)
 
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
@@ -452,18 +439,20 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         fname = oq.inputs['reqv'].pop('active shallow crust')
         oq.inputs['reqv']['act shallow crust'] = fname
         with self.assertRaises(ValueError) as ctx:
-            readinput.get_composite_source_model(oq, in_memory=False)
+            readinput.get_composite_source_model(oq)
         self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
 
     def test_applyToSources(self):
         oq = readinput.get_oqparam('job.ini', case_21)
         with mock.patch('logging.info') as info:
-            readinput.get_composite_source_model(oq)
+            with mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
+                readinput.get_composite_source_model(oq)
         self.assertEqual(
             info.call_args[0],
             ('Applied %d changes to the composite source model', 81))
 
     def test_extra_large_source(self):
+        raise unittest.SkipTest('Removed check on MAX_EXTENT')
         oq = readinput.get_oqparam('job.ini', case_21)
         with mock.patch('logging.error') as error, datastore.hdf5new() as h5:
             with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):

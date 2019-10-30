@@ -28,6 +28,7 @@ import sys
 import numpy
 
 from openquake.calculators import base
+from openquake.calculators.export import export
 from openquake.baselib import datastore, general
 from openquake.commonlib import readinput, oqvalidation, writers
 
@@ -100,6 +101,7 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         builtins.open = check_open
+        export.sanity_check = True
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
@@ -130,6 +132,7 @@ class CalculatorTestCase(unittest.TestCase):
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
             result = self.calc.run(export_dir=self.edir)
+        self.calc.datastore.close()
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
@@ -244,6 +247,7 @@ class CalculatorTestCase(unittest.TestCase):
     def tearDownClass(cls):
         print('durations =', cls.duration)
         builtins.open = orig_open
+        export.sanity_check = False
         if OQ_CALC_OUTPUTS:
             if not os.path.exists(OUTPUTS):
                 os.mkdir(OUTPUTS)

@@ -3,8 +3,8 @@ Event Based QA Test, Case 3
 
 ============== ===================
 checksum32     2,879,210,841      
-date           2019-07-30T15:03:48
-engine_version 3.7.0-git3b3dff46da
+date           2019-10-23T16:26:15
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -39,39 +39,47 @@ job_ini                 `job.ini <job.ini>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      NaN       1            0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-P    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+P    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =======
 operation-duration mean      stddev min       max       outputs
-read_source_models 9.716E-04 NaN    9.716E-04 9.716E-04 1      
+SourceReader       9.613E-04 NaN    9.613E-04 9.613E-04 1      
 ================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=314 B fnames=101 B 1.56 KB 
-================== ============================ ========
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_15461               time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 9.716E-04 0.0       1     
-======================== ========= ========= ======
+====================== ========= ========= ======
+calc_44495             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.01062   0.0       1     
+total SourceReader     9.613E-04 0.0       1     
+====================== ========= ========= ======

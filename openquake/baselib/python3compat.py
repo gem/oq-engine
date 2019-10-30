@@ -23,6 +23,7 @@ avoid an external dependency.
 """
 import math
 import builtins
+import numpy
 
 
 def encode(val):
@@ -48,7 +49,9 @@ def decode(val):
     :param: a unicode or bytes object
     :returns: a unicode object
     """
-    if isinstance(val, str):
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        return [decode(v) for v in val]
+    elif isinstance(val, str):
         # it was an already decoded unicode object
         return val
     else:

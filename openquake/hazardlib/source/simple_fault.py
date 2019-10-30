@@ -19,7 +19,6 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import copy
 import math
-import numpy
 from openquake.baselib.python3compat import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
@@ -130,7 +129,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
@@ -325,9 +324,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip)
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a WKT string
         """
-        return numpy.array([(p.x, p.y, p.z) for p in self.fault_trace],
-                           numpy.float32)
+        return self.polygon.wkt

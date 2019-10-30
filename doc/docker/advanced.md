@@ -12,8 +12,12 @@ $ docker run -e LOCKDOWN=enabled --name myoqcontainer -d -p 8800:8800 openquake/
 
 ### Docker compose (cluster)
 
-```bash
-LOCKDOWN=enabled docker-compose up -d
+Uncomment the following lines in the `docker-compose.yml`:
+
+```yaml
+# Uncomment to enable auth in WebUI/API
+environment:
+  - LOCKDOWN=true
 ```
 
 ### Docker
