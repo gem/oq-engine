@@ -31,7 +31,7 @@ import numpy
 import requests
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import random_filter
+from openquake.baselib.general import random_filter, countby
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -42,7 +42,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_model_factory import get_ltmodels
+from openquake.commonlib.source_reader import get_ltmodels
 from openquake.commonlib import logictree, source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
@@ -161,13 +161,16 @@ def _update(params, items, base_path):
             if value.startswith('{'):
                 dic = ast.literal_eval(value)  # name -> relpath
                 input_type, fnames = normalize(key, dic.values(), base_path)
-                params['inputs'][input_type] = fnames
+                params['inputs'][input_type] = dict(zip(dic, fnames))
                 params[input_type] = ' '.join(dic)
             elif value:
                 input_type, [fname] = normalize(key, [value], base_path)
                 params['inputs'][input_type] = fname
         elif isinstance(value, str) and value.endswith('.hdf5'):
-            # for the reqv feature
+            logging.warning('The [reqv] syntax has been deprecated, see '
+                            'https://github.com/gem/oq-engine/blob/master/doc/'
+                            'adv-manual/equivalent-distance-app for the new '
+                            'syntax')
             fname = os.path.normpath(os.path.join(base_path, value))
             try:
                 reqv = params['inputs']['reqv']
@@ -196,6 +199,8 @@ def get_params(job_inis, **kw):
         job_inis = extract_from_zip(
             job_inis[0], ['job_hazard.ini', 'job_haz.ini',
                           'job.ini', 'job_risk.ini'])
+        if not job_inis:
+            raise NameError('Could not find job.ini inside %s' % input_zip)
 
     not_found = [ini for ini in job_inis if not os.path.exists(ini)]
     if not_found:  # something was not found
@@ -216,8 +221,8 @@ def get_params(job_inis, **kw):
     _update(params, kw.items(), base_path)  # override on demand
 
     if params['inputs'].get('reqv'):
-        # using pointsource_distance=0 because of the reqv approximation
-        params['pointsource_distance'] = '0'
+        # using collapse_factor=0 because of the reqv approximation
+        params['collapse_factor'] = '0'
 
     return params
 
@@ -289,7 +294,7 @@ def get_csv_header(fname, sep=','):
 def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
-    the sites_csv, or the region.
+    the sites_csv, the region, the site model, the exposure in this order.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -320,6 +325,15 @@ def get_mesh(oqparam):
         start, stop = oqparam.sites_slice
         c = (coords[start:stop] if header[0] == 'site_id'
              else sorted(coords[start:stop]))
+        # NB: Notice the sort=False below
+        # Calculations starting from ground motion fields input by the user 
+        # require at least two input files related to the gmf data:
+        #   1. A sites.csv file, listing {site_id, lon, lat} tuples
+        #   2. A gmfs.csv file, listing {event_id, site_id, gmv[IMT1], gmv[IMT2], ...} tuples
+        # The site coordinates defined in the sites file do not need to be in sorted order.
+        # We must only ensure uniqueness of the provided site_ids and coordinates.
+        # When creating the site mesh from the site coordinates read from the csv file, 
+        # the sort=False flag maintains the user-specified site_ids instead of reassigning them after sorting.
         return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
@@ -331,16 +345,21 @@ def get_mesh(oqparam):
     elif oqparam.region_grid_spacing:
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
+        elif exposure:
+            # in case of implicit grid the exposure takes precedence over
+            # the site model
+            poly = exposure.mesh.get_convex_hull()
         elif 'site_model' in oqparam.inputs:
+            # this happens in event_based/case_19, where there is an implicit
+            # grid over the site model
             sm = get_site_model(oqparam)
             poly = geo.Mesh(sm['lon'], sm['lat']).get_convex_hull()
-        elif exposure:
-            poly = exposure.mesh.get_convex_hull()
         else:
             raise InvalidFile('There is a grid spacing but not a region, '
                               'nor a site model, nor an exposure in %s' %
                               oqparam.inputs['job_ini'])
         try:
+            logging.info('Inferring the hazard grid from the exposure')
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
@@ -348,6 +367,10 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
+    elif 'site_model' in oqparam.inputs:
+        logging.info('Extracting the hazard sites from the site model')
+        sm = get_site_model(oqparam)
+        return geo.Mesh(sm['lon'], sm['lat'])
     elif 'exposure' in oqparam.inputs:
         return exposure.mesh
 
@@ -396,6 +419,12 @@ def get_site_model(oqparam):
                                      for p in sorted(params[0])])
         sm = numpy.array([tuple(param[name] for name in site_model_dt.names)
                           for param in params], site_model_dt)
+        dupl = "\n".join(
+            '%s %s' % loc for loc, n in countby(sm, 'lon', 'lat').items()
+            if n > 1)
+        if dupl:
+            raise InvalidFile('There are duplicated sites in %s:\n%s' %
+                              (fname, dupl))
         arrays.append(sm)
     return numpy.concatenate(arrays)
 
@@ -409,43 +438,14 @@ def get_site_collection(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     mesh = get_mesh(oqparam)
-    req_site_params = get_gsim_lt(oqparam).req_site_params
-    grid_spacing = oqparam.region_grid_spacing
-    if oqparam.inputs.get('site_model'):
-        sm = get_site_model(oqparam)
-        try:
-            # in the future we could have elevation in the site model
-            depth = sm['depth']
-        except ValueError:
-            # this is the normal case
-            depth = None
-        if grid_spacing:
-            grid = mesh.get_convex_hull().dilate(
-                grid_spacing).discretize(grid_spacing)
-            grid_sites = site.SiteCollection.from_points(
-                grid.lons, grid.lats, req_site_params=req_site_params)
-            sitecol, params, _ = geo.utils.assoc(
-                sm, grid_sites, oqparam.region_grid_spacing * 1.414, 'filter')
-            logging.info('Associating %d site model sites to %d grid sites',
-                         len(sm), len(sitecol))
-            sitecol.make_complete()
-        else:
-            sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm, req_site_params)
-            params = sm
-        for name in req_site_params:
-            if name in ('vs30measured', 'backarc') \
-                   and name not in params.dtype.names:
-                sitecol._set(name, 0)  # the default
-            else:
-                sitecol._set(name, params[name])
-    elif mesh is None and oqparam.ground_motion_fields:
+    if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
         return
     else:  # use the default site params
+        req_site_params = get_gsim_lt(oqparam).req_site_params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -575,7 +575,7 @@ def get_composite_source_model(oqparam, h5=None):
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     p = source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
-        logging.info('Considering {:,d} logic tree paths out of {:,d}'.format(
+        logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
             oqparam.number_of_logic_tree_samples, p))
     else:  # full enumeration
         if (oqparam.is_event_based() and
@@ -585,7 +585,7 @@ def get_composite_source_model(oqparam, h5=None):
                 'There are too many potential logic tree paths (%d):'
                 'use sampling instead of full enumeration or reduce the '
                 'source model with oq reduce_sm' % p)
-        logging.info('Potential number of logic tree paths = {:,d}'.format(p))
+        logging.info('Potential number of logic tree paths = {:_d}'.format(p))
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
@@ -695,6 +695,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
+        # for predefined hazard you cannot reduce the site collection; instead
+        # you can in other cases, typically with a grid which is mostly empty
+        # (i.e. there are many hazard sites with no assets)
         assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded
 
@@ -865,8 +868,9 @@ def get_checksum32(oqparam, hazard=False):
                        'random_seed', 'ses_seed', 'truncation_level',
                        'maximum_distance', 'investigation_time',
                        'number_of_logic_tree_samples', 'imtls',
+                       'collapse_factor', 'pointsource_distance',
                        'ses_per_logic_tree_path', 'minimum_magnitude',
-                       'sites', 'pointsource_distance', 'filter_distance'):
+                       'sites', 'collapse_factor', 'filter_distance'):
                 hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff

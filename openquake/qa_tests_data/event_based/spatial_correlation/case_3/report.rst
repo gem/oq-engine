@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 
 ============== ===================
 checksum32     1,038,141,016      
-date           2019-09-24T15:21:04
-engine_version 3.7.0-git749bb363b3
+date           2019-10-23T16:26:11
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -39,39 +39,47 @@ job_ini                 `job.ini <job.ini>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      NaN       1            0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-P    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+P    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00155 NaN    0.00155 0.00155 1      
+SourceReader       0.00113 NaN    0.00113 0.00113 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=314 B fnames=128 B 1.53 KB 
-================== ============================ ========
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_1778                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.00155  0.0       1     
-======================== ======== ========= ======
+====================== ======== ========= ======
+calc_44483             time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.01011  0.0       1     
+total SourceReader     0.00113  0.0       1     
+====================== ======== ========= ======

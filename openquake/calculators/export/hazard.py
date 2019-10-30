@@ -18,9 +18,11 @@
 
 import re
 import os
+import logging
 import operator
 import collections
 
+import shapely.wkt
 import numpy
 
 from openquake.baselib.general import group_array, deprecated
@@ -79,24 +81,20 @@ def export_ruptures_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('rupid multiplicity mag centroid_lon centroid_lat '
-              'centroid_depth trt strike dip rake boundary').split()
-    rows = []
-    sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
-    for rgetter in gen_rupture_getters(dstore):
-        rups = rgetter.get_ruptures(sf)
-        rup_data = calc.RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
-        for r, rup in zip(rup_data.to_array(rups), rups):
-            rows.append(
-                (r['rup_id'], r['multiplicity'], r['mag'],
-                 r['lon'], r['lat'], r['depth'],
-                 rgetter.trt, r['strike'], r['dip'], r['rake'],
-                 r['boundary']))
-    rows.sort()  # by rupture rup_id
+    arr = extract(dstore, 'rupture_info')
+    if export.sanity_check:
+        for r in arr:
+            poly = r['boundary'].decode('utf8')
+            obj = shapely.wkt.loads(poly)
+            if not obj.is_valid:
+                # this happens when the bounding box collapse to a line
+                # or a point, i.e. maxlon=minlon or maxlat=minlat
+                print('Rupture %d has an invalid %s' % (r['rupid'], poly))
+
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-    writers.write_csv(dest, rows, header=header, comment=comment)
+    writers.write_csv(dest, arr, comment=comment)
     return [dest]
 
 
@@ -520,8 +518,10 @@ def export_disagg_csv(ekey, dstore):
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     for key in group:
         attrs = group[key].attrs
-        iml = attrs['iml']
         rlz = rlzs[attrs['rlzi']]
+        if not key.startswith('rlz-%d-' % rlz.ordinal):
+            continue
+        iml = attrs['iml']
         try:
             poe = attrs['poe']
         except Exception:  # no poes_disagg were given
@@ -552,9 +552,9 @@ def export_disagg_csv(ekey, dstore):
                    if value is not None and key not in skip_keys}
             com.update(poe='%.7f' % poe, iml='%.7e' % iml, rlz=rlz.ordinal)
             fname = dstore.export_path(key + '_%s.csv' % label)
-            values = extract(dstore,
-                             'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d' %
-                             (label, imt, site_id, poe_id))
+            values = extract(
+                dstore, 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&rlz=%d' %
+                (label, imt, site_id, poe_id, rlz.ordinal))
             writers.write_csv(fname, values, header=header, comment=com,
                               fmt='%.5E')
             fnames.append(fname)

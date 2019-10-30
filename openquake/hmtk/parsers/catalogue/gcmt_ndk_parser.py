@@ -359,20 +359,17 @@ class ParseNDKtoGCMT(object):
         """
         centroid = GCMTCentroid(hypocentre.date,
                                 hypocentre.time)
-
-        data = ndk_string[:58].split()
-        centroid.centroid_type = data[0].rstrip(':')
-        data = [float(x) for x in data[1:]]
-        time_diff = data[0]
+        centroid.centroid_type = ndk_string[0:8]
+        time_diff = float(ndk_string[10:18])
         if fabs(time_diff) > 1E-6:
             centroid._get_centroid_time(time_diff)
-        centroid.time_error = data[1]
-        centroid.latitude = data[2]
-        centroid.latitude_error = data[3]
-        centroid.longitude = data[4]
-        centroid.longitude_error = data[5]
-        centroid.depth = data[6]
-        centroid.depth_error = data[7]
+        centroid.time_error = float(ndk_string[19:22])
+        centroid.latitude = float(ndk_string[22:29])
+        centroid.latitude_error = float(ndk_string[31:34])
+        centroid.longitude = float(ndk_string[36:42])
+        centroid.latitude_error = float(ndk_string[44:47])
+        centroid.depth = float(ndk_string[48:53])
+        centroid.depth_error = float(ndk_string[54:58])
         centroid.depth_type = ndk_string[59:63]
         centroid.centroid_id = ndk_string[64:]
         return centroid

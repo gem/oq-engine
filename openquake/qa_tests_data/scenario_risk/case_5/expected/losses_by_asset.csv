@@ -1,3 +1,4 @@
+#,,,,,"generated_by='OpenQuake engine 3.8.0-gitb889875ce1', start_date='2019-10-19T04:32:12', checksum=3193187389, investigation_time=None, risk_investigation_time=None"
 id,taxonomy,lon,lat,structural~mean,structural~stddev
 "road1962","EMCA_PRIM_2L",74.45000,42.97000,4.01250E+03,3.73416E+03
 "bridge481","steel_spl",74.61400,42.84800,1.40528E+04,3.52537E+04

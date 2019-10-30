@@ -2,9 +2,9 @@ Classical PSHA with source specific logic tree (3**2 realizations)
 ==================================================================
 
 ============== ===================
-checksum32     283,798,826        
-date           2019-09-24T15:21:20
-engine_version 3.7.0-git749bb363b3
+checksum32     3,958,530,442      
+date           2019-10-23T16:26:41
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 14, num_rlzs = 9
@@ -87,54 +87,64 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=18, rlzs=9)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ======================== ============ ============
-source_model     grp_id trt                      eff_ruptures tot_ruptures
-================ ====== ======================== ============ ============
-source_model.xml 0      Active Shallow Crust     310          310         
-source_model.xml 1      Stable Continental Crust 1,040        1,040       
-source_model.xml 2      Active Shallow Crust     310          310         
-source_model.xml 3      Stable Continental Crust 1,040        1,040       
-source_model.xml 4      Active Shallow Crust     310          310         
-source_model.xml 5      Stable Continental Crust 1,040        1,040       
-source_model.xml 6      Active Shallow Crust     310          310         
-source_model.xml 7      Stable Continental Crust 1,040        1,040       
-source_model.xml 8      Active Shallow Crust     310          310         
-source_model.xml 9      Stable Continental Crust 1,040        1,040       
-source_model.xml 10     Active Shallow Crust     310          310         
-source_model.xml 11     Stable Continental Crust 1,040        1,040       
-source_model.xml 12     Active Shallow Crust     310          310         
-source_model.xml 13     Stable Continental Crust 1,040        1,040       
-source_model.xml 14     Active Shallow Crust     310          310         
-source_model.xml 15     Stable Continental Crust 1,040        1,040       
-source_model.xml 16     Active Shallow Crust     310          310         
-source_model.xml 17     Stable Continental Crust 1,040        1,040       
-================ ====== ======================== ============ ============
-
-============= ======
-#TRT models   18    
-#eff_ruptures 12,150
-#tot_ruptures 12,150
-============= ======
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.00323   310          310         
+1      9.615E-04 1,040        1,040       
+2      0.00323   310          310         
+3      9.615E-04 1,040        1,040       
+4      0.00323   310          310         
+5      9.615E-04 1,040        1,040       
+6      0.00323   310          310         
+7      9.615E-04 1,040        1,040       
+8      0.00323   310          310         
+9      9.615E-04 1,040        1,040       
+10     0.00323   310          310         
+11     9.615E-04 1,040        1,040       
+12     0.00323   310          310         
+13     9.615E-04 1,040        1,040       
+14     0.00323   310          310         
+15     9.615E-04 1,040        1,040       
+16     0.00323   310          310         
+17     9.615E-04 1,040        1,040       
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =========
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
-========= ====== ==== ============ ========= ========= ============ =========
-2         0      S    310          0.00887   3.00000   930          104,798  
-1         1      A    1,040        4.668E-04 3.00000   3,120        6,683,467
-========= ====== ==== ============ ========= ========= ============ =========
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+2         12     S    310          0.00284   0.00323   310         
+2         0      S    310          0.00262   0.00323   310         
+2         8      S    310          0.00256   0.00323   310         
+2         2      S    310          0.00256   0.00323   310         
+2         4      S    310          0.00252   0.00323   310         
+2         14     S    310          0.00250   0.00323   310         
+2         10     S    310          0.00250   0.00323   310         
+2         16     S    310          0.00220   0.00323   310         
+2         6      S    310          0.00220   0.00323   310         
+1         11     A    1,040        0.00122   9.615E-04 1,040       
+1         13     A    1,040        0.00118   9.615E-04 1,040       
+1         17     A    1,040        0.00116   9.615E-04 1,040       
+1         9      A    1,040        0.00115   9.615E-04 1,040       
+1         1      A    1,040        0.00105   9.615E-04 1,040       
+1         15     A    1,040        9.782E-04 9.615E-04 1,040       
+1         5      A    1,040        9.680E-04 9.615E-04 1,040       
+1         7      A    1,040        9.596E-04 9.615E-04 1,040       
+1         3      A    1,040        9.594E-04 9.615E-04 1,040       
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    4.668E-04 9     
-S    0.00887   9     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.00963  
+S    0.02250  
+==== =========
 
 Duplicated sources
 ------------------
@@ -142,28 +152,28 @@ Found 0 unique sources and 6 duplicate sources with multiplicity 3.0: ['1' '1' '
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ========= ======= =======
-operation-duration mean    stddev  min       max     outputs
-preclassical       0.00194 0.00164 3.397E-04 0.00372 6      
-read_source_models 0.02511 0.00302 0.01784   0.02819 9      
-================== ======= ======= ========= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+SourceReader       0.08160 0.02442   0.03668 0.11116 9      
+preclassical       0.00203 7.590E-04 0.00118 0.00307 18     
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================= ========
-task               sent                                          received
-preclassical       srcs=9.34 KB srcfilter=3.79 KB params=3.56 KB 2.06 KB 
-read_source_models converter=2.76 KB fnames=963 B                28.07 KB
-================== ============================================= ========
+============ =============================================== ========
+task         sent                                            received
+SourceReader apply_unc=14.38 KB ltmodel=1.76 KB fname=936 B  49.32 KB
+preclassical srcs=27.56 KB params=11.41 KB srcfilter=3.92 KB 6.01 KB 
+============ =============================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_1833                time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 0.22597   0.0       9     
-total preclassical       0.01165   0.0       6     
-store source_info        0.00246   0.0       1     
-aggregate curves         0.00187   0.0       6     
-managing sources         3.746E-04 0.0       1     
-======================== ========= ========= ======
+====================== ======== ========= ======
+calc_44542             time_sec memory_mb counts
+====================== ======== ========= ======
+total SourceReader     0.73440  0.0       9     
+composite source model 0.17181  0.0       1     
+total preclassical     0.03652  0.0       18    
+aggregate curves       0.00418  0.0       18    
+store source_info      0.00232  0.0       1     
+====================== ======== ========= ======
