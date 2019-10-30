@@ -218,9 +218,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
         if oq.rlz_index is None:
-            Z = 1
+            Z = oq.num_rlzs_disagg
             try:
-                rlzs = self.datastore['best_rlz'][()].reshape(self.N, Z)
+                rlzs = self.datastore['best_rlz'][:, :Z]
             except KeyError:
                 rlzs = numpy.zeros((self.N, Z), int)
         else:
