@@ -81,17 +81,17 @@ class GriddedSurface(BaseSurface):
 
     def get_surface_boundaries(self):
         """
-        :returns: (min_max lons, min_max lats)
+        :returns: (lons, lats) for the 5 points of the bounding box
         """
-        min_lon, max_lon, max_lat, min_lat = self.get_bounding_box()
-        return [[min_lon, max_lon]], [[min_lat, max_lat]]
+        xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
+        return [xs], [ys]
 
     def get_surface_boundaries_3d(self):
         """
-        :returns: (min_max lons, min_max lats)
+        :returns: (lons, lats, depths) for the 5 points of the bounding box
         """
-        min_lon, max_lon, max_lat, min_lat = self.get_bounding_box()
-        return [[min_lon, max_lon]], [[min_lat, max_lat]], [[0, 0]]
+        xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
+        return [xs], [ys], [(0, 0, 0, 0, 0)]
 
     def get_rx_distance(self, mesh):
         """

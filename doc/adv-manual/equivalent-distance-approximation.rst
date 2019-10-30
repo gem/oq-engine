@@ -27,13 +27,12 @@ The equivalent epicenter distance approximation (``reqv`` for short)
 was introduced in engine 3.2 to enable the comparison of the OpenQuake
 engine with time-honored Fortran codes using the same approximation.
 
-You can enable it in the engine by adding a ``[reqv]`` section to the
-job.ini, like in our example in
+You can enable it in the engine by adding a ``reqv_hdf5`` parameter to the
+``job.ini``, like in our example in
 openquake/qa_tests_data/classical/case_2/job.ini::
 
-  [reqv]
-  active shallow crust = lookup_asc.hdf5
-  stable shallow crust = lookup_sta.hdf5
+  reqv_hdf5 = {'active shallow crust': 'lookup_asc.hdf5',
+               'stable shallow crust': 'lookup_sta.hdf5'}
 
 For each tectonic region type to which the approximation should be applied,
 the user must provide a lookup table in .hdf5 format containing arrays

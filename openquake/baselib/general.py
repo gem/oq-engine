@@ -39,8 +39,10 @@ import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 
 
 def duplicated(items):
@@ -754,8 +756,17 @@ class DictArray(Mapping):
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
+        lenset = set()
         for imt, imls in imtls.items():
             self[imt] = imls
+            try:
+                lenset.add(len(imls))
+            except TypeError:
+                lenset.add(1)
+        if len(lenset) == 1:
+            self.L1 = lenset.pop()
+        else:
+            self.L1 = None
 
     def new(self, array):
         """
@@ -871,6 +882,96 @@ def group_array(array, *kfields):
     Convert an array into a dict kfields -> array
     """
     return groupby(array, operator.itemgetter(*kfields), _reducerecords)
+
+
+def multi_index(shape, axis=None):
+    """
+    :param shape: a shape of lenght L with P = S1 * S2 * ... * SL
+    :param axis: None or an integer in the range 0 .. L -1
+    :yields:
+        P tuples of indices with a slice(None) at the axis position (if any)
+    """
+    if any(s >= TWO16 for s in shape):
+        raise ValueError('Shape too big: ' + str(shape))
+    ranges = (range(s) for s in shape)
+    if axis is None:
+        yield from itertools.product(*ranges)
+    for tup in itertools.product(*ranges):
+        lst = list(tup)
+        lst.insert(axis, slice(None))
+        yield tuple(lst)
+
+
+def fast_agg(indices, values=None, axis=0):
+    """
+    :param indices: N indices in the range 0 ... M - 1 with M < N
+    :param values: N values (can be arrays)
+    :returns: M aggregated values (can be arrays)
+
+    >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
+    >>> fast_agg([0, 1, 1, 0], values)
+    array([[0.5 , 0.55],
+           [0.5 , 0.55]])
+    """
+    if values is None:
+        values = numpy.ones_like(indices)
+    N = len(values)
+    if len(indices) != N:
+        raise ValueError('There are %d values but %d indices' %
+                         (N, len(indices)))
+    shp = values.shape[1:]
+    if not shp:
+        return numpy.bincount(indices, values)
+    M = max(indices) + 1
+    lst = list(shp)
+    lst.insert(axis, M)
+    res = numpy.zeros(lst, values.dtype)
+    for mi in multi_index(shp, axis):
+        res[mi] = numpy.bincount(indices, values[mi])
+    return res
+
+
+def fast_agg2(tags, values=None, axis=0):
+    """
+    :param tags: N non-unique tags out of M
+    :param values: N values (can be arrays)
+    :returns: (M unique tags, M aggregated values)
+
+    >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
+    >>> fast_agg2(['A', 'B', 'B', 'A'], values)
+    (array(['A', 'B'], dtype='<U1'), array([[0.5 , 0.55],
+           [0.5 , 0.55]]))
+
+    It can also be used to count the number of tags:
+
+    >>> fast_agg2(['A', 'B', 'B', 'A', 'A'])
+    (array(['A', 'B'], dtype='<U1'), array([3., 2.]))
+    """
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    return uniq, fast_agg(indices, values, axis)
+
+
+def fast_agg3(structured_array, kfield, vfields):
+    """
+    Aggregate a structured array with a key field (the kfield)
+    and some value fields (the vfields).
+    """
+    allnames = structured_array.dtype.names
+    assert kfield in allnames, kfield
+    for vfield in vfields:
+        assert vfield in allnames, vfield
+    tags = structured_array[kfield]
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    dic = {}
+    dtlist = [(kfield, structured_array.dtype[kfield])]
+    for name in vfields:
+        dic[name] = fast_agg(indices, structured_array[name])
+        dtlist.append((name, structured_array.dtype[name]))
+    res = numpy.zeros(len(uniq), dtlist)
+    res[kfield] = uniq
+    for name in dic:
+        res[name] = dic[name]
+    return res
 
 
 def count(groupiter):

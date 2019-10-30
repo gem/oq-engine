@@ -1,0 +1,11 @@
+============= ============= ====== ======== =======
+return_period kind          policy taxonomy value  
+30            mean          A      RC       NaN    
+30            quantile-0.25 A      RC       NaN    
+240           mean          A      RC       0.04677
+240           quantile-0.25 A      RC       0.04420
+480           mean          A      RC       0.09495
+480           quantile-0.25 A      RC       0.08257
+960           mean          A      RC       0.10884
+960           quantile-0.25 A      RC       0.10269
+============= ============= ====== ======== =======

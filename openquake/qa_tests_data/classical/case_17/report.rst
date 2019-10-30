@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 17
 =================================
 
 ============== ===================
-checksum32     1,496,028,179      
-date           2019-07-30T15:04:28
-engine_version 3.7.0-git3b3dff46da
+checksum32     2,969,341,507      
+date           2019-10-23T16:26:39
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = 5
@@ -64,61 +64,56 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=2, rlzs=5)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================== ====== ==================== ============ ============
-source_model       grp_id trt                  eff_ruptures tot_ruptures
-================== ====== ==================== ============ ============
-source_model_1.xml 0      Active Shallow Crust 46           39          
-source_model_2.xml 1      Active Shallow Crust 46           7           
-================== ====== ==================== ============ ============
-
-============= ==
-#TRT models   2 
-#eff_ruptures 92
-#tot_ruptures 46
-============= ==
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.02564   39           39          
+1      0.14286   7            7.00000     
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== ======
-source_id grp_id code num_ruptures calc_time num_sites weight speed 
-========= ====== ==== ============ ========= ========= ====== ======
-1         0      P    39           0.00129   2.00000   46     35,525
-========= ====== ==== ============ ========= ========= ====== ======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+1         0      P    39           0.00126   0.02564   39          
+2         1      P    7            0.00120   0.14286   7.00000     
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-P    0.00129   2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+P    0.00246  
+==== =========
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ======= =======
-operation-duration mean      stddev    min       max     outputs
-preclassical       0.00162   NaN       0.00162   0.00162 1      
-read_source_models 9.358E-04 3.176E-04 7.112E-04 0.00116 2      
-================== ========= ========= ========= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+SourceReader       0.00112 6.137E-05 0.00108 0.00117 2      
+preclassical       0.00149 4.198E-05 0.00146 0.00152 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ==================================================== ========
-task               sent                                                 received
-preclassical       srcs=1.8 KB params=517 B srcfilter=220 B gsims=147 B 347 B   
-read_source_models converter=628 B fnames=204 B                         3.39 KB 
-================== ==================================================== ========
+============ =========================================== ========
+task         sent                                        received
+SourceReader apply_unc=2.28 KB ltmodel=378 B fname=212 B 6.05 KB 
+preclassical srcs=2.56 KB params=1.09 KB srcfilter=446 B 684 B   
+============ =========================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_15531               time_sec  memory_mb counts
-======================== ========= ========= ======
-store source_info        0.00209   0.0       1     
-total read_source_models 0.00187   0.0       2     
-total preclassical       0.00162   0.0       1     
-managing sources         9.570E-04 0.0       1     
-aggregate curves         1.450E-04 0.0       1     
-======================== ========= ========= ======
+====================== ========= ========= ======
+calc_44537             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.04380   0.0       1     
+total preclassical     0.00299   0.0       2     
+total SourceReader     0.00225   0.0       2     
+store source_info      0.00224   0.0       1     
+aggregate curves       4.416E-04 0.0       2     
+====================== ========= ========= ======

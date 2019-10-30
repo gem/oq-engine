@@ -26,7 +26,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.7.0'
+__version__ = '3.8.0'
 __version__ += git_suffix(__file__)
 
 

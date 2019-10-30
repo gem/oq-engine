@@ -111,18 +111,19 @@ def log(array, cutoff):
 
 def closest_to_ref(arrays, ref, cutoff=1E-12):
     """
-    :param arrays: a sequence of R arrays
+    :param arrays: a sequence of arrays
     :param ref: the reference array
-    :returns: a dictionary with keys rlz, value, and dist
+    :returns: a list of indices ordered by closeness
     """
     dist = numpy.zeros(len(arrays))
     logref = log(ref, cutoff)
-    for rlz, array in enumerate(arrays):
+    pairs = []
+    for idx, array in enumerate(arrays):
         diff = log(array, cutoff) - logref
-        dist[rlz] = numpy.sqrt((diff * diff).sum())
-    rlz = dist.argmin()
-    closest = dict(rlz=rlz, value=arrays[rlz], dist=dist[rlz])
-    return closest
+        dist = numpy.sqrt((diff * diff).sum())
+        pairs.append((dist, idx))
+    pairs.sort()
+    return [idx for dist, idx in pairs]
 
 
 def compose_arrays(a1, a2, firstfield='etag'):

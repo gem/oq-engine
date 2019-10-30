@@ -1,0 +1,11 @@
+============= ===== ====== ======== =======
+return_period kind  policy taxonomy value  
+30            rlz-0 A      RC       NaN    
+30            rlz-1 A      RC       NaN    
+240           rlz-0 A      RC       0.04934
+240           rlz-1 A      RC       0.04420
+480           rlz-0 A      RC       0.10733
+480           rlz-1 A      RC       0.08257
+960           rlz-0 A      RC       0.11500
+960           rlz-1 A      RC       0.10269
+============= ===== ====== ======== =======
