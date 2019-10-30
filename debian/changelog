@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made it possible to disaggregate on multiple realizations
+    with the parameters `rlz_index` or `num_rlzs_disagg`
   * Fixed downloading the ShakeMaps (again)
   * Better error message in case of too large maximum_distance
   * Optimized the case of point sources with an hypocenter distribution and
