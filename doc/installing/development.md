@@ -133,7 +133,8 @@ You can pull all the latest changes to the source code running
 
 ```bash
 cd oq-engine
-git pull
+oq dbserver stop
+git pull && pip install -e .
 cd ..
 ```
 

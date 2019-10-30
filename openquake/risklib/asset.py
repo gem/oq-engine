@@ -163,17 +163,6 @@ class Asset(object):
         self.area = area
         self._retrofitted = retrofitted
         self.calc = calc
-        self._cost = {}  # cache for the costs
-
-    @property
-    def taxonomy(self):
-        return self.tagvalue('taxonomy')
-
-    def tagvalue(self, tagname):
-        """
-        :returns: the tagvalue associated to the given tagname
-        """
-        return self.tagidxs[self.calc.tagi[tagname]]
 
     def value(self, loss_type, time_event=None):
         """
@@ -181,12 +170,7 @@ class Asset(object):
         """
         if loss_type == 'occupants':
             return self.values['occupants_' + str(time_event)]
-        try:  # extract from the cache
-            val = self._cost[loss_type]
-        except KeyError:  # compute
-            val = self.calc(loss_type, self.values, self.area, self.number)
-            self._cost[loss_type] = val
-        return val
+        return self.calc(loss_type, self.values, self.area, self.number)
 
     def retrofitted(self):
         """
@@ -194,19 +178,6 @@ class Asset(object):
         """
         return self.calc('structural', {'structural': self._retrofitted},
                          self.area, self.number)
-
-    def tagmask(self, tags):
-        """
-        :returns: a boolean array with True where the assets has tags
-        """
-        mask = numpy.zeros(len(tags), bool)
-        for t, tag in enumerate(tags):
-            tagname, tagvalue = tag.split('=')
-            mask[t] = self.tagvalue(tagname) == tagvalue
-        return mask
-
-    def __lt__(self, other):
-        return self.ordinal < other.ordinal
 
     def __repr__(self):
         return '<Asset #%s>' % self.ordinal

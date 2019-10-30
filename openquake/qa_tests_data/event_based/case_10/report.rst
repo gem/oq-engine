@@ -3,8 +3,8 @@ Event Based Bogota
 
 ============== ===================
 checksum32     4,020,014,859      
-date           2019-09-24T15:21:03
-engine_version 3.7.0-git749bb363b3
+date           2019-10-23T16:26:10
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 5, num_levels = 104, num_rlzs = ?
@@ -42,6 +42,15 @@ source_model_logic_tree  `logic_tree_source_model.xml <logic_tree_source_model.x
 structural_vulnerability `vulnerability_model_bog.xml <vulnerability_model_bog.xml>`_      
 ======================== ==================================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      NaN       5,370        0.0         
+1      NaN       7,860        0.0         
+====== ========= ============ ============
+
 Exposure model
 --------------
 =========== =
@@ -60,39 +69,40 @@ CR/LFINF+DUC          1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-C    0.0       1     
-P    0.0       122   
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+C    0.0      
+P    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.30735 0.32569 0.07705 0.53764 2      
+SourceReader       0.39023 0.37015 0.12850 0.65197 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=628 B fnames=241 B 70.83 KB
-================== ============================ ========
+============ =========================================== =========
+task         sent                                        received 
+SourceReader apply_unc=5.08 KB ltmodel=454 B fname=235 B 205.63 KB
+============ =========================================== =========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_1774                time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 0.61469   1.25391   2     
-reading exposure         5.634E-04 0.0       1     
-======================== ========= ========= ======
+====================== ========= ========= ======
+calc_44479             time_sec  memory_mb counts
+====================== ========= ========= ======
+total SourceReader     0.78047   1.33594   2     
+composite source model 0.69368   0.0       1     
+reading exposure       5.169E-04 0.0       1     
+====================== ========= ========= ======

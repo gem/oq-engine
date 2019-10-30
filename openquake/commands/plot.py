@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
+import shapely
+import numpy
 from openquake.baselib import sap
-from openquake.hazardlib import mfd
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -71,7 +72,38 @@ def make_figure_hmaps(extractors, what):
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ncalcs = len(extractors)
-    for i, ex in enumerate(extractors):
+    if ncalcs > 2:
+        raise RuntimeError('Could not plot more than two calculations at once')
+    elif ncalcs == 2:  # plot the differences
+        ex1, ex2 = extractors
+        oq1 = ex1.oqparam
+        oq2 = ex2.oqparam
+        n_poes = len(oq1.poes)
+        assert n_poes == len(oq2.poes)
+        itime = oq1.investigation_time
+        assert oq2.investigation_time == itime
+        sitecol = ex1.get('sitecol')
+        assert ex1.get('sitecol') == sitecol
+        hmaps1 = ex1.get(what)
+        hmaps2 = ex2.get(what)
+        [imt] = hmaps1.imt
+        assert [imt] == hmaps2.imt
+        [kind] = hmaps1.kind
+        assert hmaps1.kind == [kind]
+        for j, poe in enumerate(oq1.poes):
+            diff = hmaps1[kind][:, 0, j] - hmaps2[kind][:, 0, j]
+            maxdiff = numpy.abs(diff).max()
+            ax = fig.add_subplot(1, n_poes, j + 1)
+            ax.grid(True)
+            ax.set_xlabel('IMT=%s, kind=%s, poe=%s\ncalcs %d-%d, '
+                          'inv_time=%dy\nmaxdiff=%s' %
+                          (imt, kind, poe, ex1.calc_id, ex2.calc_id,
+                           itime, maxdiff))
+            bmap = basemap('cyl', sitecol)
+            bmap.scatter(sitecol['lon'], sitecol['lat'],
+                         c=diff, cmap='jet')
+    elif ncalcs == 1:  # plot the hmap
+        [ex] = extractors
         oq = ex.oqparam
         n_poes = len(oq.poes)
         sitecol = ex.get('sitecol')
@@ -79,7 +111,7 @@ def make_figure_hmaps(extractors, what):
         [imt] = hmaps.imt
         [kind] = hmaps.kind
         for j, poe in enumerate(oq.poes):
-            ax = fig.add_subplot(n_poes, ncalcs, j * ncalcs + i + 1)
+            ax = fig.add_subplot(1, n_poes, j + 1)
             ax.grid(True)
             ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
                           'inv_time=%dy' %
@@ -120,44 +152,22 @@ def make_figure_uhs(extractors, what):
 
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot 'disagg?by=Dist&imt=PGA'
+    $ oq plot 'disagg?kind=Mag&imt=PGA'
     """
-    assert len(extractors) == 1
     import matplotlib.pyplot as plt
     fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
     [sid] = disagg.site_id
+    [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    oq = extractors[0].oqparam
-    poe = oq.poes_disagg[poe_id]
-    ax = fig.add_subplot(1, 1, 1)
-    ax.set_xlabel('Disagg%s on site %s, poe=%s, inv_time=%dy' %
-                  (disagg.by, sid, poe, oq.investigation_time))
-    ax.plot(disagg.array)
-    ax.legend()
-    return plt
-
-
-# FIXME: not working right now
-def make_figure_source_geom(extractors, what):
-    """
-    Extract the geometry of a given sources
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/source_geom/1,2,3
-    """
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    [ex] = extractors
-    sitecol = ex.get('sitecol')
-    geom_by_src = vars(ex.get(what))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.grid(True)
-    ax.set_xlabel('Source')
-    bmap = basemap('cyl', sitecol)
-    for src, geom in geom_by_src.items():
-        if src != 'array':
-            bmap.plot(geom['lon'], geom['lat'], label=src)
-    bmap.plot(sitecol['lon'], sitecol['lat'], 'x')
+    ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
+                  (disagg.kind, sid, imt, poe_id, oq.investigation_time))
+    for name, values in zip(disagg.names, disagg.array):
+        x, y = values.T
+        print(y)
+        ax.plot(x, y, label=name.split('-')[1])
     ax.legend()
     return plt
 
@@ -211,33 +221,75 @@ def make_figure_memory(extractors, what):
     return plt
 
 
-# FIXME: not working right now
-def make_figure_event_based_mfd(extractors, what):
+@sap.script
+def make_figure_sources(extractors, what):
     """
-    :param plots: list of pairs (task_name, memory array)
+    Plot the sources (except point sources)
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
+    from openquake.hmtk.plotting.patch import PolygonPatch
+    [ex] = extractors
+    info = ex.get(what)
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    # sitecol = ex.get('sitecol')
+    # bmap = basemap('cyl', sitecol)
+    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
+    minxs = []
+    maxxs = []
+    minys = []
+    maxys = []
+    n = 0
+    tot = 0
+    for rec in info:
+        if not rec['wkt'].startswith('POINT'):
+            poly = shapely.wkt.loads(rec['wkt'])
+            minx, miny, maxx, maxy = poly.bounds
+            minxs.append(minx)
+            maxxs.append(maxx)
+            minys.append(miny)
+            maxys.append(maxy)
+            if rec['eff_ruptures']:  # not filtered out
+                alpha = .3
+                n += 1
+            else:
+                alpha = .1
+            pp = PolygonPatch(poly, alpha=alpha)
+            ax.add_patch(pp)
+            tot += 1
+    ax.set_xlim(min(minxs), max(maxxs))
+    ax.set_ylim(min(minys), max(maxys))
+    ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
+    return plt
 
-    num_plots = len(extractors)
-    fig = plt.figure()
-    for i, ex in enumerate(extractors):
-        mfd_dict = ex.get(what).to_dict()
-        mags = mfd_dict.pop('magnitudes')
-        duration = mfd_dict.pop('duration')
-        ax = fig.add_subplot(1, num_plots, i + 1)
-        ax.grid(True)
-        ax.set_xlabel('magnitude')
-        ax.set_ylabel('annual frequency [on %dy]' % duration)
-        for label, freqs in mfd_dict.items():
-            ax.plot(mags, freqs, label=label)
-        mfds = ex.get('source_mfds').array
-        if len(mfds) == 1:
-            expected = mfd.from_toml(mfds[0], ex.oqparam.width_of_mfd_bin)
-            magnitudes, frequencies = zip(
-                *expected.get_annual_occurrence_rates())
-            ax.plot(magnitudes, frequencies, label='expected')
-        ax.legend()
+
+@sap.script
+def make_figure_rupture_info(extractors, what):
+    """
+    Plot the rupture bounding boxes
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    from openquake.hmtk.plotting.patch import PolygonPatch
+    [ex] = extractors
+    info = ex.get(what)
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    # sitecol = ex.get('sitecol')
+    # bmap = basemap('cyl', sitecol)
+    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
+    n = 0
+    tot = 0
+    for rec in info:
+        poly = shapely.wkt.loads(rec['boundary'].decode('utf8'))
+        if poly.is_valid:
+            ax.add_patch(PolygonPatch(poly))
+            n += 1
+        else:
+            print('Invalid %s' % rec['boundary'].decode('utf8'))
+        tot += 1
+    ax.set_title('%d/%d valid ruptures' % (n, tot))
     return plt
 
 

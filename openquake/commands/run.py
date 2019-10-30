@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import unittest.mock
 import collections
 import tempfile
 import logging
@@ -88,12 +89,15 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, loglevel,
     return rcalc
 
 
+# run with processpool unless OQ_DISTRIBUTE is set to something else
 def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     global calc_path
     assert len(job_inis) in (1, 2), job_inis
     # set the logs first of all
     calc_id = logs.init(level=getattr(logging, loglevel.upper()))
     with performance.Monitor('total runtime', measuremem=True) as monitor:
+        if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+            os.environ['OQ_DISTRIBUTE'] = 'processpool'
         if len(job_inis) == 1:  # run hazard or risk
             if hc:
                 hc_id = hc[0]

@@ -2,9 +2,9 @@ event based two source models
 =============================
 
 ============== ===================
-checksum32     1,852,256,743      
-date           2019-09-24T15:20:55
-engine_version 3.7.0-git749bb363b3
+checksum32     1,291,658,938      
+date           2019-10-23T16:25:52
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 1, num_levels = 11, num_rlzs = ?
@@ -41,6 +41,17 @@ source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.x
 structural_vulnerability `structural_vulnerability_model.xml <structural_vulnerability_model.xml>`_
 ======================== ==========================================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      NaN       482          0.0         
+1      NaN       4            0.0         
+2      NaN       482          0.0         
+3      NaN       1            0.0         
+====== ========= ============ ============
+
 Exposure model
 --------------
 =========== =
@@ -55,19 +66,19 @@ tax1     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-S    0.0       3     
-X    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+S    0.0      
+X    0.0      
+==== =========
 
 Duplicated sources
 ------------------
@@ -77,21 +88,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01397 0.00768 0.00854 0.01940 2      
+SourceReader       0.01242 0.00602 0.00816 0.01668 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=628 B fnames=218 B 13.93 KB
-================== ============================ ========
+============ ========================================== ========
+task         sent                                       received
+SourceReader apply_unc=2.4 KB ltmodel=378 B fname=212 B 20.24 KB
+============ ========================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_1707                time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 0.02794   0.28125   2     
-reading exposure         5.031E-04 0.0       1     
-======================== ========= ========= ======
+====================== ========= ========= ======
+calc_44411             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.02833   0.0       1     
+total SourceReader     0.02484   0.43359   2     
+reading exposure       5.648E-04 0.0       1     
+====================== ========= ========= ======

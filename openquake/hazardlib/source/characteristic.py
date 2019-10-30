@@ -78,7 +78,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
@@ -119,9 +119,8 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         """
         return self.surface.mesh.get_convex_hull()
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a WKT string
         """
-        return numpy.array([(p.x, p.y, p.z) for p in self.surface.mesh],
-                           numpy.float32)
+        return self.surface.mesh.get_convex_hull().wkt
