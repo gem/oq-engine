@@ -128,8 +128,8 @@ class _GeographicObjects(object):
         if not dic:
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
-        return (sitecol.filtered(dic),
-                numpy.array([dic[sid] for sid in sorted(dic)]),
+        sids = sorted(dic)
+        return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
     def assoc2(self, assets_by_site, assoc_dist, mode, asset_refs):
@@ -190,7 +190,7 @@ def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
     :returns: (filtered site collection, filtered objects)
     """
     if isinstance(objects, numpy.ndarray) or hasattr(objects, 'lons'):
-        # objects is a geo array with lon, lat fields or a mesh-like instance
+        # objects is a geo array with lon, lat fields; used for ShakeMaps
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
         return _GeographicObjects(sitecol).assoc2(
@@ -316,7 +316,10 @@ def get_bounding_box(obj, maxdist):
             lons %= 360
         bbox = lons.min(), lats.min(), lons.max(), lats.max()
     a1 = min(maxdist * KM_TO_DEGREES, 90)
-    a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
+    a2 = angular_distance(maxdist, bbox[1], bbox[3])
+    if bbox[2] - bbox[0] + 2 * a2 > 180:
+        raise ValueError('The maximum distance %d is too large, the bounding '
+                         'box is larger than half the globe' % maxdist)
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 
@@ -620,3 +623,12 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
+
+
+def bbox2poly(bbox):
+    """
+    :param bbox: a geographic bounding box West-East-North-South
+    :returns: a list of pairs corrisponding to the bbox polygon
+    """
+    x1, x2, y2, y1 = bbox  # west, east, north, south
+    return (x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)

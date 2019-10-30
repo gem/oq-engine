@@ -32,7 +32,7 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42)
+    case_42, case_43, case_44)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -60,6 +60,11 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertIn('task', info)
             self.assertIn('sent', info)
             self.assertIn('received', info)
+
+            slow = view('task:classical_split_filter:-1', self.calc.datastore)
+            self.assertIn('taskno', slow)
+            self.assertIn('duration', slow)
+            self.assertIn('sources', slow)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
@@ -202,22 +207,26 @@ class ClassicalTestCase(CalculatorTestCase):
                           '0.145', '0.203', '0.284'))
 
     def test_case_14(self):
-        # test classical
-        self.assert_curves_ok([
-            'hazard_curve-rlz-000_PGA.csv', 'hazard_curve-rlz-001_PGA.csv'
-        ], case_14.__file__)
+        # test classical with 2 gsims and 1 sample
+        self.assert_curves_ok(['hazard_curve-rlz-000_PGA.csv'],
+                              case_14.__file__)
+
+        # test sampling use the right number of gsims by looking at
+        # the poes datasets which have shape (N, L, G)
+        G = 1  # and not 2
+        self.calc.datastore['poes/grp-00'].array.shape[-1] == G
 
         # test preclassical and OQ_SAMPLE_SOURCES
         with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
             self.run_calc(
                 case_14.__file__, 'job.ini', calculation_mode='preclassical')
-        rpt = view('ruptures_per_trt', self.calc.datastore)
+        rpt = view('ruptures_per_grp', self.calc.datastore)
         self.assertEqual(rpt, """\
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-simple_fault.xml 0      Active Shallow Crust 447          447         
-================ ====== ==================== ============ ============""")
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.02237   447          447         
+====== ========= ============ ============""")
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
@@ -404,12 +413,17 @@ hazard_uhs-std.csv
         self.assertEqual(checksum, 3211843635)
 
     def test_case_24(self):  # UHS
+        # this is a case with rjb and an hypocenter distribution
         self.assert_curves_ok([
             'hazard_curve-PGA.csv', 'hazard_curve-PGV.csv',
             'hazard_curve-SA(0.025).csv', 'hazard_curve-SA(0.05).csv',
             'hazard_curve-SA(0.1).csv', 'hazard_curve-SA(0.2).csv',
             'hazard_curve-SA(0.5).csv', 'hazard_curve-SA(1.0).csv',
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
+        # test that the number of ruptures is 1/3 of the the total
+        # due to the collapsing of the hypocenters (rjb is depth-independent)
+        self.assertEqual(len(self.calc.datastore['rup/rrup_']), 260)
+        self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -453,10 +467,6 @@ hazard_uhs-std.csv
                  ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
                  ('rx_', 3202), ('sid_', 3202), ('srcidx', 3202),
                  ('weight', 3202), ('ztor', 3202)])
-
-            # check best_rlz on 5 sites
-            best_rlz = self.calc.datastore['best_rlz'][()]
-            numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling are not implemented
@@ -529,3 +539,18 @@ hazard_uhs-std.csv
         # split/filter a long complex fault source with maxdist=1000 km
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_42.__file__)
+
+    def test_case_43(self):
+        # this is a test for
+        # collapse_factor = 3 * rupture radius > maximum_distance
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "hazard_map-mean-PGA.csv"], case_43.__file__)
+
+    def test_case_44(self):
+        # this is a test for shift_hypo. We computed independently the results
+        # using the same input and a simpler calculator implemented in a
+        # jupyter notebook
+        self.assert_curves_ok(["hc-shift-hypo-PGA.csv"], case_44.__file__,
+                              shift_hypo='true')
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_44.__file__,
+                              shift_hypo='false')

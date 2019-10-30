@@ -22,7 +22,7 @@ import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib import calc, geo, probability_map
+from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import (
     EBRupture, BaseRupture, events_dt)
@@ -34,6 +34,26 @@ U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
+
+
+def build_stat_curve(poes, imtls, stat, weights):
+    """
+    Build statistics by taking into account IMT-dependent weights
+    """
+    assert len(poes) == len(weights), (len(poes), len(weights))
+    L = len(imtls.array)
+    array = numpy.zeros((L, 1))
+    if isinstance(weights, list):  # IMT-dependent weights
+        # this is slower since the arrays are shorter
+        for imt in imtls:
+            slc = imtls(imt)
+            ws = [w[imt] for w in weights]
+            if sum(ws) == 0:  # expect no data for this IMT
+                continue
+            array[slc] = stat(poes[:, slc], ws)
+    else:
+        array = stat(poes, weights)
+    return probability_map.ProbabilityCurve(array)
 
 
 def sig_eps_dt(imts):
@@ -108,6 +128,7 @@ class PmapGetter(object):
                 self.nbytes += pmap.nbytes
         return self._pmap_by_grp
 
+    # used in risk calculation where there is a single site per getter
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
@@ -220,8 +241,15 @@ class PmapGetter(object):
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
-        else:
+        elif grp:
             raise NotImplementedError('multiple realizations')
+        L = len(self.imtls.array)
+        pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
+        for sid in self.sids:
+            pmap[sid] = build_stat_curve(
+                numpy.array([pc.array for pc in self.get_pcurves(sid)]),
+                self.imtls, stats.mean_curve, self.weights)
+        return pmap
 
 
 class GmfDataGetter(collections.abc.Mapping):
@@ -384,11 +412,10 @@ class GmfGetter(object):
                                 gmvs[:, imti], oq.imtls[imt],
                                 oq.ses_per_logic_tree_path)
                             hcurves[rsi2str(rlzi, sid, imt)] = poes
-        elif oq.ground_motion_fields:  # fast lane
-            with monitor('building hazard', measuremem=True):
-                gmfdata = self.get_gmfdata()
-        else:
+        if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
+        with monitor('building hazard', measuremem=True):
+            gmfdata = self.get_gmfdata()
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         indices = []
@@ -600,6 +627,7 @@ class RuptureGetter(object):
                 ebr.sids = sids
                 ebr.ridx = rec['id']
                 ebr.e0 = 0 if self.e0 is None else e0
+                ebr.id = rec['id']  # rup_id  in the datastore
                 ebrs.append(ebr)
         return ebrs
 

@@ -22,7 +22,8 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 from shapely import geometry
 from openquake.baselib.general import split_in_blocks, not_equal
-from openquake.hazardlib.geo.utils import fix_lon, cross_idl
+from openquake.hazardlib.geo.utils import (
+    fix_lon, cross_idl, _GeographicObjects)
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -117,7 +118,9 @@ site_param_dt = {
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
+    'z1pt4': numpy.float64,
     'backarc': numpy.bool,
+    'xvf': numpy.float64,
 
     # Parameters for site amplification
     'ec8': (numpy.string_, 1),
@@ -234,6 +237,8 @@ class SiteCollection(object):
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
                     self._set(name, sitemodel[name])
+        if len(numpy.unique(self[['lon', 'lat']])) < len(self):
+            raise ValueError('There are duplicated points!')
         return self
 
     def _set(self, param, value):
@@ -255,7 +260,7 @@ class SiteCollection(object):
         if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
-        indices = numpy.uint32(sorted(indices))
+        indices = numpy.uint32(indices)
         new.array = self.array[indices]
         new.complete = self.complete
         return new
@@ -293,6 +298,10 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         arr.flags.writeable = False
+
+        # NB: in test_correlation.py we define a SiteCollection with
+        # non-unique sites, so we cannot do an
+        # assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
 
     def __eq__(self, other):
         return not self.__ne__(other)
@@ -375,6 +384,29 @@ class SiteCollection(object):
         # extract indices of Trues from the mask
         indices, = mask.nonzero()
         return self.filtered(indices)
+
+    def assoc(self, site_model, assoc_dist, ignore=()):
+        """
+        Associate the `site_model` parameters to the sites.
+        Log a warning if the site parameters are more distant than
+        `assoc_dist`.
+
+        :returns: the site model array reduced to the hazard sites
+        """
+        m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
+        if len(m1) != len(m2) or (m1 != m2).any():  # associate
+            _sitecol, site_model, _discarded = _GeographicObjects(
+                site_model).assoc(self, assoc_dist, 'warn')
+        ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
+            ignore) - {'lon', 'lat', 'depth'}
+        for name in ok:
+            self._set(name, site_model[name])
+        for name in set(self.array.dtype.names) - set(site_model.dtype.names):
+            if name in ('vs30measured', 'backarc'):
+                self._set(name, 0)  # default
+                # NB: by default reference_vs30_type == 'measured' is 1
+                # but vs30measured is 0 (the opposite!!)
+        return site_model
 
     def within(self, region):
         """

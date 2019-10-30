@@ -3,8 +3,8 @@ Scenario QA Test, Case 1
 
 ============== ===================
 checksum32     4,118,729,114      
-date           2019-09-24T15:20:55
-engine_version 3.7.0-git749bb363b3
+date           2019-10-23T16:25:53
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 3, num_levels = 1, num_rlzs = 1
@@ -54,14 +54,6 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Information about the tasks
 ---------------------------
 Not available
@@ -74,7 +66,7 @@ task sent received
 
 Slowest operations
 ------------------
-========= ======== ========= ======
-calc_1712 time_sec memory_mb counts
-========= ======== ========= ======
-========= ======== ========= ======
+========== ======== ========= ======
+calc_44416 time_sec memory_mb counts
+========== ======== ========= ======
+========== ======== ========= ======
