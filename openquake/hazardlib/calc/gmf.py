@@ -201,7 +201,9 @@ class GmfComputer(object):
             numpy.random.seed(seed)
         dctx = self.dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
-            assert self.correlation_model is None
+            if self.correlation_model:
+                raise ValueError('truncation_level=0 requires '
+                                 'no correlation model')
             mean, _stddevs = gsim.get_mean_and_stddevs(
                 self.sctx, rctx, dctx, imt, stddev_types=[])
             mean = gsim.to_imt_unit_values(mean)
@@ -213,7 +215,7 @@ class GmfComputer(object):
         elif self.truncation_level is None:
             distribution = scipy.stats.norm()
         else:
-            assert self.truncation_level > 0
+            assert self.truncation_level > 0, self.truncation_level
             distribution = scipy.stats.truncnorm(
                 - self.truncation_level, self.truncation_level)
 

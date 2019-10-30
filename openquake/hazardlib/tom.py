@@ -182,12 +182,11 @@ class PoissonTOM(BaseTOM):
         :param occurrence_rate:
             The average number of events per year.
         :param poes:
-            2D numpy array containing conditional probabilities that the 
+            2D numpy array containing conditional probabilities that the
             rupture occurrence causes a ground shaking value exceeding a
             ground motion level at a site. First dimension represent sites,
             second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :meth:`method
-            <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>`.
+            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`.
         :return:
             2D numpy array containing probabilities of no exceedance. First
             dimension represents sites, second dimensions intensity measure

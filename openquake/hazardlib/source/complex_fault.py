@@ -149,12 +149,8 @@ class ComplexFaultSource(ParametricSeismicSource):
     """
     code = b'C'
     # a slice of the rupture_slices, thus splitting the source
-
     _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
-
     MODIFICATIONS = set(('set_geometry',))
-
-    RUPTURE_WEIGHT = 4.0  # makes ComplexFaultSources heavy
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
@@ -170,7 +166,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.edges = edges
         self.rake = rake
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
@@ -263,11 +259,8 @@ class ComplexFaultSource(ParametricSeismicSource):
         return ComplexFaultSurface.surface_projection_from_fault_data(
             self.edges)
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a WKT string
         """
-        points = []
-        for edge in self.edges:
-            points.extend((p.x, p.y, p.z) for p in edge)
-        return numpy.array(points, numpy.float32)
+        return self.polygon.wkt

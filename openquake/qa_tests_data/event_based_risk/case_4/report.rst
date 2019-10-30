@@ -2,9 +2,9 @@ Event Based Risk for Turkey reduced
 ===================================
 
 ============== ===================
-checksum32     39,734,555         
-date           2019-07-30T15:04:39
-engine_version 3.7.0-git3b3dff46da
+checksum32     3,898,885,399      
+date           2019-10-23T16:26:21
+engine_version 3.8.0-git2e0d8e6795
 ============== ===================
 
 num_sites = 13, num_levels = 91, num_rlzs = 8
@@ -70,20 +70,15 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=32, rlzs=8)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-===================== ====== ==================== ============ ============
-source_model          grp_id trt                  eff_ruptures tot_ruptures
-===================== ====== ==================== ============ ============
-../src/as_model.xml   0      Active Shallow Crust 6            2,982       
-../src/fsbg_model.xml 1      Active Shallow Crust 1            108         
-===================== ====== ==================== ============ ============
-
-============= =====
-#TRT models   2    
-#eff_ruptures 7    
-#tot_ruptures 3,099
-============= =====
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      2.10000   2,982        10          
+1      0.50000   108          2.00000     
+2      NaN       9            0.0         
+====== ========= ============ ============
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -112,62 +107,61 @@ SAM_4S   1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-========== ====== ==== ============ ========= ========= ======= =====
-source_id  grp_id code num_ruptures calc_time num_sites weight  speed
-========== ====== ==== ============ ========= ========= ======= =====
-AS_TRAS334 0      A    760          0.03496   7.00000   4.00000 114  
-AS_TRAS360 0      A    624          0.03156   3.00000   2.00000 63   
-AS_TRAS346 0      A    527          0.02211   5.00000   2.00000 90   
-AS_TRAS458 0      A    399          0.01706   2.00000   2.00000 117  
-AS_TRAS395 0      A    432          0.01278   3.00000   2.00000 156  
-AS_TRAS410 0      A    240          0.00536   2.00000   0.0     0.0  
-========== ====== ==== ============ ========= ========= ======= =====
+============ ====== ==== ============ ========= ========= ============
+source_id    grp_id code num_ruptures calc_time num_sites eff_ruptures
+============ ====== ==== ============ ========= ========= ============
+AS_TRAS334   0      A    760          0.06095   3.00000   2.00000     
+AS_TRAS346   0      A    527          0.04044   2.50000   2.00000     
+AS_TRAS458   0      A    399          0.03084   1.00000   2.00000     
+AS_TRAS395   0      A    432          0.01521   1.50000   2.00000     
+AS_TRAS360   0      A    624          0.01138   1.50000   2.00000     
+FSBG_TRBG989 1      A    108          0.00483   0.50000   2.00000     
+============ ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.12383   7     
-P    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.16704  
+P    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ========= ======= =======
-operation-duration mean    stddev  min       max     outputs
-compute_gmfs       0.02381 0.00593 0.01952   0.04122 29     
-read_source_models 0.02178 0.02998 6.950E-04 0.05610 3      
-sample_ruptures    0.01943 0.01359 0.00201   0.04240 8      
-================== ======= ======= ========= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+SourceReader       0.02896 0.04385 0.00117 0.07951 3      
+compute_gmfs       0.03486 0.01350 0.01405 0.05707 29     
+sample_ruptures    0.02287 0.02185 0.00149 0.06415 8      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ==================================================== =========
-task               sent                                                 received 
-compute_gmfs       param=199.43 KB rupgetter=55.31 KB srcfilter=6.23 KB 221.97 KB
-read_source_models converter=942 B fnames=341 B                         12.5 KB  
-sample_ruptures    param=56.6 KB sources=17.2 KB srcfilter=1.72 KB      9.73 KB  
-================== ==================================================== =========
+=============== ==================================================== =========
+task            sent                                                 received 
+SourceReader    apply_unc=4.68 KB ltmodel=610 B fname=353 B          23.65 KB 
+sample_ruptures param=56.72 KB sources=17.1 KB srcfilter=1.74 KB     9.92 KB  
+compute_gmfs    param=208.98 KB rupgetter=52.96 KB srcfilter=6.32 KB 199.17 KB
+=============== ==================================================== =========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_15573               time_sec memory_mb counts
+calc_44502               time_sec memory_mb counts
 ======================== ======== ========= ======
-EventBasedCalculator.run 1.33270  2.57422   1     
-total compute_gmfs       0.69056  0.0       29    
-building hazard          0.40790  0.0       29    
-total sample_ruptures    0.15543  0.0       8     
-getting ruptures         0.14006  0.0       29    
-saving gmfs              0.10369  0.0       29    
-saving events            0.08099  0.0       1     
-total read_source_models 0.06534  0.0       3     
-building hazard curves   0.05204  0.0       236   
-aggregating hcurves      0.03123  0.0       29    
-saving ruptures          0.01480  0.0       6     
-saving gmf_data/indices  0.01296  0.0       1     
-GmfGetter.init           0.00528  0.0       29    
-store source_info        0.00390  0.0       1     
-reading exposure         0.00165  0.0       1     
+total compute_gmfs       1.01101  1.10156   29    
+EventBasedCalculator.run 0.93622  0.0       1     
+building hazard          0.57146  0.27734   29    
+getting ruptures         0.18582  1.10156   29    
+total sample_ruptures    0.18296  0.28516   8     
+building hazard curves   0.17351  0.0       236   
+composite source model   0.09645  0.0       1     
+total SourceReader       0.08688  0.15234   3     
+saving events            0.08576  0.0       1     
+saving ruptures          0.02776  0.0       6     
+aggregating hcurves      0.00978  0.0       29    
+saving gmfs              0.00580  0.0       29    
+store source_info        0.00258  0.0       1     
+reading exposure         0.00193  0.0       1     
 ======================== ======== ========= ======

@@ -651,7 +651,7 @@ def intensity_measure_type(value):
 def intensity_measure_types(value):
     """
     :param value: input string
-    :returns: non-empty list of Intensity Measure Type objects
+    :returns: non-empty list of ordered Intensity Measure Type objects
 
     >>> intensity_measure_types('')
     []
@@ -663,10 +663,8 @@ def intensity_measure_types(value):
     Traceback (most recent call last):
       ...
     ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
-    >>> intensity_measure_types('SA(1), PGA')
-    Traceback (most recent call last):
-    ...
-    ValueError: The IMTs are not sorted by period: SA(1), PGA
+    >>> intensity_measure_types('PGV, SA(1), PGA')
+    ['PGA', 'PGV', 'SA(1.0)']
     """
     if not value:
         return []
@@ -676,9 +674,7 @@ def intensity_measure_types(value):
     sorted_imts = sorted(imts, key=lambda im: getattr(im, 'period', 1))
     if len(distinct(imts)) < len(imts):
         raise ValueError('Duplicated IMTs in %s' % value)
-    if sorted_imts != imts:
-        raise ValueError('The IMTs are not sorted by period: %s' % value)
-    return [str(imt) for imt in imts]
+    return [str(imt) for imt in sorted_imts]
 
 
 def check_levels(imls, imt, min_iml=1E-10):

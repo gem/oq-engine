@@ -42,7 +42,7 @@ def make_figure(losses_by_rlzi, loss_types, nbins):
             ax = fig.add_subplot(R, L, rlzi * L + lti + 1)
             ax.set_xlabel('%s, loss_type=%s' % (rlz, lt))
             ax.hist(ls, nbins, rwidth=.9)
-            ax.set_title('loss=%.5e$\pm$%.5e' % (ls.mean(), ls.std(ddof=1)))
+            ax.set_title(r'loss=%.5e$\pm$%.5e' % (ls.mean(), ls.std(ddof=1)))
     return plt
 
 

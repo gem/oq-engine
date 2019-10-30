@@ -1,4 +1,4 @@
-# Upgrading the OpenQuake Engine on RedHat Linux 7 and its clones
+# Upgrading the OpenQuake Engine on RedHat Linux and its clones
 
 To upgrade the OpenQuake Engine and its libraries run
 

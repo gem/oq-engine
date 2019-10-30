@@ -26,13 +26,13 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, countby, AccumDict, CallableDict,
-    get_array, group_array)
+    humansize, countby, AccumDict, CallableDict,
+    get_array, group_array, fast_agg, fast_agg3)
 from openquake.baselib.performance import perf_dt
-from openquake.baselib.python3compat import decode
+from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util, source, calc
+from openquake.commonlib import util, calc
 from openquake.commonlib.writers import build_header, scientificformat
 from openquake.calculators import getters
 from openquake.calculators.extract import extract
@@ -142,40 +142,13 @@ def rst_table(data, header=None, fmt=None):
     return '\n'.join(lines)
 
 
-def sum_tbl(tbl, kfield, vfields):
-    """
-    Aggregate a composite array and compute the totals on a given key.
-
-    >>> dt = numpy.dtype([('name', (bytes, 10)), ('value', int)])
-    >>> tbl = numpy.array([('a', 1), ('a', 2), ('b', 3)], dt)
-    >>> sum_tbl(tbl, 'name', ['value'])['value']
-    array([3, 3])
-    """
-    pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
-    dt = numpy.dtype(pairs + [('counts', int)])
-
-    def sum_all(group):
-        vals = numpy.zeros(1, dt)[0]
-        for rec in group:
-            for vfield in vfields:
-                vals[vfield] += rec[vfield]
-            vals['counts'] += 1
-        vals[kfield] = rec[kfield]
-        return vals
-    rows = groupby(tbl, operator.itemgetter(kfield), sum_all).values()
-    array = numpy.zeros(len(rows), dt)
-    for i, row in enumerate(rows):
-        for j, name in enumerate(dt.names):
-            array[i][name] = row[j]
-    return array
-
-
 @view.add('times_by_source_class')
 def view_times_by_source_class(token, dstore):
     """
     Returns the calculation times depending on the source typology
     """
-    totals = sum_tbl(dstore['source_info'], 'code', ['calc_time'])
+    totals = fast_agg3(dstore['source_info']['code', 'calc_time'],
+                       'code', ['calc_time'])
     return rst_table(totals)
 
 
@@ -186,13 +159,12 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     info = dstore['source_info']['source_id', 'grp_id', 'code', 'num_ruptures',
                                  'calc_time', 'num_sites', 'eff_ruptures']
-    info = info[info['calc_time'] > 0]
+    info = info[info['eff_ruptures'] > 0]
     info.sort(order='calc_time')
-    data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names]
-                       + [('speed', float)])
+    data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names])
     for name in info.dtype.names:
         data[name] = info[name]
-    data['speed'] = info['eff_ruptures'] / info['calc_time']
+    data['num_sites'] /= data['eff_ruptures']
     return rst_table(data[::-1][:maxrows])
 
 
@@ -224,32 +196,21 @@ def view_csm_info(token, dstore):
     return rst_table(rows, header)
 
 
-@view.add('ruptures_per_trt')
-def view_ruptures_per_trt(token, dstore):
-    tbl = []
-    header = ('source_model grp_id trt eff_ruptures tot_ruptures'.split())
-    num_trts = 0
-    eff_ruptures = 0
-    tot_ruptures = 0
-    csm_info = dstore['csm_info']
-    for i, sm in enumerate(csm_info.source_models):
-        for src_group in sm.src_groups:
-            trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures
-            if er:
-                num_trts += 1
-                eff_ruptures += er
-                tbl.append(
-                    (sm.name, src_group.id, trt, er, src_group.tot_ruptures))
-            tot_ruptures += src_group.tot_ruptures
-    rows = [('#TRT models', num_trts),
-            ('#eff_ruptures', eff_ruptures),
-            ('#tot_ruptures', tot_ruptures)]
-    if len(tbl) > 1:
-        summary = '\n\n' + rst_table(rows)
-    else:
-        summary = ''
-    return rst_table(tbl, header=header) + summary
+@view.add('ruptures_per_grp')
+def view_ruptures_per_grp(token, dstore):
+    info = dstore['source_info'][()]
+    agg = fast_agg3(
+        info, 'grp_id', ['num_sites', 'num_ruptures', 'eff_ruptures'])
+    agg['num_sites'] /= agg['eff_ruptures']
+    return rst_table(agg)
+
+
+@view.add('eff_ruptures')
+def view_eff_ruptures(token, dstore):
+    header = ['num_ruptures', 'eff_ruptures']
+    info = dstore['source_info']['num_ruptures', 'eff_ruptures']
+    return rst_table([[info['num_ruptures'].sum(),
+                       info['eff_ruptures'].sum()]], header)
 
 
 @view.add('short_source_info')
@@ -318,14 +279,13 @@ def view_job_info(token, dstore):
     to the workers and back in a classical calculation.
     """
     data = [['task', 'sent', 'received']]
-    for task in dstore['task_info']:
-        dset = dstore['task_info/' + task]
-        if 'sent' in dset.attrs:
-            sent = sorted(ast.literal_eval(dset.attrs['sent']).items(),
-                          key=operator.itemgetter(1), reverse=True)
-            sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
-            recv = dset['received'].sum()
-            data.append((task, ' '.join(sent), humansize(recv)))
+    task_info = dstore['task_info'][()]
+    task_sent = ast.literal_eval(dstore['task_sent'][()])
+    for task, dic in task_sent.items():
+        sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
+        sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
+        recv = get_array(task_info, taskname=encode(task))['received'].sum()
+        data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
 
 
@@ -344,17 +304,6 @@ def avglosses_data_transfer(token, dstore):
     return (
         '%d asset(s) x %d realization(s) x %d loss type(s) losses x '
         '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
-
-
-@view.add('ebr_data_transfer')
-def ebr_data_transfer(token, dstore):
-    """
-    Display the data transferred in an event based risk calculation
-    """
-    attrs = dstore['losses_by_event'].attrs
-    sent = humansize(attrs['sent'])
-    received = humansize(attrs['tot_received'])
-    return 'Event Based Risk: sent %s, received %s' % (sent, received)
 
 
 # for scenario_risk
@@ -471,7 +420,9 @@ def performance_view(dstore, add_calc_id=True):
     """
     Returns the performance view as a numpy array.
     """
-    data = sorted(dstore['performance_data'], key=operator.itemgetter(0))
+    pdata = dstore['performance_data']
+    pdata.refresh()
+    data = sorted(pdata[()], key=operator.itemgetter(0))
     out = []
     for operation, group in itertools.groupby(data, operator.itemgetter(0)):
         counts = 0
@@ -573,18 +524,20 @@ def view_task_info(token, dstore):
 
       $ oq show task_info:classical
     """
+    task_info = dstore['task_info']
+    task_info.refresh()
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
         [task] = args
-        array = dstore['task_info/' + task][()]
+        array = get_array(task_info[()], taskname=task)
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
         return rst_table(data)
 
     data = ['operation-duration mean stddev min max outputs'.split()]
-    for task in dstore['task_info']:
-        val = dstore['task_info/' + task]['duration']
+    for task, arr in group_array(task_info[()], 'taskname').items():
+        val = arr['duration']
         if len(val):
             data.append(stats(task, val))
     if len(data) == 1:
@@ -600,7 +553,7 @@ def view_task_durations(token, dstore):
       $ oq show task_durations:classical
     """
     task = token.split(':')[1]  # called as task_duration:task_name
-    array = dstore['task_info/' + task]['duration']
+    array = get_array(dstore['task_info'][()], taskname=task)['duration']
     return '\n'.join(map(str, array))
 
 
@@ -615,7 +568,9 @@ def view_task_hazard(token, dstore):
     _, name, index = token.split(':')
     if 'sources_by_task' not in dstore:
         return 'Missing sources_by_task'
-    data = dstore['task_info/' + name][()]
+    data = get_array(dstore['task_info'][()], taskname=encode(name))
+    if len(data) == 0:
+        raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['taskno']
@@ -627,24 +582,6 @@ def view_task_hazard(token, dstore):
     return res
 
 
-@view.add('task_risk')
-def view_task_risk(token, dstore):
-    """
-    Display info about a given risk task. Here are a few examples of usage::
-
-     $ oq show task_risk:0  # the fastest task
-     $ oq show task_risk:-1  # the slowest task
-    """
-    [key] = dstore['task_info']
-    data = dstore['task_info/' + key][()]
-    data.sort(order='duration')
-    rec = data[int(token.split(':')[1])]
-    taskno = rec['taskno']
-    res = 'taskno=%d, weight=%d, duration=%d s' % (
-        taskno, rec['weight'], rec['duration'])
-    return res
-
-
 @view.add('task_ebrisk')
 def view_task_ebrisk(token, dstore):
     """
@@ -653,7 +590,7 @@ def view_task_ebrisk(token, dstore):
     $ oq show task_ebrisk:-1  # the slowest task
     """
     idx = int(token.split(':')[1])
-    task_info = dstore['task_info/ebrisk'][()]
+    task_info = get_array(dstore['task_info'][()], taskname='ebrisk')
     task_info.sort(order='duration')
     info = task_info[idx]
     times = get_array(dstore['gmf_info'][()], task_no=info['taskno'])
@@ -845,6 +782,18 @@ def view_act_ruptures_by_src(token, dstore):
     return rst_table(table)
 
 
+@view.add('bad_ruptures')
+def view_bad_ruptures(token, dstore):
+    """
+    Display the ruptures with an invalid bounding box
+    """
+    data = dstore['ruptures']['id', 'code', 'mag',
+                              'minlon', 'maxlon', 'minlat', 'maxlat']
+    bad = data[numpy.logical_or(data['minlon'] == data['maxlon'],
+                                data['minlat'] == data['maxlat'])]
+    return rst_table(bad)
+
+
 Source = collections.namedtuple(
     'Source', 'source_id code num_ruptures checksum')
 
@@ -932,3 +881,16 @@ def view_gmvs(token, dstore):
     data = dstore['gmf_data/data'][()]
     gmvs = data[data['sid'] == sid]['gmv']
     return rst_table(gmvs)
+
+
+@view.add('events_by_mag')
+def view_events_by_mag(token, dstore):
+    """
+    Show how many events there are for each magnitude
+    """
+    rups = dstore['ruptures'][()]
+    num_evs = fast_agg(dstore['events']['rup_id'])
+    counts = {}
+    for mag, grp in group_array(rups, 'mag').items():
+        counts[mag] = sum(num_evs[rup_id] for rup_id in grp['id'])
+    return rst_table(counts.items(), ['mag', 'num_events'])
