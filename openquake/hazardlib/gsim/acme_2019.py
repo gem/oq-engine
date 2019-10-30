@@ -233,6 +233,10 @@ class AlAtikSigmaModel(GMPE):
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
 
+        if self.kappa_file is not None:
+            with open(self.kappa_file, 'r') as myfile:
+                self.data = myfile.read()
+
     def _setup_standard_deviations(self, fle):
         # setup tau
         self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
@@ -320,16 +324,13 @@ class AlAtikSigmaModel(GMPE):
                     dists, imt, stds_types)
 
         kappa = 1
-        if self.kappa_file is not None:
-            with open(self.kappa_file, 'r') as myfile:
-                data = myfile.read()
-            KAPPATAB = CoeffsTable(table=data, sa_damping=5)
-            if imt.period == 0:
-                kappa = KAPPATAB[SA(0.01)][self.kappa_val]
-            elif imt.period > 2.0:
-                kappa = KAPPATAB[SA(2.0)][self.kappa_val]
-            else:
-                kappa = KAPPATAB[imt][self.kappa_val]
+        KAPPATAB = CoeffsTable(table=self.data, sa_damping=5)
+        if imt.period == 0:
+            kappa = KAPPATAB[SA(0.01)][self.kappa_val]
+        elif imt.period > 2.0:
+            kappa = KAPPATAB[SA(2.0)][self.kappa_val]
+        else:
+            kappa = KAPPATAB[imt][self.kappa_val]
         return mean+np.log(kappa), stddevs
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
