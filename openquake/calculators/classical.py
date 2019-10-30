@@ -322,10 +322,7 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('saving statistics'):
             for kind in pmap_by_kind:  # i.e. kind == 'hcurves-stats'
                 pmaps = pmap_by_kind[kind]
-                if kind == 'rlzs_by_sid':  # pmaps is actually a rlzs_by_sid
-                    for sid, rlzs in pmaps.items():
-                        self.datastore['best_rlz'][sid] = rlzs
-                elif kind in ('hmaps-rlzs', 'hmaps-stats'):
+                if kind in ('hmaps-rlzs', 'hmaps-stats'):
                     # pmaps is a list of R pmaps
                     dset = self.datastore.getitem(kind)
                     for r, pmap in enumerate(pmaps):
@@ -385,8 +382,6 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-        if 'mean' in dict(hstats) and R > 1 and N <= oq.max_sites_disagg:
-            self.datastore.create_dset('best_rlz', U32, (N, R))
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
@@ -429,7 +424,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     L = len(imtls.array)
     R = len(weights)
     S = len(hstats)
-    pmap_by_kind = {'rlzs_by_sid': {}}
+    pmap_by_kind = {}
     if R > 1 and individual_curves or not hstats:
         pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
     if hstats:
@@ -447,15 +442,11 @@ def build_hazard(pgetter, N, hstats, individual_curves,
             if hstats:
                 arr = numpy.array([pc.array for pc in pcurves])
                 for s, (statname, stat) in enumerate(hstats.items()):
-                    pc = getters._build_stat_curve(arr, imtls, stat, weights)
+                    pc = getters.build_stat_curve(arr, imtls, stat, weights)
                     pmap_by_kind['hcurves-stats'][s][sid] = pc
                     if poes:
                         hmap = calc.make_hmap(pc, pgetter.imtls, poes, sid)
                         pmap_by_kind['hmaps-stats'][s].update(hmap)
-                    if statname == 'mean' and R > 1 and N <= max_sites_disagg:
-                        rlzs = pmap_by_kind['rlzs_by_sid']
-                        rlzs[sid] = util.closest_to_ref(
-                            [p.array for p in pcurves], pc.array)
             if R > 1 and individual_curves or not hstats:
                 for pmap, pc in zip(pmap_by_kind['hcurves-rlzs'], pcurves):
                     pmap[sid] = pc
