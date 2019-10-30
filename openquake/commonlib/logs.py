@@ -177,5 +177,6 @@ def init(calc_id='nojob', level=logging.INFO):
         assert isinstance(calc_id, int), calc_id
     fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
     for handler in logging.root.handlers:
-        handler.setFormatter(logging.Formatter(fmt))
+        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(f)
     return calc_id

@@ -60,7 +60,7 @@ def keyfunc(ekey):
 
 
 export = CallableDict(keyfunc)
-
+export.sanity_check = False  # overridden in the tests
 export.from_db = False  # overridden when exporting from db
 
 

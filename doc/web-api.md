@@ -249,6 +249,22 @@ Parameters:
 Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
 
 
+#### POST /v1/calc/validate_zip
+
+Check if a given job.zip archive is valid
+
+Parameters:
+
+    * archive: the zip file to be validated
+
+Response:
+
+a JSON object, containing:
+
+    * valid: a boolean indicating if the provided archive is a valid job.zip
+    * error_msg: the error message, if any error was found (None otherwise)
+
+
 #### POST /v1/valid/
 
 Check if a given XML text is a valid NRML.

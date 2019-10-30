@@ -359,8 +359,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
             ]
             self.assertTrue(isinstance(actual_rupture,
                                        ParametricProbabilisticRupture))
-            self.assertEqual(actual_rupture.occurrence_rate,
-                             expected_occurrence_rate)
+            self.assertAlmostEqual(actual_rupture.occurrence_rate,
+                                   expected_occurrence_rate)
             self.assertIs(actual_rupture.temporal_occurrence_model, tom)
             self.assertEqual(actual_rupture.tectonic_region_type, trt)
             surface = actual_rupture.surface

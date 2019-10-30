@@ -15,24 +15,73 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import pathlib
-from openquake.hazardlib import gsim, imt, const
-import numpy as np
 import unittest
+import numpy as np
+
+from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.contexts import DistancesContext
+from openquake.hazardlib import gsim, imt, const
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 
 data = pathlib.Path(__file__).parent / 'data'
 
 
 class GenericGmpeAvgSATestCase(unittest.TestCase):
+    """
+    Testing instantiation and usage of the  GenericGmpeAvgSA class
+    """
 
-    def test_calculation_Akkar(self, avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0]):
+    def test01(self):
+        avg_periods = [0.05, 0.15, 1.0, 2.0, 4.0]
+        gmm = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
+            gmpe_name='ZhaoEtAl2006Asc',
+            avg_periods=avg_periods,
+            corr_func='akkar')
+        msg = 'The class name is incorrect'
+        self.assertTrue(gmm.__class__.__name__ == 'GenericGmpeAvgSA', msg=msg)
+
+        sites = Dummy.get_site_collection(4, vs30=760.)
+        rup = Dummy.get_rupture(mag=6.0)
+        rup.hypo_depth = 10.
+        dists = DistancesContext()
+        dists.rrup = np.array([1., 10., 30., 70.])
+        imtype = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, _ = gmm.get_mean_and_stddevs(sites, rup, dists, imtype, stdt)
+        expected = np.array([-1.33735637, -2.62649473, -3.64500654,
+                             -4.60067093])
+        np.testing.assert_almost_equal(mean, expected)
+
+    def test02(self):
+        avg_periods = [0.05, 0.15, 1.0, 2.0, 4.0]
+        gmm = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
+            gmpe_name='AkkarEtAlRepi2014',
+            avg_periods=avg_periods,
+            corr_func='akkar')
+        msg = 'The class name is incorrect'
+        self.assertTrue(gmm.__class__.__name__ == 'GenericGmpeAvgSA', msg=msg)
+
+        sites = Dummy.get_site_collection(4, vs30=760.)
+        rup = Dummy.get_rupture(mag=6.0)
+        dists = DistancesContext()
+        dists.repi = np.array([1., 10., 30., 70.])
+        imtype = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, _ = gmm.get_mean_and_stddevs(sites, rup, dists, imtype, stdt)
+        expected = np.array([-2.0383581, -2.6548699, -3.767237 , -4.7775653])
+        np.testing.assert_almost_equal(mean, expected)
+
+    def test_calculation_akkar(self, avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0]):
 
         DATA_FILE = data/'GENERIC_GMPE_AVGSA_MEAN_STD_TOTAL_AKKAR.csv'
 
         # Initialise meta-GMPE
         mgmpe = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
-                    gmpe_name='BooreAtkinson2008',
-                    avg_periods=avg_periods,
-                    corr_func='akkar')
+            gmpe_name='BooreAtkinson2008',
+            avg_periods=avg_periods,
+            corr_func='akkar')
 
         sctx = gsim.base.SitesContext()
         rctx = gsim.base.RuptureContext()
@@ -67,7 +116,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
         # Testing not supported periods
         try:
-            self.test_calculation_Akkar(
+            self.test_calculation_akkar(
                 avg_periods=[0.05, 0.15, 1.0, 2.0, 4.012345])
         except ValueError:
             pass
@@ -78,9 +127,9 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
         # Initialise meta-GMPE
         mgmpe = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
-                    gmpe_name='BooreAtkinson2008',
-                    avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
-                    corr_func='baker_jayaram')
+            gmpe_name='BooreAtkinson2008',
+            avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
+            corr_func='baker_jayaram')
 
         sctx = gsim.base.SitesContext()
         rctx = gsim.base.RuptureContext()

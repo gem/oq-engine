@@ -270,10 +270,7 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if filename and not os.path.exists(filename):  # store the sitecol
-            with hdf5.File(filename, 'w') as h5:
-                h5['sitecol'] = sitecol if sitecol else ()
-        else:  # keep the sitecol in memory
+        if not filename:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
     def __getstate__(self):
@@ -358,10 +355,7 @@ class SourceFilter(object):
             return []
         elif not self.integration_distance:  # do not filter
             return self.sitecol.sids
-        if hasattr(rec, 'dtype'):
-            bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
-        else:
-            bbox = rec  # assume it is a 4-tuple
+        bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
         maxdist = self.integration_distance(trt, rec['mag'])
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)

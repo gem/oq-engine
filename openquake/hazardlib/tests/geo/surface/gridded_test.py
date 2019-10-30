@@ -110,9 +110,10 @@ class GriddedSurfaceTestCaseIDL(unittest.TestCase):
         self.assertEqual((179.5, -179.5, 1., 0.), self.surf.get_bounding_box())
 
     def test_surface_boundaries_3d(self):
-        boundaries = self.surf.get_surface_boundaries_3d()
-        self.assertEqual(boundaries,
-                         ([[179.5, -179.5]], [[0.0, 1.0]], [[0, 0]]))
+        xs, ys, zs = self.surf.get_surface_boundaries_3d()
+        self.assertEqual(xs, [(179.5, -179.5, -179.5, 179.5, 179.5)])
+        self.assertEqual(ys, [(0.0, 0.0, 1.0, 1.0, 0.0)])
+        self.assertEqual(zs, [(0, 0, 0, 0, 0)])
 
     def test_get_middle_point(self):
         point = self.surf.get_middle_point()

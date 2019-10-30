@@ -109,6 +109,5 @@ class StdDev(ConstantContainer):
     #: of inter- and intra-event squared standard deviations, represents
     #: the total ground shaking variability, and is the only one that
     #: is used for calculating a probability of intensity exceedance
-    #: (see
-    #: :meth:`openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes`).
+    #: (see :func:`openquake.hazardlib.gsim.base.get_poes`).
     TOTAL = 'Total'
