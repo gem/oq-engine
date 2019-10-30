@@ -117,35 +117,35 @@ class JB2009CorrelationModel(BaseCorrelationModel):
 
 
 def jbcorrelation(sites_or_distances, imt, vs30_clustering=False):
-        """
-        Returns the Jayaram-Baker correlation model.
+    """
+     Returns the Jayaram-Baker correlation model.
 
-        :param sites_or_distances:
-            SiteCollection instance o ristance matrix
-        :param imt:
-            Intensity Measure Type (PGA or SA)
-        :param vs30_clustering:
-            flag, defalt false
-        """
-        if hasattr(sites_or_distances, 'mesh'):
-            distances = sites_or_distances.mesh.get_distance_matrix()
+     :param sites_or_distances:
+         SiteCollection instance o ristance matrix
+     :param imt:
+         Intensity Measure Type (PGA or SA)
+     :param vs30_clustering:
+         flag, defalt false
+    """
+    if hasattr(sites_or_distances, 'mesh'):
+        distances = sites_or_distances.mesh.get_distance_matrix()
+    else:
+        distances = sites_or_distances
+
+    # formulae are from page 1700
+    if imt.period < 1:
+        if not vs30_clustering:
+            # case 1, eq. (17)
+            b = 8.5 + 17.2 * imt.period
         else:
-            distances = sites_or_distances
+            # case 2, eq. (18)
+            b = 40.7 - 15.0 * imt.period
+    else:
+        # both cases, eq. (19)
+        b = 22.0 + 3.7 * imt.period
 
-        # formulae are from page 1700
-        if imt.period < 1:
-            if not vs30_clustering:
-                # case 1, eq. (17)
-                b = 8.5 + 17.2 * imt.period
-            else:
-                # case 2, eq. (18)
-                b = 40.7 - 15.0 * imt.period
-        else:
-            # both cases, eq. (19)
-            b = 22.0 + 3.7 * imt.period
-
-        # eq. (20)
-        return numpy.exp((- 3.0 / b) * distances)
+    # eq. (20)
+    return numpy.exp((- 3.0 / b) * distances)
 
 
 class HM2018CorrelationModel(BaseCorrelationModel):

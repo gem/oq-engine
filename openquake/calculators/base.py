@@ -57,6 +57,21 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
 
 
+# this is used for the minimum_intensity dictionaries
+def equivalent(dic1, dic2):
+    """
+    Check if two dictionaries name -> value are equivalent
+    """
+    if dic1 == dic2:
+        return True
+    v1 = set(dic1.values())
+    v2 = set(dic2.values())
+    if len(v1) == 1 and len(v2) == 1 and v1.pop() == v2.pop():
+        # {'PGA': 0.05, 'SA(0.3)': 0.05} is equivalent to {'default': 0.05}
+        return True
+    return False
+
+
 def get_stats(seq):
     std = numpy.nan if len(seq) == 1 else numpy.std(seq, ddof=1)
     tup = (numpy.mean(seq), std, numpy.min(seq), numpy.max(seq), len(seq))
@@ -183,7 +198,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, **kw):
+    def run(self, pre_execute=True, concurrent_tasks=None, remove=True, **kw):
         """
         Run the calculation and return the exported outputs.
         """
@@ -206,7 +221,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
-                self.before_export()
                 self.export(kw.get('exports', ''))
             except Exception:
                 if kw.get('pdb'):  # post-mortem debug
@@ -228,8 +242,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.gmfs = None
                 readinput.eids = None
 
-                # cleanup epsilons, if any
-                if os.path.exists(self.datastore.tempname):
+                # remove temporary hdf5 file, if any
+                if os.path.exists(self.datastore.tempname) and remove:
                     os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
 
@@ -303,19 +317,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if fnames:
                 logging.info('exported %s: %s', ekey[0], fnames)
 
-    def before_export(self):
-        """
-        Set the attributes nbytes
-        """
-        # sanity check that eff_ruptures have been set, i.e. are not -1
-        try:
-            csm_info = self.datastore['csm_info']
-        except KeyError:
-            csm_info = self.datastore['csm_info'] = self.csm.info
-        for sm in csm_info.source_models:
-            for sg in sm.src_groups:
-                assert sg.eff_ruptures != -1, sg
-
 
 def check_time_event(oqparam, occupancy_periods):
     """
@@ -334,25 +335,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    # called multiple times in event_based/py
-    def block_splitter(self, sources, weight=get_weight, key=lambda src: 1):
-        """
-        :param sources: a list of sources
-        :param weight: a weight function (default .weight)
-        :param key: None or 'src_group_id'
-        :returns: an iterator over blocks of sources
-        """
-        if not hasattr(self, 'maxweight'):
-            trt_sources = self.csm.get_trt_sources()
-            self.maxweight = self.csm.get_maxweight(
-                trt_sources, get_weight, self.oqparam.concurrent_tasks,
-                source.MINWEIGHT)
-            if self.maxweight == source.MINWEIGHT:
-                logging.info('Using minweight=%d', source.MINWEIGHT)
-            else:
-                logging.info('Using maxweight=%d', self.maxweight)
-        return general.block_splitter(sources, self.maxweight, weight, key)
-
     def src_filter(self, filename=None):
         """
         :returns: a SourceFilter/UcerfFilter
@@ -388,12 +370,11 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
-        op = '=' if self.oqparam.pointsource_distance == {} else '<'
         f, s = self.csm.get_floating_spinning_factors()
         if f != 1:
-            logging.info('Rupture floating factor %s %s', op, f)
+            logging.info('Rupture floating factor = %s', f)
         if s != 1:
-            logging.info('Rupture spinning factor %s %s', op, s)
+            logging.info('Rupture spinning factor = %s', s)
 
     def read_inputs(self):
         """
@@ -409,10 +390,12 @@ class HazardCalculator(BaseCalculator):
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             with self.monitor('composite source model', measuremem=True):
-                self.csm = readinput.get_composite_source_model(
+                self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
+                self.csm_info = csm.info
+                self.datastore['source_model_lt'] = csm.source_model_lt
                 res = views.view('dupl_sources', self.datastore)
-                logging.info(f'The composite source model has {res.val:,d} '
+                logging.info(f'The composite source model has {res.val:_d} '
                              'ruptures')
             if res:
                 logging.info(res)
@@ -480,7 +463,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            if oqp.minimum_intensity != oq.minimum_intensity:
+            if not equivalent(oqp.minimum_intensity, oq.minimum_intensity):
                 raise ValueError(
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
@@ -498,9 +481,9 @@ class HazardCalculator(BaseCalculator):
         elif self.__class__.precalc:
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
-            calc.run()
+            calc.run(remove=False)
             for name in ('csm param sitecol assetcol crmodel rlzs_assoc '
-                         'policy_name policy_dict').split():
+                         'policy_name policy_dict csm_info').split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
@@ -543,7 +526,7 @@ class HazardCalculator(BaseCalculator):
         except AttributeError:  # no self.csm
             return self.datastore['csm_info'].get_num_rlzs()
 
-    def read_exposure(self, haz_sitecol=None):  # after load_risk_model
+    def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
         Read the exposure, the risk models and update the attributes
         .sitecol, .assetcol
@@ -570,8 +553,9 @@ class HazardCalculator(BaseCalculator):
                         len(discarded))
         self.policy_name = ''
         self.policy_dict = {}
-        if oq.insurance:
-            self.load_insurance_data(oq.insurance, oq.inputs['insurance'])
+        if oq.inputs.get('insurance'):
+            k, v = zip(*oq.inputs['insurance'].items())
+            self.load_insurance_data(k, v)
         return readinput.exposure
 
     def load_insurance_data(self, ins_types, ins_files):
@@ -717,6 +701,11 @@ class HazardCalculator(BaseCalculator):
                 self.crmodel.tmap = tmap_lst
 
         if hasattr(self, 'sitecol') and self.sitecol:
+            if 'site_model' in oq.inputs:
+                assoc_dist = (oq.region_grid_spacing * 1.414
+                              if oq.region_grid_spacing else 5)  # Graeme's 5km
+                sm = readinput.get_site_model(oq)
+                self.sitecol.complete.assoc(sm, assoc_dist)
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
@@ -736,14 +725,19 @@ class HazardCalculator(BaseCalculator):
         """
         Save info about the composite source model inside the csm_info dataset
         """
-        if hasattr(self, 'csm'):  # no scenario
-            self.csm.info.update_eff_ruptures(eff_ruptures)
-            self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+        if hasattr(self, 'csm_info'):  # no scenario
+            self.csm_info.update_eff_ruptures(eff_ruptures)
+            self.rlzs_assoc = self.csm_info.get_rlzs_assoc(
                 self.oqparam.sm_lt_path)
             if not self.rlzs_assoc.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-            self.datastore['csm_info'] = self.csm.info
-            self.datastore['source_model_lt'] = self.csm.source_model_lt
+
+            # sanity check that eff_ruptures have been set, i.e. are not -1
+            for sm in self.csm_info.source_models:
+                for sg in sm.src_groups:
+                    assert sg.eff_ruptures != -1, sg
+            self.datastore['csm_info'] = self.csm_info
+
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         rlzs_by_grp = self.rlzs_assoc.by_grp()
@@ -775,7 +769,9 @@ class HazardCalculator(BaseCalculator):
         if calc_times:
             source_info = self.datastore['source_info']
             arr = numpy.zeros((len(source_info), 3), F32)
-            ids, vals = zip(*sorted(calc_times.items()))
+            # NB: the zip magic is needed for performance,
+            # looping would be too slow
+            ids, vals = zip(*calc_times.items())
             arr[numpy.array(ids)] = vals
             source_info['eff_ruptures'] += arr[:, 0]
             source_info['num_sites'] += arr[:, 1]

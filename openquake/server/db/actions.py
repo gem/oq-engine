@@ -270,13 +270,16 @@ DISPLAY_NAME = {
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
-    'agg_maps-rlzs': 'Aggregate Loss Maps',
-    'agg_maps-stats': 'Aggregate Loss Maps Statistics',
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
-    'agg_losses-rlzs': 'Aggregate Asset Losses',
+    'agg_losses-rlzs': 'Aggregate Losses',
+    'agg_losses-stats': 'Aggregate Losses Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
+    'tot_losses-rlzs': 'Total Losses',
+    'tot_losses-stats': 'Total Losses Statistics',
+    'tot_curves-rlzs': 'Total Loss Curves',
+    'tot_curves-stats': 'Total Loss Curves Statistics',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'ruptures': 'Earthquake Ruptures',
@@ -340,7 +343,8 @@ def del_calc(db, job_id, user, force=False):
     """
     job_id = int(job_id)
     dependent = db(
-        'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
+        "SELECT id FROM job WHERE hazard_calculation_id=?x "
+        "AND status != 'deleted'", job_id)
     if not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
@@ -358,19 +362,11 @@ def del_calc(db, job_id, user, force=False):
         return {"error": 'Cannot delete calculation %d: it belongs to '
                 '%s and you are %s' % (job_id, owner, user)}
 
-    # try to delete datastore and associated file
-    # path has typically the form /home/user/oqdata/calc_XXX
     fname = path + ".hdf5"
-    cache = fname.replace('calc_', 'cache_')
-    if os.path.exists(cache):
-        fnames = [fname, cache]
-    else:
-        fnames = [fname]
-    for fname in fnames:
-        try:
-            os.remove(fname)
-        except OSError as exc:  # permission error
-            return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    try:
+        os.remove(fname)
+    except OSError as exc:  # permission error
+        return {"error": 'Could not remove %s: %s' % (fname, exc)}
     return {"success": fname}
 
 

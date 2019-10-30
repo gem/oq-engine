@@ -60,28 +60,37 @@ AND is_running=1 AND pid > 0 ORDER BY id'''
 
 if OQ_DISTRIBUTE == 'zmq':
 
-    def set_concurrent_tasks_default(job_id):
+    def set_concurrent_tasks_default(calc):
         """
         Set the default for concurrent_tasks based on the available
         worker pools .
         """
         num_workers = 0
         w = config.zworkers
-        for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
+        if w.host_cores:
+            host_cores = [hc.split() for hc in w.host_cores.split(',')]
+        else:
+            host_cores = []
+        for host, _cores in host_cores:
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
             with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                 if not general.socket_ready(url):
                     logs.LOG.warn('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
+        if num_workers == 0:
+            num_workers = os.cpu_count()
+            logs.LOG.warn('Missing host_cores, no idea about how many cores '
+                          'are available, using %d', num_workers)
         parallel.Starmap.num_cores = num_workers
+        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
         OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.warn('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control  # noqa: E402
 
-    def set_concurrent_tasks_default(job_id):
+    def set_concurrent_tasks_default(calc):
         """
         Set the default for concurrent_tasks based on the number of available
         celery workers.
@@ -89,10 +98,11 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
             logs.LOG.critical("No live compute nodes, aborting calculation")
-            logs.dbcmd('finish', job_id, 'failed')
+            logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         parallel.Starmap.num_cores = ncores
+        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
         OqParam.concurrent_tasks.default = ncores * 2
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
@@ -116,6 +126,11 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)
+
+else:
+
+    def set_concurrent_tasks_default(calc):
+        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
 
 
 def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
@@ -331,14 +346,18 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             del data  # save memory
 
         poll_queue(job_id, _PID, poll_time=15)
+    except BaseException:
+        # the job aborted even before starting
+        logs.dbcmd('finish', job_id, 'aborted')
+        return
+    try:
         if OQ_DISTRIBUTE.endswith('pool'):
             logs.LOG.warning('Using %d cores on %s',
                              parallel.Starmap.num_cores, platform.node())
-        if OQ_DISTRIBUTE == 'zmq':
-            logs.dbcmd('zmq_start')  # start zworkers
+        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
+            logs.dbcmd('zmq_start')  # start the zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
-        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-            set_concurrent_tasks_default(job_id)
+        set_concurrent_tasks_default(calc)
         t0 = time.time()
         calc.run(exports=exports,
                  hazard_calculation_id=hazard_calculation_id, **kw)
@@ -367,8 +386,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         # if there was an error in the calculation, this part may fail;
         # in such a situation, we simply log the cleanup error without
         # taking further action, so that the real error can propagate
-        if OQ_DISTRIBUTE == 'zmq':  # stop zworkers
-            logs.dbcmd('zmq_stop')
+        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
+            logs.dbcmd('zmq_stop')  # stop the zworkers
         try:
             if OQ_DISTRIBUTE.startswith('celery'):
                 celery_cleanup(TERMINATE)
