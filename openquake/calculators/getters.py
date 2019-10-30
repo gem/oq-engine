@@ -36,7 +36,11 @@ by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 
 
-def _build_stat_curve(poes, imtls, stat, weights):
+def build_stat_curve(poes, imtls, stat, weights):
+    """
+    Build statistics by taking into account IMT-dependent weights
+    """
+    assert len(poes) == len(weights), (len(poes), len(weights))
     L = len(imtls.array)
     array = numpy.zeros((L, 1))
     if isinstance(weights, list):  # IMT-dependent weights
@@ -242,8 +246,8 @@ class PmapGetter(object):
         L = len(self.imtls.array)
         pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
         for sid in self.sids:
-            pmap[sid] = _build_stat_curve(
-                [pc.array for pc in self.get_pcurves(sid)],
+            pmap[sid] = build_stat_curve(
+                numpy.array([pc.array for pc in self.get_pcurves(sid)]),
                 self.imtls, stats.mean_curve, self.weights)
         return pmap
 
