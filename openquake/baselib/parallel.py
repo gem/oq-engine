@@ -536,7 +536,8 @@ class IterResult(object):
                 humansize(max_per_output))
             if self.nbytes:
                 nb = {k: humansize(v) for k, v in self.nbytes.items()}
-                logging.info('Received %s', nb)
+                if len(nb) < 10:
+                    logging.info('Received %s', nb)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
