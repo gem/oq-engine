@@ -468,10 +468,6 @@ hazard_uhs-std.csv
                  ('rx_', 3202), ('sid_', 3202), ('srcidx', 3202),
                  ('weight', 3202), ('ztor', 3202)])
 
-            # check best_rlz on 5 sites
-            best_rlz = self.calc.datastore['best_rlz'][()]
-            numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
-
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling are not implemented
         with self.assertRaises(NotImplementedError):
