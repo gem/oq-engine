@@ -26,11 +26,13 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, gen_slices, get_indices
 from openquake.baselib.python3compat import encode
+from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -217,21 +219,29 @@ class DisaggregationCalculator(base.HazardCalculator):
         csm_info = self.datastore['csm_info']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
+
+        ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        self.pgetter = getters.PmapGetter(
+            self.datastore, ws, self.sitecol.sids)
+
+        # build array rlzs (N, Z)
         if oq.rlz_index is None:
             Z = oq.num_rlzs_disagg
-            try:
-                rlzs = self.datastore['best_rlz'][:, :Z]
-            except KeyError:
-                rlzs = numpy.zeros((self.N, Z), int)
+            rlzs = numpy.zeros((self.N, Z), int)
+            if self.R > 1:
+                for sid in self.sitecol.sids:
+                    curves = numpy.array(
+                        [pc.array for pc in self.pgetter.get_pcurves(sid)])
+                    mean = getters.build_stat_curve(
+                        curves, oq.imtls, stats.mean_curve, ws)
+                    rlzs[sid] = util.closest_to_ref(curves, mean.array)[:Z]
+                self.datastore['best_rlzs'] = rlzs
         else:
             Z = len(oq.rlz_index)
             rlzs = numpy.zeros((self.N, Z), int)
             for z in range(Z):
                 rlzs[:, z] = oq.rlz_index[z]
-
-        ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        self.pgetter = getters.PmapGetter(
-            self.datastore, ws, self.sitecol.sids)
+        assert Z <= self.R, (Z, self.R)
 
         if oq.iml_disagg:
             # no hazard curves are needed
@@ -282,6 +292,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
             for z, rlz in enumerate(rlzs[s]):
+                import pdb; pdb.set_trace()
                 logging.info('Site #%d, disaggregating for rlz=#%d', s, rlz)
                 for p, poe in enumerate(self.poes_disagg):
                     for m, imt in enumerate(oq.imtls):
@@ -356,13 +367,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             a dictionary sid -> trti -> disagg matrix
         """
+        oq = self.oqparam
         T = len(self.trts)
         # build a dictionary sid, rlz -> 8D matrix of shape (T, ..., M, P)
         results = {(sid, rlz): _8d_matrix(dic, T)
                    for (sid, rlz), dic in results.items()}
 
         # get the number of outputs
-        Z = len(self.oqparam.rlz_index or [0])
+        Z = oq.num_rlzs_disagg if oq.rlz_index is None else len(oq.rlz_index)
         shp = (len(self.sitecol), len(self.poes_disagg), len(self.imts), Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
