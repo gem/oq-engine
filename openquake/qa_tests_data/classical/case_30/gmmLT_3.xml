@@ -3,13 +3,12 @@
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <logicTree logicTreeID='lt1'>
 
-        <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                     applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="YoungsEtAl1997SInter">
                         <uncertaintyModel>YoungsEtAl1997SInter</uncertaintyModel>
                         <uncertaintyWeight>0.33</uncertaintyWeight>
-                        <uncertaintyWeight imt="SA(1.0)">0.3</uncertaintyWeight>
+                        <uncertaintyWeight imt="SA(1.0)">0</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="AtkinsonBoore2003SInter">
                         <uncertaintyModel>AtkinsonBoore2003SInter</uncertaintyModel>
@@ -19,13 +18,10 @@
                     <logicTreeBranch branchID="ZhaoEtAl2006SInter">
                         <uncertaintyModel>ZhaoEtAl2006SInter</uncertaintyModel>
                         <uncertaintyWeight>0.34</uncertaintyWeight>
-                        <uncertaintyWeight imt="SA(1.0)">0.3</uncertaintyWeight>
+                        <uncertaintyWeight imt="SA(1.0)">0.6</uncertaintyWeight>
                     </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
 
-
-        <logicTreeBranchingLevel branchingLevelID="bl2">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
                     applyToTectonicRegionType="Subduction IntraSlab">
                 <logicTreeBranch branchID="AtkinsonBoore2003SSlab">
@@ -41,12 +37,8 @@
                     <uncertaintyModel>ZhaoEtAl2006SSlab</uncertaintyModel>
                     <uncertaintyWeight>0.34</uncertaintyWeight>
                 </logicTreeBranch>
-
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-        
 
-        <logicTreeBranchingLevel branchingLevelID="bl3">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
                     applyToTectonicRegionType="Active Shallow Crust">
                 <logicTreeBranch branchID="ZhaoEtAl2006Asc">
@@ -66,8 +58,6 @@
                     <uncertaintyWeight>0.25</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-        
 
     </logicTree>
 </nrml>

@@ -152,6 +152,11 @@ class RlzsAssoc(object):
             # logic tree reduction; we ensure the sum of the weights is 1
             for rlz in self.realizations:
                 rlz.weight = rlz.weight / tot_weight
+        # for instance for test_case_30_sampling there are 2 realizations
+        # with weights for YoungsEtAl1997SInter_@_ZhaoEtAl2006Asc and
+        # ZhaoEtAl2006SInter_@_ChiouYoungs2008 respectively
+        # <ImtWeight {'SA(1.0)': 0.0, 'weight': 0.4925373134328358}>
+        # <ImtWeight {'SA(1.0)': 1.0, 'weight': 0.5074626865671642}>
 
     @property
     def realizations(self):

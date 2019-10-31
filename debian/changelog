@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended IMT-dependent weights to classical calculations with sampling
   * Made it possible to disaggregate on multiple realizations
     with the parameters `rlz_index` or `num_rlzs_disagg`
   * Fixed downloading the ShakeMaps (again)
