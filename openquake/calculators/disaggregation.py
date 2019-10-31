@@ -387,22 +387,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param attrs:
             dictionary of attributes to add to the dataset
         """
-        for m, imt in enumerate(self.imts):
-            ws = numpy.array([w[imt] for w in self.ws])
-            for sid, mat9 in results.items():
-                if self.Z > 1:
-                    weights = ws[self.rlzs[sid]]
-                    weights /= weights.sum()  # normalize to 1
+        for sid, mat9 in results.items():
+            rlzs = self.rlzs[sid]
+            for m, imt in enumerate(self.imts):
+                # NB: here is how to compute the stats:
+                # weights = numpy.array([self.ws[r][imt] for r in rlzs]
+                # weights /= weights.sum()  # normalize to 1
+                # mean = numpy.average(mat7, -1, weights)
                 for p, poe in enumerate(self.poes_disagg):
                     mat7 = mat9[..., m, p, :]
-                    if self.Z > 1 and mat7.any():
-                        mean = numpy.average(mat7, -1, weights)
-                        #self._save('disagg', sid, 'mean', poe, imt, mean)
                     for z in range(self.Z):
-                        rlz = self.rlzs[sid, z]
                         mat6 = mat7[..., z]
                         if mat6.any():  # nonzero
-                            self._save('disagg', sid, rlz, poe, imt, mat6)
+                            self._save('disagg', sid, rlzs[z], poe, imt, mat6)
         self.datastore.set_attrs('disagg', **attrs)
 
     def _save(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
