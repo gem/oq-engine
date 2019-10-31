@@ -265,7 +265,7 @@ def _digitize_lons(lons, lon_bins):
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.nofilter, filter_distance='rjb', **kwargs):
+        source_filter=filters.nofilter, **kwargs):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
@@ -345,7 +345,7 @@ def disaggregation(
             trt, rlzs_by_gsim,
             {'truncation_level': truncation_level,
              'maximum_distance': source_filter.integration_distance,
-             'filter_distance': filter_distance, 'imtls': {str(imt): [iml]}})
+             'imtls': {str(imt): [iml]}})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rdata = contexts.RupData(cmaker).from_srcs(srcs, sitecol)
@@ -384,7 +384,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        mat = _build_disagg_matrix(bdata[trt], bin_edges)[..., 0, 0, :]
+        mat = _build_disagg_matrix(bdata[trt], bin_edges)[..., 0, 0]
         matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 

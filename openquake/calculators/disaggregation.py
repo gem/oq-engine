@@ -219,9 +219,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
 
-        ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        self.ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self.pgetter = getters.PmapGetter(
-            self.datastore, ws, self.sitecol.sids)
+            self.datastore, self.ws, self.sitecol.sids)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
@@ -232,7 +232,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     curves = numpy.array(
                         [pc.array for pc in self.pgetter.get_pcurves(sid)])
                     mean = getters.build_stat_curve(
-                        curves, oq.imtls, stats.mean_curve, ws)
+                        curves, oq.imtls, stats.mean_curve, self.ws)
                     rlzs[sid] = util.closest_to_ref(curves, mean.array)[:Z]
                 self.datastore['best_rlzs'] = rlzs
         else:
@@ -384,13 +384,23 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         :param results:
             an 8D-matrix of shape (T, .., E, M, P)
+        :param attrs:
+            dictionary of attributes to add to the dataset
         """
-        for sid, matrix9 in results.items():
-            for z in range(self.Z):
-                rlz = self.rlzs[sid, z]
+        for m, imt in enumerate(self.imts):
+            ws = numpy.array([w[imt] for w in self.ws])
+            for sid, mat9 in results.items():
+                if self.Z > 1:
+                    weights = ws[self.rlzs[sid]]
+                    weights /= weights.sum()  # normalize to 1
                 for p, poe in enumerate(self.poes_disagg):
-                    for m, imt in enumerate(self.imts):
-                        mat6 = matrix9[..., m, p, z]
+                    mat7 = mat9[..., m, p, :]
+                    if self.Z > 1 and mat7.any():
+                        mean = numpy.average(mat7, -1, weights)
+                        #self._save('disagg', sid, 'mean', poe, imt, mean)
+                    for z in range(self.Z):
+                        rlz = self.rlzs[sid, z]
+                        mat6 = mat7[..., z]
                         if mat6.any():  # nonzero
                             self._save('disagg', sid, rlz, poe, imt, mat6)
         self.datastore.set_attrs('disagg', **attrs)
