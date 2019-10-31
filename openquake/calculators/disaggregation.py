@@ -115,7 +115,7 @@ def compute_disagg(dstore, slc, sitecol, oq, cmaker, iml4, trti, bin_edges,
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary sid -> 7D-array
+        a dictionary sid, z -> 7D-array
     """
     dstore.open('r')
     rupdata = {k: dstore['rup/' + k][slc] for k in dstore['rup']}
@@ -126,11 +126,11 @@ def compute_disagg(dstore, slc, sitecol, oq, cmaker, iml4, trti, bin_edges,
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=False)
     gmf_mon = monitor('computing mean_std', measuremem=False)
-    for sid, rlz, arr in disagg.build_matrices(
+    for sid, z, arr in disagg.build_matrices(
             rupdata, sitecol, cmaker, iml4,
             oq.num_epsilon_bins, bin_edges, pne_mon, mat_mon, gmf_mon):
-        result[sid, rlz] = arr
-    return result  # sid, rlz -> array
+        result[sid, z] = arr
+    return result  # sid, z -> array
 
 
 def agg_probs(*probs):
@@ -242,6 +242,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             for z in range(Z):
                 rlzs[:, z] = oq.rlz_index[z]
         assert Z <= self.R, (Z, self.R)
+        self.Z = Z
+        self.rlzs = rlzs
 
         if oq.iml_disagg:
             # no hazard curves are needed
@@ -320,19 +322,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         results = parallel.Starmap(
             compute_disagg, allargs, h5=self.datastore.hdf5
         ).reduce(self.agg_result, AccumDict(accum={}))
-        return results  # sid, rlz -> trti-> 7D array
+        return results  # sid, z -> trti-> 7D array
 
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results.
 
-        :param acc: dictionary sid -> trti -> 7D array
+        :param acc: dictionary sid, z -> trti -> 7D array
         :param result: dictionary with the result coming from a task
         """
         # this is fast
         trti = result.pop('trti')
-        for (sid, rlz), arr in result.items():
-            acc[sid, rlz][trti] = agg_probs(acc[sid, rlz].get(trti, 0), arr)
+        for (sid, z), arr in result.items():
+            acc[sid, z][trti] = agg_probs(acc[sid, z].get(trti, 0), arr)
         return acc
 
     def save_bin_edges(self):
@@ -340,9 +342,16 @@ class DisaggregationCalculator(base.HazardCalculator):
         Save disagg-bins
         """
         b = self.bin_edges
+        self._9d_matrix = {}
+        M = len(self.oqparam.imtls)
+        P = len(self.oqparam.poes_disagg)
+        T = len(self.trts)
         for sid in self.sitecol.sids:
             bins = disagg.get_bins(b, sid)
-            shape = [len(bin) - 1 for bin in bins] + [len(self.trts)]
+            shape = [len(bin) - 1 for bin in bins] + [T]
+            shp = (self.Z, T) + tuple(shape[:-2]) + (M, P, shape[-2])
+            # (Z, T, mag, dist, lon, lat, M, P, eps)
+            self._9d_matrix[sid] = numpy.zeros(shp)
             shape_dic = dict(zip(BIN_NAMES, shape))
             if sid == 0:
                 logging.info('nbins=%s for site=#%d', shape_dic, sid)
@@ -368,9 +377,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         T = len(self.trts)
-        # build a dictionary sid, rlz -> 8D matrix of shape (T, ..., M, P)
-        results = {(sid, rlz): _8d_matrix(dic, T)
-                   for (sid, rlz), dic in results.items()}
+        # build a dictionary sid, z -> 8D matrix of shape (T, ..., M, P, E)
+        results = {(sid, z): _8d_matrix(dic, T)
+                   for (sid, z), dic in results.items()}
 
         # get the number of outputs
         Z = oq.num_rlzs_disagg if oq.rlz_index is None else len(oq.rlz_index)
@@ -384,9 +393,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         Save the computed PMFs in the datastore
 
         :param results:
-            an 8D-matrix of shape (T, .., M, P)
+            an 8D-matrix of shape (T, .., M, P, E)
         """
-        for (sid, rlz), matrix8 in results.items():
+        for (sid, z), matrix8 in results.items():
+            rlz = self.rlzs[sid, z]
+            self._9d_matrix[sid][z] = matrix8
             for p, poe in enumerate(self.poes_disagg):
                 for m, imt in enumerate(self.imts):
                     self._save_result(
