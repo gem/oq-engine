@@ -167,9 +167,8 @@ def _build_disagg_matrix(bdata, bins):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
-    :param mon: a Monitor instance
     :returns: a 7D-matrix of shape (#magbins, #distbins, #lonbins,
-                                    #latbins, #imts, #poes, #epsbins)
+                                    #latbins, #epsbins, #imts, #poes)
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
     dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
@@ -213,16 +212,17 @@ def build_matrices(rupdata, sitecol, cmaker, iml4,
     :param iml4: an array of shape (N, M, P, Z)
     :param num_epsilon_bins: number of epsilons bins
     :param bin_edges: edges of the bins
-    :yield: (sid, z, matrix)
+    :yield: (sid, 8dmatrix) if the matrix is nonzero
     """
     if len(sitecol) >= 32768:
         raise ValueError('You can disaggregate at max 32,768 sites')
     indices = _site_indices(rupdata['sid_'], len(sitecol))
     eps3 = _eps3(cmaker.trunclevel, num_epsilon_bins)  # this is slow
-    Z = iml4.shape[-1]  # number of realizations
+    M, P, Z = iml4.shape[1:]
     for sid, iml3 in zip(sitecol.sids, iml4):
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
+        arr = numpy.zeros([len(b) - 1 for b in bins] + [M, P, Z])
         for z in range(Z):
             rlz = iml4.rlzs[sid, z]
             iml2 = hdf5.ArrayWrapper(
@@ -231,9 +231,9 @@ def build_matrices(rupdata, sitecol, cmaker, iml4,
                                   indices[sid], iml2, eps3, pne_mon, gmf_mon)
             if bdata.pnes.sum():
                 with mat_mon:
-                    mat = _build_disagg_matrix(bdata, bins)
-                    if mat.any():  # nonzero
-                        yield sid, z, mat
+                    arr[..., z] = _build_disagg_matrix(bdata, bins)
+        if arr.any():  # nonzero
+            yield sid, arr
 
 
 def _digitize_lons(lons, lon_bins):
