@@ -195,10 +195,10 @@ def _build_disagg_matrix(bdata, bins):
     lats_idx[lats_idx == dim4] = dim4 - 1
 
     U, M, P, E = bdata.pnes.shape
-    mat7D = numpy.ones(shape[:-1] + [M, P, E])
+    mat7D = numpy.ones(shape + [M, P])
     for i_mag, i_dist, i_lon, i_lat, pne in zip(
             mags_idx, dists_idx, lons_idx, lats_idx, bdata.pnes):
-        mat7D[i_mag, i_dist, i_lon, i_lat] *= pne
+        mat7D[i_mag, i_dist, i_lon, i_lat] *= pne.transpose(2, 0, 1)  # E, M, P
     return 1. - mat7D
 
 
