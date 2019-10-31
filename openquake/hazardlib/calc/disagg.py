@@ -213,7 +213,7 @@ def build_matrices(rupdata, sitecol, cmaker, iml4,
     :param iml4: an array of shape (N, M, P, Z)
     :param num_epsilon_bins: number of epsilons bins
     :param bin_edges: edges of the bins
-    :yield: (sid, rlz, matrix)
+    :yield: (sid, z, matrix)
     """
     if len(sitecol) >= 32768:
         raise ValueError('You can disaggregate at max 32,768 sites')
@@ -233,7 +233,7 @@ def build_matrices(rupdata, sitecol, cmaker, iml4,
                 with mat_mon:
                     mat = _build_disagg_matrix(bdata, bins)
                     if mat.any():  # nonzero
-                        yield sid, rlz, mat
+                        yield sid, z, mat
 
 
 def _digitize_lons(lons, lon_bins):
