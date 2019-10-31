@@ -342,16 +342,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         Save disagg-bins
         """
         b = self.bin_edges
-        self._9d_matrix = {}
-        M = len(self.oqparam.imtls)
-        P = len(self.oqparam.poes_disagg)
         T = len(self.trts)
         for sid in self.sitecol.sids:
             bins = disagg.get_bins(b, sid)
             shape = [len(bin) - 1 for bin in bins] + [T]
-            shp = (self.Z, T) + tuple(shape[:-2]) + (M, P, shape[-2])
-            # (Z, T, mag, dist, lon, lat, M, P, eps)
-            self._9d_matrix[sid] = numpy.zeros(shp)
             shape_dic = dict(zip(BIN_NAMES, shape))
             if sid == 0:
                 logging.info('nbins=%s for site=#%d', shape_dic, sid)
@@ -377,7 +371,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         T = len(self.trts)
-        # build a dictionary sid, z -> 8D matrix of shape (T, ..., M, P, E)
+        # build a dictionary sid, z -> 8D matrix of shape (T, ..., E, M, P)
         results = {(sid, z): _8d_matrix(dic, T)
                    for (sid, z), dic in results.items()}
 
@@ -393,15 +387,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         Save the computed PMFs in the datastore
 
         :param results:
-            an 8D-matrix of shape (T, .., M, P, E)
+            an 8D-matrix of shape (T, .., E, M, P)
         """
         for (sid, z), matrix8 in results.items():
             rlz = self.rlzs[sid, z]
-            self._9d_matrix[sid][z] = matrix8
             for p, poe in enumerate(self.poes_disagg):
                 for m, imt in enumerate(self.imts):
                     self._save_result(
-                        'disagg', sid, rlz, poe, imt, matrix8[..., m, p, :])
+                        'disagg', sid, rlz, poe, imt, matrix8[..., m, p])
         self.datastore.set_attrs('disagg', **attrs)
 
     def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
