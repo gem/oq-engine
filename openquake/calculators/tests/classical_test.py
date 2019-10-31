@@ -469,11 +469,10 @@ hazard_uhs-std.csv
                  ('weight', 3202), ('ztor', 3202)])
 
     def test_case_30_sampling(self):
-        # IMT-dependent weights with sampling are not implemented
-        with self.assertRaises(NotImplementedError):
-            self.assert_curves_ok(
-                ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-                case_30.__file__, number_of_logic_tree_samples='10')
+        # IMT-dependent weights with sampling
+        self.assert_curves_ok(
+            ['hazcurve-PGA.csv', 'hazcurve-SA(1.0).csv'],
+            case_30.__file__, number_of_logic_tree_samples='2')
 
     def test_case_31(self):
         # source specific logic tree

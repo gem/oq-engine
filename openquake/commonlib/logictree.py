@@ -1602,6 +1602,7 @@ class GsimLogicTree(object):
             [trt] = self.values
         return sorted(self.values[trt])
 
+    # called when using sampling
     def sample(self, n, seed):
         """
         :param n: number of samples
@@ -1627,6 +1628,7 @@ class GsimLogicTree(object):
             rlzs.append(rlz)
         return rlzs
 
+    # this is called only when using full enumeration
     def __iter__(self):
         """
         Yield :class:`openquake.commonlib.logictree.Realization` instances

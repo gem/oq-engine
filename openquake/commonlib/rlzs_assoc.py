@@ -146,19 +146,12 @@ class RlzsAssoc(object):
         Finalize the initialization of the RlzsAssoc object by setting
         the (reduced) weights of the realizations.
         """
-        if self.num_samples:
-            assert len(self.realizations) == self.num_samples, (
-                len(self.realizations), self.num_samples)
+        tot_weight = sum(rlz.weight for rlz in self.realizations)
+        if not tot_weight.is_one():
+            # this may happen for rounding errors or because of the
+            # logic tree reduction; we ensure the sum of the weights is 1
             for rlz in self.realizations:
-                for k in rlz.weight.dic:
-                    rlz.weight.dic[k] = 1. / self.num_samples
-        else:
-            tot_weight = sum(rlz.weight for rlz in self.realizations)
-            if not tot_weight.is_one():
-                # this may happen for rounding errors or because of the
-                # logic tree reduction; we ensure the sum of the weights is 1
-                for rlz in self.realizations:
-                    rlz.weight = rlz.weight / tot_weight
+                rlz.weight = rlz.weight / tot_weight
 
     @property
     def realizations(self):
