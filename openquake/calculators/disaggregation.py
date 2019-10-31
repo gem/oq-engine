@@ -377,9 +377,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         shp = (len(self.sitecol), len(self.poes_disagg), len(self.imts), Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
-        self.save_disagg_result(results, trts=encode(self.trts))
+        self.save_disagg_results(results, trts=encode(self.trts))
 
-    def save_disagg_result(self, results, **attrs):
+    def save_disagg_results(self, results, **attrs):
         """
         Save the computed PMFs in the datastore
 
