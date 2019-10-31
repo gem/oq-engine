@@ -61,7 +61,7 @@ def _check_curves(sid, rlzs, curves, imtls, poes_disagg):
     return bool(bad)
 
 
-def _8d_matrix(matrices, num_trts):
+def _trt_matrix(matrices, num_trts):
     # convert a dict trti -> matrix into a single matrix of shape (T, ...)
     trti = next(iter(matrices))
     mat = numpy.zeros((num_trts,) + matrices[trti].shape)
@@ -115,22 +115,21 @@ def compute_disagg(dstore, slc, sitecol, oq, cmaker, iml4, trti, bin_edges,
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary sid, z -> 7D-array
+        a dictionary sid -> 8D-array
     """
     dstore.open('r')
     rupdata = {k: dstore['rup/' + k][slc] for k in dstore['rup']}
-    result = {'trti': trti}
     # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=False)
     gmf_mon = monitor('computing mean_std', measuremem=False)
-    for sid, z, arr in disagg.build_matrices(
-            rupdata, sitecol, cmaker, iml4,
-            oq.num_epsilon_bins, bin_edges, pne_mon, mat_mon, gmf_mon):
-        result[sid, z] = arr
-    return result  # sid, z -> array
+    result = dict(disagg.build_matrices(
+        rupdata, sitecol, cmaker, iml4, oq.num_epsilon_bins,
+        bin_edges, pne_mon, mat_mon, gmf_mon))
+    result['trti'] = trti
+    return result  # sid -> array
 
 
 def agg_probs(*probs):
@@ -322,19 +321,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         results = parallel.Starmap(
             compute_disagg, allargs, h5=self.datastore.hdf5
         ).reduce(self.agg_result, AccumDict(accum={}))
-        return results  # sid, z -> trti-> 7D array
+        return results  # sid -> trti-> 8D array
 
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results.
 
-        :param acc: dictionary sid, z -> trti -> 7D array
+        :param acc: dictionary sid -> trti -> 8D array
         :param result: dictionary with the result coming from a task
         """
         # this is fast
         trti = result.pop('trti')
-        for (sid, z), arr in result.items():
-            acc[sid, z][trti] = agg_probs(acc[sid, z].get(trti, 0), arr)
+        for sid, arr in result.items():
+            acc[sid][trti] = agg_probs(acc[sid].get(trti, 0), arr)
         return acc
 
     def save_bin_edges(self):
@@ -369,15 +368,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             a dictionary sid -> trti -> disagg matrix
         """
-        oq = self.oqparam
         T = len(self.trts)
-        # build a dictionary sid, z -> 8D matrix of shape (T, ..., E, M, P)
-        results = {(sid, z): _8d_matrix(dic, T)
-                   for (sid, z), dic in results.items()}
+        # build a dictionary sid -> 9D matrix of shape (T, ..., E, M, P)
+        results = {sid: _trt_matrix(dic, T) for sid, dic in results.items()}
 
         # get the number of outputs
-        Z = oq.num_rlzs_disagg if oq.rlz_index is None else len(oq.rlz_index)
-        shp = (len(self.sitecol), len(self.poes_disagg), len(self.imts), Z)
+        shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         self.save_disagg_results(results, trts=encode(self.trts))
@@ -389,15 +385,17 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             an 8D-matrix of shape (T, .., E, M, P)
         """
-        for (sid, z), matrix8 in results.items():
-            rlz = self.rlzs[sid, z]
-            for p, poe in enumerate(self.poes_disagg):
-                for m, imt in enumerate(self.imts):
-                    self._save_result(
-                        'disagg', sid, rlz, poe, imt, matrix8[..., m, p])
+        for sid, matrix9 in results.items():
+            for z in range(self.Z):
+                rlz = self.rlzs[sid, z]
+                for p, poe in enumerate(self.poes_disagg):
+                    for m, imt in enumerate(self.imts):
+                        mat6 = matrix9[..., m, p, z]
+                        if mat6.any():  # nonzero
+                            self._save('disagg', sid, rlz, poe, imt, mat6)
         self.datastore.set_attrs('disagg', **attrs)
 
-    def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
+    def _save(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
         disagg_outputs = self.oqparam.disagg_outputs
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
