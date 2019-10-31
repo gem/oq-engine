@@ -146,17 +146,28 @@ class RlzsAssoc(object):
         Finalize the initialization of the RlzsAssoc object by setting
         the (reduced) weights of the realizations.
         """
-        tot_weight = sum(rlz.weight for rlz in self.realizations)
-        if not tot_weight.is_one():
-            # this may happen for rounding errors or because of the
-            # logic tree reduction; we ensure the sum of the weights is 1
-            for rlz in self.realizations:
-                rlz.weight = rlz.weight / tot_weight
-        # for instance for test_case_30_sampling there are 2 realizations
-        # with weights for YoungsEtAl1997SInter_@_ZhaoEtAl2006Asc and
-        # ZhaoEtAl2006SInter_@_ChiouYoungs2008 respectively
-        # <ImtWeight {'SA(1.0)': 0.0, 'weight': 0.4925373134328358}>
-        # <ImtWeight {'SA(1.0)': 1.0, 'weight': 0.5074626865671642}>
+        rlzs = self.realizations
+        if self.num_samples:
+            # for instance for test_case_30_sampling there are 2 realizations
+            # for YoungsEtAl1997SInter_@_ZhaoEtAl2006Asc and
+            # ZhaoEtAl2006SInter_@_ChiouYoungs2008 with weights
+            # <ImtWeight {'weight': 0.5, 'SA(1.0)': 0.0}>
+            # <ImtWeight {'weight': 0.5, 'SA(1.0)': 1.0}>
+            assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
+            keys = list(rlzs[0].weight.dic)
+            for k in keys:
+                ws = numpy.array([rlz.weight[k] / rlz.weight['weight']
+                                  for rlz in rlzs])
+                ws /= ws.sum()  # normalize to 1
+                for rlz, w in zip(self.realizations, ws):
+                    rlz.weight.dic[k] = w
+        else:
+            tot_weight = sum(rlz.weight for rlz in self.realizations)
+            if not tot_weight.is_one():
+                # this may happen for rounding errors or because of the
+                # logic tree reduction; we ensure the sum of the weights is 1
+                for rlz in self.realizations:
+                    rlz.weight = rlz.weight / tot_weight
 
     @property
     def realizations(self):
