@@ -1116,7 +1116,7 @@ def extract_rupture_info(dstore, what):
                  boundary))
     arr = numpy.array(rows, dtlist)
     arr.sort(order='rupid')
-    return ArrayWrapper(arr, investigation_time=oq.investigation_time)
+    return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time))
 
 # #####################  extraction from the WebAPI ###################### #
 
