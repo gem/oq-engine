@@ -384,8 +384,8 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        mat = _build_disagg_matrix(bdata[trt], bin_edges)[..., 0, 0]
-        matrix[..., trt_num[trt]] = mat
+        mat7 = _build_disagg_matrix(bdata[trt], bin_edges)  # shape (..., M, P)
+        matrix[..., trt_num[trt]] = mat7[..., 0, 0]
     return bin_edges + (trts,), matrix
 
 
