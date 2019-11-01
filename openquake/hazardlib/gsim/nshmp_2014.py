@@ -119,135 +119,38 @@ def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
 
 
 DEFAULT_WEIGHTING = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
+SUFFIX = {0: 'Mean', -1: 'Lower', 1: 'Upper'}
 
 
-class AbrahamsonEtAl2014NSHMPUpper(AbrahamsonEtAl2014):
+def adjust(basecls, sgn):
     """
-    Implements the positive NSHMP adjustment factor for the Abrahamson et al.
-    (2014) NGA West 2 GMPE
+    :param basecls:
+        a base class (Idriss2014, ChiouYoungs2014, CampbellBozorgnia2014,
+        BooreEtAl2014, AbrahamsonEtAl2014)
+    :param sgn:
+        sign of the adjustement factor, -1, 0, +1
+    :returns:
+        adjusted subclass of basecls
     """
-    get_mean_and_stddevs = get_mean_and_stddevs
+    name = basecls.__name__ + 'NSHMP' + SUFFIX[sgn]
+    dic = dict(get_mean_and_stddevs=get_mean_and_stddevs)
+    if sgn == 0:
+        dic['weights_signs'] = DEFAULT_WEIGHTING
+        dic['__doc__'] = ("Implements the %s GMPE for application to the "
+                          "weighted mean case") % basecls.__name__
+    else:
+        dic['__doc__'] = ("Implements the %d NSHMP adjustment factor for the"
+                          " %s NGA West 2 GMPE" % (sgn, basecls.__name__))
+    # the base class requires only Rjb, but the epistemic adjustment factors
+    # are given in terms of Rrup, so both are required in the subclass
+    dic['REQUIRES_DISTANCES'] = frozenset(
+        basecls.REQUIRES_DISTANCES | {'rrup'})
+    return type(name, (basecls,), dic)
 
 
-class AbrahamsonEtAl2014NSHMPLower(AbrahamsonEtAl2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Abrahamson et al.
-    (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class AbrahamsonEtAl2014NSHMPMean(AbrahamsonEtAl2014):
-    """
-    Implements the Abrahamson et al (2014) GMPE for application to the
-    weighted mean case
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-    weights_signs = DEFAULT_WEIGHTING
-
-
-class BooreEtAl2014NSHMPUpper(BooreEtAl2014):
-    """
-    Implements the positive NSHMP adjustment factor for the Boore et al.
-    (2014) NGA West 2 GMPE
-    """
-    # Originally Boore et al. (2014) requires only Rjb, but the epistemic
-    # adjustment factors are given in terms of Rrup, so both are required here
-    REQUIRES_DISTANCES = set(("rjb", "rrup"))
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class BooreEtAl2014NSHMPLower(BooreEtAl2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Boore et al.
-    (2014) NGA West 2 GMPE
-    """
-    # See similar comment above
-    REQUIRES_DISTANCES = set(("rjb", "rrup"))
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class BooreEtAl2014NSHMPMean(BooreEtAl2014):
-    """
-    Implements the Boore et al (2014) GMPE for application to the
-    weighted mean case
-    """
-    # See similar comment above
-    REQUIRES_DISTANCES = set(("rjb", "rrup"))
-    get_mean_and_stddevs = get_mean_and_stddevs
-    weights_signs = DEFAULT_WEIGHTING
-
-
-class CampbellBozorgnia2014NSHMPUpper(CampbellBozorgnia2014):
-    """
-    Implements the positive NSHMP adjustment factor for the Campbell and
-    Bozorgnia (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class CampbellBozorgnia2014NSHMPLower(CampbellBozorgnia2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Campbell and
-    Bozorgnia (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class CampbellBozorgnia2014NSHMPMean(CampbellBozorgnia2014):
-    """
-    Implements the Campbell & Bozorgnia (2014) GMPE for application to the
-    weighted mean case
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-    weights_signs = DEFAULT_WEIGHTING
-
-
-class ChiouYoungs2014NSHMPUpper(ChiouYoungs2014):
-    """
-    Implements the positive NSHMP adjustment factor for the Chiou & Youngs
-    (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class ChiouYoungs2014NSHMPLower(ChiouYoungs2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Chiou & Youngs
-    (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class ChiouYoungs2014NSHMPMean(ChiouYoungs2014):
-    """
-    Implements the Chiou & Youngs (2014) GMPE for application to the
-    weighted mean case
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-    weights_signs = DEFAULT_WEIGHTING
-
-
-class Idriss2014NSHMPUpper(Idriss2014):
-    """
-    Implements the positive NSHMP adjustment factor for the Idriss (2014)
-    NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class Idriss2014NSHMPLower(Idriss2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Idriss (2014)
-    NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class Idriss2014NSHMPMean(Idriss2014):
-    """
-    Implements the Idriss (2014) GMPE for application to the
-    weighted mean case
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-    weights_signs = DEFAULT_WEIGHTING
+for cls in (Idriss2014, ChiouYoungs2014, CampbellBozorgnia2014, BooreEtAl2014,
+            AbrahamsonEtAl2014):
+    # register Upper/Lower/Mean subclasses
+    for sgn in (1, -1, 0):
+        c = adjust(cls, sgn)
+        globals()[c.__name__] = c
