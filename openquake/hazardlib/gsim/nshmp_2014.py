@@ -66,8 +66,7 @@ class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
         # Get original mean and standard deviations
         mean, stddevs = super().get_mean_and_stddevs(
             sctx, rctx, dctx, imt, stddev_types)
-        cff = SInterCan15Mid.SITE_COEFFS[imt]
-        mean += np.log(cff['mf'])
+        mean += np.log(SInterCan15Mid.SITE_COEFFS[imt]['mf'])
         return mean, stddevs
 
 
@@ -101,21 +100,12 @@ def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
     <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
     for spec of input and result values.
     """
-    cname = self.__class__.__name__
-    if cname.endswith('Upper'):
-        sgn = 1
-    elif cname.endswith('Lower'):
-        sgn = -1
-    elif cname.endswith('Mean'):
-        sgn = 0
-    else:
-        raise NameError(cname)
     mean, stddevs = self.__class__.__base__.get_mean_and_stddevs(
         self, sctx, rctx, dctx, imt, stddev_types)
 
     # return mean, increased by the adjustment factor, and standard deviation
     self.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
-    return mean + sgn * self.adjustment, stddevs
+    return mean + self.sgn * self.adjustment, stddevs
 
 
 DEFAULT_WEIGHTING = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
@@ -133,7 +123,7 @@ def adjust(basecls, sgn):
         adjusted subclass of basecls
     """
     name = basecls.__name__ + 'NSHMP' + SUFFIX[sgn]
-    dic = dict(get_mean_and_stddevs=get_mean_and_stddevs)
+    dic = dict(get_mean_and_stddevs=get_mean_and_stddevs, sgn=sgn)
     if sgn == 0:
         dic['weights_signs'] = DEFAULT_WEIGHTING
         dic['__doc__'] = ("Implements the %s GMPE for application to the "
@@ -145,6 +135,7 @@ def adjust(basecls, sgn):
     # are given in terms of Rrup, so both are required in the subclass
     dic['REQUIRES_DISTANCES'] = frozenset(
         basecls.REQUIRES_DISTANCES | {'rrup'})
+
     return type(name, (basecls,), dic)
 
 
