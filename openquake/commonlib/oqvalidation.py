@@ -42,7 +42,7 @@ KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
                 'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
                 'source_model_logic_tree', 'hazard_curves', 'insurance',
                 'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
-                'fragility', 'reqv', 'input_zip',
+                'fragility', 'reqv', 'input_zip', 'require',
                 'nonstructural_vulnerability',
                 'nonstructural_fragility',
                 'nonstructural_consequence',
@@ -160,6 +160,7 @@ class OqParam(valid.ParamSet):
     rupture_mesh_spacing = valid.Param(valid.positivefloat)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
+    require = valid.Param(valid.namelist, None)
     return_periods = valid.Param(valid.positiveints, None)
     ruptures_per_block = valid.Param(valid.positiveint, 50000)
     ses_per_logic_tree_path = valid.Param(
