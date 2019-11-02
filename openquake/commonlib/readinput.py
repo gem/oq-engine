@@ -474,6 +474,11 @@ def get_gsim_lt(oqparam, trts=['*']):
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
+    fnames = [os.path.join(oqparam.base_path, f) for f in gsim_lt.fnames]
+    missing = set(fnames) - set(oqparam.inputs.get('require', {}).values())
+    if missing:
+        raise NameError('The gsim_logic_tree requires %s which is not listed '
+                        'in %s' % (missing, oqparam.inputs['job_ini']))
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:

@@ -1399,6 +1399,7 @@ class GsimLogicTree(object):
                 ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or nrml.read(fname).logicTree
+        self.fnames = set()
         self.gmpe_tables = set()  # populated right below
         self.branches = self._build_trts_branches(trts)
         if tectonic_region_types and not self.branches:
@@ -1563,6 +1564,9 @@ class GsimLogicTree(object):
                         GMPETable.GMPE_DIR = os.path.dirname(self.filename)
                     try:
                         gsim = valid.gsim(uncertainty)
+                        self.fnames.update(
+                            getattr(gsim, name) for name in dir(gsim)
+                            if name.endswith('_file'))
                     except Exception as exc:
                         raise ValueError(
                             "%s in file %s" % (exc, self.filename)) from exc
