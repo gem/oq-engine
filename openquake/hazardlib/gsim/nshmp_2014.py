@@ -120,7 +120,7 @@ def adjust(basecls, sgn):
     :param sgn:
         sign of the adjustement factor, -1, 0, +1
     :returns:
-        adjusted subclass of basecls
+        adjusted subclass of basecls for use with the NSHMP 2014 model
     """
     name = basecls.__name__ + 'NSHMP' + SUFFIX[sgn]
     dic = dict(get_mean_and_stddevs=get_mean_and_stddevs, sgn=sgn)
