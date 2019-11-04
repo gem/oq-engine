@@ -134,7 +134,7 @@ Everything will work provided you respect the following rules:
 
 1. in the gsim logic tree file you must use relative path names (relative to it)
 2. in the GMPE code the file must be read at initialization time, not later
-3. in the GMPE code the name of the file argument must end with ``_file`` or
+3. in ``GMPE.__init__`` the name of the file argument must end with ``_file`` or
    ``_table``. 
 
 The constraint about reading at initialization time makes it possible
