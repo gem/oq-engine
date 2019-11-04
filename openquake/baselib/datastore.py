@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import os
 import re
 import gzip
@@ -388,6 +389,13 @@ class DataStore(collections.abc.MutableMapping):
                 yield from self.retrieve_files(fullk)
             else:
                 yield fullk, gzip.decompress(bytes(numpy.asarray(v[()])))
+
+    def getfile(self, key):
+        """
+        :returns: a BytesIO object
+        """
+        data = bytes(numpy.asarray(self[key][()]))
+        return io.BytesIO(gzip.decompress(data))
 
     @property
     def metadata(self):
