@@ -390,7 +390,7 @@ class DataStore(collections.abc.MutableMapping):
             else:
                 yield fullk, gzip.decompress(bytes(numpy.asarray(v[()])))
 
-    def getfile(self, key):
+    def get_file(self, key):
         """
         :returns: a BytesIO object
         """
