@@ -18,11 +18,9 @@
 
 import re
 import os
-import logging
+import sys
 import operator
 import collections
-
-import shapely.wkt
 import numpy
 
 from openquake.baselib.general import group_array, deprecated
@@ -83,11 +81,9 @@ def export_ruptures_csv(ekey, dstore):
     dest = dstore.export_path('ruptures.csv')
     arr = extract(dstore, 'rupture_info')
     if export.sanity_check:
-        for r in arr:
-            poly = r['boundary'].decode('utf8')
-            obj = shapely.wkt.loads(poly)
-            assert obj.is_valid, (r['rupid'], poly)
-
+        bad = view('bad_ruptures', dstore)
+        if bad.count('\n') > 3:  # nonempty rst_table
+            print(bad, file=sys.stderr)
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
