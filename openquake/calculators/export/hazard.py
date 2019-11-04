@@ -85,6 +85,7 @@ def export_ruptures_csv(ekey, dstore):
     if export.sanity_check:
         for r in arr:
             poly = r['boundary'].decode('utf8')
+            assert not poly.startswith('POINT')
             obj = shapely.wkt.loads(poly)
             assert obj.is_valid, (r['rupid'], poly)
 
