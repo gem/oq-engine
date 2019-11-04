@@ -378,17 +378,16 @@ class DataStore(collections.abc.MutableMapping):
             data = gzip.compress(open(fname, 'rb').read())
             self[where + fname[prefix:]] = numpy.void(data)
 
-    def retrieve_files(self, grp=None):
+    def retrieve_files(self, prefix='input'):
         """
         :yields: pairs (relative path, data)
         """
-        grp = grp or self['input']
-        for k, v in grp.items():
+        for k, v in self[prefix].items():
+            fullk = prefix + '/' + k
             if hasattr(v, 'items'):
-                yield from self.retrieve_files(v)
+                yield from self.retrieve_files(fullk)
             else:
-                a = numpy.asarray(v[()])
-                yield k, gzip.decompress(bytes(a))
+                yield fullk, gzip.decompress(bytes(numpy.asarray(v[()])))
 
     @property
     def metadata(self):
