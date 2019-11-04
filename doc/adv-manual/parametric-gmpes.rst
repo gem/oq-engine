@@ -45,8 +45,8 @@ in the dataset ``csm_info/gsim_lt/branches``.
 
 The examples below will make it clear how it works.
 
-GMPETable and other file-dependent GMPEs
------------------------------------------
+GMPETable
+---------
 
 Historically, the first parametric GMPE was the GMPETable, introduced many
 years ago to support the Canada model. The GMPETable class has a single
@@ -126,6 +126,9 @@ more general. The old syntax has the limitation of being non-hierarchic,
 making it impossible to define MultiGMPEs involving parametric GMPEs:
 this is why we switched to TOML.
 
+File-dependent GMPEs
+-----------------------------------------
+
 It is possible to define other GMPEs taking one or more filenames as argument.
 Everything will work provided you respect the following rules:
 
@@ -136,8 +139,8 @@ Everything will work provided you respect the following rules:
 
 The constraint about reading at initialization time makes it possible
 for the engine to work on a cluster. The issue is that GMPEs are
-instantiate in the controller not and used in the worker nodes, which
-in general *do not have access to the filesystem* of the controller.
+instantiated in the controller and used in the worker nodes, which
+*do not have access to the same filesystem*.
 If the files are read after instantiation, you will get a file not
 found error when running on a cluster.
 
