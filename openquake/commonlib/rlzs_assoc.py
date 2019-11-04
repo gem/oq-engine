@@ -148,19 +148,10 @@ class RlzsAssoc(object):
         """
         rlzs = self.realizations
         if self.num_samples:
-            # for instance for test_case_30_sampling there are 2 realizations
-            # for YoungsEtAl1997SInter_@_ZhaoEtAl2006Asc and
-            # ZhaoEtAl2006SInter_@_ChiouYoungs2008 with weights
-            # <ImtWeight {'weight': 0.5, 'SA(1.0)': 0.0}>
-            # <ImtWeight {'weight': 0.5, 'SA(1.0)': 1.0}>
             assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
-            keys = list(rlzs[0].weight.dic)
-            for k in keys:
-                ws = numpy.array([rlz.weight[k] / rlz.weight['weight']
-                                  for rlz in rlzs])
-                ws /= ws.sum()  # normalize to 1
-                for rlz, w in zip(self.realizations, ws):
-                    rlz.weight.dic[k] = w
+            for rlz in rlzs:
+                for k in rlz.weight.dic:
+                    rlz.weight.dic[k] = 1 / self.num_samples
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if not tot_weight.is_one():
