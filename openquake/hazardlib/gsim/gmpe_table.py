@@ -299,7 +299,7 @@ class GMPETable(GMPE):
 
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}
 
-    GMPE_TABLE = None
+    gmpe_file = None
 
     amplification = None
 
@@ -308,20 +308,20 @@ class GMPETable(GMPE):
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        fname = self.kwargs.get('gmpe_table', self.GMPE_TABLE)
+        fname = self.kwargs.get('gmpe_table', self.gmpe_file)
         if fname is None:
-            raise ValueError('You forgot to set %s.GMPE_TABLE!' %
+            raise ValueError('You forgot to set %s.gmpe_file!' %
                              self.__class__.__name__)
         elif os.path.isabs(fname):
-            self.GMPE_TABLE = fname
+            self.gmpe_file = fname
         elif not hasattr(self, 'GMPE_DIR'):
             # when called from GsimLogicTree.__fromh5__ GMPE_DIR is missing
             return
         else:
             # NB: (hackish) GMPE_DIR must be set externally
-            self.GMPE_TABLE = os.path.abspath(
+            self.gmpe_file = os.path.abspath(
                 os.path.join(self.GMPE_DIR, fname))
-        with h5py.File(self.GMPE_TABLE, "r") as fle:
+        with h5py.File(self.gmpe_file, "r") as fle:
             try:
                 # this is the format inside the datastore
                 self.distance_type = fle["distance_type"][()]
