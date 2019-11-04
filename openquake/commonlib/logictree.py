@@ -1445,10 +1445,12 @@ class GsimLogicTree(object):
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches]
         dic = {'branches': numpy.array(branches, dt)}
+        attrs = {}
 
         # manage gmpe_tables, if any
         if hasattr(self, 'filename'):  # missing for fake logic trees
             dirname = os.path.dirname(self.filename)
+            attrs['basedir'] = dirname
             for gmpe_table in sorted(self.gmpe_tables):
                 dic[os.path.basename(gmpe_table)] = d = {}
                 with hdf5.File(os.path.join(dirname, gmpe_table), 'r') as f:
@@ -1460,7 +1462,7 @@ class GsimLogicTree(object):
                                     python3compat.decode(dset.attrs['metric']))
                         else:
                             d[group] = {k: ds[()] for k, ds in dset.items()}
-        return dic, {}
+        return dic, attrs
 
     def __fromh5__(self, dic, attrs):
         self.branches = []
@@ -1472,7 +1474,7 @@ class GsimLogicTree(object):
             else:
                 br_id = branch['branch']
                 gsim_ = branch['uncertainty']
-            gsim = valid.gsim(gsim_)
+            gsim = valid.gsim(gsim_, attrs['basedir'])
             self.values[branch['trt']].append(gsim)
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
@@ -1530,6 +1532,7 @@ class GsimLogicTree(object):
         trts = []
         branches = []
         branchsetids = set()
+        basedir = os.path.dirname(self.filename)
         for branching_level in self._ltnode:
             for branchset in _bsnodes(self.filename, branching_level):
                 if branchset['uncertaintyType'] != 'gmpeModel':
@@ -1557,12 +1560,8 @@ class GsimLogicTree(object):
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
                     uncertainty = to_toml(branch.uncertaintyModel)
-                    if isinstance(self.filename, str):
-                        # a bit hackish: set the GMPE_DIR equal to the
-                        # directory where the gsim_logic_tree file is
-                        GMPETable.GMPE_DIR = os.path.dirname(self.filename)
                     try:
-                        gsim = valid.gsim(uncertainty)
+                        gsim = valid.gsim(uncertainty, basedir)
                     except Exception as exc:
                         raise ValueError(
                             "%s in file %s" % (exc, self.filename)) from exc
