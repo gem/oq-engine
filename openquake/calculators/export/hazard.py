@@ -86,10 +86,7 @@ def export_ruptures_csv(ekey, dstore):
         for r in arr:
             poly = r['boundary'].decode('utf8')
             obj = shapely.wkt.loads(poly)
-            if not obj.is_valid:
-                # this happens when the bounding box collapse to a line
-                # or a point, i.e. maxlon=minlon or maxlat=minlat
-                print('Rupture %d has an invalid %s' % (r['rupid'], poly))
+            assert obj.is_valid, (r['rupid'], poly)
 
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
