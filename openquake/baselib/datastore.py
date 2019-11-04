@@ -18,8 +18,10 @@
 
 import os
 import re
+import gzip
 import getpass
 import collections
+import numpy
 import h5py
 
 from openquake.baselib import hdf5, config, performance
@@ -366,6 +368,27 @@ class DataStore(collections.abc.MutableMapping):
             return self[key]
         except KeyError:
             return default
+
+    def store_files(self, fnames, where='input/'):
+        """
+        :param fnames: a set of full pathnames
+        """
+        prefix = len(os.path.commonprefix(fnames))
+        for fname in fnames:
+            data = gzip.compress(open(fname, 'rb').read())
+            self[where + fname[prefix:]] = numpy.void(data)
+
+    def retrieve_files(self, grp=None):
+        """
+        :yields: pairs (relative path, data)
+        """
+        grp = grp or self['input']
+        for k, v in grp.items():
+            if hasattr(v, 'items'):
+                yield from self.retrieve_files(v)
+            else:
+                a = numpy.asarray(v[()])
+                yield k, gzip.decompress(bytes(a))
 
     @property
     def metadata(self):
