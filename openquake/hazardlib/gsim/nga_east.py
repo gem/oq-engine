@@ -560,16 +560,16 @@ class NGAEastGMPE(NGAEastBaseGMPE):
     subdirectory fixed to the path of the present file. The GMPE table option
     is therefore no longer needed
     """
-    gmpe_file = ""
+    gmpe_table = ""
 
     def __init__(self, tau_model="global", phi_model="global",
                  phi_s2ss_model=None, tau_quantile=None,
                  phi_ss_quantile=None, phi_s2ss_quantile=None):
-        if not self.gmpe_file:
+        if not self.gmpe_table:
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
                                       "input table")
         super().__init__(
-            gmpe_table=self.gmpe_file,
+            gmpe_table=self.gmpe_table,
             tau_model=tau_model, phi_model=phi_model,
             phi_s2ss_model=phi_s2ss_model, tau_quantile=tau_quantile,
             phi_ss_quantile=phi_ss_quantile,
@@ -758,18 +758,18 @@ class NGAEastGMPETotalSigma(NGAEastBaseGMPETotalSigma):
     GMPE table is fixed. This forms the main base-class for the total sigma
     version of the core set of NGA East models
     """
-    gmpe_file = ""
+    gmpe_table = ""
 
     def __init__(self, tau_model="global", phi_model="global",
                  phi_s2ss_model=None, sigma_quantile=None):
         """
         Instantiates the GMPE without the hdf5 table fort the median values
         """
-        if not self.gmpe_file:
+        if not self.gmpe_table:
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
                                       "input table")
         super().__init__(
-            self.gmpe_file, tau_model=tau_model, phi_model=phi_model,
+            self.gmpe_table, tau_model=tau_model, phi_model=phi_model,
             phi_s2ss_model=phi_s2ss_model, sigma_quantile=sigma_quantile)
 
 
@@ -791,7 +791,7 @@ class Boore2015NGAEastA04(NGAEastGMPE):
     Ground Motion Models for the Central and Eastern North America Region",
     PEER Report 2015/04, Pacific Earthquake Engineering Research Center
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_A04_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_A04_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastA04TotalSigma(NGAEastGMPETotalSigma):
@@ -799,7 +799,7 @@ class Boore2015NGAEastA04TotalSigma(NGAEastGMPETotalSigma):
     Boore (2015) NGA East GMPE using the Atkinson (2004) attenuation model
     for use with the total sigma aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_A04_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_A04_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastAB14(NGAEastGMPE):
@@ -807,7 +807,7 @@ class Boore2015NGAEastAB14(NGAEastGMPE):
     Boore (2015) NGA East GMPE using the Atkinson & Boore (2014) attenuation
     model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_AB14_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_AB14_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastAB14TotalSigma(NGAEastGMPETotalSigma):
@@ -815,7 +815,7 @@ class Boore2015NGAEastAB14TotalSigma(NGAEastGMPETotalSigma):
     Boore (2015) NGA East GMPE using the Atkinson & Boore (2014) attenuation
     model for use with the total sigma aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_AB14_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_AB14_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastAB95(NGAEastGMPE):
@@ -823,7 +823,7 @@ class Boore2015NGAEastAB95(NGAEastGMPE):
     Boore (2015) NGA East GMPE using the Atkinson & Boore (1995) attenuation
     model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_AB95_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_AB95_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastAB95TotalSigma(NGAEastGMPETotalSigma):
@@ -831,7 +831,7 @@ class Boore2015NGAEastAB95TotalSigma(NGAEastGMPETotalSigma):
     Boore (2015) NGA East GMPE using the Atkinson & Boore (1995) attenuation
     model for use with the total sigma aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_AB95_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_AB95_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastBCA10D(NGAEastGMPE):
@@ -839,7 +839,7 @@ class Boore2015NGAEastBCA10D(NGAEastGMPE):
     Boore (2015) NGA East GMPE using the Boore et al (2010) attenuation
     model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_BCA10D_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_BCA10D_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastBCA10DTotalSigma(NGAEastGMPETotalSigma):
@@ -847,7 +847,7 @@ class Boore2015NGAEastBCA10DTotalSigma(NGAEastGMPETotalSigma):
     Boore (2015) NGA East GMPE using the Boore et al (2010) attenuation
     model for use with the total sigma aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_BCA10D_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_BCA10D_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastBS11(NGAEastGMPE):
@@ -855,7 +855,7 @@ class Boore2015NGAEastBS11(NGAEastGMPE):
     Boore (2015) NGA East GMPE using the Boatwright and Seekins (2011)
     attenuation model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_BS11_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_BS11_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastBS11TotalSigma(NGAEastGMPETotalSigma):
@@ -863,14 +863,14 @@ class Boore2015NGAEastBS11TotalSigma(NGAEastGMPETotalSigma):
     Boore (2015) NGA East GMPE using the Boatwright and Seekins (2011)
     attenuation model for use with the total sigma aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_BS11_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_BS11_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastSGD02(NGAEastGMPE):
     """
     Boore (2015) NGA East GMPE using the Silva et al (2002) attenuation model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_SGD02_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_SGD02_J15_Adjusted.hdf5")
 
 
 class Boore2015NGAEastSGD02TotalSigma(NGAEastGMPETotalSigma):
@@ -878,7 +878,7 @@ class Boore2015NGAEastSGD02TotalSigma(NGAEastGMPETotalSigma):
     Boore (2015) NGA East GMPE using the Silva et al (2002) attenuation model
     for use with the total sigma aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_BOORE_SGD02_J15_Adjusted.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_SGD02_J15_Adjusted.hdf5")
 
 
 # Darragh, Abrahamson, Silva and Gregor (2015) suite
@@ -892,7 +892,7 @@ class DarraghEtAl2015NGAEast1CCSP(NGAEastGMPE):
     Hard Rock Ground Motion Models for Region 2 of Central and Eastern
     North America" in ...
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_DARRAGH_1CCSP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_1CCSP.hdf5")
 
 
 class DarraghEtAl2015NGAEast1CCSPTotalSigma(NGAEastGMPETotalSigma):
@@ -901,7 +901,7 @@ class DarraghEtAl2015NGAEast1CCSPTotalSigma(NGAEastGMPETotalSigma):
     constant stress parameter (1CCSP) for use with the total sigma aleatory
     uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_DARRAGH_1CCSP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_1CCSP.hdf5")
 
 
 class DarraghEtAl2015NGAEast1CVSP(NGAEastGMPE):
@@ -909,7 +909,7 @@ class DarraghEtAl2015NGAEast1CVSP(NGAEastGMPE):
     NGA East model of Darragh et al. (2015) adopting the single-corner
     variable stress parameter (1CVSP)
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_DARRAGH_1CVSP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_1CVSP.hdf5")
 
 
 class DarraghEtAl2015NGAEast1CVSPTotalSigma(NGAEastGMPETotalSigma):
@@ -918,7 +918,7 @@ class DarraghEtAl2015NGAEast1CVSPTotalSigma(NGAEastGMPETotalSigma):
     variable stress parameter (1CVSP) for use with the total sigma aleatory
     uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_DARRAGH_1CVSP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_1CVSP.hdf5")
 
 
 class DarraghEtAl2015NGAEast2CCSP(NGAEastGMPE):
@@ -926,7 +926,7 @@ class DarraghEtAl2015NGAEast2CCSP(NGAEastGMPE):
     NGA East model of Darragh et al. (2015) adopting the two-corner
     constant stress parameter (2CCSP)
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_DARRAGH_2CCSP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_2CCSP.hdf5")
 
 
 class DarraghEtAl2015NGAEast2CCSPTotalSigma(NGAEastGMPETotalSigma):
@@ -935,7 +935,7 @@ class DarraghEtAl2015NGAEast2CCSPTotalSigma(NGAEastGMPETotalSigma):
     constant stress parameter (2CCSP) for use with the total sigma aleatory
     uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_DARRAGH_2CCSP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_2CCSP.hdf5")
 
 
 class DarraghEtAl2015NGAEast2CVSP(NGAEastGMPE):
@@ -943,7 +943,7 @@ class DarraghEtAl2015NGAEast2CVSP(NGAEastGMPE):
     NGA East model of Darragh et al. (2015) adopting the two-corner
     variable stress parameter (1CVSP)
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_DARRAGH_2CVSP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_2CVSP.hdf5")
 
 
 class DarraghEtAl2015NGAEast2CVSPTotalSigma(NGAEastGMPETotalSigma):
@@ -952,7 +952,7 @@ class DarraghEtAl2015NGAEast2CVSPTotalSigma(NGAEastGMPETotalSigma):
     variable stress parameter (2CVSP) for use with the total sigma aleatory
     uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_DARRAGH_2CVSP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_2CVSP.hdf5")
 
 # Yenier & Atkinson (2015)
 
@@ -965,7 +965,7 @@ class YenierAtkinson2015NGAEast(NGAEastGMPE):
     Application to Central and Eastern North America" in PEER 2015/04, Chapter
     4
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_YENIER_ATKINSON.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_YENIER_ATKINSON.hdf5")
 
 
 class YenierAtkinson2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
@@ -973,7 +973,7 @@ class YenierAtkinson2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
     NGA East Model of Yenier & Atkinson (2015) for use with the total sigma
     aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_YENIER_ATKINSON.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_YENIER_ATKINSON.hdf5")
 
 
 # Pezeschk et al. (2015)
@@ -987,7 +987,7 @@ class PezeschkEtAl2015NGAEastM1SS(NGAEastGMPE):
     Motion Prediction Equations for Eastern North America using a Hybrid
     Empirical Method" in PEER 2015/04, Chapter 5
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_PEZESCHK_M1SS.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_PEZESCHK_M1SS.hdf5")
 
 
 class PezeschkEtAl2015NGAEastM1SSTotalSigma(NGAEastGMPETotalSigma):
@@ -995,14 +995,14 @@ class PezeschkEtAl2015NGAEastM1SSTotalSigma(NGAEastGMPETotalSigma):
     NGA East Model of Pezeschk et al (2015) for the large-M simulation scaling
     for use with the total sigma aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_PEZESCHK_M1SS.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_PEZESCHK_M1SS.hdf5")
 
 
 class PezeschkEtAl2015NGAEastM2ES(NGAEastGMPE):
     """
     NGA East Model of Pezeschk et al (2015) for the large-M empirical scaling
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_PEZESCHK_M2ES.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_PEZESCHK_M2ES.hdf5")
 
 
 class PezeschkEtAl2015NGAEastM2ESTotalSigma(NGAEastGMPETotalSigma):
@@ -1010,7 +1010,7 @@ class PezeschkEtAl2015NGAEastM2ESTotalSigma(NGAEastGMPETotalSigma):
     NGA East Model of Pezeschk et al (2015) for the large-M empirical scaling
     for use with the total sigma aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_PEZESCHK_M2ES.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_PEZESCHK_M2ES.hdf5")
 
 # Frankel (2015)
 
@@ -1024,7 +1024,7 @@ class Frankel2015NGAEast(NGAEastGMPE):
     Earthquakes Using Hybrid Broadband Seismograms from Finite-Fault
     Simulation with Constant Stress-Drop Scaling" in PEER 2015/04, Chapter 6
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_FRANKEL_J15.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_FRANKEL_J15.hdf5")
 
 
 class Frankel2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
@@ -1032,7 +1032,7 @@ class Frankel2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
     NGA East Model of Frankel (2015) for application to Central & Eastern
     United States for use with the total sigma aleatory uncertainty model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_FRANKEL_J15.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_FRANKEL_J15.hdf5")
 
 # Shahjouei & Pezeschk (2015)
 
@@ -1046,7 +1046,7 @@ class ShahjoueiPezeschk2015NGAEast(NGAEastGMPE):
     for Central and Eastern North America using Hybrid Broadband Simulations
     and NGA-West2 GMPEs" in PEER 2015/04, Chapter 7
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_SHAHJOUEI_PEZESCHK.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_SHAHJOUEI_PEZESCHK.hdf5")
 
 
 class ShahjoueiPezeschk2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
@@ -1055,7 +1055,7 @@ class ShahjoueiPezeschk2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
     Eastern United States, for use with the total sigma aleatory uncertainty
     model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_SHAHJOUEI_PEZESCHK.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_SHAHJOUEI_PEZESCHK.hdf5")
 
 # Al Noman and Cramer (2015)
 
@@ -1068,7 +1068,7 @@ class AlNomanCramer2015NGAEast(NGAEastGMPE):
     Al Noman & Cramer (2015) "Empirical Ground-Motion Prediction Equations for
     Eastern North America" in PEER 2015/04, Chapter 8
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_ALNOMAN_CRAMER.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_ALNOMAN_CRAMER.hdf5")
 
 
 class AlNomanCramer2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
@@ -1077,7 +1077,7 @@ class AlNomanCramer2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
     Eastern United States, for use with the total sigma aleatory uncertainty
     model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_ALNOMAN_CRAMER.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_ALNOMAN_CRAMER.hdf5")
 
 # Graizer (2015)
 
@@ -1090,7 +1090,7 @@ class Graizer2015NGAEast(NGAEastGMPE):
     Graizer, V (2015) "Ground-Motion Prediction Equations for the Central and
     Eastern United States" in PEER 2015/04, Chapter 9
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_GRAIZER.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_GRAIZER.hdf5")
 
 
 class Graizer2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
@@ -1099,7 +1099,7 @@ class Graizer2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
     United States, for use with the total sigma aleatory uncertainty
     model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_GRAIZER.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_GRAIZER.hdf5")
 
 # Hassani & Atkinson (2015)
 
@@ -1112,7 +1112,7 @@ class HassaniAtkinson2015NGAEast(NGAEastGMPE):
     Hassani, B & Atkinson, GA (2015) "Referenced Empirical Ground-Motion Model
     for Eastern North America" in PEER 2015/04, Chapter 10
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_HASSANI_ATKINSON.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_HASSANI_ATKINSON.hdf5")
 
 
 class HassaniAtkinson2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
@@ -1121,7 +1121,7 @@ class HassaniAtkinson2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
     Eastern United States, for use with the total sigma aleatory uncertainty
     model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_HASSANI_ATKINSON.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_HASSANI_ATKINSON.hdf5")
 
 # Hollenback et al. (2015)
 
@@ -1134,7 +1134,7 @@ class HollenbackEtAl2015NGAEastGP(NGAEastGMPE):
     Hollenback, J, Keuhn, N, Goulet, CA and Abrahamson, NA (2015) "PEER NGA-
     East Median Ground Motion Models" in PEER 2015/04, Chapter 11
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_PEER_GP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_PEER_GP.hdf5")
 
 
 class HollenbackEtAl2015NGAEastGPTotalSigma(NGAEastGMPETotalSigma):
@@ -1143,7 +1143,7 @@ class HollenbackEtAl2015NGAEastGPTotalSigma(NGAEastGMPETotalSigma):
     Eastern United States, for use with the total sigma aleatory uncertainty
     model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_PEER_GP.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_PEER_GP.hdf5")
 
 
 class HollenbackEtAl2015NGAEastEX(NGAEastGMPE):
@@ -1154,7 +1154,7 @@ class HollenbackEtAl2015NGAEastEX(NGAEastGMPE):
     Hollenback, J, Keuhn, N, Goulet, CA and Abrahamson, NA (2015) "PEER NGA-
     East Median Ground Motion Models" in PEER 2015/04, Chapter 11
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_PEER_EX.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_PEER_EX.hdf5")
 
 
 class HollenbackEtAl2015NGAEastEXTotalSigma(NGAEastGMPETotalSigma):
@@ -1163,4 +1163,4 @@ class HollenbackEtAl2015NGAEastEXTotalSigma(NGAEastGMPETotalSigma):
     Eastern United States, for use with the total sigma aleatory uncertainty
     model
     """
-    gmpe_file = os.path.join(PATH, "NGAEast_PEER_EX.hdf5")
+    gmpe_table = os.path.join(PATH, "NGAEast_PEER_EX.hdf5")
