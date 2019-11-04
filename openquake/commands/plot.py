@@ -221,6 +221,28 @@ def make_figure_memory(extractors, what):
     return plt
 
 
+class PolygonPlotter():
+    def __init__(self, ax):
+        self.ax = ax
+        self.minxs = []
+        self.maxxs = []
+        self.minys = []
+        self.maxys = []
+
+    def add(self, poly, **kw):
+        from openquake.hmtk.plotting.patch import PolygonPatch
+        minx, miny, maxx, maxy = poly.bounds
+        self.minxs.append(minx)
+        self.maxxs.append(maxx)
+        self.minys.append(miny)
+        self.maxys.append(maxy)
+        self.ax.add_patch(PolygonPatch(poly, **kw))
+
+    def set_lim(self):
+        self.ax.set_xlim(min(self.minxs), max(self.maxxs))
+        self.ax.set_ylim(min(self.minys), max(self.maxys))
+
+
 @sap.script
 def make_figure_sources(extractors, what):
     """
@@ -228,7 +250,6 @@ def make_figure_sources(extractors, what):
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
-    from openquake.hmtk.plotting.patch import PolygonPatch
     [ex] = extractors
     info = ex.get(what)
     fig, ax = plt.subplots()
@@ -236,30 +257,20 @@ def make_figure_sources(extractors, what):
     # sitecol = ex.get('sitecol')
     # bmap = basemap('cyl', sitecol)
     # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
-    minxs = []
-    maxxs = []
-    minys = []
-    maxys = []
+    pp = PolygonPlotter(ax)
     n = 0
     tot = 0
     for rec in info:
         if not rec['wkt'].startswith('POINT'):
             poly = shapely.wkt.loads(rec['wkt'])
-            minx, miny, maxx, maxy = poly.bounds
-            minxs.append(minx)
-            maxxs.append(maxx)
-            minys.append(miny)
-            maxys.append(maxy)
             if rec['eff_ruptures']:  # not filtered out
                 alpha = .3
                 n += 1
             else:
                 alpha = .1
-            pp = PolygonPatch(poly, alpha=alpha)
-            ax.add_patch(pp)
+            pp.add(poly, alpha=alpha)
             tot += 1
-    ax.set_xlim(min(minxs), max(maxxs))
-    ax.set_ylim(min(minys), max(maxys))
+    pp.set_lim()
     ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
     return plt
 
@@ -271,7 +282,6 @@ def make_figure_rupture_info(extractors, what):
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
-    from openquake.hmtk.plotting.patch import PolygonPatch
     [ex] = extractors
     info = ex.get(what)
     fig, ax = plt.subplots()
@@ -281,14 +291,17 @@ def make_figure_rupture_info(extractors, what):
     # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     n = 0
     tot = 0
+    pp = PolygonPlotter(ax)
     for rec in info:
-        poly = shapely.wkt.loads(rec['boundary'].decode('utf8'))
-        if poly.is_valid:
-            ax.add_patch(PolygonPatch(poly))
+        wkt = rec['boundary'].decode('utf8')
+        if wkt.startswith('POLYGON'):
+            poly = shapely.wkt.loads(wkt)
+            pp.add(poly)
             n += 1
         else:
             print('Invalid %s' % rec['boundary'].decode('utf8'))
         tot += 1
+    pp.set_lim()
     ax.set_title('%d/%d valid ruptures' % (n, tot))
     return plt
 

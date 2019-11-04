@@ -1111,9 +1111,9 @@ def extract_rupture_info(dstore, what):
             coordset = set(coords)
             if len(coordset) == 1:  # degenerate to point boundind box
                 boundary = 'POINT(%s)' % coords[0]
-            elif len(coordset) < 5:  # degenerate to line bounding box
+            elif len(coordset) < 4:  # degenerate to line bounding box
                 boundary = 'LINESTRING(%s)' % ', '.join(coordset)
-            else:  # regular bounding box with 5 vertices
+            else:  # regular bounding box with 4 + 1 vertices
                 boundary = 'POLYGON((%s))' % ', '.join(coords)
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
