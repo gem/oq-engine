@@ -33,9 +33,8 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import imt as imt_module
 
 
-BASE_DATA_PATH = os.path.join(os.path.dirname(__file__),
-                              "data",
-                              "gsimtables")
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "gsimtables")
+GMPE_TABLE = os.path.join(BASE_DATA_PATH, "Wcrust_rjb_med.hdf5")
 
 
 def midpoint(low, high, point=0.5):
@@ -740,15 +739,10 @@ class GSIMTableQATestCase(BaseGSIMTestCase):
     MEAN_FILE = "gsimtables/Wcrust_rjb_med_MEAN.csv"
     STD_TOTAL_FILE = "gsimtables/Wcrust_rjb_med_TOTAL.csv"
 
-    def setUp(self):
-        self.GSIM_CLASS.gmpe_table = os.path.join(BASE_DATA_PATH,
-                                                  "Wcrust_rjb_med.hdf5")
-
     def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.7)
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.7,
+                   gmpe_table=GMPE_TABLE)
 
     def test_std_total(self):
-        self.check(self.STD_TOTAL_FILE, max_discrep_percentage=0.7)
-
-    def tearDown(self):
-        self.GSIM_CLASS.gmpe_table = None
+        self.check(self.STD_TOTAL_FILE, max_discrep_percentage=0.7,
+                   gmpe_table=GMPE_TABLE)
