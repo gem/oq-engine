@@ -222,6 +222,9 @@ def make_figure_memory(extractors, what):
 
 
 class PolygonPlotter():
+    """
+    Add polygons to a given axis object
+    """
     def __init__(self, ax):
         self.ax = ax
         self.minxs = []
@@ -262,13 +265,12 @@ def make_figure_sources(extractors, what):
     tot = 0
     for rec in info:
         if not rec['wkt'].startswith('POINT'):
-            poly = shapely.wkt.loads(rec['wkt'])
             if rec['eff_ruptures']:  # not filtered out
                 alpha = .3
                 n += 1
             else:
                 alpha = .1
-            pp.add(poly, alpha=alpha)
+            pp.add(shapely.wkt.loads(rec['wkt']), alpha=alpha)
             tot += 1
     pp.set_lim()
     ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
@@ -295,8 +297,7 @@ def make_figure_rupture_info(extractors, what):
     for rec in info:
         wkt = rec['boundary'].decode('utf8')
         if wkt.startswith('POLYGON'):
-            poly = shapely.wkt.loads(wkt)
-            pp.add(poly)
+            pp.add(shapely.wkt.loads(wkt))
             n += 1
         else:
             print('Invalid %s' % rec['boundary'].decode('utf8'))
