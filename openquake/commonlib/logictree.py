@@ -1532,12 +1532,7 @@ class GsimLogicTree(object):
         trts = []
         branches = []
         branchsetids = set()
-        if isinstance(self.filename, str):
-            # where the logictree file is
-            basedir = os.path.dirname(self.filename)
-        else:
-            import pdb; pdb.set_trace()
-            basedir = ''
+        basedir = os.path.dirname(self.filename)
         for branching_level in self._ltnode:
             for branchset in _bsnodes(self.filename, branching_level):
                 if branchset['uncertaintyType'] != 'gmpeModel':
