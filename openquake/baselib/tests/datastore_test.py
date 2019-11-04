@@ -86,3 +86,13 @@ class DataStoreTestCase(unittest.TestCase):
             read(42, datadir=tmp)
         self.assertIn('permission denied', str(ctx.exception).lower())
         os.remove(fname)
+
+    def test_store_retrieve_files(self):
+        fnames = []
+        for cwd, dirs, files in os.walk(os.path.dirname(__file__)):
+            for f in files:
+                if f.endswith('.py'):
+                    fnames.append(os.path.join(cwd, f))
+        self.dstore.store_files(fnames)
+        for name, data in self.dstore.retrieve_files():
+            print(name)
