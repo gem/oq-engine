@@ -1530,6 +1530,11 @@ class GsimLogicTree(object):
         trts = []
         branches = []
         branchsetids = set()
+        if isinstance(self.filename, str):
+            # where the logictree file is
+            basedir = os.path.dirname(self.filename)
+        else:
+            basedir = ''
         for branching_level in self._ltnode:
             for branchset in _bsnodes(self.filename, branching_level):
                 if branchset['uncertaintyType'] != 'gmpeModel':
@@ -1557,12 +1562,8 @@ class GsimLogicTree(object):
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
                     uncertainty = to_toml(branch.uncertaintyModel)
-                    if isinstance(self.filename, str):
-                        # a bit hackish: set the GMPE_DIR equal to the
-                        # directory where the gsim_logic_tree file is
-                        GMPETable.GMPE_DIR = os.path.dirname(self.filename)
                     try:
-                        gsim = valid.gsim(uncertainty)
+                        gsim = valid.gsim(uncertainty, basedir)
                     except Exception as exc:
                         raise ValueError(
                             "%s in file %s" % (exc, self.filename)) from exc
