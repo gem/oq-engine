@@ -1108,13 +1108,7 @@ def extract_rupture_info(dstore, what):
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
             coords = ['%.5f %.5f' % xy for xy in bbox2poly(r['bbox'])]
-            coordset = set(coords)
-            if len(coordset) == 1:  # degenerate to point boundind box
-                boundary = 'POINT(%s)' % coords[0]
-            elif len(coordset) < 4:  # degenerate to line bounding box
-                boundary = 'LINESTRING(%s)' % ', '.join(coordset)
-            else:  # regular bounding box with 4 + 1 vertices
-                boundary = 'POLYGON((%s))' % ', '.join(coords)
+            boundary = 'POLYGON((%s))' % ', '.join(coords)
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
