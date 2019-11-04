@@ -418,7 +418,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as err:
             GMPETable(gmpe_table=None)
         self.assertEqual(str(err.exception),
-                         "You forgot to set GMPETable.gmpe_file!")
+                         "You forgot to set GMPETable.gmpe_table!")
         with self.assertRaises(OSError) as err:
             GMPETable(gmpe_table='/do/not/exists/table.hdf5')
         self.assertIn("No such file or directory", str(err.exception))
@@ -741,7 +741,7 @@ class GSIMTableQATestCase(BaseGSIMTestCase):
     STD_TOTAL_FILE = "gsimtables/Wcrust_rjb_med_TOTAL.csv"
 
     def setUp(self):
-        self.GSIM_CLASS.gmpe_file = os.path.join(BASE_DATA_PATH,
+        self.GSIM_CLASS.gmpe_table = os.path.join(BASE_DATA_PATH,
                                                   "Wcrust_rjb_med.hdf5")
 
     def test_mean(self):
@@ -751,4 +751,4 @@ class GSIMTableQATestCase(BaseGSIMTestCase):
         self.check(self.STD_TOTAL_FILE, max_discrep_percentage=0.7)
 
     def tearDown(self):
-        self.GSIM_CLASS.gmpe_file = None
+        self.GSIM_CLASS.gmpe_table = None
