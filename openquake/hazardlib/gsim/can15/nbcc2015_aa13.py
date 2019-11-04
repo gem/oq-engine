@@ -59,7 +59,7 @@ class NBCC2015_AA13_Base(GMPETable):
     gsim/nga_east.html
     """
     experimental = True
-    GMPE_TABLE = ""
+    gmpe_file = ""
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
@@ -167,7 +167,7 @@ class NBCC2015_AA13_stablecrust_low(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Crust"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Stable Crust Low"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "ENA_low_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "ENA_low_clC.hdf5")
 
 
 class NBCC2015_AA13_stablecrust_central(NBCC2015_AA13_Base):
@@ -178,7 +178,7 @@ class NBCC2015_AA13_stablecrust_central(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Crust"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Stable Crust Central"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "ENA_med_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "ENA_med_clC.hdf5")
 
 
 class NBCC2015_AA13_stablecrust_high(NBCC2015_AA13_Base):
@@ -189,7 +189,7 @@ class NBCC2015_AA13_stablecrust_high(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Crust"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Stable Crust High"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "ENA_high_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "ENA_high_clC.hdf5")
 
 
 class NBCC2015_AA13_activecrust_low(NBCC2015_AA13_Base):
@@ -200,7 +200,7 @@ class NBCC2015_AA13_activecrust_low(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Active Crust Low"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "Wcrust_low_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "Wcrust_low_clC.hdf5")
 
 
 class NBCC2015_AA13_activecrust_central(NBCC2015_AA13_Base):
@@ -211,7 +211,7 @@ class NBCC2015_AA13_activecrust_central(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Active Crust Central"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "Wcrust_med_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "Wcrust_med_clC.hdf5")
 
 
 class NBCC2015_AA13_activecrust_high(NBCC2015_AA13_Base):
@@ -222,7 +222,7 @@ class NBCC2015_AA13_activecrust_high(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Active Crust High"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "Wcrust_high_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "Wcrust_high_clC.hdf5")
 
 
 class NBCC2015_AA13_activecrustFRjb_low(NBCC2015_AA13_Base):
@@ -233,7 +233,7 @@ class NBCC2015_AA13_activecrustFRjb_low(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust Fault"
     REQUIRES_DISTANCES = set(('rjb',))
     gsim = "AA13 Active Crust Fault Low"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WcrustFRjb_low_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WcrustFRjb_low_clC.hdf5")
 
 
 class NBCC2015_AA13_activecrustFRjb_central(NBCC2015_AA13_Base):
@@ -244,7 +244,7 @@ class NBCC2015_AA13_activecrustFRjb_central(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust Fault"
     REQUIRES_DISTANCES = set(('rjb',))
     gsim = "AA13 Active Crust Fault Central"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WcrustFRjb_med_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WcrustFRjb_med_clC.hdf5")
 
 
 class NBCC2015_AA13_activecrustFRjb_high(NBCC2015_AA13_Base):
@@ -255,7 +255,7 @@ class NBCC2015_AA13_activecrustFRjb_high(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust Fault"
     REQUIRES_DISTANCES = set(('rjb',))
     gsim = "AA13 Active Crust Fault High"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WcrustFRjb_high_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WcrustFRjb_high_clC.hdf5")
 
 
 class NBCC2015_AA13_inslab30_low(NBCC2015_AA13_Base):
@@ -266,7 +266,7 @@ class NBCC2015_AA13_inslab30_low(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 30"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Subduction Inslab 30 Low"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD30_low_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WinslabD30_low_clC.hdf5")
 
 
 class NBCC2015_AA13_inslab30_central(NBCC2015_AA13_Base):
@@ -277,7 +277,7 @@ class NBCC2015_AA13_inslab30_central(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 30"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Subduction Inslab 30 Central"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD30_med_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WinslabD30_med_clC.hdf5")
 
 
 class NBCC2015_AA13_inslab30_high(NBCC2015_AA13_Base):
@@ -288,7 +288,7 @@ class NBCC2015_AA13_inslab30_high(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 30"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Subduction Inslab 30 High"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD30_high_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WinslabD30_high_clC.hdf5")
 
 
 class NBCC2015_AA13_inslab50_low(NBCC2015_AA13_Base):
@@ -299,7 +299,7 @@ class NBCC2015_AA13_inslab50_low(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 50"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Subduction Inslab 50 Low"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD50_low_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WinslabD50_low_clC.hdf5")
 
 
 class NBCC2015_AA13_inslab50_central(NBCC2015_AA13_Base):
@@ -310,7 +310,7 @@ class NBCC2015_AA13_inslab50_central(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 50"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Subduction Inslab 50 Central"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD50_med_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WinslabD50_med_clC.hdf5")
 
 
 class NBCC2015_AA13_inslab50_high(NBCC2015_AA13_Base):
@@ -321,7 +321,7 @@ class NBCC2015_AA13_inslab50_high(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 50"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Subduction Inslab 50 High"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD50_high_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WinslabD50_high_clC.hdf5")
 
 
 class NBCC2015_AA13_interface_low(NBCC2015_AA13_Base):
@@ -332,7 +332,7 @@ class NBCC2015_AA13_interface_low(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Interface"
     REQUIRES_DISTANCES = set(('rrup',))
     gsim = "AA13 Subduction Interface Low"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WinterfaceCombo_lowclC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WinterfaceCombo_lowclC.hdf5")
 
 
 class NBCC2015_AA13_interface_central(NBCC2015_AA13_Base):
@@ -343,7 +343,7 @@ class NBCC2015_AA13_interface_central(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Interface"
     REQUIRES_DISTANCES = set(('rrup',))
     gsim = "AA13 Subduction Interface Central"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WinterfaceCombo_medclC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WinterfaceCombo_medclC.hdf5")
 
 
 class NBCC2015_AA13_interface_high(NBCC2015_AA13_Base):
@@ -354,7 +354,7 @@ class NBCC2015_AA13_interface_high(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Interface"
     REQUIRES_DISTANCES = set(('rrup',))
     gsim = "AA13 Subduction Interface High"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "WinterfaceCombo_highclC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "WinterfaceCombo_highclC.hdf5")
 
 
 class NBCC2015_AA13_offshore_low(NBCC2015_AA13_Base):
@@ -365,7 +365,7 @@ class NBCC2015_AA13_offshore_low(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Offshore Low"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "Woffshore_low_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "Woffshore_low_clC.hdf5")
 
 
 class NBCC2015_AA13_offshore_central(NBCC2015_AA13_Base):
@@ -376,7 +376,7 @@ class NBCC2015_AA13_offshore_central(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Offshore Central"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "Woffshore_med_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "Woffshore_med_clC.hdf5")
 
 
 class NBCC2015_AA13_offshore_high(NBCC2015_AA13_Base):
@@ -387,4 +387,4 @@ class NBCC2015_AA13_offshore_high(NBCC2015_AA13_Base):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
     REQUIRES_DISTANCES = set(('rhypo',))
     gsim = "AA13 Offshore High"
-    GMPE_TABLE = os.path.join(BASE_PATH_AA13, "Woffshore_high_clC.hdf5")
+    gmpe_file = os.path.join(BASE_PATH_AA13, "Woffshore_high_clC.hdf5")

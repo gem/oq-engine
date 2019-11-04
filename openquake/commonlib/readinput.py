@@ -804,7 +804,7 @@ def get_input_files(oqparam, hazard=False):
             gsim_lt = get_gsim_lt(oqparam)
             for gsims in gsim_lt.values.values():
                 for gsim in gsims:
-                    table = getattr(gsim, 'GMPE_TABLE', None)
+                    table = getattr(gsim, 'gmpe_file', None)
                     if table:
                         fnames.append(table)
             fnames.append(fname)
