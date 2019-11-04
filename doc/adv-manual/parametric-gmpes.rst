@@ -45,8 +45,8 @@ in the dataset ``csm_info/gsim_lt/branches``.
 
 The examples below will make it clear how it works.
 
-GMPETable
-------------------------
+GMPETable and other file-dependent GMPEs
+-----------------------------------------
 
 Historically, the first parametric GMPE was the GMPETable, introduced many
 years ago to support the Canada model. The GMPETable class has a single
@@ -125,6 +125,28 @@ forever, but we recommend you to use the new TOML-based syntax, which is
 more general. The old syntax has the limitation of being non-hierarchic,
 making it impossible to define MultiGMPEs involving parametric GMPEs:
 this is why we switched to TOML.
+
+It is possible to define other GMPEs taking one or more filenames as argument.
+Everything will work provided you respect the following rules:
+
+1. in the gsim logic tree file you must use relative path names (relative to it)
+2. in the GMPE code the file must be read at initialization time, not later
+3. in the GMPE code the name of the file argument must end with ``_file`` or
+   ``_table``. 
+
+The constraint about reading at initialization time makes it possible
+for the engine to work on a cluster. The issue is that GMPEs are
+instantiate in the controller not and used in the worker nodes, which
+in general *do not have access to the filesystem* of the controller.
+If the files are read after instantiation, you will get a file not
+found error when running on a cluster.
+
+The constraint on the argument name makes it possible for the engine
+to collect all the files required by the GMPEs; in this way the `oq zip`
+command can work and it is possible to store in the datastore all the
+required files. Without it, it would not be possible from the datastore
+to reconstruct the inputs, thus making it impossible to ship the
+calculation to a different machine.
 
 MultiGMPE
 -----------------
