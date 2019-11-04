@@ -312,15 +312,8 @@ class GMPETable(GMPE):
         if fname is None:
             raise ValueError('You forgot to set %s.gmpe_file!' %
                              self.__class__.__name__)
-        elif os.path.isabs(fname):
-            self.gmpe_file = fname
-        elif not hasattr(self, 'GMPE_DIR'):
-            # when called from GsimLogicTree.__fromh5__ GMPE_DIR is missing
-            return
-        else:
-            # NB: (hackish) GMPE_DIR must be set externally
-            self.gmpe_file = os.path.abspath(
-                os.path.join(self.GMPE_DIR, fname))
+        assert os.path.isabs(fname)
+        self.gmpe_file = fname
         with h5py.File(self.gmpe_file, "r") as fle:
             try:
                 # this is the format inside the datastore
