@@ -242,8 +242,10 @@ class PolygonPlotter():
         self.ax.add_patch(PolygonPatch(poly, **kw))
 
     def set_lim(self):
-        self.ax.set_xlim(min(self.minxs), max(self.maxxs))
-        self.ax.set_ylim(min(self.minys), max(self.maxys))
+        if self.minxs and self.maxxs:
+            self.ax.set_xlim(min(self.minxs), max(self.maxxs))
+        if self.minys and self.maxys:
+            self.ax.set_ylim(min(self.minys), max(self.maxys))
 
 
 @sap.script
