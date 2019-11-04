@@ -1445,10 +1445,12 @@ class GsimLogicTree(object):
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches]
         dic = {'branches': numpy.array(branches, dt)}
+        attrs = {}
 
         # manage gmpe_tables, if any
         if hasattr(self, 'filename'):  # missing for fake logic trees
             dirname = os.path.dirname(self.filename)
+            attrs['basedir'] = dirname
             for gmpe_table in sorted(self.gmpe_tables):
                 dic[os.path.basename(gmpe_table)] = d = {}
                 with hdf5.File(os.path.join(dirname, gmpe_table), 'r') as f:
@@ -1460,7 +1462,7 @@ class GsimLogicTree(object):
                                     python3compat.decode(dset.attrs['metric']))
                         else:
                             d[group] = {k: ds[()] for k, ds in dset.items()}
-        return dic, {}
+        return dic, attrs
 
     def __fromh5__(self, dic, attrs):
         self.branches = []
@@ -1472,7 +1474,7 @@ class GsimLogicTree(object):
             else:
                 br_id = branch['branch']
                 gsim_ = branch['uncertainty']
-            gsim = valid.gsim(gsim_)
+            gsim = valid.gsim(gsim_, attrs['basedir'])
             self.values[branch['trt']].append(gsim)
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
@@ -1534,6 +1536,7 @@ class GsimLogicTree(object):
             # where the logictree file is
             basedir = os.path.dirname(self.filename)
         else:
+            import pdb; pdb.set_trace()
             basedir = ''
         for branching_level in self._ltnode:
             for branchset in _bsnodes(self.filename, branching_level):
