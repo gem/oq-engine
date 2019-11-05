@@ -804,9 +804,9 @@ def get_input_files(oqparam, hazard=False):
             gsim_lt = get_gsim_lt(oqparam)
             for gsims in gsim_lt.values.values():
                 for gsim in gsims:
-                    for attr in dir(gsim):
-                        if attr.endswith(('_file', '_table')):
-                            fnames.add(getattr(gsim, attr))
+                    for k, v in gsim.kwargs.items():
+                        if k.endswith(('_file', '_table')):
+                            fnames.add(v)
             fnames.add(fname)
         elif key == 'source_model':  # UCERF
             f = oqparam.inputs['source_model']
