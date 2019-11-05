@@ -308,7 +308,7 @@ class GMPETable(GMPE):
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        fname = self.kwargs.get('gmpe_table', self.gmpe_table)
+        fname = self.kwargs['gmpe_table']
         if dic is None:
             if not os.path.isabs(fname):  # called __fromh5__
                 return
