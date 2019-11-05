@@ -1444,14 +1444,16 @@ class GsimLogicTree(object):
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches]
         dic = {'branches': numpy.array(branches, dt)}
-        dirname = os.path.dirname(self.filename)
-        for gsims in self.values.values():
-            for gsim in gsims:
-                for k, v in gsim.kwargs.items():
-                    if k.endswith(('_file', '_table')):
-                        fname = os.path.join(dirname, v)
-                        with open(fname, 'rb') as f:
-                            dic[os.path.basename(v)] = f.read()
+        if hasattr(self, 'filename'):
+            # missing in EventBasedRiskTestCase case_1f
+            dirname = os.path.dirname(self.filename)
+            for gsims in self.values.values():
+                for gsim in gsims:
+                    for k, v in gsim.kwargs.items():
+                        if k.endswith(('_file', '_table')):
+                            fname = os.path.join(dirname, v)
+                            with open(fname, 'rb') as f:
+                                dic[os.path.basename(v)] = f.read()
         return dic, {}
 
     def __fromh5__(self, dic, attrs):
