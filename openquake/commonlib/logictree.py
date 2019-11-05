@@ -1463,9 +1463,7 @@ class GsimLogicTree(object):
             br_id = branch['branch']
             gsim_ = branch['uncertainty']
             gsim = valid.gsim(gsim_)
-            has_files = [v for k, v in gsim.kwargs.items()
-                         if k.endswith(('_table', '_file'))]
-            if has_files:
+            if dic:
                 gsim.init({k: io.BytesIO(bytes(numpy.asarray(v)))
                            for k, v in dic.items()})
             self.values[branch['trt']].append(gsim)
