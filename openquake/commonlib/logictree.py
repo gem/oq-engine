@@ -1466,12 +1466,8 @@ class GsimLogicTree(object):
         self.branches = []
         self.values = collections.defaultdict(list)
         for branch in dic.pop('branches'):
-            if 'id' in branch.dtype.names:  # engine < 3.6
-                br_id = branch['id']
-                gsim_ = branch['gsim']
-            else:
-                br_id = branch['branch']
-                gsim_ = branch['uncertainty']
+            br_id = branch['branch']
+            gsim_ = branch['uncertainty']
             gsim = valid.gsim(gsim_)
             has_files = [v for k, v in gsim.kwargs.items()
                          if k.endswith(('_table', '_file'))]
