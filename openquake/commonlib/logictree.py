@@ -24,6 +24,7 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
+import io
 import os
 import re
 import ast
@@ -36,12 +37,11 @@ import operator
 from collections import namedtuple
 import toml
 import numpy
-from openquake.baselib import hdf5, node, python3compat
+from openquake.baselib import hdf5, node
 from openquake.baselib.general import (groupby, group_array, duplicated,
                                        add_defaults)
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
@@ -1399,7 +1399,6 @@ class GsimLogicTree(object):
                 ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or nrml.read(fname).logicTree
-        self.gmpe_tables = set()  # populated right below
         self.branches = self._build_trts_branches(trts)
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
@@ -1445,21 +1444,14 @@ class GsimLogicTree(object):
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches]
         dic = {'branches': numpy.array(branches, dt)}
-
-        # manage gmpe_tables, if any
-        if hasattr(self, 'filename'):  # missing for fake logic trees
-            dirname = os.path.dirname(self.filename)
-            for gmpe_table in sorted(self.gmpe_tables):
-                dic[os.path.basename(gmpe_table)] = d = {}
-                with hdf5.File(os.path.join(dirname, gmpe_table), 'r') as f:
-                    for group, dset in f.items():
-                        if hasattr(dset, 'shape'):  # dataset, not group
-                            d[group] = dset[()]
-                            if group == 'Distances':
-                                d['distance_type'] = (
-                                    python3compat.decode(dset.attrs['metric']))
-                        else:
-                            d[group] = {k: ds[()] for k, ds in dset.items()}
+        dirname = os.path.dirname(self.filename)
+        for gsims in self.values.values():
+            for gsim in gsims:
+                for k, v in gsim.kwargs.items():
+                    if k.endswith(('_file', '_table')):
+                        fname = os.path.join(dirname, v)
+                        with open(fname, 'rb') as f:
+                            dic[os.path.basename(v)] = f.read()
         return dic, {}
 
     def __fromh5__(self, dic, attrs):
@@ -1472,7 +1464,8 @@ class GsimLogicTree(object):
             has_files = [v for k, v in gsim.kwargs.items()
                          if k.endswith(('_table', '_file'))]
             if has_files:
-                gsim.init(dic)
+                gsim.init({k: io.BytesIO(bytes(numpy.asarray(v)))
+                           for k, v in dic.items()})
             self.values[branch['trt']].append(gsim)
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
@@ -1563,9 +1556,6 @@ class GsimLogicTree(object):
                     except Exception as exc:
                         raise ValueError(
                             "%s in file %s" % (exc, self.filename)) from exc
-                    if (isinstance(gsim, GMPETable) and
-                            'gmpe_table' in gsim.kwargs):
-                        self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
                                                (self.filename, gsim))
