@@ -1212,7 +1212,8 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             try:
                 convert = getattr(self.__class__, name).validator
             except AttributeError:
-                logging.warning("The parameter '%s' is unknown, ignoring" % name)
+                logging.warning(
+                    "The parameter '%s' is unknown, ignoring" % name)
                 continue
             try:
                 value = convert(val)
