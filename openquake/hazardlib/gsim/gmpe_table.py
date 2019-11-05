@@ -315,7 +315,6 @@ class GMPETable(GMPE):
             fle = h5py.File(fname, "r")
         else:
             fle = filedict[os.path.basename(fname)]
-        self.gmpe_table = fname
         try:
             # this is the format inside the datastore
             self.distance_type = fle["distance_type"][()]
