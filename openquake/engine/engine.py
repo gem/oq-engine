@@ -19,7 +19,6 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
-import io
 import os
 import re
 import sys
@@ -31,7 +30,6 @@ import logging
 import traceback
 import platform
 import psutil
-import numpy
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -330,10 +328,6 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     calc.from_engine = True
     tb = 'None\n'
     try:
-        if not oqparam.hazard_calculation_id:
-            logs.LOG.info('gzipping the input files')
-            fnames = readinput.get_input_files(oqparam)
-            calc.datastore.store_files(fnames)
         poll_queue(job_id, _PID, poll_time=15)
     except BaseException:
         # the job aborted even before starting
