@@ -314,7 +314,7 @@ class GMPETable(GMPE):
                 return
             fle = h5py.File(fname, "r")
         else:
-            fle = filedict[os.path.normpath(fname)]
+            fle = filedict[os.path.basename(fname)]
         self.gmpe_table = fname
         try:
             # this is the format inside the datastore
