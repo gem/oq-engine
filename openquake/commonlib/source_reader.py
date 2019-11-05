@@ -195,7 +195,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
                 src.samples = ltm.samples
             sg.sources = [src]
             data = [((grp_id, grp_id, src.source_id, src.code,
-                      0, 0, -1, src.num_ruptures, 0, '', ''))]
+                      0, 0, -1, src.num_ruptures, 0, ''))]
             hdf5.extend(sources, numpy.array(data, source_info_dt))
         return lt_models
 
