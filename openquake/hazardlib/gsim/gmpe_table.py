@@ -303,18 +303,18 @@ class GMPETable(GMPE):
 
     amplification = None
 
-    def init(self, dic=None):
+    def init(self, filedict=None):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
         fname = self.kwargs['gmpe_table']
-        if dic is None:
+        if filedict is None:
             if not os.path.isabs(fname):  # called __fromh5__
                 return
             fle = h5py.File(fname, "r")
         else:
-            fle = dic[os.path.basename(fname)]
+            fle = filedict[os.path.normpath(fname)]
         self.gmpe_table = fname
         try:
             # this is the format inside the datastore
