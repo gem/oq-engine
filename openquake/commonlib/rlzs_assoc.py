@@ -150,8 +150,7 @@ class RlzsAssoc(object):
         if self.num_samples:
             assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
             for rlz in rlzs:
-                for k in rlz.weight.dic:
-                    rlz.weight.dic[k] = 1. / self.num_samples
+                rlz.weight = 1. / self.num_samples
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if not tot_weight.is_one():
@@ -224,11 +223,12 @@ def accept_path(path, ref_path):
     return True
 
 
-def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
+def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None, imt=None):
     """
     :param cinfo: a :class:`openquake.commonlib.source.CompositionInfo`
     :param sm_lt_path: logic tree path tuple used to select a source model
     :param trts: tectonic region types to accept
+    :param imt: IMT to use for the sampling weights (if IMT-dependent)
     """
     assoc = RlzsAssoc(cinfo)
     trtset = set(cinfo.gsim_lt.values)
@@ -239,7 +239,7 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
             continue
         elif cinfo.num_samples:  # sampling, do not reduce the logic tree
             rlzs = cinfo.gsim_lt.sample(
-                smodel.samples, cinfo.seed + smodel.ordinal)
+                smodel.samples, cinfo.seed + smodel.ordinal, imt)
             all_trts = list(cinfo.gsim_lt.values)
         else:  # full enumeration
             # collect the effective tectonic region types and ruptures

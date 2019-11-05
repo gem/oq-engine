@@ -169,7 +169,7 @@ class LogicTreeError(Exception):
             self.filename, self.lineno, self.message)
 
 
-def sample(weighted_objects, num_samples, seed):
+def sample(weighted_objects, num_samples, seed, key=None):
     """
     Take random samples of a sequence of weighted objects
 
@@ -180,16 +180,17 @@ def sample(weighted_objects, num_samples, seed):
         The number of samples to return
     :param seed:
         A random seed
+    :param key:
+        If given, assume .weight is a dictionary and key is the key
     :return:
         A subsequence of the original sequence with `num_samples` elements
     """
     weights = []
     for obj in weighted_objects:
-        w = obj.weight
-        if isinstance(obj.weight, float):
-            weights.append(w)
-        else:
-            weights.append(w['weight'])
+        if key is None:  # assume obj.weight is a probability
+            weights.append(obj.weight)
+        else:  # assume obj.weight is a dictionary of probabilities
+            weights.append(obj.weight[key])
     numpy.random.seed(seed)
     idxs = numpy.random.choice(len(weights), num_samples, p=weights)
     # NB: returning an array would break things
@@ -1466,13 +1467,13 @@ class GsimLogicTree(object):
         self.branches = []
         self.values = collections.defaultdict(list)
         for branch in dic.pop('branches'):
-            if 'id' in branch.dtype.names:  # engine < 3.6
-                br_id = branch['id']
-                gsim_ = branch['gsim']
-            else:
-                br_id = branch['branch']
-                gsim_ = branch['uncertainty']
+            br_id = branch['branch']
+            gsim_ = branch['uncertainty']
             gsim = valid.gsim(gsim_)
+            has_files = [v for k, v in gsim.kwargs.items()
+                         if k.endswith(('_table', '_file'))]
+            if has_files:
+                gsim.init(dic)
             self.values[branch['trt']].append(gsim)
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
@@ -1530,6 +1531,7 @@ class GsimLogicTree(object):
         trts = []
         branches = []
         branchsetids = set()
+        basedir = os.path.dirname(self.filename)
         for branching_level in self._ltnode:
             for branchset in _bsnodes(self.filename, branching_level):
                 if branchset['uncertaintyType'] != 'gmpeModel':
@@ -1557,12 +1559,8 @@ class GsimLogicTree(object):
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
                     uncertainty = to_toml(branch.uncertaintyModel)
-                    if isinstance(self.filename, str):
-                        # a bit hackish: set the GMPE_DIR equal to the
-                        # directory where the gsim_logic_tree file is
-                        GMPETable.GMPE_DIR = os.path.dirname(self.filename)
                     try:
-                        gsim = valid.gsim(uncertainty)
+                        gsim = valid.gsim(uncertainty, basedir)
                     except Exception as exc:
                         raise ValueError(
                             "%s in file %s" % (exc, self.filename)) from exc
@@ -1603,14 +1601,15 @@ class GsimLogicTree(object):
         return sorted(self.values[trt])
 
     # called when using sampling
-    def sample(self, n, seed):
+    def sample(self, n, seed, imt=None):
         """
         :param n: number of samples
         :param seed: random seed
         :returns: n Realization objects
         """
         brlists = [sample([b for b in self.branches if b.trt == trt],
-                          n, seed + i) for i, trt in enumerate(self.values)]
+                          n, seed + i, imt or 'weight')
+                   for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
             weight = 1
@@ -1621,7 +1620,7 @@ class GsimLogicTree(object):
                 branch = brlist[i]
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '@')
-                weight *= branch.weight
+                weight *= branch.weight[imt]
                 value.append(branch.gsim)
             rlz = Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))

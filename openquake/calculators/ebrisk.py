@@ -62,7 +62,8 @@ def _calc_risk(hazard, param, monitor):
         assets_by_site = assetcol.assets_by_site()
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
-        weights = dstore['weights'][()]
+        imt = dstore['weights'].dtype.names[0]
+        weights = dstore['weights'][imt]
     E = len(events)
     L = len(param['lba'].loss_names)
     shape = assetcol.tagcol.agg_shape((E, L), param['aggregate_by'])

@@ -43,16 +43,14 @@ def build_stat_curve(poes, imtls, stat, weights):
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = len(imtls.array)
     array = numpy.zeros((L, 1))
-    if isinstance(weights, list):  # IMT-dependent weights
-        # this is slower since the arrays are shorter
-        for imt in imtls:
-            slc = imtls(imt)
-            ws = [w[imt] for w in weights]
-            if sum(ws) == 0:  # expect no data for this IMT
-                continue
-            array[slc] = stat(poes[:, slc], ws)
-    else:
-        array = stat(poes, weights)
+    # IMT-dependent weights
+    # this is slower since the arrays are shorter
+    for imt in imtls:
+        slc = imtls(imt)
+        ws = weights[imt]
+        if ws.sum() == 0:  # expect no data for this IMT
+            continue
+        array[slc] = stat(poes[:, slc], ws)
     return probability_map.ProbabilityCurve(array)
 
 
@@ -77,15 +75,11 @@ class PmapGetter(object):
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
-    def __init__(self, dstore, weights, sids=None, poes=()):
+    def __init__(self, dstore, sids=None, poes=()):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
-        if len(weights[0].dic) == 1:  # no weights by IMT
-            self.weights = numpy.array([w['weight'] for w in weights])
-        else:
-            self.weights = weights
         self.poes = poes
-        self.num_rlzs = len(weights)
+        self.num_rlzs = len(dstore['weights'])
         self.eids = None
         self.nbytes = 0
         self.sids = sids
@@ -107,6 +101,7 @@ class PmapGetter(object):
         if self.sids is None:
             self.sids = self.dstore['sitecol'].sids
         oq = self.dstore['oqparam']
+        self.weights = self.dstore['weights'][()]
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
         rlzs_by_grp = self.dstore['rlzs_by_grp']

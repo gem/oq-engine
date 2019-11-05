@@ -102,11 +102,24 @@ def fix_ones(pmap):
     return pmap
 
 
-def build_weights(realizations, imt_dt):
+def build_weights(csm_info, imt_dt):
     """
     :returns: an array with the realization weights of shape R
     """
-    arr = numpy.array([rlz.weight['default'] for rlz in realizations])
+    if csm_info.num_samples:
+        dic = {}
+        for imt in imt_dt.names:
+            rlzs = csm_info.get_rlzs_assoc(imt=imt).realizations
+            dic[imt] = [rlz.weight for rlz in rlzs]
+        arr = numpy.zeros(len(rlzs), imt_dt)
+        for imt in dic:
+            arr[imt] = dic[imt]
+    else:
+        rlzs = csm_info.get_rlzs_assoc().realizations
+        arr = numpy.zeros(len(rlzs), imt_dt)
+        for imt in imt_dt.names:
+            for r, rlz in enumerate(rlzs):
+                arr[r][imt] = rlz.weight[imt]
     return arr
 
 
@@ -400,6 +413,11 @@ class HazardCalculator(BaseCalculator):
             if res:
                 logging.info(res)
         self.init()  # do this at the end of pre-execute
+
+        if not oq.hazard_calculation_id:
+            logging.info('gzipping the input files')
+            fnames = readinput.get_input_files(oq)
+            self.datastore.store_files(fnames)
 
     def save_multi_peril(self):
         """Defined in MultiRiskCalculator"""
@@ -744,7 +762,7 @@ class HazardCalculator(BaseCalculator):
 
         if self.oqparam.imtls:
             self.datastore['weights'] = arr = build_weights(
-                self.rlzs_assoc.realizations, self.oqparam.imt_dt())
+                self.csm_info, self.oqparam.imt_dt())
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
         if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
@@ -872,8 +890,7 @@ class RiskCalculator(HazardCalculator):
         else:
             dstore = self.datastore
         if kind == 'poe':  # hcurves, shape (R, N)
-            ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-            getter = getters.PmapGetter(dstore, ws, [sid])
+            getter = getters.PmapGetter(dstore, [sid])
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
             if len(dstore['gmf_data/data']) == 0:

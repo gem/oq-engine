@@ -384,9 +384,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         allargs = [  # this list is very fast to generate
-            (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
+            (getters.PmapGetter(self.datastore, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
         self.datastore.swmr_on()

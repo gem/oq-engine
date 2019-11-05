@@ -213,7 +213,8 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
         if not stats:
             return
         statnames, statfuncs = zip(*stats.items())
-        weights = dstore['weights'][()]
+        imt = dstore['weights'].dtype.names[0]
+        weights = dstore['weights'][imt]
         name = prefix + '-stats'
         if name in set(dstore):
             dstore[name][...] = compute_stats2(arrayNR, statfuncs, weights)

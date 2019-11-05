@@ -20,6 +20,7 @@
 Validation library for the engine, the desktop tools, and anything else
 """
 
+import os
 import re
 import ast
 import logging
@@ -73,7 +74,7 @@ class FromFile(object):
 
 
 # more tests are in tests/valid_test.py
-def gsim(value):
+def gsim(value, basedir=''):
     """
     Convert a string in TOML format into a GSIM instance
 
@@ -83,6 +84,9 @@ def gsim(value):
     if not value.startswith('['):  # assume the GSIM name
         value = '[%s]' % value
     [(gsim_name, kwargs)] = toml.loads(value).items()
+    for k, v in kwargs.items():
+        if k.endswith(('_file', '_table')):
+            kwargs[k] = os.path.normpath(os.path.join(basedir, v))
     minimum_distance = float(kwargs.pop('minimum_distance', 0))
     if gsim_name == 'FromFile':
         return FromFile()
@@ -1208,7 +1212,8 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             try:
                 convert = getattr(self.__class__, name).validator
             except AttributeError:
-                logging.warning("The parameter '%s' is unknown, ignoring" % name)
+                logging.warning(
+                    "The parameter '%s' is unknown, ignoring" % name)
                 continue
             try:
                 value = convert(val)

@@ -758,11 +758,7 @@ def view_pmap(token, dstore):
     Display the mean ProbabilityMap associated to a given source group name
     """
     grp = token.split(':')[1]  # called as pmap:grp
-    pmap = {}
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    weights = [rlz.weight for rlz in rlzs_assoc.realizations]
-    pgetter = getters.PmapGetter(dstore, weights)
-    pmap = pgetter.get_mean(grp)
+    pmap = getters.PmapGetter(dstore).get_mean(grp)
     return str(pmap)
 
 
