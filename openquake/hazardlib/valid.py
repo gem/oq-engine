@@ -86,7 +86,7 @@ def gsim(value, basedir=''):
     [(gsim_name, kwargs)] = toml.loads(value).items()
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):
-            kwargs[k] = os.path.join(basedir, v)
+            kwargs[k] = os.path.normpath(os.path.join(basedir, v))
     minimum_distance = float(kwargs.pop('minimum_distance', 0))
     if gsim_name == 'FromFile':
         return FromFile()
