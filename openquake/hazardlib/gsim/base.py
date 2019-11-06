@@ -526,6 +526,16 @@ class GMPE(GroundShakingIntensityModel):
         """
         return numpy.exp(values)
 
+    def open(self, argname):
+        """
+        :param name: name of a file parameter
+        :returns: the associated file object
+        """
+        argvalue = self.kwargs[argname]
+        if hasattr(argvalue, 'read'):
+            return argvalue
+        return open(argvalue, 'rb')
+
     def set_parameters(self):
         """
         Combines the parameters of the GMPE provided at the construction level
