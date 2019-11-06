@@ -793,7 +793,7 @@ def get_input_files(oqparam, hazard=False):
     :param hazard: if True, consider only the hazard files
     :returns: input path names in a specific order
     """
-    fnames = []  # files entering in the checksum
+    fnames = set()  # files entering in the checksum
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('site_model', 'source_model_logic_tree',
@@ -804,33 +804,33 @@ def get_input_files(oqparam, hazard=False):
             gsim_lt = get_gsim_lt(oqparam)
             for gsims in gsim_lt.values.values():
                 for gsim in gsims:
-                    table = getattr(gsim, 'GMPE_TABLE', None)
-                    if table:
-                        fnames.append(table)
-            fnames.append(fname)
+                    for k, v in gsim.kwargs.items():
+                        if k.endswith(('_file', '_table')):
+                            fnames.add(v)
+            fnames.add(fname)
         elif key == 'source_model':  # UCERF
             f = oqparam.inputs['source_model']
-            fnames.append(f)
+            fnames.add(f)
             fname = nrml.read(f).sourceModel.UCERFSource['filename']
-            fnames.append(os.path.join(os.path.dirname(f), fname))
+            fnames.add(os.path.join(os.path.dirname(f), fname))
         elif key == 'exposure':  # fname is a list
             for exp in asset.Exposure.read_headers(fname):
-                fnames.extend(exp.datafiles)
-            fnames.extend(fname)
+                fnames.update(exp.datafiles)
+            fnames.update(fname)
         elif isinstance(fname, dict):
-            fnames.extend(fname.values())
+            fnames.update(fname.values())
         elif isinstance(fname, list):
             for f in fname:
                 if f == oqparam.input_dir:
                     raise InvalidFile('%s there is an empty path in %s' %
                                       (oqparam.inputs['job_ini'], key))
-            fnames.extend(fname)
+            fnames.update(fname)
         elif key == 'source_model_logic_tree':
             for smpaths in logictree.collect_info(fname).smpaths.values():
-                fnames.extend(smpaths)
-            fnames.append(fname)
+                fnames.update(smpaths)
+            fnames.add(fname)
         else:
-            fnames.append(fname)
+            fnames.add(fname)
     return sorted(fnames)
 
 
