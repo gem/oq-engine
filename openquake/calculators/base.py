@@ -735,8 +735,9 @@ class HazardCalculator(BaseCalculator):
                 for sg in sm.src_groups:
                     assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info
-            self.datastore['weights'] = self.csm_info.get_imt_weights(
-                self.oqparam.imt_dt())
+            idt = self.oqparam.imt_dt()
+            if idt.names:  # empty for test_case_1_ruptures
+                self.datastore['weights'] = self.csm_info.get_imt_weights(idt)
 
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
