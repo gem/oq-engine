@@ -1388,7 +1388,7 @@ class GsimLogicTree(object):
                                   'branchSetID': 'bs1',
                                   'uncertaintyType': 'gmpeModel'},
                                  nodes=[ltbranch])])])
-        return cls(repr(gsim), ['*'], ltnode=lt)
+        return cls('fake/' + gsim.__class__.__name__, ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         self.filename = fname
@@ -1461,11 +1461,12 @@ class GsimLogicTree(object):
         self.values = collections.defaultdict(list)
         for branch in dic.pop('branches'):
             br_id = branch['branch']
-            gsim_ = branch['uncertainty']
-            gsim = valid.gsim(gsim_)
-            if dic:
-                gsim.init({k: io.BytesIO(bytes(numpy.asarray(v)))
-                           for k, v in dic.items()})
+            gsim = valid.gsim(branch['uncertainty'])
+            for k, v in gsim.kwargs.items():
+                if k.endswith(('_file', '_table')):
+                    arr = numpy.asarray(dic[v][()])
+                    gsim.kwargs[k] = io.BytesIO(bytes(arr))
+            gsim.__init__(**gsim.kwargs)
             self.values[branch['trt']].append(gsim)
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
