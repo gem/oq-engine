@@ -567,10 +567,12 @@ def extract_agg_curves(dstore, what):
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
         arr = dstore['agg_curves-rlzs'][tup]  # shape P, R
+        units = dstore.get_attr('agg_curves-rlzs', 'units')
         rps = dstore.get_attr('agg_curves-rlzs', 'return_periods')
     else:
         kinds = list(info['stats'])
         arr = dstore['agg_curves-stats'][tup]  # shape P, S
+        units = dstore.get_attr('agg_curves-stats', 'units')
         rps = dstore.get_attr('agg_curves-stats', 'return_periods')
     if qdic['absolute'] == [1]:
         pass
@@ -584,6 +586,7 @@ def extract_agg_curves(dstore, what):
     attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
     attrs['return_period'] = list(rps)
     attrs['kind'] = kinds
+    attrs['units'] = units  # used by the QGIS plugin
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
