@@ -303,17 +303,12 @@ class GMPETable(GMPE):
 
     amplification = None
 
-    def init(self, filedict=None):
+    def init(self):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
         fname = self.kwargs.get('gmpe_table', self.gmpe_table)
-        if filedict is None:
-            if not os.path.isabs(fname):  # called __fromh5__
-                return
-        else:
-            fname = filedict[os.path.basename(fname)]  # BytesIO
         with h5py.File(fname, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])
             self.REQUIRES_DISTANCES = set([self.distance_type])
