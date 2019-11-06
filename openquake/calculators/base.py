@@ -102,27 +102,6 @@ def fix_ones(pmap):
     return pmap
 
 
-def build_weights(csm_info, imt_dt):
-    """
-    :returns: an array with the realization weights of shape R
-    """
-    if csm_info.num_samples:
-        dic = {}
-        for imt in imt_dt.names:
-            rlzs = csm_info.get_rlzs_assoc(imt=imt).realizations
-            dic[imt] = [rlz.weight for rlz in rlzs]
-        arr = numpy.zeros(len(rlzs), imt_dt)
-        for imt in dic:
-            arr[imt] = dic[imt]
-    else:
-        rlzs = csm_info.get_rlzs_assoc().realizations
-        arr = numpy.zeros(len(rlzs), imt_dt)
-        for imt in imt_dt.names:
-            for r, rlz in enumerate(rlzs):
-                arr[r][imt] = rlz.weight[imt]
-    return arr
-
-
 def set_array(longarray, shortarray):
     """
     :param longarray: a numpy array of floats of length L >= l
@@ -756,8 +735,8 @@ class HazardCalculator(BaseCalculator):
                 for sg in sm.src_groups:
                     assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info
-            self.datastore['weights'] = build_weights(
-                self.csm_info, self.oqparam.imt_dt())
+            self.datastore['weights'] = self.csm_info.get_imt_weights(
+                self.oqparam.imt_dt())
 
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)

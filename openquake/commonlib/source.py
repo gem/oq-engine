@@ -164,6 +164,26 @@ class CompositionInfo(object):
                for sm in self.source_models for grp in sm.src_groups}
         return dic
 
+    def get_imt_weights(self, imt_dt):
+        """
+        :returns: an array with the realization weights of shape R
+        """
+        if self.num_samples:
+            dic = {}
+            for imt in imt_dt.names:
+                rlzs = self.get_rlzs_assoc(imt=imt).realizations
+                dic[imt] = [rlz.weight for rlz in rlzs]
+            arr = numpy.zeros(len(rlzs), imt_dt)
+            for imt in dic:
+                arr[imt] = dic[imt]
+        else:
+            rlzs = self.get_rlzs_assoc().realizations
+            arr = numpy.zeros(len(rlzs), imt_dt)
+            for imt in imt_dt.names:
+                for r, rlz in enumerate(rlzs):
+                    arr[r][imt] = rlz.weight[imt]
+        return arr
+
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
         return self.seed, self.num_samples, self.source_models
@@ -240,7 +260,11 @@ class CompositionInfo(object):
         """
         :returns: an array of realizations
         """
-        tups = [(r.ordinal, r.uid, r.weight['weight'])
+        def flt(w):
+            if isinstance(w, float):
+                return w
+            return w['weight']
+        tups = [(r.ordinal, r.uid, flt(r.weight))
                 for r in self.get_rlzs_assoc().realizations]
         return numpy.array(tups, rlz_dt)
 

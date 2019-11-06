@@ -33,7 +33,6 @@ from copy import deepcopy
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.gsim import registry
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_ltmodels
 from openquake.hazardlib.tom import PoissonTOM
@@ -2203,7 +2202,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         counter = collections.Counter()
         gsim_rlzs = list(self.parse_valid(xml, ['Volcanic']))
         for seed in range(1000):
-            [rlz] = logictree.sample(gsim_rlzs, 1, seed)
+            [rlz] = logictree.sample(gsim_rlzs, 1, seed, 'weight')
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 413, ('b2',): 587})
@@ -2235,7 +2234,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 
     def test_sample_gmpe(self):
         [(value, weight, branch_ids, _, _)] = logictree.sample(
-            list(self.gmpe_lt), 1, self.seed)
+            list(self.gmpe_lt), 1, self.seed, 'weight')
         self.assertEqual(value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(weight['default'], 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
