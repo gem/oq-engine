@@ -322,7 +322,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             msg = ('%s is experimental and may change in future versions - '
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, ExperimentalWarning)
-        self.init()
 
     def init(self):
         """
@@ -525,6 +524,16 @@ class GMPE(GroundShakingIntensityModel):
         Returns numpy array of exponents of ``values``.
         """
         return numpy.exp(values)
+
+    def open(self, argname):
+        """
+        :param name: name of a file parameter
+        :returns: the associated file object
+        """
+        argvalue = self.kwargs[argname]
+        if hasattr(argvalue, 'read'):
+            return argvalue
+        return open(argvalue, 'rb')
 
     def set_parameters(self):
         """
