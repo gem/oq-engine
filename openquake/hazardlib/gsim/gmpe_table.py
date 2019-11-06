@@ -299,7 +299,7 @@ class GMPETable(GMPE):
 
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}
 
-    gmpe_table = None
+    gmpe_table = None  # see subclasses like NBCC2015_AA13_activecrustFRjb_low
 
     amplification = None
 
@@ -308,36 +308,30 @@ class GMPETable(GMPE):
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        fname = self.kwargs['gmpe_table']
+        fname = self.kwargs.get('gmpe_table', self.gmpe_table)
         if filedict is None:
             if not os.path.isabs(fname):  # called __fromh5__
                 return
-            fle = h5py.File(fname, "r")
         else:
-            fle = filedict[os.path.basename(fname)]
-        self.gmpe_table = fname
-        try:
-            # this is the format inside the datastore
-            self.distance_type = fle["distance_type"][()]
-        except KeyError:
-            # this is the original format outside the datastore
+            fname = filedict[os.path.basename(fname)]  # BytesIO
+        with h5py.File(fname, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])
-        self.REQUIRES_DISTANCES = set([self.distance_type])
-        # Load in magnitude
-        self.m_w = fle["Mw"][:]
-        # Load in distances
-        self.distances = fle["Distances"][:]
-        # Load intensity measure types and levels
-        self.imls = hdf_arrays_to_dict(fle["IMLs"])
-        self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(
-            self._supported_imts())
-        if "SA" in self.imls and "T" not in self.imls:
-            raise ValueError("Spectral Acceleration must be accompanied by"
-                             " periods")
-        # Get the standard deviations
-        self._setup_standard_deviations(fle)
-        if "Amplification" in fle:
-            self._setup_amplification(fle)
+            self.REQUIRES_DISTANCES = set([self.distance_type])
+            # Load in magnitude
+            self.m_w = fle["Mw"][:]
+            # Load in distances
+            self.distances = fle["Distances"][:]
+            # Load intensity measure types and levels
+            self.imls = hdf_arrays_to_dict(fle["IMLs"])
+            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(
+                self._supported_imts())
+            if "SA" in self.imls and "T" not in self.imls:
+                raise ValueError("Spectral Acceleration must be accompanied by"
+                                 " periods")
+            # Get the standard deviations
+            self._setup_standard_deviations(fle)
+            if "Amplification" in fle:
+                self._setup_amplification(fle)
 
     def _setup_standard_deviations(self, fle):
         """
