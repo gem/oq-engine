@@ -384,11 +384,10 @@ class DataStore(collections.abc.MutableMapping):
         :yields: pairs (relative path, data)
         """
         for k, v in self[prefix].items():
-            fullk = prefix + '/' + k
             if hasattr(v, 'items'):
-                yield from self.retrieve_files(fullk)
+                yield from self.retrieve_files(prefix + '/' + k)
             else:
-                yield fullk, gzip.decompress(bytes(numpy.asarray(v[()])))
+                yield k, gzip.decompress(bytes(numpy.asarray(v[()])))
 
     def get_file(self, key):
         """
