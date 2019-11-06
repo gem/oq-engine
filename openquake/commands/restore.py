@@ -55,7 +55,7 @@ def restore(archive, oqdata):
             detect_types=sqlite3.PARSE_DECLTYPES)
     n = 0
     for fname in os.listdir(oqdata):
-        mo = re.match('calc_(\d+)\.hdf5', fname)
+        mo = re.match(r'calc_(\d+)\.hdf5', fname)
         if mo:
             job_id = int(mo.group(1))
             fullname = os.path.join(oqdata, fname)[:-5]  # strip .hdf5
