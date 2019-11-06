@@ -110,7 +110,8 @@ def export_agg_curve_rlzs(ekey, dstore):
 def _get_data(dstore, dskey, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':
-        weights = dstore['weights'][()]
+        imt = dstore['weights'].dtype.names[0]
+        weights = dstore['weights'][imt]  # TODO: imt-dependent weights
         if dskey in set(dstore):  # precomputed
             tags = [decode(s) for s in dstore.get_attr(dskey, 'stats')]
             statfuncs = [stats[tag] for tag in tags]
