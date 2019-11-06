@@ -303,11 +303,12 @@ class GMPETable(GMPE):
 
     amplification = None
 
-    def init(self):
+    def __init__(self, **kwargs):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
+        super().__init__(**kwargs)
         fname = self.kwargs.get('gmpe_table', self.gmpe_table)
         with h5py.File(fname, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])
