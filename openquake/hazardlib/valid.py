@@ -94,7 +94,11 @@ def gsim(value, basedir=''):
         gsim_class = registry[gsim_name]
     except KeyError:
         raise ValueError('Unknown GSIM: %s' % gsim_name)
-    gs = gsim_class(**kwargs)
+    if basedir:
+        gs = gsim_class(**kwargs)
+    else:
+        gs = object.__new__(gsim_class)
+        gs.kwargs = kwargs
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     gs.minimum_distance = minimum_distance
     return gs
