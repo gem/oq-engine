@@ -76,13 +76,14 @@ class PmapGetter(object):
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
     def __init__(self, dstore, sids=None, poes=()):
-        self.dstore = dstore
-        self.sids = dstore['sitecol'].sids if sids is None else sids
-        self.poes = poes
-        self.num_rlzs = len(dstore['weights'])
-        self.eids = None
-        self.nbytes = 0
-        self.sids = sids
+        with dstore:
+            self.dstore = dstore
+            self.sids = dstore['sitecol'].sids if sids is None else sids
+            self.poes = poes
+            self.num_rlzs = len(dstore['weights'])
+            self.eids = None
+            self.nbytes = 0
+            self.sids = sids
 
     @property
     def imts(self):

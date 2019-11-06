@@ -39,7 +39,7 @@ def classical_risk(riskinputs, crmodel, param, monitor):
         :class:`openquake.baselib.performance.Monitor` instance
     """
     result = dict(loss_curves=[], stat_curves=[])
-    weights = [w['default'] for w in param['weights']]
+    weights = param['weights']
     statnames, stats = zip(*param['stats'])
     for ri in riskinputs:
         A = len(ri.assets)
@@ -91,7 +91,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         super().pre_execute()
         if 'poes' not in self.datastore:  # when building short report
             return
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        # TODO: imt-dependent weights
+        weights = self.rlzs_assoc.weights
         stats = list(oq.hazard_stats().items())
         self.param = dict(stats=stats, weights=weights)
         self.riskinputs = self.build_riskinputs('poe')

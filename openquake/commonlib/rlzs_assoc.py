@@ -167,7 +167,11 @@ class RlzsAssoc(object):
     @property
     def weights(self):
         """Array with the weight of the realizations"""
-        return numpy.array([rlz.weight for rlz in self.realizations])
+        if self.num_samples:
+            ws = [rlz.weight for rlz in self.realizations]
+        else:
+            ws = [rlz.weight['weight'] for rlz in self.realizations]
+        return numpy.array(ws)
 
     def get_rlz(self, rlzstr):
         r"""

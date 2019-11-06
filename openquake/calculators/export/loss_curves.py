@@ -44,7 +44,7 @@ class LossCurveExporter(object):
         self.oq = dstore['oqparam']
         try:
             self.builder = get_loss_builder(dstore)
-        except KeyError:  # no 'events' for non event_based_risk
+        except Exception:  # the builder cannot be instantiated for classical
             pass
         self.assetcol = dstore['assetcol']
         arefs = [decode(aref) for aref in self.assetcol.asset_refs]

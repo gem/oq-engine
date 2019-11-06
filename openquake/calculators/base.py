@@ -460,6 +460,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
+            self.datastore['weights'] = numpy.ones(1, oq.imt_dt())
             self.rlzs_assoc = fake.get_rlzs_assoc()
             self.datastore['rlzs_by_grp'] = self.rlzs_assoc.by_grp()
             self.save_crmodel()
@@ -755,15 +756,12 @@ class HazardCalculator(BaseCalculator):
                 for sg in sm.src_groups:
                     assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info
+            self.datastore['weights'] = build_weights(
+                self.csm_info, self.oqparam.imt_dt())
 
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         rlzs_by_grp = self.rlzs_assoc.by_grp()
-
-        if self.oqparam.imtls:
-            self.datastore['weights'] = arr = build_weights(
-                self.csm_info, self.oqparam.imt_dt())
-            self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
         if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
                 or R >= TWO32):
