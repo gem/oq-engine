@@ -208,7 +208,7 @@ class AlAtikSigmaModel(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, **kwargs):
-        self.kwargs = kwargs
+        super().__init__(**kwargs)
         self.tau_model = kwargs.get('tau_model', 'global')
         self.phi_model = kwargs.get('phi_model', 'global')
         self.phi_s2ss_model = kwargs.get('phi_s2ss_model')
