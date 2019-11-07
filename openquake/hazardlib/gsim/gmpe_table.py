@@ -23,7 +23,6 @@ in the form of binary tables, and
 :class:`openquake.hazardlib.gsim.gmpe_table.AmplificationTable` for defining
 the corresponding amplification of the IMLs
 """
-import os
 from copy import deepcopy
 
 import h5py
