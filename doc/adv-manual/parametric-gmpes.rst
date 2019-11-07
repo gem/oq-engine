@@ -10,25 +10,22 @@ authors wanting to implement a parametric GMPE.
 Signature of a GMPE class
 -------------------------
 
-The best advice for an implementor of a new GMPE is *do not define an
-__init__ method*. It is not necessary, since the ``__init__`` will
-be inherited from the superclass. If you need to perform some
-initialization please define an ``init()`` method without arguments
-and the engine will call it. Here is an example:
+We recommend to define parametric GMPEs with a ``**kwargs`` signature:
 
 .. code-block:: python
 
-    from openquake.hazardlib.gsim.base import GMPE
+ from openquake.hazardlib.gsim.base import GMPE
 
-    class MyGMPE(GMPE):
-       def init(self):
-           # doing some initialization here
+ class MyGMPE(GMPE):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # doing some initialization here
 
-The signature of the base ``GMPE.__init__`` method is ``**kwargs``.
-Such dictionary is stored in ``self.kwargs`` and your
-``init()`` method can operate on the passed arguments in this way, if need
-there is. Normally (i.e. for nonparametric GMPEs) ``self.kwargs`` is the
-empty dictionary, but it can be arbitrarily nested, with only one limitation:
+
+The call to ``super().__init__`` will set a ``self.kwargs`` attribute
+and perform a few checks, like raising a warning if the GMPE is experimental.
+For nonparametric GMPEs)``self.kwargs`` is the empty dictionary, but in general
+is non-empty and it can be arbitrarily nested, with only one limitation:
 it must be a *dictionary of literal Python
 objects* so that it admits a TOML representation.
 
