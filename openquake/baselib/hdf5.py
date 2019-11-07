@@ -332,6 +332,8 @@ class File(h5py.File):
         elif isinstance(obj, list) and len(obj) and isinstance(
                 obj[0], numpy.ndarray):
             self.save_vlen(path, obj)
+        elif isinstance(obj, bytes):
+            super().__setitem__(path, numpy.void(obj))
         else:
             super().__setitem__(path, obj)
         if pyclass:

@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import zipfile
+import logging
 from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
 
@@ -70,10 +72,9 @@ def export_input_zip(ekey, dstore):
     Export the data in the `input_zip` dataset as a .zip file
     """
     dest = dstore.export_path('input.zip')
-    nbytes = dstore.get_attr('input/zip', 'nbytes')
-    zbytes = dstore['input/zip'][()]
-    # when reading input_zip some terminating null bytes are truncated (for
-    # unknown reasons) therefore they must be restored
-    zbytes += b'\x00' * (nbytes - len(zbytes))
-    open(dest, 'wb').write(zbytes)
+    with zipfile.ZipFile(
+            dest, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as z:
+        for k, data in dstore.retrieve_files():
+            logging.info('Archiving %s' % k)
+            z.writestr(k, data)
     return [dest]
