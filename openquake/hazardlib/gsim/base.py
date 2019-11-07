@@ -197,6 +197,12 @@ class MetaGSIM(abc.ABCMeta):
                                          (missing, name))
         return super().__new__(meta, name, bases, dic)
 
+    def __call__(cls, **kwargs):
+        self = object.__new__(cls)
+        self.kwargs = kwargs
+        self.__init__(**kwargs)
+        return self
+
 
 @functools.total_ordering
 class GroundShakingIntensityModel(metaclass=MetaGSIM):
@@ -308,7 +314,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             registry[cls.__name__] = cls
 
     def __init__(self, **kwargs):
-        self.kwargs = kwargs
         cls = self.__class__
         if cls.superseded_by:
             msg = '%s is deprecated - use %s instead' % (

@@ -10,20 +10,6 @@ authors wanting to implement a parametric GMPE.
 Signature of a GMPE class
 -------------------------
 
-The best advice for an implementor of a new GMPE is *do not define an
-__init__ method*. It is not necessary, since the ``__init__`` will
-be inherited from the superclass. If you need to perform some
-initialization please define an ``init()`` method without arguments
-and the engine will call it. Here is an example:
-
-.. code-block:: python
-
-    from openquake.hazardlib.gsim.base import GMPE
-
-    class MyGMPE(GMPE):
-       def init(self):
-           # doing some initialization here
-
 The signature of the base ``GMPE.__init__`` method is ``**kwargs``.
 Such dictionary is stored in ``self.kwargs`` and your
 ``init()`` method can operate on the passed arguments in this way, if need
@@ -36,7 +22,7 @@ TOML is a simple format
 similar to the ``.ini`` format but hierarchical that is described here
 https://github.com/toml-lang/toml#user-content-example and it is used
 by lots of people in the IT world. The advantage of TOML is that it is
-a lot more readable than JSON and XML and simpler than YAML: moreover,
+more readable than JSON and XML and simpler than YAML: moreover,
 it is perfect for serializing into text literal Python objects like
 dictionaries and lists. The serialization feature is essential for the
 engine since the GMPEs are read from the GMPE logic tree file which is a
@@ -167,8 +153,8 @@ the following code:
 .. code-block:: python
 
     class GMPEWithTextFile(GMPE):
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+        def __init__(self, text_file):
+            super().__init__()
             with self.open('text_file') as myfile:  # good
                 self.text = myfile.read().decode('utf-8')
 
@@ -179,26 +165,10 @@ results of a calculation:
 .. code-block:: python
 
     class GMPEWithTextFile(GMPE):
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-            with open(kwargs['text_file']) as myfile:  # bad
+        def __init__(self, text_file):
+            super().__init__()
+            with open(text_file) as myfile:  # bad
                 self.text = myfile.read()
-
-NB: writing
-
-.. code-block:: python
-
-    class GMPEWithTextFile(GMPE):
-        def __init__(self, text_file:
-            super().__init__(text_file=text_file)
-            with self.open('text_file') as myfile:  # good
-                self.text = myfile.read().decode('utf-8')
-
-will work but it is discouraged. It is best to keep the ``**kwargs``
-signature so that the call to ``super().__init__(**kwargs))`` will
-work out of the box even in future subclasses of `GMPEWithTextFile`
-with different parameters (in case somebody decided to develop
-such subclasses; this is defensive programming).
 
 MultiGMPE
 -----------------
