@@ -912,7 +912,7 @@ def extract_rupture(dstore, rup_id):
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/rupture/1066
     """
-    ridx = list(dstore['ruptures']['rup_id']).index(int(rup_id))
+    ridx = list(dstore['ruptures']['id']).index(int(rup_id))
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     yield from getter.get_rupdict().items()
 
