@@ -16,10 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import os
 import re
+import gzip
 import getpass
 import collections
+import numpy
 import h5py
 
 from openquake.baselib import hdf5, config, performance
@@ -366,6 +369,32 @@ class DataStore(collections.abc.MutableMapping):
             return self[key]
         except KeyError:
             return default
+
+    def store_files(self, fnames, where='input/'):
+        """
+        :param fnames: a set of full pathnames
+        """
+        prefix = len(os.path.commonprefix(fnames))
+        for fname in fnames:
+            data = gzip.compress(open(fname, 'rb').read())
+            self[where + fname[prefix:]] = numpy.void(data)
+
+    def retrieve_files(self, prefix='input'):
+        """
+        :yields: pairs (relative path, data)
+        """
+        for k, v in self[prefix].items():
+            if hasattr(v, 'items'):
+                yield from self.retrieve_files(prefix + '/' + k)
+            else:
+                yield k, gzip.decompress(bytes(numpy.asarray(v[()])))
+
+    def get_file(self, key):
+        """
+        :returns: a BytesIO object
+        """
+        data = bytes(numpy.asarray(self[key][()]))
+        return io.BytesIO(gzip.decompress(data))
 
     @property
     def metadata(self):
