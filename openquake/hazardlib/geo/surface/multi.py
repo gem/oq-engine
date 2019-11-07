@@ -343,8 +343,8 @@ class MultiSurface(BaseSurface):
         lats = []
         for surf in self.surfaces:
             lons_surf, lats_surf = surf.get_surface_boundaries()
-            lons.append(lons_surf[0])
-            lats.append(lats_surf[0])
+            lons.extend(lons_surf)
+            lats.extend(lats_surf)
         return lons, lats
 
     def get_surface_boundaries_3d(self):
