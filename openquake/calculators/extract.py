@@ -1080,7 +1080,7 @@ class RuptureData(object):
             self.cmaker.add_rup_params(rup)
             ruptparams = tuple(getattr(rup, param) for param in self.params)
             point = rup.surface.get_middle_point()
-            boundaries = rup.surface.get_surface_boundaries()
+            boundaries = rup.surface.get_surface_boundaries_3d()
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
@@ -1111,7 +1111,7 @@ def extract_rupture_info(dstore, what):
         rups = rgetter.get_ruptures(sf)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
-            coords = ['%.5f %.5f' % xyz for xyz in zip(*r['boundaries'])]
+            coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             boundary = 'POLYGON((%s))' % ', '.join(coords)
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
