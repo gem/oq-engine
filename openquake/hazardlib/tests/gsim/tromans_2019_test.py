@@ -155,10 +155,10 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
                                              diffs * np.ones(arr1.shape))
 
     def test_scaling_factors(self):
-        gsim_1 = self.gsim("BindiEtAl2014Rjb", branch="central",
+        gsim_1 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central",
                            scaling_factor=1.2)
 
-        gsim_2 = self.gsim("BindiEtAl2014Rjb", branch="central")
+        gsim_2 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central")
 
         mean_1 = gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
                                              PGA(), [const.StdDev.TOTAL])[0]
@@ -168,10 +168,10 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
 
     def test_vskappa_scaling(self):
         vskappa_dict = {"PGA": 1.2, "SA(0.2)": 1.3, "SA(1.0)": 1.4}
-        gsim_1 = self.gsim("BindiEtAl2014Rjb", branch="central",
+        gsim_1 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central",
                            vskappa=vskappa_dict)
 
-        gsim_2 = self.gsim("BindiEtAl2014Rjb", branch="central")
+        gsim_2 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central")
         # PGA
         self._compare_arrays(
             gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
@@ -227,10 +227,10 @@ class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
             0.083)
 
     def test_sigma_mu_scaling(self):
-        gsim_1 = self.gsim("BindiEtAl2014Rjb", branch="central",
+        gsim_1 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central",
                            sigma_mu_epsilon=1.0)
 
-        gsim_2 = self.gsim("BindiEtAl2014Rjb", branch="central")
+        gsim_2 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central")
 
         mean_1 = gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
                                              PGA(), [const.StdDev.TOTAL])[0]
