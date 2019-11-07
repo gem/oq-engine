@@ -18,6 +18,7 @@
 import copy
 import random
 import os.path
+import pickle
 import functools
 import collections
 import logging
@@ -25,7 +26,7 @@ import zlib
 import numpy
 
 from openquake.baselib import hdf5, parallel
-from openquake.hazardlib import nrml, sourceconverter, sourcewriter, calc
+from openquake.hazardlib import nrml, sourceconverter, calc
 
 TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
@@ -39,7 +40,6 @@ source_info_dt = numpy.dtype([
     ('eff_ruptures', numpy.float32),   # 7
     ('checksum', numpy.uint32),        # 8
     ('wkt', hdf5.vstr),                # 9
-    ('toml', hdf5.vstr),               # 10
 ])
 
 
@@ -146,11 +146,13 @@ class SourceReader(object):
                     srcmags = [item[0] for item in
                                src.get_annual_occurrence_rates()]
                 mags.update(srcmags)
-                toml = sourcewriter.tomldump(src)
-                checksum = zlib.adler32(toml.encode('utf8'))
+                dic = {k: v for k, v in vars(src).items()
+                       if k != 'id' and k != 'src_group_id'}
+                checksum = zlib.adler32(
+                    pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
                 sg.info[i] = (ltmodel.ordinal, 0, src.source_id,
                               src.code, src.num_ruptures, 0, 0, 0, checksum,
-                              src.wkt(), toml)
+                              src.wkt())
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=newsm.changes,
                     src_groups=src_groups, mags=mags,
@@ -193,7 +195,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
                 src.samples = ltm.samples
             sg.sources = [src]
             data = [((grp_id, grp_id, src.source_id, src.code,
-                      0, 0, -1, src.num_ruptures, 0, '', ''))]
+                      0, 0, -1, src.num_ruptures, 0, ''))]
             hdf5.extend(sources, numpy.array(data, source_info_dt))
         return lt_models
 
