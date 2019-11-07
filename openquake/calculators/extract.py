@@ -1067,7 +1067,8 @@ class RuptureData(object):
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
-            ('bbox', (F32, 4))] + [(param, F32) for param in self.params])
+            ('boundaries', hdf5.vfloat32)] +
+            [(param, F32) for param in self.params])
 
     def to_array(self, ebruptures):
         """
@@ -1079,7 +1080,7 @@ class RuptureData(object):
             self.cmaker.add_rup_params(rup)
             ruptparams = tuple(getattr(rup, param) for param in self.params)
             point = rup.surface.get_middle_point()
-            bbox = rup.surface.get_bounding_box()
+            boundaries = rup.surface.get_surface_boundaries_3d()
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
@@ -1087,7 +1088,7 @@ class RuptureData(object):
             data.append(
                 (ebr.id, ebr.srcidx, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
-                 rup.surface.get_dip(), rup.rake, bbox) + ruptparams)
+                 rup.surface.get_dip(), rup.rake, boundaries) + ruptparams)
         return numpy.array(data, self.dt)
 
 
@@ -1103,14 +1104,14 @@ def extract_rupture_info(dstore, what):
               ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32),
-              ('boundary', '<S120')]
+              ('boundary', '<S1000')]
     rows = []
     sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     for rgetter in getters.gen_rupture_getters(dstore):
         rups = rgetter.get_ruptures(sf)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
-            coords = ['%.5f %.5f' % xy for xy in bbox2poly(r['bbox'])]
+            coords = ['%.5f %.5f %.5f' % xyz for xyz in zip(*r['boundaries'])]
             boundary = 'POLYGON((%s))' % ', '.join(coords)
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
