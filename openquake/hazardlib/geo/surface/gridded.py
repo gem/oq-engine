@@ -83,6 +83,7 @@ class GriddedSurface(BaseSurface):
         """
         :returns: (lons, lats) for the 5 points of the bounding box
         """
+        # FIXME: implement real boundaries, not bounding box
         xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
         return xs, ys
 
@@ -90,6 +91,7 @@ class GriddedSurface(BaseSurface):
         """
         :returns: (lons, lats, depths) for the 5 points of the bounding box
         """
+        # FIXME: implement real boundaries, not bounding box
         xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
         return xs, ys, (0, 0, 0, 0, 0)
 
