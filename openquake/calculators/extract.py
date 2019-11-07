@@ -1111,7 +1111,7 @@ def extract_rupture_info(dstore, what):
         rups = rgetter.get_ruptures(sf)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
-            coords = ['%.5f %.5f %.5f' % xyz for xyz in zip(*r['boundaries'])]
+            coords = ['%.5f %.5f' % xyz for xyz in zip(*r['boundaries'])]
             boundary = 'POLYGON((%s))' % ', '.join(coords)
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
