@@ -166,7 +166,6 @@ class PostRiskCalculator(base.RiskCalculator):
         stats = oq.hazard_stats().items()
         S = len(stats)
         P = len(builder.return_periods)
-        C = len(oq.conditional_loss_poes)
         loss_types = oq.loss_names
         aggby = {'aggregate_by': aggregate_by}
         for tagname in aggregate_by:
