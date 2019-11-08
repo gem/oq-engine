@@ -124,20 +124,7 @@ def to_toml(rup):
     :param rup: a rupture instance
     :returns: a TOML string
     """
-    if not code2cls:
-        code2cls.update(BaseRupture.init())
-    hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-    mesh = surface_to_array(rup.surface)  # shape (3, sy, sz)
-    sy, sz = mesh.shape[1:]
-    dic = {'serial': int(rup.rup_id),
-           'mag': rup.mag, 'rake': rup.rake, 'hypo': hypo,
-           'trt': rup.tectonic_region_type,
-           'code': rup.code, 'occurrence_rate': rup.occurrence_rate,
-           'rupture_cls': rup.__class__.__name__,
-           'surface_cls': rup.surface.__class__.__name__,
-           'lons': mesh[0], 'lats': mesh[1], 'depths': mesh[2]}
-    _fixfloat32(dic)
-    return toml.dumps(dic)
+    return toml.dumps(rup.todict())
 
 
 def to_checksum(cls1, cls2):
@@ -222,6 +209,25 @@ class BaseRupture(metaclass=abc.ABCMeta):
 
     get_probability_no_exceedance = (
         contexts.RuptureContext.get_probability_no_exceedance)
+
+    def todict(self):
+        """
+        :returns: a representation of the rupture as a dict
+        """
+        if not code2cls:
+            code2cls.update(BaseRupture.init())
+        hypo = self.hypocenter.x, self.hypocenter.y, self.hypocenter.z
+        mesh = surface_to_array(self.surface)  # shape (3, sy, sz)
+        sy, sz = mesh.shape[1:]
+        dic = {'serial': int(self.rup_id),
+               'mag': self.mag, 'rake': self.rake, 'hypo': hypo,
+               'trt': self.tectonic_region_type,
+               'code': self.code, 'occurrence_rate': self.occurrence_rate,
+               'rupture_cls': self.__class__.__name__,
+               'surface_cls': self.surface.__class__.__name__,
+               'lons': mesh[0], 'lats': mesh[1], 'depths': mesh[2]}
+        _fixfloat32(dic)
+        return dic
 
     def sample_number_of_occurrences(self, n=1):
         """

@@ -27,6 +27,7 @@ import itertools
 from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
+import toml
 import numpy
 import h5py
 from openquake.baselib import InvalidFile
@@ -454,6 +455,16 @@ class ArrayWrapper(object):
     def shape(self):
         """shape of the underlying array"""
         return self.array.shape if hasattr(self, 'array') else ()
+
+    def toml(self):
+        """
+        :returns: a TOML string representation of the ArrayWrapper
+        """
+        if self.shape:
+            return toml.dumps(self.array)
+        dic = {k: v for k, v in vars(self).items()
+               if not k.startswith('_')}
+        return toml.dumps(dic)
 
     def save(self, path, **extra):
         """
