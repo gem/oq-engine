@@ -241,9 +241,9 @@ class AtkinsonBoore2003SInter(GMPE):
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.log(10 ** C['sx']) + np.zeros(num_sites))
+                stddevs.append(np.log(10 ** C['s1']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(np.log(10 ** C['sy']) + np.zeros(num_sites))
+                stddevs.append(np.log(10 ** C['s2']) + np.zeros(num_sites))
         return stddevs
 
     COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
