@@ -330,9 +330,11 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # testing extracting ruptures, including nonparametric ones
         rup0 = extract(self.calc.datastore, 'rupture/0').array
+        self.assertGot(
+            rup0, os.path.join(self.testdir, 'expected/rupture_0.toml'))
         rup1 = extract(self.calc.datastore, 'rupture/1').array
-        self.assertIn('occurrence_rate = 0.00109', rup0)
-        self.assertIn('occurrence_rate = nan', rup1)
+        self.assertGot(
+            rup1, os.path.join(self.testdir, 'expected/rupture_1.toml'))
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure
