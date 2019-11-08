@@ -230,9 +230,8 @@ class AlAtikSigmaModel(GMPE):
         self.gmpe = registry[self.gmpe_name]()
         self.set_parameters()
 
-        if self.kappa_file is not None:
-            with self.open('kappa_file') as myfile:
-                self.data = myfile.read().decode('utf-8')
+        with self.open(self.kappa_file) as myfile:
+            self.data = myfile.read().decode('utf-8')
 
     def _setup_standard_deviations(self, fle):
         # setup tau
