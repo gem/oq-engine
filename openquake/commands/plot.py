@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import gzip
 import logging
 import shapely
 import numpy
@@ -295,8 +296,8 @@ def make_figure_rupture_info(extractors, what):
     n = 0
     tot = 0
     pp = PolygonPlotter(ax)
-    for rec in info:
-        wkt = rec['boundary'].decode('utf8')
+    geoms = gzip.decompress(info['boundaries']).decode('utf8').split('\n')
+    for rec, wkt in zip(info, geoms):
         poly = shapely.wkt.loads(wkt)
         if poly.is_valid:
             pp.add(poly)
