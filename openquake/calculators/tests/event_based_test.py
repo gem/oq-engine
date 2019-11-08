@@ -329,10 +329,10 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures.xml', fname)
 
         # testing extracting ruptures
-        rup0 = extract(self.calc.datastore, 'rupture/0').array
+        rup0 = extract(self.calc.datastore, 'rupture/0').toml()
         self.assertGot(  # planar rupture
             rup0, os.path.join(self.testdir, 'expected/rupture_0.toml'))
-        rup1 = extract(self.calc.datastore, 'rupture/1').array
+        rup1 = extract(self.calc.datastore, 'rupture/1').toml()
         self.assertGot(  # gridded rupture
             rup1, os.path.join(self.testdir, 'expected/rupture_1.toml'))
 
