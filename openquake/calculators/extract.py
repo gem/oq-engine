@@ -19,6 +19,7 @@ from urllib.parse import parse_qs
 from functools import lru_cache
 import collections
 import logging
+import gzip
 import ast
 import io
 import os
@@ -1108,24 +1109,24 @@ def extract_rupture_info(dstore, what):
     dtlist = [('rupid', U32), ('multiplicity', U16), ('mag', F32),
               ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
-              ('strike', F32), ('dip', F32), ('rake', F32),
-              ('boundary', hdf5.vstr)]
+              ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
+    boundaries = []
     sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     for rgetter in getters.gen_rupture_getters(dstore):
         rups = rgetter.get_ruptures(sf, min_mag)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
-            boundary = 'POLYGON((%s))' % ', '.join(coords)
+            boundaries.append('POLYGON((%s))' % ', '.join(coords))
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
-                 rgetter.trt, r['strike'], r['dip'], r['rake'],
-                 boundary))
+                 rgetter.trt, r['strike'], r['dip'], r['rake']))
     arr = numpy.array(rows, dtlist)
-    arr.sort(order='rupid')
-    return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time))
+    geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
+    return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
+                                  boundaries=geoms))
 
 # #####################  extraction from the WebAPI ###################### #
 
