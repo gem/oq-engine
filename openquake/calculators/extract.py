@@ -1098,8 +1098,13 @@ def extract_rupture_info(dstore, what):
     """
     Extract some information about the ruptures, including the boundary.
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/rupture_info
+    http://127.0.0.1:8800/v1/calc/30/extract/rupture_info?min_mag=6
     """
+    qdict = parse(what)
+    if 'min_mag' in qdict:
+        [min_mag] = qdict['min_mag']
+    else:
+        min_mag = 0
     oq = dstore['oqparam']
     dtlist = [('rupid', U32), ('multiplicity', U16), ('mag', F32),
               ('centroid_lon', F32), ('centroid_lat', F32),
@@ -1109,7 +1114,7 @@ def extract_rupture_info(dstore, what):
     rows = []
     sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     for rgetter in getters.gen_rupture_getters(dstore):
-        rups = rgetter.get_ruptures(sf)
+        rups = rgetter.get_ruptures(sf, min_mag)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
