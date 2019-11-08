@@ -308,7 +308,7 @@ def make_figure_rupture_info(extractors, what):
     ax.set_title('%d/%d valid ruptures' % (n, tot))
     if tot == 1:
         # print the full geometry
-        print(ex.get('rupture/%d' % rec['rupid']).array)
+        print(ex.get('rupture/%d' % rec['rupid']).toml())
     return plt
 
 
