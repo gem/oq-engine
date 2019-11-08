@@ -25,11 +25,13 @@ import numpy
 import math
 import itertools
 import collections
+import toml
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo, contexts
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.geo.mesh import RectangularMesh
+from openquake.hazardlib.geo.mesh import (
+    Mesh, RectangularMesh, surface_to_array)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.near_fault import (
@@ -38,10 +40,104 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 
 U16 = numpy.uint16
 U32 = numpy.uint32
+F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
 events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
+code2cls = {}
+
+
+def get_rupture(dic, geom=None, trt=None):
+    """
+    :param dic: a dictionary or a record
+    :param geom: if any, an array with fields lon, lat, depth
+    :returns: a rupture instance
+    """
+    if not code2cls:
+        code2cls.update(BaseRupture.init())
+    if geom is None:
+        lons = dic['lons']
+        mesh = numpy.zeros((3, len(lons), len(lons[0])), F32)
+        mesh[0] = dic['lons']
+        mesh[1] = dic['lats']
+        mesh[2] = dic['depths']
+    else:
+        mesh = numpy.zeros((3,) + geom.shape, F32)
+        mesh[0] = geom['lon']
+        mesh[1] = geom['lat']
+        mesh[2] = geom['depth']
+    rupture_cls, surface_cls = code2cls[dic['code']]
+    rupture = object.__new__(rupture_cls)
+    rupture.rup_id = dic['serial']
+    rupture.surface = object.__new__(surface_cls)
+    rupture.mag = dic['mag']
+    rupture.rake = dic['rake']
+    rupture.hypocenter = geo.Point(*dic['hypo'])
+    rupture.occurrence_rate = dic['occurrence_rate']
+    rupture.tectonic_region_type = trt or dic['trt']
+    if surface_cls is geo.PlanarSurface:
+        rupture.surface = geo.PlanarSurface.from_array(
+            mesh[:, 0, :])
+    elif surface_cls is geo.MultiSurface:
+        # mesh has shape (3, n, 4)
+        rupture.surface.__init__([
+            geo.PlanarSurface.from_array(mesh[:, i, :])
+            for i in range(mesh.shape[1])])
+    elif surface_cls is geo.GriddedSurface:
+        # fault surface, strike and dip will be computed
+        rupture.surface.strike = rupture.surface.dip = None
+        rupture.surface.mesh = Mesh(*mesh)
+    else:
+        # fault surface, strike and dip will be computed
+        rupture.surface.strike = rupture.surface.dip = None
+        rupture.surface.__init__(RectangularMesh(*mesh))
+    return rupture
+
+
+def from_toml(toml_str):
+    """
+    :param toml_str: a string in TOML format
+    :returns: a rupture instance
+    """
+    return get_rupture(toml.loads(toml_str))
+
+
+def float5(x):
+    # a float with 5 digits
+    return round(float(x), 5)
+
+
+def _fixfloat32(dic):
+    # work around a TOML/numpy issue
+    for k, v in dic.items():
+        if isinstance(v, F32):
+            dic[k] = float5(v)
+        elif isinstance(v, tuple):
+            dic[k] = [float5(x) for x in v]
+        elif isinstance(v, numpy.ndarray):
+            dic[k] = [[float5(y) for y in x] for x in v]
+
+
+def to_toml(rup):
+    """
+    :param rup: a rupture instance
+    :returns: a TOML string
+    """
+    if not code2cls:
+        code2cls.update(BaseRupture.init())
+    hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+    mesh = surface_to_array(rup.surface)  # shape (3, sy, sz)
+    sy, sz = mesh.shape[1:]
+    dic = {'serial': int(rup.rup_id),
+           'mag': rup.mag, 'rake': rup.rake, 'hypo': hypo,
+           'trt': rup.tectonic_region_type,
+           'code': rup.code, 'occurrence_rate': rup.occurrence_rate,
+           'rupture_cls': rup.__class__.__name__,
+           'surface_cls': rup.surface.__class__.__name__,
+           'lons': mesh[0], 'lats': mesh[1], 'depths': mesh[2]}
+    _fixfloat32(dic)
+    return toml.dumps(dic)
 
 
 def to_checksum(cls1, cls2):
