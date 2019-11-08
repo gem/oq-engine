@@ -299,7 +299,7 @@ def make_figure_rupture_info(extractors, what):
         wkt = rec['boundary'].decode('utf8')
         poly = shapely.wkt.loads(wkt)
         if poly.is_valid:
-            pp.add()
+            pp.add(poly)
             n += 1
         else:
             print('Invalid %s' % rec['boundary'].decode('utf8'))
