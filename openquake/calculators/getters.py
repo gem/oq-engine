@@ -574,7 +574,7 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, srcfilter=calc.filters.nofilter):
+    def get_ruptures(self, srcfilter=calc.filters.nofilter, min_mag=0):
         """
         :returns: a list of EBRuptures filtered by bounding box
         """
@@ -582,6 +582,8 @@ class RuptureGetter(object):
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             for e0, rec in zip(self.e0, self.rup_array):
+                if rec['mag'] < min_mag:
+                    continue
                 if srcfilter.integration_distance:
                     sids = srcfilter.close_sids(rec, self.trt)
                     if len(sids) == 0:  # the rupture is far away
