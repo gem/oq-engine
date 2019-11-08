@@ -303,7 +303,7 @@ def make_figure_rupture_info(extractors, what):
             pp.add(poly)
             n += 1
         else:
-            print('Invalid %s' % rec['boundary'].decode('utf8'))
+            print('Invalid %s' % wkt)
         tot += 1
     pp.set_lim()
     ax.set_title('%d/%d valid ruptures' % (n, tot))
