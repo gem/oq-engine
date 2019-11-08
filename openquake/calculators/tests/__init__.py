@@ -219,7 +219,7 @@ class CalculatorTestCase(unittest.TestCase):
         """
         if not os.path.isabs(fname):
             fname = os.path.join(self.calc.oqparam.export_dir, fname)
-        if not os.path.exists(fname) and self.OVERWRITE_EXPECTED:
+        if self.OVERWRITE_EXPECTED:
             open8(fname, 'w').write(expected_content)
         with open8(fname) as got:
             self.assertEqual(expected_content, got.read())
