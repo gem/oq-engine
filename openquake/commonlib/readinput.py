@@ -38,6 +38,7 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+from openquake.hazardlib.source import rupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
@@ -530,10 +531,15 @@ def get_rupture(oqparam):
         an hazardlib rupture
     """
     rup_model = oqparam.inputs['rupture_model']
-    [rup_node] = nrml.read(rup_model)
-    conv = sourceconverter.RuptureConverter(
-        oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
-    rup = conv.convert_node(rup_node)
+    if rup_model.endswith('.xml'):
+        [rup_node] = nrml.read(rup_model)
+        conv = sourceconverter.RuptureConverter(
+            oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
+        rup = conv.convert_node(rup_node)
+    elif rup_model.endswith('.toml'):
+        rup = rupture.from_toml(open(rup_model).read())
+    else:
+        raise ValueError('Unrecognized ruptures model %s' % rup_model)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
     rup.rup_id = oqparam.random_seed
     return rup
