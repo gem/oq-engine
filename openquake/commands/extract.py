@@ -34,9 +34,9 @@ def extract(what, calc_id, webapi=True, local=False):
         else:
             obj = Extractor(calc_id).get(what)
         w = what.replace('/', '-').replace('?', '-')
-        if isinstance(obj.array, str):  # is a TOML string
+        if not obj.shape:  # is a dictionary of arrays
             fname = '%s_%d.toml' % (w, calc_id)
-            open(fname, 'w').write(obj.array)
+            open(fname, 'w').write(obj.toml())
         else:  # a regular ArrayWrapper
             fname = '%s_%d.hdf5' % (w, calc_id)
             obj.save(fname)
