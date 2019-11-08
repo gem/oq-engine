@@ -32,7 +32,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, get_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.geo.utils import bbox2poly
+from openquake.hazardlib.source import rupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -914,7 +914,8 @@ def extract_rupture(dstore, rup_id):
     """
     ridx = list(dstore['ruptures']['id']).index(int(rup_id))
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
-    yield from getter.get_rupdict().items()
+    [ebr] = getter.get_ruptures()
+    return rupture.to_toml(ebr.rupture)
 
 
 @extract.add('event_info')
