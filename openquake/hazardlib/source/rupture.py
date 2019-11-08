@@ -122,6 +122,8 @@ def to_toml(rup):
     :param rup: a rupture instance
     :returns: a TOML string
     """
+    if not code2cls:
+        code2cls.update(BaseRupture.init())
     hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
     mesh = surface_to_array(rup.surface)  # shape (3, sy, sz)
     sy, sz = mesh.shape[1:]
@@ -129,6 +131,8 @@ def to_toml(rup):
            'mag': rup.mag, 'rake': rup.rake, 'hypo': hypo,
            'trt': rup.tectonic_region_type, 's1': sy, 's2': sz,
            'code': rup.code, 'occurrence_rate': rup.occurrence_rate,
+           'rupture_cls': rup.__class__.__name__,
+           'surface_cls': rup.surface.__class__.__name__,
            'lons': mesh[0], 'lats': mesh[1], 'depths': mesh[2]}
     _fixfloat32(dic)
     return toml.dumps(dic)
