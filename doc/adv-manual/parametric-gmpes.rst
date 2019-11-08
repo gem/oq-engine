@@ -133,8 +133,8 @@ Everything will work provided you respect the following rules:
    the suffix ``_file`` or ``_table``
 2. the files must be read at GMPE initialization time
    (i.e. in the ``__init__`` method)
-3. they must be read with the ``GMPE.open(argname)`` method, NOT with the
-   ``open(fname)`` builtin;
+3. they must be read with the ``GMPE.open`` method, NOT with the
+   ``open`` builtin;
 4. in the gsim logic tree file you must use **relative** path names
    
 The constraint on the argument names makes it possible for the engine
@@ -166,7 +166,7 @@ the following code:
     class GMPEWithTextFile(GMPE):
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
-            with self.open('text_file') as myfile:  # good
+            with self.open(kwargs['text_file']) as myfile:  # good
                 self.text = myfile.read().decode('utf-8')
 
 You should NOT write the following, because it will break the
@@ -188,11 +188,11 @@ NB: writing
     class GMPEWithTextFile(GMPE):
         def __init__(self, text_file:
             super().__init__(text_file=text_file)
-            with self.open('text_file') as myfile:  # good
+            with self.open(text_file) as myfile:  # good
                 self.text = myfile.read().decode('utf-8')
 
-will work but it is discouraged. It is best to keep the ``**kwargs``
-signature so that the call to ``super().__init__(**kwargs))`` will
+would work but it is discouraged. It is best to keep the ``**kwargs``
+signature so that the call to ``super().__init__(**kwargs)`` will
 work out of the box even in future subclasses of `GMPEWithTextFile`
 with different parameters (in case somebody decided to develop
 such subclasses; this is defensive programming).
