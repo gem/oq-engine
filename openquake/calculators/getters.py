@@ -558,7 +558,7 @@ class RuptureGetter(object):
             source_ids = dstore['source_info']['source_id']
             rec = self.rup_array[0]
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
-                rec['sy'], rec['sz'])
+                rec['s1'], rec['s2'])
             dic['lons'] = geom['lon']
             dic['lats'] = geom['lat']
             dic['deps'] = geom['depth']
@@ -589,7 +589,7 @@ class RuptureGetter(object):
                 else:
                     sids = None
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
-                    rec['sy'], rec['sz'])
+                    rec['s1'], rec['s2'])
                 rupture = get_rupture(rec, geom, self.trt)
                 grp_id = rec['grp_id']
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id,
