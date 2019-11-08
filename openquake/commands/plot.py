@@ -174,8 +174,7 @@ def make_figure_disagg(extractors, what):
 
 def make_figure_task_info(extractors, what):
     """
-    Plot an histogram with the task distribution. Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/task_info?kind=classical
+    $ oq plot 'task_info?kind=classical'
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -201,7 +200,7 @@ def make_figure_task_info(extractors, what):
 
 def make_figure_memory(extractors, what):
     """
-    :param plots: list of pairs (task_name, memory array)
+    $ oq plot 'memory?'
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -251,7 +250,7 @@ class PolygonPlotter():
 @sap.script
 def make_figure_sources(extractors, what):
     """
-    Plot the sources (except point sources)
+    $ oq plot sources?sm_id=0
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -282,7 +281,7 @@ def make_figure_sources(extractors, what):
 @sap.script
 def make_figure_rupture_info(extractors, what):
     """
-    Plot the rupture bounding boxes
+    $ oq plot rupture_info?
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -310,10 +309,16 @@ def make_figure_rupture_info(extractors, what):
 
 
 @sap.script
-def plot(what, calc_id=-1, other_id=None, webapi=False):
+def plot(what='examples', calc_id=-1, other_id=None, webapi=False):
     """
     Generic plotter for local and remote calculations.
     """
+    if what == 'examples':
+        help_msg = ['Examples of possible plots:']
+        for k, v in globals().items():
+            if k.startswith('make_figure_'):
+                help_msg.append(v.__doc__)
+        raise SystemExit(''.join(help_msg))
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
     prefix, rest = what.split('?', 1)
