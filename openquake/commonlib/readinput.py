@@ -326,14 +326,18 @@ def get_mesh(oqparam):
         c = (coords[start:stop] if header[0] == 'site_id'
              else sorted(coords[start:stop]))
         # NB: Notice the sort=False below
-        # Calculations starting from ground motion fields input by the user 
+        # Calculations starting from ground motion fields input by the user
         # require at least two input files related to the gmf data:
         #   1. A sites.csv file, listing {site_id, lon, lat} tuples
-        #   2. A gmfs.csv file, listing {event_id, site_id, gmv[IMT1], gmv[IMT2], ...} tuples
-        # The site coordinates defined in the sites file do not need to be in sorted order.
-        # We must only ensure uniqueness of the provided site_ids and coordinates.
-        # When creating the site mesh from the site coordinates read from the csv file, 
-        # the sort=False flag maintains the user-specified site_ids instead of reassigning them after sorting.
+        #   2. A gmfs.csv file, listing {event_id, site_id, gmv[IMT1],
+        #      gmv[IMT2], ...} tuples
+        # The site coordinates defined in the sites file do not need to be in
+        # sorted order.
+        # We must only ensure uniqueness of the provided site_ids and
+        # coordinates.
+        # When creating the site mesh from the site coordinates read from
+        # the csv file, the sort=False flag maintains the user-specified
+        # site_ids instead of reassigning them after sorting.
         return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
@@ -486,7 +490,9 @@ def get_gsim_lt(oqparam, trts=['*']):
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
         raise NotImplementedError('IMT-dependent weights in the logic tree '
-                                  'do not work with sampling!')
+                                  'cannot work with sampling, because they '
+                                  'would produce different realizations for '
+                                  'each IMT that cannot be combined')
     return gsim_lt
 
 
