@@ -281,7 +281,7 @@ def make_figure_sources(extractors, what):
 @sap.script
 def make_figure_rupture_info(extractors, what):
     """
-    $ oq plot rupture_info?
+    $ oq plot rupture_info?min_mag=6
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -297,14 +297,18 @@ def make_figure_rupture_info(extractors, what):
     pp = PolygonPlotter(ax)
     for rec in info:
         wkt = rec['boundary'].decode('utf8')
-        if wkt.startswith('POLYGON'):
-            pp.add(shapely.wkt.loads(wkt))
+        poly = shapely.wkt.loads(wkt)
+        if poly.is_valid:
+            pp.add()
             n += 1
         else:
             print('Invalid %s' % rec['boundary'].decode('utf8'))
         tot += 1
     pp.set_lim()
     ax.set_title('%d/%d valid ruptures' % (n, tot))
+    if tot == 1:
+        # print the full geometry
+        print(ex.get('rupture/%d' % rec['rupid']).array)
     return plt
 
 

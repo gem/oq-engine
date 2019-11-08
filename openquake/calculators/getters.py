@@ -22,10 +22,9 @@ import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib import calc, geo, probability_map, stats
-from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
-    EBRupture, BaseRupture, events_dt)
+    EBRupture, BaseRupture, events_dt, get_rupture)
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -559,7 +558,7 @@ class RuptureGetter(object):
             source_ids = dstore['source_info']['source_id']
             rec = self.rup_array[0]
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
-                rec['sy'], rec['sz'])
+                rec['sx'], rec['sy'])
             dic['lons'] = geom['lon']
             dic['lats'] = geom['lat']
             dic['deps'] = geom['depth']
@@ -575,7 +574,7 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, srcfilter, min_mag=0):
+    def get_ruptures(self, srcfilter=calc.filters.nofilter, min_mag=0):
         """
         :returns: a list of EBRuptures filtered by bounding box
         """
@@ -591,37 +590,9 @@ class RuptureGetter(object):
                         continue
                 else:
                     sids = None
-                mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
-                    rec['sy'], rec['sz'])
-                mesh[0] = geom['lon']
-                mesh[1] = geom['lat']
-                mesh[2] = geom['depth']
-                rupture_cls, surface_cls = code2cls[rec['code']]
-                rupture = object.__new__(rupture_cls)
-                rupture.rup_id = rec['serial']
-                rupture.surface = object.__new__(surface_cls)
-                rupture.mag = rec['mag']
-                rupture.rake = rec['rake']
-                rupture.hypocenter = geo.Point(*rec['hypo'])
-                rupture.occurrence_rate = rec['occurrence_rate']
-                rupture.tectonic_region_type = self.trt
-                if surface_cls is geo.PlanarSurface:
-                    rupture.surface = geo.PlanarSurface.from_array(
-                        mesh[:, 0, :])
-                elif surface_cls is geo.MultiSurface:
-                    # mesh has shape (3, n, 4)
-                    rupture.surface.__init__([
-                        geo.PlanarSurface.from_array(mesh[:, i, :])
-                        for i in range(mesh.shape[1])])
-                elif surface_cls is geo.GriddedSurface:
-                    # fault surface, strike and dip will be computed
-                    rupture.surface.strike = rupture.surface.dip = None
-                    rupture.surface.mesh = Mesh(*mesh)
-                else:
-                    # fault surface, strike and dip will be computed
-                    rupture.surface.strike = rupture.surface.dip = None
-                    rupture.surface.__init__(RectangularMesh(*mesh))
+                    rec['sx'], rec['sy'])
+                rupture = get_rupture(rec, geom, self.trt)
                 grp_id = rec['grp_id']
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id,
                                 rec['n_occ'], self.samples)
