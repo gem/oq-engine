@@ -217,7 +217,11 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Make sure the content of the exported file is the expected one
         """
-        with open8(os.path.join(self.calc.oqparam.export_dir, fname)) as got:
+        if not os.path.isabs(fname):
+            fname = os.path.join(self.calc.oqparam.export_dir, fname)
+        if not os.path.exists(fname) and self.OVERWRITE_EXPECTED:
+            open8(fname, 'w').write(expected_content)
+        with open8(fname) as got:
             self.assertEqual(expected_content, got.read())
 
     def assertEventsByRlz(self, events_by_rlz):
