@@ -56,12 +56,14 @@ def get_rupture(dic, geom=None, trt=None):
     """
     if not code2cls:
         code2cls.update(BaseRupture.init())
-    mesh = numpy.zeros((3, dic['s1'], dic['s2']), F32)
     if geom is None:
+        lons = dic['lons']
+        mesh = numpy.zeros((3, len(lons), len(lons[0])), F32)
         mesh[0] = dic['lons']
         mesh[1] = dic['lats']
         mesh[2] = dic['depths']
     else:
+        mesh = numpy.zeros((3,) + geom.shape, F32)
         mesh[0] = geom['lon']
         mesh[1] = geom['lat']
         mesh[2] = geom['depth']
@@ -129,7 +131,7 @@ def to_toml(rup):
     sy, sz = mesh.shape[1:]
     dic = {'serial': int(rup.rup_id),
            'mag': rup.mag, 'rake': rup.rake, 'hypo': hypo,
-           'trt': rup.tectonic_region_type, 's1': sy, 's2': sz,
+           'trt': rup.tectonic_region_type,
            'code': rup.code, 'occurrence_rate': rup.occurrence_rate,
            'rupture_cls': rup.__class__.__name__,
            'surface_cls': rup.surface.__class__.__name__,
