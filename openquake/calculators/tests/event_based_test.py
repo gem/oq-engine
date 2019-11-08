@@ -328,6 +328,12 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('ruptures', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.xml', fname)
 
+        # testing extracting ruptures, including nonparametric ones
+        rup0 = extract(self.calc.datastore, 'rupture/0').array
+        rup1 = extract(self.calc.datastore, 'rupture/1').array
+        self.assertIn('occurrence_rate = 0.00109', rup0)
+        self.assertIn('occurrence_rate = nan', rup1)
+
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure
         self.run_calc(case_16.__file__, 'job.ini',
