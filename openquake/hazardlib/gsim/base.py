@@ -520,15 +520,14 @@ class GMPE(GroundShakingIntensityModel):
         """
         return numpy.exp(values)
 
-    def open(self, argname):
+    def open(self, fname_or_file):
         """
-        :param name: name of a file parameter
-        :returns: the associated file object
+        :param fname_or_file: filename or filelike object
+        :returns: the file object
         """
-        argvalue = self.kwargs[argname]
-        if hasattr(argvalue, 'read'):
-            return argvalue
-        return open(argvalue, 'rb')
+        if hasattr(fname_or_file, 'read'):
+            return fname_or_file
+        return open(fname_or_file, 'rb')
 
     def set_parameters(self):
         """
