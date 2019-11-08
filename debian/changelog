@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the boundary information from the CSV rupture exporter
   * Changed the /extract/rupture/XXX API to returns a TOML that can be
     used by a scenario calculator
   * Added general support for file-reading GMPEs
