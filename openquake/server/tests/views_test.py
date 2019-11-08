@@ -29,6 +29,7 @@ import time
 import unittest
 import numpy
 import zlib
+import gzip
 import tempfile
 import string
 import random
@@ -201,6 +202,12 @@ class EngineServerTestCase(unittest.TestCase):
         got = loadnpz(self.c.get(extract_url))
         self.assertGreater(len(got['magnitudes']), 1)
         self.assertGreater(len(got['mean_frequency']), 1)
+
+        # check rupture_info
+        extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        boundaries = gzip.decompress(got['boundaries']).split(b'\n')
+        self.assertEqual(len(boundaries), 33)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
