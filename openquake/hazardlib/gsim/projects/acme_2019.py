@@ -207,14 +207,11 @@ class AlAtikSigmaModel(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None,
-                 phi_ss_quantile=None, phi_s2ss_quantile=None,
-                 kappa_file=None, kappa_val=None):
-        # this is taken from http://tiny.cc/krb5bz
-        self.tau_model = tau_model
-        self.phi_model = phi_model
-        self.phi_s2ss_model = phi_s2ss_model
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.tau_model = kwargs.get('tau_model', 'global')
+        self.phi_model = kwargs.get('phi_model', 'global')
+        self.phi_s2ss_model = kwargs.get('phi_s2ss_model')
         self.TAU = None
         self.PHI_SS = None
         self.PHI_S2SS = None
@@ -222,16 +219,20 @@ class AlAtikSigmaModel(GMPE):
             self.ergodic = True
         else:
             self.ergodic = False
-        self.tau_quantile = tau_quantile
-        self.phi_ss_quantile = phi_ss_quantile
-        self.phi_s2ss_quantile = phi_s2ss_quantile
+        self.tau_quantile = kwargs.get('tau_quantile')
+        self.phi_ss_quantile = kwargs.get('phi_ss_quantile')
+        self.phi_s2ss_quantile = kwargs.get('phi_s2ss_quantile')
         self._setup_standard_deviations(fle=None)
-        self.kappa_file = kappa_file
-        self.kappa_val = kappa_val
+        self.kappa_file = kwargs.get('kappa_file')
+        self.kappa_val = kwargs.get('kappa_val')
 
-        super().__init__(gmpe_name=gmpe_name)
-        self.gmpe = registry[gmpe_name]()
+        self.gmpe_name = kwargs['gmpe_name']
+        self.gmpe = registry[self.gmpe_name]()
         self.set_parameters()
+
+        if self.kappa_file is not None:
+            with self.open('kappa_file') as myfile:
+                self.data = myfile.read().decode('utf-8')
 
     def _setup_standard_deviations(self, fle):
         # setup tau
@@ -320,16 +321,13 @@ class AlAtikSigmaModel(GMPE):
                     dists, imt, stds_types)
 
         kappa = 1
-        if self.kappa_file is not None:
-            with open(self.kappa_file, 'r') as myfile:
-                data = myfile.read()
-            KAPPATAB = CoeffsTable(table=data, sa_damping=5)
-            if imt.period == 0:
-                kappa = KAPPATAB[SA(0.01)][self.kappa_val]
-            elif imt.period > 2.0:
-                kappa = KAPPATAB[SA(2.0)][self.kappa_val]
-            else:
-                kappa = KAPPATAB[imt][self.kappa_val]
+        KAPPATAB = CoeffsTable(table=self.data, sa_damping=5)
+        if imt.period == 0:
+            kappa = KAPPATAB[SA(0.01)][self.kappa_val]
+        elif imt.period > 2.0:
+            kappa = KAPPATAB[SA(2.0)][self.kappa_val]
+        else:
+            kappa = KAPPATAB[imt][self.kappa_val]
         return mean+np.log(kappa), stddevs
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
