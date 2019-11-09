@@ -35,7 +35,7 @@ def extract(what, calc_id, webapi=True, local=False):
             obj = Extractor(calc_id).get(what)
         w = what.replace('/', '-').replace('?', '-')
         if not obj.shape:  # is a dictionary of arrays
-            fname = '%s_%d.toml' % (w, calc_id)
+            fname = '%s_%d.txt' % (w, calc_id)
             open(fname, 'w').write(obj.toml())
         else:  # a regular ArrayWrapper
             fname = '%s_%d.hdf5' % (w, calc_id)
