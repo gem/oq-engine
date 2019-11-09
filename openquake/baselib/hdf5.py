@@ -330,16 +330,25 @@ class File(h5py.File):
         elif (isinstance(obj, numpy.ndarray) and obj.shape and
               len(obj) and isinstance(obj[0], str)):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
+        elif (isinstance(obj, numpy.ndarray) and not obj.shape and
+              obj.dtype.name.startswith('bytes')):
+            self._set(path, numpy.void(bytes(obj)))
         elif isinstance(obj, list) and len(obj) and isinstance(
                 obj[0], numpy.ndarray):
             self.save_vlen(path, obj)
         elif isinstance(obj, bytes):
-            super().__setitem__(path, numpy.void(obj))
+            self._set(path, numpy.void(obj))
         else:
-            super().__setitem__(path, obj)
+            self._set(path, obj)
         if pyclass:
             self.flush()  # make sure it is fully saved
             self.save_attrs(path, attrs, __pyclass__=pyclass)
+
+    def _set(self, path, obj):
+        try:
+            super().__setitem__(path, obj)
+        except Exception as exc:
+            raise exc.__class__('Could not set %s=%r' % (path, obj))
 
     def __getitem__(self, path):
         h5obj = super().__getitem__(path)
