@@ -165,7 +165,11 @@ def make_figure_disagg(extractors, what):
     [poe_id] = disagg.poe_id
     ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
                   (disagg.kind, sid, imt, poe_id, oq.investigation_time))
-    for name, values in zip(disagg.names, disagg.array):
+    if not hasattr(disagg, 'names'):
+        names, arrays = ['rlz-0'], [disagg.array]
+    else:
+        names, arrays = disagg.names, disagg.array
+    for name, values in zip(names, arrays):
         x, y = values.T
         print(y)
         ax.plot(x, y, label=name.split('-')[1])
