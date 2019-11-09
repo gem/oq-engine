@@ -1012,6 +1012,7 @@ def extract_disagg(dstore, what):
     if not allnames:
         raise KeyError('No data for ' + what)
     elif len(allnames) == 1:
+        qdict['names'] = allnames
         return ArrayWrapper(values, qdict)
     else:
         qdict['names'] = allnames
