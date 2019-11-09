@@ -488,7 +488,6 @@ class ArrayWrapper(object):
                 except ValueError as err:
                     if 'Object header message is too large' in str(err):
                         logging.error(str(err))
-                    raise
             for k, v in extra.items():
                 f.attrs[k] = maybe_encode(v)
 
