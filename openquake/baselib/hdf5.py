@@ -308,39 +308,45 @@ class File(h5py.File):
                         'Could not store attribute %s=%s: %s' % (k, v, exc))
 
     def __setitem__(self, path, obj):
+        cls = obj.__class__
+        if hasattr(obj, '__toh5__'):
+            obj, attrs = obj.__toh5__()
+            pyclass = cls2dotname(cls)
+        else:
+            pyclass = ''
+        if isinstance(obj, (dict, Group)) and obj:
+            for k, v in obj.items():
+                # NB: there was a line sorted(obj.items()) here
+                # it was removed because it caused the absurd issue
+                # https://github.com/gem/oq-engine/issues/4761
+                # for an exposure with more than 65536 assets
+                if isinstance(k, tuple):  # multikey
+                    k = '-'.join(k)
+                key = '%s/%s' % (path, quote_plus(k))
+                self[key] = v
+            if isinstance(obj, Group):
+                self.save_attrs(
+                    path, obj.attrs, __pyclass__=cls2dotname(Group))
+        elif (isinstance(obj, numpy.ndarray) and obj.shape and
+              len(obj) and isinstance(obj[0], str)):
+            self.create_dataset(path, obj.shape, vstr)[:] = obj
+        elif (isinstance(obj, numpy.ndarray) and not obj.shape and
+              obj.dtype.name.startswith('bytes')):
+            self._set(path, numpy.void(bytes(obj)))
+        elif isinstance(obj, list) and len(obj) and isinstance(
+                obj[0], numpy.ndarray):
+            self.save_vlen(path, obj)
+        elif isinstance(obj, bytes):
+            self._set(path, numpy.void(obj))
+        else:
+            self._set(path, obj)
+        if pyclass:
+            self.flush()  # make sure it is fully saved
+            self.save_attrs(path, attrs, __pyclass__=pyclass)
+
+    def _set(self, path, obj):
         try:
-            cls = obj.__class__
-            if hasattr(obj, '__toh5__'):
-                obj, attrs = obj.__toh5__()
-                pyclass = cls2dotname(cls)
-            else:
-                pyclass = ''
-            if isinstance(obj, (dict, Group)) and obj:
-                for k, v in obj.items():
-                    # NB: there was a line sorted(obj.items()) here
-                    # it was removed because it caused the absurd issue
-                    # https://github.com/gem/oq-engine/issues/4761
-                    # for an exposure with more than 65536 assets
-                    if isinstance(k, tuple):  # multikey
-                        k = '-'.join(k)
-                    key = '%s/%s' % (path, quote_plus(k))
-                    self[key] = v
-                if isinstance(obj, Group):
-                    self.save_attrs(
-                        path, obj.attrs, __pyclass__=cls2dotname(Group))
-            elif (isinstance(obj, numpy.ndarray) and obj.shape and
-                  len(obj) and isinstance(obj[0], str)):
-                self.create_dataset(path, obj.shape, vstr)[:] = obj
-            elif isinstance(obj, list) and len(obj) and isinstance(
-                    obj[0], numpy.ndarray):
-                self.save_vlen(path, obj)
-            elif isinstance(obj, bytes):
-                super().__setitem__(path, numpy.void(obj))
-            else:
-                super().__setitem__(path, obj)
-            if pyclass:
-                self.flush()  # make sure it is fully saved
-                self.save_attrs(path, attrs, __pyclass__=pyclass)
+            super().__setitem__(path, obj)
         except Exception as exc:
             raise exc.__class__('Could not set %s=%r' % (path, obj))
 
