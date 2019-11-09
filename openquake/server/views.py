@@ -708,7 +708,6 @@ def extract(request, calc_id, what):
             aw = _extract(ds, what + query_string)
             a = {}
             for key, val in vars(aw).items():
-                key = str(key)  # can be a numpy.bytes_
                 if key.startswith('_'):
                     continue
                 elif isinstance(val, str):
