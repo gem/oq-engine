@@ -33,7 +33,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.scalerel import PointMSR
 
-U16 = numpy.uint16
+I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
@@ -443,7 +443,8 @@ class PmapMaker():
             tup = [getattr(rup, p) for p in self.REQUIRES_RUPTURE_PARAMETERS]
             for name in self.REQUIRES_DISTANCES:
                 dists = getattr(dctx, name)
-                tup.extend(U16(dists / distmax / precision))
+                tup.extend(I16(dists / distmax / precision))
+                # NB: the rx distance can be negative, hence the I16 (not U16)
             acc[tuple(tup)].append((rup, sctx, dctx))
         new_ctxs = []
         for vals in acc.values():
