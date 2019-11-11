@@ -19,6 +19,7 @@ from urllib.parse import parse_qs
 from functools import lru_cache
 import collections
 import logging
+import gzip
 import ast
 import io
 import os
@@ -32,7 +33,6 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, get_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.geo.utils import bbox2poly
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -914,7 +914,8 @@ def extract_rupture(dstore, rup_id):
     """
     ridx = list(dstore['ruptures']['id']).index(int(rup_id))
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
-    yield from getter.get_rupdict().items()
+    [ebr] = getter.get_ruptures()
+    return ArrayWrapper((), ebr.rupture.todict())
 
 
 @extract.add('event_info')
@@ -1097,30 +1098,35 @@ def extract_rupture_info(dstore, what):
     """
     Extract some information about the ruptures, including the boundary.
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/rupture_info
+    http://127.0.0.1:8800/v1/calc/30/extract/rupture_info?min_mag=6
     """
+    qdict = parse(what)
+    if 'min_mag' in qdict:
+        [min_mag] = qdict['min_mag']
+    else:
+        min_mag = 0
     oq = dstore['oqparam']
     dtlist = [('rupid', U32), ('multiplicity', U16), ('mag', F32),
               ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
-              ('strike', F32), ('dip', F32), ('rake', F32),
-              ('boundary', '<S1000')]
+              ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
+    boundaries = []
     sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     for rgetter in getters.gen_rupture_getters(dstore):
-        rups = rgetter.get_ruptures(sf)
+        rups = rgetter.get_ruptures(sf, min_mag)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
-            boundary = 'POLYGON((%s))' % ', '.join(coords)
+            boundaries.append('POLYGON((%s))' % ', '.join(coords))
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
-                 rgetter.trt, r['strike'], r['dip'], r['rake'],
-                 boundary))
+                 rgetter.trt, r['strike'], r['dip'], r['rake']))
     arr = numpy.array(rows, dtlist)
-    arr.sort(order='rupid')
-    return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time))
+    geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
+    return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
+                                  boundaries=geoms))
 
 # #####################  extraction from the WebAPI ###################### #
 
