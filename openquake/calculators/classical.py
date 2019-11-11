@@ -20,6 +20,7 @@ import copy
 import time
 import logging
 import operator
+import itertools
 import numpy
 
 from openquake.baselib import parallel, hdf5
@@ -108,11 +109,19 @@ def split_by_mag(sources):
     """
     out = []
     for src in sources:
-        for mag, rate in src.get_annual_occurrence_rates():
-            new = copy.copy(src)
-            new.mfd = mfd.ArbitraryMFD([mag], [rate])
-            new.num_ruptures = new.count_ruptures()
-            out.append(new)
+        if hasattr(src, 'get_annual_occurrence_rates'):
+            for mag, rate in src.get_annual_occurrence_rates():
+                new = copy.copy(src)
+                new.mfd = mfd.ArbitraryMFD([mag], [rate])
+                new.num_ruptures = new.count_ruptures()
+                out.append(new)
+        else:  # nonparametric source
+            # data is a list of pairs (rup, pmf)
+            for mag, group in itertools.groupby(
+                    src.data, lambda pair: pair[0].mag):
+                new = src.__class__(src.source_id, src.name,
+                                    src.tectonic_region_type, list(group))
+                out.append(new)
     return out
 
 
@@ -149,6 +158,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, rup_data
         """
+        if not dic['pmap']:
+            return acc
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
