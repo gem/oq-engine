@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import copy
 import time
 import logging
 import operator
@@ -23,6 +24,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
+from openquake.hazardlib import mfd
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -98,6 +100,20 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
+
+
+def split_by_mag(sources):
+    """
+    Split sources by magnitude
+    """
+    out = []
+    for src in sources:
+        for mag, rate in src.get_annual_occurrence_rates():
+            new = copy.copy(src)
+            new.mfd = mfd.ArbitraryMFD([mag], [rate])
+            new.num_ruptures = new.count_ruptures()
+            out.append(new)
+    return out
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
@@ -288,9 +304,10 @@ class ClassicalCalculator(base.HazardCalculator):
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
+        elif oq.split_by_magnitude:
+            f1 = f2 = classical
         else:
-            f1, f2 = classical, (
-                classical_split_filter if oq.split_sources else classical)
+            f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
         for trt, sources, atomic in trt_sources:
             gsims = gsims_by_trt[trt]
@@ -299,6 +316,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 nb = 1
                 yield f1, (sources, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
+                if oq.split_by_magnitude:
+                    sources = split_by_mag(sources)
                 blocks = list(block_splitter(sources, totweight/C, srcweight))
                 nb = len(blocks)
                 for block in blocks:
