@@ -289,7 +289,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
         else:
-            f1, f2 = classical, classical_split_filter
+            f1, f2 = classical, (
+                classical_split_filter if oq.split_sources else classical)
         C = oq.concurrent_tasks or 1
         for trt, sources, atomic in trt_sources:
             gsims = gsims_by_trt[trt]
