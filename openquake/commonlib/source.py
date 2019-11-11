@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, AccumDict
-from openquake.hazardlib import source, sourceconverter
+from openquake.hazardlib import source, sourceconverter, contexts
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
 
@@ -256,12 +256,27 @@ class CompositionInfo(object):
 
     def get_source_model(self, src_group_id):
         """
-        Return the source model for the given src_group_id
+        :returns: the source model for the given src_group_id
         """
         for smodel in self.source_models:
             for src_group in smodel.src_groups:
                 if src_group.id == src_group_id:
                     return smodel
+
+    def get_gmv(self, onesite, param):
+        """
+        :returns: an array of shape (#mags, #dists, #trts)
+        """
+        gsims_by_trt = self.get_gsims_by_trt()
+        trts = list(gsims_by_trt)
+        ndists = 100
+        gmv = numpy.zeros((len(self.mags), ndists, len(trts)))
+        for t, trt in enumerate(trts):
+            maxdist = param['maximum_distance'][trt]
+            dists = numpy.arange(0, maxdist, maxdist / ndists)
+            cmaker = contexts.ContextMaker(trt, gsims_by_trt[trt], param)
+            gmv[:, :, t] = cmaker.make_gmv(onesite, self.mags, dists)
+        return gmv
 
     def get_gsims_by_trt(self):
         """
