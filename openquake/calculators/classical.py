@@ -247,6 +247,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         mags = self.datastore['source_mags'][()]
         if len(self.sitecol) == 1 and len(mags):
+            logging.info('Computing mag_dis_trt_factor')
             gsims_by_trt = self.csm_info.get_gsims_by_trt()
             gmv = get_gmv(self.sitecol, gsims_by_trt, mags,
                           oq.maximum_distance, oq.imtls)
