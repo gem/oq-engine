@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import gzip
 import logging
 import shapely
 import numpy
@@ -164,7 +165,11 @@ def make_figure_disagg(extractors, what):
     [poe_id] = disagg.poe_id
     ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
                   (disagg.kind, sid, imt, poe_id, oq.investigation_time))
-    for name, values in zip(disagg.names, disagg.array):
+    if not hasattr(disagg, 'names'):
+        names, arrays = ['rlz-0'], [disagg.array]
+    else:
+        names, arrays = disagg.names, disagg.array
+    for name, values in zip(names, arrays):
         x, y = values.T
         print(y)
         ax.plot(x, y, label=name.split('-')[1])
@@ -281,7 +286,7 @@ def make_figure_sources(extractors, what):
 @sap.script
 def make_figure_rupture_info(extractors, what):
     """
-    $ oq plot rupture_info?
+    $ oq plot rupture_info?min_mag=6
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -295,16 +300,20 @@ def make_figure_rupture_info(extractors, what):
     n = 0
     tot = 0
     pp = PolygonPlotter(ax)
-    for rec in info:
-        wkt = rec['boundary'].decode('utf8')
-        if wkt.startswith('POLYGON'):
-            pp.add(shapely.wkt.loads(wkt))
+    geoms = gzip.decompress(info['boundaries']).decode('utf8').split('\n')
+    for rec, wkt in zip(info, geoms):
+        poly = shapely.wkt.loads(wkt)
+        if poly.is_valid:
+            pp.add(poly)
             n += 1
         else:
-            print('Invalid %s' % rec['boundary'].decode('utf8'))
+            print('Invalid %s' % wkt)
         tot += 1
     pp.set_lim()
     ax.set_title('%d/%d valid ruptures' % (n, tot))
+    if tot == 1:
+        # print the full geometry
+        print(ex.get('rupture/%d' % rec['rupid']).toml())
     return plt
 
 

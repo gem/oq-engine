@@ -33,9 +33,13 @@ def extract(what, calc_id, webapi=True, local=False):
             obj = WebExtractor(calc_id).get(what)
         else:
             obj = Extractor(calc_id).get(what)
-        fname = '%s_%d.hdf5' % (what.replace('/', '-').replace('?', '-'),
-                                calc_id)
-        obj.save(fname)
+        w = what.replace('/', '-').replace('?', '-')
+        if not obj.shape:  # is a dictionary of arrays
+            fname = '%s_%d.txt' % (w, calc_id)
+            open(fname, 'w').write(obj.toml())
+        else:  # a regular ArrayWrapper
+            fname = '%s_%d.hdf5' % (w, calc_id)
+            obj.save(fname)
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)
