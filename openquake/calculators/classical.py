@@ -265,18 +265,23 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
-        smap = parallel.Starmap(self.core_task.__func__)
-        smap.task_queue = list(self.gen_task_queue())  # really fast
-        acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         mags = self.datastore['source_mags'][()]
         if len(self.sitecol) == 1 and len(mags):
             logging.info('Computing mag_dis_trt_factor')
             gsims_by_trt = self.csm_info.get_gsims_by_trt()
             gmv, dists_by_trt = get_gmv(self.sitecol, gsims_by_trt, mags,
                                         oq.maximum_distance, oq.imtls)
-            self.datastore['mag_dis_trt_factor'] = gmv / gmv.max()
+            self.datastore['mag_dis_trt_factor'] = md = gmv / gmv.max()
             self.datastore.set_attrs('mag_dis_trt_factor',
                                      mags=mags, **dists_by_trt)
+            self.magdist = {trt: MagDist(md[:, :, t], mags=mags,
+                                         dists=dists_by_trt[trt])
+                            for t, trt in enumerate(dists_by_trt)}
+        else:
+            self.magdist = {}
+        smap = parallel.Starmap(self.core_task.__func__)
+        smap.task_queue = list(self.gen_task_queue())  # really fast
+        acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -341,16 +346,8 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
-        trti = 0
         for trt, sources, atomic in trt_sources:
-            try:
-                dset = self.datastore['mag_dis_trt_factor']
-                param['magdis'] = MagDist(dset[:, :, trti],
-                                          mags=dset.attrs['mags'],
-                                          dists=dset.attrs[trt])
-            except KeyError:
-                param['magdis'] = None
-            trti += 1
+            param['magdis'] = self.magdist.get(trt)
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
