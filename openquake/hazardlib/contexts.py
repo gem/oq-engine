@@ -37,6 +37,7 @@ I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
+EPSILON = 1E-3
 
 
 def _update(pmap, pm, src, src_mutex, rup_mutex):
@@ -144,7 +145,7 @@ class RupData(object):
         self.data['lat_'].append(F32(closest.lats))
 
 
-class ContextMaker():
+class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
     """
@@ -158,6 +159,7 @@ class ContextMaker():
         self.maximum_distance = (
             param.get('maximum_distance') or IntegrationDistance({}))
         self.trunclevel = param.get('truncation_level')
+        self.magdis = param.get('magdis')
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -377,7 +379,7 @@ def _collapse_ctxs(ctxs):
     return [(rup, sites, dctx)]
 
 
-class PmapMaker():
+class PmapMaker(object):
     """
     A class to compute the PoEs from a given source
     """
@@ -462,7 +464,11 @@ class PmapMaker():
             return ctxs
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
+        magdis = self.cmaker.magdis
         for rup, sctx, dctx in ctxs:
+            if magdis and magdis(rup.mag, dctx.rrup[0]) < EPSILON:
+                # discard ruptures giving small contribution
+                continue
             tup = []
             for p in self.REQUIRES_RUPTURE_PARAMETERS:
                 if (p != 'mag' and self.pointsource_distance is not None and
@@ -695,11 +701,12 @@ def get_gmv(onesite, gsims_by_trt, mags, maximum_distance, imtls):
     """
     trts = list(gsims_by_trt)
     ndists = 100
+    dists_by_trt = {}
     gmv = numpy.zeros((len(mags), ndists, len(trts)))
     param = dict(maximum_distance=maximum_distance, imtls=imtls)
     for t, trt in enumerate(trts):
         maxdist = maximum_distance[trt]
-        dists = numpy.arange(0, maxdist, maxdist / ndists)
+        dists_by_trt[trt] = numpy.arange(0, maxdist, maxdist / ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.make_gmv(onesite, mags, dists)
-    return gmv
+        gmv[:, :, t] = cmaker.make_gmv(onesite, mags, dists_by_trt[trt])
+    return gmv, dists_by_trt
