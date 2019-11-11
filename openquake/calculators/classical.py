@@ -143,6 +143,18 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
                 extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures))
 
 
+class MagDist(object):
+    def __init__(self, array, mags, dists):
+        self.array = array
+        self.mags = mags
+        self.dists = dists
+
+    def __call__(self, mag, dist):
+        mi = numpy.searchsorted(self.mags, mag)
+        di = numpy.searchsorted(self.dists, mag)
+        return self.array[mi, di]
+
+
 @base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -260,9 +272,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if len(self.sitecol) == 1 and len(mags):
             logging.info('Computing mag_dis_trt_factor')
             gsims_by_trt = self.csm_info.get_gsims_by_trt()
-            gmv = get_gmv(self.sitecol, gsims_by_trt, mags,
-                          oq.maximum_distance, oq.imtls)
+            gmv, dists_by_trt = get_gmv(self.sitecol, gsims_by_trt, mags,
+                                        oq.maximum_distance, oq.imtls)
             self.datastore['mag_dis_trt_factor'] = gmv / gmv.max()
+            self.datastore.set_attrs('mag_dis_trt_factor',
+                                     mags=mags, **dists_by_trt)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -327,7 +341,16 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
+        trti = 0
         for trt, sources, atomic in trt_sources:
+            try:
+                dset = self.datastore['mag_dis_trt_factor']
+                param['magdis'] = MagDist(dset[:, :, trti],
+                                          mags=dset.attrs['mags'],
+                                          dists=dset.attrs[trt])
+            except KeyError:
+                param['magdis'] = None
+            trti += 1
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
