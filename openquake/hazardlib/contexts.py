@@ -37,7 +37,7 @@ I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
-EPSILON = 1E-3
+EPSILON = 2E-4
 
 
 def _update(pmap, pm, src, src_mutex, rup_mutex):
