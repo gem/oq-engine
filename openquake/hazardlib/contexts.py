@@ -290,6 +290,29 @@ class ContextMaker():
             ctxs.append((rup, sctx, dctx))
         return ctxs
 
+    def make_gmv(self, onesite, mags, dists):
+        """
+        :param onesite: a SiteCollection instance with a single site
+        :param mags: a sequence of magnitudes
+        :param dists: a sequence of distances
+        :returns: an array of GMVs of shape (#mags, #dists)
+        """
+        assert len(onesite) == 1, onesite
+        nmags, ndists = len(mags), len(dists)
+        gmv = numpy.zeros((nmags, ndists))
+        for m, d in itertools.product(range(nmags), range(ndists)):
+            mag, dist = mags[m], dists[d]
+            rup = RuptureContext()
+            for par in self.REQUIRES_RUPTURE_PARAMETERS:
+                setattr(rup, par, 0)
+            rup.mag = mag
+            dctx = DistancesContext(
+                (dst, [dist]) for dst in self.REQUIRES_DISTANCES)
+            mean = base.get_mean_std(  # shape (2, N, M, G) -> G
+                onesite, rup, dctx, [self.imts[-1]], self.gsims)[0, 0, 0]
+            gmv[m, d] = numpy.exp(mean.max())
+        return gmv
+
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
         """
         :param src_sites: an iterator of pairs (source, sites)
