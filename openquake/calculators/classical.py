@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, get_gmv
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -245,6 +245,12 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(self.core_task.__func__)
         smap.task_queue = list(self.gen_task_queue())  # really fast
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
+        mags = self.datastore['source_mags'][()]
+        if len(self.sitecol) == 1 and len(mags):
+            gsims_by_trt = self.csm_info.get_gsims_by_trt()
+            gmv = get_gmv(self.sitecol, gsims_by_trt, mags,
+                          oq.maximum_distance, oq.imtls)
+            self.datastore['mag_dis_trt_factor'] = gmv / gmv.max()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))

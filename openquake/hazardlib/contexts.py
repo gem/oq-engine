@@ -307,7 +307,7 @@ class ContextMaker():
                 setattr(rup, par, 0)
             rup.mag = mag
             dctx = DistancesContext(
-                (dst, [dist]) for dst in self.REQUIRES_DISTANCES)
+                (dst, numpy.array([dist])) for dst in self.REQUIRES_DISTANCES)
             mean = base.get_mean_std(  # shape (2, N, M, G) -> G
                 onesite, rup, dctx, [self.imts[-1]], self.gsims)[0, 0, 0]
             gmv[m, d] = numpy.exp(mean.max())
@@ -679,3 +679,19 @@ class RuptureContext(BaseContext):
         # parametric rupture
         tom = self.temporal_occurrence_model
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
+
+
+def get_gmv(onesite, gsims_by_trt, mags, maximum_distance, imtls):
+    """
+    :returns: an array of shape (#mags, #dists, #trts)
+    """
+    trts = list(gsims_by_trt)
+    ndists = 100
+    gmv = numpy.zeros((len(mags), ndists, len(trts)))
+    param = dict(maximum_distance=maximum_distance, imtls=imtls)
+    for t, trt in enumerate(trts):
+        maxdist = maximum_distance[trt]
+        dists = numpy.arange(0, maxdist, maxdist / ndists)
+        cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
+        gmv[:, :, t] = cmaker.make_gmv(onesite, mags, dists)
+    return gmv
