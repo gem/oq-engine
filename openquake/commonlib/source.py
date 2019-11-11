@@ -263,21 +263,6 @@ class CompositionInfo(object):
                 if src_group.id == src_group_id:
                     return smodel
 
-    def get_gmv(self, onesite, param):
-        """
-        :returns: an array of shape (#mags, #dists, #trts)
-        """
-        gsims_by_trt = self.get_gsims_by_trt()
-        trts = list(gsims_by_trt)
-        ndists = 100
-        gmv = numpy.zeros((len(self.mags), ndists, len(trts)))
-        for t, trt in enumerate(trts):
-            maxdist = param['maximum_distance'][trt]
-            dists = numpy.arange(0, maxdist, maxdist / ndists)
-            cmaker = contexts.ContextMaker(trt, gsims_by_trt[trt], param)
-            gmv[:, :, t] = cmaker.make_gmv(onesite, self.mags, dists)
-        return gmv
-
     def get_gsims_by_trt(self):
         """
         :returns: a dictionary trt -> sorted gsims
