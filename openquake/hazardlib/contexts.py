@@ -440,7 +440,15 @@ class PmapMaker():
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
         for rup, sctx, dctx in ctxs:
-            tup = [getattr(rup, p) for p in self.REQUIRES_RUPTURE_PARAMETERS]
+            tup = []
+            for p in self.REQUIRES_RUPTURE_PARAMETERS:
+                if (p != 'mag' and self.pointsource_distance is not None and
+                        dctx.rrup.min() > self.pointsource_distance):
+                    tup.append(0)
+                    # all nonmag rupture parameters are collapsed to 0
+                    # over the pointsource_distance
+                else:
+                    tup.append(getattr(rup, p))
             for name in self.REQUIRES_DISTANCES:
                 dists = getattr(dctx, name)
                 tup.extend(I16(dists / distmax / precision))
