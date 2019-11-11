@@ -175,6 +175,7 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
+    split_sources = valid.Param(valid.boolean, True)
     collapse_factor = valid.Param(valid.positivefloat, 3)
     max_radius = valid.Param(valid.positivefloat, None)
     task_duration = valid.Param(valid.positiveint, None)  # used in ebrisk
