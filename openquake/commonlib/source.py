@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, AccumDict
-from openquake.hazardlib import source, sourceconverter
+from openquake.hazardlib import source, sourceconverter, contexts
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
 
@@ -256,7 +256,7 @@ class CompositionInfo(object):
 
     def get_source_model(self, src_group_id):
         """
-        Return the source model for the given src_group_id
+        :returns: the source model for the given src_group_id
         """
         for smodel in self.source_models:
             for src_group in smodel.src_groups:
