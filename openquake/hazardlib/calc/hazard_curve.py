@@ -55,6 +55,7 @@ the engine manages all the realizations at once.
 """
 
 import operator
+import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict

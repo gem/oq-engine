@@ -252,7 +252,6 @@ class PolygonPlotter():
             self.ax.set_ylim(min(self.minys), max(self.maxys))
 
 
-@sap.script
 def make_figure_sources(extractors, what):
     """
     $ oq plot sources?sm_id=0
@@ -283,7 +282,6 @@ def make_figure_sources(extractors, what):
     return plt
 
 
-@sap.script
 def make_figure_rupture_info(extractors, what):
     """
     $ oq plot rupture_info?min_mag=6
@@ -314,6 +312,36 @@ def make_figure_rupture_info(extractors, what):
     if tot == 1:
         # print the full geometry
         print(ex.get('rupture/%d' % rec['rupid']).toml())
+    return plt
+
+
+def make_figure_mag_dist_trt(extractors, what):
+    """
+    $ oq plot 'mag_dist_trt?'
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    [ex] = extractors
+    md = ex.get('effect')
+    trts = ex.get('csm_info').trts
+    mag_ticks = md.mags[::-5]
+    fig = plt.figure()
+    cmap = cm.get_cmap('jet', 100)
+    axes = []
+    vmin = numpy.log10(md.array.min())
+    for trti, trt in enumerate(trts):
+        ax = fig.add_subplot(len(trts), 1, trti + 1)
+        axes.append(ax)
+        ax.set_xticks(mag_ticks)
+        ax.set_xlabel('Mag - %s' % trt)
+        dist_ticks = getattr(md, trt)[::10]
+        ax.set_yticks(dist_ticks)
+        ax.set_ylabel('Dist')
+        extent = mag_ticks[0], mag_ticks[-1], dist_ticks[0], dist_ticks[-1]
+        im = ax.imshow(numpy.log10(md[:, :, trti]), cmap=cmap,
+                       extent=extent, aspect='auto', vmin=vmin, vmax=0)
+    fig.colorbar(im, ax=axes)
     return plt
 
 

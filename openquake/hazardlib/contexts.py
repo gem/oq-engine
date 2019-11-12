@@ -144,7 +144,7 @@ class RupData(object):
         self.data['lat_'].append(F32(closest.lats))
 
 
-class ContextMaker():
+class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
     """
@@ -158,6 +158,7 @@ class ContextMaker():
         self.maximum_distance = (
             param.get('maximum_distance') or IntegrationDistance({}))
         self.trunclevel = param.get('truncation_level')
+        self.effect = param.get('effect')
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -290,6 +291,29 @@ class ContextMaker():
             ctxs.append((rup, sctx, dctx))
         return ctxs
 
+    def make_gmv(self, onesite, mags, dists):
+        """
+        :param onesite: a SiteCollection instance with a single site
+        :param mags: a sequence of magnitudes
+        :param dists: a sequence of distances
+        :returns: an array of GMVs of shape (#mags, #dists)
+        """
+        assert len(onesite) == 1, onesite
+        nmags, ndists = len(mags), len(dists)
+        gmv = numpy.zeros((nmags, ndists))
+        for m, d in itertools.product(range(nmags), range(ndists)):
+            mag, dist = mags[m], dists[d]
+            rup = RuptureContext()
+            for par in self.REQUIRES_RUPTURE_PARAMETERS:
+                setattr(rup, par, 0)
+            rup.mag = mag
+            dctx = DistancesContext(
+                (dst, numpy.array([dist])) for dst in self.REQUIRES_DISTANCES)
+            mean = base.get_mean_std(  # shape (2, N, M, G) -> G
+                onesite, rup, dctx, [self.imts[-1]], self.gsims)[0, 0, 0]
+            gmv[m, d] = numpy.exp(mean.max())
+        return gmv
+
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
         """
         :param src_sites: an iterator of pairs (source, sites)
@@ -354,7 +378,7 @@ def _collapse_ctxs(ctxs):
     return [(rup, sites, dctx)]
 
 
-class PmapMaker():
+class PmapMaker(object):
     """
     A class to compute the PoEs from a given source
     """
@@ -409,9 +433,10 @@ class PmapMaker():
                 dists.append(mdist)
             with self.ctx_mon:
                 ctxs = self.cmaker.make_ctxs(rups, sites, mdist)
-                totrups += len(ctxs)
-                ctxs = self.collapse(ctxs)
-                numrups += len(ctxs)
+                if ctxs:
+                    totrups += len(ctxs)
+                    ctxs = self.collapse(ctxs)
+                    numrups += len(ctxs)
             for rup, r_sites, dctx in ctxs:
                 sids, poes = self._sids_poes(rup, r_sites, dctx)
                 with self.pne_mon:
@@ -435,12 +460,30 @@ class PmapMaker():
         """
         Collapse the contexts if the distances are equivalent up to 1/1000
         """
-        if len(ctxs) in (0, 1) or not self.rup_indep:  # nothing to collapse
+        effect = self.cmaker.effect
+        if not self.rup_indep:  # do not collapse
             return ctxs
+        elif len(ctxs) == 1:
+            [(rup, sctx, dctx)] = ctxs
+            if effect and effect.small(rup.mag, dctx.rrup[0]):
+                return []
+            else:  # nothing to collapse
+                return ctxs
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
         for rup, sctx, dctx in ctxs:
-            tup = [getattr(rup, p) for p in self.REQUIRES_RUPTURE_PARAMETERS]
+            if effect and effect.small(rup.mag, dctx.rrup[0]):
+                # discard ruptures giving small contribution
+                continue
+            tup = []
+            for p in self.REQUIRES_RUPTURE_PARAMETERS:
+                if (p != 'mag' and self.pointsource_distance is not None and
+                        dctx.rrup.min() > self.pointsource_distance):
+                    tup.append(0)
+                    # all nonmag rupture parameters are collapsed to 0
+                    # over the pointsource_distance
+                else:
+                    tup.append(getattr(rup, p))
             for name in self.REQUIRES_DISTANCES:
                 dists = getattr(dctx, name)
                 tup.extend(I16(dists / distmax / precision))
@@ -656,3 +699,20 @@ class RuptureContext(BaseContext):
         # parametric rupture
         tom = self.temporal_occurrence_model
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
+
+
+def get_gmv(onesite, gsims_by_trt, mags, maximum_distance, imtls):
+    """
+    :returns: an array of shape (#mags, #dists, #trts)
+    """
+    trts = list(gsims_by_trt)
+    ndists = 100
+    dists_by_trt = {}
+    gmv = numpy.zeros((len(mags), ndists, len(trts)))
+    param = dict(maximum_distance=maximum_distance, imtls=imtls)
+    for t, trt in enumerate(trts):
+        maxdist = maximum_distance[trt]
+        dists_by_trt[trt] = numpy.arange(0, maxdist, maxdist / ndists)
+        cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
+        gmv[:, :, t] = cmaker.make_gmv(onesite, mags, dists_by_trt[trt])
+    return gmv, dists_by_trt
