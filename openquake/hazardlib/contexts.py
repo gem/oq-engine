@@ -433,9 +433,10 @@ class PmapMaker(object):
                 dists.append(mdist)
             with self.ctx_mon:
                 ctxs = self.cmaker.make_ctxs(rups, sites, mdist)
-                totrups += len(ctxs)
-                ctxs = self.collapse(ctxs)
-                numrups += len(ctxs)
+                if ctxs:
+                    totrups += len(ctxs)
+                    ctxs = self.collapse(ctxs)
+                    numrups += len(ctxs)
             for rup, r_sites, dctx in ctxs:
                 sids, poes = self._sids_poes(rup, r_sites, dctx)
                 with self.pne_mon:
@@ -459,13 +460,17 @@ class PmapMaker(object):
         """
         Collapse the contexts if the distances are equivalent up to 1/1000
         """
-        if len(ctxs) in (0, 1) or not self.rup_indep:  # nothing to collapse
-            return ctxs
+        magdis = self.cmaker.magdis
+        if len(ctxs) == 1:
+            [(rup, sctx, dctx)] = ctxs
+            if magdis and magdis.small(rup.mag, dctx.rrup[0]):
+                return []
+            else:  # nothing to collapse
+                return ctxs
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
-        magdis = self.cmaker.magdis
         for rup, sctx, dctx in ctxs:
-            if magdis and magdis(rup.mag, dctx.rrup[0]).small():
+            if magdis and magdis.small(rup.mag, dctx.rrup[0]):
                 # discard ruptures giving small contribution
                 continue
             tup = []
