@@ -127,6 +127,20 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                     rup.rup_id = rup_id  # used as seed
                     yield rup, num_occ
 
+    def get_mags(self):
+        """
+        :returns: the magnitudes of the ruptures contained in the source
+        """
+        mags = set()
+        if hasattr(self, 'get_annual_occurrence_rates'):
+            for mag, rate in self.get_annual_occurrence_rates():
+                mags.add(mag)
+        else:  # nonparametric
+            for rup, pmf in self.data:
+                if rup.mag >= self.min_mag:
+                    mags.add(rup.mag)
+        return sorted(mags)
+
     def sample_ruptures_poissonian(self, rupids, eff_num_ses):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples
