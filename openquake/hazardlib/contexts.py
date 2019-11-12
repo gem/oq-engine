@@ -158,7 +158,7 @@ class ContextMaker(object):
         self.maximum_distance = (
             param.get('maximum_distance') or IntegrationDistance({}))
         self.trunclevel = param.get('truncation_level')
-        self.magdis = param.get('magdis')
+        self.effect = param.get('effect')
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -460,17 +460,17 @@ class PmapMaker(object):
         """
         Collapse the contexts if the distances are equivalent up to 1/1000
         """
-        magdis = self.cmaker.magdis
+        effect = self.cmaker.effect
         if len(ctxs) == 1:
             [(rup, sctx, dctx)] = ctxs
-            if magdis and magdis.small(rup.mag, dctx.rrup[0]):
+            if effect and effect.small(rup.mag, dctx.rrup[0]):
                 return []
             else:  # nothing to collapse
                 return ctxs
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
         for rup, sctx, dctx in ctxs:
-            if magdis and magdis.small(rup.mag, dctx.rrup[0]):
+            if effect and effect.small(rup.mag, dctx.rrup[0]):
                 # discard ruptures giving small contribution
                 continue
             tup = []
