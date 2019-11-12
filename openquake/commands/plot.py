@@ -327,7 +327,7 @@ def make_figure_effect(extractors, what):
     import matplotlib.pyplot as plt
     from matplotlib import cm
     [ex] = extractors
-    effect = ex.get('effect')
+    effect = ex.get(what)
     trts = ex.get('csm_info').trts
     mag_ticks = effect.mags[::-5]
     fig = plt.figure()
@@ -345,6 +345,37 @@ def make_figure_effect(extractors, what):
         extent = mag_ticks[0], mag_ticks[-1], dist_ticks[0], dist_ticks[-1]
         im = ax.imshow(numpy.log10(effect[:, :, trti]), cmap=cmap,
                        extent=extent, aspect='auto', vmin=vmin, vmax=0)
+    fig.colorbar(im, ax=axes)
+    return plt
+
+
+def make_figure_rups_by_mag_dist(extractors, what):
+    """
+    $ oq plot 'rups_by_mag_dist?'
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    [ex] = extractors
+    counts = ex.get(what)
+    counts.array = numpy.log10(counts.array + 1)
+    trts = ex.get('csm_info').trts
+    mag_ticks = counts.mags[::-5]
+    fig = plt.figure()
+    cmap = cm.get_cmap('jet', 100)
+    axes = []
+    vmax = counts.array.max()
+    for trti, trt in enumerate(trts):
+        ax = fig.add_subplot(len(trts), 1, trti + 1)
+        axes.append(ax)
+        ax.set_xticks(mag_ticks)
+        ax.set_xlabel('Mag')
+        dist_ticks = counts.dist_bins[trt][::10]
+        ax.set_yticks(dist_ticks)
+        ax.set_ylabel(trt)
+        extent = mag_ticks[0], mag_ticks[-1], dist_ticks[0], dist_ticks[-1]
+        im = ax.imshow(counts[:, :, trti], cmap=cmap,
+                       extent=extent, aspect='auto', vmin=0, vmax=vmax)
     fig.colorbar(im, ax=axes)
     return plt
 
