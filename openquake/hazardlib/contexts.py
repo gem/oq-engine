@@ -723,6 +723,7 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     assert len(srcfilter.sitecol) == 1
     trt = sources[0].tectonic_region_type
     dist_bins = srcfilter.integration_distance.get_dist_bins(trt)
+    nbins = len(dist_bins)
     mags = set('%.3f' % mag for src in sources for mag in src.get_mags())
     dic = {mag: numpy.zeros(len(dist_bins), int) for mag in sorted(mags)}
     cmaker = ContextMaker(trt, gsims, params, monitor)
@@ -733,5 +734,7 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
             except FarAwayRupture:
                 continue
             di = numpy.searchsorted(dist_bins, dctx.rrup[0])
+            if di == nbins:
+                di = nbins - 1
             dic['%.3f' % rup.mag][di] += 1
     return {trt: AccumDict(dic)}
