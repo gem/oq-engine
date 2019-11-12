@@ -143,7 +143,11 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
                 extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures))
 
 
-class MagDist(object):
+class Effect(object):
+    """
+    Compute the effect of a rupture of a given magnitude and distance,
+    as a float in the range [0, 1] (0=no effect, 1=maximum effect).
+    """
     def __init__(self, array, mags, dists, threshold):
         self.array = array
         self.mags = mags
@@ -156,6 +160,7 @@ class MagDist(object):
         return self.array[mi, di]
 
     def small(self, mag, dist):
+        "True if the effect is below the threshold"
         return self(mag, dist) < self.threshold
 
 
@@ -278,12 +283,12 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore['mag_dis_trt_factor'] = md = gmv / gmv.max()
             self.datastore.set_attrs('mag_dis_trt_factor',
                                      mags=mags, **dists_by_trt)
-            self.magdist = {trt: MagDist(md[:, :, t], mags=mags,
-                                         dists=dists_by_trt[trt],
-                                         threshold=oq.threshold)
-                            for t, trt in enumerate(dists_by_trt)}
+            self.effect = {trt: Effect(md[:, :, t], mags=mags,
+                                       dists=dists_by_trt[trt],
+                                       threshold=oq.threshold)
+                           for t, trt in enumerate(dists_by_trt)}
         else:
-            self.magdist = {}
+            self.effect = {}
         smap = parallel.Starmap(self.core_task.__func__)
         smap.task_queue = list(self.gen_task_queue())  # really fast
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
@@ -352,7 +357,7 @@ class ClassicalCalculator(base.HazardCalculator):
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
         for trt, sources, atomic in trt_sources:
-            param['magdis'] = self.magdist.get(trt)
+            param['effect'] = self.effect.get(trt)
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
