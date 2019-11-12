@@ -701,18 +701,16 @@ class RuptureContext(BaseContext):
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
 
 
-def get_gmv(onesite, gsims_by_trt, mags, maximum_distance, imtls):
+def get_effect(mags, onesite, gsims_by_trt, maximum_distance, imtls):
     """
-    :returns: an array of shape (#mags, #dists, #trts)
+    :returns: a dict magnitude-string -> array(#dists, #trts)
     """
     trts = list(gsims_by_trt)
-    ndists = 100
-    dists_by_trt = {}
+    ndists = 51
     gmv = numpy.zeros((len(mags), ndists, len(trts)))
     param = dict(maximum_distance=maximum_distance, imtls=imtls)
     for t, trt in enumerate(trts):
-        maxdist = maximum_distance[trt]
-        dists_by_trt[trt] = numpy.arange(0, maxdist, maxdist / ndists)
+        dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.make_gmv(onesite, mags, dists_by_trt[trt])
-    return gmv, dists_by_trt
+        gmv[:, :, t] = cmaker.make_gmv(onesite, mags, dist_bins)
+    return dict(zip(['%.3f' % mag for mag in mags], gmv))

@@ -165,6 +165,12 @@ class IntegrationDistance(collections.abc.Mapping):
         bbox = get_bounding_box(src, maxdist)
         return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
 
+    def get_dist_bins(self, trt, nbins=51):
+        """
+        :returns: an array of distance bins, from zero to maxdist
+        """
+        return numpy.arange(nbins) * self(trt) / (nbins - 1)
+
     def __getstate__(self):
         # otherwise is not pickleable due to .piecewise
         return dict(dic=self.dic, magdist=self.magdist)
