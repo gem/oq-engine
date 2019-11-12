@@ -45,7 +45,11 @@ def make_figure_hcurves(extractors, what):
     for i, ex in enumerate(extractors):
         hcurves = ex.get(what)
         for kind in hcurves.kind:
-            got[ex.calc_id, kind] = hcurves[kind]
+            if hcurves.rlzs:
+                arr = getattr(hcurves, 'rlz-%03d' % hcurves.k[0])
+            else:
+                arr = getattr(hcurves, kind)
+            got[ex.calc_id, kind] = arr
     oq = ex.oqparam
     n_imts = len(hcurves.imt)
     [site] = hcurves.site_id
@@ -252,7 +256,6 @@ class PolygonPlotter():
             self.ax.set_ylim(min(self.minys), max(self.maxys))
 
 
-@sap.script
 def make_figure_sources(extractors, what):
     """
     $ oq plot sources?sm_id=0
@@ -283,7 +286,6 @@ def make_figure_sources(extractors, what):
     return plt
 
 
-@sap.script
 def make_figure_rupture_info(extractors, what):
     """
     $ oq plot rupture_info?min_mag=6
@@ -314,6 +316,36 @@ def make_figure_rupture_info(extractors, what):
     if tot == 1:
         # print the full geometry
         print(ex.get('rupture/%d' % rec['rupid']).toml())
+    return plt
+
+
+def make_figure_effect(extractors, what):
+    """
+    $ oq plot 'effect?'
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    [ex] = extractors
+    effect = ex.get('effect')
+    trts = ex.get('csm_info').trts
+    mag_ticks = effect.mags[::-5]
+    fig = plt.figure()
+    cmap = cm.get_cmap('jet', 100)
+    axes = []
+    vmin = numpy.log10(effect.array.min())
+    for trti, trt in enumerate(trts):
+        ax = fig.add_subplot(len(trts), 1, trti + 1)
+        axes.append(ax)
+        ax.set_xticks(mag_ticks)
+        ax.set_xlabel('Mag')
+        dist_ticks = effect.dist_bins[trt][::10]
+        ax.set_yticks(dist_ticks)
+        ax.set_ylabel(trt)
+        extent = mag_ticks[0], mag_ticks[-1], dist_ticks[0], dist_ticks[-1]
+        im = ax.imshow(numpy.log10(effect[:, :, trti]), cmap=cmap,
+                       extent=extent, aspect='auto', vmin=vmin, vmax=0)
+    fig.colorbar(im, ax=axes)
     return plt
 
 
