@@ -20,12 +20,13 @@ import copy
 import time
 import logging
 import operator
+import itertools
 import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, get_gmv
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -108,11 +109,19 @@ def split_by_mag(sources):
     """
     out = []
     for src in sources:
-        for mag, rate in src.get_annual_occurrence_rates():
-            new = copy.copy(src)
-            new.mfd = mfd.ArbitraryMFD([mag], [rate])
-            new.num_ruptures = new.count_ruptures()
-            out.append(new)
+        if hasattr(src, 'get_annual_occurrence_rates'):
+            for mag, rate in src.get_annual_occurrence_rates():
+                new = copy.copy(src)
+                new.mfd = mfd.ArbitraryMFD([mag], [rate])
+                new.num_ruptures = new.count_ruptures()
+                out.append(new)
+        else:  # nonparametric source
+            # data is a list of pairs (rup, pmf)
+            for mag, group in itertools.groupby(
+                    src.data, lambda pair: pair[0].mag):
+                new = src.__class__(src.source_id, src.name,
+                                    src.tectonic_region_type, list(group))
+                out.append(new)
     return out
 
 
@@ -134,6 +143,27 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
                 extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures))
 
 
+class Effect(object):
+    """
+    Compute the effect of a rupture of a given magnitude and distance,
+    as a float in the range [0, 1] (0=no effect, 1=maximum effect).
+    """
+    def __init__(self, array, mags, dists, threshold):
+        self.array = array
+        self.mags = mags
+        self.dists = dists
+        self.threshold = threshold
+
+    def __call__(self, mag, dist):
+        mi = numpy.searchsorted(self.mags, mag)
+        di = numpy.searchsorted(self.dists, mag)
+        return self.array[mi, di]
+
+    def small(self, mag, dist):
+        "True if the effect is below the threshold"
+        return self(mag, dist) < self.threshold
+
+
 @base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -149,6 +179,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, rup_data
         """
+        if not dic['pmap']:
+            return acc
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
@@ -242,6 +274,21 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
+        mags = self.datastore['source_mags'][()]
+        if oq.threshold and len(self.sitecol) == 1 and len(mags):
+            logging.info('Computing effect of the ruptures')
+            gsims_by_trt = self.csm_info.get_gsims_by_trt()
+            gmv, dists_by_trt = get_gmv(self.sitecol, gsims_by_trt, mags,
+                                        oq.maximum_distance, oq.imtls)
+            self.datastore['effect'] = md = gmv / gmv.max()
+            self.datastore.set_attrs('effect',
+                                     mags=mags, **dists_by_trt)
+            self.effect = {trt: Effect(md[:, :, t], mags=mags,
+                                       dists=dists_by_trt[trt],
+                                       threshold=oq.threshold)
+                           for t, trt in enumerate(dists_by_trt)}
+        else:
+            self.effect = {}
         smap = parallel.Starmap(self.core_task.__func__)
         smap.task_queue = list(self.gen_task_queue())  # really fast
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
@@ -310,6 +357,7 @@ class ClassicalCalculator(base.HazardCalculator):
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
         for trt, sources, atomic in trt_sources:
+            param['effect'] = self.effect.get(trt)
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
