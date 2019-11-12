@@ -137,6 +137,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint)
     num_rlzs_disagg = valid.Param(valid.positiveint, 1)
     oversubmit = valid.Param(valid.boolean, False)
+    threshold = valid.Param(valid.probability, 0)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.positivefloat, None)
@@ -231,8 +232,6 @@ class OqParam(valid.ParamSet):
                 'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
-        if 'pointsource_distance' in names_vals:
-            logging.warning('The pointsource_distance parameter is obsolete: you should removed it or use a collapse factor, see https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#collapse-factor')
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
