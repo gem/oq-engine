@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
-from openquake.hazardlib.contexts import ContextMaker, get_gmv
+from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -148,16 +148,14 @@ class Effect(object):
     Compute the effect of a rupture of a given magnitude and distance,
     as a float in the range [0, 1] (0=no effect, 1=maximum effect).
     """
-    def __init__(self, array, mags, dists, threshold):
-        self.array = array
-        self.mags = mags
+    def __init__(self, effect_by_mag, dists, threshold):
+        self.effect_by_mag = effect_by_mag
         self.dists = dists
         self.threshold = threshold
 
     def __call__(self, mag, dist):
-        mi = numpy.searchsorted(self.mags, mag)
-        di = numpy.searchsorted(self.dists, mag)
-        return self.array[mi, di]
+        di = numpy.searchsorted(self.dists, dist)
+        return self.effect_by_mag['%.3f' % mag][di]
 
     def small(self, mag, dist):
         "True if the effect is below the threshold"
@@ -278,15 +276,22 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.threshold and len(self.sitecol) == 1 and len(mags):
             logging.info('Computing effect of the ruptures')
             gsims_by_trt = self.csm_info.get_gsims_by_trt()
-            gmv, dists_by_trt = get_gmv(self.sitecol, gsims_by_trt, mags,
-                                        oq.maximum_distance, oq.imtls)
-            self.datastore['effect'] = md = gmv / gmv.max()
-            self.datastore.set_attrs('effect',
-                                     mags=mags, **dists_by_trt)
-            self.effect = {trt: Effect(md[:, :, t], mags=mags,
-                                       dists=dists_by_trt[trt],
-                                       threshold=oq.threshold)
-                           for t, trt in enumerate(dists_by_trt)}
+            mon = self.monitor('rupture effect')
+            effect = parallel.Starmap.apply(
+                get_effect, (mags, self.sitecol, gsims_by_trt,
+                             oq.maximum_distance, oq.imtls, mon)).reduce()
+            # normalize the effect arrays in the range [0, 1]
+            maxeffect = max(effect[mag].max() for mag in effect)
+            for mag in effect:
+                effect[mag] /= maxeffect
+            self.datastore['effect'] = effect
+            dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
+                         for trt in gsims_by_trt}
+            self.datastore.set_attrs('effect', **dist_bins)
+            self.effect = {
+                trt: Effect({mag: effect[mag][:, t] for mag in effect},
+                            dists=dist_bins[trt], threshold=oq.threshold)
+                for t, trt in enumerate(gsims_by_trt)}
         else:
             self.effect = {}
         smap = parallel.Starmap(self.core_task.__func__)
