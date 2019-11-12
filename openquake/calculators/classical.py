@@ -276,6 +276,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         mags = self.datastore['source_mags'][()]
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
+                     for trt in gsims_by_trt}
         if oq.threshold and len(self.sitecol) == 1 and len(mags):
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
@@ -287,8 +289,6 @@ class ClassicalCalculator(base.HazardCalculator):
             for mag in effect:
                 effect[mag] /= maxeffect
             self.datastore['effect'] = effect
-            dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
-                         for trt in gsims_by_trt}
             self.datastore.set_attrs('effect', **dist_bins)
             self.effect = {
                 trt: Effect({mag: effect[mag][:, t] for mag in effect},
