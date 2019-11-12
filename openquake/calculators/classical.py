@@ -144,15 +144,19 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
 
 
 class MagDist(object):
-    def __init__(self, array, mags, dists):
+    def __init__(self, array, mags, dists, threshold):
         self.array = array
         self.mags = mags
         self.dists = dists
+        self.threshold = threshold
 
     def __call__(self, mag, dist):
         mi = numpy.searchsorted(self.mags, mag)
         di = numpy.searchsorted(self.dists, mag)
         return self.array[mi, di]
+
+    def small(self, mag, dist):
+        return self(mag, dist) < self.threshold
 
 
 @base.calculators.add('classical')
@@ -266,7 +270,7 @@ class ClassicalCalculator(base.HazardCalculator):
             return {}
 
         mags = self.datastore['source_mags'][()]
-        if len(self.sitecol) == 1 and len(mags):
+        if oq.threshold and len(self.sitecol) == 1 and len(mags):
             logging.info('Computing mag_dis_trt_factor')
             gsims_by_trt = self.csm_info.get_gsims_by_trt()
             gmv, dists_by_trt = get_gmv(self.sitecol, gsims_by_trt, mags,
@@ -275,7 +279,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.set_attrs('mag_dis_trt_factor',
                                      mags=mags, **dists_by_trt)
             self.magdist = {trt: MagDist(md[:, :, t], mags=mags,
-                                         dists=dists_by_trt[trt])
+                                         dists=dists_by_trt[trt],
+                                         threshold=oq.threshold)
                             for t, trt in enumerate(dists_by_trt)}
         else:
             self.magdist = {}

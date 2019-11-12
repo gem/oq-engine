@@ -37,7 +37,6 @@ I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
-EPSILON = 2E-4
 
 
 def _update(pmap, pm, src, src_mutex, rup_mutex):
@@ -466,7 +465,7 @@ class PmapMaker(object):
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
         magdis = self.cmaker.magdis
         for rup, sctx, dctx in ctxs:
-            if magdis and magdis(rup.mag, dctx.rrup[0]) < EPSILON:
+            if magdis and magdis(rup.mag, dctx.rrup[0]).small():
                 # discard ruptures giving small contribution
                 continue
             tup = []
