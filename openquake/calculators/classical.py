@@ -276,12 +276,12 @@ class ClassicalCalculator(base.HazardCalculator):
 
         mags = self.datastore['source_mags'][()]
         if oq.threshold and len(self.sitecol) == 1 and len(mags):
-            logging.info('Computing mag_dis_trt_factor')
+            logging.info('Computing effect of the ruptures')
             gsims_by_trt = self.csm_info.get_gsims_by_trt()
             gmv, dists_by_trt = get_gmv(self.sitecol, gsims_by_trt, mags,
                                         oq.maximum_distance, oq.imtls)
-            self.datastore['mag_dis_trt_factor'] = md = gmv / gmv.max()
-            self.datastore.set_attrs('mag_dis_trt_factor',
+            self.datastore['effect'] = md = gmv / gmv.max()
+            self.datastore.set_attrs('effect',
                                      mags=mags, **dists_by_trt)
             self.effect = {trt: Effect(md[:, :, t], mags=mags,
                                        dists=dists_by_trt[trt],

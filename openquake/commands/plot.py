@@ -323,7 +323,7 @@ def make_figure_mag_dist_trt(extractors, what):
     import matplotlib.pyplot as plt
     from matplotlib import cm
     [ex] = extractors
-    md = ex.get('mag_dis_trt_factor')
+    md = ex.get('effect')
     trts = ex.get('csm_info').trts
     mag_ticks = md.mags[::-5]
     fig = plt.figure()
