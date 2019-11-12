@@ -137,6 +137,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint)
     num_rlzs_disagg = valid.Param(valid.positiveint, 1)
     oversubmit = valid.Param(valid.boolean, False)
+    threshold = valid.Param(valid.probability, 0)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.positivefloat, None)
