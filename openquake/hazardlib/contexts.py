@@ -461,7 +461,9 @@ class PmapMaker(object):
         Collapse the contexts if the distances are equivalent up to 1/1000
         """
         effect = self.cmaker.effect
-        if len(ctxs) == 1:
+        if not self.rup_indep:  # do not collapse
+            return ctxs
+        elif len(ctxs) == 1:
             [(rup, sctx, dctx)] = ctxs
             if effect and effect.small(rup.mag, dctx.rrup[0]):
                 return []
