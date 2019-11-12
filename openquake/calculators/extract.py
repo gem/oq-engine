@@ -452,6 +452,21 @@ def extract_uhs(dstore, what):
     yield from params.items()
 
 
+@extract.add('effect')
+def extract_effect(dstore, what):
+    """
+    Extracts the effect of ruptures. Use it as /extract/effect
+    """
+    grp = dstore['effect']
+    dist_bins = dict(grp.attrs)
+    ndists = len(dist_bins[next(iter(dist_bins))])
+    arr = numpy.zeros((len(grp), ndists, len(dist_bins)))
+    for i, mag in enumerate(grp):
+        arr[i] = dstore['effect/' + mag][()]
+    return ArrayWrapper(arr, dict(dist_bins=dist_bins, ndists=ndists,
+                                  mags=[float(mag) for mag in grp]))
+
+
 @extract.add('sources')
 def extract_sources(dstore, what):
     """
