@@ -165,7 +165,6 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
         self.collapse_factor = param.get('collapse_factor', 3)
-        self.max_radius = param.get('max_radius')
         self.pointsource_distance = param.get('pointsource_distance')
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
@@ -502,8 +501,6 @@ class PmapMaker(object):
         if loc:
             # implements the collapse distance feature: the finite site effects
             # are ignored for sites over collapse_factor x rupture_radius
-            # implements the max_radius feature: sites above
-            # max_radius * rupture_radius are discarded
             simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
             if simple:
                 yield from triples  # there is nothing to collapse
@@ -519,8 +516,6 @@ class PmapMaker(object):
                 for mag, rups in self.mag_rups:
                     mdist = self.maximum_distance(trt, mag)
                     radius = src._get_max_rupture_projection_radius(mag)
-                    if self.max_radius is not None:
-                        mdist = min(self.max_radius * radius, mdist)
                     if self.pointsource_distance:  # legacy approach
                         cdist = min(self.pointsource_distance, mdist)
                     else:
