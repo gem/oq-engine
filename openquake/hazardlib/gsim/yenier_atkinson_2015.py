@@ -65,8 +65,8 @@ class YenierAtkinson2015BSSA(GMPE):
     #: Required site parameter is Vs30
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
-    #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    #: Required rupture parameters are magnitude and hypocenter depth
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
 
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = set(('rrup',))
@@ -78,8 +78,7 @@ class YenierAtkinson2015BSSA(GMPE):
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         # Compute focal depth if not set at the initialization level
         if self.focal_depth is None:
-            self.focal_depth = 10.
-            #self.focal_depth = rctx.hypo_depth
+            self.focal_depth = rctx.hypo_depth
         mean = self._get_mean_on_soil(sctx, rctx, dctx, imt, stddev_types)
         stddevs = np.zeros_like(sctx.vs30)
         return mean, stddevs
@@ -114,7 +113,7 @@ class YenierAtkinson2015BSSA(GMPE):
         # Regional term for path duration
         c_p = self._get_c_p(imt, dctx.rrup, rctx.mag)
         # Compute mean using equation 26
-        mean = f_m + f_delta_sigma + f_z + f_gamma + c_e + c_p
+        mean = f_m + f_delta_sigma + f_z + f_gamma + c_e + c_p 
         return mean
 
     def _get_f_m(self, C, imt, m):
