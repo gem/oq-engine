@@ -457,6 +457,7 @@ def extract_effect(dstore, what):
     """
     Extracts the effect of ruptures. Use it as /extract/effect
     """
+    what = what or 'effect'
     grp = dstore[what]
     dist_bins = dict(grp.attrs)
     ndists = len(dist_bins[next(iter(dist_bins))])
