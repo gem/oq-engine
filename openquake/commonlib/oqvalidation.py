@@ -177,7 +177,6 @@ class OqParam(valid.ParamSet):
     specific_assets = valid.Param(valid.namelist, [])
     split_by_magnitude = valid.Param(valid.boolean, False)
     collapse_factor = valid.Param(valid.positivefloat, 3)
-    max_radius = valid.Param(valid.positivefloat, None)
     task_duration = valid.Param(valid.positiveint, None)  # used in ebrisk
     task_multiplier = valid.Param(valid.positiveint, 10)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
