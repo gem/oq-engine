@@ -334,6 +334,7 @@ def make_figure_effect(extractors, what):
     cmap = cm.get_cmap('jet', 100)
     axes = []
     vmin = numpy.log10(effect.array.min())
+    vmax = numpy.log10(effect.array.max())
     for trti, trt in enumerate(trts):
         ax = fig.add_subplot(len(trts), 1, trti + 1)
         axes.append(ax)
@@ -344,7 +345,7 @@ def make_figure_effect(extractors, what):
         ax.set_ylabel(trt)
         extent = mag_ticks[0], mag_ticks[-1], dist_ticks[0], dist_ticks[-1]
         im = ax.imshow(numpy.log10(effect[:, :, trti]), cmap=cmap,
-                       extent=extent, aspect='auto', vmin=vmin, vmax=0)
+                       extent=extent, aspect='auto', vmin=vmin, vmax=vmax)
     fig.colorbar(im, ax=axes)
     return plt
 
