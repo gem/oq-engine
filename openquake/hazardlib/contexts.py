@@ -165,7 +165,6 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
         self.collapse_factor = param.get('collapse_factor', 3)
-        self.max_radius = param.get('max_radius')
         self.pointsource_distance = param.get('pointsource_distance')
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
@@ -502,8 +501,6 @@ class PmapMaker(object):
         if loc:
             # implements the collapse distance feature: the finite site effects
             # are ignored for sites over collapse_factor x rupture_radius
-            # implements the max_radius feature: sites above
-            # max_radius * rupture_radius are discarded
             simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
             if simple:
                 yield from triples  # there is nothing to collapse
@@ -519,8 +516,6 @@ class PmapMaker(object):
                 for mag, rups in self.mag_rups:
                     mdist = self.maximum_distance(trt, mag)
                     radius = src._get_max_rupture_projection_radius(mag)
-                    if self.max_radius is not None:
-                        mdist = min(self.max_radius * radius, mdist)
                     if self.pointsource_distance:  # legacy approach
                         cdist = min(self.pointsource_distance, mdist)
                     else:
@@ -699,6 +694,50 @@ class RuptureContext(BaseContext):
         # parametric rupture
         tom = self.temporal_occurrence_model
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
+
+
+class Effect(object):
+    """
+    Compute the effect of a rupture of a given magnitude and distance,
+    as a float in the range [0, 1] (0=no effect, 1=maximum effect).
+
+    :param effect_by_mag: a dictionary magstring -> intensities
+    :param dists: array of distances, one per each intensity
+    :param threshold: used in the .small() method
+    """
+    def __init__(self, effect_by_mag, dists, threshold):
+        self.effect_by_mag = effect_by_mag
+        self.dists = dists
+        self.nbins = len(dists)
+        self.threshold = threshold
+
+    def __call__(self, mag, dist):
+        di = numpy.searchsorted(self.dists, dist)
+        if di == self.nbins:
+            di = self.nbins
+        eff = self.effect_by_mag['%.3f' % mag][di]
+        return eff
+
+    # this is useful to compute the collapse_distance and minimum_distance
+    def dist_by_mag(self, intensity=None):
+        """
+        :returns: a dict magstring -> distance
+        """
+        if intensity is None:
+            intensity = self.threshold
+        dic = {}
+        for mag, intensities in self.effect_by_mag.items():
+            # the intensities are in decreasing order
+            idx = numpy.searchsorted(numpy.sort(intensities), intensity,
+                                     'right') or 1
+            dic[mag] = self.dists[self.nbins - idx]
+        return dic
+
+    def small(self, mag, dist):
+        """
+        True if the effect is below the threshold
+        """
+        return self(mag, dist) < self.threshold
 
 
 def get_effect(mags, onesite, gsims_by_trt, maximum_distance, imtls):
