@@ -295,6 +295,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     superseded_by = None
     non_verified = False
     experimental = False
+    non_general = False
     get_poes = staticmethod(get_poes)
 
     @classmethod
@@ -320,6 +321,11 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             warnings.warn(msg, NotVerifiedWarning)
         if cls.experimental:
             msg = ('%s is experimental and may change in future versions - '
+                   'the user is liable for their application') % cls.__name__
+            warnings.warn(msg, ExperimentalWarning)
+        if cls.non_general:
+            msg = ('%s is not intended for general use and the behaviour '
+                   'may not be as expected - '
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, ExperimentalWarning)
 
