@@ -687,6 +687,7 @@ class CoeffsTable(object):
     def __init__(self, **kwargs):
         if 'table' not in kwargs:
             raise TypeError('CoeffsTable requires "table" kwarg')
+        self._coeffs = {}  # cache
         table = kwargs.pop('table')
         self.sa_coeffs = {}
         self.non_sa_coeffs = {}
@@ -747,11 +748,16 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        if imt.name != 'SA':
-            return self.non_sa_coeffs[imt]
-
         try:
-            return self.sa_coeffs[imt]
+            return self._coeffs[imt]
+        except KeyError:
+            pass
+        if imt.name != 'SA':
+            self._coeffs[imt] = c = self.non_sa_coeffs[imt]
+            return c
+        try:
+            self._coeffs[imt] = c = self.sa_coeffs[imt]
+            return c
         except KeyError:
             pass
 
@@ -775,6 +781,7 @@ class CoeffsTable(object):
                  / (math.log(min_above.period) - math.log(max_below.period)))
         max_below = self.sa_coeffs[max_below]
         min_above = self.sa_coeffs[min_above]
-        return dict(
-            (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
-            for co in max_below)
+        self._coeffs[imt] = c = {
+            co: (min_above[co] - max_below[co]) * ratio + max_below[co]
+            for co in max_below}
+        return c
