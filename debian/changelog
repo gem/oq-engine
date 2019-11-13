@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Re-adjustment of SERA Subduction model epistemic scaling factors
+  
   [Michele Simionato]
   * Saving more information in the case of single-site classical hazard
   * Extended `pointsource_distance` to generic sources
