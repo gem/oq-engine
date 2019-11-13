@@ -27,7 +27,7 @@ from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
 from openquake.hazardlib.contexts import (
-    ContextMaker, get_effect, ruptures_by_mag_dist)
+    ContextMaker, Effect, get_effect, ruptures_by_mag_dist)
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -142,26 +142,6 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
                 extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures))
-
-
-class Effect(object):
-    """
-    Compute the effect of a rupture of a given magnitude and distance,
-    as a float in the range [0, 1] (0=no effect, 1=maximum effect).
-    """
-    def __init__(self, effect_by_mag, dists, threshold):
-        self.effect_by_mag = effect_by_mag
-        self.dists = dists
-        self.threshold = threshold
-
-    def __call__(self, mag, dist):
-        di = numpy.searchsorted(self.dists, dist)
-        eff = self.effect_by_mag['%.3f' % mag][di]
-        return eff
-
-    def small(self, mag, dist):
-        "True if the effect is below the threshold"
-        return self(mag, dist) < self.threshold
 
 
 @base.calculators.add('classical')
