@@ -20,6 +20,7 @@ import logging
 import shapely
 import numpy
 from openquake.baselib import sap
+from openquake.hazardlib.contexts import Effect
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -378,6 +379,30 @@ def make_figure_rups_by_mag_dist(extractors, what):
         im = ax.imshow(counts[:, :, trti], cmap=cmap,
                        extent=extent, aspect='auto', vmin=0, vmax=vmax)
     fig.colorbar(im, ax=axes)
+    return plt
+
+
+def make_figure_dist_by_mag(extractors, what):
+    """
+    $ oq plot 'dist_by_mag?threshold=.01'
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    [ex] = extractors
+    effect = ex.get('effect')
+    mags = ['%.3f' % mag for mag in effect.mags]
+    fig, ax = plt.subplots()
+    prefix, rest = what.split('?', 1)
+    threshold = float(rest.split('=')[1])
+    trti = 0
+    for trt, dists in effect.dist_bins.items():
+        dic = dict(zip(mags, effect[:, :, trti]))
+        dist_by_mag = Effect(dic, dists, threshold).dist_by_mag()
+        ax.plot(effect.mags, list(dist_by_mag.values()), label=trt)
+        ax.set_xlabel('Mag')
+        ax.set_ylabel('Dist')
+        ax.set_title('Integration Distance at intensity=%s' % threshold)
+        trti += 1
     return plt
 
 
