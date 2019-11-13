@@ -28,7 +28,7 @@ from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
 from openquake.hazardlib.contexts import (
     ContextMaker, get_effect, ruptures_by_mag_dist)
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util
@@ -278,21 +278,18 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                      for trt in gsims_by_trt}
-        if oq.threshold and len(self.sitecol) == 1 and len(mags):
+        if oq.minimum_intensity and len(self.sitecol) == 1 and len(mags):
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
                 get_effect, (mags, self.sitecol, gsims_by_trt,
                              oq.maximum_distance, oq.imtls, mon)).reduce()
-            # normalize the effect arrays in the range [0, 1]
-            maxeffect = max(effect[mag].max() for mag in effect)
-            for mag in effect:
-                effect[mag] /= maxeffect
             self.datastore['effect'] = effect
             self.datastore.set_attrs('effect', **dist_bins)
+            threshold = getdefault(oq.minimum_intensity, list(oq.imtls)[-1])
             self.effect = {
                 trt: Effect({mag: effect[mag][:, t] for mag in effect},
-                            dists=dist_bins[trt], threshold=oq.threshold)
+                            dists=dist_bins[trt], threshold=threshold)
                 for t, trt in enumerate(gsims_by_trt)}
         else:
             self.effect = {}
