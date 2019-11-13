@@ -78,8 +78,7 @@ class YenierAtkinson2015BSSA(GMPE):
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         # Compute focal depth if not set at the initialization level
         if self.focal_depth is None:
-            self.focal_depth = 10
-#            self.focal_depth = rctx.hypocenter.depth
+            self.focal_depth = rctx.hypocenter.depth
         mean = self._get_mean_on_soil(sctx, rctx, dctx, imt, stddev_types)
         stddevs = np.zeros_like(sctx.vs30)
         return mean, stddevs
