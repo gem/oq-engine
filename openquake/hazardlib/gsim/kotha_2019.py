@@ -410,13 +410,15 @@ class KothaEtAl2019SERA(KothaEtAl2019):
         Returns the linear site amplification term depending on whether the
         Vs30 is observed of inferred
         """
-        ampl = np.zeros(sites.vs30.shape)
+        vs30 = np.copy(sites.vs30)
+        vs30[vs30 > 1100.] = 1100.
+        ampl = np.zeros(vs30.shape)
         # For observed vs30 sites
         ampl[sites.vs30measured] = (C["d0_obs"] + C["d1_obs"] *
-                                    np.log(sites.vs30[sites.vs30measured]))
+                                    np.log(vs30[sites.vs30measured]))
         # For inferred Vs30 sites
         idx = np.logical_not(sites.vs30measured)
-        ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(sites.vs30[idx]))
+        ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
         return ampl
 
     def get_stddevs(self, C, stddev_shape, stddev_types, sites):
