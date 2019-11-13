@@ -64,7 +64,6 @@
     if `hazard_curves_from_gmfs=true`
   * `oq show job_info` now works while the calculation is running
   * Reduced the sent data transfer in ebrisk calculations
-  * Replaced the `pointsource_distance` concept with a `collapse_distance`
   * Deprecated the old syntax for the `reqv` feature
   * Added short aliases for hazard statistics `mean`, `max` and `std`
   * Reduced substantially the memory occupation in the task queue
