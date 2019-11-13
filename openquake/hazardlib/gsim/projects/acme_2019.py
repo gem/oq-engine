@@ -231,7 +231,8 @@ class AlAtikSigmaModel(GMPE):
         self.set_parameters()
 
         with self.open(self.kappa_file) as myfile:
-            self.data = myfile.read().decode('utf-8')
+            data = myfile.read().decode('utf-8')
+        self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
     def _setup_standard_deviations(self, fle):
         # setup tau
@@ -310,24 +311,23 @@ class AlAtikSigmaModel(GMPE):
         # apply extrapolation to periods > cappingp
         if imt.period > cappingp:
             # compute acceleration at the capping period
-            mean, _ = self.gmpe.get_mean_and_stddevs(sites, rup,
-                    dists, SA(cappingp), stds_types)
+            mean, _ = self.gmpe.get_mean_and_stddevs(
+                sites, rup, dists, SA(cappingp), stds_types)
             # convert to spectral displacement at the capping period
             disp = self.get_disp_from_acc(mean, cappingp)
             mean = self.get_acc_from_disp(disp, imt.period)
         else:
-            mean, _ = self.gmpe.get_mean_and_stddevs(sites, rup,
-                    dists, imt, stds_types)
+            mean, _ = self.gmpe.get_mean_and_stddevs(
+                sites, rup, dists, imt, stds_types)
 
         kappa = 1
-        KAPPATAB = CoeffsTable(table=self.data, sa_damping=5)
         if imt.period == 0:
-            kappa = KAPPATAB[SA(0.01)][self.kappa_val]
+            kappa = self.KAPPATAB[SA(0.01)][self.kappa_val]
         elif imt.period > 2.0:
-            kappa = KAPPATAB[SA(2.0)][self.kappa_val]
+            kappa = self.KAPPATAB[SA(2.0)][self.kappa_val]
         else:
-            kappa = KAPPATAB[imt][self.kappa_val]
-        return mean+np.log(kappa), stddevs
+            kappa = self.KAPPATAB[imt][self.kappa_val]
+        return mean + np.log(kappa), stddevs
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """
