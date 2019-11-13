@@ -66,7 +66,7 @@ class YenierAtkinson2015BSSA(GMPE):
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
     #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
 
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = set(('rrup',))
@@ -78,7 +78,8 @@ class YenierAtkinson2015BSSA(GMPE):
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         # Compute focal depth if not set at the initialization level
         if self.focal_depth is None:
-            self.focal_depth = rctx.hypo_depth
+            self.focal_depth = 10.
+            #self.focal_depth = rctx.hypo_depth
         mean = self._get_mean_on_soil(sctx, rctx, dctx, imt, stddev_types)
         stddevs = np.zeros_like(sctx.vs30)
         return mean, stddevs
