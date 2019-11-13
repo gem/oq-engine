@@ -81,6 +81,8 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
     focal mechanism.
     """
 
+    non_general = True
+
     def __init__(self):
         # Initialise using the super class
         super().__init__(focal_depth=10., region='CENA')
@@ -106,6 +108,8 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
     - Centered Ztor = 0
     - Centered Dpp = 0
     """
+
+    non_general = True
 
     def _get_mean(self, sites, C, ln_y_ref, exp1, exp2):
         """
@@ -196,6 +200,8 @@ class AlAtikSigmaModel(GMPE):
         Name of the gmpe
 
     """
+
+    non_general = True
 
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
