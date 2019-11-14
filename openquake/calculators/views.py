@@ -785,12 +785,12 @@ def view_act_ruptures_by_src(token, dstore):
 @view.add('bad_ruptures')
 def view_bad_ruptures(token, dstore):
     """
-    Display the ruptures with an invalid bounding box
+    Display the ruptures degenating to a point
     """
     data = dstore['ruptures']['id', 'code', 'mag',
                               'minlon', 'maxlon', 'minlat', 'maxlat']
-    bad = data[numpy.logical_or(data['minlon'] == data['maxlon'],
-                                data['minlat'] == data['maxlat'])]
+    bad = data[numpy.logical_and(data['minlon'] == data['maxlon'],
+                                 data['minlat'] == data['maxlat'])]
     return rst_table(bad)
 
 
