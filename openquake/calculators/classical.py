@@ -258,7 +258,7 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                      for trt in gsims_by_trt}
-        if oq.minimum_intensity and len(self.sitecol) == 1 and len(mags):
+        if oq.pointsource_distance and len(self.sitecol) == 1 and len(mags):
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
@@ -266,10 +266,10 @@ class ClassicalCalculator(base.HazardCalculator):
                              oq.maximum_distance, oq.imtls, mon)).reduce()
             self.datastore['effect'] = effect
             self.datastore.set_attrs('effect', **dist_bins)
-            # threshold = getdefault(oq.minimum_intensity, list(oq.imtls)[-1])
             self.effect = {
                 trt: Effect({mag: effect[mag][:, t] for mag in effect},
-                            dists=dist_bins[trt])
+                            dist_bins[trt],
+                            getdefault(oq.pointsource_distance, trt))
                 for t, trt in enumerate(gsims_by_trt)}
             for trt, eff in self.effect.items():
                 oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
