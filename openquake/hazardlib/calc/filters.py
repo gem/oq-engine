@@ -82,7 +82,7 @@ class IntegrationDistance(collections.abc.Mapping):
         self.magdist = {}  # TRT -> (magnitudes, distances), set by the engine
         for trt, value in self.dic.items():
             if isinstance(value, (list, numpy.ndarray)):
-                # assume a list of pairs (mag, dist)
+                # assume a list of pairs (magstring, dist)
                 self.magdist[trt] = {'%.3f' % mag: dist for mag, dist in value}
             else:
                 self.dic[trt] = float(value)
