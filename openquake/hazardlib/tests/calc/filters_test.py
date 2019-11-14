@@ -80,8 +80,8 @@ class SourceFilterTestCase(unittest.TestCase):
         srcfilter = SourceFilter(sitecol, maxdist)
         bb1, bb2 = srcfilter.get_bounding_boxes(mag=4)
         # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
-        aae(bb1, (176.928409,  79.640272, 181.071591,  80.359728))
-        aae(bb2, (-181.071591,   79.640272, -176.928409,   80.359728))
+        aae(bb1, (176.928409, 79.640272, 181.071591, 80.359728))
+        aae(bb2, (-181.071591, 79.640272, -176.928409, 80.359728))
 
     def test_international_date_line_2(self):
         # from a bug affecting a calculation in New Zealand
@@ -95,6 +95,7 @@ class SourceFilterTestCase(unittest.TestCase):
         srcfilter = SourceFilter(sitecol, maxdist)
         sites = srcfilter.get_close_sites(src)
         self.assertIsNotNone(sites)
+
 
 # from https://groups.google.com/d/msg/openquake-users/P03SxJsfW_s/nCdcxj8WAAAJ
 characteric_source = '''\
