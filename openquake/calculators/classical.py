@@ -258,11 +258,11 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                      for trt in gsims_by_trt}
-        if oq.pointsource_distance and len(self.sitecol) == 1 and len(mags):
+        if oq.pointsource_distance and len(mags):
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
-                get_effect, (mags, self.sitecol, gsims_by_trt,
+                get_effect, (mags, self.sitecol.one(), gsims_by_trt,
                              oq.maximum_distance, oq.imtls, mon)).reduce()
             self.datastore['effect'] = effect
             self.datastore.set_attrs('effect', **dist_bins)
