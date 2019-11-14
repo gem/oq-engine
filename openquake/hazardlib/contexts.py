@@ -705,10 +705,13 @@ class Effect(object):
     :param dists: array of distances, one per each intensity
     :param threshold: used in the .small() method
     """
-    def __init__(self, effect_by_mag, dists, threshold):
+    def __init__(self, effect_by_mag, dists, threshold=None):
         self.effect_by_mag = effect_by_mag
         self.dists = dists
         self.nbins = len(dists)
+        if threshold is None:
+            # intensity at the maximum magnitude and distance
+            threshold = self.effect_by_mag[max(effect_by_mag)][-1]
         self.threshold = threshold
 
     def __call__(self, mag, dist):
