@@ -45,6 +45,10 @@ class IntegrationDistanceTestCase(unittest.TestCase):
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=7)
         aae(bb, [-2.7395804, 7.30204,  2.7395804, 12.69796])
 
+        aae(maxdist('ANY_TRT', mag=6), 200)
+        bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=6)
+        aae(bb, [-1.8263869, 8.20136, 1.8263869, 11.79864])
+
 
 class SourceFilterTestCase(unittest.TestCase):
     def test_get_bounding_boxes(self):
