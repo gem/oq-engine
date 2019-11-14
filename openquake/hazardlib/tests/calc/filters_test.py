@@ -41,13 +41,9 @@ class IntegrationDistanceTestCase(unittest.TestCase):
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
         aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
 
-        aae(maxdist('ANY_TRT', mag=7.1), 400)
-        bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=7.1)
-        aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
-
-        aae(maxdist('ANY_TRT', mag=6.9), 300)
-        bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=6.9)
-        aae(bb, [-2.7395804, 7.30204, 2.7395804, 12.69796])
+        aae(maxdist('ANY_TRT', mag=7), 300)
+        bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=7)
+        aae(bb, [-2.7395804, 7.30204,  2.7395804, 12.69796])
 
 
 class SourceFilterTestCase(unittest.TestCase):
@@ -62,10 +58,10 @@ class SourceFilterTestCase(unittest.TestCase):
                  vs30=55.4, vs30measured=False,
                  z1pt0=66.7, z2pt5=88.9, backarc=False)])
         srcfilter = SourceFilter(sitecol, maxdist)
-        bb1, bb2 = srcfilter.get_bounding_boxes(mag=4.5)
+        bb1, bb2 = srcfilter.get_bounding_boxes(mag=4)
         # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
-        aae(bb1, (9.0429636, 19.10068, 10.9570364, 20.89932))
-        aae(bb2, (-2.1009057, -4.29932, -0.2990943, -2.50068))
+        aae(bb1, (9.6171855, 19.640272, 10.3828145, 20.359728))
+        aae(bb2, (-1.5603623, -3.759728, -0.8396377, -3.040272))
 
     def test_international_date_line(self):
         maxdist = IntegrationDistance({'default': [
@@ -78,10 +74,10 @@ class SourceFilterTestCase(unittest.TestCase):
                  vs30=55.4, vs30measured=False,
                  z1pt0=66.7, z2pt5=88.9, backarc=False)])
         srcfilter = SourceFilter(sitecol, maxdist)
-        bb1, bb2 = srcfilter.get_bounding_boxes(mag=4.5)
+        bb1, bb2 = srcfilter.get_bounding_boxes(mag=4)
         # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
-        aae(bb1, (173.8210225, 79.10068, 184.1789775, 80.89932))
-        aae(bb2, (-184.1789775, 79.10068, -173.8210225, 80.89932))
+        aae(bb1, (176.928409,  79.640272, 181.071591,  80.359728))
+        aae(bb2, (-181.071591,   79.640272, -176.928409,   80.359728))
 
     def test_international_date_line_2(self):
         # from a bug affecting a calculation in New Zealand
