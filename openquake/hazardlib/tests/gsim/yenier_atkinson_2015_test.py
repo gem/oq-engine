@@ -28,4 +28,4 @@ class YenierAtkinson2015BSSA(BaseGSIMTestCase):
     def test_mean(self):
 
        self.check('YA15/ya15_mean_cena.csv',
-                   max_discrep_percentage=0.8)
+                   max_discrep_percentage=0.3)
