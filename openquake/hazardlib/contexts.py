@@ -165,7 +165,7 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
         self.collapse_factor = param.get('collapse_factor', 3)
-        psd = param.get('pointsource_distance',  {'default': None})
+        psd = param.get('pointsource_distance') or {'default': None}
         self.pointsource_distance = getdefault(psd, trt)
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
@@ -728,8 +728,7 @@ class Effect(object):
         dic = {}
         for mag, intensities in self.effect_by_mag.items():
             # the intensities are in decreasing order
-            idx = numpy.searchsorted(numpy.sort(intensities), intensity,
-                                     'right') or 1
+            idx = numpy.searchsorted(numpy.sort(intensities), intensity) or 1
             dic[mag] = self.dists[self.nbins - idx]
         return dic
 
