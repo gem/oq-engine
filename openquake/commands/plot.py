@@ -56,7 +56,6 @@ def make_figure_hcurves(extractors, what):
     [site] = hcurves.site_id
     for j, imt in enumerate(hcurves.imt):
         imls = oq.imtls[imt]
-        imt_slice = oq.imtls(imt)
         ax = fig.add_subplot(n_imts, 1, j + 1)
         ax.set_xlabel('%s, site %s, inv_time=%dy' %
                       (imt, site, oq.investigation_time))
@@ -64,8 +63,8 @@ def make_figure_hcurves(extractors, what):
         for ck, arr in got.items():
             if (arr == 0).all():
                 logging.warning('There is a zero curve %s_%s', *ck)
-            ax.loglog(imls, arr[0, imt_slice], '-', label='%s_%s' % ck)
-            ax.loglog(imls, arr[0, imt_slice], '.')
+            ax.loglog(imls, arr[0], '-', label='%s_%s' % ck)
+            ax.loglog(imls, arr[0], '.')
         ax.grid(True)
         ax.legend()
     return plt
