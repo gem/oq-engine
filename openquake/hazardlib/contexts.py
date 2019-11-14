@@ -28,7 +28,7 @@ from openquake.baselib.general import AccumDict, DictArray
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim import base
-from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.calc.filters import IntegrationDistance, getdefault
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.scalerel import PointMSR
@@ -165,7 +165,8 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
         self.collapse_factor = param.get('collapse_factor', 3)
-        self.pointsource_distance = param.get('pointsource_distance')
+        psd = param.get('pointsource_distance',  {'default': None})
+        self.pointsource_distance = getdefault(psd, trt)
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
@@ -459,21 +460,12 @@ class PmapMaker(object):
         """
         Collapse the contexts if the distances are equivalent up to 1/1000
         """
-        effect = self.cmaker.effect  # not None for single-site calculations
-        if not self.rup_indep:  # do not collapse
+        # effect = self.cmaker.effect  # not None for single-site calculations
+        if not self.rup_indep or len(ctxs) == 1:  # do not collapse
             return ctxs
-        elif len(ctxs) == 1:
-            [(rup, sctx, dctx)] = ctxs
-            if effect and effect.small(rup.mag, dctx.rrup[0]):
-                return []
-            else:  # nothing to collapse
-                return ctxs
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
         for rup, sctx, dctx in ctxs:
-            if effect and effect.small(rup.mag, dctx.rrup[0]):
-                # discard ruptures giving small contribution
-                continue
             tup = []
             for p in self.REQUIRES_RUPTURE_PARAMETERS:
                 if (p != 'mag' and self.pointsource_distance is not None and
@@ -703,16 +695,21 @@ class Effect(object):
 
     :param effect_by_mag: a dictionary magstring -> intensities
     :param dists: array of distances, one per each intensity
-    :param threshold: used in the .small() method
+    :param cdist: collapse distance
     """
-    def __init__(self, effect_by_mag, dists, threshold=None):
+    def __init__(self, effect_by_mag, dists, collapse_dist=None):
         self.effect_by_mag = effect_by_mag
         self.dists = dists
         self.nbins = len(dists)
-        if threshold is None:
-            # intensity at the maximum magnitude and distance
-            threshold = self.effect_by_mag[max(effect_by_mag)][-1]
-        self.threshold = threshold
+        effectmax = effect_by_mag[max(effect_by_mag)]
+        # intensity at the maximum magnitude and distance
+        self.zero_value = effectmax[-1]
+        if collapse_dist is not None:
+            # intensity at the maximum magnitude and collapse distance
+            idx = numpy.searchsorted(dists, collapse_dist)
+            self.collapse_value = effectmax[idx]
+        else:
+            self.collapse_value = None
 
     def __call__(self, mag, dist):
         di = numpy.searchsorted(self.dists, dist)
@@ -727,7 +724,7 @@ class Effect(object):
         :returns: a dict magstring -> distance
         """
         if intensity is None:
-            intensity = self.threshold
+            intensity = self.zero_value
         dic = {}
         for mag, intensities in self.effect_by_mag.items():
             # the intensities are in decreasing order
@@ -735,12 +732,6 @@ class Effect(object):
                                      'right') or 1
             dic[mag] = self.dists[self.nbins - idx]
         return dic
-
-    def small(self, mag, dist):
-        """
-        True if the effect is below the threshold
-        """
-        return self(mag, dist) < self.threshold
 
 
 def get_effect(mags, onesite, gsims_by_trt, maximum_distance, imtls):
