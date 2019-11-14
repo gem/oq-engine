@@ -91,10 +91,10 @@ def get_mean_std(sctx, rctx, dctx, imts, gsims):
                                                     [const.StdDev.TOTAL])
             arr[0, :, m, g] = mean
             arr[1, :, m, g] = std
-        if CoeffsTable.num_instances > num_tables:
-            raise RuntimeError('Instantiating CoeffsTable inside '
-                               '%s.get_mean_and_stddevs' %
-                               gsim.__class__.__name)
+            if CoeffsTable.num_instances > num_tables:
+                raise RuntimeError('Instantiating CoeffsTable inside '
+                                   '%s.get_mean_and_stddevs' %
+                                   gsim.__class__.__name__)
     return arr
 
 
@@ -706,7 +706,7 @@ class CoeffsTable(object):
         else:
             raise TypeError("CoeffsTable cannot be constructed with inputs "
                             "of the form '%s'" % table.__class__.__name__)
-        self.num_instances += 1
+        self.__class__.num_instances += 1
 
     def _setup_table_from_str(self, table, sa_damping):
         """
