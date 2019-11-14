@@ -707,6 +707,8 @@ class Effect(object):
         if collapse_dist is not None:
             # intensity at the maximum magnitude and collapse distance
             idx = numpy.searchsorted(dists, collapse_dist)
+            if idx == self.nbins:
+                idx -= 1
             self.collapse_value = effectmax[idx]
         else:
             self.collapse_value = None
