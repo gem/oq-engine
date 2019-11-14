@@ -273,6 +273,12 @@ class SiteCollection(object):
         self.array['sids'] = numpy.arange(len(self), dtype=numpy.uint32)
         self.complete = self
 
+    def one(self):
+        """
+        :returns: a SiteCollection with only the first site
+        """
+        return self.filtered([self.sids[0]])
+
     def __init__(self, sites):
         """
         Build a complete SiteCollection from a list of Site objects

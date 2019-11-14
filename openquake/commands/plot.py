@@ -384,7 +384,7 @@ def make_figure_rups_by_mag_dist(extractors, what):
 
 def make_figure_dist_by_mag(extractors, what):
     """
-    $ oq plot 'dist_by_mag?threshold=.01'
+    $ oq plot 'dist_by_mag?'
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -392,20 +392,15 @@ def make_figure_dist_by_mag(extractors, what):
     effect = ex.get('effect')
     mags = ['%.3f' % mag for mag in effect.mags]
     fig, ax = plt.subplots()
-    prefix, rest = what.split('?', 1)
-    if rest:
-        threshold = float(rest.split('=')[1])
-    else:
-        threshold = None
     trti = 0
     for trt, dists in effect.dist_bins.items():
         dic = dict(zip(mags, effect[:, :, trti]))
-        eff = Effect(dic, dists, threshold)
+        eff = Effect(dic, dists)
         dist_by_mag = eff.dist_by_mag()
         ax.plot(effect.mags, list(dist_by_mag.values()), label=trt)
         ax.set_xlabel('Mag')
         ax.set_ylabel('Dist')
-        ax.set_title('Integration Distance at intensity=%s' % eff.threshold)
+        ax.set_title('Integration Distance at intensity=%s' % eff.zero_value)
         trti += 1
     return plt
 
