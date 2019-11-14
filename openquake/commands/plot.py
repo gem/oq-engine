@@ -393,15 +393,19 @@ def make_figure_dist_by_mag(extractors, what):
     mags = ['%.3f' % mag for mag in effect.mags]
     fig, ax = plt.subplots()
     prefix, rest = what.split('?', 1)
-    threshold = float(rest.split('=')[1])
+    if rest:
+        threshold = float(rest.split('=')[1])
+    else:
+        threshold = None
     trti = 0
     for trt, dists in effect.dist_bins.items():
         dic = dict(zip(mags, effect[:, :, trti]))
-        dist_by_mag = Effect(dic, dists, threshold).dist_by_mag()
+        eff = Effect(dic, dists, threshold)
+        dist_by_mag = eff.dist_by_mag()
         ax.plot(effect.mags, list(dist_by_mag.values()), label=trt)
         ax.set_xlabel('Mag')
         ax.set_ylabel('Dist')
-        ax.set_title('Integration Distance at intensity=%s' % threshold)
+        ax.set_title('Integration Distance at intensity=%s' % eff.threshold)
         trti += 1
     return plt
 
