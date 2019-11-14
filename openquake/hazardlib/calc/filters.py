@@ -22,7 +22,6 @@ import operator
 import collections.abc
 from contextlib import contextmanager
 import numpy
-from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
@@ -65,52 +64,26 @@ def getdefault(dic_with_default, key):
         return dic_with_default['default']
 
 
-class Piecewise(object):
-    """
-    Given two arrays x and y of non-decreasing values, build a piecewise
-    function associating to each x the corresponding y. If x is smaller
-    then the minimum x, the minimum y is returned; if x is larger than the
-    maximum x, the maximum y is returned.
-    """
-    def __init__(self, x, y):
-        self.y = numpy.array(y)
-        # interpolating from x values to indices in the range [0: len(x)]
-        self.piecewise = interp1d(x, range(len(x)), bounds_error=False,
-                                  fill_value=(0, len(x) - 1))
-
-    def __call__(self, x):
-        idx = numpy.int64(numpy.ceil(self.piecewise(x)))
-        return self.y[idx]
-
-
 class IntegrationDistance(collections.abc.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
-    tectonic region type. The integration distances can be scalars or
-    list of pairs (magnitude, distance). Here is an example using 'default'
+    tectonic region type. Here is an example using 'default'
     as tectonic region type, so that the same values will be used for all
     tectonic region types:
 
-    >>> maxdist = IntegrationDistance({'default': [
-    ...          (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
+    >>> maxdist = IntegrationDistance({'default': 400})
+    >>> maxdist('Some TRT')
+    400.0
     >>> maxdist('Some TRT', mag=2.5)
-    30
-    >>> maxdist('Some TRT', mag=3)
-    30
-    >>> maxdist('Some TRT', mag=3.1)
-    40
-    >>> maxdist('Some TRT', mag=8)
-    400
-    >>> maxdist('Some TRT', mag=8.5)  # 2000 km are used above the maximum
-    2000
+    400.0
     """
     def __init__(self, dic):
         self.dic = dic or {}  # TRT -> float or list of pairs
-        self.magdist = {}  # TRT -> (magnitudes, distances)
+        self.magdist = {}  # TRT -> (magnitudes, distances), set by the engine
         for trt, value in self.dic.items():
             if isinstance(value, (list, numpy.ndarray)):
-                # assume a list of pairs (mag, dist)
-                self.magdist[trt] = value
+                # assume a list of pairs (magstring, dist)
+                self.magdist[trt] = {'%.3f' % mag: dist for mag, dist in value}
             else:
                 self.dic[trt] = float(value)
 
@@ -122,17 +95,7 @@ class IntegrationDistance(collections.abc.Mapping):
             return value
         elif mag is None:  # get the maximum distance for the maximum mag
             return value[-1][1]
-        elif not hasattr(self, 'piecewise'):
-            self.piecewise = {}  # function cache
-        try:
-            md = self.piecewise[trt]  # retrieve from the cache
-        except KeyError:  # fill the cache
-            mags, dists = zip(*getdefault(self.magdist, trt))
-            if mags[-1] < 11:  # use 2000 km for mag > mags[-1]
-                mags = numpy.concatenate([mags, [11]])
-                dists = numpy.concatenate([dists, [MAX_DISTANCE]])
-            md = self.piecewise[trt] = Piecewise(mags, dists)
-        return md(mag)
+        return getdefault(self.magdist, trt)['%.3f' % mag]
 
     def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """

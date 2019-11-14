@@ -266,11 +266,13 @@ class ClassicalCalculator(base.HazardCalculator):
                              oq.maximum_distance, oq.imtls, mon)).reduce()
             self.datastore['effect'] = effect
             self.datastore.set_attrs('effect', **dist_bins)
-            threshold = getdefault(oq.minimum_intensity, list(oq.imtls)[-1])
+            # threshold = getdefault(oq.minimum_intensity, list(oq.imtls)[-1])
             self.effect = {
                 trt: Effect({mag: effect[mag][:, t] for mag in effect},
-                            dists=dist_bins[trt], threshold=threshold)
+                            dists=dist_bins[trt])
                 for t, trt in enumerate(gsims_by_trt)}
+            for trt, eff in self.effect.items():
+                oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
         else:
             self.effect = {}
         if oq.calculation_mode == 'preclassical' and self.N == 1:
