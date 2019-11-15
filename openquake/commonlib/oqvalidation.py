@@ -789,8 +789,7 @@ class OqParam(valid.ParamSet):
         and the user must have the permission to write on it.
         """
         if self.export_dir and not os.path.isabs(self.export_dir):
-            self.export_dir = os.path.normpath(
-                os.path.join(self.input_dir, self.export_dir))
+            self.export_dir = os.getcwd()
         if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
             logging.warning('export_dir not specified. Using export_dir=%s'
