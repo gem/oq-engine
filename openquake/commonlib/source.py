@@ -462,7 +462,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 if len(srcs) > 1 and not isinstance(src.src_group_id, list):
                     src.src_group_id = [s.src_group_id for s in srcs]
                 dic[trt].append(src)
-        return atomic + [kv + (False,) for kv in acc.items()]
+        return atomic + [kv + (False,) for kv in dic.items()]
 
     def get_num_ruptures(self):
         """
