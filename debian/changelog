@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the syntax for magnitude-dependent magnitude distance, since
+    now it can be automatically determined by the engine
   * Saving more information in the case of single-site classical hazard
   * Extended `pointsource_distance` to generic sources
   * Removed the boundary information from the CSV rupture exporter
