@@ -176,7 +176,6 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_by_magnitude = valid.Param(valid.boolean, False)
-    collapse_factor = valid.Param(valid.positivefloat, 3)
     task_duration = valid.Param(valid.positiveint, None)  # used in ebrisk
     task_multiplier = valid.Param(valid.positiveint, 10)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
