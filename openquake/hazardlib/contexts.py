@@ -305,6 +305,7 @@ class ContextMaker(object):
             for par in self.REQUIRES_RUPTURE_PARAMETERS:
                 setattr(rup, par, 0)
             rup.mag = mag
+            rup.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             dctx = DistancesContext(
                 (dst, numpy.array([dist])) for dst in self.REQUIRES_DISTANCES)
             mean = base.get_mean_std(  # shape (2, N, M, G) -> G
