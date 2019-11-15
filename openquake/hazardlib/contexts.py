@@ -31,7 +31,6 @@ from openquake.hazardlib.gsim import base
 from openquake.hazardlib.calc.filters import IntegrationDistance, getdefault
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.scalerel import PointMSR
 
 I16 = numpy.int16
 F32 = numpy.float32
@@ -493,7 +492,7 @@ class PmapMaker(object):
             # implements pointsource_distance: finite site effects
             # are ignored for sites over that distance, if any
             simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
-            if simple or self.pointsource_distance is None:
+            if simple or not self.pointsource_distance:
                 yield from triples  # there is nothing to collapse
             else:
                 weights, depths = zip(*src.hypocenter_distribution.data)
