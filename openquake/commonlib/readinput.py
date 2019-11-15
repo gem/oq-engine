@@ -222,8 +222,8 @@ def get_params(job_inis, **kw):
     _update(params, kw.items(), base_path)  # override on demand
 
     if params['inputs'].get('reqv'):
-        # using collapse_factor=0 because of the reqv approximation
-        params['collapse_factor'] = '0'
+        # using pointsource_distance=0 because of the reqv approximation
+        params['pointsource_distance'] = '0'
 
     return params
 
@@ -880,9 +880,9 @@ def get_checksum32(oqparam, hazard=False):
                        'random_seed', 'ses_seed', 'truncation_level',
                        'maximum_distance', 'investigation_time',
                        'number_of_logic_tree_samples', 'imtls',
-                       'collapse_factor', 'pointsource_distance',
+                       'pointsource_distance',
                        'ses_per_logic_tree_path', 'minimum_magnitude',
-                       'sites', 'collapse_factor', 'filter_distance'):
+                       'sites', 'filter_distance'):
                 hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff
