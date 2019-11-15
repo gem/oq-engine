@@ -83,6 +83,7 @@ def get_mean_std(sctx, rctx, dctx, imts, gsims):
     M = len(imts)
     G = len(gsims)
     arr = numpy.zeros((2, N, M, G))
+    num_tables = CoeffsTable.num_instances
     for g, gsim in enumerate(gsims):
         d = dctx.roundup(gsim.minimum_distance)
         for m, imt in enumerate(imts):
@@ -90,6 +91,10 @@ def get_mean_std(sctx, rctx, dctx, imts, gsims):
                                                     [const.StdDev.TOTAL])
             arr[0, :, m, g] = mean
             arr[1, :, m, g] = std
+            if CoeffsTable.num_instances > num_tables:
+                raise RuntimeError('Instantiating CoeffsTable inside '
+                                   '%s.get_mean_and_stddevs' %
+                                   gsim.__class__.__name__)
     return arr
 
 
@@ -678,9 +683,12 @@ class CoeffsTable(object):
     ...           imt.PGV(): {"a": 0.5, "b": 10.0}}
     >>> ct = CoeffsTable(sa_damping=5, table=coeffs)
     """
+    num_instances = 0
+    
     def __init__(self, **kwargs):
         if 'table' not in kwargs:
             raise TypeError('CoeffsTable requires "table" kwarg')
+        self._coeffs = {}  # cache
         table = kwargs.pop('table')
         self.sa_coeffs = {}
         self.non_sa_coeffs = {}
@@ -698,6 +706,7 @@ class CoeffsTable(object):
         else:
             raise TypeError("CoeffsTable cannot be constructed with inputs "
                             "of the form '%s'" % table.__class__.__name__)
+        self.__class__.num_instances += 1
 
     def _setup_table_from_str(self, table, sa_damping):
         """
@@ -741,11 +750,16 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        if imt.name != 'SA':
-            return self.non_sa_coeffs[imt]
-
         try:
-            return self.sa_coeffs[imt]
+            return self._coeffs[imt]
+        except KeyError:
+            pass
+        if imt.name != 'SA':
+            self._coeffs[imt] = c = self.non_sa_coeffs[imt]
+            return c
+        try:
+            self._coeffs[imt] = c = self.sa_coeffs[imt]
+            return c
         except KeyError:
             pass
 
@@ -769,6 +783,7 @@ class CoeffsTable(object):
                  / (math.log(min_above.period) - math.log(max_below.period)))
         max_below = self.sa_coeffs[max_below]
         min_above = self.sa_coeffs[min_above]
-        return dict(
-            (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
-            for co in max_below)
+        self._coeffs[imt] = c = {
+            co: (min_above[co] - max_below[co]) * ratio + max_below[co]
+            for co in max_below}
+        return c
