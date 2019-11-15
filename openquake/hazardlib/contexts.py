@@ -725,6 +725,7 @@ class Effect(object):
         return dic
 
 
+# used in calculators/classical.py
 def get_effect(mags, onesite, gsims_by_trt, maximum_distance, imtls):
     """
     :returns: a dict magnitude-string -> array(#dists, #trts)
@@ -740,6 +741,7 @@ def get_effect(mags, onesite, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(['%.3f' % mag for mag in mags], gmv))
 
 
+# used in calculators/classical.py
 def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     """
     :returns: a dictionary trt -> mag string -> counts by distance
