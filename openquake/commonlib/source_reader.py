@@ -148,11 +148,11 @@ class SourceReader(object):
                 mags.update(srcmags)
                 dic = {k: v for k, v in vars(src).items()
                        if k != 'id' and k != 'src_group_id'}
-                checksum = zlib.adler32(
+                src.checksum = zlib.adler32(
                     pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
                 sg.info[i] = (ltmodel.ordinal, 0, src.source_id,
-                              src.code, src.num_ruptures, 0, 0, 0, checksum,
-                              src.wkt())
+                              src.code, src.num_ruptures, 0, 0, 0,
+                              src.checksum, src.wkt())
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=newsm.changes,
                     src_groups=src_groups, mags=mags,
