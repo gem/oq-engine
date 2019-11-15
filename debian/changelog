@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Removed the syntax for magnitude-dependent magnitude distance, since
+    now it can be automatically determined by the engine
+  * Saving more information in the case of single-site classical hazard
+  * Extended `pointsource_distance` to generic sources
   * Removed the boundary information from the CSV rupture exporter
   * Changed the /extract/rupture/XXX API to returns a TOML that can be
     used by a scenario calculator
@@ -62,7 +66,6 @@
     if `hazard_curves_from_gmfs=true`
   * `oq show job_info` now works while the calculation is running
   * Reduced the sent data transfer in ebrisk calculations
-  * Replaced the `pointsource_distance` concept with a `collapse_distance`
   * Deprecated the old syntax for the `reqv` feature
   * Added short aliases for hazard statistics `mean`, `max` and `std`
   * Reduced substantially the memory occupation in the task queue

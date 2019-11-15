@@ -16,15 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import copy
 import time
 import logging
 import operator
+import itertools
 import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
-from openquake.hazardlib.contexts import ContextMaker
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib import mfd
+from openquake.hazardlib.contexts import (
+    ContextMaker, Effect, get_effect, ruptures_by_mag_dist)
+from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util
@@ -100,6 +104,28 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
+def split_by_mag(sources):
+    """
+    Split sources by magnitude
+    """
+    out = []
+    for src in sources:
+        if hasattr(src, 'get_annual_occurrence_rates'):
+            for mag, rate in src.get_annual_occurrence_rates():
+                new = copy.copy(src)
+                new.mfd = mfd.ArbitraryMFD([mag], [rate])
+                new.num_ruptures = new.count_ruptures()
+                out.append(new)
+        else:  # nonparametric source
+            # data is a list of pairs (rup, pmf)
+            for mag, group in itertools.groupby(
+                    src.data, lambda pair: pair[0].mag):
+                new = src.__class__(src.source_id, src.name,
+                                    src.tectonic_region_type, list(group))
+                out.append(new)
+    return out
+
+
 def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     Prefilter the sources
@@ -133,6 +159,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, rup_data
         """
+        if not dic['pmap']:
+            return acc
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
@@ -226,6 +254,45 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
+        mags = self.datastore['source_mags'][()]
+        gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
+                     for trt in gsims_by_trt}
+        if oq.minimum_intensity and len(self.sitecol) == 1 and len(mags):
+            logging.info('Computing effect of the ruptures')
+            mon = self.monitor('rupture effect')
+            effect = parallel.Starmap.apply(
+                get_effect, (mags, self.sitecol, gsims_by_trt,
+                             oq.maximum_distance, oq.imtls, mon)).reduce()
+            self.datastore['effect'] = effect
+            self.datastore.set_attrs('effect', **dist_bins)
+            # threshold = getdefault(oq.minimum_intensity, list(oq.imtls)[-1])
+            self.effect = {
+                trt: Effect({mag: effect[mag][:, t] for mag in effect},
+                            dists=dist_bins[trt])
+                for t, trt in enumerate(gsims_by_trt)}
+            for trt, eff in self.effect.items():
+                oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
+        else:
+            self.effect = {}
+        if oq.calculation_mode == 'preclassical' and self.N == 1:
+            mags = sorted(set('%.3f' % mag for mag in mags))
+            smap = parallel.Starmap(ruptures_by_mag_dist)
+            for func, args in self.gen_task_queue():
+                smap.submit(args)
+            counts = smap.reduce()
+            ndists = oq.maximum_distance.get_dist_bins.__defaults__[0]
+            for mag, mag in enumerate(mags):
+                arr = numpy.zeros((ndists, len(gsims_by_trt)), U32)
+                for trti, trt in enumerate(gsims_by_trt):
+                    try:
+                        arr[:, trti] = counts[trt][mag]
+                    except KeyError:
+                        pass
+                self.datastore['rups_by_mag_dist/' + mag] = arr
+            self.datastore.set_attrs('rups_by_mag_dist', **dist_bins)
+            self.datastore['csm_info'] = self.csm_info
+            return {}
         smap = parallel.Starmap(self.core_task.__func__)
         smap.task_queue = list(self.gen_task_queue())  # really fast
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
@@ -280,24 +347,31 @@ class ClassicalCalculator(base.HazardCalculator):
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
+            collapse_factor=oq.collapse_factor,
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo,
             task_multiplier=oq.task_multiplier,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
-        if oq.calculation_mode == 'preclassical':
+        if oq.calculation_mode == 'preclassical' and self.N == 1:
+            f1 = f2 = ruptures_by_mag_dist
+        elif oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
+        elif oq.split_by_magnitude:
+            f1 = f2 = classical
         else:
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
         for trt, sources, atomic in trt_sources:
+            param['effect'] = self.effect.get(trt)
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
                 nb = 1
                 yield f1, (sources, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
+                if oq.split_by_magnitude:
+                    sources = split_by_mag(sources)
                 blocks = list(block_splitter(sources, totweight/C, srcweight))
                 nb = len(blocks)
                 for block in blocks:
