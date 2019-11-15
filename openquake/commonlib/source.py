@@ -447,7 +447,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                     acc[grp.trt].extend(grp)
         if not acc:
             return atomic
-        elif not hasattr(grp.sources[0], 'checksum') or not optimize_dupl:
+        elif not optimize_dupl:
             # for UCERF or for event_based
             return atomic + [kv + (False,) for kv in acc.items()]
         # extract a single source from multiple sources with the same ID
@@ -462,7 +462,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 if len(srcs) > 1 and not isinstance(src.src_group_id, list):
                     src.src_group_id = [s.src_group_id for s in srcs]
                 dic[trt].append(src)
-        return atomic + [kv + (False,) for kv in acc.items()]
+        return atomic + [kv + (False,) for kv in dic.items()]
 
     def get_num_ruptures(self):
         """
