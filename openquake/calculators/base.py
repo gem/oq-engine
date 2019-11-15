@@ -19,6 +19,7 @@ import os
 import sys
 import abc
 import pdb
+import socket
 import logging
 import operator
 import itertools
@@ -375,6 +376,9 @@ class HazardCalculator(BaseCalculator):
             logging.info('Rupture floating factor = %s', f)
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
+        if f != 1 and s != 1 and self.oqparam.pointsource_distance is None:
+            if socket.gethostname() in ('wilson', 'holiday'):
+                raise RuntimeError('You MUST set a pointsource_distance!')
 
     def read_inputs(self):
         """

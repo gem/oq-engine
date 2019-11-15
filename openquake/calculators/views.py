@@ -785,12 +785,12 @@ def view_act_ruptures_by_src(token, dstore):
 @view.add('bad_ruptures')
 def view_bad_ruptures(token, dstore):
     """
-    Display the ruptures with an invalid bounding box
+    Display the ruptures degenerating to a point
     """
     data = dstore['ruptures']['id', 'code', 'mag',
                               'minlon', 'maxlon', 'minlat', 'maxlat']
-    bad = data[numpy.logical_or(data['minlon'] == data['maxlon'],
-                                data['minlat'] == data['maxlat'])]
+    bad = data[numpy.logical_and(data['minlon'] == data['maxlon'],
+                                 data['minlat'] == data['maxlat'])]
     return rst_table(bad)
 
 
@@ -894,3 +894,13 @@ def view_events_by_mag(token, dstore):
     for mag, grp in group_array(rups, 'mag').items():
         counts[mag] = sum(num_evs[rup_id] for rup_id in grp['id'])
     return rst_table(counts.items(), ['mag', 'num_events'])
+
+
+@view.add('maximum_intensity')
+def view_maximum_intensity(token, dstore):
+    """
+    Show intensities at minimum and maximum distance for the highest magnitude
+    """
+    effect = extract(dstore, 'effect')
+    data = zip(dstore['csm_info'].trts, effect[-1, -1], effect[-1, 0])
+    return rst_table(data, ['trt', 'intensity1', 'intensity2'])
