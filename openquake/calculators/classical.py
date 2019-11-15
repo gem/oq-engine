@@ -349,7 +349,6 @@ class ClassicalCalculator(base.HazardCalculator):
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            collapse_factor=oq.collapse_factor,
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo,
             task_multiplier=oq.task_multiplier,
