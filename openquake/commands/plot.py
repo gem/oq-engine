@@ -21,6 +21,7 @@ import shapely
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.contexts import Effect
+from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -394,13 +395,23 @@ def make_figure_dist_by_mag(extractors, what):
     trti = 0
     for trt, dists in effect.dist_bins.items():
         dic = dict(zip(mags, effect[:, :, trti]))
-        eff = Effect(dic, dists)
+        if ex.oqparam.pointsource_distance:
+            pdist = getdefault(ex.oqparam.pointsource_distance, trt)
+        else:
+            pdist = None
+        eff = Effect(dic, dists, pdist)
         dist_by_mag = eff.dist_by_mag()
-        ax.plot(effect.mags, list(dist_by_mag.values()), label=trt)
+        ax.plot(effect.mags, list(dist_by_mag.values()), label=trt,
+                color='red')
+        if pdist:
+            dist_by_mag = eff.dist_by_mag(eff.collapse_value)
+            ax.plot(effect.mags, list(dist_by_mag.values()), label=trt,
+                    color='green')
         ax.set_xlabel('Mag')
         ax.set_ylabel('Dist')
         ax.set_title('Integration Distance at intensity=%s' % eff.zero_value)
         trti += 1
+    ax.legend()
     return plt
 
 
