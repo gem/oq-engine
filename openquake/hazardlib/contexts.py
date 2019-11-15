@@ -466,10 +466,10 @@ class PmapMaker(object):
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
         for rup, sctx, dctx in ctxs:
+            pdist = self.pointsource_distance.get('%.3f' % rup.mag)
             tup = []
             for p in self.REQUIRES_RUPTURE_PARAMETERS:
-                if (p != 'mag' and self.pointsource_distance is not None and
-                        dctx.rrup.min() > self.pointsource_distance):
+                if p != 'mag' and pdist and dctx.rrup.min() > pdist:
                     tup.append(0)
                     # all nonmag rupture parameters are collapsed to 0
                     # over the pointsource_distance
@@ -507,9 +507,10 @@ class PmapMaker(object):
                 trt = src.tectonic_region_type
                 for mag, rups in self.mag_rups:
                     mdist = self.maximum_distance(trt, mag)
+                    pdist = self.pointsource_distance.get('%.3f' % mag)
                     radius = src._get_max_rupture_projection_radius(mag)
-                    if self.pointsource_distance:  # legacy approach
-                        cdist = min(self.pointsource_distance, mdist)
+                    if pdist:  # legacy approach
+                        cdist = min(pdist, mdist)
                     else:
                         cdist = min(self.collapse_factor * radius, mdist)
                     close_sites, far_sites = sites.split(loc, cdist)
