@@ -273,6 +273,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 for t, trt in enumerate(gsims_by_trt)}
             for trt, eff in self.effect.items():
                 oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
+                oq.pointsource_distance[trt] = eff.dist_by_mag(
+                    eff.collapse_value)
         else:
             self.effect = {}
         if oq.calculation_mode == 'preclassical' and self.N == 1:
