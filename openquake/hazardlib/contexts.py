@@ -164,8 +164,7 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        self.collapse_factor = param.get('collapse_factor', 3)
-        psd = param.get('pointsource_distance') or {'default': None}
+        psd = param.get('pointsource_distance') or {'default': {}}
         self.pointsource_distance = getdefault(psd, trt)
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
@@ -491,15 +490,11 @@ class PmapMaker(object):
         loc = getattr(src, 'location', None)
         triples = ((rups, sites, None) for mag, rups in self.mag_rups)
         if loc:
-            # implements the collapse distance feature: the finite site effects
-            # are ignored for sites over collapse_factor x rupture_radius
+            # implements pointsource_distance: finite site effects
+            # are ignored for sites over that distance, if any
             simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
-            if simple:
+            if simple or self.pointsource_distance is None:
                 yield from triples  # there is nothing to collapse
-            elif self.pointsource_distance is None and (
-                    len(sites) < self.max_sites_disagg or isinstance(
-                        src.magnitude_scaling_relationship, PointMSR)):
-                yield from triples  # do not collapse for few sites or 0 radius
             else:
                 weights, depths = zip(*src.hypocenter_distribution.data)
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
@@ -508,19 +503,14 @@ class PmapMaker(object):
                 for mag, rups in self.mag_rups:
                     mdist = self.maximum_distance(trt, mag)
                     pdist = self.pointsource_distance.get('%.3f' % mag)
-                    radius = src._get_max_rupture_projection_radius(mag)
-                    if pdist:  # legacy approach
-                        cdist = min(pdist, mdist)
-                    else:
-                        cdist = min(self.collapse_factor * radius, mdist)
-                    close_sites, far_sites = sites.split(loc, cdist)
-                    if close_sites is None:  # all is far
-                        yield _collapse(rups), far_sites, mdist
-                    elif far_sites is None:  # all is close
-                        yield rups, close_sites, mdist
+                    close, far = sites.split(loc, min(pdist, mdist))
+                    if close is None:  # all is far
+                        yield _collapse(rups), far, mdist
+                    elif far is None:  # all is close
+                        yield rups, close, mdist
                     else:  # some sites are far, some are close
-                        yield _collapse(rups), far_sites, mdist
-                        yield rups, close_sites, mdist
+                        yield _collapse(rups), far, mdist
+                        yield rups, close, mdist
         else:  # no point source or site-specific analysis
             yield from triples
 
