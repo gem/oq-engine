@@ -730,8 +730,12 @@ class Effect(object):
             intensity = self.zero_value
         dic = {}  # magnitude -> distance
         for mag, intensities in self.effect_by_mag.items():
-            dic[mag] = interp1d(
-                intensities, self.dists, fill_value="extrapolate")(intensity)
+            if intensity < intensities.min():
+                dic[mag] = self.dists[-1]
+            elif intensity > intensities.max():
+                dic[mag] = self.dists[0]
+            else:
+                dic[mag] = interp1d(intensities, self.dists)(intensity)
         return dic
 
 
