@@ -279,7 +279,6 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             self.effect = {}
         if oq.calculation_mode == 'preclassical' and self.N == 1:
-            mags = sorted(set('%.3f' % mag for mag in mags))
             smap = parallel.Starmap(ruptures_by_mag_dist)
             for func, args in self.gen_task_queue():
                 smap.submit(args)
