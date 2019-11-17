@@ -740,8 +740,9 @@ class Effect(object):
 
 
 # used in calculators/classical.py
-def get_effect(mags, onesite, gsims_by_trt, maximum_distance, imtls):
+def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls):
     """
+    :param mag: an ordered list of magnitude strings with format %.3d
     :returns: a dict magnitude-string -> array(#dists, #trts)
     """
     trts = list(gsims_by_trt)
@@ -751,8 +752,9 @@ def get_effect(mags, onesite, gsims_by_trt, maximum_distance, imtls):
     for t, trt in enumerate(trts):
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.make_gmv(onesite, mags, dist_bins)
-    return dict(zip(['%.3f' % mag for mag in mags], gmv))
+        gmv[:, :, t] = cmaker.make_gmv(
+            onesite, [float(mag) for mag in mags], dist_bins)
+    return dict(zip(mags, gmv))
 
 
 # used in calculators/classical.py
