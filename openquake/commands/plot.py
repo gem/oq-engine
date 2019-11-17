@@ -415,6 +415,26 @@ def make_figure_dist_by_mag(extractors, what):
     return plt
 
 
+def make_figure_effect_by_mag(extractors, what):
+    """
+    $ oq plot effect_by_mag?'
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    [ex] = extractors
+    effect = ex.get('effect')
+    fig, ax = plt.subplots()
+    trti = 0
+    for trt, dists in effect.dist_bins.items():
+        ax.plot(effect.mags, effect[:, -1, trti], label=trt)
+        ax.set_xlabel('Mag')
+        ax.set_ylabel('Intensity')
+        ax.set_title('Effect at maximum distance')
+        trti += 1
+    ax.legend()
+    return plt
+
+
 @sap.script
 def plot(what='examples', calc_id=-1, other_id=None, webapi=False):
     """
