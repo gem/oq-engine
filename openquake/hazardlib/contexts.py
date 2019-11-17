@@ -23,6 +23,8 @@ import warnings
 import operator
 import itertools
 import numpy
+from scipy.interpolate import interp1d
+
 
 from openquake.baselib.general import AccumDict, DictArray
 from openquake.baselib.performance import Monitor
@@ -31,7 +33,6 @@ from openquake.hazardlib.gsim import base
 from openquake.hazardlib.calc.filters import IntegrationDistance, getdefault
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.scalerel import PointMSR
 
 I16 = numpy.int16
 F32 = numpy.float32
@@ -164,8 +165,7 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        self.collapse_factor = param.get('collapse_factor', 3)
-        psd = param.get('pointsource_distance') or {'default': None}
+        psd = param.get('pointsource_distance') or {'default': {}}
         self.pointsource_distance = getdefault(psd, trt)
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
@@ -307,6 +307,7 @@ class ContextMaker(object):
             for par in self.REQUIRES_RUPTURE_PARAMETERS:
                 setattr(rup, par, 0)
             rup.mag = mag
+            rup.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             dctx = DistancesContext(
                 (dst, numpy.array([dist])) for dst in self.REQUIRES_DISTANCES)
             mean = base.get_mean_std(  # shape (2, N, M, G) -> G
@@ -466,10 +467,10 @@ class PmapMaker(object):
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
         for rup, sctx, dctx in ctxs:
+            pdist = self.pointsource_distance.get('%.3f' % rup.mag)
             tup = []
             for p in self.REQUIRES_RUPTURE_PARAMETERS:
-                if (p != 'mag' and self.pointsource_distance is not None and
-                        dctx.rrup.min() > self.pointsource_distance):
+                if p != 'mag' and pdist and dctx.rrup.min() > pdist:
                     tup.append(0)
                     # all nonmag rupture parameters are collapsed to 0
                     # over the pointsource_distance
@@ -491,15 +492,11 @@ class PmapMaker(object):
         loc = getattr(src, 'location', None)
         triples = ((rups, sites, None) for mag, rups in self.mag_rups)
         if loc:
-            # implements the collapse distance feature: the finite site effects
-            # are ignored for sites over collapse_factor x rupture_radius
+            # implements pointsource_distance: finite site effects
+            # are ignored for sites over that distance, if any
             simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
-            if simple:
+            if simple or not self.pointsource_distance:
                 yield from triples  # there is nothing to collapse
-            elif self.pointsource_distance is None and (
-                    len(sites) < self.max_sites_disagg or isinstance(
-                        src.magnitude_scaling_relationship, PointMSR)):
-                yield from triples  # do not collapse for few sites or 0 radius
             else:
                 weights, depths = zip(*src.hypocenter_distribution.data)
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
@@ -507,19 +504,15 @@ class PmapMaker(object):
                 trt = src.tectonic_region_type
                 for mag, rups in self.mag_rups:
                     mdist = self.maximum_distance(trt, mag)
-                    radius = src._get_max_rupture_projection_radius(mag)
-                    if self.pointsource_distance:  # legacy approach
-                        cdist = min(self.pointsource_distance, mdist)
-                    else:
-                        cdist = min(self.collapse_factor * radius, mdist)
-                    close_sites, far_sites = sites.split(loc, cdist)
-                    if close_sites is None:  # all is far
-                        yield _collapse(rups), far_sites, mdist
-                    elif far_sites is None:  # all is close
-                        yield rups, close_sites, mdist
+                    pdist = self.pointsource_distance.get('%.3f' % mag)
+                    close, far = sites.split(loc, min(pdist, mdist))
+                    if close is None:  # all is far
+                        yield _collapse(rups), far, mdist
+                    elif far is None:  # all is close
+                        yield rups, close, mdist
                     else:  # some sites are far, some are close
-                        yield _collapse(rups), far_sites, mdist
-                        yield rups, close_sites, mdist
+                        yield _collapse(rups), far, mdist
+                        yield rups, close, mdist
         else:  # no point source or site-specific analysis
             yield from triples
 
@@ -727,16 +720,21 @@ class Effect(object):
         """
         if intensity is None:
             intensity = self.zero_value
-        dic = {}
+        dic = {}  # magnitude -> distance
         for mag, intensities in self.effect_by_mag.items():
-            # the intensities are in decreasing order
-            idx = numpy.searchsorted(numpy.sort(intensities), intensity) or 1
-            dic[mag] = self.dists[self.nbins - idx]
+            if intensity < intensities.min():
+                dic[mag] = self.dists[-1]
+            elif intensity > intensities.max():
+                dic[mag] = self.dists[0]
+            else:
+                dic[mag] = interp1d(intensities, self.dists)(intensity)
         return dic
 
 
-def get_effect(mags, onesite, gsims_by_trt, maximum_distance, imtls):
+# used in calculators/classical.py
+def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls):
     """
+    :param mag: an ordered list of magnitude strings with format %.3d
     :returns: a dict magnitude-string -> array(#dists, #trts)
     """
     trts = list(gsims_by_trt)
@@ -746,10 +744,12 @@ def get_effect(mags, onesite, gsims_by_trt, maximum_distance, imtls):
     for t, trt in enumerate(trts):
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.make_gmv(onesite, mags, dist_bins)
-    return dict(zip(['%.3f' % mag for mag in mags], gmv))
+        gmv[:, :, t] = cmaker.make_gmv(
+            onesite, [float(mag) for mag in mags], dist_bins)
+    return dict(zip(mags, gmv))
 
 
+# used in calculators/classical.py
 def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     """
     :returns: a dictionary trt -> mag string -> counts by distance

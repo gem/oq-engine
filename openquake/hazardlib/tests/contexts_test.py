@@ -22,20 +22,20 @@ from openquake.hazardlib.contexts import Effect
 
 dists = numpy.array([0, 10, 20, 30, 40, 50])
 intensities = {
-    '4.5': numpy.array([1.0, .95, .9, .6, .5, .3]),
-    '5.0': numpy.array([1.2, 1.1, .9, .7, .6, .5]),
-    '5.5': numpy.array([1.5, 1.2, .8, .8, .8, .6]),
-    '6.0': numpy.array([2.0, 1.5, .9, .8, .6, .6])}
+    '4.5': numpy.array([1.0, .95, .7, .6, .5, .3]),
+    '5.0': numpy.array([1.2, 1.1, .7, .69, .6, .5]),
+    '5.5': numpy.array([1.5, 1.2, .89, .85, .82, .6]),
+    '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
 
 
 class EffectTestCase(unittest.TestCase):
     def test_dist_by_mag(self):
         effect = Effect(intensities, dists)
         dist = list(effect.dist_by_mag().values())
-        self.assertEqual(dist, [40, 50, 50, 50])
+        numpy.testing.assert_allclose(dist, [30, 40, 50, 50])
 
         dist = list(effect.dist_by_mag(.9).values())
-        self.assertEqual(dist, [30, 30, 20, 30])
+        numpy.testing.assert_allclose(dist, [12, 15, 19.677419, 20])
 
         dist = list(effect.dist_by_mag(1.1).values())
-        self.assertEqual(dist, [0, 20, 20, 20])
+        numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
