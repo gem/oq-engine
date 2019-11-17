@@ -22,10 +22,10 @@ from openquake.hazardlib.contexts import Effect
 
 dists = numpy.array([0, 10, 20, 30, 40, 50])
 intensities = {
-    '4.5': numpy.array([1.0, .95, .9, .6, .5, .3]),
-    '5.0': numpy.array([1.2, 1.1, .9, .7, .6, .5]),
+    '4.5': numpy.array([1.0, .95, .7, .6, .5, .3]),
+    '5.0': numpy.array([1.2, 1.1, .7, .7, .6, .5]),
     '5.5': numpy.array([1.5, 1.2, .8, .8, .8, .6]),
-    '6.0': numpy.array([2.0, 1.5, .9, .8, .6, .6])}
+    '6.0': numpy.array([2.0, 1.5, .9, .8, .8, .6])}
 
 
 class EffectTestCase(unittest.TestCase):
@@ -35,7 +35,7 @@ class EffectTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(dist, [30, 40, 50, 50])
 
         dist = list(effect.dist_by_mag(.9).values())
-        numpy.testing.assert_allclose(dist, [20, 20, 32.5, 20])
+        numpy.testing.assert_allclose(dist, [12, 20, 32.5, 20])
 
         dist = list(effect.dist_by_mag(1.1).values())
         numpy.testing.assert_allclose(dist, [0, 10, 17.5, 16.666667])
