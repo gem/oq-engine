@@ -23,6 +23,8 @@ import warnings
 import operator
 import itertools
 import numpy
+from scipy.interpolate import interp1d
+
 
 from openquake.baselib.general import AccumDict, DictArray
 from openquake.baselib.performance import Monitor
@@ -679,6 +681,14 @@ class RuptureContext(BaseContext):
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
 
 
+def decreasing(values):
+    v0 = values[0]
+    for v in values[1:]:
+        if v > v0:
+            raise ValueError('%s > %s' % (v, v0))
+        v0 = v
+
+
 class Effect(object):
     """
     Compute the effect of a rupture of a given magnitude and distance,
@@ -718,11 +728,10 @@ class Effect(object):
         """
         if intensity is None:
             intensity = self.zero_value
-        dic = {}
+        dic = {}  # magnitude -> distance
         for mag, intensities in self.effect_by_mag.items():
-            # the intensities are in decreasing order
-            idx = numpy.searchsorted(numpy.sort(intensities), intensity) or 1
-            dic[mag] = self.dists[self.nbins - idx]
+            dic[mag] = interp1d(
+                intensities, self.dists, fill_value="extrapolate")(intensity)
         return dic
 
 
