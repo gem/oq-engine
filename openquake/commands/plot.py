@@ -20,8 +20,8 @@ import logging
 import shapely
 import numpy
 from openquake.baselib import sap
-from openquake.hazardlib.contexts import Effect
-from openquake.hazardlib.calc.filters import getdefault
+from openquake.hazardlib.contexts import Effect, get_effect_by_mag
+from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -422,11 +422,21 @@ def make_figure_effect_by_mag(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
     [ex] = extractors
-    effect = ex.get('effect')
+    gsims_by_trt = ex.get('gsims_by_trt', asdict=True)
+    mags = ex.get('source_mags').array
+    try:
+        effect = ex.get('effect')
+    except KeyError:
+        onesite = ex.get('sitecol').one()
+        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
+        imtls = ex.oqparam.imtls
+        ebm = get_effect_by_mag(
+            mags, onesite, gsims_by_trt, maximum_distance, imtls)
+        effect = numpy.array(list(ebm.values()))
     fig, ax = plt.subplots()
     trti = 0
-    for trt, dists in effect.dist_bins.items():
-        ax.plot(effect.mags, effect[:, -1, trti], label=trt)
+    for trt in gsims_by_trt:
+        ax.plot(mags, effect[:, -1, trti], label=trt)
         ax.set_xlabel('Mag')
         ax.set_ylabel('Intensity')
         ax.set_title('Effect at maximum distance')

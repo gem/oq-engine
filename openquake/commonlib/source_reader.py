@@ -141,9 +141,9 @@ class SourceReader(object):
             sg.info = numpy.zeros(len(sg), source_info_dt)
             for i, src in enumerate(sg):
                 if hasattr(src, 'data'):  # nonparametric
-                    srcmags = [item[0].mag for item in src.data]
+                    srcmags = ['%.3f' % item[0].mag for item in src.data]
                 else:
-                    srcmags = [item[0] for item in
+                    srcmags = ['%.3f' % item[0] for item in
                                src.get_annual_occurrence_rates()]
                 mags.update(srcmags)
                 dic = {k: v for k, v in vars(src).items()
@@ -276,7 +276,7 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                 hdf5.extend(sources, sg.info)
 
     if h5:
-        h5['source_mags'] = sorted(mags)
+        h5['source_mags'] = numpy.array(sorted(mags))
 
     # log if some source file is being used more than once
     dupl = 0
