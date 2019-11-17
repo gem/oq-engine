@@ -131,6 +131,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_6.__file__)
 
     def test_case_7(self):
+        # this is a case with duplicated sources
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
@@ -541,8 +542,7 @@ hazard_uhs-std.csv
                                "hazard_map-mean-PGA.csv"], case_42.__file__)
 
     def test_case_43(self):
-        # this is a test for
-        # collapse_factor = 3 * rupture radius > maximum_distance
+        # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
 
