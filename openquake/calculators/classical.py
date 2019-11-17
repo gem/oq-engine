@@ -27,7 +27,7 @@ from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
 from openquake.hazardlib.contexts import (
-    ContextMaker, Effect, get_effect, ruptures_by_mag_dist)
+    ContextMaker, Effect, get_effect_by_mag, ruptures_by_mag_dist)
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -262,8 +262,9 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
-                get_effect, (mags, self.sitecol.one(), gsims_by_trt,
-                             oq.maximum_distance, oq.imtls, mon)).reduce()
+                get_effect_by_mag,
+                (mags, self.sitecol.one(), gsims_by_trt,
+                 oq.maximum_distance, oq.imtls, mon)).reduce()
             self.datastore['effect'] = effect
             self.datastore.set_attrs('effect', **dist_bins)
             self.effect = {
