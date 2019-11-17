@@ -681,14 +681,6 @@ class RuptureContext(BaseContext):
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
 
 
-def decreasing(values):
-    v0 = values[0]
-    for v in values[1:]:
-        if v > v0:
-            raise ValueError('%s > %s' % (v, v0))
-        v0 = v
-
-
 class Effect(object):
     """
     Compute the effect of a rupture of a given magnitude and distance,
