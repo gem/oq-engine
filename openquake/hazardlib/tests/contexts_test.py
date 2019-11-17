@@ -32,10 +32,10 @@ class EffectTestCase(unittest.TestCase):
     def test_dist_by_mag(self):
         effect = Effect(intensities, dists)
         dist = list(effect.dist_by_mag().values())
-        self.assertEqual(dist, [40, 50, 50, 50])
+        numpy.testing.assert_allclose(dist, [30, 40, 50, 50])
 
         dist = list(effect.dist_by_mag(.9).values())
-        self.assertEqual(dist, [30, 30, 20, 30])
+        numpy.testing.assert_allclose(dist, [20, 20, 32.5, 20])
 
         dist = list(effect.dist_by_mag(1.1).values())
-        self.assertEqual(dist, [0, 20, 20, 20])
+        numpy.testing.assert_allclose(dist, [0, 10, 17.5, 16.666667])
