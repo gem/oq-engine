@@ -131,7 +131,9 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
-    for src in srcs:
+    with monitor("splitting/filtering sources"):
+        splits, _stime = split_sources(srcs)
+    for src in splits:
         t0 = time.time()
         if srcfilter.get_close_sites(src) is None:
             continue
