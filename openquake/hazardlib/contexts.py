@@ -310,9 +310,17 @@ class ContextMaker(object):
             rup.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             dctx = DistancesContext(
                 (dst, numpy.array([dist])) for dst in self.REQUIRES_DISTANCES)
-            mean = base.get_mean_std(  # shape (2, N, M, G) -> G
-                onesite, rup, dctx, [self.imts[-1]], self.gsims)[0, 0, 0]
-            gmv[m, d] = numpy.exp(mean.max())
+            max_imt = self.imts[-1]
+            means = []
+            for gsim in self.gsims:
+                try:
+                    mean = base.get_mean_std(  # shape (2, N, M, G) -> 1
+                        onesite, rup, dctx, [max_imt], [gsim])[0, 0, 0, 0]
+                except ValueError:  # magnitude outside of supported range
+                    continue
+                else:
+                    means.append(mean)
+            gmv[m, d] = numpy.exp(max(means))
         return gmv
 
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
