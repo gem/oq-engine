@@ -275,9 +275,10 @@ class SiteCollection(object):
 
     def one(self):
         """
-        :returns: a SiteCollection with only the first site
+        :returns: a SiteCollection with only a site
         """
-        return self.filtered([self.sids[0]])
+        idx = self.array['lat'].argmin()
+        return self.filtered([self.sids[idx]])
 
     def __init__(self, sites):
         """
