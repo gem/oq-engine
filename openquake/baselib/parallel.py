@@ -786,8 +786,6 @@ class Starmap(object):
                 del self.task_queue[0]
                 self.submit(args, func=func)
                 self.todo += 1
-                logging.debug('%d tasks todo, %d in queue',
-                              self.todo, len(self.task_queue))
 
     def _loop(self):
         if self.task_queue:
@@ -808,6 +806,8 @@ class Starmap(object):
             elif res.msg == 'TASK_ENDED':
                 self.todo -= 1
                 self._submit_many(max(self.num_cores - self.todo, 2))
+                logging.debug('%d tasks todo, %d in queue',
+                              self.todo, len(self.task_queue))
                 self.log_percent()
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
