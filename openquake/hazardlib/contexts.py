@@ -744,7 +744,8 @@ class Effect(object):
 
 
 # used in calculators/classical.py
-def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls):
+def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
+                      monitor):
     """
     :param mag: an ordered list of magnitude strings with format %.3d
     :returns: a dict magnitude-string -> array(#dists, #trts)
