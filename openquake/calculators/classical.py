@@ -86,12 +86,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield classical(srcs, srcfilter, gsims, params, monitor)
         return
     # NB: splitting all the sources improves the distribution significantly,
-    # compared to splitting only the big source
+    # compared to splitting only the big sources
     sources = []
-    with monitor("filtering/splitting sources"):
-        for src, _sites in srcfilter(srcs):
-            splits, _stime = split_sources([src])
-            sources.extend(srcfilter.filter(splits))
+    with monitor("splitting/filtering sources"):
+        splits, _stime = split_sources(srcs)
+        sources.extend(srcfilter.filter(splits))
     if sources:
         sources.sort(key=weight)
         totsites = len(srcfilter.sitecol)
