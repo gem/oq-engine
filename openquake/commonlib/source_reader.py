@@ -141,9 +141,9 @@ class SourceReader(object):
             sg.info = numpy.zeros(len(sg), source_info_dt)
             for i, src in enumerate(sg):
                 if hasattr(src, 'data'):  # nonparametric
-                    srcmags = [item[0].mag for item in src.data]
+                    srcmags = ['%.3f' % item[0].mag for item in src.data]
                 else:
-                    srcmags = [item[0] for item in
+                    srcmags = ['%.3f' % item[0] for item in
                                src.get_annual_occurrence_rates()]
                 mags.update(srcmags)
                 dic = {k: v for k, v in vars(src).items()
@@ -164,7 +164,10 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     Build source models from the logic tree and to store
     them inside the `source_info` dataset.
     """
-    spinning_off = oq.collapse_factor == 0 or oq.pointsource_distance == 0
+    if oq.pointsource_distance is None:
+        spinning_off = False
+    else:
+        spinning_off = sum(oq.pointsource_distance.values()) == 0
     if spinning_off:
         logging.info('Removing nodal plane and hypocenter distributions')
     # NB: the source models file are often NOT in the shared directory
@@ -273,7 +276,7 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                 hdf5.extend(sources, sg.info)
 
     if h5:
-        h5['source_mags'] = sorted(mags)
+        h5['source_mags'] = numpy.array(sorted(mags))
 
     # log if some source file is being used more than once
     dupl = 0
