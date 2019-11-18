@@ -320,7 +320,8 @@ class ContextMaker(object):
                     continue
                 else:
                     means.append(mean)
-            gmv[m, d] = numpy.exp(max(means))
+            if means:
+                gmv[m, d] = numpy.exp(max(means))
         return gmv
 
     def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
