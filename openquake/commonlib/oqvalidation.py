@@ -139,7 +139,7 @@ class OqParam(valid.ParamSet):
     oversubmit = valid.Param(valid.boolean, False)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.positivefloat, None)
+    pointsource_distance = valid.Param(valid.floatdict, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -176,9 +176,8 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_by_magnitude = valid.Param(valid.boolean, False)
-    collapse_factor = valid.Param(valid.positivefloat, 3)
     task_duration = valid.Param(valid.positiveint, None)  # used in ebrisk
-    task_multiplier = valid.Param(valid.positiveint, 10)  # used in classical
+    task_multiplier = valid.Param(valid.positiveint, 20)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
