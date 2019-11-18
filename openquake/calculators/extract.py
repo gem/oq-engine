@@ -213,6 +213,14 @@ def extract_realizations(dstore, dummy):
     return arr
 
 
+@extract.add('gsims_by_trt')
+def extract_gsims_by_trt(dstore, what):
+    """
+    Extract the dictionary gsims_by_trt
+    """
+    return ArrayWrapper((), dstore['csm_info'].gsim_lt.values)
+
+
 @extract.add('exposure_metadata')
 def extract_exposure_metadata(dstore, what):
     """
@@ -1175,12 +1183,15 @@ class Extractor(object):
         self.dstore = util.read(calc_id)
         self.oqparam = self.dstore['oqparam']
 
-    def get(self, what):
+    def get(self, what, asdict=False):
         """
         :param what: what to extract
-        :returns: an ArrayWrapper instance
+        :returns: an ArrayWrapper instance or a dictionary if asdict is True
         """
-        return extract(self.dstore, what)
+        aw = extract(self.dstore, what)
+        if asdict:
+            return {k: v for k, v in vars(aw).items() if not k.startswith('_')}
+        return aw
 
     def __enter__(self):
         return self
