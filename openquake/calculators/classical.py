@@ -27,7 +27,7 @@ from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
 from openquake.hazardlib.contexts import (
-    ContextMaker, Effect, get_effect, ruptures_by_mag_dist)
+    ContextMaker, Effect, get_effect_by_mag, ruptures_by_mag_dist)
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -258,25 +258,27 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                      for trt in gsims_by_trt}
-        if oq.minimum_intensity and len(self.sitecol) == 1 and len(mags):
+        if oq.pointsource_distance and len(mags):
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
-                get_effect, (mags, self.sitecol, gsims_by_trt,
-                             oq.maximum_distance, oq.imtls, mon)).reduce()
+                get_effect_by_mag,
+                (mags, self.sitecol.one(), gsims_by_trt,
+                 oq.maximum_distance, oq.imtls, mon)).reduce()
             self.datastore['effect'] = effect
             self.datastore.set_attrs('effect', **dist_bins)
-            # threshold = getdefault(oq.minimum_intensity, list(oq.imtls)[-1])
             self.effect = {
                 trt: Effect({mag: effect[mag][:, t] for mag in effect},
-                            dists=dist_bins[trt])
+                            dist_bins[trt],
+                            getdefault(oq.pointsource_distance, trt))
                 for t, trt in enumerate(gsims_by_trt)}
             for trt, eff in self.effect.items():
                 oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
+                oq.pointsource_distance[trt] = eff.dist_by_mag(
+                    eff.collapse_value)
         else:
             self.effect = {}
         if oq.calculation_mode == 'preclassical' and self.N == 1:
-            mags = sorted(set('%.3f' % mag for mag in mags))
             smap = parallel.Starmap(ruptures_by_mag_dist)
             for func, args in self.gen_task_queue():
                 smap.submit(args)
@@ -347,7 +349,6 @@ class ClassicalCalculator(base.HazardCalculator):
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            collapse_factor=oq.collapse_factor,
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo,
             task_multiplier=oq.task_multiplier,
