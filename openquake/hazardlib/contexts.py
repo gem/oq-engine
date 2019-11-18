@@ -244,7 +244,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture, radius_dist=None):
+    def make_contexts(self, sites, rupture, mdist=None):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -256,6 +256,9 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
+        :param mdist:
+            Maximum distance for the rupture magnitude (if None use the max)
+
         :returns:
             Tuple of two items: sites and distances context.
 
@@ -263,7 +266,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        sites, dctx = self.filter(sites, rupture, radius_dist)
+        sites, dctx = self.filter(sites, rupture, mdist)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -278,14 +281,14 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def make_ctxs(self, ruptures, sites, radius_dist=None):
+    def make_ctxs(self, ruptures, sites, mdist=None):
         """
         :returns: a list of triples (rctx, sctx, dctx)
         """
         ctxs = []
         for rup in ruptures:
             try:
-                sctx, dctx = self.make_contexts(sites, rup, radius_dist)
+                sctx, dctx = self.make_contexts(sites, rup, mdist)
             except FarAwayRupture:
                 continue
             ctxs.append((rup, sctx, dctx))
