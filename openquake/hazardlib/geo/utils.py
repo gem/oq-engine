@@ -320,7 +320,7 @@ def get_bounding_box(obj, maxdist):
     delta = bbox[2] - bbox[0] + 2 * a2
     if delta > 180:
         raise ValueError('The maximum distance %d is too large, the bounding '
-                         'box is larger than half the globe: %d' %
+                         'box is larger than half the globe: %d degrees' %
                          (maxdist, delta))
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
