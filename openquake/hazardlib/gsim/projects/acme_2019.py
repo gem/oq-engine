@@ -199,28 +199,28 @@ class AlAtikSigmaModel(GMPE):
     :param GMPE:
         GMPE is the **kwargs describing the GMPE (its name) and the sigma
         and kappa modifications to be imposed
-    :kwarg gmpe_name:
+    :param gmpe_name:
         GMPE class that will be adjusted by AlAtikSigmaModel
-    :kwarg tau_model:
+    :param tau_model:
         Choice of model for the inter-event standard deviation (tau), selecting
         from "global" {default}, "cena" or "cena_constant". default is global
-    :kwarg tau_quantile:
+    :param tau_quantile:
         tau quantile used in sigma model. default of None uses the mean.
-    :kwarg phi_model:
+    :param phi_model:
         Choice of model for the single-station intra-event standard deviation
         (phi_ss), selecting from "global" {default}, "cena" or "cena_constant"
         default is global.
-    :kwarg phi_quantile:
+    :param phi_quantile:
         phi quantile used in sigma model. default of None uses the mean.
-    :kwarg phi_s2ss_model:
+    :param phi_s2ss_model:
         Choice of station-term s2ss model. Can be either "cena" or None. When
         None is input then the non-ergodic model is used
-    :kwarg phi_s2ss_quantile:
+    :param phi_s2ss_quantile:
         s2ss quantile used in sigma model. default of None uses the mean.
-    :kwarg kappa_file:
+    :param kappa_file:
         tab-delimited file of kappa values per IMT, where first column is
         IMT. includes a header.
-    :kwarg kappa_val:
+    :param kappa_val:
         kappa value corresponding to a column header in kappa_file
 
     """
