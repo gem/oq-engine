@@ -100,11 +100,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             maxw = 1E6
         blocks = list(block_splitter(sources, maxw, weight))
         nb = len(blocks)
-        msg = 'produced %d subtask(s) with mean weight=%d' % (
-            nb - 1, sum(b.weight for b in blocks) / nb)
+        msg = 'produced %d subtask(s) with max weight=%d' % (
+            nb - 1, max(b.weight for b in blocks))
         if monitor.calc_id and nb > 1:
             try:
-                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'INFO',
+                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
                            'classical_split_filter#%d' % monitor.task_no, msg)
             except Exception:
                 # a foreign key error in case of `oq run` is expected
