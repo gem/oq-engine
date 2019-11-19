@@ -20,6 +20,7 @@ import copy
 import time
 import logging
 import operator
+from datetime import datetime
 import itertools
 import numpy
 
@@ -31,7 +32,7 @@ from openquake.hazardlib.contexts import (
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, logs
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -98,6 +99,12 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         elif maxw > 1E6:
             maxw = 1E6
         blocks = list(block_splitter(sources, maxw, weight))
+        nb = len(blocks)
+        if monitor.calc_id and nb > 1:
+            msg = 'task #%d produced %d subtask(s) with mean_weight=%d' % (
+                monitor.task_no, nb - 1, sum(b.weight for b in blocks) / nb)
+            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'INFO',
+                       '', msg)
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
@@ -296,7 +303,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.set_attrs('rups_by_mag_dist', **dist_bins)
             self.datastore['csm_info'] = self.csm_info
             return {}
-        smap = parallel.Starmap(self.core_task.__func__)
+        smap = parallel.Starmap(
+            self.core_task.__func__, h5=self.datastore.hdf5)
         smap.task_queue = list(self.gen_task_queue())  # really fast
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
