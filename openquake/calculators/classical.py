@@ -320,8 +320,10 @@ class ClassicalCalculator(base.HazardCalculator):
                                 ('eff_sites', U32),
                                 ('srcids', hdf5.vuint32)])
                 for task_no in range(num_tasks):
-                    sbt[task_no] = self.sources_by_task.get(
-                        task_no, (0, 0, U32([])))
+                    try:
+                        sbt[task_no] = self.sources_by_task[task_no]
+                    except KeyError:
+                        pass
                 self.datastore['sources_by_task'] = sbt
                 self.sources_by_task.clear()
         numrups = sum(arr[0] for arr in self.calc_times.values())
