@@ -105,7 +105,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         if monitor.calc_id and nb > 1:
             try:
                 logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'INFO',
-                           'classical_split_filter:%d' % monitor.task_no, msg)
+                           'classical_split_filter#%d' % monitor.task_no, msg)
             except Exception:
                 # a foreign key error in case of `oq run` is expected
                 print(msg)
