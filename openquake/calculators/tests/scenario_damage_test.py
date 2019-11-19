@@ -23,7 +23,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9)
+    case_6, case_7, case_8, case_9, case_10)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -149,6 +149,13 @@ RM       4,000
     def test_case_9(self):
         # case with noDamageLimit==0 that had NaNs in the past
         self.run_calc(case_9.__file__, 'job.ini')
+        fnames = export(('dmg_by_asset', 'csv'), self.calc.datastore)
+        for i, fname in enumerate(fnames):
+            self.assertEqualFiles('expected/dmg_by_asset-%d.csv' % i, fname)
+
+    def test_case_10(self):
+        # case with more IMTs in the imported GMFs than required
+        self.run_calc(case_10.__file__, 'job.ini')
         fnames = export(('dmg_by_asset', 'csv'), self.calc.datastore)
         for i, fname in enumerate(fnames):
             self.assertEqualFiles('expected/dmg_by_asset-%d.csv' % i, fname)
