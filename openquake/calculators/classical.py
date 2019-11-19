@@ -104,7 +104,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             monitor.task_no, nb - 1, sum(b.weight for b in blocks) / nb)
         if monitor.calc_id and nb > 1:
             logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'INFO',
-                       '', msg)
+                       'classical_split_filter', msg)
         else:
             print(msg)
         for block in blocks[:-1]:
