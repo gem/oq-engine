@@ -93,7 +93,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         sources = list(srcfilter.filter(splits))
     if sources:
         sources.sort(key=weight)
-        maxw = sum(src.weight for src in sources) / 2
+        maxw = sum(src.weight for src in sources) / 5
         if maxw < 1000:
             maxw = 1000
         elif maxw > params['max_weight']:
