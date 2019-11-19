@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Added more check on the IMTs and made it impossible to import a GMF.csv
+  * Added more check on the IMTs and made it possible to import a GMF.csv
     file with more IMTs than needed
   * Enabled magnitude-dependent pointsource_distance and maximum_distance
   * Removed the syntax for magnitude-dependent maximum distance, since
