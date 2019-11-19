@@ -203,12 +203,13 @@ class AlAtikSigmaModel(GMPE):
         GMPE class that will be adjusted by AlAtikSigmaModel
     :kwarg tau_model:
         Choice of model for the inter-event standard deviation (tau), selecting
-        from "global" {default}, "cena" or "cena_constant"
+        from "global" {default}, "cena" or "cena_constant". default is global
     :kwarg tau_quantile:
         tau quantile used in sigma model. default of None uses the mean.
     :kwarg phi_model:
         Choice of model for the single-station intra-event standard deviation
         (phi_ss), selecting from "global" {default}, "cena" or "cena_constant"
+        default is global.
     :kwarg phi_quantile:
         phi quantile used in sigma model. default of None uses the mean.
     :kwarg phi_s2ss_model:
