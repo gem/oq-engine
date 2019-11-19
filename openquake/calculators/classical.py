@@ -100,11 +100,13 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             maxw = 1E6
         blocks = list(block_splitter(sources, maxw, weight))
         nb = len(blocks)
+        msg = 'task #%d produced %d subtask(s) with mean_weight=%d' % (
+            monitor.task_no, nb - 1, sum(b.weight for b in blocks) / nb)
         if monitor.calc_id and nb > 1:
-            msg = 'task #%d produced %d subtask(s) with mean_weight=%d' % (
-                monitor.task_no, nb - 1, sum(b.weight for b in blocks) / nb)
             logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'INFO',
                        '', msg)
+        else:
+            print(msg)
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
