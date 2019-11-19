@@ -983,13 +983,20 @@ def import_gmfs(dstore, fname, sids):
     if names[0] == 'rlzi':  # backward compatbility
         names = names[1:]  # discard the field rlzi
     imts = [name[4:] for name in names[2:]]
-    gmf_data_dt = dstore['oqparam'].gmf_data_dt()
-    arr = numpy.zeros(len(array), gmf_data_dt)
-    col = 0
+    oq = dstore['oqparam']
+    if set(oq.imtls) > set(imts):
+        raise ValueError('%s contains %s but the risk model needs %s' %
+                         (fname, imts, list(oq.imtls)))
+    imt2idx = {imt: i for i, imt in enumerate(oq.imtls)}
+    arr = numpy.zeros(len(array), oq.gmf_data_dt())
     for name in names:
         if name.startswith('gmv_'):
-            arr['gmv'][:, col] = array[name]
-            col += 1
+            try:
+                m = imt2idx[name[4:]]
+            except KeyError:  # the file contains more than enough IMTs
+                pass
+            else:
+                arr['gmv'][:, m] = array[name]
         else:
             arr[name] = array[name]
     # store the events
