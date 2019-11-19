@@ -103,10 +103,12 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         msg = 'task #%d produced %d subtask(s) with mean_weight=%d' % (
             monitor.task_no, nb - 1, sum(b.weight for b in blocks) / nb)
         if monitor.calc_id and nb > 1:
-            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'INFO',
-                       'classical_split_filter', msg)
-        else:
-            print(msg)
+            try:
+                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'INFO',
+                           'classical_split_filter', msg)
+            except Exception:
+                # a foreign key error in case of `oq run` is expected
+                print(msg)
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
