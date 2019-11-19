@@ -100,7 +100,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             maxw = 1E6
         blocks = list(block_splitter(sources, maxw, weight))
         nb = len(blocks)
-        msg = 'task #%d produced %d subtask(s) with mean_weight=%d' % (
+        msg = 'task #%d produced %d subtask(s) with mean weight=%d' % (
             monitor.task_no, nb - 1, sum(b.weight for b in blocks) / nb)
         if monitor.calc_id and nb > 1:
             try:
