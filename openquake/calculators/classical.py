@@ -93,11 +93,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         sources = list(srcfilter.filter(splits))
     if sources:
         sources.sort(key=weight)
-        maxw = sum(src.weight for src in sources) / params['task_multiplier']
+        maxw = sum(src.weight for src in sources) / 2
         if maxw < 1000:
             maxw = 1000
-        elif maxw > 1E6:
-            maxw = 1E6
+        elif maxw > params['max_weight']:
+            maxw = params['max_weight']
         blocks = list(block_splitter(sources, maxw, weight))
         nb = len(blocks)
         msg = 'produced %d subtask(s) with max weight=%d' % (
@@ -363,8 +363,7 @@ class ClassicalCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            shift_hypo=oq.shift_hypo,
-            task_multiplier=oq.task_multiplier,
+            shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical' and self.N == 1:
