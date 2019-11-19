@@ -66,7 +66,7 @@ def get_sof_adjustment(rake, imt):
     elif 45 < rake <= 135:
         famp = f_r_ss**(1-p_r) * f_n_ss**(-p_n)
     # Strike-Slip - F_SS:EQ
-    elif ((-30 < rake <= 30) or (150 < rake <= 180) or (-180 < rake <= -150)):
+    elif (-30 < rake <= 30) or (150 < rake <= 180) or (-180 < rake <= -150):
         famp = f_r_ss**(-p_r) * f_n_ss**(-p_n)
     else:
         raise ValueError('Unrecognised rake value')
@@ -88,7 +88,7 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
         super().__init__(focal_depth=10., region='CENA')
         # Adjust the set of required parameters for the description of the
         # rupture by adding rake
-        _previous = [s for s in list(super().REQUIRES_RUPTURE_PARAMETERS)]
+        _previous = list(super().REQUIRES_RUPTURE_PARAMETERS)
         self.REQUIRES_RUPTURE_PARAMETERS = frozenset(_previous + ['rake'])
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
@@ -196,8 +196,9 @@ class AlAtikSigmaModel(GMPE):
     The implementation of the sigma model is the one already available
     in the current implementation of the NGA East GMMs.
 
-    :param gmpe_name:
-        Name of the gmpe
+    :param GMPE:
+        GMPE is the **kwargs describing the GMPE (its name) and the sigma 
+        and kappa modifications to be imposed
 
     """
 
@@ -272,9 +273,9 @@ class AlAtikSigmaModel(GMPE):
         max period of coefficents provided by the GMPE
         """
         try:
-            highest_period = max(gmpe.COEFFS.sa_coeffs.keys()).period
+            highest_period = max(gmpe.COEFFS.sa_coeffs).period
         except AttributeError:
-            highest_period = max(gmpe.TAB2.sa_coeffs.keys()).period
+            highest_period = max(gmpe.TAB2.sa_coeffs).period
         cappingp = min(highest_period, cornerp)
         if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
             cappingp = 1.0
