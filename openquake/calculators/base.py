@@ -984,9 +984,10 @@ def import_gmfs(dstore, fname, sids):
         names = names[1:]  # discard the field rlzi
     imts = [name[4:] for name in names[2:]]
     oq = dstore['oqparam']
-    if set(oq.imtls) > set(imts):
-        raise ValueError('%s contains %s but the risk model needs %s' %
-                         (fname, imts, list(oq.imtls)))
+    missing = set(oq.imtls) - set(imts)
+    if missing:
+        raise ValueError('The calculation needs %s which is missing from %s' %
+                         (', '.join(missing), fname))
     imt2idx = {imt: i for i, imt in enumerate(oq.imtls)}
     arr = numpy.zeros(len(array), oq.gmf_data_dt())
     for name in names:
