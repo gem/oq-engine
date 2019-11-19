@@ -93,7 +93,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     if sources:
         sources.sort(key=weight)
         maxw = sum(src.weight for src in sources) / params['task_multiplier']
-        blocks = list(block_splitter(sources, max(maxw, 1000), weight))
+        if maxw < 1000:
+            maxw = 1000
+        elif maxw > 1E6:
+            maxw = 1E6
+        blocks = list(block_splitter(sources, maxw, weight))
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
