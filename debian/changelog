@@ -1,3 +1,6 @@
+  [Alberto Chiusole]
+  * changed the way how the available number of CPU cores is computed
+
   [Michele Simionato]
   * Renamed ordinal -> rlz_id in the realizations.csv output
   * Added more check on the IMTs and made it possible to import a GMF.csv
