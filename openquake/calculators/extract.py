@@ -198,9 +198,9 @@ def extract_realizations(dstore, dummy):
     rlzs = dstore['csm_info'].rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
-    dt = [('ordinal', U32), ('branch_path', '<S100'), ('weight', F32)]
+    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
-    arr['ordinal'] = rlzs['ordinal']
+    arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
     if scenario:
         gsims = dstore['csm_info/gsim_lt/branches']['uncertainty']
