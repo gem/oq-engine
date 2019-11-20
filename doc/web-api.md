@@ -310,14 +310,16 @@ Parameters: None
 
 Response:
 ```json
-{'aggregate_by': [],
- 'area_source_discretization': None,
- 'ash_wet_amplification_factor': 1.0,
- 'asset_correlation': 0,
- 'asset_hazard_distance': {u'default': 15},
- 'asset_loss_table': False,
- 'assets_per_site_limit': 1000,
- 'avg_losses': True,
+{"aggregate_by": [],
+ "area_source_discretization": null,
+ "ash_wet_amplification_factor": 1.0,
+ "asset_correlation": 0,
+ "asset_hazard_distance": {"default": 15},
+ "asset_loss_table": false,
+ "assets_per_site_limit": 1000,
+ "avg_losses": true,
+ "base_path": ".",
+ "calculation_mode": "",
  ...
  }
 ```
