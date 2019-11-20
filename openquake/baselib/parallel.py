@@ -594,9 +594,9 @@ class Starmap(object):
     running_tasks = []  # currently running tasks
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
-    if hasattr(psutil.Process(), 'cpu_affinity'):
+    try:
         num_cores = len(psutil.Process().cpu_affinity())
-    else:
+    except AttributeError:
         num_cores = psutil.cpu_count()
     oversubmit = False
 
