@@ -92,7 +92,6 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         splits, _stime = split_sources(srcs)
         sources.extend(srcfilter.filter(splits))
     if sources:
-        sources.sort(key=weight)
         totsites = len(srcfilter.sitecol)
         mw = 1000 if totsites <= params['max_sites_disagg'] else 50000
         mweight = max(mw, sum(src.weight for src in sources) /
