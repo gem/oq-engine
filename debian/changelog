@@ -1,3 +1,6 @@
+  [Alberto Chiusole]
+  * Changed the way how the available number of CPU cores is computed
+
   [Michele Simionato]
   * Renamed id -> event_id in the events.csv output and gmfs.csv output;
   * Renamed sid -> site_id in the gmfs.csv output
