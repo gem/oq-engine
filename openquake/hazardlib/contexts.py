@@ -377,6 +377,8 @@ class PmapMaker(object):
     def __init__(self, cmaker, srcfilter, group):
         vars(self).update(vars(cmaker))
         self.cmaker = cmaker
+        self.srcfilter = srcfilter
+        self.group = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = len(srcfilter.sitecol) <= cmaker.max_sites_disagg
