@@ -91,7 +91,14 @@ def extract_from(data, fields):
     return data
 
 
-def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
+def _header(fields, sep, renamedict):
+    if renamedict:
+        fields = [renamedict.get(f, f) for f in fields]
+    return encode(sep.join(fields) + '\n')
+
+
+def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
+              renamedict=None):
     """
     :param dest: None, file, filename or io.BytesIO instance
     :param data: array to save
@@ -133,7 +140,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
 
     someheader = header or autoheader
     if header != 'no-header' and someheader:
-        dest.write(encode(sep.join(someheader) + u'\n'))
+        dest.write(_header(someheader, sep, renamedict))
 
     def format(val):
         col = scientificformat(val, fmt)
@@ -152,7 +159,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
                     row.append('%.5f' % val)
                 else:
                     row.append(format(val))
-            dest.write(encode(sep.join(row) + '\n'))
+            dest.write(_header(row, sep, renamedict))
     else:
         for row in data:
             dest.write(encode(sep.join(format(col) for col in row) + '\n'))
