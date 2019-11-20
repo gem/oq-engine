@@ -592,6 +592,7 @@ def getargnames(task_func):
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
+    # Use only the "visible" cores, not the total system cores.
     num_cores = len(psutil.Process().cpu_affinity())
     oversubmit = False
 
