@@ -389,8 +389,6 @@ class PmapMaker(object):
     def _sids_poes(self, rup, r_sites, dctx, srcid):
         # return sids and poes of shape (N, L, G)
         # NB: this must be fast since it is inside an inner loop
-        if self.fewsites:  # store rupdata
-            self.rupdata.add(rup, srcid, r_sites, dctx)
         with self.gmf_mon:
             mean_std = base.get_mean_std(  # shape (2, N, M, G)
                 r_sites, rup, dctx, self.imts, self.gsims)
@@ -429,7 +427,7 @@ class PmapMaker(object):
                 (mag, list(rups)) for mag, rups in itertools.groupby(
                     src.iter_ruptures(shift_hypo=self.shift_hypo),
                     key=operator.attrgetter('mag'))]
-        self.rupdata = RupData(self.cmaker)
+        rupdata = RupData(self.cmaker)
         totrups, numrups, nsites = 0, 0, 0
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
@@ -444,6 +442,8 @@ class PmapMaker(object):
                     ctxs = self.collapse(ctxs)
                     numrups += len(ctxs)
             for rup, r_sites, dctx in ctxs:
+                if self.fewsites:  # store rupdata
+                    rupdata.add(rup, src.id, r_sites, dctx)
                 sids, poes = self._sids_poes(rup, r_sites, dctx, src.id)
                 with self.pne_mon:
                     pnes = rup.get_probability_no_exceedance(poes)
@@ -459,7 +459,7 @@ class PmapMaker(object):
         poemap.numrups = numrups
         poemap.nsites = nsites
         poemap.maxdist = numpy.mean(dists) if dists else None
-        poemap.data = self.rupdata.data
+        poemap.data = rupdata.data
         self._update(pmap, poemap, src)
         return poemap
 
