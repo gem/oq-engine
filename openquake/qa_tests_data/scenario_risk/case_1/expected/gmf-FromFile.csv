@@ -1,4 +1,4 @@
-eid,sid,gmv_PGA
+event_id,site_id,gmv_PGA
 0,0,6.040316E-01
 1,0,3.348780E-01
 2,0,3.926018E-01

@@ -400,7 +400,8 @@ def export_gmf_data_csv(ekey, dstore):
         writers.write_csv(f, sites)
         fname = dstore.build_fname('gmf', 'data', 'csv')
         gmfa.sort(order=['eid', 'sid'])
-        writers.write_csv(fname, _expand_gmv(gmfa, imts))
+        writers.write_csv(fname, _expand_gmv(gmfa, imts),
+                          renamedict={'sid': 'site_id', 'eid': 'event_id'})
         if 'sigma_epsilon' in dstore['gmf_data']:
             sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
             sig_eps = dstore['gmf_data/sigma_epsilon'][()]
@@ -413,6 +414,7 @@ def export_gmf_data_csv(ekey, dstore):
         else:
             return [fname, f]
     # old format for single eid
+    # TODO: is this still used?
     gmfa = gmfa[gmfa['eid'] == eid]
     eid2rlz = dict(dstore['events'])
     rlzi = eid2rlz[eid]

@@ -1,2 +1,3 @@
-event_id,rlzi,sig_SA(0.3),eps_SA(0.3)
-0,0,NAN,NAN
+event_id,sig,eps
+10,NAN,NAN
+11,NAN,NAN
