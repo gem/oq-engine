@@ -61,6 +61,11 @@ class ExperimentalWarning(UserWarning):
     to changes in future version.
     """
 
+class AdaptedWarning(UserWarning):
+    """
+    Raised for GMPEs that are intended for experimental use or maybe subject
+    to changes in future version.
+    """
 
 def gsim_imt_dt(sorted_gsims, sorted_imts):
     """
@@ -300,7 +305,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     superseded_by = None
     non_verified = False
     experimental = False
-    non_general = False
+    adapted = False
     get_poes = staticmethod(get_poes)
 
     @classmethod
@@ -328,11 +333,11 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             msg = ('%s is experimental and may change in future versions - '
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, ExperimentalWarning)
-        if cls.non_general:
+        if cls.adapted:
             msg = ('%s is not intended for general use and the behaviour '
                    'may not be as expected - '
                    'the user is liable for their application') % cls.__name__
-            warnings.warn(msg, ExperimentalWarning)
+            warnings.warn(msg, AdaptedWarning)
 
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
