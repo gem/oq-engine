@@ -1,3 +1,3 @@
-#,,"generated_by='OpenQuake engine 3.7.0-gitab830d1d1c', start_date='2019-09-14T06:51:48', checksum=3380558429"
-event_id,occupants,rlz_id
-0,1.99604E+00,0
+#,,,,,,,,,"generated_by='OpenQuake engine 3.8.0-gitd5287f4f5d', start_date='2019-11-20T15:55:36', checksum=1238055533, investigation_time=1.0, risk_investigation_time=50.0"
+event_id,id,business_interruption,contents,nonstructural,occupants,structural,rlz_id,rup_id,year
+0,a1,4.51641E+01,2.63838E+02,3.95756E+02,9.03281E-04,1.15396E+02,0,0,1

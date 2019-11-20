@@ -584,7 +584,7 @@ def export_realizations(ekey, dstore):
 def export_events(ekey, dstore):
     events = dstore['events'][()]
     path = dstore.export_path('events.csv')
-    writers.write_csv(path, events, fmt='%s')
+    writers.write_csv(path, events, fmt='%s', renamedict=dict(id='event_id'))
     return [path]
 
 

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Renamed id -> event_id in the events.csv output
   * Renamed ordinal -> rlz_id in the realizations.csv output
   * Added more check on the IMTs and made it possible to import a GMF.csv
     file with more IMTs than needed
