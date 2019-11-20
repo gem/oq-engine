@@ -1,3 +1,7 @@
+  [Matteo Nastasi]
+  * Add '/v1/ini_defaults' web api entry point to retrieve all default
+    values for ini attributes (attrs without a default are not returned)
+
   [Michele Simionato]
   * Added more check on the IMTs and made it possible to import a GMF.csv
     file with more IMTs than needed
