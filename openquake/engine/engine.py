@@ -335,7 +335,6 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         return
     try:
         if OQ_DISTRIBUTE.endswith('pool'):
-            # Report the number of "visible" cores, not the total system cores
             logs.LOG.warning('Using %d cores on %s',
                              parallel.Starmap.num_cores, platform.node())
         if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
