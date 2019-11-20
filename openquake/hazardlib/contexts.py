@@ -40,20 +40,6 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
 
 
-def _update(pmap, pm, src, src_mutex, rup_indep):
-    if rup_indep:
-        pm = ~pm
-    if not pm:
-        return
-    if src_mutex:
-        pm *= src.mutex_weight
-    for grp_id in src.src_group_ids:
-        if src_mutex:
-            pmap[grp_id] += pm
-        else:
-            pmap[grp_id] |= pm
-
-
 def get_distances(rupture, sites, param):
     """
     :param rupture: a rupture
@@ -344,8 +330,7 @@ class ContextMaker(object):
         for src, sites in srcfilter(group):
             t0 = time.time()
             try:
-                poemap = pmaker.make(src, sites)
-                _update(pmap, poemap, src, pmaker.src_mutex, pmaker.rup_indep)
+                poemap = pmaker.make(src, sites, pmap)
             except Exception as err:
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
@@ -419,7 +404,20 @@ class PmapMaker(object):
                         poes[:, ll(imt), g] = 0
             return r_sites.sids, poes
 
-    def make(self, src, sites):
+    def _update(self, pmap, pm, src):
+        if self.rup_indep:
+            pm = ~pm
+        if not pm:
+            return
+        if self.src_mutex:
+            pm *= src.mutex_weight
+        for grp_id in src.src_group_ids:
+            if self.src_mutex:
+                pmap[grp_id] += pm
+            else:
+                pmap[grp_id] |= pm
+
+    def make(self, src, sites, pmap):
         """
         :param src: a hazardlib source
         :param s_sites: the sites affected by it
@@ -460,6 +458,7 @@ class PmapMaker(object):
         poemap.nsites = nsites
         poemap.maxdist = numpy.mean(dists) if dists else None
         poemap.data = self.rupdata.data
+        self._update(pmap, poemap, src)
         return poemap
 
     def collapse(self, ctxs, precision=1E-3):
