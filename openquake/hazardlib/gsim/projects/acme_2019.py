@@ -81,7 +81,7 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
     focal mechanism.
     """
 
-    non_general = True
+    adapted = True
 
     def __init__(self):
         # Initialise using the super class
@@ -109,7 +109,7 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
     - Centered Dpp = 0
     """
 
-    non_general = True
+    adapted = True
 
     def _get_mean(self, sites, C, ln_y_ref, exp1, exp2):
         """
@@ -225,7 +225,7 @@ class AlAtikSigmaModel(GMPE):
 
     """
 
-    non_general = True
+    adapted = True
 
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
