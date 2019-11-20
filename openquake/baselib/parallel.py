@@ -592,7 +592,7 @@ def getargnames(task_func):
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
-    num_cores = multiprocessing.cpu_count()
+    num_cores = len(psutil.Process().cpu_affinity())
     oversubmit = False
 
     @classmethod
