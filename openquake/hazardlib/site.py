@@ -275,9 +275,12 @@ class SiteCollection(object):
 
     def one(self):
         """
-        :returns: a SiteCollection with only a site
+        :returns: a SiteCollection with a site of the highest vs30
         """
-        idx = self.array['lat'].argmin()
+        if 'vs30' in self.dtype.names:
+            idx = self.array['vs30'].argmax()
+        else:
+            idx = 0
         return self.filtered([self.sids[idx]])
 
     def __init__(self, sites):

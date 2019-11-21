@@ -1,10 +1,15 @@
-  [Alberto Chiusole]
-  * Changed the way how the available number of CPU cores is computed
-
   [Michele Simionato]
   * Renamed id -> event_id in the events.csv output and gmfs.csv output;
   * Renamed sid -> site_id in the gmfs.csv output
   * Renamed ordinal -> rlz_id in the realizations.csv output
+
+  [Alberto Chiusole]
+  * Changed the way how the available number of CPU cores is computed
+
+  [Kendra Johnson, Robin Gee]
+  * Added GMPEs for Rietbrock-Edwards (2019) and Yenier-Atkinson (2015)
+
+  [Michele Simionato]
   * Added more check on the IMTs and made it possible to import a GMF.csv
     file with more IMTs than needed
   * Enabled magnitude-dependent pointsource_distance and maximum_distance
