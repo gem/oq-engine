@@ -102,9 +102,9 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         for block in blocks[:-1]:
             if block.weight <= MINWEIGHT:  # task too small to be resubmitted
                 yield classical(block, srcfilter, gsims, params, monitor)
-                subtasks += 1
             else:  # resubmit
                 yield classical, block, srcfilter, gsims, params
+                subtasks += 1
         if monitor.calc_id and subtasks:
             msg = 'produced %d subtask(s) with max weight=%d' % (
                 subtasks, max(b.weight for b in blocks))
