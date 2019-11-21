@@ -92,24 +92,25 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         splits, _stime = split_sources(srcs)
         sources = list(srcfilter.filter(splits))
     if sources:
-        maxw = sum(src.weight for src in sources) / 5
-        if maxw < 1000:
-            maxw = 1000
-        elif maxw > params['max_weight']:
-            maxw = params['max_weight']
+        maxw = min(sum(src.weight for src in sources)/5, params['max_weight'])
         blocks = list(block_splitter(sources, maxw, weight))
-        nb = len(blocks)
+        subtasks = 0
+        for block in blocks[:-1]:
+            if block.weight > 1000:  # subtask big enough to resubmit
+                yield classical, block, srcfilter, gsims, params
+                subtasks += 1
+            else:  # run in-core
+                yield classical(block, srcfilter, gsims, params, monitor)
+
         msg = 'produced %d subtask(s) with max weight=%d' % (
-            nb - 1, max(b.weight for b in blocks))
-        if monitor.calc_id and nb > 1:
+            subtasks, max(b.weight for b in blocks))
+        if monitor.calc_id and subtasks:
             try:
                 logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
                            'classical_split_filter#%d' % monitor.task_no, msg)
             except Exception:
                 # a foreign key error in case of `oq run` is expected
                 print(msg)
-        for block in blocks[:-1]:
-            yield classical, block, srcfilter, gsims, params
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
