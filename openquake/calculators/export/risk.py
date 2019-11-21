@@ -147,7 +147,8 @@ def export_avg_losses(ekey, dstore):
         array = numpy.zeros(len(values), dt)
         for li, ln in enumerate(oq.loss_names):
             array[ln] = values[:, li]
-        writer.save(compose_arrays(assets, array), dest, comment=md)
+        writer.save(compose_arrays(assets, array), dest, comment=md,
+                    renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -292,7 +293,8 @@ def export_loss_maps_csv(ekey, dstore):
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
         md.update(
             dict(kind=uid, risk_investigation_time=oq.risk_investigation_time))
-        writer.save(compose_arrays(assets, value[:, i]), fname, comment=md)
+        writer.save(compose_arrays(assets, value[:, i]), fname, comment=md,
+                    renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -331,7 +333,8 @@ def export_damages_csv(ekey, dstore):
     for lti, lt in enumerate(loss_types):
         for tag, values in zip(tags, value[:, :, lti].T):
             fname = dstore.build_fname('damages-%s' % lt, tag, ekey[1])
-            writer.save(compose_arrays(assets, values), fname)
+            writer.save(compose_arrays(assets, values), fname,
+                    renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -494,7 +497,8 @@ def export_bcr_map(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for t, tag in enumerate(tags):
         path = dstore.build_fname('bcr', tag, 'csv')
-        writer.save(compose_arrays(assets, bcr_data[:, t]), path)
+        writer.save(compose_arrays(assets, bcr_data[:, t]), path,
+                    renamedict=dict(id='asset_id'))
         fnames.append(path)
     return writer.getsaved()
 
@@ -567,7 +571,8 @@ def export_asset_risk_csv(ekey, dstore):
             except KeyError:
                 row.append(value)
         rows.append(row)
-    writer.save(rows, fname, colnames)
+    writer.save(rows, fname, colnames,
+                renamedict=dict(id='asset_id'))
     return [fname]
 
 
