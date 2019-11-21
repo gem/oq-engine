@@ -1,5 +1,5 @@
-#,,,,,,,,,"generated_by='OpenQuake engine 3.8.0-gitfb0c4cdaf3', start_date='2019-11-08T14:13:57', checksum=3422077956, investigation_time=200.0, ses_per_logic_tree_path=3"
-rupid,multiplicity,mag,centroid_lon,centroid_lat,centroid_depth,trt,strike,dip,rake
+#,,,,,,,,,"generated_by='OpenQuake engine 3.8.0-git784eb9b41c', start_date='2019-11-21T05:39:50', checksum=3422077956, investigation_time=200.0, ses_per_logic_tree_path=3"
+rup_id,multiplicity,mag,centroid_lon,centroid_lat,centroid_depth,trt,strike,dip,rake
 0,1,5.850000E+00,-1.222000E+02,3.690000E+01,6.000000E+00,Active Shallow Crust,4.497391E+01,9.000000E+01,0.000000E+00
 1,1,5.550000E+00,-1.218000E+02,3.730000E+01,3.000000E+00,Active Shallow Crust,0.000000E+00,9.000000E+01,0.000000E+00
 2,1,5.550000E+00,-1.218000E+02,3.730000E+01,3.000000E+00,Active Shallow Crust,0.000000E+00,9.000000E+01,0.000000E+00
