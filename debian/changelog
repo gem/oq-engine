@@ -7,6 +7,8 @@
   * Renamed ordinal -> rlz_id in the realizations.csv output
 
   [Alberto Chiusole]
+  * Restored the `export_dir` to be relative to the current directory
+    and not to the input directory
   * Changed the way how the available number of CPU cores is computed
 
   [Kendra Johnson, Robin Gee]
