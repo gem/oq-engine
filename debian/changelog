@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Renamed id -> asset_id in all the relevant CSV exporters
   * Renamed rlzi -> rlz_id in the dmg_by_event.csv output
   * Renamed rupid -> rup_id in the ruptures.csv output
   * Renamed id -> event_id in the events.csv output and gmfs.csv output
