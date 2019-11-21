@@ -113,7 +113,7 @@ class LossCurveExporter(object):
             com = dict(
                 kind=key,
                 risk_investigation_time=self.oq.risk_investigation_time)
-            writer.save(data, dest, comment=com)
+            writer.save(data, dest, comment=com, renamedict=dict(id='asset_id'))
         return writer.getsaved()
 
     def export(self, export_type, what):
