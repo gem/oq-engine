@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Renamed id -> event_id in the events.csv output and gmfs.csv output;
+  * Renamed rupid -> rup_id in the ruptures.csv output
+  * Renamed id -> event_id in the events.csv output and gmfs.csv output
   * Renamed sid -> site_id in the gmfs.csv output
   * Renamed ordinal -> rlz_id in the realizations.csv output
 
