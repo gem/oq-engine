@@ -41,6 +41,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+MINWEIGHT = 1000
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -93,18 +94,20 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         sources = list(srcfilter.filter(splits))
     if sources:
         maxw = min(sum(src.weight for src in sources)/5, params['max_weight'])
+        if maxw <= MINWEIGHT:  # task too small to be resubmitted
+            yield classical(sources, srcfilter, gsims, params, monitor)
+            return
         blocks = list(block_splitter(sources, maxw, weight))
         subtasks = 0
         for block in blocks[:-1]:
-            if block.weight > 1000:  # subtask big enough to resubmit
-                yield classical, block, srcfilter, gsims, params
-                subtasks += 1
-            else:  # run in-core
+            if block.weight <= MINWEIGHT:  # task too small to be resubmitted
                 yield classical(block, srcfilter, gsims, params, monitor)
-
-        msg = 'produced %d subtask(s) with max weight=%d' % (
-            subtasks, max(b.weight for b in blocks))
+                subtasks += 1
+            else:  # resubmit
+                yield classical, block, srcfilter, gsims, params
         if monitor.calc_id and subtasks:
+            msg = 'produced %d subtask(s) with max weight=%d' % (
+                subtasks, max(b.weight for b in blocks))
             try:
                 logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
                            'classical_split_filter#%d' % monitor.task_no, msg)
