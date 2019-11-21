@@ -1,4 +1,5 @@
-id,policy,taxonomy,lon,lat,nonstructural,structural,structural_ins
+#,,,,,,,"generated_by='OpenQuake engine 3.8.0-git4c93a33098', start_date='2019-11-21T14:28:23', checksum=258387160, investigation_time=50.0, risk_investigation_time=50.0"
+asset_id,policy,taxonomy,lon,lat,nonstructural,structural,structural_ins
 "a0","A","RM",81.29850,29.10980,1.17871E+02,2.61625E+02,1.38009E+02
 "a1","A","RC",83.08230,27.90060,1.32559E+01,3.29468E+01,1.55663E+00
 "a2","B","W",85.74770,27.90150,2.34002E+01,1.89448E+02,1.70285E+02
