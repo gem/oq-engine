@@ -92,29 +92,26 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     with monitor("splitting/filtering sources"):
         splits, _stime = split_sources(srcs)
         sources = list(srcfilter.filter(splits))
-    if sources:
-        maxw = min(sum(src.weight for src in sources)/5, params['max_weight'])
-        if maxw <= MINWEIGHT:  # task too small to be resubmitted
-            yield classical(sources, srcfilter, gsims, params, monitor)
-            return
-        blocks = list(block_splitter(sources, maxw, weight))
-        subtasks = 0
-        for block in blocks[:-1]:
-            if block.weight <= MINWEIGHT:  # task too small to be resubmitted
-                yield classical(block, srcfilter, gsims, params, monitor)
-            else:  # resubmit
-                yield classical, block, srcfilter, gsims, params
-                subtasks += 1
-        if monitor.calc_id and subtasks:
-            msg = 'produced %d subtask(s) with max weight=%d' % (
-                subtasks, max(b.weight for b in blocks))
-            try:
-                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                           'classical_split_filter#%d' % monitor.task_no, msg)
-            except Exception:
-                # a foreign key error in case of `oq run` is expected
-                print(msg)
-        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
+    if not sources:
+        return
+    maxw = min(sum(src.weight for src in sources)/5, params['max_weight'])
+    if maxw < MINWEIGHT*5:  # task too small to be resubmitted
+        yield classical(sources, srcfilter, gsims, params, monitor)
+        return
+    blocks = list(block_splitter(sources, maxw, weight))
+    subtasks = len(blocks) - 1
+    for block in blocks[:-1]:
+        yield classical, block, srcfilter, gsims, params
+    if monitor.calc_id and subtasks:
+        msg = 'produced %d subtask(s) with max weight=%d' % (
+            subtasks, max(b.weight for b in blocks))
+        try:
+            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                       'classical_split_filter#%d' % monitor.task_no, msg)
+        except Exception:
+            # a foreign key error in case of `oq run` is expected
+            print(msg)
+    yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
 def split_by_mag(sources):
