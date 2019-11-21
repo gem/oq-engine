@@ -789,6 +789,7 @@ class OqParam(valid.ParamSet):
         """
         if self.export_dir and not os.path.isabs(self.export_dir):
             self.export_dir = os.getcwd()
+            logging.info('Using export_dir=%s', self.export_dir)
         if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
             logging.warning('export_dir not specified. Using export_dir=%s'
