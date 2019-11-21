@@ -207,7 +207,7 @@ def export_losses_by_asset(ekey, dstore):
         losses = losses_by_asset[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
         data = compose_arrays(assets, losses.copy().view(loss_dt)[:, 0])
-        writer.save(data, dest, comment=md)
+        writer.save(data, dest, comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -362,7 +362,8 @@ def export_dmg_by_asset_csv(ekey, dstore):
         else:
             dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        writer.save(compose_arrays(assets, dmg_by_asset), fname)
+        writer.save(compose_arrays(assets, dmg_by_asset), fname, renamedict=
+                    dict(id='asset_id'))
     return writer.getsaved()
 
 
