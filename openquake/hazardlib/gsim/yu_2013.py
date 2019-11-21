@@ -177,7 +177,7 @@ class YuEtAl2013Ms(GMPE):
     ])
 
     #: No site parameters required
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
@@ -193,7 +193,7 @@ class YuEtAl2013Ms(GMPE):
         """
         # Check that the requested standard deviation type is available
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                    for stddev_type in stddev_types)
+                   for stddev_type in stddev_types)
         #
         # Set parameters
         mag = rup.mag
