@@ -1,5 +1,5 @@
-#,,,,,"generated_by='OpenQuake engine 3.8.0-git8c570cc098', start_date='2019-10-04T11:01:48', checksum=1631201394, investigation_time=1.0, risk_investigation_time=1.0"
-NAME_1,id,taxonomy,lon,lat,structural
+#,,,,,"generated_by='OpenQuake engine 3.8.0-git4c93a33098', start_date='2019-11-21T14:28:30', checksum=1631201394, investigation_time=1.0, risk_investigation_time=1.0"
+NAME_1,asset_id,taxonomy,lon,lat,structural
 "RegionB","a3","tax1",-122.57000,38.11300,4.85046E-01
 "Region A","a2","tax1",-122.11400,38.11300,7.81351E+00
 "RegionB","a5","tax1",-122.00000,37.91000,8.44404E+00
