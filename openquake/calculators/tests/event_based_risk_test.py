@@ -360,7 +360,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check that the IDs in losses_by_event.csv exist in ruptures.csv
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        rupids = set(read_csv(fname, {None: '<S50'})['rupid'])
+        rupids = set(read_csv(fname, {None: '<S50'})['rup_id'])
         self.assertTrue(rup_ids <= rupids, 'There are non-existing rupture IDs'
                         ' in losses_by_event!')
 
