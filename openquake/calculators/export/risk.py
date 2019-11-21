@@ -373,7 +373,7 @@ def export_dmg_by_event(ekey, dstore):
     :param dstore: datastore object
     """
     damage_dt = build_damage_dt(dstore, mean_std=False)
-    dt_list = [('event_id', numpy.uint64), ('rlzi', numpy.uint16)] + [
+    dt_list = [('event_id', numpy.uint64), ('rlz_id', numpy.uint16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
     all_losses = dstore[ekey[0]][()]  # shape (E, R, LI)
     events_by_rlz = group_array(dstore['events'], 'rlz_id')
@@ -386,7 +386,7 @@ def export_dmg_by_event(ekey, dstore):
             data = all_losses[:, rlz.ordinal].copy().view(damage_dt)  # shape E
             arr = numpy.zeros(len(data), dt_list)
             arr['event_id'] = events_by_rlz[rlz.ordinal]['id']
-            arr['rlzi'] = rlz.ordinal
+            arr['rlz_id'] = rlz.ordinal
             for field in damage_dt.names:
                 arr[field] = data[field].squeeze()
             writer.save_block(arr, dest)
