@@ -1,4 +1,4 @@
-event_id,rlzi,contents~no_damage,contents~ds1,contents~ds2,contents~ds3,contents~ds4,nonstructural~no_damage,nonstructural~ds1,nonstructural~ds2,nonstructural~ds3,nonstructural~ds4,structural~no_damage,structural~ds1,structural~ds2,structural~ds3,structural~ds4
+event_id,rlz_id,contents~no_damage,contents~ds1,contents~ds2,contents~ds3,contents~ds4,nonstructural~no_damage,nonstructural~ds1,nonstructural~ds2,nonstructural~ds3,nonstructural~ds4,structural~no_damage,structural~ds1,structural~ds2,structural~ds3,structural~ds4
 0,0,4.33209E+00,1.18313E+00,8.34688E-01,4.91031E-01,1.59065E-01,4.27195E+00,1.77465E+00,7.61456E-01,1.06606E-01,8.53353E-02,6.49146E+00,3.98636E-01,8.84608E-02,1.65589E-02,4.88885E-03
 1,0,3.79961E+00,1.23735E+00,9.54932E-01,6.18176E-01,3.89926E-01,3.74608E+00,1.71630E+00,1.11063E+00,3.02715E-01,1.24269E-01,5.91999E+00,6.18147E-01,2.67638E-01,1.00040E-01,9.41890E-02
 2,0,3.90578E+00,1.29562E+00,9.76171E-01,5.67858E-01,2.54567E-01,3.85399E+00,1.83279E+00,1.03952E+00,1.73766E-01,9.99362E-02,6.19860E+00,5.51119E-01,1.77851E-01,4.40309E-02,2.84030E-02
