@@ -1,4 +1,4 @@
-event_id,rlzi,structural~no_damage,structural~slight,structural~moderate,structural~extensive,structural~complete
+event_id,rlz_id,structural~no_damage,structural~slight,structural~moderate,structural~extensive,structural~complete
 0,0,5.35591E+01,3.09624E+00,2.65311E-01,5.28488E-02,2.64528E-02
 1,0,5.34264E+01,3.29457E+00,2.28586E-01,3.70202E-02,1.34476E-02
 2,0,5.35646E+01,3.19295E+00,1.97363E-01,3.21006E-02,1.29504E-02
