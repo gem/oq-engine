@@ -1,3 +1,4 @@
-id,taxonomy,lon,lat,structural~mean,structural~stddev
+#,,,,,"generated_by='OpenQuake engine 3.8.0-gitc8d8cd129f', start_date='2019-11-21T14:14:58', checksum=1429593239, investigation_time=None, risk_investigation_time=None"
+asset_id,taxonomy,lon,lat,structural~mean,structural~stddev
 "a2","tax1",-122.00000,38.00300,4.22500E+01,1.31228E+02
 "a1","tax1",-122.00000,38.11300,4.22500E+02,1.31228E+03

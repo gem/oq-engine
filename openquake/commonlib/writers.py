@@ -179,7 +179,7 @@ class CsvWriter(object):
         self.fmt = fmt
         self.fnames = set()
 
-    def save(self, data, fname, header=None, comment=None):
+    def save(self, data, fname, header=None, comment=None, renamedict=None):
         """
         Save data on fname.
 
@@ -187,8 +187,9 @@ class CsvWriter(object):
         :param fname: path name
         :param header: header to use
         :param comment: optional dictionary to be converted in a comment
+        :param renamedict: a dictionary for renaming the columns
         """
-        write_csv(fname, data, self.sep, self.fmt, header, comment)
+        write_csv(fname, data, self.sep, self.fmt, header, comment, renamedict)
         self.fnames.add(getattr(fname, 'name', fname))
 
     def save_block(self, data, dest):
