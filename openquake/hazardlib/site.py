@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
+import collections
 from shapely import geometry
 from openquake.baselib.general import split_in_blocks, not_equal
 from openquake.hazardlib.geo.utils import (
@@ -238,7 +239,9 @@ class SiteCollection(object):
                 if name not in ('lon', 'lat'):
                     self._set(name, sitemodel[name])
         if len(numpy.unique(self[['lon', 'lat']])) < len(self):
-            raise ValueError('There are duplicated points!')
+            c = collections.Counter(tuple(loc) for loc in self[['lon', 'lat']])
+            [(k, v)] = c.most_common(1)
+            raise ValueError('There are duplicated points (%.5f %.5f)' % k)
         return self
 
     def _set(self, param, value):
