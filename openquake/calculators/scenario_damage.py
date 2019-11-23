@@ -25,6 +25,12 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
+def economic_loss(csqfunc, asset, fractions, loss_type):
+    means = [0] + [param[0] for param in csqfunc.params]
+    # NB: we add a 0 in front for nodamage state
+    return fractions @ means * asset['value-' + loss_type]
+
+
 def scenario_damage(riskinputs, crmodel, param, monitor):
     """
     Core function for a damage computation.
@@ -59,12 +65,22 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
-                    dmg = fractions[:, :D] * asset['number']  # shape (E, D)
+                    dmg = fractions * asset['number']  # shape (E, D)
                     result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
                     if crmodel.has('consequence'):
-                        csq = fractions[:, D] * asset['value-' + loss_type]
+                        try:
+                            cfs, ws = crmodel.get_csq_funcs_weights(
+                                asset['taxonomy'], loss_type)
+                        except KeyError:  # missing cf for a loss_type
+                            continue
+                        arrays = []
+                        for cf in cfs:
+                            arrays.append(
+                                economic_loss(cf, asset, fractions, loss_type))
+                        csq = arrays[0] if len(arrays) == 1 else numpy.average(
+                            arrays, weights=ws)
                         result['c_asset'].append(
                             (l, r, asset['ordinal'], scientific.mean_std(csq)))
                         result['c_event'][:, r, l] += csq
