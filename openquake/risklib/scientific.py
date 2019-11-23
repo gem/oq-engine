@@ -1504,8 +1504,8 @@ class LossesByAsset(object):
 consequence = CallableDict()
 
 
-@consequence.add('economic_loss')
-def economic_loss(csqfunc, asset, dmgdist, loss_type):
+@consequence.add('losses')
+def economic_losses(csqfunc, asset, dmgdist, loss_type):
     """
     :param csqfunc: consequence function (i.e. coefficients per damage state)
     :param asset: asset record
