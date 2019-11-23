@@ -20,7 +20,6 @@ import ast
 import copy
 import functools
 import collections
-import logging
 from urllib.parse import unquote_plus
 import numpy
 
@@ -543,6 +542,31 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def has(self, kind):
         return _extract(self._riskmodels, kind)
+
+    def compute_csq(self, name, asset, fractions, loss_type):
+        """
+        :param name: name of the consequence
+        :param asset: asset record
+        :param fractions: array of probabilies of shape (E, D)
+        :param loss_type: loss type as a string
+        :returns: an array of length E
+        """
+        if not self.has('consequence'):
+            return
+        conseq = scientific.consequence[name]
+        try:
+            # consider the taxonomy mapping
+            cfs, ws = self.get_csq_funcs_weights(
+                asset['taxonomy'], loss_type)
+        except KeyError:  # missing cf for a loss_type
+            return
+        arrays = []
+        for cf in cfs:
+            arrays.append(
+                conseq(cf, asset, fractions[:, 1:], loss_type))
+        csq = arrays[0] if len(arrays) == 1 else numpy.average(
+            arrays, weights=ws)
+        return csq
 
     def init(self, oqparam):
         self.imtls = oqparam.imtls
