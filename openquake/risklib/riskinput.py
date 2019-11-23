@@ -96,7 +96,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
                     dat = data[rm.imti[lt]]
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
-                arrays, weights=weights)
+                arrays, weights=weights, axis=0)
             ls.append(res)
         arr = numpy.concatenate(ls)
         dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
