@@ -51,10 +51,9 @@ def get_dmg_csq(crm, assets_by_site, gmf):
                 fracs = rm.scenario_damage(loss_type, assets, [gmv])
                 for asset, frac in zip(assets, fracs):
                     dmg = asset['number'] * frac  # shape (1, D)
-                    csq = crm.compute_csq(
-                        'economic_loss', asset, frac, loss_type)
+                    csq = crm.compute_csq(asset, frac, loss_type)
                     out[asset['ordinal'], l, 0, :D] = dmg
-                    out[asset['ordinal'], l, 0, D] = csq
+                    out[asset['ordinal'], l, 0, D] = csq['losses']
     return out
 
 
