@@ -1497,3 +1497,21 @@ class LossesByAsset(object):
         :returns: an array of shape (A, L)
         """
         return numpy.zeros((self.A, len(self.loss_names)), F32)
+
+
+# ####################### Consequences ##################################### #
+
+consequence = CallableDict()
+
+
+@consequence.add('economic_loss')
+def economic_loss(csqfunc, asset, dmgdist, loss_type):
+    """
+    :param csqfunc: consequence function (i.e. coefficients per damage state)
+    :param asset: asset record
+    :param dmgdist: an array of probabilies of shape (E, D - 1)
+    :param loss_type: loss type string
+    :returns: array of economic losses of length E
+    """
+    means = [param[0] for param in csqfunc.params]
+    return dmgdist @ means * asset['value-' + loss_type]
