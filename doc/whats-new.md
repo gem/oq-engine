@@ -257,8 +257,8 @@ importer is 4-5 times faster and uses over 10 times less memory than
 before.
 
 Since a long time ago the engine has the ability to reduce the hazard
-site collection (which can be large, think of a fine grid) only the
-locations were there are assets. Such feature has been optimized in
+site collection (which can be large, think of a fine grid) only to the
+locations where there are assets. Such feature has been optimized in
 this release, up to a spectacular extent in some cases: we measured a
 speedup from 2h to 0.1s for Canada.
 
