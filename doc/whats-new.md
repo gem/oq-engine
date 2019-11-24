@@ -400,7 +400,7 @@ deprecated. Now finally the NRML importers have been removed.
 
 There was an old deprecated GMF exporter in NRML format for scenario
 calculations. It has been finally deprecated. You should use the CSV
-exporter thas has been available for years insted.
+exporter thas has been available for years instead.
 
 We deprecated the XML disaggregation exporters in favor
 of the CSV exporters.
