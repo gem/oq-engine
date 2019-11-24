@@ -93,6 +93,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         splits, _stime = split_sources(srcs)
         sources = list(srcfilter.filter(splits))
     if not sources:
+        yield {'pmap': {}}
         return
     maxw = min(sum(src.weight for src in sources)/5, params['max_weight'])
     if maxw < MINWEIGHT*5:  # task too small to be resubmitted
