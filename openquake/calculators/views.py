@@ -574,7 +574,9 @@ def view_task_hazard(token, dstore):
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['taskno']
-    eff_ruptures, eff_sites, srcids = dstore['sources_by_task'][taskno]
+    eff_ruptures = dstore['sources_by_task/eff_ruptures'][taskno]
+    eff_sites = dstore['sources_by_task/eff_sites'][taskno]
+    srcids = dstore['sources_by_task/srcids'][taskno]
     srcs = dstore['source_info']['source_id'][srcids]
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],

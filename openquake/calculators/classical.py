@@ -326,15 +326,19 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('store source_info'):
                 self.store_source_info(self.calc_times)
             if self.sources_by_task:
-                num_tasks = max(self.sources_by_task) + 1
-                sbt = numpy.zeros(
-                    num_tasks, [('eff_ruptures', U32),
-                                ('eff_sites', U32),
-                                ('srcids', hdf5.vuint32)])
-                for task_no in range(num_tasks):
-                    sbt[task_no] = self.sources_by_task.get(
-                        task_no, (0, 0, U32([])))
-                self.datastore['sources_by_task'] = sbt
+                num_tasks = max(self.sources_by_task) + 1,
+                er = self.datastore.create_dset('sources_by_task/eff_ruptures',
+                                                U32, num_tasks)
+                es = self.datastore.create_dset('sources_by_task/eff_sites',
+                                                U32, num_tasks)
+                si = self.datastore.create_dset('sources_by_task/srcids',
+                                                hdf5.vuint32, num_tasks,
+                                                fillvalue=None)
+                for task_no, rec in self.sources_by_task.items():
+                    effrups, effsites, srcids = rec
+                    er[task_no] = effrups
+                    es[task_no] = effsites
+                    si[task_no] = srcids
                 self.sources_by_task.clear()
         numrups = sum(arr[0] for arr in self.calc_times.values())
         if self.totrups != numrups:
