@@ -804,16 +804,6 @@ class OqParam(valid.ParamSet):
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
-    def is_valid_sites(self):
-        """
-        The sites are overdetermined
-        """
-        if 'site_model' in self.inputs and (
-                self.sites or 'sites' in self.inputs
-                or 'hazard_curves' in self.inputs):
-            return False
-        return True
-
     def is_valid_complex_fault_mesh_spacing(self):
         """
         The `complex_fault_mesh_spacing` parameter can be None only if

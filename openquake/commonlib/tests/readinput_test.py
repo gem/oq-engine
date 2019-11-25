@@ -495,6 +495,5 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         self.assertEqual(len(discarded), 0)
 
     def test_site_model_sites(self):
-        # you cannot set them at the same time
-        with self.assertRaises(ValueError):
-            readinput.get_oqparam('job.ini', case_16, sites='0 0')
+        # you can set them at the same time
+        readinput.get_oqparam('job.ini', case_16, sites='0 0')
