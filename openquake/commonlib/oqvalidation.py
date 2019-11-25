@@ -77,7 +77,7 @@ class OqParam(valid.ParamSet):
     assets_per_site_limit = valid.Param(valid.positivefloat, 1000)
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
-    calculation_mode = valid.Param(valid.Choice(), '')  # -> get_oqparam
+    calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
