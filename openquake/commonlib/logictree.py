@@ -1464,7 +1464,7 @@ class GsimLogicTree(object):
             gsim = valid.gsim(branch['uncertainty'])
             for k, v in gsim.kwargs.items():
                 if k.endswith(('_file', '_table')):
-                    arr = numpy.asarray(dic[v][()])
+                    arr = numpy.asarray(dic[os.path.basename(v)][()])
                     gsim.kwargs[k] = io.BytesIO(bytes(arr))
             gsim.__init__(**gsim.kwargs)
             self.values[branch['trt']].append(gsim)
