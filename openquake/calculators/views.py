@@ -566,15 +566,17 @@ def view_task_hazard(token, dstore):
      $ oq show task:classical:-1  # the slowest task
     """
     _, name, index = token.split(':')
-    if 'sources_by_task' not in dstore:
-        return 'Missing sources_by_task'
+    if 'by_task' not in dstore:
+        return 'Missing by_task'
     data = get_array(dstore['task_info'][()], taskname=encode(name))
     if len(data) == 0:
         raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['taskno']
-    eff_ruptures, eff_sites, srcids = dstore['sources_by_task'][taskno]
+    eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
+    eff_sites = dstore['by_task/eff_sites'][taskno]
+    srcids = dstore['by_task/srcids'][taskno]
     srcs = dstore['source_info']['source_id'][srcids]
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
