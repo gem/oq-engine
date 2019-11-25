@@ -20,7 +20,6 @@ import ast
 import copy
 import functools
 import collections
-import logging
 from urllib.parse import unquote_plus
 import numpy
 
@@ -382,22 +381,14 @@ class RiskModel(object):
         :param assets: a list of A assets of the same taxonomy
         :param gmvs_eids: pairs (gmvs, eids), each one with E elements
         :param _eps: dummy parameter, unused
-        :returns: an array of shape (A, E, D + 1) elements
+        :returns: an array of shape (A, E, D) elements
 
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
         ffs = self.risk_functions[loss_type, 'fragility']
         damages = scientific.scenario_damage(ffs, gmvs).T
-        E, D = damages.shape
-        dmg_csq = numpy.zeros((E, D + 1))
-        dmg_csq[:, :D] = damages
-        c_model = self.risk_functions.get((loss_type, 'consequence'))
-        if c_model:  # compute consequences
-            means = [0] + [par[0] for par in c_model.params]
-            # NB: we add a 0 in front for nodamage state
-            dmg_csq[:, D] = damages @ means  # consequence ratio
-        return numpy.array([dmg_csq] * len(assets))
+        return numpy.array([damages] * len(assets))
 
     def classical_damage(
             self, loss_type, assets, hazard_curve, eids=None, eps=None):
@@ -552,6 +543,30 @@ class CompositeRiskModel(collections.abc.Mapping):
     def has(self, kind):
         return _extract(self._riskmodels, kind)
 
+    def compute_csq(self, asset, fractions, loss_type):
+        """
+        :param asset: asset record
+        :param fractions: array of probabilies of shape (E, D)
+        :param loss_type: loss type as a string
+        :returns: a dict consequence_name -> array of length E
+        """
+        if not self.has('consequence'):
+            return {}
+        try:
+            cfs, ws = self.get_csq_funcs_weights(
+                asset['taxonomy'], loss_type)
+        except KeyError:  # missing cf for a loss_type
+            return {}
+        csq = {}
+        for name, func in scientific.consequence.items():
+            arrays = []
+            for cf in cfs:
+                coeffs = [param[0] for param in cf.params]
+                arrays.append(func(coeffs, asset, fractions[:, 1:], loss_type))
+            csq[name] = arrays[0] if len(arrays) == 1 else numpy.average(
+                arrays, weights=ws, axis=0)
+        return csq
+
     def init(self, oqparam):
         self.imtls = oqparam.imtls
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
@@ -662,6 +677,19 @@ class CompositeRiskModel(collections.abc.Mapping):
             rmodels.append(self._riskmodels[key])
             weights.append(weight)
         return rmodels, weights
+
+    def get_csq_funcs_weights(self, taxidx, loss_type):
+        """
+        :returns:
+            a list of weighted consequence functions for the given taxonomy
+            index and loss type
+        """
+        cfuncs, weights = [], []
+        for key, weight in self.tmap[taxidx]:
+            rfs = self._riskmodels[key].risk_functions
+            cfuncs.append(rfs[loss_type, 'consequence'])
+            weights.append(weight)
+        return cfuncs, weights
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
