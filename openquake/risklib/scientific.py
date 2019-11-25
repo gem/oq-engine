@@ -1505,13 +1505,12 @@ consequence = CallableDict()
 
 
 @consequence.add('losses')
-def economic_losses(csqfunc, asset, dmgdist, loss_type):
+def economic_losses(coeffs, asset, dmgdist, loss_type):
     """
-    :param csqfunc: consequence function (i.e. coefficients per damage state)
+    :param coeffs: coefficients per damage state
     :param asset: asset record
     :param dmgdist: an array of probabilies of shape (E, D - 1)
     :param loss_type: loss type string
     :returns: array of economic losses of length E
     """
-    means = [param[0] for param in csqfunc.params]
-    return dmgdist @ means * asset['value-' + loss_type]
+    return dmgdist @ coeffs * asset['value-' + loss_type]
