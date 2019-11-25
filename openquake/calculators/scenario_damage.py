@@ -40,34 +40,33 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
                       'd_event': damage array of shape R, L, E, D,
-                      'c_asset': [(l, r, a, mean-stddev), ...],
-                      'c_event': damage array of shape R, L, E}
+                      + optional consequences}
 
-    `d_asset` and `d_tag` are related to the damage distributions
-    whereas `c_asset` and `c_tag` are the consequence distributions.
-    If there is no consequence model `c_asset` is an empty list and
-    `c_tag` is a zero-valued array.
+    `d_asset` and `d_tag` are related to the damage distributions.
     """
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     E = param['number_of_ground_motion_fields']
     R = riskinputs[0].hazard_getter.num_rlzs
-    result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
-                  c_asset=[], c_event=numpy.zeros((E, R, L), F64))
+    result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64))
+    for name in scientific.consequence:
+        result[name + '_by_asset'] = []
+        result[name + '_by_event'] = numpy.zeros((E, R, L), F64)
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
-                    dmg = fractions[:, :D] * asset['number']  # shape (E, D)
+                    dmg = fractions * asset['number']  # shape (E, D)
                     result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
-                    if crmodel.has('consequence'):
-                        csq = fractions[:, D] * asset['value-' + loss_type]
-                        result['c_asset'].append(
-                            (l, r, asset['ordinal'], scientific.mean_std(csq)))
-                        result['c_event'][:, r, l] += csq
+                    csq = crmodel.compute_csq(asset, fractions, loss_type)
+                    for name, value in csq.items():
+                        result[name + '_by_asset'].append(
+                            (l, r, asset['ordinal'],
+                             scientific.mean_std(value)))
+                        result[name + '_by_event'][:, r, l] += value
     return result
 
 
@@ -120,13 +119,17 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.datastore['dmg_by_event'] = d_event
 
         # consequence distributions
-        if result['c_asset']:
-            dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
-            stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
-            c_asset = numpy.zeros((N, R, L), stat_dt)
-            for (l, r, a, stat) in result['c_asset']:
-                c_asset[a, r, l] = stat
-            self.datastore['losses_by_asset'] = c_asset
-            self.datastore['losses_by_event'] = numpy.fromiter(
-                ((eid + rlzi * F, rlzi, F32(result['c_event'][eid, rlzi]))
-                 for rlzi in range(R) for eid in range(F)), dtlist)
+        del result['d_asset']
+        del result['d_event']
+        dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
+        stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
+        for name, csq in result.items():
+            if name.endswith('_by_asset'):
+                c_asset = numpy.zeros((N, R, L), stat_dt)
+                for (l, r, a, stat) in result[name]:
+                    c_asset[a, r, l] = stat
+                self.datastore[name] = c_asset
+            elif name.endswith('_by_event'):
+                self.datastore[name] = numpy.fromiter(
+                    ((eid + rlzi * F, rlzi, F32(result[name][eid, rlzi]))
+                     for rlzi in range(R) for eid in range(F)), dtlist)
