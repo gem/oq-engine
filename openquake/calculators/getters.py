@@ -59,7 +59,7 @@ def sig_eps_dt(imts):
     """
     :returns: a composite data type for the sig_eps output
     """
-    lst = [('eid', U32), ('rlzi', U16)]
+    lst = [('eid', U32), ('rlz_id', U16)]
     for imt in imts:
         lst.append(('sig_' + imt, F32))
     for imt in imts:
