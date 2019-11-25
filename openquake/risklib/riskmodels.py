@@ -561,7 +561,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         for name, func in scientific.consequence.items():
             arrays = []
             for cf in cfs:
-                arrays.append(func(cf, asset, fractions[:, 1:], loss_type))
+                coeffs = [param[0] for param in cf.params]
+                arrays.append(func(coeffs, asset, fractions[:, 1:], loss_type))
             csq[name] = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=ws, axis=0)
         return csq
