@@ -275,6 +275,10 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.c.get('/v1/available_gsims')
         self.assertIn(b'ChiouYoungs2014PEER', resp.content)
 
+    def test_ini_defaults(self):
+        resp = self.c.get('/v1/ini_defaults')
+        self.assertEqual(resp.status_code, 200)
+
     def test_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
