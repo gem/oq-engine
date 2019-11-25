@@ -256,7 +256,7 @@ def get_consequence_model(node, fname):
         node['assetCategory']  # make sure it is there
         node['lossCategory']  # make sure it is there
         cfs = node[2:]
-    functions = {}
+    coeffs = {}
     for cf in cfs:
         with context(fname, cf):
             params = []
@@ -270,11 +270,11 @@ def get_consequence_model(node, fname):
                         raise ValueError("Expected '%s', got '%s'" %
                                          (ls, param['ls']))
                     params.append((param['mean'], param['stddev']))
-            functions[cf['id']] = [p[0] for p in params]
+            coeffs[cf['id']] = [p[0] for p in params]
     attrs = node.attrib.copy()
     attrs.update(description=description, limitStates=limitStates)
     cmodel = scientific.ConsequenceModel(**attrs)
-    cmodel.update(functions)
+    cmodel.update(coeffs)
     return cmodel
 
 
