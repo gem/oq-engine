@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the /v1/calc/ID/status endpoint to return an error 404 when needed
   * Removed the "sites are overdetermined" check, since it now unneeded
   * Renamed id -> asset_id in all the relevant CSV exporters
   * Renamed rlzi -> rlz_id in the dmg_by_event.csv output
