@@ -327,6 +327,7 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('store source_info'):
                 self.store_source_info(self.calc_times)
             if self.by_task:
+                logging.info('Storing by_task information')
                 num_tasks = max(self.by_task) + 1,
                 er = self.datastore.create_dset('by_task/eff_ruptures',
                                                 U32, num_tasks)
