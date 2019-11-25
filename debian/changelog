@@ -1,10 +1,12 @@
+  [Michele Simionato]
+  * Fixed the /v1/calc/ID/status endpoint to return an error 404 when needed
+  * Removed the "sites are overdetermined" check, since it now unneeded
+
   [Matteo Nastasi]
   * Add '/v1/ini_defaults' web api entry point to retrieve all default
     values for ini attributes (attrs without a default are not returned)
 
   [Michele Simionato]
-  * Fixed the /v1/calc/ID/status endpoint to return an error 404 when needed
-  * Removed the "sites are overdetermined" check, since it now unneeded
   * Renamed rlzi -> rlzi in the sigma-epsilon dataset and exporter
   * Renamed id -> asset_id in all the relevant CSV exporters
   * Renamed rlzi -> rlz_id in the dmg_by_event.csv output
