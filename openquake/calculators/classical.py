@@ -93,6 +93,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         splits, _stime = split_sources(srcs)
         sources = list(srcfilter.filter(splits))
     if not sources:
+        yield {'pmap': {}}
         return
     maxw = min(sum(src.weight for src in sources)/5, params['max_weight'])
     if maxw < MINWEIGHT*5:  # task too small to be resubmitted
@@ -188,7 +189,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 eff_rups += rec[0]
                 if rec[0]:
                     eff_sites += rec[1] / rec[0]
-            self.sources_by_task[extra['task_no']] = (
+            self.by_task[extra['task_no']] = (
                 eff_rups, eff_sites, U32(srcids))
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
@@ -249,7 +250,7 @@ class ClassicalCalculator(base.HazardCalculator):
         dparams = [p[:-1] for p in self.rparams if p.endswith('_')]
         logging.info('Scalar parameters %s', rparams)
         logging.info('Vector parameters %s', dparams)
-        self.sources_by_task = {}  # task_no => src_ids
+        self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         return zd
 
@@ -325,17 +326,22 @@ class ClassicalCalculator(base.HazardCalculator):
                              'point sources %d km', maxdist)
             with self.monitor('store source_info'):
                 self.store_source_info(self.calc_times)
-            if self.sources_by_task:
-                num_tasks = max(self.sources_by_task) + 1
-                sbt = numpy.zeros(
-                    num_tasks, [('eff_ruptures', U32),
-                                ('eff_sites', U32),
-                                ('srcids', hdf5.vuint32)])
-                for task_no in range(num_tasks):
-                    sbt[task_no] = self.sources_by_task.get(
-                        task_no, (0, 0, U32([])))
-                self.datastore['sources_by_task'] = sbt
-                self.sources_by_task.clear()
+            if self.by_task:
+                logging.info('Storing by_task information')
+                num_tasks = max(self.by_task) + 1,
+                er = self.datastore.create_dset('by_task/eff_ruptures',
+                                                U32, num_tasks)
+                es = self.datastore.create_dset('by_task/eff_sites',
+                                                U32, num_tasks)
+                si = self.datastore.create_dset('by_task/srcids',
+                                                hdf5.vuint32, num_tasks,
+                                                fillvalue=None)
+                for task_no, rec in self.by_task.items():
+                    effrups, effsites, srcids = rec
+                    er[task_no] = effrups
+                    es[task_no] = effsites
+                    si[task_no] = srcids
+                self.by_task.clear()
         numrups = sum(arr[0] for arr in self.calc_times.values())
         if self.totrups != numrups:
             logging.info('Considered %d/%d ruptures', numrups, self.totrups)
