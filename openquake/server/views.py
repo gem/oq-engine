@@ -44,7 +44,8 @@ from django.shortcuts import render
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
-from openquake.hazardlib import nrml, gsim
+from openquake.hazardlib import nrml, gsim, valid
+
 
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base
@@ -211,6 +212,21 @@ def get_available_gsims(request):
     """
     gsims = list(gsim.get_available_gsims())
     return HttpResponse(content=json.dumps(gsims), content_type=JSON)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_ini_defaults(request):
+    """
+    Return a list of ini attributes with a default value
+    """
+    ini_defs = {}
+    for name in dir(oqvalidation.OqParam):
+        obj = getattr(oqvalidation.OqParam, name)
+        if (isinstance(obj, valid.Param)
+                and obj.default is not valid.Param.NODEFAULT):
+            ini_defs[name] = obj.default
+    return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)
 
 
 def _make_response(error_msg, error_line, valid):

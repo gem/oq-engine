@@ -1,3 +1,7 @@
+  [Matteo Nastasi]
+  * Add '/v1/ini_defaults' web api entry point to retrieve all default
+    values for ini attributes (attrs without a default are not returned)
+
   [Michele Simionato]
   * Removed the "sites are overdetermined" check, since it now unneeded
   * Renamed id -> asset_id in all the relevant CSV exporters
