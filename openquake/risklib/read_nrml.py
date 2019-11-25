@@ -270,8 +270,7 @@ def get_consequence_model(node, fname):
                         raise ValueError("Expected '%s', got '%s'" %
                                          (ls, param['ls']))
                     params.append((param['mean'], param['stddev']))
-            functions[cf['id']] = scientific.ConsequenceFunction(
-                cf['id'], cf['dist'], params)
+            functions[cf['id']] = [p[0] for p in params]
     attrs = node.attrib.copy()
     attrs.update(description=description, limitStates=limitStates)
     cmodel = scientific.ConsequenceModel(**attrs)
