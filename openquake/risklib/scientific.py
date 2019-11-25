@@ -635,20 +635,6 @@ class FragilityFunctionList(list):
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
 
 
-class ConsequenceFunction(object):
-    def __init__(self, id, dist, params):
-        self.id = id
-        self.dist = dist
-        self.params = numpy.array(params)
-
-    def __toh5__(self):
-        return self.params, dict(id=self.id, dist=self.dist)
-
-    def __fromh5__(self, params, attrs):
-        self.params = params
-        vars(self).update(attrs)
-
-
 class ConsequenceModel(dict):
     """
     Dictionary of consequence functions. You can access each
