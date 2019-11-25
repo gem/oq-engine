@@ -1,5 +1,5 @@
 #,,,"kind='rlz-001', risk_investigation_time=None"
-asset,loss_type,loss,poe
+asset_id,loss_type,loss,poe
 a1,structural,0.00000E+00,2.34712E-03
 a1,structural,6.31641E+00,2.34712E-03
 a1,structural,1.26328E+01,2.34434E-03
