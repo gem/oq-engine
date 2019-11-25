@@ -131,6 +131,9 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.c.get('/v1/calc/0')
         assert resp.status_code == 404, resp
 
+        resp = self.c.get('/v1/calc/0/status')
+        assert resp.status_code == 404, resp
+
     def test_ok(self):
         job_id = self.postzip('archive_ok.zip')
         self.wait()
