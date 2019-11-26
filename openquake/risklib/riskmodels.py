@@ -619,6 +619,16 @@ class CompositeRiskModel(collections.abc.Mapping):
         tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
         return tdict
 
+    def get_consequences(self):
+        """
+        :returns: the list of available consequences
+        """
+        csq = []
+        for cname_by_tagname, arr in self.cons_model.items():
+            if len(arr):
+                csq.append(cname_by_tagname.split('_by_')[0])
+        return csq
+
     def make_curve_params(self, oqparam):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
