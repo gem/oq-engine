@@ -379,8 +379,9 @@ class RiskModel(object):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
-        :param gmvs_eids: pairs (gmvs, eids), each one with E elements
-        :param _eps: dummy parameter, unused
+        :param gmvs: an array of E ground motion values
+        :param eids: an array of E event IDs
+        :param eps: dummy parameter, unused
         :returns: an array of shape (A, E, D) elements
 
         where N is the number of points, E the number of events
@@ -389,6 +390,8 @@ class RiskModel(object):
         ffs = self.risk_functions[loss_type, 'fragility']
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
+
+    event_based_damage = scenario_damage
 
     def classical_damage(
             self, loss_type, assets, hazard_curve, eids=None, eps=None):
