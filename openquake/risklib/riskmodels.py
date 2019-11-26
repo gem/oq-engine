@@ -379,8 +379,9 @@ class RiskModel(object):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
-        :param gmvs_eids: pairs (gmvs, eids), each one with E elements
-        :param _eps: dummy parameter, unused
+        :param gmvs: an array of E ground motion values
+        :param eids: an array of E event IDs
+        :param eps: dummy parameter, unused
         :returns: an array of shape (A, E, D) elements
 
         where N is the number of points, E the number of events
@@ -389,6 +390,8 @@ class RiskModel(object):
         ffs = self.risk_functions[loss_type, 'fragility']
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
+
+    event_based_damage = scenario_damage
 
     def classical_damage(
             self, loss_type, assets, hazard_curve, eids=None, eps=None):
@@ -618,6 +621,16 @@ class CompositeRiskModel(collections.abc.Mapping):
         # .taxonomy must be set by the engine
         tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
         return tdict
+
+    def get_consequences(self):
+        """
+        :returns: the list of available consequences
+        """
+        csq = []
+        for cname_by_tagname, arr in self.cons_model.items():
+            if len(arr):
+                csq.append(cname_by_tagname.split('_by_')[0])
+        return csq
 
     def make_curve_params(self, oqparam):
         # the CurveParams are used only in classical_risk, classical_bcr
