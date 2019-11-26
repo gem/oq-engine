@@ -631,7 +631,12 @@ def get_crmodel(oqparam):
     """
     riskdict = get_risk_models(oqparam)
     oqparam.set_risk_imtls(riskdict)
-    crm = riskmodels.CompositeRiskModel(oqparam, riskdict)
+    consdict = {}
+    for taxo, dic in riskdict.items():
+        for ltype, kind in list(dic):
+            if kind == 'consequence':
+                consdict[taxo, ltype] = dic.pop((ltype, kind))
+    crm = riskmodels.CompositeRiskModel(oqparam, riskdict, consdict)
     return crm
 
 
