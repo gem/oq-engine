@@ -598,7 +598,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
 
-    def vectorize(self, tagcol):
+    def vectorize_cons_model(self, tagcol):
         """
         Convert the dictionaries tag -> coeffs in the consequence model
         into vectors tag index -> coeffs (one per cname)
