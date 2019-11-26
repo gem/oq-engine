@@ -653,10 +653,15 @@ def get_crmodel(oqparam):
         # legacy approach, extract the consequences from the risk models
         consdict = {'losses_by_taxonomy': {}}
         for taxo, dic in riskdict.items():
-            for ltype, kind in list(dic):
-                if kind == 'consequence':
-                    consdict['losses_by_taxonomy'][taxo, ltype] = dic.pop(
-                        (ltype, kind))
+            coeffs_by_lt = {lt: dic.pop((lt, kind)) for lt, kind in list(dic)
+                            if kind == 'consequence'}
+            if coeffs_by_lt:
+                dtlist = [(lt, F32) for lt in coeffs_by_lt]
+                coeffs = numpy.zeros(len(riskdict.limit_states), dtlist)
+                for lt, cf in coeffs_by_lt.items():
+                    coeffs[lt] = cf
+                consdict['losses_by_taxonomy'][taxo] = coeffs
+
     crm = riskmodels.CompositeRiskModel(oqparam, riskdict, consdict)
     return crm
 
