@@ -140,8 +140,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertGreater(len(results), 0)
         for res in results:
             for etype in res['outtypes']:  # test all export types
-                if etype == 'xml' and res['type'] == 'gmf_data':
-                    continue  # do not export GMFs in XML for event based
                 text = self.get_text(
                     'result/%s' % res['id'], export_type=etype)
                 print('downloading result/%s' % res['id'], res['type'], etype)
@@ -213,6 +211,16 @@ class EngineServerTestCase(unittest.TestCase):
         extract_url = '/v1/calc/%s/extract/num_events' % job_id
         got = loadnpz(self.c.get(extract_url))
         self.assertEqual(got['num_events'], 34)
+
+        # check gmf_data
+        extract_url = '/v1/calc/%s/extract/gmf_data?event_id=28' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(len(got['rlz-000']), 3)
+
+        # check gmf_data with no data
+        extract_url = '/v1/calc/%s/extract/gmf_data?event_id=0' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(len(got['rlz-000']), 0)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
