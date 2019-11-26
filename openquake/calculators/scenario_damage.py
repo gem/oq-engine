@@ -88,7 +88,13 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        self.F = getattr(self, 'oqparam.number_of_ground_motion_fields', None)
+        self.F = getattr(self.oqparam, 'number_of_ground_motion_fields', None)
+        if not self.F and self.oqparam.hazard_calculation_id:
+            oqp = self.datastore.parent['oqparam']
+            try:
+                self.F = oqp.number_of_ground_motion_fields
+            except AttributeError:
+                pass
         self.param['number_of_ground_motion_fields'] = self.F
         self.riskinputs = self.build_riskinputs('gmf')
 
