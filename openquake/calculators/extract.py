@@ -771,6 +771,14 @@ def extract_gmf_scenario_npz(dstore, what):
         yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
 
 
+@extract.add('num_events')
+def extract_num_events(dstore, what):
+    """
+    :returns: the number of events (if any)
+    """
+    yield 'num_events', len(dstore['events'])
+
+
 def build_damage_dt(dstore, mean_std=True):
     """
     :param dstore: a datastore instance

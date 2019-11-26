@@ -209,6 +209,11 @@ class EngineServerTestCase(unittest.TestCase):
         boundaries = gzip.decompress(got['boundaries']).split(b'\n')
         self.assertEqual(len(boundaries), 33)
 
+        # check num_events
+        extract_url = '/v1/calc/%s/extract/num_events' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(got['num_events'], 34)
+
     def test_classical(self):
         job_id = self.postzip('classical.zip')
         self.wait()
