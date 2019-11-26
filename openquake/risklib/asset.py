@@ -209,6 +209,12 @@ class TagCollection(object):
         for tagname in tagnames:
             self.add_tagname(tagname)
 
+    def get_tagidx(self, tagname):
+        """
+        :returns: a dictionary tag string -> tag index
+        """
+        return {tag: idx for idx, tag in enumerate(getattr(self, tagname))}
+
     def add_tagname(self, tagname):
         self.tagnames.append(tagname)
         setattr(self, tagname + '_idx', {'?': 0})
