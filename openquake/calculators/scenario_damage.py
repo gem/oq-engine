@@ -88,10 +88,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        F = self.oqparam.number_of_ground_motion_fields
-        self.param['number_of_ground_motion_fields'] = F
+        self.F = getattr(self, 'oqparam.number_of_ground_motion_fields', None)
+        self.param['number_of_ground_motion_fields'] = self.F
         self.riskinputs = self.build_riskinputs('gmf')
-        self.param['tags'] = list(self.assetcol.tagcol)
 
     def post_execute(self, result):
         """
@@ -107,7 +106,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = len(self.rlzs_assoc.realizations)
         D = len(dstates)
         N = len(self.assetcol)
-        F = self.oqparam.number_of_ground_motion_fields
 
         # damage distributions
         dt_list = []
@@ -118,15 +116,17 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for (l, r, a, stat) in result['d_asset']:
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = d_asset
-        dmg_dt = [(ds, F32) for ds in self.crmodel.damage_states]
-        d_event = numpy.zeros((F, R, L), dmg_dt)
-        for d, ds in enumerate(self.crmodel.damage_states):
-            d_event[ds] = result['d_event'][:, :, :, d]
-        self.datastore['dmg_by_event'] = d_event
+        if self.F:
+            dmg_dt = [(ds, F32) for ds in self.crmodel.damage_states]
+            d_event = numpy.zeros((self.F, R, L), dmg_dt)
+            for d, ds in enumerate(self.crmodel.damage_states):
+                d_event[ds] = result['d_event'][:, :, :, d]
+            self.datastore['dmg_by_event'] = d_event
 
         # consequence distributions
         del result['d_asset']
-        del result['d_event']
+        if 'd_event' in result:
+            del result['d_event']
         dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
         stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
         for name, csq in result.items():
@@ -135,7 +135,17 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 for (l, r, a, stat) in result[name]:
                     c_asset[a, r, l] = stat
                 self.datastore[name] = c_asset
-            elif name.endswith('_by_event'):
+            elif self.F and name.endswith('_by_event'):
                 self.datastore[name] = numpy.fromiter(
-                    ((eid + rlzi * F, rlzi, F32(result[name][eid, rlzi]))
-                     for rlzi in range(R) for eid in range(F)), dtlist)
+                    ((eid + rlzi * self.F, rlzi, F32(result[name][eid, rlzi]))
+                     for rlzi in range(R) for eid in range(self.F)), dtlist)
+
+
+@base.calculators.add('event_based_damage')
+class EventBasedDamageCalculator(ScenarioDamageCalculator):
+    """
+    Event Based Damage calculator, able to compute dmg_by_asset
+    """
+    core_task = scenario_damage
+    precalc = 'event_based'
+    accept_precalc = ['event_based', 'event_based_risk']
