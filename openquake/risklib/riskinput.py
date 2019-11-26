@@ -53,6 +53,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
     :param haz: an array or a dictionary of hazard on that site
     :param rlzi: if given, a realization index
+    :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
     if hasattr(haz, 'array'):  # classical
         eids = []
