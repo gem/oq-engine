@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an API /v1/calc/ID/extract/gmf_data?event_id=XXX
   * Added an API /v1/calc/ID/extract/num_events
   * Fixed the /v1/calc/ID/status endpoint to return an error 404 when needed
   * Removed the "sites are overdetermined" check, since it now unneeded
