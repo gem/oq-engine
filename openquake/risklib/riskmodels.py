@@ -549,12 +549,11 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dict consequence_name -> array of length E
         """
         csq = {}  # cname -> values per event
-        for byname, cons_by_tag in self.cons_model.items():
-            if cons_by_tag:
+        for byname, coeffs in self.cons_model.items():
+            if len(coeffs):
                 cname, tagname = byname.split('_by_')
                 func = scientific.consequence[cname]
-                [(tag, weight)] = self.tmap[asset[tagname]]
-                coeffs = cons_by_tag[tag][loss_type]
+                coeffs = coeffs[asset[tagname] - 1][loss_type]
                 csq[cname] = func(coeffs, asset, fractions[:, 1:], loss_type)
         return csq
 
@@ -598,6 +597,18 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if hasattr(rf, 'imt'):
                     iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
+
+    def vectorize(self, tagcol):
+        """
+        Convert the dictionaries tag -> coeffs in the consequence model
+        into vectors tag index -> coeffs (one per cname)
+        """
+        for cname_by_tagname, dic in self.cons_model.items():
+            cname, tagname = cname_by_tagname.split('_by_')
+            tagidx = tagcol.get_tagidx(tagname)
+            items = sorted((tagidx[tag], cf) for tag, cf in dic.items())
+            self.cons_model[cname_by_tagname] = numpy.array(
+                [it[1] for it in items])
 
     @cached_property
     def taxonomy_dict(self):
@@ -701,7 +712,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
         dic = self._riskmodels.copy()
         for k, v in self.cons_model.items():
-            if v:
+            if len(v):
                 dic[k] = v
         return dic, attrs
 
