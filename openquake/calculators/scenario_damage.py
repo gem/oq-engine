@@ -46,24 +46,24 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     """
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
+    F = param['number_of_ground_motion_fields']
     R = riskinputs[0].hazard_getter.num_rlzs
-    result = dict(d_asset=[])
     consequences = crmodel.get_consequences()
+    result = dict(d_asset=[])
+    if F:
+        result['d_event'] = numpy.zeros((F, R, L, D), F64)
+        for name in consequences:
+            result[name + '_by_event'] = numpy.zeros((F, R, L), F64)
     for name in consequences:
         result[name + '_by_asset'] = []
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
-            E = len(out.eids)
-            if 'd_event' not in result:
-                result['d_event'] = numpy.zeros((E, R, L, D), F64)
-            for name in consequences:
-                if name + '_by_event' not in result:
-                    result[name + '_by_event'] = numpy.zeros((E, R, L), F64)
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
-                    dmg = fractions * asset['number']  # shape (E, D)
-                    result['d_event'][:, r, l] += dmg
+                    dmg = fractions * asset['number']  # shape (F, D)
+                    if F:
+                        result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
                     csq = crmodel.compute_csq(asset, fractions, loss_type)
@@ -71,7 +71,8 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         result[name + '_by_asset'].append(
                             (l, r, asset['ordinal'],
                              scientific.mean_std(value)))
-                        result[name + '_by_event'][:, r, l] += value
+                        if F:
+                            result[name + '_by_event'][:, r, l] += value
     return result
 
 
@@ -87,6 +88,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
+        F = self.oqparam.number_of_ground_motion_fields
+        self.param['number_of_ground_motion_fields'] = F
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['tags'] = list(self.assetcol.tagcol)
 
