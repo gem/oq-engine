@@ -50,7 +50,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     R = riskinputs[0].hazard_getter.num_rlzs
     consequences = crmodel.get_consequences()
     result = dict(d_asset=[])
-    if F:
+    if F:  # this is defined in scenario, not in event_based
         result['d_event'] = numpy.zeros((F, R, L, D), F64)
         for name in consequences:
             result[name + '_by_event'] = numpy.zeros((F, R, L), F64)
@@ -62,7 +62,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     dmg = fractions * asset['number']  # shape (F, D)
-                    if F:
+                    if F:  # in scenario
                         result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
@@ -71,7 +71,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         result[name + '_by_asset'].append(
                             (l, r, asset['ordinal'],
                              scientific.mean_std(value)))
-                        if F:
+                        if F:  # in scenario
                             result[name + '_by_event'][:, r, l] += value
     return result
 
