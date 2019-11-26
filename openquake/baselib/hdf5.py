@@ -661,6 +661,8 @@ def build_dt(dtypedict, names):
     for name in names:
         try:
             dt = dtypedict[name]
+            if dt is str:
+                dt = vstr
         except KeyError:
             dt = dtypedict[None]
         lst.append((name, dt))
@@ -690,6 +692,8 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
         try:
             rows = [tuple(row) for row in csv.reader(f)]
             arr = numpy.array(rows, build_dt(dtypedict, header))
+        except KeyError:
+            raise KeyError('Missing None -> default in dtypedict')
         except Exception as exc:
             raise InvalidFile('%s: %s' % (fname, exc))
     if renamedict:

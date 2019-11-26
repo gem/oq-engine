@@ -477,7 +477,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         crm = dstore.getitem('risk_model')
         riskdict = AccumDict(accum={})
         riskdict.limit_states = crm.attrs['limit_states']
-        cons_model = {}  # taxo, loss_type -> coeffs
+        cons_model = {}  # cname_by -> taxo, loss_type -> coeffs
         # TODO: populate it
         for quoted_id, rm in crm.items():
             riskid = unquote_plus(quoted_id)
@@ -718,8 +718,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt in self.loss_types:
                 attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
         dic = self._riskmodels.copy()
-        if self.cons_model:
-            dic['by_taxonomy'] = self.cons_model
+        dic.update(self.cons_model)
         return dic, attrs
 
     def __repr__(self):
