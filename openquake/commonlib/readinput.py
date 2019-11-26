@@ -31,7 +31,7 @@ import numpy
 import requests
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import random_filter, countby
+from openquake.baselib.general import random_filter, countby, group_array
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -622,6 +622,14 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
+def _cons_coeffs(records, limit_states):
+    dtlist = [(lt, F32) for lt in records['loss_type']]
+    coeffs = numpy.zeros(len(limit_states), dtlist)
+    for rec in records:
+        coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
+    return coeffs
+
+
 def get_crmodel(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
@@ -631,11 +639,24 @@ def get_crmodel(oqparam):
     """
     riskdict = get_risk_models(oqparam)
     oqparam.set_risk_imtls(riskdict)
-    consdict = {}
-    for taxo, dic in riskdict.items():
-        for ltype, kind in list(dic):
-            if kind == 'consequence':
-                consdict[taxo, ltype] = dic.pop((ltype, kind))
+    if 'consequence' in oqparam.inputs:
+        # build consdict of the form cname_by_tagname -> tag -> array
+        consdict = {}
+        for by, fname in oqparam.inputs['consequence'].items():
+            dtypedict = {by: str, 'cname': str, 'loss_type': str, None: float}
+            dic = group_array(hdf5.read_csv(fname, dtypedict).array, 'cname')
+            for cname, group in dic.items():
+                bytag = {tag: _cons_coeffs(grp, riskdict.limit_states)
+                         for tag, grp in group_array(group, by).items()}
+                consdict['%s_by_%s' % (cname, by)] = bytag
+    else:
+        # legacy approach, extract the consequences from the risk models
+        consdict = {'losses_by_taxonomy': {}}
+        for taxo, dic in riskdict.items():
+            for ltype, kind in list(dic):
+                if kind == 'consequence':
+                    consdict['losses_by_taxonomy'][taxo, ltype] = dic.pop(
+                        (ltype, kind))
     crm = riskmodels.CompositeRiskModel(oqparam, riskdict, consdict)
     return crm
 
