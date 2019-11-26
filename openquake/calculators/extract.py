@@ -742,7 +742,7 @@ def extract_losses_by_event(dstore, what):
         yield 'rlz-%03d' % rlzi, dic[rlzi]
 
 
-def _gmf_scenario(data, num_sites, imts):
+def _gmf(data, num_sites, imts):
     # convert data into the composite array expected by QGIS
     eids = sorted(numpy.unique(data['eid']))
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
@@ -758,17 +758,36 @@ def _gmf_scenario(data, num_sites, imts):
 
 # used by the QGIS plugin
 @extract.add('gmf_data')
-def extract_gmf_scenario_npz(dstore, what):
+def extract_gmf_npz(dstore, what):
     oq = dstore['oqparam']
+    qdict = parse(what)
+    [eid] = qdict.get('event_id', [None])
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
-    data = dstore['gmf_data/data'][()]
-    rlz = dstore['events']['rlz_id']
-    for rlzi in sorted(set(rlz)):
-        idx = rlz[data['eid']] == rlzi
-        gmfa = _gmf_scenario(data[idx], n, oq.imtls)
-        logging.info('Exporting array%s for rlz#%d', gmfa.shape, rlzi)
-        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
+    data = dstore['gmf_data/data']
+    if eid is None:  # get all events
+        rlz = dstore['events']['rlz_id']
+        for rlzi in sorted(set(rlz)):
+            idx = rlz[data['eid']] == rlzi
+            gmfa = _gmf(data[idx], n, oq.imtls)
+            logging.info('Exporting array%s for rlz#%d', gmfa.shape, rlzi)
+            yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
+    else:  # get a single event
+        rlzi = dstore['events'][eid]['rlz_id']
+        idx = data['eid'] == eid
+        if idx.any():
+            gmfa = _gmf(data[idx], n, oq.imtls)
+            yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
+        else:  # zero GMF
+            yield 'rlz-%03d' % rlzi, []
+
+
+@extract.add('num_events')
+def extract_num_events(dstore, what):
+    """
+    :returns: the number of events (if any)
+    """
+    yield 'num_events', len(dstore['events'])
 
 
 def build_damage_dt(dstore, mean_std=True):
