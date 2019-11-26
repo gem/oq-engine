@@ -548,20 +548,14 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param loss_type: loss type as a string
         :returns: a dict consequence_name -> array of length E
         """
-        if not self.cons_model:
-            return {}
-        try:
-            cfs, ws = self.get_csq_funcs_weights(
-                asset['taxonomy'], loss_type)
-        except KeyError:  # missing cf for a loss_type
-            return {}
-        csq = {}
-        for name, func in scientific.consequence.items():
-            arrays = []
-            for cf in cfs:
-                arrays.append(func(cf, asset, fractions[:, 1:], loss_type))
-            csq[name] = arrays[0] if len(arrays) == 1 else numpy.average(
-                arrays, weights=ws, axis=0)
+        csq = {}  # cname -> values per event
+        for byname, cons_by_tag in self.cons_model.items():
+            if cons_by_tag:
+                cname, tagname = byname.split('_by_')
+                func = scientific.consequence[cname]
+                [(tag, weight)] = self.tmap[asset[tagname]]
+                coeffs = cons_by_tag[tag][loss_type]
+                csq[cname] = func(coeffs, asset, fractions[:, 1:], loss_type)
         return csq
 
     def init(self, oqparam):
@@ -675,18 +669,6 @@ class CompositeRiskModel(collections.abc.Mapping):
             weights.append(weight)
         return rmodels, weights
 
-    def get_csq_funcs_weights(self, taxidx, loss_type):
-        """
-        :returns:
-            a list of weighted consequence functions for the given taxonomy
-            index and loss type
-        """
-        coeffs, weights = [], []
-        for key, weight in self.tmap[taxidx]:
-            coeffs.append(self.cons_model[key, loss_type])  # by taxonomy
-            weights.append(weight)
-        return coeffs, weights
-
     def __iter__(self):
         return iter(sorted(self._riskmodels))
 
@@ -718,7 +700,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt in self.loss_types:
                 attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
         dic = self._riskmodels.copy()
-        dic.update(self.cons_model)
+        for k, v in self.cons_model.items():
+            if v:
+                dic[k] = v
         return dic, attrs
 
     def __repr__(self):
