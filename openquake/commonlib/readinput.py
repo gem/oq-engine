@@ -399,8 +399,8 @@ def get_site_model(oqparam):
                  fname, {None: float, 'vs30measured': numpy.uint8}).array
             sm['lon'] = numpy.round(sm['lon'], 5)
             sm['lat'] = numpy.round(sm['lat'], 5)
-            uniq = len(numpy.unique(sm[['lon', 'lat']]))
-            if len(sm) != uniq:
+            num_uniq = len(numpy.unique(sm[['lon', 'lat']]))
+            if len(sm) != num_uniq:
                 raise InvalidFile('Found duplicate sites in %s' % fname)
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '

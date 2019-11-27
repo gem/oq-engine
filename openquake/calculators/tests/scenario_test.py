@@ -134,7 +134,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(self.calc.datastore['sitecol']), 66)
 
     def test_case_11(self):
-        # importing exposure + site model once causing duplicate sites
+        # importing exposure + site model with duplicate sites
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_11.__file__, 'job.ini')
         self.assertIn('duplicate sites', str(ctx.exception))
