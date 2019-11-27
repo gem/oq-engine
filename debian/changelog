@@ -1,4 +1,17 @@
   [Michele Simionato]
+  * Implemented an event_based_damage calculator
+  * Added an API /v1/calc/ID/extract/gmf_data?event_id=XXX
+  * Added an API /v1/calc/ID/extract/num_events
+  * Fixed the /v1/calc/ID/status endpoint to return an error 404 when needed
+  * Removed the "sites are overdetermined" check, since it now unneeded
+  * Turned the calculation of consequences into a plugin architecture
+
+  [Matteo Nastasi]
+  * Add '/v1/ini_defaults' web api entry point to retrieve all default
+    values for ini attributes (attrs without a default are not returned)
+
+  [Michele Simionato]
+  * Renamed rlzi -> rlzi in the sigma-epsilon dataset and exporter
   * Renamed id -> asset_id in all the relevant CSV exporters
   * Renamed rlzi -> rlz_id in the dmg_by_event.csv output
   * Renamed rupid -> rup_id in the ruptures.csv output

@@ -94,7 +94,8 @@ class LossCurveExporter(object):
         ebr = hasattr(self, 'builder')
         for key in sorted(curves_dict):
             recs = curves_dict[key]
-            data = [['asset', 'loss_type', 'loss', 'period' if ebr else 'poe']]
+            data = [['asset_id', 'loss_type', 'loss',
+                     'period' if ebr else 'poe']]
             for li, loss_type in enumerate(self.loss_types):
                 if ebr:  # event_based_risk
                     array = recs[:, :, li]  # shape (A, P, LI)
@@ -113,7 +114,8 @@ class LossCurveExporter(object):
             com = dict(
                 kind=key,
                 risk_investigation_time=self.oq.risk_investigation_time)
-            writer.save(data, dest, comment=com, renamedict=dict(id='asset_id'))
+            writer.save(data, dest, comment=com,
+                        renamedict=dict(id='asset_id'))
         return writer.getsaved()
 
     def export(self, export_type, what):
