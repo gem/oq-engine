@@ -177,8 +177,6 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
-            if extra.get('maxdist'):
-                self.maxdists.append(extra['maxdist'])
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
             srcids = []
@@ -197,8 +195,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures[grp_id] += eff_rups
 
             rup_data = dic['rup_data']
-            if len(rup_data['grp_id']):
-                nr = len(rup_data['srcidx'])
+            nr = len(rup_data['grp_id'])
+            if nr:
                 default = (numpy.ones(nr, F32) * numpy.nan,
                            [numpy.zeros(0, F32)] * nr)
                 for k in self.rparams:
@@ -221,7 +219,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
-        rparams = {'grp_id', 'srcidx', 'occurrence_rate',
+        rparams = {'grp_id', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_', 'rrup_'}
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         for sm in self.csm_info.source_models:
@@ -315,15 +313,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        self.maxdists = []
         try:
             acc = smap.get_results().reduce(self.agg_dicts, acc0)
             self.store_rlz_info(acc.eff_ruptures)
         finally:
-            if self.maxdists:
-                maxdist = numpy.mean(self.maxdists)
-                logging.info('Using effective maximum distance for '
-                             'point sources %d km', maxdist)
             with self.monitor('store source_info'):
                 self.store_source_info(self.calc_times)
             if self.by_task:
