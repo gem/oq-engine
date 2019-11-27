@@ -365,8 +365,8 @@ def export_dmg_by_asset_csv(ekey, dstore):
         else:
             dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        writer.save(compose_arrays(assets, dmg_by_asset), fname, renamedict=
-                    dict(id='asset_id'))
+        writer.save(compose_arrays(assets, dmg_by_asset), fname,
+                    renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 

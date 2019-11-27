@@ -1,3 +1,2 @@
-#,,"generated_by='OpenQuake engine 3.8.0-git7effe21d62', start_date='2019-11-20T16:24:51', checksum=1296573449"
-event_id,structural,rlz_id
-0,8.51288E+02,0
+#,,,,"generated_by='OpenQuake engine 3.8.0-git28790eb61b', start_date='2019-11-25T14:44:53', checksum=3586488257"
+event_id,contents,nonstructural,structural,rlz_id

@@ -42,7 +42,7 @@ KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
                 'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
                 'source_model_logic_tree', 'hazard_curves', 'insurance',
                 'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
-                'fragility', 'reqv', 'input_zip',
+                'fragility', 'consequence', 'reqv', 'input_zip',
                 'nonstructural_vulnerability',
                 'nonstructural_fragility',
                 'nonstructural_consequence',
@@ -77,7 +77,7 @@ class OqParam(valid.ParamSet):
     assets_per_site_limit = valid.Param(valid.positivefloat, 1000)
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
-    calculation_mode = valid.Param(valid.Choice(), '')  # -> get_oqparam
+    calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -97,7 +97,7 @@ class OqParam(valid.ParamSet):
     filter_distance = valid.Param(valid.Choice('rrup'), None)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
-    ground_motion_correlation_params = valid.Param(valid.dictionary)
+    ground_motion_correlation_params = valid.Param(valid.dictionary, {})
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
@@ -630,7 +630,8 @@ class OqParam(valid.ParamSet):
         """
         The calculation mode is event_based, event_based_risk or ebrisk
         """
-        return self.calculation_mode in 'event_based_risk ebrisk'
+        return (self.calculation_mode in
+                'event_based_risk ebrisk event_based_damage')
 
     def is_valid_shakemap(self):
         """
@@ -803,16 +804,6 @@ class OqParam(valid.ParamSet):
             return True
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
-
-    def is_valid_sites(self):
-        """
-        The sites are overdetermined
-        """
-        if 'site_model' in self.inputs and (
-                self.sites or 'sites' in self.inputs
-                or 'hazard_curves' in self.inputs):
-            return False
-        return True
 
     def is_valid_complex_fault_mesh_spacing(self):
         """
