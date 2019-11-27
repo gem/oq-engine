@@ -320,7 +320,6 @@ class ContextMaker(object):
         imtls = self.imtls
         L, G = len(imtls.array), len(self.gsims)
         pmap = AccumDict(accum=ProbabilityMap(L, G))
-        gids = []
         rup_data = AccumDict(accum=[])
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
@@ -345,14 +344,14 @@ class ContextMaker(object):
             if len(poemap.data):
                 nr = len(poemap.data['sid_'])
                 for gid in src.src_group_ids:
-                    gids.extend([gid] * nr)
+                    rup_data['grp_id'].extend([gid] * nr)
                     for k, v in poemap.data.items():
                         rup_data[k].extend(v)
             calc_times[src.id] += numpy.array(
                 [poemap.numrups, poemap.nsites, time.time() - t0])
 
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
-        rdata['grp_id'] = numpy.uint16(gids)
+        rdata['grp_id'] = numpy.uint16(rup_data['grp_id'])
         extra = dict(totrups=totrups,
                      maxdist=numpy.mean(dists) if dists else None)
         return pmap, rdata, calc_times, extra
