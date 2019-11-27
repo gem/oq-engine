@@ -372,6 +372,8 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
+    # the site model has the precedence over the exposure, see the
+    # discussion in https://github.com/gem/oq-engine/pull/5217
     elif 'site_model' in oqparam.inputs:
         logging.info('Extracting the hazard sites from the site model')
         sm = get_site_model(oqparam)
@@ -395,6 +397,11 @@ def get_site_model(oqparam):
         if isinstance(fname, str) and fname.endswith('.csv'):
             sm = hdf5.read_csv(
                  fname, {None: float, 'vs30measured': numpy.uint8}).array
+            sm['lon'] = numpy.round(sm['lon'], 5)
+            sm['lat'] = numpy.round(sm['lat'], 5)
+            uniq = len(numpy.unique(sm[['lon', 'lat']]))
+            if len(sm) != uniq:
+                raise InvalidFile('Found duplicate sites in %s' % fname)
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
