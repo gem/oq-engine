@@ -103,16 +103,15 @@ class RupData(object):
         for src in srcs:
             for rup in src.iter_ruptures(shift_hypo=self.cmaker.shift_hypo):
                 self.cmaker.add_rup_params(rup)
-                self.add(rup, src.id, sites)
+                self.add(rup, sites)
         return {k: numpy.array(v) for k, v in self.data.items()}
 
-    def add(self, rup, src_id, sctx, dctx=None):
+    def add(self, rup, sctx, dctx=None):
         rate = rup.occurrence_rate
         if numpy.isnan(rate):  # for nonparametric ruptures
             probs_occur = rup.probs_occur
         else:
             probs_occur = numpy.zeros(0, numpy.float64)
-        self.data['srcidx'].append(src_id or 0)
         self.data['occurrence_rate'].append(rate)
         self.data['weight'].append(rup.weight or numpy.nan)
         self.data['probs_occur'].append(probs_occur)
@@ -324,7 +323,6 @@ class ContextMaker(object):
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         pmaker = PmapMaker(self, srcfilter, group)
-        dists = []
         totrups = 0
         src_sites = srcfilter(group)
         while True:
@@ -338,16 +336,13 @@ class ContextMaker(object):
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
                 raise etype(msg).with_traceback(tb)
-            if poemap.maxdist:
-                dists.append(poemap.maxdist)
             totrups += poemap.totrups
             calc_times[src.id] += numpy.array(
                 [poemap.numrups, poemap.nsites, time.time() - t0])
 
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
         rdata['grp_id'] = numpy.uint16(rup_data['grp_id'])
-        extra = dict(totrups=totrups,
-                     maxdist=numpy.mean(dists) if dists else None)
+        extra = dict(totrups=totrups)
         return pmap, rdata, calc_times, extra
 
 
@@ -428,10 +423,7 @@ class PmapMaker(object):
         totrups, numrups, nsites = 0, 0, 0
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
-        dists = []
         for rups, sites, mdist in self._gen_rups_sites(src, sites):
-            if mdist is not None:
-                dists.append(mdist)
             with self.ctx_mon:
                 ctxs = self.cmaker.make_ctxs(rups, sites, mdist)
                 if ctxs:
@@ -440,7 +432,7 @@ class PmapMaker(object):
                     numrups += len(ctxs)
             for rup, r_sites, dctx in ctxs:
                 if self.fewsites:  # store rupdata
-                    rupdata.add(rup, src.id, r_sites, dctx)
+                    rupdata.add(rup, r_sites, dctx)
                 sids, poes = self._sids_poes(rup, r_sites, dctx, src.id)
                 with self.pne_mon:
                     pnes = rup.get_probability_no_exceedance(poes)
@@ -455,7 +447,6 @@ class PmapMaker(object):
         poemap.totrups = totrups
         poemap.numrups = numrups
         poemap.nsites = nsites
-        poemap.maxdist = numpy.mean(dists) if dists else None
         self._update(pmap, poemap, src)
         if len(rupdata.data):
             for gid in src.src_group_ids:
