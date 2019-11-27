@@ -20,7 +20,6 @@ import ast
 import copy
 import functools
 import collections
-import logging
 from urllib.parse import unquote_plus
 import numpy
 
@@ -380,24 +379,19 @@ class RiskModel(object):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
-        :param gmvs_eids: pairs (gmvs, eids), each one with E elements
-        :param _eps: dummy parameter, unused
-        :returns: an array of shape (A, E, D + 1) elements
+        :param gmvs: an array of E ground motion values
+        :param eids: an array of E event IDs
+        :param eps: dummy parameter, unused
+        :returns: an array of shape (A, E, D) elements
 
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
         ffs = self.risk_functions[loss_type, 'fragility']
         damages = scientific.scenario_damage(ffs, gmvs).T
-        E, D = damages.shape
-        dmg_csq = numpy.zeros((E, D + 1))
-        dmg_csq[:, :D] = damages
-        c_model = self.risk_functions.get((loss_type, 'consequence'))
-        if c_model:  # compute consequences
-            means = [0] + [par[0] for par in c_model.params]
-            # NB: we add a 0 in front for nodamage state
-            dmg_csq[:, D] = damages @ means  # consequence ratio
-        return numpy.array([dmg_csq] * len(assets))
+        return numpy.array([damages] * len(assets))
+
+    event_based_damage = scenario_damage
 
     def classical_damage(
             self, loss_type, assets, hazard_curve, eids=None, eps=None):
@@ -486,14 +480,14 @@ class CompositeRiskModel(collections.abc.Mapping):
         crm = dstore.getitem('risk_model')
         riskdict = AccumDict(accum={})
         riskdict.limit_states = crm.attrs['limit_states']
+        cons_model = {}  # cname_by -> taxo, loss_type -> coeffs
+        # TODO: populate it
         for quoted_id, rm in crm.items():
             riskid = unquote_plus(quoted_id)
             for lt_kind in rm:
                 lt, kind = lt_kind.rsplit('-', 1)
                 rf = dstore['risk_model/%s/%s' % (quoted_id, lt_kind)]
-                if kind == 'consequence':
-                    riskdict[riskid][lt, kind] = rf
-                elif kind == 'fragility':  # rf is a FragilityFunctionList
+                if kind == 'fragility':  # rf is a FragilityFunctionList
                     try:
                         rf = rf.build(
                             riskdict.limit_states,
@@ -511,12 +505,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                             lt[:-12], 'vulnerability_retrofitted'] = rf
                     else:
                         riskdict[riskid][lt, 'vulnerability'] = rf
-        crm = CompositeRiskModel(oqparam, riskdict)
+        crm = CompositeRiskModel(oqparam, riskdict, cons_model)
         crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
         return crm
 
-    def __init__(self, oqparam, riskdict):
+    def __init__(self, oqparam, riskdict, consdict):
         self.damage_states = []
+        self.cons_model = consdict
         self._riskmodels = {}  # riskid -> crmodel
         if oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
@@ -549,8 +544,21 @@ class CompositeRiskModel(collections.abc.Mapping):
                     riskid, oqparam, risk_functions=vfs)
         self.init(oqparam)
 
-    def has(self, kind):
-        return _extract(self._riskmodels, kind)
+    def compute_csq(self, asset, fractions, loss_type):
+        """
+        :param asset: asset record
+        :param fractions: array of probabilies of shape (E, D)
+        :param loss_type: loss type as a string
+        :returns: a dict consequence_name -> array of length E
+        """
+        csq = {}  # cname -> values per event
+        for byname, coeffs in self.cons_model.items():
+            if len(coeffs):
+                cname, tagname = byname.split('_by_')
+                func = scientific.consequence[cname]
+                coeffs = coeffs[asset[tagname] - 1][loss_type]
+                csq[cname] = func(coeffs, asset, fractions[:, 1:], loss_type)
+        return csq
 
     def init(self, oqparam):
         self.imtls = oqparam.imtls
@@ -593,6 +601,18 @@ class CompositeRiskModel(collections.abc.Mapping):
                     iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
 
+    def vectorize_cons_model(self, tagcol):
+        """
+        Convert the dictionaries tag -> coeffs in the consequence model
+        into vectors tag index -> coeffs (one per cname)
+        """
+        for cname_by_tagname, dic in self.cons_model.items():
+            cname, tagname = cname_by_tagname.split('_by_')
+            tagidx = tagcol.get_tagidx(tagname)
+            items = sorted((tagidx[tag], cf) for tag, cf in dic.items())
+            self.cons_model[cname_by_tagname] = numpy.array(
+                [it[1] for it in items])
+
     @cached_property
     def taxonomy_dict(self):
         """
@@ -601,6 +621,16 @@ class CompositeRiskModel(collections.abc.Mapping):
         # .taxonomy must be set by the engine
         tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
         return tdict
+
+    def get_consequences(self):
+        """
+        :returns: the list of available consequences
+        """
+        csq = []
+        for cname_by_tagname, arr in self.cons_model.items():
+            if len(arr):
+                csq.append(cname_by_tagname.split('_by_')[0])
+        return csq
 
     def make_curve_params(self, oqparam):
         # the CurveParams are used only in classical_risk, classical_bcr
@@ -686,14 +716,18 @@ class CompositeRiskModel(collections.abc.Mapping):
         loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
-        dic = dict(covs=self.covs, loss_types=loss_types,
-                   limit_states=limit_states,
-                   tmap=repr(getattr(self, 'tmap', [])))
+        attrs = dict(covs=self.covs, loss_types=loss_types,
+                     limit_states=limit_states,
+                     tmap=repr(getattr(self, 'tmap', [])))
         rf = next(iter(self.values()))
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
-                dic['loss_ratios_' + lt] = rf.loss_ratios[lt]
-        return self._riskmodels, dic
+                attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
+        dic = self._riskmodels.copy()
+        for k, v in self.cons_model.items():
+            if len(v):
+                dic[k] = v
+        return dic, attrs
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
