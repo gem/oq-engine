@@ -458,9 +458,8 @@ class PmapMaker(object):
         poemap.maxdist = numpy.mean(dists) if dists else None
         self._update(pmap, poemap, src)
         if len(rupdata.data):
-            nr = len(rupdata.data['sid_'])
             for gid in src.src_group_ids:
-                rup_data['grp_id'].extend([gid] * nr)
+                rup_data['grp_id'].extend([gid] * numrups)
                 for k, v in rupdata.data.items():
                     rup_data[k].extend(v)
         return poemap
