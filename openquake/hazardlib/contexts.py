@@ -327,10 +327,14 @@ class ContextMaker(object):
         pmaker = PmapMaker(self, srcfilter, group)
         dists = []
         totrups = 0
-        for src, sites in srcfilter(group):
+        src_sites = srcfilter(group)
+        while True:
             t0 = time.time()
             try:
+                src, sites = next(src_sites)
                 poemap = pmaker.make(src, sites, pmap)
+            except StopIteration:
+                break
             except Exception as err:
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
