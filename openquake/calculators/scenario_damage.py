@@ -40,34 +40,39 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
                       'd_event': damage array of shape R, L, E, D,
-                      'c_asset': [(l, r, a, mean-stddev), ...],
-                      'c_event': damage array of shape R, L, E}
+                      + optional consequences}
 
-    `d_asset` and `d_tag` are related to the damage distributions
-    whereas `c_asset` and `c_tag` are the consequence distributions.
-    If there is no consequence model `c_asset` is an empty list and
-    `c_tag` is a zero-valued array.
+    `d_asset` and `d_tag` are related to the damage distributions.
     """
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
-    E = param['number_of_ground_motion_fields']
+    F = param['number_of_ground_motion_fields']
     R = riskinputs[0].hazard_getter.num_rlzs
-    result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
-                  c_asset=[], c_event=numpy.zeros((E, R, L), F64))
+    consequences = crmodel.get_consequences()
+    result = dict(d_asset=[])
+    if F:  # this is defined in scenario, not in event_based
+        result['d_event'] = numpy.zeros((F, R, L, D), F64)
+        for name in consequences:
+            result[name + '_by_event'] = numpy.zeros((F, R, L), F64)
+    for name in consequences:
+        result[name + '_by_asset'] = []
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
-                    dmg = fractions[:, :D] * asset['number']  # shape (E, D)
-                    result['d_event'][:, r, l] += dmg
+                    dmg = fractions * asset['number']  # shape (F, D)
+                    if F:  # in scenario
+                        result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
-                    if crmodel.has('consequence'):
-                        csq = fractions[:, D] * asset['value-' + loss_type]
-                        result['c_asset'].append(
-                            (l, r, asset['ordinal'], scientific.mean_std(csq)))
-                        result['c_event'][:, r, l] += csq
+                    csq = crmodel.compute_csq(asset, fractions, loss_type)
+                    for name, value in csq.items():
+                        result[name + '_by_asset'].append(
+                            (l, r, asset['ordinal'],
+                             scientific.mean_std(value)))
+                        if F:  # in scenario
+                            result[name + '_by_event'][:, r, l] += value
     return result
 
 
@@ -83,10 +88,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        F = self.oqparam.number_of_ground_motion_fields
-        self.param['number_of_ground_motion_fields'] = F
+        self.F = getattr(self.oqparam, 'number_of_ground_motion_fields', None)
+        if not self.F and self.oqparam.hazard_calculation_id:
+            oqp = self.datastore.parent['oqparam']
+            try:
+                self.F = oqp.number_of_ground_motion_fields
+            except AttributeError:
+                pass
+        self.param['number_of_ground_motion_fields'] = self.F
         self.riskinputs = self.build_riskinputs('gmf')
-        self.param['tags'] = list(self.assetcol.tagcol)
 
     def post_execute(self, result):
         """
@@ -102,7 +112,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = len(self.rlzs_assoc.realizations)
         D = len(dstates)
         N = len(self.assetcol)
-        F = self.oqparam.number_of_ground_motion_fields
 
         # damage distributions
         dt_list = []
@@ -113,20 +122,36 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for (l, r, a, stat) in result['d_asset']:
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = d_asset
-        dmg_dt = [(ds, F32) for ds in self.crmodel.damage_states]
-        d_event = numpy.zeros((F, R, L), dmg_dt)
-        for d, ds in enumerate(self.crmodel.damage_states):
-            d_event[ds] = result['d_event'][:, :, :, d]
-        self.datastore['dmg_by_event'] = d_event
+        if self.F:
+            dmg_dt = [(ds, F32) for ds in self.crmodel.damage_states]
+            d_event = numpy.zeros((self.F, R, L), dmg_dt)
+            for d, ds in enumerate(self.crmodel.damage_states):
+                d_event[ds] = result['d_event'][:, :, :, d]
+            self.datastore['dmg_by_event'] = d_event
 
         # consequence distributions
-        if result['c_asset']:
-            dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
-            stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
-            c_asset = numpy.zeros((N, R, L), stat_dt)
-            for (l, r, a, stat) in result['c_asset']:
-                c_asset[a, r, l] = stat
-            self.datastore['losses_by_asset'] = c_asset
-            self.datastore['losses_by_event'] = numpy.fromiter(
-                ((eid + rlzi * F, rlzi, F32(result['c_event'][eid, rlzi]))
-                 for rlzi in range(R) for eid in range(F)), dtlist)
+        del result['d_asset']
+        if 'd_event' in result:
+            del result['d_event']
+        dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
+        stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
+        for name, csq in result.items():
+            if name.endswith('_by_asset'):
+                c_asset = numpy.zeros((N, R, L), stat_dt)
+                for (l, r, a, stat) in result[name]:
+                    c_asset[a, r, l] = stat
+                self.datastore[name] = c_asset
+            elif self.F and name.endswith('_by_event'):
+                self.datastore[name] = numpy.fromiter(
+                    ((eid + rlzi * self.F, rlzi, F32(result[name][eid, rlzi]))
+                     for rlzi in range(R) for eid in range(self.F)), dtlist)
+
+
+@base.calculators.add('event_based_damage')
+class EventBasedDamageCalculator(ScenarioDamageCalculator):
+    """
+    Event Based Damage calculator, able to compute dmg_by_asset
+    """
+    core_task = scenario_damage
+    precalc = 'event_based'
+    accept_precalc = ['event_based', 'event_based_risk']
