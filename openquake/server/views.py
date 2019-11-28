@@ -353,7 +353,7 @@ def calc_list(request, id=None):
     # always filter calculation list unless user is a superuser
     calc_data = logs.dbcmd('get_calcs', request.GET,
                            utils.get_valid_users(request),
-                           not request.user.is_superuser, id)
+                           not utils.is_superuser(request), id)
 
     response_data = []
     username = psutil.Process(os.getpid()).username()
@@ -401,7 +401,7 @@ def calc_abort(request, calc_id):
 
     # only the owner or superusers can abort a calculation
     if (job.user_name not in utils.get_valid_users(request) and
-            not request.user.is_superuser):
+            not utils.is_superuser(request)):
         message = {'error': ('User %s has no permission to abort job %s' %
                              (request.user, job.id))}
         return HttpResponse(content=json.dumps(message), content_type=JSON,
