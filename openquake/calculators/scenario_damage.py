@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import logging
 import numpy
 from openquake.risklib import scientific
 from openquake.calculators import base
@@ -49,7 +51,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     F = param['number_of_ground_motion_fields']
     R = riskinputs[0].hazard_getter.num_rlzs
     consequences = crmodel.get_consequences()
-    result = dict(d_asset=[])
+    result = dict(d_asset=[], nonzero=0)
     if F:  # this is defined in scenario, not in event_based
         result['d_event'] = numpy.zeros((F, R, L, D), F64)
         for name in consequences:
@@ -62,6 +64,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     dmg = fractions * asset['number']  # shape (F, D)
+                    result['nonzero'] += (dmg[:, 1:] > 1).sum()
                     if F:  # in scenario
                         result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
@@ -103,6 +106,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
+        nonzero = result.pop('nonzero', 0)
         if not result:
             self.collapsed()
             return
@@ -111,14 +115,17 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         L = len(ltypes)
         R = len(self.rlzs_assoc.realizations)
         D = len(dstates)
-        N = len(self.assetcol)
+        A = len(self.assetcol)
+        total = A * self.E * L * (D - 1)
+        logging.info(
+            f'There are {nonzero:_d}/{total:_d} nonzero damage fractions')
 
         # damage distributions
         dt_list = []
         mean_std_dt = numpy.dtype([('mean', (F32, D)), ('stddev', (F32, D))])
         for ltype in ltypes:
             dt_list.append((ltype, mean_std_dt))
-        d_asset = numpy.zeros((N, R, L, 2, D), F32)
+        d_asset = numpy.zeros((A, R, L, 2, D), F32)
         for (l, r, a, stat) in result['d_asset']:
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = d_asset
@@ -137,7 +144,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
         for name, csq in result.items():
             if name.endswith('_by_asset'):
-                c_asset = numpy.zeros((N, R, L), stat_dt)
+                c_asset = numpy.zeros((A, R, L), stat_dt)
                 for (l, r, a, stat) in result[name]:
                     c_asset[a, r, l] = stat
                 self.datastore[name] = c_asset
