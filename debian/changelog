@@ -1,3 +1,8 @@
+  [Daniele Viganò]
+  * Changed the default value of `ACL_ON` configuration variable.
+    All users have now access to all outputs by default when
+    authentication is enabled
+
   [Michele Simionato]
   * Implemented an event_based_damage calculator
   * Added an API /v1/calc/ID/extract/gmf_data?event_id=XXX
@@ -7,7 +12,7 @@
   * Turned the calculation of consequences into a plugin architecture
 
   [Matteo Nastasi]
-  * Add '/v1/ini_defaults' web api entry point to retrieve all default
+  * Added '/v1/ini_defaults' web api entry point to retrieve all default
     values for ini attributes (attrs without a default are not returned)
 
   [Michele Simionato]
