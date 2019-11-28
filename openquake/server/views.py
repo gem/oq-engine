@@ -399,9 +399,11 @@ def calc_abort(request, calc_id):
         message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
-    if not utils.user_has_permission(request, job.user_name):
+    # only the owner or superusers can abort a calculation
+    if (job.user_name not in utils.get_valid_users(request) and
+            not request.user.is_superuser):
         message = {'error': ('User %s has no permission to abort job %s' %
-                             (job.user_name, job.id))}
+                             (request.user, job.id))}
         return HttpResponse(content=json.dumps(message), content_type=JSON,
                             status=403)
 
