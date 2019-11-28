@@ -30,6 +30,13 @@ if settings.LOCKDOWN:
     from django.contrib.auth.models import User
 
 
+def is_superuser(request):
+    if settings.LOCKDOWN and hasattr(request, 'user'):
+        if request.user.is_superuser:
+            return True
+    return False
+
+
 def get_user(request):
     """
     Returns the users from `request` if authentication is enabled, otherwise
@@ -70,10 +77,10 @@ def get_acl_on(request):
     Returns `True` if ACL should be honorated, returns otherwise `False`.
     """
     acl_on = settings.ACL_ON
-    if settings.LOCKDOWN and hasattr(request, 'user'):
+    if is_superuser(request):
         # ACL is always disabled for superusers
-        if request.user.is_superuser:
-            acl_on = False
+        acl_on = False
+
     return acl_on
 
 
