@@ -350,9 +350,10 @@ def calc_list(request, id=None):
     Responses are in JSON.
     """
     base_url = _get_base_url(request)
+    # always filter calculation list unless user is a superuser
     calc_data = logs.dbcmd('get_calcs', request.GET,
                            utils.get_valid_users(request),
-                           utils.get_acl_on(request), id)
+                           not request.user.is_superuser, id)
 
     response_data = []
     username = psutil.Process(os.getpid()).username()
