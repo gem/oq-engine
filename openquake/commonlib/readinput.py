@@ -31,7 +31,8 @@ import numpy
 import requests
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import random_filter, countby, group_array
+from openquake.baselib.general import (
+    random_filter, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -399,9 +400,10 @@ def get_site_model(oqparam):
                  fname, {None: float, 'vs30measured': numpy.uint8}).array
             sm['lon'] = numpy.round(sm['lon'], 5)
             sm['lat'] = numpy.round(sm['lat'], 5)
-            num_uniq = len(numpy.unique(sm[['lon', 'lat']]))
-            if len(sm) != num_uniq:
-                raise InvalidFile('Found duplicate sites in %s' % fname)
+            dupl = get_duplicates(sm, 'lon', 'lat')
+            if dupl:
+                raise InvalidFile(
+                    'Found duplicate sites %s in %s' % (dupl, fname))
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
