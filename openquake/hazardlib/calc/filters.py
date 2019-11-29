@@ -88,14 +88,11 @@ class IntegrationDistance(collections.abc.Mapping):
                 self.dic[trt] = float(value)
 
     def __call__(self, trt, mag=None):
-        if not self.dic:
+        if mag and self.magdist and trt != 'default':
+            return self.magdist[trt]['%.3f' % mag]
+        elif not self.dic:
             return MAX_DISTANCE
-        value = getdefault(self.dic, trt)
-        if isinstance(value, float):  # scalar maximum distance
-            return value
-        elif mag is None:  # get the maximum distance for the maximum mag
-            return value[-1][1]
-        return getdefault(self.magdist, trt)['%.3f' % mag]
+        return getdefault(self.dic, trt)
 
     def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """
