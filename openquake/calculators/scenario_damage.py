@@ -56,7 +56,10 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
             result[name + '_by_event'] = numpy.zeros((F, R, L), F64)
     for name in consequences:
         result[name + '_by_asset'] = []
+    mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
+        with mon:
+            ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
