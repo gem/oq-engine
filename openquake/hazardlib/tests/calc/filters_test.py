@@ -41,12 +41,12 @@ class IntegrationDistanceTestCase(unittest.TestCase):
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
         aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
 
-        aae(maxdist('ANY_TRT', mag=7), 300)
-        bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=7)
+        aae(maxdist('ANY_TRT', mag=7), 400)
+        bb = maxdist.get_bounding_box(0, 10, 'default', mag=7)
         aae(bb, [-2.7395804, 7.30204,  2.7395804, 12.69796])
 
-        aae(maxdist('ANY_TRT', mag=6), 200)
-        bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=6)
+        aae(maxdist('default', mag=6), 200)
+        bb = maxdist.get_bounding_box(0, 10, 'default', mag=6)
         aae(bb, [-1.8263869, 8.20136, 1.8263869, 11.79864])
 
 
