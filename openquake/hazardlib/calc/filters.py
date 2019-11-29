@@ -130,9 +130,9 @@ class IntegrationDistance(collections.abc.Mapping):
 
     def get_dist_bins(self, trt, nbins=51):
         """
-        :returns: an array of distance bins, from zero to maxdist
+        :returns: an array of distance bins, from 10m to maxdist
         """
-        return numpy.arange(nbins) * self(trt) / (nbins - 1)
+        return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
     def __getstate__(self):
         # otherwise is not pickleable due to .piecewise
