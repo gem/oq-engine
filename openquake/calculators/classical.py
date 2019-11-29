@@ -266,10 +266,12 @@ class ClassicalCalculator(base.HazardCalculator):
             return {}
 
         mags = self.datastore['source_mags'][()]
+        if len(mags) == 0:  # everything was discarded
+            raise RuntimeError('All sources were discarded!?')
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                      for trt in gsims_by_trt}
-        if oq.pointsource_distance and len(mags):
+        if oq.pointsource_distance:
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
