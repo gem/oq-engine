@@ -116,6 +116,7 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
                         'There are %d old calculations, cannot '
                         'retrieve the %s' % (len(calc_ids), hc_id))
             calc = base.calculators(oqparam, calc_id)
+            calc.gzip_inputs = lambda: None  # disable feature
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
                      rlz_ids=rlz_ids)
