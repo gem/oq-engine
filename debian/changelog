@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check for duplicate sites in the site model file
   * Implemented an event_based_damage calculator
   * Added an API /v1/calc/ID/extract/gmf_data?event_id=XXX
   * Added an API /v1/calc/ID/extract/num_events
