@@ -2,7 +2,7 @@
 # !! must update pip first! so wheels will be used !!
 
 # GEM Mirror
-# We also provide pre-compiled windowsx_10_9_x86_64 wheels for
+# We also provide pre-compiled win_amd64 wheels for
 # h5py, Shapely, psutil, PyYAML, Basemap
 
 https://wheelhouse.openquake.org/v3/windows/py/pytz-2019.1-py2.py3-none-any.whl
@@ -17,7 +17,7 @@ https://wheelhouse.openquake.org/v3/windows/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/decorator-4.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/pbr-5.2.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/six-1.12.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/windows/py/Django-2.2.4-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/Django-2.2.7-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/sqlparse-0.3.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/certifi-2019.3.9-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/chardet-3.0.4-py2.py3-none-any.whl

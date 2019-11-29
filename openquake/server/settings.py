@@ -105,7 +105,9 @@ MIDDLEWARE = (
     'django.middleware.csrf.CsrfViewMiddleware',
 )
 
+# Authentication is not enabled by default
 LOCKDOWN = False
+# Allow all users to see other users outputs by default
 ACL_ON = False
 
 # Add additional paths (as regular expressions) that don't require
@@ -202,8 +204,6 @@ except ImportError:
         pass
 
 if LOCKDOWN:
-
-    ACL_ON = True
 
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',

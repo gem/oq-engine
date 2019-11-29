@@ -661,11 +661,9 @@ def build_dt(dtypedict, names):
     for name in names:
         try:
             dt = dtypedict[name]
-            if dt is str:
-                dt = vstr
         except KeyError:
             dt = dtypedict[None]
-        lst.append((name, dt))
+        lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 
 
