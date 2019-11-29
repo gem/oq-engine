@@ -122,7 +122,7 @@ class IntegrationDistance(collections.abc.Mapping):
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
         mag = src.get_min_max_mag()[1]
-        maxdist = self(src.tectonic_region_type, mag)
+        maxdist = self(src.tectonic_region_type)  # TODO: use mag here
         bbox = get_bounding_box(src, maxdist)
         return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
 
