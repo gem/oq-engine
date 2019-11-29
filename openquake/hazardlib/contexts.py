@@ -499,7 +499,7 @@ class PmapMaker(object):
                 loc.depth = numpy.average(depths, weights=weights)
                 trt = src.tectonic_region_type
                 for mag, rups in self.mag_rups:
-                    mdist = self.maximum_distance(trt, mag)
+                    mdist = self.maximum_distance(trt)  # FIXME: mag-dep
                     pdist = self.pointsource_distance.get('%.3f' % mag)
                     close, far = sites.split(loc, min(pdist, mdist))
                     if close is None:  # all is far
