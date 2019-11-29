@@ -1,5 +1,5 @@
-#,"generated_by='OpenQuake engine 3.8.0-git9546b776aa', start_date='2019-11-29T06:58:04', checksum=3866945601, smlt_path='b1', gsimlt_path='b1', imt='SA', investigation_time=50.0, lon=10.099999999999994, lat=40.1, poe='0.1000000', iml='3.2530334e-01', rlz=0"
+#,"generated_by='OpenQuake engine 3.8.0-git51eef813db', start_date='2019-11-17T07:32:55', checksum=3866945601, smlt_path='b1', gsimlt_path='b1', imt='SA', investigation_time=50.0, lon=10.099999999999994, lat=40.1, poe='0.1000000', iml='3.2707152e-01', rlz=0"
 mag,poe
-5.50000E+00,5.46570E-02
-6.50000E+00,3.03633E-02
-7.50000E+00,1.00171E-02
+5.50000E+00,5.39305E-02
+6.50000E+00,3.06130E-02
+7.50000E+00,9.93030E-03
