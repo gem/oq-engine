@@ -868,6 +868,9 @@ class RiskCalculator(HazardCalculator):
             riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
+        if self.oqparam.calculation_mode in (
+                'event_based_damage', 'scenario_damage', 'scenario_risk'):
+            self.datastore.swmr_on()
         return riskinputs
 
     def get_getter(self, kind, sid):
@@ -892,7 +895,11 @@ class RiskCalculator(HazardCalculator):
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you set '
                     'ground_motion_fields=False or a large minimum_intensity')
-        if dstore is self.datastore:
+        if (self.oqparam.calculation_mode not in
+                'event_based_damage scenario_damage scenario_risk'
+                and dstore is self.datastore):
+            # hack to make h5py happy; I could not get this to work with
+            # the SWMR mode
             getter.init()
         return getter
 
