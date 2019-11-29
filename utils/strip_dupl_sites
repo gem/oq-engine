@@ -17,15 +17,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Strip duplicates from a CSV file
-"""
 import numpy
 from openquake.baselib import sap, hdf5
 from openquake.commonlib.writers import write_csv
 
 @sap.Script
 def strip_dupl(fname, ndigits=5):
+    """
+    Strip duplicates from a CSV file
+    """
     dupl = set()
     arr = hdf5.read_csv(fname, {None: str, 'lon': float, 'lat': float}).array
     for f in ('lon', 'lat'):
