@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Avoided transferring the GMFs upfront in scenario_damage, scenario_risk
+    and event_based_damage
   * Added a check for duplicate sites in the site model file
   * Implemented an event_based_damage calculator
   * Added an API /v1/calc/ID/extract/gmf_data?event_id=XXX
@@ -31,7 +33,7 @@
   [Michele Simionato]
   * Added more check on the IMTs and made it possible to import a GMF.csv
     file with more IMTs than needed
-  * Enabled magnitude-dependent pointsource_distance and maximum_distance
+  * Enabled magnitude-dependent pointsource_distance
   * Removed the syntax for magnitude-dependent maximum distance, since
     now it can be automatically determined by the engine
   * Saving more information in the case of single-site classical hazard

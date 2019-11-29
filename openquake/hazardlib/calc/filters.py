@@ -78,24 +78,22 @@ class IntegrationDistance(collections.abc.Mapping):
     400.0
     """
     def __init__(self, dic):
-        self.dic = dic or {}  # TRT -> float or list of pairs
+        self.dic = {}  # TRT -> float or list of pairs
         self.magdist = {}  # TRT -> (magnitudes, distances), set by the engine
-        for trt, value in self.dic.items():
+        for trt, value in dic.items():
             if isinstance(value, (list, numpy.ndarray)):
                 # assume a list of pairs (magstring, dist)
                 self.magdist[trt] = {'%.3f' % mag: dist for mag, dist in value}
+                self.dic[trt] = value[-1][-1]
             else:
                 self.dic[trt] = float(value)
 
     def __call__(self, trt, mag=None):
-        if not self.dic:
+        if mag and trt in self.magdist:
+            return self.magdist[trt]['%.3f' % mag]
+        elif not self.dic:
             return MAX_DISTANCE
-        value = getdefault(self.dic, trt)
-        if isinstance(value, float):  # scalar maximum distance
-            return value
-        elif mag is None:  # get the maximum distance for the maximum mag
-            return value[-1][1]
-        return getdefault(self.magdist, trt)['%.3f' % mag]
+        return getdefault(self.dic, trt)
 
     def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """
@@ -124,15 +122,15 @@ class IntegrationDistance(collections.abc.Mapping):
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
         mag = src.get_min_max_mag()[1]
-        maxdist = self(src.tectonic_region_type, mag)
+        maxdist = self(src.tectonic_region_type)  # TODO: use mag here
         bbox = get_bounding_box(src, maxdist)
         return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
 
     def get_dist_bins(self, trt, nbins=51):
         """
-        :returns: an array of distance bins, from zero to maxdist
+        :returns: an array of distance bins, from 10m to maxdist
         """
-        return numpy.arange(nbins) * self(trt) / (nbins - 1)
+        return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
     def __getstate__(self):
         # otherwise is not pickleable due to .piecewise

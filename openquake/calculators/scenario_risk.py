@@ -60,7 +60,10 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
     L = len(crmodel.loss_types)
     result = dict(agg=numpy.zeros((E, L), F32), avg=[],
                   all_losses=AccumDict(accum={}))
+    mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
+        with mon:
+            ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             r = out.rlzi
             slc = param['event_slice'](r)
