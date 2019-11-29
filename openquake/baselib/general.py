@@ -1275,3 +1275,14 @@ def add_defaults(array, **kw):
         if k not in array.dtype.names:
             new[k] = v
     return new
+
+
+def get_duplicates(array, *fields):
+    """
+    :returns: a dictionary {key: num_dupl} for duplicate records
+    """
+    uniq = numpy.unique(array[list(fields)])
+    if len(uniq) == len(array):  # no duplicates
+        return {}
+    return {k: len(g) for k, g in group_array(array, *fields).items()
+            if len(g) > 1}

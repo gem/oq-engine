@@ -879,6 +879,8 @@ class Exposure(object):
             rename[field] = 'occupants_' + field
         for fname in self.datafiles:
             array = hdf5.read_csv(fname, conv, rename).array
+            array['lon'] = numpy.round(array['lon'], 5)
+            array['lat'] = numpy.round(array['lat'], 5)
             yield from array
 
     def _populate_from(self, asset_array, param, check_dupl):
