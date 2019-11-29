@@ -192,7 +192,7 @@ class ContextMaker(object):
         """
         distances = get_distances(rupture, sites, self.filter_distance)
         mdist = mdist or self.maximum_distance(
-            rupture.tectonic_region_type, rupture.mag)
+            rupture.tectonic_region_type)  # TODO: add rupture.mag here
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
