@@ -402,9 +402,15 @@ class HazardCalculator(BaseCalculator):
         self.init()  # do this at the end of pre-execute
 
         if not oq.hazard_calculation_id:
-            logging.info('gzipping the input files')
-            fnames = readinput.get_input_files(oq)
-            self.datastore.store_files(fnames)
+            self.gzip_inputs()
+
+    def gzip_inputs(self):
+        """
+        Gzipping the inputs and saving them in the datastore
+        """
+        logging.info('gzipping the input files')
+        fnames = readinput.get_input_files(self.oqparam)
+        self.datastore.store_files(fnames)
 
     def save_multi_peril(self):
         """Defined in MultiRiskCalculator"""
