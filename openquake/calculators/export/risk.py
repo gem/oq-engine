@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array,  deprecated
+from openquake.baselib.general import group_array
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -379,20 +379,21 @@ def export_dmg_by_event(ekey, dstore):
     damage_dt = build_damage_dt(dstore, mean_std=False)
     dt_list = [('event_id', numpy.uint64), ('rlz_id', numpy.uint16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
-    all_losses = dstore[ekey[0]][()]  # shape (E, R, LI)
+    data_by_eid = dict(dstore[ekey[0]][()])  # eid_dmg_dt
     events_by_rlz = group_array(dstore['events'], 'rlz_id')
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
     writer.save(numpy.zeros(0, dt_list), fname)
     with open(fname, 'ab') as dest:
-        for rlz in rlzs:
-            data = all_losses[:, rlz.ordinal].copy().view(damage_dt)  # shape E
+        for rlz, events in events_by_rlz.items():
+            data = numpy.array(  # shape (E, L, D)
+                [data_by_eid[eid] for eid in events['id']])
             arr = numpy.zeros(len(data), dt_list)
-            arr['event_id'] = events_by_rlz[rlz.ordinal]['id']
-            arr['rlz_id'] = rlz.ordinal
-            for field in damage_dt.names:
-                arr[field] = data[field].squeeze()
+            arr['event_id'] = events['id']
+            arr['rlz_id'] = events['rlz_id']
+            for l, loss_type in enumerate(damage_dt.names):
+                for d, dmg_state in enumerate(damage_dt[loss_type].names):
+                    arr[loss_type][dmg_state] = data[:, l, d]
             writer.save_block(arr, dest)
     return [fname]
 
@@ -501,26 +502,6 @@ def export_bcr_map(ekey, dstore):
                     renamedict=dict(id='asset_id'))
         fnames.append(path)
     return writer.getsaved()
-
-
-@export.add(('losses_by_tag', 'csv'))
-@deprecated(msg='This exporter will be removed soon')
-def export_by_tag_csv(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    token, tag = ekey[0].split('/')
-    data = extract(dstore, token + '/' + tag)
-    fnames = []
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for stat, arr in data:
-        tup = (ekey[0].replace('/', '-'), stat, ekey[1])
-        path = '%s-%s.%s' % tup
-        fname = dstore.export_path(path)
-        writer.save(arr, fname)
-        fnames.append(fname)
-    return fnames
 
 
 @export.add(('aggregate_by', 'csv'))
