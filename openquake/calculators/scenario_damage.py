@@ -18,6 +18,7 @@
 
 import logging
 import numpy
+from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -51,9 +52,10 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     F = param['number_of_ground_motion_fields']
     R = riskinputs[0].hazard_getter.num_rlzs
     consequences = crmodel.get_consequences()
-    result = dict(d_asset=[], nonzero=0)
+    collapse_threshold = param['collapse_threshold']
+    acc = AccumDict(accum=numpy.zeros((L, D), F32))
+    result = dict(d_asset=[], d_event=acc, nonzero=0)
     if F:  # this is defined in scenario, not in event_based
-        result['d_event'] = numpy.zeros((F, R, L, D), F64)
         for name in consequences:
             result[name + '_by_event'] = numpy.zeros((F, R, L), F64)
     for name in consequences:
@@ -68,8 +70,9 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     dmg = fractions * asset['number']  # shape (F, D)
                     result['nonzero'] += (dmg[:, 1:] > 1).sum()
-                    if F:  # in scenario
-                        result['d_event'][:, r, l] += dmg
+                    for eid, dmgdist in zip(out.eids, dmg):
+                        if dmgdist[-1] > collapse_threshold:
+                            acc[eid][l] += dmgdist
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
                     csq = crmodel.compute_csq(asset, fractions, loss_type)
@@ -102,6 +105,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             except AttributeError:
                 pass
         self.param['number_of_ground_motion_fields'] = self.F
+        self.param['collapse_threshold'] = self.oqparam.collapse_threshold
         self.riskinputs = self.build_riskinputs('gmf')
 
     def post_execute(self, result):
@@ -123,7 +127,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         logging.info(
             f'There are {nonzero:_d}/{total:_d} nonzero damage fractions')
 
-        # damage distributions
+        # damage by asset
         dt_list = []
         mean_std_dt = numpy.dtype([('mean', (F32, D)), ('stddev', (F32, D))])
         for ltype in ltypes:
@@ -132,12 +136,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for (l, r, a, stat) in result['d_asset']:
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = d_asset
-        if self.F:
-            dmg_dt = [(ds, F32) for ds in self.crmodel.damage_states]
-            d_event = numpy.zeros((self.F, R, L), dmg_dt)
-            for d, ds in enumerate(self.crmodel.damage_states):
-                d_event[ds] = result['d_event'][:, :, :, d]
-            self.datastore['dmg_by_event'] = d_event
+
+        # damage by event
+        eid_dmg_dt = self.crmodel.eid_dmg_dt()
+        d_event = numpy.array(sorted(result['d_event'].items()), eid_dmg_dt)
+        self.datastore['dmg_by_event'] = d_event
 
         # consequence distributions
         del result['d_asset']
