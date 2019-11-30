@@ -62,7 +62,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         result[name + '_by_asset'] = []
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        dddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->ddd
+        ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
         with mon:
             ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor):
@@ -76,7 +76,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         eid = out.eids[e]
                         acc[eid][l] += dmgdist
                         if dmgdist[-1] >= collapse_threshold:
-                            dddic[aid, eid][l] = fractions[e, 1:]
+                            ddic[aid, eid][l] = fractions[e, 1:]
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
                     csq = crmodel.compute_csq(asset, fractions, loss_type)
@@ -87,9 +87,9 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         by_event = result[name + '_by_event']
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
-        aed = numpy.zeros(len(dddic), param['aed_dt'])
-        for i, ((aid, eid), ddd) in enumerate(sorted(dddic.items())):
-            aed[i] = (aid, eid, ddd)
+        aed = numpy.zeros(len(ddic), param['aed_dt'])
+        for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
+            aed[i] = (aid, eid, dd)
         yield {'aed': aed}
     yield result
 
@@ -107,7 +107,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     def pre_execute(self):
         super().pre_execute()
         self.param['collapse_threshold'] = self.oqparam.collapse_threshold
-        self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_ddd_dt()
+        self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         A = len(self.assetcol)
         self.datastore.create_dset('dd_data/data', aed_dt)
         self.datastore.create_dset('dd_data/indices', U32, (A, 2))
