@@ -88,7 +88,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
         aed = numpy.zeros(len(dddic), param['aed_dt'])
-        for i, ((aid, eid), ddd) in enumerate(dddic.items()):
+        for i, ((aid, eid), ddd) in enumerate(sorted(dddic.items())):
             aed[i] = (aid, eid, ddd)
         yield {'aed': aed}
     yield result
