@@ -601,6 +601,14 @@ class CompositeRiskModel(collections.abc.Mapping):
                     iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
 
+    def eid_dmg_dt(self):
+        """
+        :returns: a dtype (eid, dmg)
+        """
+        L = len(self.lti)
+        D = len(self.damage_states)
+        return numpy.dtype([('eid', U32), ('dmg', (F32, (L, D)))])
+
     def vectorize_cons_model(self, tagcol):
         """
         Convert the dictionaries tag -> coeffs in the consequence model
