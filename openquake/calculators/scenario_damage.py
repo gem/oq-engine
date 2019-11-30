@@ -49,17 +49,14 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     """
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
-    F = param['number_of_ground_motion_fields']
-    R = riskinputs[0].hazard_getter.num_rlzs
     consequences = crmodel.get_consequences()
     collapse_threshold = param['collapse_threshold']
     acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
     # otherwise test 4b will randomly break with last digit changes
-    # in dmg_by_event
+    # in dmg_by_event :-(
     result = dict(d_asset=[], d_event=acc, nonzero=0)
-    if F:  # this is defined in scenario, not in event_based
-        for name in consequences:
-            result[name + '_by_event'] = numpy.zeros((F, R, L), F64)
+    for name in consequences:
+        result[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
     for name in consequences:
         result[name + '_by_asset'] = []
     mon = monitor('getting hazard', measuremem=False)
@@ -78,12 +75,13 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
                     csq = crmodel.compute_csq(asset, fractions, loss_type)
-                    for name, value in csq.items():
+                    for name, values in csq.items():
                         result[name + '_by_asset'].append(
                             (l, r, asset['ordinal'],
-                             scientific.mean_std(value)))
-                        if F:  # in scenario
-                            result[name + '_by_event'][:, r, l] += value
+                             scientific.mean_std(values)))
+                        by_event = result[name + '_by_event']
+                        for eid, value in zip(out.eids, values):
+                            by_event[eid][l] += value
     return result
 
 
@@ -99,14 +97,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        self.F = getattr(self.oqparam, 'number_of_ground_motion_fields', None)
-        if not self.F and self.oqparam.hazard_calculation_id:
-            oqp = self.datastore.parent['oqparam']
-            try:
-                self.F = oqp.number_of_ground_motion_fields
-            except AttributeError:
-                pass
-        self.param['number_of_ground_motion_fields'] = self.F
         self.param['collapse_threshold'] = self.oqparam.collapse_threshold
         self.riskinputs = self.build_riskinputs('gmf')
 
@@ -150,16 +140,18 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             del result['d_event']
         dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
         stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
+        rlz = self.datastore['events']['rlz_id']
         for name, csq in result.items():
             if name.endswith('_by_asset'):
                 c_asset = numpy.zeros((A, R, L), stat_dt)
                 for (l, r, a, stat) in result[name]:
                     c_asset[a, r, l] = stat
                 self.datastore[name] = c_asset
-            elif self.F and name.endswith('_by_event'):
-                self.datastore[name] = numpy.fromiter(
-                    ((eid + rlzi * self.F, rlzi, F32(result[name][eid, rlzi]))
-                     for rlzi in range(R) for eid in range(self.F)), dtlist)
+            elif name.endswith('_by_event'):
+                arr = numpy.zeros(len(csq), dtlist)
+                for i, (eid, loss) in enumerate(csq.items()):
+                    arr[i] = (eid, rlz[eid], loss)
+                self.datastore[name] = arr
 
 
 @base.calculators.add('event_based_damage')
