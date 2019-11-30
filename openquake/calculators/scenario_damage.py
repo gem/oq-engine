@@ -71,7 +71,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                     dmg = fractions * asset['number']  # shape (F, D)
                     result['nonzero'] += (dmg[:, 1:] > 1).sum()
                     for eid, dmgdist in zip(out.eids, dmg):
-                        if dmgdist[-1] > collapse_threshold:
+                        if dmgdist[-1] >= collapse_threshold:
                             acc[eid][l] += dmgdist
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
