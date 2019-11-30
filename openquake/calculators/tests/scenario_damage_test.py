@@ -19,6 +19,7 @@
 import os
 import numpy
 
+from openquake.baselib.general import fast_agg3
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
@@ -43,6 +44,16 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqual(len(got), len(expected))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual)
+        self.check_dmg_by_event()
+
+    def check_dmg_by_event(self):
+        number = self.calc.datastore['assetcol/array']['number']
+        data = self.calc.datastore['dd_data'][()]
+        if len(data):
+            data_by_eid = fast_agg3(data, 'eid', ['ddd'], number[data['aid']])
+            dmg_by_event = self.calc.datastore['dmg_by_event'][()]
+            for rec1, rec2 in zip(data_by_eid, dmg_by_event):
+                aae(rec1['ddd'], rec2['dmg'][:, 1:], decimal=1)
 
     def test_case_1(self):
         # test with a single event and a missing tag
