@@ -55,7 +55,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
     # otherwise test 4b will randomly break with last digit changes
     # in dmg_by_event :-(
-    result = dict(d_asset=[], d_event=acc, aed=[], nonzero=0)
+    result = dict(d_asset=[], d_event=acc, nonzero=0)
     for name in consequences:
         result[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
     for name in consequences:
@@ -90,9 +90,8 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         aed = numpy.zeros(len(dddic), param['aed_dt'])
         for i, ((aid, eid), ddd) in enumerate(dddic.items()):
             aed[i] = (aid, eid, ddd)
-        result['aed'].append(aed)
-    result['aed'] = numpy.concatenate(result['aed'])
-    return result
+        yield {'aed': aed}
+    yield result
 
 
 @base.calculators.add('scenario_damage')
@@ -116,12 +115,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.start = 0
 
     def combine(self, acc, res):
-        aed = res.pop('aed')
-        for aid, [(i1, i2)] in get_indices(aed['aid']).items():
-            self.datastore['dd_data/indices'][aid] = (
-                self.start + i1, self.start + i2)
-        self.start += len(aed)
-        hdf5.extend(self.datastore['dd_data/data'], aed)
+        if 'aed' in res:
+            aed = res['aed']
+            if len(aed) == 0:
+                return acc
+            for aid, [(i1, i2)] in get_indices(aed['aid']).items():
+                self.datastore['dd_data/indices'][aid] = (
+                    self.start + i1, self.start + i2)
+            self.start += len(aed)
+            hdf5.extend(self.datastore['dd_data/data'], aed)
+            return acc
         return acc + res
 
     def post_execute(self, result):
