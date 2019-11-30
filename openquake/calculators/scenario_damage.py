@@ -52,16 +52,16 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
     collapse_threshold = param['collapse_threshold']
-    acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
-    # otherwise test 4b will randomly break with last digit changes
-    # in dmg_by_event :-(
-    result = dict(d_asset=[], d_event=acc, nonzero=0)
-    for name in consequences:
-        result[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
-    for name in consequences:
-        result[name + '_by_asset'] = []
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
+        acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
+        # otherwise test 4b will randomly break with last digit changes
+        # in dmg_by_event :-(
+        result = dict(d_asset=[], d_event=acc, nonzero=0)
+        for name in consequences:
+            result[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
+        for name in consequences:
+            result[name + '_by_asset'] = []
         ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
         with mon:
             ri.hazard_getter.init()
@@ -87,11 +87,10 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         by_event = result[name + '_by_event']
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
-        aed = numpy.zeros(len(ddic), param['aed_dt'])
+        result['aed'] = aed = numpy.zeros(len(ddic), param['aed_dt'])
         for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
             aed[i] = (aid, eid, dd)
-        yield {'aed': aed}
-    yield result
+        yield result
 
 
 @base.calculators.add('scenario_damage')
@@ -115,16 +114,14 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.start = 0
 
     def combine(self, acc, res):
-        if 'aed' in res:
-            aed = res['aed']
-            if len(aed) == 0:
-                return acc
-            for aid, [(i1, i2)] in get_indices(aed['aid']).items():
-                self.datastore['dd_data/indices'][aid] = (
-                    self.start + i1, self.start + i2)
-            self.start += len(aed)
-            hdf5.extend(self.datastore['dd_data/data'], aed)
+        aed = res.pop('aed')
+        if len(aed) == 0:
             return acc
+        for aid, [(i1, i2)] in get_indices(aed['aid']).items():
+            self.datastore['dd_data/indices'][aid] = (
+                self.start + i1, self.start + i2)
+        self.start += len(aed)
+        hdf5.extend(self.datastore['dd_data/data'], aed)
         return acc + res
 
     def post_execute(self, result):
