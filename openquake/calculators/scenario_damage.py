@@ -53,13 +53,14 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     consequences = crmodel.get_consequences()
     collapse_threshold = param['collapse_threshold']
     mon = monitor('getting hazard', measuremem=False)
+    acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
+    res = {'d_event': acc}
+    for name in consequences:
+        res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
     for ri in riskinputs:
-        acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
-        result = dict(d_asset=[], d_event=acc, nonzero=0)
-        for name in consequences:
-            result[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
+        result = dict(d_asset=[], nonzero=0)
         for name in consequences:
             result[name + '_by_asset'] = []
         ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
@@ -84,13 +85,14 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         result[name + '_by_asset'].append(
                             (l, r, asset['ordinal'],
                              scientific.mean_std(values)))
-                        by_event = result[name + '_by_event']
+                        by_event = res[name + '_by_event']
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
         result['aed'] = aed = numpy.zeros(len(ddic), param['aed_dt'])
         for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
             aed[i] = (aid, eid, dd)
         yield result
+    yield res
 
 
 @base.calculators.add('scenario_damage')
@@ -114,9 +116,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.start = 0
 
     def combine(self, acc, res):
-        aed = res.pop('aed')
+        aed = res.pop('aed', ())
         if len(aed) == 0:
-            return acc
+            return acc + res
         for aid, [(i1, i2)] in get_indices(aed['aid']).items():
             self.datastore['dd_data/indices'][aid] = (
                 self.start + i1, self.start + i2)
