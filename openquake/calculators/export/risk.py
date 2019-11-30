@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array,  deprecated
+from openquake.baselib.general import group_array
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -502,26 +502,6 @@ def export_bcr_map(ekey, dstore):
                     renamedict=dict(id='asset_id'))
         fnames.append(path)
     return writer.getsaved()
-
-
-@export.add(('losses_by_tag', 'csv'))
-@deprecated(msg='This exporter will be removed soon')
-def export_by_tag_csv(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    token, tag = ekey[0].split('/')
-    data = extract(dstore, token + '/' + tag)
-    fnames = []
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for stat, arr in data:
-        tup = (ekey[0].replace('/', '-'), stat, ekey[1])
-        path = '%s-%s.%s' % tup
-        fname = dstore.export_path(path)
-        writer.save(arr, fname)
-        fnames.append(fname)
-    return fnames
 
 
 @export.add(('aggregate_by', 'csv'))
