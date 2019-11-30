@@ -53,7 +53,9 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     R = riskinputs[0].hazard_getter.num_rlzs
     consequences = crmodel.get_consequences()
     collapse_threshold = param['collapse_threshold']
-    acc = AccumDict(accum=numpy.zeros((L, D), F32))
+    acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
+    # otherwise test 4b will randomly break with last digit changes
+    # in dmg_by_event
     result = dict(d_asset=[], d_event=acc, nonzero=0)
     if F:  # this is defined in scenario, not in event_based
         for name in consequences:
