@@ -27,7 +27,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
-DDDFACTOR = 65535
 
 
 def scenario_damage(riskinputs, crmodel, param, monitor):
@@ -63,7 +62,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         result[name + '_by_asset'] = []
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        dddic = AccumDict(accum=numpy.zeros((L, D - 1), U16))  # aid,eid->ddd
+        dddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->ddd
         with mon:
             ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor):
@@ -76,8 +75,8 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                     for e, dmgdist in enumerate(dmg):
                         eid = out.eids[e]
                         acc[eid][l] += dmgdist
-                        if dmgdist[-1] > collapse_threshold:
-                            dddic[aid, eid] = fractions[e, 1:] * DDDFACTOR
+                        if dmgdist[-1] >= collapse_threshold:
+                            dddic[aid, eid][l] = fractions[e, 1:]
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
                     csq = crmodel.compute_csq(asset, fractions, loss_type)
@@ -110,11 +109,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         super().pre_execute()
         self.param['collapse_threshold'] = self.oqparam.collapse_threshold
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_ddd_dt()
-        self.datastore.create_dset('ddd_data', aed_dt)
+        self.datastore.create_dset('dd_data', aed_dt)
         self.riskinputs = self.build_riskinputs('gmf')
 
     def combine(self, acc, res):
-        hdf5.extend(self.datastore['ddd_data'], res.pop('aed'))
+        hdf5.extend(self.datastore['dd_data'], res.pop('aed'))
         return acc + res
 
     def post_execute(self, result):
@@ -153,9 +152,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # consequence distributions
         del result['d_asset']
-    
-        if 'd_event' in result:
-            del result['d_event']
+        del result['d_event']
         dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
         stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
         rlz = self.datastore['events']['rlz_id']
