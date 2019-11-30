@@ -50,10 +50,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         number = self.calc.datastore['assetcol/array']['number']
         data = self.calc.datastore['dd_data/data'][()]
         if len(data):
-            data_by_eid = fast_agg3(data, 'eid', ['ddd'], number[data['aid']])
+            data_by_eid = fast_agg3(data, 'eid', ['dd'], number[data['aid']])
             dmg_by_event = self.calc.datastore['dmg_by_event'][()]
             for rec1, rec2 in zip(data_by_eid, dmg_by_event):
-                aae(rec1['ddd'], rec2['dmg'][:, 1:], decimal=1)
+                aae(rec1['dd'], rec2['dmg'][:, 1:], decimal=1)
 
     def test_case_1(self):
         # test with a single event and a missing tag
