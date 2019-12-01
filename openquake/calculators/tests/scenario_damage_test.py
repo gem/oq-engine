@@ -36,7 +36,8 @@ aae = numpy.testing.assert_almost_equal
 class ScenarioDamageTestCase(CalculatorTestCase):
     def assert_ok(self, pkg, job_ini, exports='csv', kind='dmg'):
         test_dir = os.path.dirname(pkg.__file__)
-        out = self.run_calc(test_dir, job_ini, exports=exports)
+        out = self.run_calc(test_dir, job_ini, exports=exports,
+                            collapse_threshold='0')
         got = out[kind + '_by_asset', exports]
         expected_dir = os.path.join(test_dir, 'expected')
         expected = sorted(f for f in os.listdir(expected_dir)
