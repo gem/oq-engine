@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Storing the asset damage table in scenario_damage and event based damage,
+    but only for assets and events above a `collapse_threshold` parameter
   * Avoided transferring the GMFs upfront in scenario_damage, scenario_risk
     and event_based_damage
   * Added a check for duplicate sites in the site model file
