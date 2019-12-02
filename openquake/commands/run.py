@@ -82,6 +82,7 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, loglevel,
     hcalc.gzip_inputs = lambda: None  # disable feature
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
               exports=exports, **params)
+    hcalc.datastore.close()
     hc_id = hcalc.datastore.calc_id
     rcalc_id = logs.init(level=getattr(logging, loglevel.upper()))
     oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
