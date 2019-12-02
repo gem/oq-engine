@@ -609,6 +609,13 @@ class CompositeRiskModel(collections.abc.Mapping):
         D = len(self.damage_states)
         return numpy.dtype([('eid', U32), ('dmg', (F32, (L, D)))])
 
+    def aid_eid_loss_dt(self):
+        """
+        :returns: a dtype (aid, eid, loss)
+        """
+        L = len(self.lti),
+        return numpy.dtype([('aid', U32), ('eid', U32), ('loss', (F32, L))])
+
     def vectorize_cons_model(self, tagcol):
         """
         Convert the dictionaries tag -> coeffs in the consequence model
