@@ -43,6 +43,10 @@ SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 
 
+class BBoxError(ValueError):
+    """Bounding box too large"""
+
+
 def angular_distance(km, lat, lat2=None):
     """
     Return the angular distance of two points at the given latitude.
@@ -319,9 +323,9 @@ def get_bounding_box(obj, maxdist):
     a2 = angular_distance(maxdist, bbox[1], bbox[3])
     delta = bbox[2] - bbox[0] + 2 * a2
     if delta > 180:
-        raise ValueError('The maximum distance %d is too large, the bounding '
-                         'box is larger than half the globe: %d degrees' %
-                         (maxdist, delta))
+        raise BBoxError('The maximum distance %d is too large, the bounding '
+                        'box is larger than half the globe: %d degrees' %
+                        (maxdist, delta))
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 
