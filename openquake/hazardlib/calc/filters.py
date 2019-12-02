@@ -341,7 +341,7 @@ class SourceFilter(object):
             try:
                 box = self.integration_distance.get_affected_box(src)
             except BBoxError:  # too large, don't filter
-                self.indices = self.sitecol.sids
+                src.indices = self.sitecol.sids
                 yield src
                 continue
             indices = self.sitecol.within_bbox(box)
