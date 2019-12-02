@@ -79,6 +79,7 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, loglevel,
     Run both hazard and risk, one after the other
     """
     hcalc = base.calculators(readinput.get_oqparam(job_haz), calc_id)
+    hcalc.gzip_inputs = lambda: None  # disable feature
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
               exports=exports, **params)
     hc_id = hcalc.datastore.calc_id
