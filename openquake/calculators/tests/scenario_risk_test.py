@@ -34,8 +34,7 @@ aac = numpy.testing.assert_allclose
 
 
 def tot_loss(dstore):
-    dset = dstore['asset_loss_table']
-    return {name: dset[name].sum() for name in dset.dtype.names}
+    return dstore['loss_data/data']['loss'].sum(axis=0)
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -182,8 +181,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         tot10 = tot_loss(self.calc.datastore)
         self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='20')
         tot20 = tot_loss(self.calc.datastore)
-        for name in tot10:
-            aac(tot10[name], tot20[name])
+        aac(tot10, tot20)
 
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are
