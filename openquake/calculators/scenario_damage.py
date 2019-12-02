@@ -60,7 +60,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
-        result = dict(d_asset=[], nonzero=0)
+        result = dict(d_asset=[])
         for name in consequences:
             result[name + '_by_asset'] = []
         ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
@@ -72,7 +72,6 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     aid = asset['ordinal']
                     dmg = fractions * asset['number']  # shape (F, D)
-                    result['nonzero'] += (dmg[:, 1:] > 1).sum()
                     for e, dmgdist in enumerate(dmg):
                         eid = out.eids[e]
                         acc[eid][l] += dmgdist
@@ -131,7 +130,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
-        nonzero = result.pop('nonzero', 0)
         if not result:
             self.collapsed()
             return
@@ -141,9 +139,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = len(self.rlzs_assoc.realizations)
         D = len(dstates)
         A = len(self.assetcol)
-        total = A * self.E * L * (D - 1)
-        logging.info(
-            f'There are {nonzero:_d}/{total:_d} nonzero damage fractions')
+        indices = self.datastore['dd_data/indices'][()]
+        events_per_asset = (indices[:, 1] - indices[:, 0]).mean()
+        logging.info('Found ~%d dmg distributions per asset', events_per_asset)
 
         # damage by asset
         dt_list = []
