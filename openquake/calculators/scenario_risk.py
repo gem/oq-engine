@@ -128,8 +128,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         except KeyError:
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
         self.param['event_slice'] = self.event_slice
-        self.param['asset_loss_table'] = self.oqparam.asset_loss_table
-
         self.param['loss_ratio_threshold'] = oq.loss_ratio_threshold
         self.param['ael_dt'] = ael_dt = self.crmodel.aid_eid_loss_dt()
         A = len(self.assetcol)
