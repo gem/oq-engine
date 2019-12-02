@@ -902,7 +902,7 @@ def multi_index(shape, axis=None):
         yield tuple(lst)
 
 
-def fast_agg(indices, values=None, axis=0):
+def fast_agg(indices, values=None, axis=0, factor=None):
     """
     :param indices: N indices in the range 0 ... M - 1 with M < N
     :param values: N values (can be arrays)
@@ -927,7 +927,8 @@ def fast_agg(indices, values=None, axis=0):
     lst.insert(axis, M)
     res = numpy.zeros(lst, values.dtype)
     for mi in multi_index(shp, axis):
-        res[mi] = numpy.bincount(indices, values[mi])
+        vals = values[mi] if factor is None else values[mi] * factor
+        res[mi] = numpy.bincount(indices, vals)
     return res
 
 
@@ -951,7 +952,7 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
-def fast_agg3(structured_array, kfield, vfields):
+def fast_agg3(structured_array, kfield, vfields, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)
     and some value fields (the vfields).
@@ -965,7 +966,7 @@ def fast_agg3(structured_array, kfield, vfields):
     dic = {}
     dtlist = [(kfield, structured_array.dtype[kfield])]
     for name in vfields:
-        dic[name] = fast_agg(indices, structured_array[name])
+        dic[name] = fast_agg(indices, structured_array[name], factor=factor)
         dtlist.append((name, structured_array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
     res[kfield] = uniq
