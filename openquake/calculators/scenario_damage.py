@@ -18,7 +18,8 @@
 
 import logging
 import numpy
-from openquake.baselib.general import AccumDict
+from openquake.baselib import hdf5
+from openquake.baselib.general import AccumDict, get_indices
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -51,27 +52,32 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
     collapse_threshold = param['collapse_threshold']
-    acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
-    # otherwise test 4b will randomly break with last digit changes
-    # in dmg_by_event :-(
-    result = dict(d_asset=[], d_event=acc, nonzero=0)
-    for name in consequences:
-        result[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
-    for name in consequences:
-        result[name + '_by_asset'] = []
     mon = monitor('getting hazard', measuremem=False)
+    acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
+    res = {'d_event': acc}
+    for name in consequences:
+        res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
     for ri in riskinputs:
+        # otherwise test 4b will randomly break with last digit changes
+        # in dmg_by_event :-(
+        result = dict(d_asset=[], nonzero=0)
+        for name in consequences:
+            result[name + '_by_asset'] = []
+        ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
         with mon:
             ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
+                    aid = asset['ordinal']
                     dmg = fractions * asset['number']  # shape (F, D)
                     result['nonzero'] += (dmg[:, 1:] > 1).sum()
-                    for eid, dmgdist in zip(out.eids, dmg):
+                    for e, dmgdist in enumerate(dmg):
+                        eid = out.eids[e]
+                        acc[eid][l] += dmgdist
                         if dmgdist[-1] >= collapse_threshold:
-                            acc[eid][l] += dmgdist
+                            ddic[aid, eid][l] = fractions[e, 1:]
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
                     csq = crmodel.compute_csq(asset, fractions, loss_type)
@@ -79,10 +85,14 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         result[name + '_by_asset'].append(
                             (l, r, asset['ordinal'],
                              scientific.mean_std(values)))
-                        by_event = result[name + '_by_event']
+                        by_event = res[name + '_by_event']
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
-    return result
+        result['aed'] = aed = numpy.zeros(len(ddic), param['aed_dt'])
+        for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
+            aed[i] = (aid, eid, dd)
+        yield result
+    yield res
 
 
 @base.calculators.add('scenario_damage')
@@ -98,7 +108,23 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     def pre_execute(self):
         super().pre_execute()
         self.param['collapse_threshold'] = self.oqparam.collapse_threshold
+        self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
+        A = len(self.assetcol)
+        self.datastore.create_dset('dd_data/data', aed_dt)
+        self.datastore.create_dset('dd_data/indices', U32, (A, 2))
         self.riskinputs = self.build_riskinputs('gmf')
+        self.start = 0
+
+    def combine(self, acc, res):
+        aed = res.pop('aed', ())
+        if len(aed) == 0:
+            return acc + res
+        for aid, [(i1, i2)] in get_indices(aed['aid']).items():
+            self.datastore['dd_data/indices'][aid] = (
+                self.start + i1, self.start + i2)
+        self.start += len(aed)
+        hdf5.extend(self.datastore['dd_data/data'], aed)
+        return acc + res
 
     def post_execute(self, result):
         """
@@ -136,8 +162,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # consequence distributions
         del result['d_asset']
-        if 'd_event' in result:
-            del result['d_event']
+        del result['d_event']
         dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
         stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
         rlz = self.datastore['events']['rlz_id']
