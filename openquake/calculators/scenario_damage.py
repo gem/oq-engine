@@ -52,7 +52,8 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
     collapse_threshold = param['collapse_threshold']
-    mon = monitor('getting hazard', measuremem=False)
+    haz_mon = monitor('getting hazard', measuremem=False)
+    rsk_mon = monitor('aggregating risk', measuremem=False)
     acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
     res = {'d_event': acc}
     for name in consequences:
@@ -64,32 +65,34 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         for name in consequences:
             result[name + '_by_asset'] = []
         ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
-        with mon:
+        with haz_mon:
             ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor):
-            r = out.rlzi
-            for l, loss_type in enumerate(crmodel.loss_types):
-                for asset, fractions in zip(ri.assets, out[loss_type]):
-                    aid = asset['ordinal']
-                    dmg = fractions * asset['number']  # shape (F, D)
-                    for e, dmgdist in enumerate(dmg):
-                        eid = out.eids[e]
-                        acc[eid][l] += dmgdist
-                        if dmgdist[-1] >= collapse_threshold:
-                            ddic[aid, eid][l] = fractions[e, 1:]
-                    result['d_asset'].append(
-                        (l, r, asset['ordinal'], scientific.mean_std(dmg)))
-                    csq = crmodel.compute_csq(asset, fractions, loss_type)
-                    for name, values in csq.items():
-                        result[name + '_by_asset'].append(
-                            (l, r, asset['ordinal'],
-                             scientific.mean_std(values)))
-                        by_event = res[name + '_by_event']
-                        for eid, value in zip(out.eids, values):
-                            by_event[eid][l] += value
-        result['aed'] = aed = numpy.zeros(len(ddic), param['aed_dt'])
-        for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
-            aed[i] = (aid, eid, dd)
+            with rsk_mon:
+                r = out.rlzi
+                for l, loss_type in enumerate(crmodel.loss_types):
+                    for asset, fractions in zip(ri.assets, out[loss_type]):
+                        aid = asset['ordinal']
+                        dmg = fractions * asset['number']  # shape (F, D)
+                        for e, dmgdist in enumerate(dmg):
+                            eid = out.eids[e]
+                            acc[eid][l] += dmgdist
+                            if dmgdist[-1] >= collapse_threshold:
+                                ddic[aid, eid][l] = fractions[e, 1:]
+                        result['d_asset'].append(
+                            (l, r, asset['ordinal'], scientific.mean_std(dmg)))
+                        csq = crmodel.compute_csq(asset, fractions, loss_type)
+                        for name, values in csq.items():
+                            result[name + '_by_asset'].append(
+                                (l, r, asset['ordinal'],
+                                 scientific.mean_std(values)))
+                            by_event = res[name + '_by_event']
+                            for eid, value in zip(out.eids, values):
+                                by_event[eid][l] += value
+        with rsk_mon:
+            result['aed'] = aed = numpy.zeros(len(ddic), param['aed_dt'])
+            for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
+                aed[i] = (aid, eid, dd)
         yield result
     yield res
 
