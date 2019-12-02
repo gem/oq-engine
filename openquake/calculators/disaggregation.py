@@ -274,7 +274,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             int(numpy.ceil(max_mag / oq.mag_bin_width) + 1))
 
         # build dist_edges
-        maxdist = max(oq.maximum_distance(trt, max_mag) for trt in trts)
+        maxdist = max(oq.maximum_distance(trt) for trt in trts)
         dist_edges = oq.distance_bin_width * numpy.arange(
             0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
 
