@@ -26,6 +26,7 @@ from openquake.risklib.scientific import LossesByAsset
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.calculators import base, event_based, getters
+from openquake.calculators.scenario_risk import highest_losses
 from openquake.calculators.post_risk import PostRiskCalculator
 
 U8 = numpy.uint8
@@ -67,6 +68,7 @@ def _calc_risk(hazard, param, monitor):
     L = len(param['lba'].loss_names)
     shape = assetcol.tagcol.agg_shape((E, L), param['aggregate_by'])
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shape[1:]))]
+    alt = general.AccumDict(accum=numpy.zeros(L, F32))  # aid, eid -> loss
     acc = dict(elt=numpy.zeros(shape, F32),  # shape (E, L, T...)
                gmf_info=[], events_per_sid=0, lossbytes=0)
     arr = acc['elt']
@@ -75,7 +77,7 @@ def _calc_risk(hazard, param, monitor):
     tagnames = param['aggregate_by']
     eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
-
+    n = param['highest_losses']
     for sid, haz in general.group_array(gmfs, 'sid').items():
         assets_on_sid = assets_by_site[sid]
         if len(assets_on_sid) == 0:
@@ -100,6 +102,8 @@ def _calc_risk(hazard, param, monitor):
                     else:
                         losses = lratios * asset['value-' + lt]
                     losses_by_lt[lt] = losses
+                    for loss, eid in highest_losses(losses, out.eids, n):
+                        alt[aid, eid][lti] = loss
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     arr[(eidx, loss_idx) + tagidxs] += losses
                     if param['avg_losses']:
@@ -112,6 +116,9 @@ def _calc_risk(hazard, param, monitor):
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
+    acc['alt'] = numpy.fromiter(
+        ((aid, eid, loss) for (aid, eid), loss in alt.items()),
+        param['ael_dt'])
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -171,6 +178,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                           self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
+        self.param['highest_losses'] = oq.highest_losses
+        self.param['ael_dt'] = ael_dt = self.crmodel.aid_eid_loss_dt(
+            oq.loss_names)
+        A = len(self.assetcol)
+        self.datastore.create_dset('loss_data/data', ael_dt)
+        self.datastore.create_dset('loss_data/indices', U32, (A, 2))
+        self.start = 0
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
@@ -261,6 +275,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if len(elt):
             with self.monitor('saving losses_by_event'):
                 hdf5.extend(self.datastore['losses_by_event'], elt)
+        if 'alt' in dic:
+            ael = dic['alt']
+            if len(ael) == 0:
+                return
+            for aid, [(i1, i2)] in general.get_indices(ael['aid']).items():
+                self.datastore['loss_data/indices'][aid] = (
+                    self.start + i1, self.start + i2)
+            hdf5.extend(self.datastore['loss_data/data'], dic['alt'])
+            self.start += len(ael)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
