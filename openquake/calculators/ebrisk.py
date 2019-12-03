@@ -240,21 +240,21 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, allargs, h5=self.datastore.hdf5)
-        res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
+        smap.reduce(self.agg_dicts)
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
         logging.info(
             'Produced %s of losses', general.humansize(self.lossbytes))
-        return res
+        return 1
 
-    def agg_dicts(self, acc, dic):
+    def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
         :param dic: dictionary with keys elt, losses_by_A
         """
         if not dic:
-            return 1
+            return
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
         hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
@@ -266,7 +266,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         self.events_per_sid.append(dic['events_per_sid'])
         self.lossbytes += dic['lossbytes']
-        return 1
 
     def post_execute(self, dummy):
         """
