@@ -78,6 +78,7 @@ def _calc_risk(hazard, param, monitor):
     eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
     n = param['highest_losses']
+    minimum_loss = param['minimum_loss']
     for sid, haz in general.group_array(gmfs, 'sid').items():
         assets_on_sid = assets_by_site[sid]
         if len(assets_on_sid) == 0:
@@ -103,7 +104,8 @@ def _calc_risk(hazard, param, monitor):
                         losses = lratios * asset['value-' + lt]
                     losses_by_lt[lt] = losses
                     for loss, eid in highest_losses(losses, out.eids, n):
-                        alt[aid, eid][lti] = loss
+                        if loss >= minimum_loss[lti]:
+                            alt[aid, eid][lti] = loss
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     arr[(eidx, loss_idx) + tagidxs] += losses
                     if param['avg_losses']:
@@ -179,6 +181,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['highest_losses'] = oq.highest_losses
+        self.param['minimum_loss'] = [oq.minimum_asset_loss[ln]
+                                      for ln in oq.loss_names]
         self.param['ael_dt'] = ael_dt = self.crmodel.aid_eid_loss_dt(
             oq.loss_names)
         A = len(self.assetcol)
