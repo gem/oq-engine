@@ -68,7 +68,7 @@ def build_loss_tables(dstore):
     dstore['rup_loss_table'] = tbl
 
 
-# 1) parallelizing by events does not work, we need all the events
+# 1) parallelizing by events does not work, we need all of the events
 # 2) parallelizing by multi_index slows down everything with warnings
 # kernel:NMI watchdog: BUG: soft lockup - CPU#26 stuck for 21s!
 # due to excessive reading, and then we run out of memory
