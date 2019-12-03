@@ -44,7 +44,7 @@ def _event_slice(num_gmfs, r):
 
 def highest_losses(losses, eids, n):
     """
-    >>> highest_losses([1, 2, 3, 4, 5], [.4, .2, .5, .7, .1], 3)
+    >>> highest_losses([.4, .2, .5, .7, .1], [1, 2, 3, 4, 5],  3)
     [(0.4, 1), (0.5, 3), (0.7, 4)]
     """
     return sorted(zip(losses, eids))[-n:]
