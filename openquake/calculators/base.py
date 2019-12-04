@@ -58,17 +58,23 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
 
 
 # this is used for the minimum_intensity dictionaries
-def equivalent(dic1, dic2):
+def consistent(dic1, dic2):
     """
-    Check if two dictionaries name -> value are equivalent
+    Check if two dictionaries with default are consistent:
+
+    >>> consistent({'PGA': 0.05, 'SA(0.3)': 0.05}, {'default': 0.05})
+    True
+    >>> consistent({'SA(0.3)': 0.1, 'SA(0.6)': 0.05},
+    ... {'default': 0.1, 'SA(0.3)': 0.1, 'SA(0.6)': 0.05})
+    True
     """
     if dic1 == dic2:
         return True
     v1 = set(dic1.values())
     v2 = set(dic2.values())
-    missing = set(dic2) - set(dic1)
-    if len(v1) == 1 and len(v2) == 1 and v1.pop() == v2.pop():
-        # {'PGA': 0.05, 'SA(0.3)': 0.05} is equivalent to {'default': 0.05}
+    missing = set(dic2) - set(dic1) - {'default'}
+    if len(v1) == 1 and len(v2) == 1 and v1 == v2:
+        # {'PGA': 0.05, 'SA(0.3)': 0.05} is consistent with {'default': 0.05}
         return True
     return not missing
 
@@ -475,7 +481,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            if not equivalent(oqp.minimum_intensity, oq.minimum_intensity):
+            if not consistent(oqp.minimum_intensity, oq.minimum_intensity):
                 raise ValueError(
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
