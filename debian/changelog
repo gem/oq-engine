@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Re-adjustment of SERA Subduction model epistemic scaling factors
+  
   [Michele Simionato]
   * Improved the task distribution in the ebrisk calculator
   * Fixed a bug in ebrisk with aggregate_by when building the rup_loss_table
