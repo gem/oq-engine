@@ -40,7 +40,7 @@ gmf_info_dt = numpy.dtype([('ridx', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def _calc_risk(hazard, param, monitor):
+def calc_risk(hazard, param, monitor):
     gmfs = numpy.concatenate(hazard['gmfs'])
     events = numpy.concatenate(hazard['events'])
     mon_risk = monitor('computing risk', measuremem=False)
@@ -108,6 +108,10 @@ def _calc_risk(hazard, param, monitor):
     return acc
 
 
+def len_gmfs(hazard):
+    return sum(len(gmfs) for gmfs in hazard['gmfs'])
+
+
 def ebrisk(rupgetters, srcfilter, param, monitor):
     """
     :param rupgetters: RuptureGetters with 1 rupture each
@@ -133,8 +137,12 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         hazard['gmf_info'].append(
             (c.rupture.ridx, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
-    acc = _calc_risk(hazard, param, monitor)
-    return acc
+        size = len_gmfs(hazard)
+        if size > param['max_gmfs_size']:
+            yield calc_risk, hazard, param
+            hazard = dict(gmfs=[], events=[], gmf_info=[])
+    if len_gmfs(hazard):
+        yield calc_risk(hazard, param, monitor)
 
 
 @base.calculators.add('ebrisk')
@@ -154,6 +162,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict))
+        self.param['max_gmfs_size'] = oq.max_gmfs_size
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param.pop('oqparam', None)  # unneeded
