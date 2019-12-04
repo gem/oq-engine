@@ -109,7 +109,7 @@ def calc_risk(hazard, param, monitor):
         ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
     acc['alt'] = numpy.fromiter(
-        ((aid, eid, loss) for (aid, eid), loss in alt.items()),
+        ((aid, eid, loss) for (aid, eid), loss in sorted(alt.items())),
         param['ael_dt'])
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A
@@ -182,8 +182,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             oq.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('loss_data/data', ael_dt)
-        self.datastore.create_dset('loss_data/indices', U32, (A, 2))
-        self.start = 0
+        self.datastore.create_dset('loss_data/indices', hdf5.vuint32,
+                                   shape=(A, 2), fillvalue=None)
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
@@ -248,9 +248,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.events_per_sid = []
         self.lossbytes = 0
         self.datastore.swmr_on()
+        self.indices = general.AccumDict(accum=[])  # aid, idx -> indices
+        self.offset = 0
         smap = parallel.Starmap(
             self.core_task.__func__, allargs, h5=self.datastore.hdf5)
         smap.reduce(self.agg_dicts)
+        for k, indices in self.indices.items():
+            self.datastore['loss_data/indices'][k] = indices
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
@@ -276,10 +280,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             if len(ael) == 0:
                 return
             for aid, [(i1, i2)] in general.get_indices(ael['aid']).items():
-                self.datastore['loss_data/indices'][aid] = (
-                    self.start + i1, self.start + i2)
+                self.indices[aid, 0].append(self.offset + i1)
+                self.indices[aid, 1].append(self.offset + i2)
             hdf5.extend(self.datastore['loss_data/data'], dic['alt'])
-            self.start += len(ael)
+            self.offset += len(ael)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
