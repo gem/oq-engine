@@ -609,11 +609,14 @@ class CompositeRiskModel(collections.abc.Mapping):
         D = len(self.damage_states)
         return numpy.dtype([('eid', U32), ('dmg', (F32, (L, D)))])
 
-    def aid_eid_loss_dt(self):
+    def aid_eid_loss_dt(self, loss_names=None):
         """
         :returns: a dtype (aid, eid, loss)
         """
-        L = len(self.lti),
+        if loss_names:
+            L = len(loss_names),
+        else:
+            L = len(self.lti),
         return numpy.dtype([('aid', U32), ('eid', U32), ('loss', (F32, L))])
 
     def aid_eid_dd_dt(self):
