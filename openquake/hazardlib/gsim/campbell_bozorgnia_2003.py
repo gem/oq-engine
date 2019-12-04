@@ -66,6 +66,7 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
 
     #: No sites parameters are required. Mean value is computed for
     #: 'firm rock'.
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
     REQUIRES_SITES_PARAMETERS = set(())
 
     #: Required rupture parameters are magnitude, rake and dip (eq. 1 and
