@@ -27,7 +27,7 @@ from openquake.risklib.scientific import LossesByAsset
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.calculators import base, event_based, getters
-from openquake.calculators.scenario_risk import highest_losses
+from openquake.calculators.scenario_risk import highest_losses, ael_dt
 from openquake.calculators.post_risk import PostRiskCalculator
 
 U8 = numpy.uint8
@@ -153,15 +153,6 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
             hazard = dict(gmfs=[], events=[], gmf_info=[])
     if len_gmfs(hazard):
         yield calc_risk(hazard, param, monitor)
-
-
-def ael_dt(loss_names, rlz=False):
-    L = len(loss_names),
-    if rlz:
-        return [('aid', U32), ('eid', U32),
-                ('rlz', U16), ('loss', (F32, L))]
-    else:
-        return [('aid', U32), ('eid', U32), ('loss', (F32, L))]
 
 
 @base.calculators.add('ebrisk')
