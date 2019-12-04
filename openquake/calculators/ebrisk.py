@@ -117,18 +117,15 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
     :returns: a dictionary with keys elt, alt, ...
     """
     mon_haz = monitor('getting hazard', measuremem=False)
-    computers = []
-    with monitor('getting ruptures'):
-        for rupgetter in rupgetters:
+    mon_rup = monitor('getting ruptures', measuremem=False)
+    hazard = dict(gmfs=[], events=[], gmf_info=[])
+    for rupgetter in rupgetters:
+        with mon_rup:
             gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
             gg.init()
-            computers.extend(gg.computers)
-    if not computers:  # all filtered out
-        return {}
-    rupgetters.clear()
-    computers.sort(key=lambda c: c.rupture.ridx)
-    hazard = dict(gmfs=[], events=[], gmf_info=[])
-    for c in computers:
+        if not gg.computers:  # filtered out rupture
+            continue
+        [c] = gg.computers
         with mon_haz:
             data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
             hazard['gmfs'].append(data)
@@ -136,7 +133,6 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         hazard['gmf_info'].append(
             (c.rupture.ridx, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
-    computers.clear()
     acc = _calc_risk(hazard, param, monitor)
     return acc
 
