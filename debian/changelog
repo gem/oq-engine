@@ -1,3 +1,9 @@
+  [Michele Simionato]
+  * Storing (experimentally) and asset loss table per realization
+
+  [Robin Gee]
+  * set DEFINED_FOR_REFERENCE_VELOCITY in CampbellBozorgnia2003NSHMP2007
+  
   [Graeme Weatherill]
   * Re-adjustment of SERA Subduction model epistemic scaling factors
   
