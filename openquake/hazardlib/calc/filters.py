@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box)
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, BBoxError)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
@@ -338,7 +338,12 @@ class SourceFilter(object):
             if hasattr(src, 'indices'):   # already filtered
                 yield src
                 continue
-            box = self.integration_distance.get_affected_box(src)
+            try:
+                box = self.integration_distance.get_affected_box(src)
+            except BBoxError:  # too large, don't filter
+                src.indices = self.sitecol.sids
+                yield src
+                continue
             indices = self.sitecol.within_bbox(box)
             if len(indices):
                 src.indices = indices
