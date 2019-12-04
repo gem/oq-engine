@@ -78,6 +78,7 @@ class OqParam(valid.ParamSet):
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
+    collapse_threshold = valid.Param(valid.probability, 0.5)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -116,12 +117,14 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
+    loss_ratio_threshold = valid.Param(valid.probability, .1)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
+    max_gmfs_size = valid.Param(valid.positiveint, 1E6)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E11)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
