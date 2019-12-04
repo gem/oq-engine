@@ -54,6 +54,7 @@ def calc_risk(hazard, param, monitor):
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
         weights = dstore['weights'][()]
+    A = len(assetcol)
     E = len(events)
     L = len(param['lba'].loss_names)
     shape = assetcol.tagcol.agg_shape((E, L), param['aggregate_by'])
@@ -108,9 +109,12 @@ def calc_risk(hazard, param, monitor):
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
-    acc['alt'] = numpy.fromiter(
-        ((aid, eid, loss) for (aid, eid), loss in sorted(alt.items())),
+    acc['alt'] = numpy.fromiter(  # already sorted by aid
+        ((aid, eid, loss) for (aid, eid), loss in alt.items()),
         param['ael_dt'])
+    acc['indices'] = idx = numpy.zeros((A, 2), U32)
+    for aid, [i12] in general.get_indices(acc['alt']['aid']).items():
+        idx[aid] = i12
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -180,7 +184,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                                       for ln in oq.loss_names]
         self.param['ael_dt'] = ael_dt = self.crmodel.aid_eid_loss_dt(
             oq.loss_names)
-        A = len(self.assetcol)
+        self.A = A = len(self.assetcol)
         self.datastore.create_dset('loss_data/data', ael_dt)
         self.datastore.create_dset('loss_data/indices', hdf5.vuint32,
                                    shape=(A, 2), fillvalue=None)
@@ -272,18 +276,20 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
         hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
-        if len(elt):
-            with self.monitor('saving losses_by_event'):
+        with self.monitor('saving losses by event and loss_data'):
+            if len(elt):
                 hdf5.extend(self.datastore['losses_by_event'], elt)
-        if 'alt' in dic:
-            ael = dic['alt']
-            if len(ael) == 0:
-                return
-            for aid, [(i1, i2)] in general.get_indices(ael['aid']).items():
-                self.indices[aid, 0].append(self.offset + i1)
-                self.indices[aid, 1].append(self.offset + i2)
-            hdf5.extend(self.datastore['loss_data/data'], dic['alt'])
-            self.offset += len(ael)
+            if 'alt' in dic:
+                ael = dic['alt']
+                if len(ael) == 0:
+                    return
+                for aid in range(self.A):
+                    i1, i2 = dic['indices'][aid]
+                    if i2 > i1:
+                        self.indices[aid, 0].append(self.offset + i1)
+                        self.indices[aid, 1].append(self.offset + i2)
+                hdf5.extend(self.datastore['loss_data/data'], dic['alt'])
+                self.offset += len(ael)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
