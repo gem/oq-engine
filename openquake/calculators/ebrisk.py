@@ -108,9 +108,10 @@ def calc_risk(hazard, param, monitor):
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
-    acc['alt'] = numpy.fromiter(  # already sorted by aid
-        ((aid, eid, loss) for (aid, eid), loss in alt.items()),
+    alt = numpy.fromiter(  # already sorted by aid
+        ((aid, eid, eid2rlz[eid], loss) for (aid, eid), loss in alt.items()),
         param['ael_dt'])
+    acc['alt'] = general.group_array(alt, 'rlz')
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -154,6 +155,15 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         yield calc_risk(hazard, param, monitor)
 
 
+def ael_dt(loss_names, rlz=False):
+    L = len(loss_names),
+    if rlz:
+        return [('aid', U32), ('eid', U32),
+                ('rlz', U16), ('loss', (F32, L))]
+    else:
+        return [('aid', U32), ('eid', U32), ('loss', (F32, L))]
+
+
 @base.calculators.add('ebrisk')
 class EbriskCalculator(event_based.EventBasedCalculator):
     """
@@ -177,11 +187,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['highest_losses'] = oq.highest_losses
         self.param['minimum_loss'] = [getdefault(oq.minimum_asset_loss, ln)
                                       for ln in oq.loss_names]
-        self.param['ael_dt'] = ael_dt = self.crmodel.aid_eid_loss_dt(
-            oq.loss_names)
+        self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
         self.A = A = len(self.assetcol)
-        self.datastore.create_dset('loss_data/data', ael_dt)
-        self.datastore.create_dset('loss_data/indices', F32, (A, 2))
+        dt = ael_dt(oq.loss_names)
+        for r in range(self.R):
+            self.datastore.create_dset('asset_loss_table/rlz-%d' % r, dt)
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
@@ -249,15 +259,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, allargs, h5=self.datastore.hdf5)
-        alt = numpy.concatenate(smap.reduce(self.agg_dicts, []))
-        logging.info('Storing the asset loss table')
-        with self.monitor('storing asset loss table'):
-            alt.sort(order='aid')
-            self.datastore['loss_data/data'] = alt
-            indices = numpy.zeros((self.A, 2), U32)
-            for aid, [startstop] in general.get_indices(alt['aid']).items():
-                indices[aid] = startstop
-            self.datastore['loss_data/indices'][:] = indices
+        smap.reduce(self.agg_dicts)
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
@@ -265,26 +267,26 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             'Produced %s of losses', general.humansize(self.lossbytes))
         return 1
 
-    def agg_dicts(self, alts, dic):
+    def agg_dicts(self, dummy, dic):
         """
-        :param alts: list of asset loss tables
+        :param dummy: unused parameter
         :param dic: dictionary with keys elt, losses_by_A
         """
         if not dic or len(dic['elt']) == 0:
-            return alts
+            return
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
         hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
-        with self.monitor('saving losses_by_event'):
+        with self.monitor('saving losses_by_event and asset_loss_table'):
             hdf5.extend(self.datastore['losses_by_event'], elt)
-        if len(dic['alt']):
-            alts.append(dic['alt'])
+            for rlz, data in dic['alt'].items():
+                name = 'asset_loss_table/rlz-%d' % rlz
+                hdf5.extend(self.datastore[name], data[['aid', 'eid', 'loss']])
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         self.events_per_sid.append(dic['events_per_sid'])
         self.lossbytes += dic['lossbytes']
-        return alts
 
     def post_execute(self, dummy):
         """
