@@ -208,6 +208,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         eslices = self.datastore['eslices']
         allargs = []
         srcfilter = self.src_filter(self.datastore.tempname)
+        rups_per_block = numpy.ceil(
+            len(dstore['ruptures']) / (oq.concurrent_tasks or 1))
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -218,7 +220,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 rup_array, dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                 eslices[fe:fe + stop - start, 0])
-            for rgetters in general.block_splitter(rgetter.split(), 1000):
+            for rgetters in general.block_splitter(
+                    rgetter.split(), rups_per_block):
                 allargs.append((rgetters, srcfilter, self.param))
             fe += stop - start
         logging.info('Sending %d/%d source groups with ruptures',
