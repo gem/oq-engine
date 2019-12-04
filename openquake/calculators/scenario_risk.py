@@ -50,6 +50,18 @@ def highest_losses(losses, eids, n):
     return sorted(zip(losses, eids))[-n:]
 
 
+def ael_dt(loss_names, rlz=False):
+    """
+    :returns: aid, eid, loss or aid, eid, rlz, loss
+    """
+    L = len(loss_names),
+    if rlz:
+        return [('aid', U32), ('eid', U32),
+                ('rlz', U16), ('loss', (F32, L))]
+    else:
+        return [('aid', U32), ('eid', U32), ('loss', (F32, L))]
+
+
 def scenario_risk(riskinputs, crmodel, param, monitor):
     """
     Core function for a scenario computation.
@@ -135,9 +147,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
         self.param['event_slice'] = self.event_slice
         self.param['highest_losses'] = oq.highest_losses
-        self.param['ael_dt'] = ael_dt = self.crmodel.aid_eid_loss_dt()
+        self.param['ael_dt'] = dt = ael_dt(oq.loss_names)
         A = len(self.assetcol)
-        self.datastore.create_dset('loss_data/data', ael_dt)
+        self.datastore.create_dset('loss_data/data', dt)
         self.datastore.create_dset('loss_data/indices', U32, (A, 2))
         self.start = 0
 
