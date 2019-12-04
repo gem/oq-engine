@@ -40,17 +40,6 @@ gmf_info_dt = numpy.dtype([('ridx', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def start_ebrisk(rupgetter, srcfilter, param, monitor):
-    """
-    Launcher for ebrisk tasks
-    """
-    rupgetters = rupgetter.split(srcfilter)
-    if rupgetters:
-        yield from parallel.split_task(
-            ebrisk, rupgetters, srcfilter, param, monitor,
-            duration=param['task_duration'])
-
-
 def _calc_risk(hazard, param, monitor):
     gmfs = numpy.concatenate(hazard['gmfs'])
     events = numpy.concatenate(hazard['events'])
@@ -157,7 +146,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating event loss tables
     """
-    core_task = start_ebrisk
+    core_task = ebrisk
     is_stochastic = True
     precalc = 'event_based'
     accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
@@ -193,15 +182,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         parent = self.datastore.parent
         if parent:
             grp_indices = parent['ruptures'].attrs['grp_indices']
-            n_occ = parent['ruptures']['n_occ']
             dstore = parent
             csm_info = parent['csm_info']
         else:
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
-            n_occ = self.datastore['ruptures']['n_occ']
             dstore = self.datastore
             csm_info = self.csm_info
-        per_block = numpy.ceil(n_occ.sum() / (oq.concurrent_tasks or 1))
         self.set_param(
             hdf5path=self.datastore.filename,
             task_duration=oq.task_duration or 1200,  # 20min
@@ -227,7 +213,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 rup_array, dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                 eslices[fe:fe + stop - start, 0])
-            allargs.append((rgetter, srcfilter, self.param))
+            for rgetters in general.block_splitter(rgetter.split(), 1000):
+                allargs.append((rgetters, srcfilter, self.param))
             fe += stop - start
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
