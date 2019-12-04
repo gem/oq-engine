@@ -221,7 +221,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             for rgetters in general.block_splitter(rgetter.split(), 1000):
                 allargs.append((rgetters, srcfilter, self.param))
             fe += stop - start
-        logging.info('Found %d/%d source groups with ruptures',
+        logging.info('Sending %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.lossbytes = 0
