@@ -208,8 +208,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         eslices = self.datastore['eslices']
         allargs = []
         srcfilter = self.src_filter(self.datastore.tempname)
-        rups_per_block = numpy.ceil(
-            len(dstore['ruptures']) / (oq.concurrent_tasks or 1))
+        rups_per_block = min(numpy.ceil(  # at max 1000 ruptures per block
+            len(dstore['ruptures']) / (oq.concurrent_tasks or 1)), 1000)
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
