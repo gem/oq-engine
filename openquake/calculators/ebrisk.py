@@ -54,7 +54,6 @@ def calc_risk(hazard, param, monitor):
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
         weights = dstore['weights'][()]
-    A = len(assetcol)
     E = len(events)
     L = len(param['lba'].loss_names)
     shape = assetcol.tagcol.agg_shape((E, L), param['aggregate_by'])
@@ -148,8 +147,7 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         hazard['gmf_info'].append(
             (c.rupture.ridx, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
-        size = len_gmfs(hazard)
-        if size > param['max_gmfs_size']:
+        if len_gmfs(hazard) > param['max_gmfs_size']:
             yield calc_risk, hazard, param
             hazard = dict(gmfs=[], events=[], gmf_info=[])
     if len_gmfs(hazard):
@@ -227,8 +225,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         eslices = self.datastore['eslices']
         allargs = []
         srcfilter = self.src_filter(self.datastore.tempname)
-        rups_per_block = min(numpy.ceil(  # at max 1000 ruptures per block
-            len(dstore['ruptures']) / (oq.concurrent_tasks or 1)), 1000)
+        rups_per_block = min(numpy.ceil(  # at max 500 ruptures per block
+            len(dstore['ruptures']) / (oq.concurrent_tasks or 1)), 500)
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -252,10 +250,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.core_task.__func__, allargs, h5=self.datastore.hdf5)
         alt = numpy.concatenate(smap.reduce(self.agg_dicts, []))
         logging.info('Storing the asset loss table')
-        alt.sort(order='aid')
-        self.datastore['loss_data/data'] = alt
-        for aid, [startstop] in general.get_indices(alt['aid']).items():
-            self.datastore['loss_data/indices'][aid] = startstop
+        with self.monitor('storing asset loss table'):
+            alt.sort(order='aid')
+            self.datastore['loss_data/data'] = alt
+            indices = numpy.zeros((self.A, 2), U32)
+            for aid, [startstop] in general.get_indices(alt['aid']).items():
+                indices[aid] = startstop
+            self.datastore['loss_data/indices'][:] = indices
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
