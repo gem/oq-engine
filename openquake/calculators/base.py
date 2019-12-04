@@ -66,10 +66,11 @@ def equivalent(dic1, dic2):
         return True
     v1 = set(dic1.values())
     v2 = set(dic2.values())
+    missing = set(dic2) - set(dic1)
     if len(v1) == 1 and len(v2) == 1 and v1.pop() == v2.pop():
         # {'PGA': 0.05, 'SA(0.3)': 0.05} is equivalent to {'default': 0.05}
         return True
-    return False
+    return not missing
 
 
 def get_stats(seq):
