@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Improved the task distribution in the ebrisk calculator
   * Fixed a bug in ebrisk with aggregate_by when building the rup_loss_table
   * Storing the asset loss table in scenario_risk, but only for assets and
     events above over a `loss_ratio_threshold` parameter
