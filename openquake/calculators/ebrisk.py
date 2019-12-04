@@ -216,23 +216,19 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         fe = 0
         eslices = self.datastore['eslices']
         allargs = []
-        allpairs = list(enumerate(n_occ))
         srcfilter = self.src_filter(self.datastore.tempname)
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
                 continue
             ngroups += 1
-            for pairs in general.block_splitter(
-                    allpairs[start:stop], per_block, weight=get_n_occ):
-                indices = [i for i, n in pairs]
-                rup_array = dstore['ruptures'][indices]
-                rgetter = getters.RuptureGetter(
-                    rup_array, dstore.filename, grp_id,
-                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
-                    eslices[fe:fe + len(indices), 0])
-                allargs.append((rgetter, srcfilter, self.param))
-                fe += len(indices)
+            rup_array = dstore['ruptures'][start:stop]
+            rgetter = getters.RuptureGetter(
+                rup_array, dstore.filename, grp_id,
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
+                eslices[fe:fe + stop - start, 0])
+            allargs.append((rgetter, srcfilter, self.param))
+            fe += stop - start
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
