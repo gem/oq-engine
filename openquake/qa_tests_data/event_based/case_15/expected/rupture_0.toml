@@ -1,0 +1,12 @@
+serial = 43
+mag = 5.1
+rake = 90.0
+hypo = [ 145.90401, 43.397, 52.0,]
+trt = "Subduction Interface - North East Correction"
+code = 153
+occurrence_rate = 0.00109
+rupture_cls = "ParametricProbabilisticRupture"
+surface_cls = "PlanarSurface"
+lons = [ [ 145.90408, 145.90398, 145.90402, 145.90392,],]
+lats = [ [ 43.39699, 43.39695, 43.39705, 43.39701,],]
+depths = [ [ 51.99699, 51.99699, 52.00301, 52.00301,],]

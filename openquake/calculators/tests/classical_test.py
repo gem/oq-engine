@@ -79,8 +79,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_1.__file__, 'job.ini', minimum_magnitude='4.5')
-        self.assertEqual(
-            str(ctx.exception), 'Empty logic tree: too much filtering?')
+        self.assertEqual(str(ctx.exception), 'All sources were discarded!?')
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -131,6 +130,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_6.__file__)
 
     def test_case_7(self):
+        # this is a case with duplicated sources
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
@@ -225,7 +225,7 @@ class ClassicalTestCase(CalculatorTestCase):
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.02237   447          447         
+0      0.33557   447          447         
 ====== ========= ============ ============""")
 
     def test_case_15(self):
@@ -465,7 +465,7 @@ hazard_uhs-std.csv
                  ('lat_', 3202), ('lon_', 3202), ('mag', 3202),
                  ('occurrence_rate', 3202), ('probs_occur', 3202),
                  ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
-                 ('rx_', 3202), ('sid_', 3202), ('srcidx', 3202),
+                 ('rx_', 3202), ('sid_', 3202),
                  ('weight', 3202), ('ztor', 3202)])
 
     def test_case_30_sampling(self):
@@ -541,8 +541,7 @@ hazard_uhs-std.csv
                                "hazard_map-mean-PGA.csv"], case_42.__file__)
 
     def test_case_43(self):
-        # this is a test for
-        # collapse_factor = 3 * rupture radius > maximum_distance
+        # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
 
