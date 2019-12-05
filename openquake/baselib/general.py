@@ -1292,3 +1292,31 @@ def get_duplicates(array, *fields):
         return {}
     return {k: len(g) for k, g in group_array(array, *fields).items()
             if len(g) > 1}
+
+
+def add_columns(a, b, on, cols=None):
+    """
+    >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
+    >>> b_dt = [('ordinal', int), ('zipcode', int)]
+    >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
+    ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
+    >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
+    >>> add_columns(a, b, 'aid', ['zipcode'])
+    array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
+           (2, 1, 2.3, 20128)],
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('zipcode', '<i8')])
+    """
+    if cols is None:
+        cols = b.dtype.names
+    dtlist = []
+    for name in a.dtype.names:
+        dtlist.append((name, a.dtype[name]))
+    for name in cols:
+        dtlist.append((name, b.dtype[name]))
+    new = numpy.zeros(len(a), dtlist)
+    for name in a.dtype.names:
+        new[name] = a[name]
+    idxs = a[on]
+    for name in cols:
+        new[name] = b[name][idxs]
+    return new

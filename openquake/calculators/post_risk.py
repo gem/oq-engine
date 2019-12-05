@@ -19,7 +19,7 @@
 import logging
 import numpy
 
-from openquake.baselib import general, parallel
+from openquake.baselib import general, parallel, datastore
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific
@@ -95,13 +95,53 @@ def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
     return res
 
 
+def post_risk2(dstore, builder, ses_ratio, rlzi, monitor):
+    """
+    :param dstore: a DataStore instance
+    :param builder: LossCurvesMapsBuilder instance
+    :param rlzi: realization index
+    :param monitor: Monitor instance
+    :returns: a dictionary with keys rlzi, curves, agg_losses
+    """
+    with dstore:
+        oq = dstore['oqparam']
+        aggby = oq.aggregate_by
+        assetcol = dstore['assetcol']
+        ass = assetcol.array[aggby]
+        alt = dstore['asset_loss_table/rlz-%d' % rlzi][()]
+    L = len(oq.loss_names)
+    P = len(builder.return_periods)
+    shp = assetcol.tagcol.agg_shape((P, L), aggby)
+    agg = numpy.zeros(shp[1:], F32)
+    acc = general.AccumDict(accum=general.AccumDict(accum=numpy.zeros(L)))
+    for rec in general.add_columns(alt, ass, 'aid'):
+        key = tuple(rec[n] - 1 for n in aggby)
+        acc[key][rec['eid']] += rec['loss']
+        tup = (slice(None),) + key
+        agg[tup] += rec['loss']
+    res = {'agg_curves': numpy.zeros(shp, F32),
+           'tot_curves': numpy.zeros((P, L), F32),
+           'agg_losses': agg,
+           'tot_losses': agg.sum(axis=()),
+           'rlzi': rlzi}
+    for key, dic in acc.items():
+        tup = (slice(None), slice(None)) + key
+        curves = builder.build_curves(list(dic.values()), rlzi)  # (P, L)
+        res['agg_curves'][tup] = curves
+        res['tot_curves'] += curves
+    return res
+
+
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
     Compute losses and loss curves starting from an event loss table.
     """
     def pre_execute(self):
-        self.L = len(self.oqparam.loss_names)
+        oq = self.oqparam
+        if oq.hazard_calculation_id:
+            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+        self.L = len(oq.loss_names)
         self.tagcol = self.datastore['assetcol/tagcol']
 
     def execute(self):
