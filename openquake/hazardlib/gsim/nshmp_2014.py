@@ -30,7 +30,6 @@ Module exports :class:`AbrahamsonEtAl2014NSHMPUpper`
 """
 import numpy as np
 # NGA West 2 GMPEs
-from openquake.hazardlib.gsim import base
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
