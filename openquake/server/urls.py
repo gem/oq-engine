@@ -29,6 +29,7 @@ urlpatterns = [
     url(r'^v1/valid/', views.validate_nrml),
     url(r'^v1/available_gsims$', views.get_available_gsims),
     url(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
+    url(r'^v1/ini_defaults$', views.get_ini_defaults, name="ini_defaults"),
 ]
 
 # it is useful to disable the default redirect if the usage is via API only

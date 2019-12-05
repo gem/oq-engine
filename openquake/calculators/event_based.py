@@ -18,7 +18,6 @@
 
 import os.path
 import logging
-import collections
 import operator
 import numpy
 
@@ -327,7 +326,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.set_param()
         self.offset = 0
         srcfilter = self.src_filter(self.datastore.tempname)
-        self.indices = collections.defaultdict(list)  # sid, idx -> indices
+        self.indices = AccumDict(accum=[])  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.datastore.parent['csm_info'])

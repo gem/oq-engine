@@ -635,20 +635,6 @@ class FragilityFunctionList(list):
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
 
 
-class ConsequenceFunction(object):
-    def __init__(self, id, dist, params):
-        self.id = id
-        self.dist = dist
-        self.params = numpy.array(params)
-
-    def __toh5__(self):
-        return self.params, dict(id=self.id, dist=self.dist)
-
-    def __fromh5__(self, params, attrs):
-        self.params = params
-        vars(self).update(attrs)
-
-
 class ConsequenceModel(dict):
     """
     Dictionary of consequence functions. You can access each
@@ -1497,3 +1483,20 @@ class LossesByAsset(object):
         :returns: an array of shape (A, L)
         """
         return numpy.zeros((self.A, len(self.loss_names)), F32)
+
+
+# ####################### Consequences ##################################### #
+
+consequence = CallableDict()
+
+
+@consequence.add('losses')
+def economic_losses(coeffs, asset, dmgdist, loss_type):
+    """
+    :param coeffs: coefficients per damage state
+    :param asset: asset record
+    :param dmgdist: an array of probabilies of shape (E, D - 1)
+    :param loss_type: loss type string
+    :returns: array of economic losses of length E
+    """
+    return dmgdist @ coeffs * asset['value-' + loss_type]

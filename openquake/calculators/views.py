@@ -566,15 +566,17 @@ def view_task_hazard(token, dstore):
      $ oq show task:classical:-1  # the slowest task
     """
     _, name, index = token.split(':')
-    if 'sources_by_task' not in dstore:
-        return 'Missing sources_by_task'
+    if 'by_task' not in dstore:
+        return 'Missing by_task'
     data = get_array(dstore['task_info'][()], taskname=encode(name))
     if len(data) == 0:
         raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['taskno']
-    eff_ruptures, eff_sites, srcids = dstore['sources_by_task'][taskno]
+    eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
+    eff_sites = dstore['by_task/eff_sites'][taskno]
+    srcids = dstore['by_task/srcids'][taskno]
     srcs = dstore['source_info']['source_id'][srcids]
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
@@ -785,12 +787,12 @@ def view_act_ruptures_by_src(token, dstore):
 @view.add('bad_ruptures')
 def view_bad_ruptures(token, dstore):
     """
-    Display the ruptures with an invalid bounding box
+    Display the ruptures degenerating to a point
     """
     data = dstore['ruptures']['id', 'code', 'mag',
                               'minlon', 'maxlon', 'minlat', 'maxlat']
-    bad = data[numpy.logical_or(data['minlon'] == data['maxlon'],
-                                data['minlat'] == data['maxlat'])]
+    bad = data[numpy.logical_and(data['minlon'] == data['maxlon'],
+                                 data['minlat'] == data['maxlat'])]
     return rst_table(bad)
 
 
@@ -894,3 +896,13 @@ def view_events_by_mag(token, dstore):
     for mag, grp in group_array(rups, 'mag').items():
         counts[mag] = sum(num_evs[rup_id] for rup_id in grp['id'])
     return rst_table(counts.items(), ['mag', 'num_events'])
+
+
+@view.add('maximum_intensity')
+def view_maximum_intensity(token, dstore):
+    """
+    Show intensities at minimum and maximum distance for the highest magnitude
+    """
+    effect = extract(dstore, 'effect')
+    data = zip(dstore['csm_info'].trts, effect[-1, -1], effect[-1, 0])
+    return rst_table(data, ['trt', 'intensity1', 'intensity2'])

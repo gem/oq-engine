@@ -55,6 +55,7 @@ the engine manages all the realizations at once.
 """
 
 import operator
+import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
@@ -103,7 +104,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     # Get the parameters assigned to the group
     src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
-    rup_mutex = getattr(group, 'rup_interdep', None) == 'mutex'
     cluster = getattr(group, 'cluster', None)
     trts = set()
     for src in group:
@@ -120,7 +120,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
     pmap, rup_data, calc_times, extra = cmaker.get_pmap_by_grp(
-        src_filter(group), src_mutex, rup_mutex)
+        src_filter, group)
     extra['task_no'] = getattr(monitor, 'task_no', 0)
 
     group_probability = getattr(group, 'grp_probability', None)

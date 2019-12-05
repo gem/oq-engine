@@ -53,6 +53,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
     :param haz: an array or a dictionary of hazard on that site
     :param rlzi: if given, a realization index
+    :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
     if hasattr(haz, 'array'):  # classical
         eids = []
@@ -95,8 +96,8 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
                 else:  # hcurves
                     dat = data[rm.imti[lt]]
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
-            res = arrays[0] if len(arrays) == 1 else numpy.sum(
-                a * w for a, w in zip(arrays, weights))
+            res = arrays[0] if len(arrays) == 1 else numpy.average(
+                arrays, weights=weights, axis=0)
             ls.append(res)
         arr = numpy.concatenate(ls)
         dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
