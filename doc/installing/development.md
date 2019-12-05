@@ -206,15 +206,15 @@ silx view calc_NNN.hdf5
 
 ### Notes ###
 
-*<a name="note1">[1]</a>: extra features, like celery and pam support can be installed running:*
+*<a name="note1">[1]</a>: extra features, like celery and cluster support can be installed running:*
 
 ```bash
 # oq-engine with celery support
 pip install -e oq-engine/[dev,celery]
-# oq-engine with pam support
-pip install -e oq-engine/[dev,pam]
+# oq-engine with cluster support
+pip install -e oq-engine/[dev,cluster]
 # oq-engine with support for both
-pip install -e oq-engine/[dev,celery,pam]
+pip install -e oq-engine/[dev,celery,cluster]
 # oq-engine with GDAL
 pip install -e oq-engine/[platform]
 ```

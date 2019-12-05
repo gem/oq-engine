@@ -31,13 +31,15 @@ import numpy
 import requests
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import random_filter, countby
+from openquake.baselib.general import (
+    random_filter, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+from openquake.hazardlib.source import rupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
@@ -221,8 +223,8 @@ def get_params(job_inis, **kw):
     _update(params, kw.items(), base_path)  # override on demand
 
     if params['inputs'].get('reqv'):
-        # using collapse_factor=0 because of the reqv approximation
-        params['collapse_factor'] = '0'
+        # using pointsource_distance=0 because of the reqv approximation
+        params['pointsource_distance'] = '0'
 
     return params
 
@@ -326,14 +328,18 @@ def get_mesh(oqparam):
         c = (coords[start:stop] if header[0] == 'site_id'
              else sorted(coords[start:stop]))
         # NB: Notice the sort=False below
-        # Calculations starting from ground motion fields input by the user 
+        # Calculations starting from ground motion fields input by the user
         # require at least two input files related to the gmf data:
         #   1. A sites.csv file, listing {site_id, lon, lat} tuples
-        #   2. A gmfs.csv file, listing {event_id, site_id, gmv[IMT1], gmv[IMT2], ...} tuples
-        # The site coordinates defined in the sites file do not need to be in sorted order.
-        # We must only ensure uniqueness of the provided site_ids and coordinates.
-        # When creating the site mesh from the site coordinates read from the csv file, 
-        # the sort=False flag maintains the user-specified site_ids instead of reassigning them after sorting.
+        #   2. A gmfs.csv file, listing {event_id, site_id, gmv[IMT1],
+        #      gmv[IMT2], ...} tuples
+        # The site coordinates defined in the sites file do not need to be in
+        # sorted order.
+        # We must only ensure uniqueness of the provided site_ids and
+        # coordinates.
+        # When creating the site mesh from the site coordinates read from
+        # the csv file, the sort=False flag maintains the user-specified
+        # site_ids instead of reassigning them after sorting.
         return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
@@ -367,6 +373,8 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
+    # the site model has the precedence over the exposure, see the
+    # discussion in https://github.com/gem/oq-engine/pull/5217
     elif 'site_model' in oqparam.inputs:
         logging.info('Extracting the hazard sites from the site model')
         sm = get_site_model(oqparam)
@@ -390,6 +398,12 @@ def get_site_model(oqparam):
         if isinstance(fname, str) and fname.endswith('.csv'):
             sm = hdf5.read_csv(
                  fname, {None: float, 'vs30measured': numpy.uint8}).array
+            sm['lon'] = numpy.round(sm['lon'], 5)
+            sm['lat'] = numpy.round(sm['lat'], 5)
+            dupl = get_duplicates(sm, 'lon', 'lat')
+            if dupl:
+                raise InvalidFile(
+                    'Found duplicate sites %s in %s' % (dupl, fname))
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
@@ -486,7 +500,9 @@ def get_gsim_lt(oqparam, trts=['*']):
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
         raise NotImplementedError('IMT-dependent weights in the logic tree '
-                                  'do not work with sampling!')
+                                  'cannot work with sampling, because they '
+                                  'would produce different realizations for '
+                                  'each IMT that cannot be combined')
     return gsim_lt
 
 
@@ -524,10 +540,15 @@ def get_rupture(oqparam):
         an hazardlib rupture
     """
     rup_model = oqparam.inputs['rupture_model']
-    [rup_node] = nrml.read(rup_model)
-    conv = sourceconverter.RuptureConverter(
-        oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
-    rup = conv.convert_node(rup_node)
+    if rup_model.endswith('.xml'):
+        [rup_node] = nrml.read(rup_model)
+        conv = sourceconverter.RuptureConverter(
+            oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
+        rup = conv.convert_node(rup_node)
+    elif rup_model.endswith('.toml'):
+        rup = rupture.from_toml(open(rup_model).read())
+    else:
+        raise ValueError('Unrecognized ruptures model %s' % rup_model)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
     rup.rup_id = oqparam.random_seed
     return rup
@@ -610,6 +631,14 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
+def _cons_coeffs(records, limit_states):
+    dtlist = [(lt, F32) for lt in records['loss_type']]
+    coeffs = numpy.zeros(len(limit_states), dtlist)
+    for rec in records:
+        coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
+    return coeffs
+
+
 def get_crmodel(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
@@ -619,7 +648,30 @@ def get_crmodel(oqparam):
     """
     riskdict = get_risk_models(oqparam)
     oqparam.set_risk_imtls(riskdict)
-    crm = riskmodels.CompositeRiskModel(oqparam, riskdict)
+    if 'consequence' in oqparam.inputs:
+        # build consdict of the form cname_by_tagname -> tag -> array
+        consdict = {}
+        for by, fname in oqparam.inputs['consequence'].items():
+            dtypedict = {by: str, 'cname': str, 'loss_type': str, None: float}
+            dic = group_array(hdf5.read_csv(fname, dtypedict).array, 'cname')
+            for cname, group in dic.items():
+                bytag = {tag: _cons_coeffs(grp, riskdict.limit_states)
+                         for tag, grp in group_array(group, by).items()}
+                consdict['%s_by_%s' % (cname, by)] = bytag
+    else:
+        # legacy approach, extract the consequences from the risk models
+        consdict = {'losses_by_taxonomy': {}}
+        for taxo, dic in riskdict.items():
+            coeffs_by_lt = {lt: dic.pop((lt, kind)) for lt, kind in list(dic)
+                            if kind == 'consequence'}
+            if coeffs_by_lt:
+                dtlist = [(lt, F32) for lt in coeffs_by_lt]
+                coeffs = numpy.zeros(len(riskdict.limit_states), dtlist)
+                for lt, cf in coeffs_by_lt.items():
+                    coeffs[lt] = cf
+                consdict['losses_by_taxonomy'][taxo] = coeffs
+
+    crm = riskmodels.CompositeRiskModel(oqparam, riskdict, consdict)
     return crm
 
 
@@ -793,7 +845,7 @@ def get_input_files(oqparam, hazard=False):
     :param hazard: if True, consider only the hazard files
     :returns: input path names in a specific order
     """
-    fnames = []  # files entering in the checksum
+    fnames = set()  # files entering in the checksum
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('site_model', 'source_model_logic_tree',
@@ -804,33 +856,33 @@ def get_input_files(oqparam, hazard=False):
             gsim_lt = get_gsim_lt(oqparam)
             for gsims in gsim_lt.values.values():
                 for gsim in gsims:
-                    table = getattr(gsim, 'GMPE_TABLE', None)
-                    if table:
-                        fnames.append(table)
-            fnames.append(fname)
+                    for k, v in gsim.kwargs.items():
+                        if k.endswith(('_file', '_table')):
+                            fnames.add(v)
+            fnames.add(fname)
         elif key == 'source_model':  # UCERF
             f = oqparam.inputs['source_model']
-            fnames.append(f)
+            fnames.add(f)
             fname = nrml.read(f).sourceModel.UCERFSource['filename']
-            fnames.append(os.path.join(os.path.dirname(f), fname))
+            fnames.add(os.path.join(os.path.dirname(f), fname))
         elif key == 'exposure':  # fname is a list
             for exp in asset.Exposure.read_headers(fname):
-                fnames.extend(exp.datafiles)
-            fnames.extend(fname)
+                fnames.update(exp.datafiles)
+            fnames.update(fname)
         elif isinstance(fname, dict):
-            fnames.extend(fname.values())
+            fnames.update(fname.values())
         elif isinstance(fname, list):
             for f in fname:
                 if f == oqparam.input_dir:
                     raise InvalidFile('%s there is an empty path in %s' %
                                       (oqparam.inputs['job_ini'], key))
-            fnames.extend(fname)
+            fnames.update(fname)
         elif key == 'source_model_logic_tree':
             for smpaths in logictree.collect_info(fname).smpaths.values():
-                fnames.extend(smpaths)
-            fnames.append(fname)
+                fnames.update(smpaths)
+            fnames.add(fname)
         else:
-            fnames.append(fname)
+            fnames.add(fname)
     return sorted(fnames)
 
 
@@ -868,9 +920,9 @@ def get_checksum32(oqparam, hazard=False):
                        'random_seed', 'ses_seed', 'truncation_level',
                        'maximum_distance', 'investigation_time',
                        'number_of_logic_tree_samples', 'imtls',
-                       'collapse_factor', 'pointsource_distance',
+                       'pointsource_distance',
                        'ses_per_logic_tree_path', 'minimum_magnitude',
-                       'sites', 'collapse_factor', 'filter_distance'):
+                       'sites', 'filter_distance'):
                 hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff

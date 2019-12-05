@@ -86,8 +86,9 @@ collect_csv = {}  # outputname -> lines
 orig_write_csv = writers.write_csv
 
 
-def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
-    fname = orig_write_csv(dest, data, sep, fmt, header, comment)
+def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
+              renamedict=None):
+    fname = orig_write_csv(dest, data, sep, fmt, header, comment, renamedict)
     lines = open(fname).readlines()[:3]
     name = re.sub(r'[\d\.]+', '.', strip_calc_id(fname))
     collect_csv[name] = lines
@@ -217,7 +218,11 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Make sure the content of the exported file is the expected one
         """
-        with open8(os.path.join(self.calc.oqparam.export_dir, fname)) as got:
+        if not os.path.isabs(fname):
+            fname = os.path.join(self.calc.oqparam.export_dir, fname)
+        if self.OVERWRITE_EXPECTED:
+            open8(fname, 'w').write(expected_content)
+        with open8(fname) as got:
             self.assertEqual(expected_content, got.read())
 
     def assertEventsByRlz(self, events_by_rlz):

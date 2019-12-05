@@ -22,12 +22,11 @@ import operator
 import collections.abc
 from contextlib import contextmanager
 import numpy
-from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box)
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, BBoxError)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
@@ -65,74 +64,36 @@ def getdefault(dic_with_default, key):
         return dic_with_default['default']
 
 
-class Piecewise(object):
-    """
-    Given two arrays x and y of non-decreasing values, build a piecewise
-    function associating to each x the corresponding y. If x is smaller
-    then the minimum x, the minimum y is returned; if x is larger than the
-    maximum x, the maximum y is returned.
-    """
-    def __init__(self, x, y):
-        self.y = numpy.array(y)
-        # interpolating from x values to indices in the range [0: len(x)]
-        self.piecewise = interp1d(x, range(len(x)), bounds_error=False,
-                                  fill_value=(0, len(x) - 1))
-
-    def __call__(self, x):
-        idx = numpy.int64(numpy.ceil(self.piecewise(x)))
-        return self.y[idx]
-
-
 class IntegrationDistance(collections.abc.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
-    tectonic region type. The integration distances can be scalars or
-    list of pairs (magnitude, distance). Here is an example using 'default'
+    tectonic region type. Here is an example using 'default'
     as tectonic region type, so that the same values will be used for all
     tectonic region types:
 
-    >>> maxdist = IntegrationDistance({'default': [
-    ...          (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
+    >>> maxdist = IntegrationDistance({'default': 400})
+    >>> maxdist('Some TRT')
+    400.0
     >>> maxdist('Some TRT', mag=2.5)
-    30
-    >>> maxdist('Some TRT', mag=3)
-    30
-    >>> maxdist('Some TRT', mag=3.1)
-    40
-    >>> maxdist('Some TRT', mag=8)
-    400
-    >>> maxdist('Some TRT', mag=8.5)  # 2000 km are used above the maximum
-    2000
+    400.0
     """
     def __init__(self, dic):
-        self.dic = dic or {}  # TRT -> float or list of pairs
-        self.magdist = {}  # TRT -> (magnitudes, distances)
-        for trt, value in self.dic.items():
+        self.dic = {}  # TRT -> float or list of pairs
+        self.magdist = {}  # TRT -> (magnitudes, distances), set by the engine
+        for trt, value in dic.items():
             if isinstance(value, (list, numpy.ndarray)):
-                # assume a list of pairs (mag, dist)
-                self.magdist[trt] = value
+                # assume a list of pairs (magstring, dist)
+                self.magdist[trt] = {'%.3f' % mag: dist for mag, dist in value}
+                self.dic[trt] = value[-1][-1]
             else:
                 self.dic[trt] = float(value)
 
     def __call__(self, trt, mag=None):
-        if not self.dic:
+        if mag and trt in self.magdist:
+            return self.magdist[trt]['%.3f' % mag]
+        elif not self.dic:
             return MAX_DISTANCE
-        value = getdefault(self.dic, trt)
-        if isinstance(value, float):  # scalar maximum distance
-            return value
-        elif mag is None:  # get the maximum distance for the maximum mag
-            return value[-1][1]
-        elif not hasattr(self, 'piecewise'):
-            self.piecewise = {}  # function cache
-        try:
-            md = self.piecewise[trt]  # retrieve from the cache
-        except KeyError:  # fill the cache
-            mags, dists = zip(*getdefault(self.magdist, trt))
-            if mags[-1] < 11:  # use 2000 km for mag > mags[-1]
-                mags = numpy.concatenate([mags, [11]])
-                dists = numpy.concatenate([dists, [MAX_DISTANCE]])
-            md = self.piecewise[trt] = Piecewise(mags, dists)
-        return md(mag)
+        return getdefault(self.dic, trt)
 
     def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """
@@ -161,9 +122,15 @@ class IntegrationDistance(collections.abc.Mapping):
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
         mag = src.get_min_max_mag()[1]
-        maxdist = self(src.tectonic_region_type, mag)
+        maxdist = self(src.tectonic_region_type)  # TODO: use mag here
         bbox = get_bounding_box(src, maxdist)
         return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
+
+    def get_dist_bins(self, trt, nbins=51):
+        """
+        :returns: an array of distance bins, from 10m to maxdist
+        """
+        return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
     def __getstate__(self):
         # otherwise is not pickleable due to .piecewise
@@ -371,7 +338,12 @@ class SourceFilter(object):
             if hasattr(src, 'indices'):   # already filtered
                 yield src
                 continue
-            box = self.integration_distance.get_affected_box(src)
+            try:
+                box = self.integration_distance.get_affected_box(src)
+            except BBoxError:  # too large, don't filter
+                src.indices = self.sitecol.sids
+                yield src
+                continue
             indices = self.sitecol.within_bbox(box)
             if len(indices):
                 src.indices = indices

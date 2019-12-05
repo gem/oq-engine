@@ -1,5 +1,5 @@
 #,,,"kind='mean', risk_investigation_time=None"
-asset,loss_type,loss,poe
+asset_id,loss_type,loss,poe
 a2,structural,0.00000E+00,2.46188E-02
 a2,structural,9.56295E-01,2.46188E-02
 a2,structural,1.91259E+00,2.45861E-02

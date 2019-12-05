@@ -33,9 +33,8 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import imt as imt_module
 
 
-BASE_DATA_PATH = os.path.join(os.path.dirname(__file__),
-                              "data",
-                              "gsimtables")
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "gsimtables")
+GMPE_TABLE = os.path.join(BASE_DATA_PATH, "Wcrust_rjb_med.hdf5")
 
 
 def midpoint(low, high, point=0.5):
@@ -411,18 +410,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                 gsim.stddevs["Total"][iml],
                 self.hdf5["Total/" + iml][:])
 
-    def test_instantiation_without_file(self):
-        """
-        Tests the case when the GMPE table file is missing
-        """
-        with self.assertRaises(ValueError) as err:
-            GMPETable(gmpe_table=None)
-        self.assertEqual(str(err.exception),
-                         "You forgot to set GMPETable.GMPE_TABLE!")
-        with self.assertRaises(OSError) as err:
-            GMPETable(gmpe_table='/do/not/exists/table.hdf5')
-        self.assertIn("No such file or directory", str(err.exception))
-
     def test_retreival_tables_good_no_interp(self):
         """
         Tests the retreival of the IML tables for 'good' conditions without
@@ -740,15 +727,10 @@ class GSIMTableQATestCase(BaseGSIMTestCase):
     MEAN_FILE = "gsimtables/Wcrust_rjb_med_MEAN.csv"
     STD_TOTAL_FILE = "gsimtables/Wcrust_rjb_med_TOTAL.csv"
 
-    def setUp(self):
-        self.GSIM_CLASS.GMPE_TABLE = os.path.join(BASE_DATA_PATH,
-                                                  "Wcrust_rjb_med.hdf5")
-
     def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.7)
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.7,
+                   gmpe_table=GMPE_TABLE)
 
     def test_std_total(self):
-        self.check(self.STD_TOTAL_FILE, max_discrep_percentage=0.7)
-
-    def tearDown(self):
-        self.GSIM_CLASS.GMPE_TABLE = None
+        self.check(self.STD_TOTAL_FILE, max_discrep_percentage=0.7,
+                   gmpe_table=GMPE_TABLE)

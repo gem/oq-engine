@@ -73,11 +73,12 @@ install_requires = [
 ]
 
 extras_require = {
-    'setproctitle': ["setproctitle"],
-    'prctl': ["python-prctl ==1.6.1"],
     'celery':  ["celery >=4.0, <4.4"],
-    'dask':  ["dask", "distributed"],
-    'pam': ["python-pam", "django-pam"],
+    'cluster': ["python-pam",
+                "django-pam",
+                "gunicorn",
+                "python-prctl ==1.6.1",
+                "setproctitle"],
     'plotting':  [
         'basemap >=1.0',
         'pyproj >=1.9',
