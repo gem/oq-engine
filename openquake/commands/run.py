@@ -79,8 +79,10 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, loglevel,
     Run both hazard and risk, one after the other
     """
     hcalc = base.calculators(readinput.get_oqparam(job_haz), calc_id)
+    hcalc.gzip_inputs = lambda: None  # disable feature
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
               exports=exports, **params)
+    hcalc.datastore.close()
     hc_id = hcalc.datastore.calc_id
     rcalc_id = logs.init(level=getattr(logging, loglevel.upper()))
     oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
@@ -116,6 +118,7 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
                         'There are %d old calculations, cannot '
                         'retrieve the %s' % (len(calc_ids), hc_id))
             calc = base.calculators(oqparam, calc_id)
+            calc.gzip_inputs = lambda: None  # disable feature
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
                      rlz_ids=rlz_ids)

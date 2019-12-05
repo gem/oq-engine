@@ -4,7 +4,10 @@
 
 from openquake.server.settings import INSTALLED_APPS, AUTHENTICATION_BACKENDS
 
+# Enable authentication
 LOCKDOWN = True
+# Disable sharing of results across users
+ACL_ON = True
 
 INSTALLED_APPS += (
     'django_pam',

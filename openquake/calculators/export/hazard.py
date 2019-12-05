@@ -18,11 +18,9 @@
 
 import re
 import os
-import logging
+import sys
 import operator
 import collections
-
-import shapely.wkt
 import numpy
 
 from openquake.baselib.general import group_array, deprecated
@@ -83,14 +81,9 @@ def export_ruptures_csv(ekey, dstore):
     dest = dstore.export_path('ruptures.csv')
     arr = extract(dstore, 'rupture_info')
     if export.sanity_check:
-        for r in arr:
-            poly = r['boundary'].decode('utf8')
-            obj = shapely.wkt.loads(poly)
-            if not obj.is_valid:
-                # this happens when the bounding box collapse to a line
-                # or a point, i.e. maxlon=minlon or maxlat=minlat
-                print('Rupture %d has an invalid %s' % (r['rupid'], poly))
-
+        bad = view('bad_ruptures', dstore)
+        if bad.count('\n') > 3:  # nonempty rst_table
+            print(bad, file=sys.stderr)
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
@@ -407,7 +400,8 @@ def export_gmf_data_csv(ekey, dstore):
         writers.write_csv(f, sites)
         fname = dstore.build_fname('gmf', 'data', 'csv')
         gmfa.sort(order=['eid', 'sid'])
-        writers.write_csv(fname, _expand_gmv(gmfa, imts))
+        writers.write_csv(fname, _expand_gmv(gmfa, imts),
+                          renamedict={'sid': 'site_id', 'eid': 'event_id'})
         if 'sigma_epsilon' in dstore['gmf_data']:
             sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
             sig_eps = dstore['gmf_data/sigma_epsilon'][()]
@@ -420,6 +414,7 @@ def export_gmf_data_csv(ekey, dstore):
         else:
             return [fname, f]
     # old format for single eid
+    # TODO: is this still used?
     gmfa = gmfa[gmfa['eid'] == eid]
     eid2rlz = dict(dstore['events'])
     rlzi = eid2rlz[eid]
@@ -591,7 +586,7 @@ def export_realizations(ekey, dstore):
 def export_events(ekey, dstore):
     events = dstore['events'][()]
     path = dstore.export_path('events.csv')
-    writers.write_csv(path, events, fmt='%s')
+    writers.write_csv(path, events, fmt='%s', renamedict=dict(id='event_id'))
     return [path]
 
 

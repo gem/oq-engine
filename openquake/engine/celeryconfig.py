@@ -71,4 +71,4 @@ else:
     result_cache_max = 1
     task_ignore_result = True
 
-    imports = ["openquake.baselib.parallel"]
+    imports = ["openquake.baselib.parallel", "openquake.hazardlib.contexts"]
