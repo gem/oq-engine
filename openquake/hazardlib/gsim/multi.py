@@ -21,6 +21,7 @@ multiple GMPEs for different IMTs when passed a dictionary of ground motion
 models organised by IMT type or by a string describing the association
 """
 import collections
+import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.imt import from_string
@@ -100,3 +101,64 @@ class MultiGMPE(GMPE, collections.abc.Mapping):
         """
         return self.kwargs[str(imt)].get_mean_and_stddevs(
             sctx, rctx, dctx, imt, stddev_types)
+
+
+class AvgGMPE(GMPE):
+    """
+    The AvgGMPE returns mean and stddevs from a set of underlying
+    GMPEs with the given weights.
+    """
+    #: Supported tectonic region type is undefined
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
+
+    #: Supported intensity measure types are not set
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
+
+    #: Supported intensity measure component is horizontal
+    #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
+
+    #: Supported standard deviation type
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+
+    #: Required site parameters will be set be selected GMPES
+    REQUIRES_SITES_PARAMETERS = set()
+
+    #: Required rupture parameter is magnitude, others will be set later
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+
+    #: Required distance metrics will be set by the GMPEs
+    REQUIRES_DISTANCES = set()
+
+    def __init__(self, **kwargs):
+        """
+        Instantiate a list of GMPEs
+        """
+        super().__init__(**kwargs)
+        weights = []
+        self.gsims = []
+        rrp = set()
+        rd = set()
+        for gsim_name, params in kwargs.items():
+            weights.append(params.pop('weight'))
+            gsim = registry[gsim_name](**params)
+            rd.update(gsim.REQUIRES_DISTANCES)
+            rrp.update(gsim.REQUIRES_RUPTURE_PARAMETERS)
+            self.gsims.append(gsim)
+        self.REQUIRES_DISTANCES = frozenset(rd)
+        self.REQUIRES_RUPTURE_PARAMETERS = frozenset(rrp)
+        self.weights = numpy.array(weights)
+
+    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+        """
+        Call the underlying GMPEs
+        """
+        means = []
+        for g, gsim in enumerate(self.gsims):
+            mean, stds = gsim.get_mean_and_stddevs(
+                sctx, rctx, dctx, imt, stddev_types)
+            means.append(mean)
+        mean = self.weights @ means
+        #stddevs = [numpy.sqrt(self.weights @ stddev[:, s] ** 2)
+        #           for s in range(len(stddev_types))]
+        return mean, stds
