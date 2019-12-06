@@ -1,4 +1,14 @@
   [Michele Simionato]
+  * Storing (experimentally) and asset loss table per realization
+
+  [Robin Gee]
+  * set DEFINED_FOR_REFERENCE_VELOCITY in CampbellBozorgnia2003NSHMP2007
+  
+  [Graeme Weatherill]
+  * Re-adjustment of SERA Subduction model epistemic scaling factors
+  
+  [Michele Simionato]
+  * Improved the task distribution in the ebrisk calculator
   * Fixed a bug in ebrisk with aggregate_by when building the rup_loss_table
   * Storing the asset loss table in scenario_risk, but only for assets and
     events above over a `loss_ratio_threshold` parameter
