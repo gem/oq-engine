@@ -16,9 +16,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`MultiGMPE`, which can create a composite of
-multiple GMPEs for different IMTs when passed a dictionary of ground motion
-models organised by IMT type or by a string describing the association
+Module exports :class:`AvgGMPE`, which can create a composite of
+multiple GMPEs with different weights. The syntax to use in the
+logic tree file is as in this example::
+
+              <logicTreeBranch branchID="b1">
+                <uncertaintyModel>
+                  [AvgGMPE]
+                  AkkarBommer2010.weight=0.20
+                  CauzziFaccioli2008.weight=0.20
+                  ChiouYoungs2008.weight=0.20
+                  ToroEtAl2002SHARE.weight=0.20
+                  Campbell2003SHARE.weight=0.20
+                </uncertaintyModel>
+                <uncertaintyWeight>1</uncertaintyWeight>
+              </logicTreeBranch>
 """
 import numpy
 from openquake.hazardlib import const
