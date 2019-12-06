@@ -1,12 +1,14 @@
   [Michele Simionato]
-  * Storing (experimentally) and asset loss table per realization
+  * Ignored IMT-dependent weights when using sampling to make such calculations
+    possible
+  * Storing (experimentally) an asset loss table per realization
 
   [Robin Gee]
   * set DEFINED_FOR_REFERENCE_VELOCITY in CampbellBozorgnia2003NSHMP2007
-  
+
   [Graeme Weatherill]
   * Re-adjustment of SERA Subduction model epistemic scaling factors
-  
+
   [Michele Simionato]
   * Improved the task distribution in the ebrisk calculator
   * Fixed a bug in ebrisk with aggregate_by when building the rup_loss_table
