@@ -30,6 +30,7 @@ from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
+U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
@@ -608,13 +609,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         L = len(self.lti)
         D = len(self.damage_states)
         return numpy.dtype([('eid', U32), ('dmg', (F32, (L, D)))])
-
-    def aid_eid_loss_dt(self):
-        """
-        :returns: a dtype (aid, eid, loss)
-        """
-        L = len(self.lti),
-        return numpy.dtype([('aid', U32), ('eid', U32), ('loss', (F32, L))])
 
     def aid_eid_dd_dt(self):
         """
