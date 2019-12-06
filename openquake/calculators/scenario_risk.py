@@ -42,6 +42,26 @@ def _event_slice(num_gmfs, r):
     return slice(r * num_gmfs, (r + 1) * num_gmfs)
 
 
+def highest_losses(losses, eids, n):
+    """
+    >>> highest_losses([.4, .2, .5, .7, .1], [1, 2, 3, 4, 5],  3)
+    [(0.4, 1), (0.5, 3), (0.7, 4)]
+    """
+    return sorted(zip(losses, eids))[-n:]
+
+
+def ael_dt(loss_names, rlz=False):
+    """
+    :returns: aid, eid, loss or aid, eid, rlz, loss
+    """
+    L = len(loss_names),
+    if rlz:
+        return [('aid', U32), ('eid', U32),
+                ('rlz', U16), ('loss', (F32, L))]
+    else:
+        return [('aid', U32), ('eid', U32), ('loss', (F32, L))]
+
+
 def scenario_risk(riskinputs, crmodel, param, monitor):
     """
     Core function for a scenario computation.
@@ -68,6 +88,7 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
     result = dict(agg=numpy.zeros((E, L), F32), avg=[])
     mon = monitor('getting hazard', measuremem=False)
     acc = AccumDict(accum=numpy.zeros(L, F64))  # aid,eid->loss
+    n = param['highest_losses']
     for ri in riskinputs:
         with mon:
             ri.hazard_getter.init()
@@ -84,11 +105,8 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
                     stats['mean'][a] = losses[a].mean()
                     stats['stddev'][a] = losses[a].std(ddof=1)
                     result['avg'].append((l, r, asset['ordinal'], stats[a]))
-                    threshold = value(asset, loss_type) * param[
-                        'loss_ratio_threshold']
-                    for eid, loss in zip(out.eids, losses[a]):
-                        if loss >= threshold:
-                            acc[aid, eid][l] = loss
+                    for loss, eid in highest_losses(losses[a], out.eids, n):
+                        acc[aid, eid][l] = loss
                 agglosses = losses.sum(axis=0)  # shape num_gmfs
                 result['agg'][slc, l] += agglosses
 
@@ -128,10 +146,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         except KeyError:
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
         self.param['event_slice'] = self.event_slice
-        self.param['loss_ratio_threshold'] = oq.loss_ratio_threshold
-        self.param['ael_dt'] = ael_dt = self.crmodel.aid_eid_loss_dt()
+        self.param['highest_losses'] = oq.highest_losses
+        self.param['ael_dt'] = dt = ael_dt(oq.loss_names)
         A = len(self.assetcol)
-        self.datastore.create_dset('loss_data/data', ael_dt)
+        self.datastore.create_dset('loss_data/data', dt)
         self.datastore.create_dset('loss_data/indices', U32, (A, 2))
         self.start = 0
 
