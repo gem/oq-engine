@@ -510,6 +510,8 @@ def get_gsim_lt(oqparam, trts=['*']):
                         'Using weight=%s instead of %s for %s %s',
                         branch.weight.dic['weight'], w, branch.gsim, k)
                     del branch.weight.dic[k]
+    if oqparam.collapse_gsim_logic_tree:
+        return gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     return gsim_lt
 
 
