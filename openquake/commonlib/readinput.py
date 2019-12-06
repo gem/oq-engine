@@ -499,10 +499,17 @@ def get_gsim_lt(oqparam, trts=['*']):
     assert trts <= expected_trts, (trts, expected_trts)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
-        raise NotImplementedError('IMT-dependent weights in the logic tree '
-                                  'cannot work with sampling, because they '
-                                  'would produce different realizations for '
-                                  'each IMT that cannot be combined')
+        logging.error('IMT-dependent weights in the logic tree cannot work '
+                      'with sampling, because they would produce different '
+                      'GMPE paths for each IMT that cannot be combined, so '
+                      'I am using the default weights')
+        for branch in gsim_lt.branches:
+            for k, w in sorted(branch.weight.dic.items()):
+                if k != 'weight':
+                    logging.warning(
+                        'Using weight=%s instead of %s for %s %s',
+                        branch.weight.dic['weight'], w, branch.gsim, k)
+                    del branch.weight.dic[k]
     return gsim_lt
 
 
