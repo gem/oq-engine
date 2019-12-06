@@ -956,6 +956,11 @@ def fast_agg3(structured_array, kfield, vfields, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)
     and some value fields (the vfields).
+
+    >>> data = numpy.array([(1, 2.4), (1, 1.6), (2, 2.5)],
+    ...                    [('aid', U16), ('val', F32)])
+    >>> fast_agg3(data, 'aid', ['val'])
+    array([(1, 4. ), (2, 2.5)], dtype=[('aid', '<u2'), ('val', '<f4')])
     """
     allnames = structured_array.dtype.names
     assert kfield in allnames, kfield
