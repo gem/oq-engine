@@ -211,6 +211,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         srcfilter = self.src_filter(self.datastore.tempname)
+        logging.info('Weighting the ruptures')
         allargs = [(rgetter, srcfilter, self.param)
                    for rgetter in getters.gen_rupture_getters(self.datastore)]
         self.events_per_sid = []
