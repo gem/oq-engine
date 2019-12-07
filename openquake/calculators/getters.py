@@ -368,9 +368,11 @@ class GmfGetter(object):
         """
         alldata = []
         self.sig_eps = []
+        self.time_by_rup_id = {}
         for computer in self.computers:
-            data = computer.compute_all(
+            data, tbr = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
+            self.time_by_rup_id.update(tbr)
             alldata.append(data)
         if not alldata:
             return []
@@ -425,7 +427,10 @@ class GmfGetter(object):
                 stop += 1
             indices.append((sid, start, stop))
             start = stop
+        rupids = list(self.time_by_rup_id)
+        times = F32(list(self.time_by_rup_id.values()))
         res = dict(gmfdata=gmfdata, hcurves=hcurves,
+                   rupids_times=(rupids, times),
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
         return res

@@ -142,7 +142,7 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
             continue
         [c] = gg.computers
         with mon_haz:
-            data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
+            data, time_by_rup = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
             hazard['gmfs'].append(data)
             hazard['events'].append(c.rupture.get_events(gg.rlzs_by_gsim))
         hazard['gmf_info'].append(
