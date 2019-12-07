@@ -135,6 +135,7 @@ def adjust(basecls, sgn):
     dic['REQUIRES_DISTANCES'] = frozenset(
         basecls.REQUIRES_DISTANCES | {'rrup'})
 
+    dic['__module__'] = AtkinsonMacias2009NSHMP2014.__module__
     return type(name, (basecls,), dic)
 
 
