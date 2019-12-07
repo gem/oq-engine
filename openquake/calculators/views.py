@@ -168,6 +168,20 @@ def view_slow_sources(token, dstore, maxrows=20):
     return rst_table(data[::-1][:maxrows])
 
 
+@view.add('slow_ruptures')
+def view_slow_ruptures(token, dstore, maxrows=20):
+    """
+    Show the slowest ruptures
+    """
+    fields = ['id', 'grp_id', 'code', 'n_occ', 'mag']
+    rups = dstore.parent['ruptures'] if dstore.parent else dstore['ruptures']
+    time = dstore['gmf_data/time_by_rup'][()]
+    arr = util.compose_arrays(time, rups[()][fields], 'time')
+    arr = arr[arr['code'] == 153]
+    arr.sort(order='time')
+    return rst_table(arr[-maxrows:])
+
+
 @view.add('contents')
 def view_contents(token, dstore):
     """

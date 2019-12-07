@@ -212,6 +212,8 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
+                rupids, times = result.pop('rupids_times')
+                self.datastore['gmf_data/time_by_rup'][rupids] = times
                 hdf5.extend(self.datastore['gmf_data/data'], data)
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
@@ -340,12 +342,16 @@ class EventBasedCalculator(base.HazardCalculator):
                               oq.inputs['job_ini'])
         N = len(self.sitecol.complete)
         if oq.ground_motion_fields:
+            nrups = len(self.datastore.parent['ruptures']
+                        if self.datastore.parent
+                        else self.datastore['ruptures'])
             self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
             self.datastore.create_dset(
                 'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
+            self.datastore.create_dset('gmf_data/time_by_rup', F32, (nrups,))
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
 
