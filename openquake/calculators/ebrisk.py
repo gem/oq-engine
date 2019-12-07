@@ -213,7 +213,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         srcfilter = self.src_filter(self.datastore.tempname)
         logging.info('Weighting the ruptures')
         allargs = [(rgetter, srcfilter, self.param)
-                   for rgetter in getters.gen_rupture_getters(self.datastore)]
+                   for rgetter in getters.gen_rupture_getters(
+                           self.datastore, maxweight=oq.max_gmfs_size)]
         self.events_per_sid = []
         self.lossbytes = 0
         self.datastore.swmr_on()
