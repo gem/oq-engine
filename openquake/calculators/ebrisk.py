@@ -119,13 +119,9 @@ def calc_risk(hazard, param, monitor):
     return acc
 
 
-def len_gmfs(hazard):
-    return sum(len(gmfs) for gmfs in hazard['gmfs'])
-
-
-def ebrisk(rupgetters, srcfilter, param, monitor):
+def ebrisk(rupgetter, srcfilter, param, monitor):
     """
-    :param rupgetters: RuptureGetters with 1 rupture each
+    :param rupgetter: RuptureGetter with multiple ruptures
     :param srcfilter: a SourceFilter
     :param param: dictionary of parameters coming from oqparam
     :param monitor: a Monitor instance
@@ -134,9 +130,9 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
     mon_haz = monitor('getting hazard', measuremem=False)
     mon_rup = monitor('getting ruptures', measuremem=False)
     hazard = dict(gmfs=[], events=[], gmf_info=[])
-    for rupgetter in rupgetters:
+    for rg in rupgetter.split():
         with mon_rup:
-            gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
+            gg = getters.GmfGetter(rg, srcfilter, param['oqparam'])
             gg.init()
         if not gg.computers:  # filtered out rupture
             continue
@@ -153,6 +149,10 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
             hazard = dict(gmfs=[], events=[], gmf_info=[])
     if len_gmfs(hazard):
         yield calc_risk(hazard, param, monitor)
+
+
+def len_gmfs(hazard):
+    return sum(len(gmfs) for gmfs in hazard['gmfs'])
 
 
 @base.calculators.add('ebrisk')
@@ -203,48 +203,16 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.flush()  # just to be sure
         oq = self.oqparam
         parent = self.datastore.parent
-        if parent:
-            grp_indices = parent['ruptures'].attrs['grp_indices']
-            dstore = parent
-            csm_info = parent['csm_info']
-        else:
-            grp_indices = self.datastore['ruptures'].attrs['grp_indices']
-            dstore = self.datastore
-            csm_info = self.csm_info
+        csm_info = parent['csm_info'] if parent else self.csm_info
+        self.init_logic_tree(csm_info)
         self.set_param(
             hdf5path=self.datastore.filename,
             task_duration=oq.task_duration or 1200,  # 20min
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
-
-        self.init_logic_tree(csm_info)
-        trt_by_grp = csm_info.grp_by("trt")
-        samples = csm_info.get_samples_by_grp()
-        rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
-        ngroups = 0
-        fe = 0
-        eslices = self.datastore['eslices']
-        allargs = []
         srcfilter = self.src_filter(self.datastore.tempname)
-        events_per_block = min(numpy.ceil(  # at max 2000 events per block
-            self.E / (oq.concurrent_tasks or 1)), 2000)
-        for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
-            start, stop = grp_indices[grp_id]
-            if start == stop:  # no ruptures for the given grp_id
-                continue
-            ngroups += 1
-            rup_array = dstore['ruptures'][start:stop]
-            rgetter = getters.RuptureGetter(
-                rup_array, dstore.filename, grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
-                eslices[fe:fe + stop - start, 0])
-            for rgetters in general.block_splitter(
-                    rgetter.split(), events_per_block,
-                    operator.attrgetter('weight')):
-                allargs.append((rgetters, srcfilter, self.param))
-            fe += stop - start
-        logging.info('Sending %d/%d source groups with ruptures',
-                     ngroups, len(rlzs_by_gsim_grp))
+        allargs = [(rgetter, srcfilter, self.param)
+                   for rgetter in getters.gen_rupture_getters(self.datastore)]
         self.events_per_sid = []
         self.lossbytes = 0
         self.datastore.swmr_on()
