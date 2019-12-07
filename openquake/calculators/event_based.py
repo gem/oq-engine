@@ -351,7 +351,9 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset(
                 'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
-            self.datastore.create_dset('gmf_data/time_by_rup', F32, (nrups,))
+            dt = numpy.dtype([('nsites', U16), ('time', F32)])
+            self.datastore.create_dset('gmf_data/time_by_rup', dt, (nrups,),
+                                       fillvalue=None)
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
 

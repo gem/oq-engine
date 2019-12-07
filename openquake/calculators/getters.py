@@ -370,9 +370,9 @@ class GmfGetter(object):
         self.sig_eps = []
         self.time_by_rup_id = {}
         for computer in self.computers:
-            data, tbr = computer.compute_all(
+            data, dt = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
-            self.time_by_rup_id.update(tbr)
+            self.time_by_rup_id[computer.rupture.id] = (len(computer.sids), dt)
             alldata.append(data)
         if not alldata:
             return []
@@ -428,7 +428,8 @@ class GmfGetter(object):
             indices.append((sid, start, stop))
             start = stop
         rupids = list(self.time_by_rup_id)
-        times = F32(list(self.time_by_rup_id.values()))
+        times = numpy.array(list(self.time_by_rup_id.values()),
+                            [('nsites', U16), ('time', F32)])
         res = dict(gmfdata=gmfdata, hcurves=hcurves,
                    rupids_times=(rupids, times),
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
