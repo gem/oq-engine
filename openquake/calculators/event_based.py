@@ -198,7 +198,7 @@ class EventBasedCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         yield from gen_rupture_getters(
-            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1)
+            dstore, maxweight=self.oqparam.max_gmfs_size)
         if self.datastore.parent:
             self.datastore.parent.close()
 
