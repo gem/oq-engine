@@ -20,6 +20,7 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
+import time
 import numpy
 import scipy.stats
 
@@ -117,8 +118,9 @@ class GmfComputer(object):
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
-        :returns: [(sid, eid, gmv), ...]
+        :returns: [(sid, eid, gmv), ...], {rupid: dt}
         """
+        t0 = time.time()
         rup = self.rupture
         sids = self.sids
         eids_by_rlz = rup.get_eids_by_rlz(rlzs_by_gsim)
@@ -152,7 +154,8 @@ class GmfComputer(object):
                 n += e
         m = (len(min_iml),)
         gmv_dt = [('sid', U32), ('eid', U32), ('gmv', (F32, m))]
-        return numpy.array(data, gmv_dt)
+        arr = numpy.array(data, gmv_dt)
+        return arr, {rup.id: time.time() - t0}
 
     def compute(self, gsim, num_events, seed=None):
         """
