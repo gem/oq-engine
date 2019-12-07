@@ -155,7 +155,7 @@ class GmfComputer(object):
         m = (len(min_iml),)
         gmv_dt = [('sid', U32), ('eid', U32), ('gmv', (F32, m))]
         arr = numpy.array(data, gmv_dt)
-        return arr, {rup.id: time.time() - t0}
+        return arr, time.time() - t0
 
     def compute(self, gsim, num_events, seed=None):
         """
