@@ -24,6 +24,10 @@ import getpass
 import collections
 import numpy
 import h5py
+try:
+    import pandas
+except ImportError:
+    pass
 
 from openquake.baselib import hdf5, config, performance
 
@@ -395,6 +399,32 @@ class DataStore(collections.abc.MutableMapping):
         """
         data = bytes(numpy.asarray(self[key][()]))
         return io.BytesIO(gzip.decompress(data))
+
+    def read_df(self, key):
+        """
+        :returns: pandas DataFrame associated to the dataset
+        """
+        dset = self.getitem(key)
+        dtlist = []
+        for name in dset.dtype.names:
+            dt = dset.dtype[name]
+            if dt.shape:  # vector field
+                templ = name + '_%d' * len(dt.shape)
+                for i, _ in numpy.ndenumerate(numpy.zeros(dt.shape)):
+                    dtlist.append((templ % i, dt.base))
+            else:  # scalar field
+                dtlist.append((name, dt))
+        data = numpy.zeros(len(dset), dtlist)
+        for name in dset.dtype.names:
+            arr = dset[name]
+            dt = dset.dtype[name]
+            if dt.shape:  # vector field
+                templ = name + '_%d' * len(dt.shape)
+                for i, _ in numpy.ndenumerate(numpy.zeros(dt.shape)):
+                    data[templ % i] = arr[(slice(None),) + i]
+            else:  # scalar field
+                data[name] = arr
+        return pandas.DataFrame(data)
 
     @property
     def metadata(self):
