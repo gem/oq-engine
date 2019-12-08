@@ -33,7 +33,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import source, calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, gen_rupture_getters, sig_eps_dt)
+    GmfGetter, RuptureGetter, gen_rupture_getters, sig_eps_dt, time_dt)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 
@@ -213,7 +213,8 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
-                rupids, times = result.pop('rupids_times')
+                times = result.pop('times')
+                rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
                 hdf5.extend(self.datastore['gmf_data/data'], data)
                 sig_eps = result.pop('sig_eps')
@@ -247,7 +248,6 @@ class EventBasedCalculator(base.HazardCalculator):
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
         rgetters = self.gen_rupture_getters()
-
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
         logging.info('Building assocs event_id -> rlz_id for {:_d} events'
@@ -352,9 +352,8 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset(
                 'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
-            dt = numpy.dtype([('nsites', U16), ('time', F32)])
-            self.datastore.create_dset('gmf_data/time_by_rup', dt, (nrups,),
-                                       fillvalue=None)
+            self.datastore.create_dset('gmf_data/time_by_rup',
+                                       time_dt, (nrups,), fillvalue=None)
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
 
