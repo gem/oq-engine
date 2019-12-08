@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed logic tree sampling by ordering the branches by TRT
   * Ignored IMT-dependent weights when using sampling to make such calculations
     possible
   * Storing (experimentally) an asset loss table per realization
