@@ -22,11 +22,13 @@ import operator
 import collections.abc
 from contextlib import contextmanager
 import numpy
+from scipy.spatial import cKDTree
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, BBoxError)
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, BBoxError,
+    spherical_to_cartesian)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
@@ -122,7 +124,7 @@ class IntegrationDistance(collections.abc.Mapping):
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
         mag = src.get_min_max_mag()[1]
-        maxdist = self(src.tectonic_region_type)  # TODO: use mag here
+        maxdist = self(src.tectonic_region_type)  # TODO: use mag here?
         bbox = get_bounding_box(src, maxdist)
         return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
 
@@ -315,19 +317,23 @@ class SourceFilter(object):
         :param trt:
            tectonic region type string
         :returns:
-           the site indices within the bounding box enlarged by the integration
+           the site indices within the enlarged integration
            distance for the given TRT and magnitude
         """
         if self.sitecol is None:
             return []
         elif not self.integration_distance:  # do not filter
             return self.sitecol.sids
-        bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
-        maxdist = self.integration_distance(trt, rec['mag'])
-        a1 = min(maxdist * KM_TO_DEGREES, 90)
-        a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
-        bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
-        return self.sitecol.within_bbox(bb)
+        if not hasattr(self, 'kdt'):
+            self.kdt = cKDTree(self.sitecol.xyz)
+        lon, lat, dep = rec['hypo']
+        xyz = spherical_to_cartesian(lon, lat, dep)
+        maxdist = self.integration_distance(trt)  # TODO: add mag here?
+        # upper limit for the the size of the rupture from the hypocenter
+        delta = max(rec['maxlon'] - lon, lon - rec['minlon'],
+                    rec['maxlat'] - lat, lat - rec['minlat']) / KM_TO_DEGREES
+        sids = self.kdt.query_ball_point(xyz, maxdist + delta, eps=1)
+        return sids
 
     def filter(self, sources):
         """
