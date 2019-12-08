@@ -22,7 +22,7 @@ import operator
 import collections.abc
 from contextlib import contextmanager
 import numpy
-from scipy.spatial import cKDTree
+from scipy.spatial import cKDTree, distance
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
@@ -329,11 +329,18 @@ class SourceFilter(object):
         lon, lat, dep = rec['hypo']
         xyz = spherical_to_cartesian(lon, lat, dep)
         maxdist = self.integration_distance(trt)  # TODO: add mag here?
-        # upper limit for the the size of the rupture from the hypocenter
-        delta = max(rec['maxlon'] - lon, lon - rec['minlon'],
-                    rec['maxlat'] - lat, lat - rec['minlat']) / KM_TO_DEGREES
-        sids = self.kdt.query_ball_point(xyz, maxdist + delta, eps=1)
+        # upper limit for the the size of the rupture
+        delta = max(rec['maxlon'] - rec['minlon'],
+                    rec['maxlat'] - rec['minlat']) / KM_TO_DEGREES
+        sids = self.kdt.query_ball_point(xyz, maxdist + delta, eps=.0001)
         return sids
+
+    def get_cdist(self, rec):
+        """
+        :returns: array of N euclidean distances from rec['hypo']
+        """
+        xyz = spherical_to_cartesian(*rec['hypo']).reshape(1, 3)
+        return distance.cdist(self.sitecol.xyz, xyz)[:, 0]
 
     def filter(self, sources):
         """
