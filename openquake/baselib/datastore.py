@@ -414,7 +414,16 @@ class DataStore(collections.abc.MutableMapping):
                     dtlist.append((templ % i, dt.base))
             else:  # scalar field
                 dtlist.append((name, dt))
-        data = dset[()].view(dtlist)
+        data = numpy.zeros(len(dset), dtlist)
+        for name in dset.dtype.names:
+            arr = dset[name]
+            dt = dset.dtype[name]
+            if dt.shape:  # vector field
+                templ = name + '_%d' * len(dt.shape)
+                for i, _ in numpy.ndenumerate(numpy.zeros(dt.shape)):
+                    data[templ % i] = arr[(slice(None),) + i]
+            else:  # scalar field
+                data[name] = arr
         return pandas.DataFrame(data)
 
     @property
