@@ -1399,7 +1399,8 @@ class GsimLogicTree(object):
                 ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or nrml.read(fname).logicTree
-        self.branches = self._build_trts_branches(trts)
+        self.branches = self._build_trts_branches(trts)  # sorted by trt
+        self.values = dict(sorted(self.values.items()))  # sorted by trt
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute '
