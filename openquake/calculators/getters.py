@@ -304,6 +304,10 @@ class GmfDataGetter(collections.abc.Mapping):
         return len(self.sids)
 
 
+time_dt = numpy.dtype(
+    [('rup_id', U32), ('nsites', U16), ('time', F32), ('task_no', U16)])
+
+
 class GmfGetter(object):
     """
     An hazard getter with methods .get_gmfdata and .get_hazard returning
@@ -368,11 +372,11 @@ class GmfGetter(object):
         """
         alldata = []
         self.sig_eps = []
-        self.time_by_rup_id = {}
+        self.times = []  # rup_id, nsites, dt
         for computer in self.computers:
             data, dt = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
-            self.time_by_rup_id[computer.rupture.id] = (len(computer.sids), dt)
+            self.times.append((computer.rupture.id, len(computer.sids), dt))
             alldata.append(data)
         if not alldata:
             return []
@@ -427,11 +431,9 @@ class GmfGetter(object):
                 stop += 1
             indices.append((sid, start, stop))
             start = stop
-        rupids = list(self.time_by_rup_id)
-        times = numpy.array(list(self.time_by_rup_id.values()),
-                            [('nsites', U16), ('time', F32)])
-        res = dict(gmfdata=gmfdata, hcurves=hcurves,
-                   rupids_times=(rupids, times),
+        times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
+                            time_dt)
+        res = dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
         return res

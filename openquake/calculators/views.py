@@ -169,7 +169,7 @@ def view_slow_sources(token, dstore, maxrows=20):
 
 
 @view.add('slow_ruptures')
-def view_slow_ruptures(token, dstore, maxrows=200000):
+def view_slow_ruptures(token, dstore, maxrows=20):
     """
     Show the slowest ruptures
     """
@@ -177,7 +177,7 @@ def view_slow_ruptures(token, dstore, maxrows=200000):
     rups = dstore.parent['ruptures'] if dstore.parent else dstore['ruptures']
     time = dstore['gmf_data/time_by_rup'][()]
     arr = util.compose_arrays(rups[()][fields], time)
-    arr = arr[arr['code'] == 153]
+    arr = arr[arr['nsites'] > 0]
     arr.sort(order='time')
     return rst_table(arr[-maxrows:])
 
