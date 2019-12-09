@@ -575,7 +575,7 @@ def view_task_hazard(token, dstore):
         raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
-    taskno = rec['taskno']
+    taskno = rec['task_no']
     eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
     eff_sites = dstore['by_task/eff_sites'][taskno]
     srcids = dstore['by_task/srcids'][taskno]
