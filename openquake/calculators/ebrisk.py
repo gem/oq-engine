@@ -42,15 +42,13 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def calc_risk(hazard, param, monitor):
+def calc_risk(hazard, assetcol, param, monitor):
     gmfs = numpy.concatenate(hazard['gmfs'])
     events = numpy.concatenate(hazard['events'])
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
-    with monitor('getting assets'):
-        assetcol = dstore['assetcol']
-        assets_by_site = assetcol.assets_by_site()
+    assets_by_site = assetcol.assets_by_site()
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
         weights = dstore['weights'][()]
@@ -144,7 +142,11 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         hazard['gmf_info'].append(
             (c.rupture.id, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
-    return calc_risk(hazard, param, monitor) if hazard['gmfs'] else {}
+    if not hazard['gmfs']:
+        return {}
+    with monitor('getting assets'):
+        assetcol = datastore.read(param['hdf5path'])['assetcol']
+    return calc_risk(hazard, assetcol, param, monitor)
 
 
 @base.calculators.add('ebrisk')
