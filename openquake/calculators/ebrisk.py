@@ -164,7 +164,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict))
-        self.param['max_gmfs_size'] = oq.max_gmfs_size
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['highest_losses'] = oq.highest_losses
@@ -203,6 +202,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         srcfilter = self.src_filter(self.datastore.tempname)
         maxw = self.E / (oq.concurrent_tasks or 1)
+        logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
         allargs = ((rgetter, srcfilter, self.param)
                    for rgetter in getters.gen_rupture_getters(
                            self.datastore, maxweight=maxw))
