@@ -475,7 +475,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
         if 'sitecol' in dstore:
             def weight(rec, md=getdefault(maxdist, trt_by_grp[grp_id])):
                 xyz = spherical_to_cartesian(*rec['hypo'])
-                nsites = len(kdt.query_ball_point(xyz, md, eps=1))
+                nsites = len(kdt.query_ball_point(xyz, md, eps=.001))
                 return rec['n_occ'] * numpy.ceil((nsites + 1) / 1000)
         else:
             def weight(rec):
