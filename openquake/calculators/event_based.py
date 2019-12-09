@@ -83,7 +83,8 @@ class EventBasedCalculator(base.HazardCalculator):
     def init(self):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
-        self.rupser = calc.RuptureSerializer(self.datastore)
+        if not self.datastore.parent:
+            self.rupser = calc.RuptureSerializer(self.datastore)
 
     def init_logic_tree(self, csm_info):
         self.trt_by_grp = csm_info.grp_by("trt")
