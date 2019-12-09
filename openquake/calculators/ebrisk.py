@@ -207,7 +207,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.init_logic_tree(csm_info)
         self.set_param(
             hdf5path=self.datastore.filename,
-            task_duration=oq.task_duration or 1200,  # 20min
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         srcfilter = self.src_filter(self.datastore.tempname)
