@@ -200,8 +200,8 @@ class EventBasedCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         E = num_events or len(dstore['events'])
-        maxw = min(E * self.N / (oq.concurrent_tasks or 1), oq.max_gmfs_size)
-        yield from gen_rupture_getters(dstore, maxweight=maxw)
+        yield from gen_rupture_getters(
+            dstore, maxweight=E / (oq.concurrent_tasks or 1))
         if self.datastore.parent:
             self.datastore.parent.close()
 
