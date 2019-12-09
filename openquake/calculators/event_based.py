@@ -355,6 +355,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # compute_gmfs in parallel
         self.datastore.swmr_on()
+        logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
         acc = parallel.Starmap(
