@@ -38,7 +38,7 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 get_n_occ = operator.itemgetter(1)
 
-gmf_info_dt = numpy.dtype([('ridx', U32), ('task_no', U16),
+gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
@@ -142,13 +142,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             hazard['gmfs'].append(data)
             hazard['events'].append(c.rupture.get_events(gg.rlzs_by_gsim))
         hazard['gmf_info'].append(
-            (c.rupture.ridx, mon_haz.task_no, len(c.sids),
+            (c.rupture.id, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
-        if len_gmfs(hazard) > param['max_gmfs_size']:
-            yield calc_risk, hazard, param
-            hazard = dict(gmfs=[], events=[], gmf_info=[])
-    if len_gmfs(hazard):
-        yield calc_risk(hazard, param, monitor)
+    return calc_risk(hazard, param, monitor)
 
 
 def len_gmfs(hazard):

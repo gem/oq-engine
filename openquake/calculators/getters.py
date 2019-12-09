@@ -611,7 +611,6 @@ class RuptureGetter(object):
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 ebr.sids = sids
-                ebr.ridx = rec['id']
                 ebr.e0 = 0 if self.e0 is None else e0
                 ebr.id = rec['id']  # rup_id  in the datastore
                 ebrs.append(ebr)
