@@ -210,8 +210,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         srcfilter = self.src_filter(self.datastore.tempname)
-        maxw = min(self.E * self.N / (oq.concurrent_tasks or 1),
-                   oq.max_gmfs_size)
+        maxw = self.E / (oq.concurrent_tasks or 1)
         allargs = ((rgetter, srcfilter, self.param)
                    for rgetter in getters.gen_rupture_getters(
                            self.datastore, maxweight=maxw))
