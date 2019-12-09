@@ -147,10 +147,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     return calc_risk(hazard, param, monitor)
 
 
-def len_gmfs(hazard):
-    return sum(len(gmfs) for gmfs in hazard['gmfs'])
-
-
 @base.calculators.add('ebrisk')
 class EbriskCalculator(event_based.EventBasedCalculator):
     """
