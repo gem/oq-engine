@@ -446,7 +446,7 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E6, filename=None):
+def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
     """
     :yields: RuptureGetters
     """
@@ -476,7 +476,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E6, filename=None):
             def weight(rec, md=getdefault(maxdist, trt_by_grp[grp_id])):
                 xyz = spherical_to_cartesian(*rec['hypo'])
                 nsites = len(kdt.query_ball_point(xyz, md, eps=1))
-                return rec['n_occ'] * numpy.sqrt(nsites + 1)
+                return rec['n_occ'] * (nsites + 100) / 100
         else:
             def weight(rec):
                 return rec['n_occ']
