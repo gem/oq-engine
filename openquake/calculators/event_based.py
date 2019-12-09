@@ -192,14 +192,16 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 
-    def gen_rupture_getters(self):
+    def gen_rupture_getters(self, num_events=0):
         """
         :returns: a list of RuptureGetters
         """
+        oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        yield from gen_rupture_getters(
-            dstore, maxweight=self.oqparam.max_gmfs_size)
+        E = num_events or len(dstore['events'])
+        maxw = min(E * self.N / (oq.concurrent_tasks or 1), oq.max_gmfs_size)
+        yield from gen_rupture_getters(dstore, maxweight=maxw)
         if self.datastore.parent:
             self.datastore.parent.close()
 
@@ -244,7 +246,7 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = self.gen_rupture_getters()
+        rgetters = self.gen_rupture_getters(len(events))
 
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
