@@ -144,7 +144,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         hazard['gmf_info'].append(
             (c.rupture.id, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
-    return calc_risk(hazard, param, monitor)
+    return calc_risk(hazard, param, monitor) if hazard['gmfs'] else {}
 
 
 @base.calculators.add('ebrisk')
