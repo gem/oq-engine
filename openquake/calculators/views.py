@@ -428,16 +428,18 @@ def performance_view(dstore, add_calc_id=True):
         counts = 0
         time = 0
         mem = 0
-        for _operation, time_sec, memory_mb, counts_ in group:
-            counts += counts_
-            time += time_sec
-            mem = max(mem, memory_mb)
+        for rec in group:
+            counts += rec['counts']
+            time += rec['time_sec']
+            mem = max(mem, rec['memory_mb'])
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    dt = copy.copy(perf_dt)
     if add_calc_id:
-        dt.names = ('calc_%d' % dstore.calc_id,) + dt.names[1:]
-    return numpy.array(out, dt)
+        dtlist = [('calc_%d' % dstore.calc_id, perf_dt['operation'])]
+    else:
+        dtlist = [('operation', perf_dt['operation'])]
+    dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
+    return numpy.array(out, dtlist)
 
 
 @view.add('performance')
