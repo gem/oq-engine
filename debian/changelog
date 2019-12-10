@@ -8,6 +8,9 @@
   * set DEFINED_FOR_REFERENCE_VELOCITY in CampbellBozorgnia2003NSHMP2007
 
   [Graeme Weatherill]
+  * Small refactor and bug fix in average SA GMMs
+  
+  [Graeme Weatherill]
   * Re-adjustment of SERA Subduction model epistemic scaling factors
 
   [Michele Simionato]
