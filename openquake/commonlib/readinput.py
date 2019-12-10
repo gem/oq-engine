@@ -55,6 +55,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
+gsim_lt_cache = {}  # fname -> GsimLogicTree instance
 
 
 class DuplicatedPoint(Exception):
@@ -472,7 +473,7 @@ def get_site_collection(oqparam):
     return sitecol
 
 
-def get_gsim_lt(oqparam, trts=['*']):
+def get_gsim_lt(oqparam, trts=('*',)):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -487,7 +488,12 @@ def get_gsim_lt(oqparam, trts=['*']):
         return logictree.GsimLogicTree.from_(oqparam.gsim)
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+    key = (gsim_file,) + tuple(sorted(trts))
+    if key in gsim_lt_cache:
+        return gsim_lt_cache[key]
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
+    gsim_lt_cache[key] = gsim_lt
+
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
