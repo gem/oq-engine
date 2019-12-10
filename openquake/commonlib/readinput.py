@@ -55,7 +55,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
-gsim_lt_cache = {}  # fname -> GsimLogicTree instance
+gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
 
 
 class DuplicatedPoint(Exception):
