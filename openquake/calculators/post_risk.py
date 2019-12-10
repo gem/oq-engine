@@ -83,12 +83,10 @@ def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
     with dstore:
         rlzs = dstore['losses_by_event']['rlzi']
         losses = dstore['losses_by_event'][rlzs == rlzi]['loss']
-    # aggregate on the events
-    agg_losses = losses.sum(axis=0) * ses_ratio  # shape (L, T, ...)
-    res = dict(rlzi=rlzi, agg_losses=agg_losses)
+        # shape (E, L, T...)
+    res = dict(rlzi=rlzi, agg_losses=losses.sum(axis=0) * ses_ratio)
     num_axis = len(losses.shape)
     if num_axis > 2:  # there are tags, compute the totals
-        res['tot_losses'] = agg_losses.sum(axis=tuple(range(1, num_axis - 1)))
         res['tot_curves'] = builder.build_curves(
             losses.sum(axis=tuple(range(2, num_axis))), rlzi)
     res['agg_curves'] = builder.build_curves(losses, rlzi)
@@ -172,16 +170,17 @@ class PostRiskCalculator(base.RiskCalculator):
         for dic in acc:
             r = dic['rlzi']
             curves = dic['agg_curves']
-            agg_losses = dic['agg_losses']
+            agg_losses = dic['agg_losses']  # shape L, T...
             if len(curves):  # some realization can give zero contribution
-                self.datastore['agg_curves-rlzs'][:, r] = curves
-            self.datastore['agg_losses-rlzs'][:, r] = agg_losses
+                self.datastore['agg_curves-rlzs'][:, r] = curves  # (P,R,L,T..)
+            self.datastore['agg_losses-rlzs'][:, r] = agg_losses  # (L,R,T...)
             if oq.aggregate_by:
-                curves = dic['tot_curves']
-                tot_losses = dic['tot_losses']
-                if len(curves):  # some realization can give zero contribution
-                    self.datastore['tot_curves-rlzs'][:, r] = curves
-                self.datastore['tot_losses-rlzs'][:, r] = tot_losses
+                num_tags = len(oq.aggregate_by)
+                tc = dic['tot_curves']
+                tot_losses = agg_losses.sum(axis=tuple(range(1, num_tags + 1)))
+                if len(tc):  # some realization can give zero contribution
+                    self.datastore['tot_curves-rlzs'][:, r] = tc  # (P, R, L)
+                self.datastore['tot_losses-rlzs'][:, r] = tot_losses  # (L, R)
         if self.R > 1:
             logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
@@ -202,6 +201,10 @@ class PostRiskCalculator(base.RiskCalculator):
         return self.tagcol.agg_shape(sizes, aggregate_by)
 
     def build_datasets(self, builder, aggregate_by, prefix):
+        """
+        Create the datasets agg_curves-XXX, tot_curves-XXX,
+        agg_losses-XXX, tot_losses-XXX.
+        """
         oq = self.oqparam
         stats = oq.hazard_stats().items()
         S = len(stats)
