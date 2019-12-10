@@ -20,9 +20,9 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
-import collections
 from shapely import geometry
-from openquake.baselib.general import split_in_blocks, not_equal, get_duplicates
+from openquake.baselib.general import (
+    split_in_blocks, not_equal, get_duplicates)
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects)
 from openquake.hazardlib.geo.mesh import Mesh
@@ -277,10 +277,10 @@ class SiteCollection(object):
 
     def one(self):
         """
-        :returns: a SiteCollection with a site of the highest vs30
+        :returns: a SiteCollection with a site of the minimal vs30
         """
         if 'vs30' in self.dtype.names:
-            idx = self.array['vs30'].argmax()
+            idx = self.array['vs30'].argmin()
         else:
             idx = 0
         return self.filtered([self.sids[idx]])
