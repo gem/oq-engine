@@ -24,10 +24,6 @@ import getpass
 import collections
 import numpy
 import h5py
-try:
-    import pandas
-except ImportError:
-    pass
 
 from openquake.baselib import hdf5, config, performance
 
@@ -406,6 +402,7 @@ class DataStore(collections.abc.MutableMapping):
         :param index: if given, name of the "primary key" field
         :returns: pandas DataFrame associated to the dataset
         """
+        import pandas  # imported inside to save startup time
         dset = self.getitem(key)
         dtlist = []
         for name in dset.dtype.names:
