@@ -106,10 +106,9 @@ def calc_risk(hazard, assetcol, param, monitor):
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
-    alt = numpy.fromiter(  # already sorted by aid
+    acc['alt'] = numpy.fromiter(  # already sorted by aid
         ((aid, eid, eid2rlz[eid], loss) for (aid, eid), loss in alt.items()),
         param['ael_dt'])
-    acc['alt'] = general.group_array(alt, 'rlz')
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -171,11 +170,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['highest_losses'] = oq.highest_losses
         self.param['minimum_loss'] = [getdefault(oq.minimum_asset_loss, ln)
                                       for ln in oq.loss_names]
-        self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
+        self.param['ael_dt'] = dt = ael_dt(oq.loss_names, rlz=True)
         self.A = A = len(self.assetcol)
-        dt = ael_dt(oq.loss_names)
-        for r in range(self.R):
-            self.datastore.create_dset('asset_loss_table/rlz-%d' % r, dt)
+        self.datastore.create_dset('asset_loss_table', dt)
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
@@ -233,9 +230,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
         with self.monitor('saving losses_by_event and asset_loss_table'):
             hdf5.extend(self.datastore['losses_by_event'], elt)
-            for rlz, data in dic['alt'].items():
-                name = 'asset_loss_table/rlz-%d' % rlz
-                hdf5.extend(self.datastore[name], data[['aid', 'eid', 'loss']])
+            hdf5.extend(self.datastore['asset_loss_table'], dic['alt'])
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
