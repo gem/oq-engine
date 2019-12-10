@@ -417,7 +417,7 @@ def make_figure_dist_by_mag(extractors, what):
 
 def make_figure_effect_by_mag(extractors, what):
     """
-    $ oq plot effect_by_mag?'
+    $ oq plot 'effect_by_mag?'
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
