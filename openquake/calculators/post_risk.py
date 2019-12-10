@@ -78,7 +78,7 @@ def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
     :param builder: LossCurvesMapsBuilder instance
     :param rlzi: realization index
     :param monitor: Monitor instance
-    :returns: a dictionary with keys rlzi, curves, agg_losses
+    :returns: a dictionary with keys rlzi, agg_curves, agg_losses, tot_curves
     """
     with dstore:
         rlzs = dstore['losses_by_event']['rlzi']
@@ -99,34 +99,39 @@ def post_risk2(dstore, builder, ses_ratio, rlzi, monitor):
     :param builder: LossCurvesMapsBuilder instance
     :param rlzi: realization index
     :param monitor: Monitor instance
-    :returns: a dictionary with keys rlzi, curves, agg_losses
+    :returns: a dictionary with keys rlzi, agg_curves, agg_losses, tot_curves
     """
     with dstore:
         oq = dstore['oqparam']
-        aggby = oq.aggregate_by
         assetcol = dstore['assetcol']
-        ass = assetcol.array[aggby]
         alt = dstore['asset_loss_table/rlz-%d' % rlzi][()]
+    if oq.aggregate_by:
+        aggby = oq.aggregate_by
+        ass = assetcol.array[aggby]
     L = len(oq.loss_names)
     P = len(builder.return_periods)
     shp = assetcol.tagcol.agg_shape((P, L), aggby)
-    agg = numpy.zeros(shp[1:], F32)
     acc = general.AccumDict(accum=general.AccumDict(accum=numpy.zeros(L)))
-    for rec in general.add_columns(alt, ass, 'aid'):
-        key = tuple(rec[n] - 1 for n in aggby)
-        acc[key][rec['eid']] += rec['loss']
-        tup = (slice(None),) + key
-        agg[tup] += rec['loss']
-    res = {'agg_curves': numpy.zeros(shp, F32),
-           'tot_curves': numpy.zeros((P, L), F32),
-           'agg_losses': agg,
-           'tot_losses': agg.sum(axis=()),
+    tot = general.AccumDict(accum=numpy.zeros(L))  # eid -> totloss
+    agg_losses = numpy.zeros(shp[1:], F32)  # shape (L, T...)
+    if oq.aggregate_by:
+        for rec in general.add_columns(alt, ass, 'aid'):
+            key = tuple(rec[n] - 1 for n in aggby)
+            acc[key][rec['eid']] += rec['loss']
+            tup = (slice(None),) + key  # (L, T...)
+            agg_losses[tup] += rec['loss']
+    else:
+        agg_losses = alt['loss'].sum(axis=0)
+    for rec in alt:
+        tot[rec['eid']] += rec['loss']
+
+    res = {'agg_curves': numpy.zeros(shp, F32),  # shape (P, L, T...)
+           'agg_losses': agg_losses * ses_ratio,
+           'tot_curves': builder.build_curves(list(tot.values()), rlzi),
            'rlzi': rlzi}
     for key, dic in acc.items():
         tup = (slice(None), slice(None)) + key
-        curves = builder.build_curves(list(dic.values()), rlzi)  # (P, L)
-        res['agg_curves'][tup] = curves
-        res['tot_curves'] += curves
+        res['agg_curves'][tup] = builder.build_curves(list(dic.values()), rlzi)
     return res
 
 
@@ -165,7 +170,7 @@ class PostRiskCalculator(base.RiskCalculator):
         self.datastore.swmr_on()
         args = [(self.datastore, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
-        acc = list(parallel.Starmap(post_risk, args,
+        acc = list(parallel.Starmap(post_risk2, args,
                                     h5=self.datastore.hdf5))
         for dic in acc:
             r = dic['rlzi']
