@@ -6,8 +6,6 @@ python:
 
 cache:
   pip: true
-  directories:
-  - wheels  
 
 jobs:
   include:
@@ -59,16 +57,13 @@ jobs:
 
 before_install:
   - if [ "$TRAVIS_PULL_REQUEST_BRANCH" != "" ]; then BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; else BRANCH=$TRAVIS_BRANCH; fi
+  - pip install -U pip
 
 install:
   # Use '[skip wheels]' to get dependencies from upstream pypi without using cached wheels;
   # this is needed to test that (max) requirements in setup.py are still valid.
-  # Also pip does not cache data when requirements includes full http URLs, so we need
-  # to download the wheels first, put the folder in cache and then install the wheels from there.
-  # A second run of 'pip download' will download only the missing wheels.
   - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
-      pip download -r requirements-py36-linux64.txt -r requirements-extra-py36-linux64.txt -d wheels &&
-      pip -q install wheels/* ;
+      pip install -r requirements-py36-linux64.txt -r requirements-extra-py36-linux64.txt;
     fi
   - pip install pytest-xdist
   - pip -q install -e .
