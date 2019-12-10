@@ -52,14 +52,14 @@ def highest_losses(losses, eids, n):
 
 def ael_dt(loss_names, rlz=False):
     """
-    :returns: aid, eid, loss or aid, eid, rlz, loss
+    :returns: (asset_id, event_id, loss) or (asset_id, event_id, rlzi, loss)
     """
     L = len(loss_names),
     if rlz:
-        return [('aid', U32), ('eid', U32),
-                ('rlz', U16), ('loss', (F32, L))]
+        return [('asset_id', U32), ('event_id', U32),
+                ('rlzi', U16), ('loss', (F32, L))]
     else:
-        return [('aid', U32), ('eid', U32), ('loss', (F32, L))]
+        return [('asset_id', U32), ('event_id', U32), ('loss', (F32, L))]
 
 
 def scenario_risk(riskinputs, crmodel, param, monitor):
@@ -161,7 +161,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         ael = res.pop('ael', ())
         if len(ael) == 0:
             return acc + res
-        for aid, [(i1, i2)] in get_indices(ael['aid']).items():
+        for aid, [(i1, i2)] in get_indices(ael['asset_id']).items():
             self.datastore['loss_data/indices'][aid] = (
                 self.start + i1, self.start + i2)
         self.start += len(ael)
