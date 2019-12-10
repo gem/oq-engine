@@ -248,6 +248,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
+                readinput.gsim_lt_cache.clear()
 
                 # remove temporary hdf5 file, if any
                 if os.path.exists(self.datastore.tempname) and remove:
