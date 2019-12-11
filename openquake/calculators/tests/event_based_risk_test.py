@@ -187,7 +187,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(arr), 16)
         self.assertEqual(arr['event_id'].nbytes, 64)
         self.assertEqual(arr['rlzi'].nbytes, 32)
-        self.assertEqual(arr['loss'].nbytes, 128)
+        self.assertEqual(arr['loss'].nbytes, 64)
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_loss_12.csv', fname)
 
