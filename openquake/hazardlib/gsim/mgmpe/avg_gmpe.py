@@ -68,7 +68,7 @@ class AvgGMPE(GMPE):
 
     def __init__(self, **kwargs):
         """
-        Instantiate a list of GMPEs
+        Instantiate a dictionary branch_name -> gmpe_name -> gmpe_params
         """
         super().__init__(**kwargs)
         weights = []
