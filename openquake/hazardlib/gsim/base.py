@@ -61,11 +61,13 @@ class ExperimentalWarning(UserWarning):
     to changes in future version.
     """
 
+
 class AdaptedWarning(UserWarning):
     """
     Raised for GMPEs that are intended for experimental use or maybe subject
     to changes in future version.
     """
+
 
 def gsim_imt_dt(sorted_gsims, sorted_imts):
     """
