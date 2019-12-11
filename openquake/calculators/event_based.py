@@ -356,10 +356,11 @@ class EventBasedCalculator(base.HazardCalculator):
         # compute_gmfs in parallel
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
-        iterargs = ((rgetter, srcfilter, self.param)
-                    for rgetter in self.gen_rupture_getters())
+        allargs = [(rgetter, srcfilter, self.param)
+                   for rgetter in self.gen_rupture_getters()]
+        logging.info('Generated %d tasks', len(allargs))
         acc = parallel.Starmap(
-            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
+            self.core_task.__func__, allargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores
         ).reduce(self.agg_dicts, self.acc0())
 
