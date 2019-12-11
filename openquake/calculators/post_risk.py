@@ -68,31 +68,6 @@ def build_loss_tables(dstore):
     dstore['rup_loss_table'] = tbl
 
 
-# 1) parallelizing by events does not work, we need all of the events
-# 2) parallelizing by multi_index slows down everything with warnings
-# kernel:NMI watchdog: BUG: soft lockup - CPU#26 stuck for 21s!
-# due to excessive reading, and then we run out of memory
-def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
-    """
-    :param dstore: a DataStore instance
-    :param builder: LossCurvesMapsBuilder instance
-    :param rlzi: realization index
-    :param monitor: Monitor instance
-    :returns: a dictionary with keys rlzi, agg_curves, agg_losses, tot_curves
-    """
-    with dstore:
-        rlzs = dstore['losses_by_event']['rlzi']
-        losses = dstore['losses_by_event'][rlzs == rlzi]['loss']
-        # shape (E, L, T...)
-    res = dict(rlzi=rlzi, agg_losses=losses.sum(axis=0) * ses_ratio)
-    num_axis = len(losses.shape)
-    if num_axis > 2:  # there are tags, compute the totals
-        res['tot_curves'] = builder.build_curves(
-            losses.sum(axis=tuple(range(2, num_axis))), rlzi)
-    res['agg_curves'] = builder.build_curves(losses, rlzi)
-    return res
-
-
 def post_risk2(dstore, builder, ses_ratio, rlzi, monitor):
     """
     :param dstore: a DataStore instance
