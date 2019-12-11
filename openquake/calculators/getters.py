@@ -446,7 +446,8 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
+def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5,
+                        filename=None, use_kdt=True):
     """
     :yields: RuptureGetters
     """
@@ -463,7 +464,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
     rup_array = dstore['ruptures'][slc]
     nr, ne = 0, 0
     maxdist = dstore['oqparam'].maximum_distance
-    if 'sitecol' in dstore:
+    if 'sitecol' in dstore and use_kdt:
         srcfilter = SourceFilter(dstore['sitecol'], maxdist)
         kdt = cKDTree(srcfilter.sitecol.xyz)
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
@@ -472,7 +473,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             # in event_based_risk/case_3
             continue
 
-        if 'sitecol' in dstore:
+        if 'sitecol' in dstore and use_kdt:
             def weight(rec, md=getdefault(maxdist, trt_by_grp[grp_id])):
                 xyz = spherical_to_cartesian(*rec['hypo'])
                 nsites = len(kdt.query_ball_point(xyz, md, eps=.001))
