@@ -68,7 +68,7 @@ def build_loss_tables(dstore):
     dstore['rup_loss_table'] = tbl
 
 
-def post_risk2(dstore, builder, ses_ratio, rlzi, monitor):
+def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
     """
     :param dstore: a DataStore instance
     :param builder: LossCurvesMapsBuilder instance
@@ -150,7 +150,7 @@ class PostRiskCalculator(base.RiskCalculator):
         self.datastore.swmr_on()
         args = [(self.datastore, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
-        acc = list(parallel.Starmap(post_risk2, args,
+        acc = list(parallel.Starmap(post_risk, args,
                                     h5=self.datastore.hdf5))
         for dic in acc:
             r = dic['rlzi']
