@@ -1556,7 +1556,6 @@ class GsimLogicTree(object):
                     try:
                         gsim = valid.gsim(uncertainty, basedir)
                     except Exception as exc:
-                        raise
                         raise ValueError(
                             "%s in file %s" % (exc, self.filename)) from exc
                     if gsim in self.values[trt]:
