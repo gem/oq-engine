@@ -1,12 +1,15 @@
+  [Graeme Weatherill]
+  * Small refactor and bug fix in average SA GMMs
+
   [Michele Simionato]
   * Changed logic tree sampling by ordering the branches by TRT
   * Ignored IMT-dependent weights when using sampling to make such calculations
     possible
-  * Storing (experimentally) an asset loss table per realization
+  * Storing (partially) the asset loss table
 
   [Robin Gee]
-  * set DEFINED_FOR_REFERENCE_VELOCITY in CampbellBozorgnia2003NSHMP2007
-
+  * Set DEFINED_FOR_REFERENCE_VELOCITY in CampbellBozorgnia2003NSHMP2007
+  
   [Graeme Weatherill]
   * Re-adjustment of SERA Subduction model epistemic scaling factors
 
