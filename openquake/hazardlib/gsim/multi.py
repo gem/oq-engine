@@ -21,6 +21,7 @@ multiple GMPEs for different IMTs when passed a dictionary of ground motion
 models organised by IMT type or by a string describing the association
 """
 import collections
+import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.imt import from_string
