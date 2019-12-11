@@ -42,6 +42,8 @@ class AvgGMPE(GMPE):
     The AvgGMPE returns mean and stddevs from a set of underlying
     GMPEs with the given weights.
     """
+    experimental = True
+
     #: Supported tectonic region type is undefined
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
