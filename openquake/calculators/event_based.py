@@ -202,7 +202,7 @@ class EventBasedCalculator(base.HazardCalculator):
                   else self.datastore)
         E = num_events or len(dstore['events'])
         yield from gen_rupture_getters(
-            dstore, maxweight=E / (oq.concurrent_tasks or 1))
+            dstore, maxweight=E / (oq.concurrent_tasks or 1), use_kdt=False)
         if self.datastore.parent:
             self.datastore.parent.close()
 
