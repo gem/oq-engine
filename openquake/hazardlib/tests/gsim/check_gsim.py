@@ -245,6 +245,7 @@ def _parse_csv_line(headers, values, req_site_params):
     stddev_types = result_type = damping = None
 
     for param, value in zip(headers, values):
+
         if param == 'result_type':
             value = value.upper()
             if value.endswith('_STDDEV'):
@@ -292,12 +293,16 @@ def _parse_csv_line(headers, values, req_site_params):
         else:
             # value is the expected result (of result_type type)
             value = float(value)
+
             if param == 'arias':  # ugly legacy corner case
                 param = 'ia'
-            try:    # The title of the column should be IMT(args)
-                imt = from_string(param.upper())
-            except KeyError:  # Then it is just a period for SA
-                imt = registry['SA'](float(param), damping)
+            if param == 'avgsa':
+                imt = from_string('AvgSA')
+            else:
+                try:    # The title of the column should be IMT(args)
+                    imt = from_string(param.upper())
+                except KeyError:  # Then it is just a period for SA
+                    imt = registry['SA'](float(param), damping)
 
             expected_results[imt] = numpy.array([value])
 
