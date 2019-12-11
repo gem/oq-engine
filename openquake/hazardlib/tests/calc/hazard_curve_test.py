@@ -189,8 +189,8 @@ class AvgGMPETestCase(unittest.TestCase):
         hc2 = calc_hazard_curves(sources, sitecol, imtls, {
             'Active Shallow Crust': SadighEtAl1997()})['PGA']
         hc = .6 * hc1 + .4 * hc2
-        ag = AvgGMPE(AkkarBommer2010={'weight': .6},
-                     SadighEtAl1997={'weight': .4})
+        ag = AvgGMPE(b1=dict(AkkarBommer2010={'weight': .6}),
+                     b2=dict(SadighEtAl1997={'weight': .4}))
         hcm = calc_hazard_curves(sources, sitecol, imtls, {
             'Active Shallow Crust': ag})['PGA']
         # the AvgGMPE is not producing real means!!
