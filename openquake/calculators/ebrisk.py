@@ -38,19 +38,17 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 get_n_occ = operator.itemgetter(1)
 
-gmf_info_dt = numpy.dtype([('ridx', U32), ('task_no', U16),
+gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def calc_risk(hazard, param, monitor):
+def calc_risk(hazard, assetcol, param, monitor):
     gmfs = numpy.concatenate(hazard['gmfs'])
     events = numpy.concatenate(hazard['events'])
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
-    with monitor('getting assets'):
-        assetcol = dstore['assetcol']
-        assets_by_site = assetcol.assets_by_site()
+    assets_by_site = assetcol.assets_by_site()
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
         weights = dstore['weights'][()]
@@ -119,13 +117,9 @@ def calc_risk(hazard, param, monitor):
     return acc
 
 
-def len_gmfs(hazard):
-    return sum(len(gmfs) for gmfs in hazard['gmfs'])
-
-
-def ebrisk(rupgetters, srcfilter, param, monitor):
+def ebrisk(rupgetter, srcfilter, param, monitor):
     """
-    :param rupgetters: RuptureGetters with 1 rupture each
+    :param rupgetter: RuptureGetter with multiple ruptures
     :param srcfilter: a SourceFilter
     :param param: dictionary of parameters coming from oqparam
     :param monitor: a Monitor instance
@@ -134,9 +128,9 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
     mon_haz = monitor('getting hazard', measuremem=False)
     mon_rup = monitor('getting ruptures', measuremem=False)
     hazard = dict(gmfs=[], events=[], gmf_info=[])
-    for rupgetter in rupgetters:
+    for rg in rupgetter.split():
         with mon_rup:
-            gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
+            gg = getters.GmfGetter(rg, srcfilter, param['oqparam'])
             gg.init()
         if not gg.computers:  # filtered out rupture
             continue
@@ -146,13 +140,13 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
             hazard['gmfs'].append(data)
             hazard['events'].append(c.rupture.get_events(gg.rlzs_by_gsim))
         hazard['gmf_info'].append(
-            (c.rupture.ridx, mon_haz.task_no, len(c.sids),
+            (c.rupture.id, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
-        if len_gmfs(hazard) > param['max_gmfs_size']:
-            yield calc_risk, hazard, param
-            hazard = dict(gmfs=[], events=[], gmf_info=[])
-    if len_gmfs(hazard):
-        yield calc_risk(hazard, param, monitor)
+    if not hazard['gmfs']:
+        return {}
+    with monitor('getting assets'):
+        assetcol = datastore.read(param['hdf5path'])['assetcol']
+    return calc_risk(hazard, assetcol, param, monitor)
 
 
 @base.calculators.add('ebrisk')
@@ -172,7 +166,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict))
-        self.param['max_gmfs_size'] = oq.max_gmfs_size
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['highest_losses'] = oq.highest_losses
@@ -203,48 +196,18 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.flush()  # just to be sure
         oq = self.oqparam
         parent = self.datastore.parent
-        if parent:
-            grp_indices = parent['ruptures'].attrs['grp_indices']
-            dstore = parent
-            csm_info = parent['csm_info']
-        else:
-            grp_indices = self.datastore['ruptures'].attrs['grp_indices']
-            dstore = self.datastore
-            csm_info = self.csm_info
+        csm_info = parent['csm_info'] if parent else self.csm_info
+        self.init_logic_tree(csm_info)
         self.set_param(
             hdf5path=self.datastore.filename,
-            task_duration=oq.task_duration or 1200,  # 20min
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
-
-        self.init_logic_tree(csm_info)
-        trt_by_grp = csm_info.grp_by("trt")
-        samples = csm_info.get_samples_by_grp()
-        rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
-        ngroups = 0
-        fe = 0
-        eslices = self.datastore['eslices']
-        allargs = []
         srcfilter = self.src_filter(self.datastore.tempname)
-        events_per_block = min(numpy.ceil(  # at max 2000 events per block
-            self.E / (oq.concurrent_tasks or 1)), 2000)
-        for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
-            start, stop = grp_indices[grp_id]
-            if start == stop:  # no ruptures for the given grp_id
-                continue
-            ngroups += 1
-            rup_array = dstore['ruptures'][start:stop]
-            rgetter = getters.RuptureGetter(
-                rup_array, dstore.filename, grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
-                eslices[fe:fe + stop - start, 0])
-            for rgetters in general.block_splitter(
-                    rgetter.split(), events_per_block,
-                    operator.attrgetter('weight')):
-                allargs.append((rgetters, srcfilter, self.param))
-            fe += stop - start
-        logging.info('Sending %d/%d source groups with ruptures',
-                     ngroups, len(rlzs_by_gsim_grp))
+        maxw = self.E / (oq.concurrent_tasks or 1)
+        logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
+        allargs = ((rgetter, srcfilter, self.param)
+                   for rgetter in getters.gen_rupture_getters(
+                           self.datastore, maxweight=maxw))
         self.events_per_sid = []
         self.lossbytes = 0
         self.datastore.swmr_on()
