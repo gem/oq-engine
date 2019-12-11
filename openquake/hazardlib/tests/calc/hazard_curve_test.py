@@ -32,7 +32,7 @@ from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.akkar_bommer_2010 import AkkarBommer2010
-from openquake.hazardlib.gsim.avg_gmpe import AvgGMPE
+from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
