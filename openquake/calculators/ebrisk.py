@@ -54,15 +54,13 @@ def calc_risk(hazard, assetcol, param, monitor):
         weights = dstore['weights'][()]
     E = len(events)
     L = len(param['lba'].loss_names)
-    shape = assetcol.tagcol.agg_shape((E, L), param['aggregate_by'])
-    elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shape[1:]))]
+    elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
     alt = general.AccumDict(accum=numpy.zeros(L, F32))  # aid, eid -> loss
-    acc = dict(elt=numpy.zeros(shape, F32),  # shape (E, L, T...)
+    acc = dict(elt=numpy.zeros((E, L), F32),
                gmf_info=[], events_per_sid=0, lossbytes=0)
     arr = acc['elt']
     lba = param['lba']
     tempname = param['tempname']
-    tagnames = param['aggregate_by']
     eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
     n = param['highest_losses']
@@ -81,8 +79,6 @@ def calc_risk(hazard, assetcol, param, monitor):
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
-                tagi = asset[tagnames] if tagnames else ()
-                tagidxs = tuple(idx - 1 for idx in tagi)
                 losses_by_lt = {}
                 for lti, lt in enumerate(crmodel.loss_types):
                     lratios = out[lt][a]
@@ -95,7 +91,7 @@ def calc_risk(hazard, assetcol, param, monitor):
                     for loss, eid in highest_losses(losses, out.eids, n):
                         if loss > minimum_loss[lti]:
                             alt[aid, eid][loss_idx] = loss
-                    arr[(eidx, loss_idx) + tagidxs] += losses
+                    arr[eidx, loss_idx] += losses
                     if param['avg_losses']:
                         lba.losses_by_A[aid, loss_idx] += (
                             losses @ ws * param['ses_ratio'])
@@ -104,7 +100,7 @@ def calc_risk(hazard, assetcol, param, monitor):
         acc['events_per_sid'] /= len(gmfs)
     acc['gmf_info'] = numpy.array(hazard['gmf_info'], gmf_info_dt)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
-        ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
+        ((event['id'], event['rlz_id'], losses)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
     acc['alt'] = numpy.fromiter(  # already sorted by aid
         ((aid, eid, eid2rlz[eid], loss) for (aid, eid), loss in alt.items()),
@@ -177,16 +173,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
-        shp = self.assetcol.tagcol.agg_shape((L,), oq.aggregate_by)
-        elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shp))]
-        elt_nbytes = 4 * self.E * numpy.prod(shp)
+        elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
+        elt_nbytes = 4 * self.E * L
         logging.info('Approx size of the event loss table: %s',
                      general.humansize(elt_nbytes))
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
                                'red with %d tasks' % oq.concurrent_tasks)
         self.datastore.create_dset('losses_by_event', elt_dt)
-        self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
         self.datastore.create_dset('gmf_info', gmf_info_dt)
 
     def execute(self):
