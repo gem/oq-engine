@@ -23,11 +23,11 @@ logic tree file is as in this example::
               <logicTreeBranch branchID="b1">
                 <uncertaintyModel>
                   [AvgGMPE]
-                  AkkarBommer2010.weight=0.20
-                  CauzziFaccioli2008.weight=0.20
-                  ChiouYoungs2008.weight=0.20
-                  ToroEtAl2002SHARE.weight=0.20
-                  Campbell2003SHARE.weight=0.20
+                  b1.AkkarBommer2010.weight=0.20
+                  b2.CauzziFaccioli2008.weight=0.20
+                  b3.ChiouYoungs2008.weight=0.20
+                  b4.ToroEtAl2002SHARE.weight=0.20
+                  b5.Campbell2003SHARE.weight=0.20
                 </uncertaintyModel>
                 <uncertaintyWeight>1</uncertaintyWeight>
               </logicTreeBranch>
@@ -76,7 +76,8 @@ class AvgGMPE(GMPE):
         rrp = set()
         rd = set()
         rsp = set()
-        for gsim_name, params in kwargs.items():
+        for branchid, branchparams in kwargs.items():
+            [(gsim_name, params)] = branchparams.items()
             weights.append(params.pop('weight'))
             gsim = registry[gsim_name](**params)
             rd.update(gsim.REQUIRES_DISTANCES)

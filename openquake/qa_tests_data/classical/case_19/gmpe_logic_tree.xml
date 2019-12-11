@@ -30,11 +30,11 @@
               <logicTreeBranch branchID="b2">
                 <uncertaintyModel>
                   [AvgGMPE]
-                  AkkarBommer2010.weight=0.20
-                  CauzziFaccioli2008.weight=0.20
-                  ChiouYoungs2008.weight=0.20
-                  ToroEtAl2002SHARE.weight=0.20
-                  Campbell2003SHARE.weight=0.20
+                  b1.AkkarBommer2010.weight=0.20
+                  b2.CauzziFaccioli2008.weight=0.20
+                  b3.ChiouYoungs2008.weight=0.20
+                  b4.ToroEtAl2002SHARE.weight=0.20
+                  b5.Campbell2003SHARE.weight=0.20
                 </uncertaintyModel>
                 <uncertaintyWeight>1</uncertaintyWeight>
               </logicTreeBranch>
