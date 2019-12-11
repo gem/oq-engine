@@ -91,12 +91,10 @@ def calc_risk(hazard, assetcol, param, monitor):
                     else:
                         losses = lratios * asset['value-' + lt]
                     losses_by_lt[lt] = losses
-                    #for loss, eid in highest_losses(losses, out.eids, n):
-                    #    if loss > minimum_loss[lti]:
-                    #        alt[aid, eid][lti] = loss
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
-                    for loss, eid in zip(losses, out.eids):
-                        alt[aid, eid][loss_idx] = loss
+                    for loss, eid in highest_losses(losses, out.eids, n):
+                        if loss > minimum_loss[lti]:
+                            alt[aid, eid][loss_idx] = loss
                     arr[(eidx, loss_idx) + tagidxs] += losses
                     if param['avg_losses']:
                         lba.losses_by_A[aid, loss_idx] += (
