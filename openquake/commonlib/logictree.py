@@ -1572,8 +1572,11 @@ class GsimLogicTree(object):
                         (self.filename, bsid))
                 else:
                     branchsetids.add(bsid)
-                trt = branchset['applyToTectonicRegionType']
-                self.bs_id_by_trt[trt]= bsid
+                trt = branchset.get('applyToTectonicRegionType')
+                if trt:  # missing in logictree_test.py
+                    self.bs_id_by_trt[trt] = bsid
+                    trts.append(trt)
+                self.bs_id_by_trt[trt] = bsid
                 # NB: '*' is used in scenario calculations to disable filtering
                 effective = (tectonic_region_types == ['*'] or
                              trt in tectonic_region_types)
