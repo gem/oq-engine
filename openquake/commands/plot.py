@@ -445,6 +445,35 @@ def make_figure_effect_by_mag(extractors, what):
     return plt
 
 
+def make_figure_agg_curves(extractors, what):
+    """
+    $ oq plot 'agg_curves?kind=mean&loss_type=structural' -1
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    got = {}  # (calc_id, kind) -> curves
+    for i, ex in enumerate(extractors):
+        agg_curves = ex.get(what + '&absolute=1')
+        for kind in agg_curves.kind:
+            if agg_curves.rlzs:
+                arr = getattr(agg_curves, 'rlz-%03d' % agg_curves.k[0])
+            else:
+                arr = getattr(agg_curves, kind)
+            got[ex.calc_id, kind] = arr
+    oq = ex.oqparam
+    periods = agg_curves.return_periods
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('%s, risk_inv_time=%dy' %
+                  (agg_curves.loss_type, oq.risk_investigation_time))
+    ax.set_ylabel('PoE')
+    for ck, arr in got.items():
+        ax.loglog(periods, arr[0], '-', label='%s_%s' % ck)
+        ax.loglog(periods, arr[0], '.')
+    ax.grid(True)
+    ax.legend()
+    return plt
+
+
 @sap.script
 def plot(what='examples', calc_id=-1, other_id=None, webapi=False):
     """
