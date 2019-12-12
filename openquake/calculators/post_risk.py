@@ -68,10 +68,9 @@ def build_loss_tables(dstore):
     dstore['rup_loss_table'] = tbl
 
 
-def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
+def post_risk(dstore, rlzi, monitor):
     """
     :param dstore: a DataStore instance
-    :param builder: LossCurvesMapsBuilder instance
     :param rlzi: realization index
     :param monitor: Monitor instance
     :returns: a dictionary with keys rlzi, agg_curves, agg_losses, tot_curves
@@ -86,6 +85,7 @@ def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
             assert not oq.aggregate_by, oq.aggregate_by
             idxs = dstore['losses_by_event']['rlzi'] == rlzi
             alt = dstore['losses_by_event'][idxs]
+        builder = get_loss_builder(dstore)
     aggby = oq.aggregate_by
     L = len(oq.loss_names)
     P = len(builder.return_periods)
@@ -106,7 +106,7 @@ def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
         tot[rec['event_id']] += rec['loss']
 
     res = {'agg_curves': numpy.zeros(shp, F32),  # shape (P, L, T...)
-           'agg_losses': agg_losses * ses_ratio,
+           'agg_losses': agg_losses * oq.ses_ratio,
            'tot_curves': builder.build_curves(list(tot.values()), rlzi),
            'rlzi': rlzi}
     for key, dic in acc.items():
@@ -148,11 +148,10 @@ class PostRiskCalculator(base.RiskCalculator):
         if oq.aggregate_by:
             self.build_datasets(builder, [], 'tot_')
         self.datastore.swmr_on()
-        args = [(self.datastore, builder, oq.ses_ratio, rlzi)
-                for rlzi in range(self.R)]
-        acc = list(parallel.Starmap(post_risk, args,
-                                    h5=self.datastore.hdf5))
-        for dic in acc:
+        smap = parallel.Starmap(
+            post_risk, [(self.datastore, rlzi) for rlzi in range(self.R)],
+            h5=self.datastore.hdf5)
+        for dic in smap:
             r = dic['rlzi']
             tot_curves = dic['tot_curves']  # shape P, L
             agg_curves = dic['agg_curves']  # shape P, L, T...
