@@ -85,7 +85,8 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -148,7 +149,8 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -212,7 +214,8 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -283,7 +286,8 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -347,7 +351,8 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -411,7 +416,8 @@ class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
