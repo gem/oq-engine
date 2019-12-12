@@ -78,6 +78,7 @@ class OqParam(valid.ParamSet):
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
+    collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_threshold = valid.Param(valid.probability, 0.5)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
