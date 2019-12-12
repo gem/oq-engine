@@ -166,9 +166,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['asset_loss_table'] = oq.asset_loss_table
         self.param['minimum_loss'] = [getdefault(oq.minimum_asset_loss, ln)
                                       for ln in oq.loss_names]
-        self.param['ael_dt'] = dt = ael_dt(oq.loss_names, rlz=True)
+        self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
         self.A = A = len(self.assetcol)
-        self.datastore.create_dset('asset_loss_table', dt)
+        self.datastore.create_dset('asset_loss_table', ael_dt(oq.loss_names))
+        self.datastore.create_dset('alt_rlzs', U16)
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
@@ -224,7 +225,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
         with self.monitor('saving losses_by_event and asset_loss_table'):
             hdf5.extend(self.datastore['losses_by_event'], elt)
-            hdf5.extend(self.datastore['asset_loss_table'], dic['alt'])
+            hdf5.extend(self.datastore['asset_loss_table'],
+                        dic['alt'][['asset_id', 'event_id', 'loss']])
+            hdf5.extend(self.datastore['alt_rlzs'], dic['alt']['rlzi'])
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
