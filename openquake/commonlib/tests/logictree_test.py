@@ -33,7 +33,6 @@ from copy import deepcopy
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.gsim import registry
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_ltmodels
 from openquake.hazardlib.tom import PoissonTOM
