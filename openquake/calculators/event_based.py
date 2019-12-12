@@ -76,13 +76,15 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
-    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
+    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk',
+                      'ucerf_hazard']
     build_ruptures = sample_ruptures
 
     def init(self):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
-        self.rupser = calc.RuptureSerializer(self.datastore)
+        if not self.datastore.parent:
+            self.rupser = calc.RuptureSerializer(self.datastore)
 
     def init_logic_tree(self, csm_info):
         self.trt_by_grp = csm_info.grp_by("trt")
@@ -191,14 +193,16 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 
-    def gen_rupture_getters(self):
+    def gen_rupture_getters(self, num_events=0):
         """
         :returns: a list of RuptureGetters
         """
+        oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
+        E = num_events or len(dstore['events'])
         yield from gen_rupture_getters(
-            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1)
+            dstore, maxweight=E / (oq.concurrent_tasks or 1))
         if self.datastore.parent:
             self.datastore.parent.close()
 
@@ -243,7 +247,7 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = self.gen_rupture_getters()
+        rgetters = self.gen_rupture_getters(len(events))
 
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
@@ -351,6 +355,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # compute_gmfs in parallel
         self.datastore.swmr_on()
+        logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
         acc = parallel.Starmap(
