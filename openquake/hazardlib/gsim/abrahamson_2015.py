@@ -86,8 +86,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: interface events
     REQUIRES_DISTANCES = set(('rrup',))
 
-    def __init__(self, ergodic=True):
-        self.ergodic = ergodic
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.ergodic = kwargs.get('ergodic', True)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
