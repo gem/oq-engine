@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Introduced an experimental AvgGMPE and used it to implement (ootional)
+  * Introduced an experimental AvgGMPE and used it to implement (optional)
     reduction of the gsim logic tree
 
   [Graeme Weatherill]
