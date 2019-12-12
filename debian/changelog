@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds configurable nonergodic sigma option to BC Hydro and SERA GMPEs
+  
   [Michele Simionato]
   * Introduced an experimental AvgGMPE
 
