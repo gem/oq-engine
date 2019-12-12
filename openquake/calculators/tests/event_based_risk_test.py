@@ -308,7 +308,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
                       concurrent_tasks='4',
-                      aggregate_by='id', highest_losses='100')
+                      aggregate_by='id', highest_losses='32')
+
+        # check on the asset_loss_table, num_losses per asset
+        aids = self.calc.datastore['asset_loss_table']['asset_id']
+        numpy.testing.assert_equal(numpy.bincount(aids),
+                                   [6, 32, 22, 32, 32, 32, 31])
 
         # agg_losses-rlzs has shape (L=5, R=9)
         # agg_losses-stats has shape (L=5, S=4)

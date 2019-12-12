@@ -193,7 +193,7 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 
-    def gen_rupture_getters(self, num_events=0):
+    def gen_rupture_getters(self, num_events=0, use_kdt=False):
         """
         :returns: a list of RuptureGetters
         """
@@ -202,7 +202,7 @@ class EventBasedCalculator(base.HazardCalculator):
                   else self.datastore)
         E = num_events or len(dstore['events'])
         yield from gen_rupture_getters(
-            dstore, maxweight=E / (oq.concurrent_tasks or 1), use_kdt=False)
+            dstore, maxweight=E / (oq.concurrent_tasks or 1), use_kdt=use_kdt)
         if self.datastore.parent:
             self.datastore.parent.close()
 
@@ -357,7 +357,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
         allargs = [(rgetter, srcfilter, self.param)
-                   for rgetter in self.gen_rupture_getters()]
+                   for rgetter in self.gen_rupture_getters(use_kdt=True)]
         logging.info('Generated %d tasks', len(allargs))
         acc = parallel.Starmap(
             self.core_task.__func__, allargs, h5=self.datastore.hdf5,
