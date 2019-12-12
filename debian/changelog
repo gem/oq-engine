@@ -2,7 +2,8 @@
   * Adds configurable nonergodic sigma option to BC Hydro and SERA GMPEs
   
   [Michele Simionato]
-  * Introduced an experimental AvgGMPE
+  * Introduced an experimental AvgGMPE and used it to implement (optional)
+    reduction of the gsim logic tree
 
   [Graeme Weatherill]
   * Small refactor and bug fix in average SA GMPE
