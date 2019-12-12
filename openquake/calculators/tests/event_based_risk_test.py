@@ -95,10 +95,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_1_eb(self):
         # this is a case with insured losses, no tags
-        # NB: highest_losses=18 below avoid discarding any loss; that would
+        # NB: asset_loss_table=1 below avoid discarding any loss; that would
         # make the loss curves depending on the number of spawned tasks
         self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4',
-                      highest_losses='18')
+                      asset_loss_table='1')
 
         # check on the asset_loss_table, num_losses per asset
         aids = self.calc.datastore['asset_loss_table']['asset_id']
@@ -308,7 +308,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
                       concurrent_tasks='4',
-                      aggregate_by='id', highest_losses='32')
+                      aggregate_by='id', asset_loss_table='1')
 
         # check on the asset_loss_table, num_losses per asset
         aids = self.calc.datastore['asset_loss_table']['asset_id']
