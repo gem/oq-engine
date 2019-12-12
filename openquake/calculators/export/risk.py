@@ -98,10 +98,9 @@ def export_agg_curve_rlzs(ekey, dstore):
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    rows = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value').to_table()
-    import pdb; pdb.set_trace()
+    aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
     table = add_columns(
-        rows, loss_ratio=get_loss_ratio,
+        aw.to_table(), loss_ratio=get_loss_ratio,
         annual_frequency_of_exceedence=lambda rec: 1 / rec.return_periods)
     table[0] = [c[:-1] if c.endswith('s') else c for c in table[0]]
     writer.save(table, fname, comment=md)
