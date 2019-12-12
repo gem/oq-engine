@@ -80,7 +80,7 @@ def post_risk(dstore, builder, ses_ratio, rlzi, monitor):
         oq = dstore['oqparam']
         assetcol = dstore['assetcol']
         if 'asset_loss_table' in dstore:
-            idxs = dstore['asset_loss_table']['rlzi'] == rlzi
+            idxs = dstore['alt_rlzs'][()] == rlzi
             alt = dstore['asset_loss_table'][idxs]
         else:
             assert not oq.aggregate_by, oq.aggregate_by
