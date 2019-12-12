@@ -27,25 +27,17 @@
         <logicTreeBranchingLevel branchingLevelID="bl2">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2" applyToTectonicRegionType="Stable Shallow Crust">
 
-                <logicTreeBranch branchID="b21"> <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
-                    <uncertaintyWeight>0.20</uncertaintyWeight>
-                </logicTreeBranch>
-                
-                <logicTreeBranch branchID="b22"> <uncertaintyModel>CauzziFaccioli2008</uncertaintyModel>
-                    <uncertaintyWeight>0.20</uncertaintyWeight>
-                </logicTreeBranch>
-                
-                <logicTreeBranch branchID="b23"> <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
-                    <uncertaintyWeight>0.20</uncertaintyWeight>
-                </logicTreeBranch>
-                
-                <logicTreeBranch branchID="b24"> <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
-                    <uncertaintyWeight>0.20</uncertaintyWeight>
-                </logicTreeBranch>
-                
-                <logicTreeBranch branchID="b25"> <uncertaintyModel>Campbell2003SHARE</uncertaintyModel>
-                    <uncertaintyWeight>0.20</uncertaintyWeight>
-                </logicTreeBranch>
+              <logicTreeBranch branchID="b2">
+                <uncertaintyModel>
+                  [AvgGMPE]
+                  b1.AkkarBommer2010.weight=0.20
+                  b2.CauzziFaccioli2008.weight=0.20
+                  b3.ChiouYoungs2008.weight=0.20
+                  b4.ToroEtAl2002SHARE.weight=0.20
+                  b5.Campbell2003SHARE.weight=0.20
+                </uncertaintyModel>
+                <uncertaintyWeight>1</uncertaintyWeight>
+              </logicTreeBranch>
 
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
