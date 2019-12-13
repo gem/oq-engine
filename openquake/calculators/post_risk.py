@@ -172,8 +172,10 @@ class PostRiskCalculator(base.RiskCalculator):
         self.build_datasets(builder, oq.aggregate_by, 'agg_')
         if oq.aggregate_by:
             self.build_datasets(builder, [], 'tot_')
+        pr = (post_ebrisk if 'asset_loss_table' in self.datastore
+              or 'asset_loss_table' in self.datastore.parent
+              else post_risk)
         self.datastore.swmr_on()
-        pr = post_ebrisk if 'asset_loss_table' in self.datastore else post_risk
         smap = parallel.Starmap(
             pr, [(self.datastore, rlzi) for rlzi in range(self.R)],
             h5=self.datastore.hdf5)
