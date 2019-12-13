@@ -453,22 +453,17 @@ def make_figure_agg_curves(extractors, what):
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
-        agg_curves = ex.get(what + '&absolute=1')
-        for kind in agg_curves.kind:
-            if agg_curves.rlzs:
-                arr = getattr(agg_curves, 'rlz-%03d' % agg_curves.k[0])
-            else:
-                arr = getattr(agg_curves, kind)
-            got[ex.calc_id, kind] = arr
+        aw = ex.get(what + '&absolute=1')
+        agg_curve = aw.array.squeeze()
+        got[ex.calc_id, aw.kind[0]] = agg_curve
     oq = ex.oqparam
-    periods = agg_curves.return_periods
+    periods = aw.return_period
     ax = fig.add_subplot(1, 1, 1)
-    ax.set_xlabel('%s, risk_inv_time=%dy' %
-                  (agg_curves.loss_type, oq.risk_investigation_time))
+    ax.set_xlabel('risk_inv_time=%dy' % oq.risk_investigation_time)
     ax.set_ylabel('PoE')
     for ck, arr in got.items():
-        ax.loglog(periods, arr[0], '-', label='%s_%s' % ck)
-        ax.loglog(periods, arr[0], '.')
+        ax.loglog(periods, agg_curve, '-', label='%s_%s' % ck)
+        ax.loglog(periods, agg_curve, '.')
     ax.grid(True)
     ax.legend()
     return plt
