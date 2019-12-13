@@ -902,7 +902,7 @@ def multi_index(shape, axis=None):
         yield tuple(lst)
 
 
-def fast_agg(indices, values=None, axis=0):
+def fast_agg(indices, values=None, axis=0, factor=None):
     """
     :param indices: N indices in the range 0 ... M - 1 with M < N
     :param values: N values (can be arrays)
@@ -927,7 +927,8 @@ def fast_agg(indices, values=None, axis=0):
     lst.insert(axis, M)
     res = numpy.zeros(lst, values.dtype)
     for mi in multi_index(shp, axis):
-        res[mi] = numpy.bincount(indices, values[mi])
+        vals = values[mi] if factor is None else values[mi] * factor
+        res[mi] = numpy.bincount(indices, vals)
     return res
 
 
@@ -951,10 +952,15 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
-def fast_agg3(structured_array, kfield, vfields):
+def fast_agg3(structured_array, kfield, vfields, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)
     and some value fields (the vfields).
+
+    >>> data = numpy.array([(1, 2.4), (1, 1.6), (2, 2.5)],
+    ...                    [('aid', U16), ('val', F32)])
+    >>> fast_agg3(data, 'aid', ['val'])
+    array([(1, 4. ), (2, 2.5)], dtype=[('aid', '<u2'), ('val', '<f4')])
     """
     allnames = structured_array.dtype.names
     assert kfield in allnames, kfield
@@ -965,7 +971,7 @@ def fast_agg3(structured_array, kfield, vfields):
     dic = {}
     dtlist = [(kfield, structured_array.dtype[kfield])]
     for name in vfields:
-        dic[name] = fast_agg(indices, structured_array[name])
+        dic[name] = fast_agg(indices, structured_array[name], factor=factor)
         dtlist.append((name, structured_array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
     res[kfield] = uniq
@@ -1274,4 +1280,43 @@ def add_defaults(array, **kw):
     for k, v in kw.items():
         if k not in array.dtype.names:
             new[k] = v
+    return new
+
+
+def get_duplicates(array, *fields):
+    """
+    :returns: a dictionary {key: num_dupl} for duplicate records
+    """
+    uniq = numpy.unique(array[list(fields)])
+    if len(uniq) == len(array):  # no duplicates
+        return {}
+    return {k: len(g) for k, g in group_array(array, *fields).items()
+            if len(g) > 1}
+
+
+def add_columns(a, b, on, cols=None):
+    """
+    >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
+    >>> b_dt = [('ordinal', int), ('zipcode', int)]
+    >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
+    ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
+    >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
+    >>> add_columns(a, b, 'aid', ['zipcode'])
+    array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
+           (2, 1, 2.3, 20128)],
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('zipcode', '<i8')])
+    """
+    if cols is None:
+        cols = b.dtype.names
+    dtlist = []
+    for name in a.dtype.names:
+        dtlist.append((name, a.dtype[name]))
+    for name in cols:
+        dtlist.append((name, b.dtype[name]))
+    new = numpy.zeros(len(a), dtlist)
+    for name in a.dtype.names:
+        new[name] = a[name]
+    idxs = a[on]
+    for name in cols:
+        new[name] = b[name][idxs]
     return new

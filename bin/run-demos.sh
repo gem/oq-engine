@@ -31,7 +31,7 @@ oq engine --lhc
 MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' -1
 MPLBACKEND=Agg oq plot 'hmaps?kind=mean&imt=PGA' -1
 MPLBACKEND=Agg oq plot 'uhs?kind=stats' -1
-MPLBACKEND=Agg oq plot 'task_info?kind=classical' 16
+MPLBACKEND=Agg oq plot 'task_info?kind=classical_split_filter' 16
 MPLBACKEND=Agg oq plot_sites -1
 MPLBACKEND=Agg oq plot memory?
 MPLBACKEND=Agg oq plot sources?sm_id=0
@@ -49,7 +49,7 @@ oq run $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/pre-job.ini $1/
 
 # run ebrisk
 oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv
-MPLBACKEND=Agg oq plot rupture_info?
+MPLBACKEND=Agg oq plot rupture_info?min_mag=6
 echo "Displaying the exposed values in the ebrisk demo"
 oq show exposed_values/agg_NAME_1_taxonomy
 oq show exposed_values/agg_NAME_1

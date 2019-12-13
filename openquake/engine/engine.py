@@ -19,7 +19,6 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
-import io
 import os
 import re
 import sys
@@ -31,7 +30,6 @@ import logging
 import traceback
 import platform
 import psutil
-import numpy
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -42,7 +40,7 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, oqzip
+from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
@@ -330,21 +328,6 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     calc.from_engine = True
     tb = 'None\n'
     try:
-        if not oqparam.hazard_calculation_id:
-            if 'input_zip' in oqparam.inputs:  # starting from an archive
-                with open(oqparam.inputs['input_zip'], 'rb') as arch:
-                    data = numpy.array(arch.read())
-            else:
-                logs.LOG.info('Zipping the input files')
-                bio = io.BytesIO()
-                oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
-                              logging.debug)
-                data = numpy.array(bio.getvalue())
-                del bio
-            calc.datastore['input/zip'] = data
-            calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
-            del data  # save memory
-
         poll_queue(job_id, _PID, poll_time=15)
     except BaseException:
         # the job aborted even before starting

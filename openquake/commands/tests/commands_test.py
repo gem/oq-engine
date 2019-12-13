@@ -211,9 +211,6 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         Build a datastore instance to show what it is inside
         """
-        # the tests here gave mysterious core dumps in Ubuntu 16.04,
-        # but only when called together with all other tests with the command
-        # nosetests openquake/commonlib/
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run([job_ini], 0, False, 'info', None, '', {})
@@ -448,10 +445,6 @@ class EngineRunJobTestCase(unittest.TestCase):
         with read(job_id) as dstore:
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
-            task_info = view('task_info', dstore)
-            self.assertIn('compute_gmfs', task_info)
-            job_info = view('job_info', dstore)
-            self.assertIn('compute_gmfs', job_info)
 
     def test_smart_run(self):
         # test smart_run with gmf_ebrisk, since it was breaking

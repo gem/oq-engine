@@ -16,10 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import os
 import re
+import gzip
 import getpass
 import collections
+import numpy
 import h5py
 
 from openquake.baselib import hdf5, config, performance
@@ -366,6 +369,61 @@ class DataStore(collections.abc.MutableMapping):
             return self[key]
         except KeyError:
             return default
+
+    def store_files(self, fnames, where='input/'):
+        """
+        :param fnames: a set of full pathnames
+        """
+        prefix = len(os.path.commonprefix(fnames))
+        for fname in fnames:
+            data = gzip.compress(open(fname, 'rb').read())
+            self[where + fname[prefix:]] = numpy.void(data)
+
+    def retrieve_files(self, prefix='input'):
+        """
+        :yields: pairs (relative path, data)
+        """
+        for k, v in self[prefix].items():
+            if hasattr(v, 'items'):
+                yield from self.retrieve_files(prefix + '/' + k)
+            else:
+                yield k, gzip.decompress(bytes(numpy.asarray(v[()])))
+
+    def get_file(self, key):
+        """
+        :returns: a BytesIO object
+        """
+        data = bytes(numpy.asarray(self[key][()]))
+        return io.BytesIO(gzip.decompress(data))
+
+    def read_df(self, key, index=None):
+        """
+        :param key: name of the structured dataset
+        :param index: if given, name of the "primary key" field
+        :returns: pandas DataFrame associated to the dataset
+        """
+        import pandas  # imported inside to save startup time
+        dset = self.getitem(key)
+        dtlist = []
+        for name in dset.dtype.names:
+            dt = dset.dtype[name]
+            if dt.shape:  # vector field
+                templ = name + '_%d' * len(dt.shape)
+                for i, _ in numpy.ndenumerate(numpy.zeros(dt.shape)):
+                    dtlist.append((templ % i, dt.base))
+            else:  # scalar field
+                dtlist.append((name, dt))
+        data = numpy.zeros(len(dset), dtlist)
+        for name in dset.dtype.names:
+            arr = dset[name]
+            dt = dset.dtype[name]
+            if dt.shape:  # vector field
+                templ = name + '_%d' * len(dt.shape)
+                for i, _ in numpy.ndenumerate(numpy.zeros(dt.shape)):
+                    data[templ % i] = arr[(slice(None),) + i]
+            else:  # scalar field
+                data[name] = arr
+        return pandas.DataFrame.from_records(data, index=index)
 
     @property
     def metadata(self):

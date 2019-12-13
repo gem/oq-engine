@@ -42,7 +42,7 @@ KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
                 'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
                 'source_model_logic_tree', 'hazard_curves', 'insurance',
                 'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
-                'fragility', 'reqv', 'input_zip',
+                'fragility', 'consequence', 'reqv', 'input_zip',
                 'nonstructural_vulnerability',
                 'nonstructural_fragility',
                 'nonstructural_consequence',
@@ -69,7 +69,7 @@ class OqParam(valid.ParamSet):
         siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
-    asset_loss_table = valid.Param(valid.boolean, False)
+    asset_loss_table = valid.Param(valid.range01, 0.05)
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -77,7 +77,9 @@ class OqParam(valid.ParamSet):
     assets_per_site_limit = valid.Param(valid.positivefloat, 1000)
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
-    calculation_mode = valid.Param(valid.Choice(), '')  # -> get_oqparam
+    calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
+    collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
+    collapse_threshold = valid.Param(valid.probability, 0.5)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -97,7 +99,7 @@ class OqParam(valid.ParamSet):
     filter_distance = valid.Param(valid.Choice('rrup'), None)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
-    ground_motion_correlation_params = valid.Param(valid.dictionary)
+    ground_motion_correlation_params = valid.Param(valid.dictionary, {})
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
@@ -122,12 +124,13 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_potential_gmfs = valid.Param(valid.positiveint, 1E11)
+    max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
+    minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
     modal_damage_state = valid.Param(valid.boolean, False)
@@ -139,7 +142,7 @@ class OqParam(valid.ParamSet):
     oversubmit = valid.Param(valid.boolean, False)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.positivefloat, None)
+    pointsource_distance = valid.Param(valid.floatdict, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -175,10 +178,9 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    collapse_factor = valid.Param(valid.positivefloat, 3)
-    max_radius = valid.Param(valid.positivefloat, None)
+    split_by_magnitude = valid.Param(valid.boolean, False)
     task_duration = valid.Param(valid.positiveint, None)  # used in ebrisk
-    task_multiplier = valid.Param(valid.positiveint, 10)  # used in classical
+    max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
@@ -230,8 +232,6 @@ class OqParam(valid.ParamSet):
                 'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
-        if 'pointsource_distance' in names_vals:
-            logging.warning('The pointsource_distance parameter is obsolete: you should removed it or use a collapse factor, see https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#collapse-factor')
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
@@ -284,7 +284,7 @@ class OqParam(valid.ParamSet):
             for gsims in gsim_lt.values.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
-            self.check_gsims([valid.gsim(self.gsim)])
+            self.check_gsims([valid.gsim(self.gsim, self.base_path)])
 
         # check inputs
         unknown = set(self.inputs) - KNOWN_INPUTS
@@ -633,7 +633,8 @@ class OqParam(valid.ParamSet):
         """
         The calculation mode is event_based, event_based_risk or ebrisk
         """
-        return self.calculation_mode in 'event_based_risk ebrisk'
+        return (self.calculation_mode in
+                'event_based_risk ebrisk event_based_damage')
 
     def is_valid_shakemap(self):
         """
@@ -656,15 +657,6 @@ class OqParam(valid.ParamSet):
         """
         if self.calculation_mode == 'disaggregation':
             return self.truncation_level is not None
-        else:
-            return True
-
-    def is_valid_aggregate_by(self):
-        """
-        aggregate_by is implemented only for the ebrisk calculator
-        """
-        if self.aggregate_by:
-            return self.calculation_mode == 'ebrisk'
         else:
             return True
 
@@ -791,8 +783,8 @@ class OqParam(valid.ParamSet):
         and the user must have the permission to write on it.
         """
         if self.export_dir and not os.path.isabs(self.export_dir):
-            self.export_dir = os.path.normpath(
-                os.path.join(self.input_dir, self.export_dir))
+            self.export_dir = os.getcwd()
+            logging.info('Using export_dir=%s', self.export_dir)
         if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
             logging.warning('export_dir not specified. Using export_dir=%s'
@@ -806,16 +798,6 @@ class OqParam(valid.ParamSet):
             return True
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
-
-    def is_valid_sites(self):
-        """
-        The sites are overdetermined
-        """
-        if 'site_model' in self.inputs and (
-                self.sites or 'sites' in self.inputs
-                or 'hazard_curves' in self.inputs):
-            return False
-        return True
 
     def is_valid_complex_fault_mesh_spacing(self):
         """

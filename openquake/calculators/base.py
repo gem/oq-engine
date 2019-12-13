@@ -58,18 +58,25 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
 
 
 # this is used for the minimum_intensity dictionaries
-def equivalent(dic1, dic2):
+def consistent(dic1, dic2):
     """
-    Check if two dictionaries name -> value are equivalent
+    Check if two dictionaries with default are consistent:
+
+    >>> consistent({'PGA': 0.05, 'SA(0.3)': 0.05}, {'default': 0.05})
+    True
+    >>> consistent({'SA(0.3)': 0.1, 'SA(0.6)': 0.05},
+    ... {'default': 0.1, 'SA(0.3)': 0.1, 'SA(0.6)': 0.05})
+    True
     """
     if dic1 == dic2:
         return True
     v1 = set(dic1.values())
     v2 = set(dic2.values())
-    if len(v1) == 1 and len(v2) == 1 and v1.pop() == v2.pop():
-        # {'PGA': 0.05, 'SA(0.3)': 0.05} is equivalent to {'default': 0.05}
+    missing = set(dic2) - set(dic1) - {'default'}
+    if len(v1) == 1 and len(v2) == 1 and v1 == v2:
+        # {'PGA': 0.05, 'SA(0.3)': 0.05} is consistent with {'default': 0.05}
         return True
-    return False
+    return not missing
 
 
 def get_stats(seq):
@@ -241,6 +248,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
+                readinput.gsim_lt_cache.clear()
 
                 # remove temporary hdf5 file, if any
                 if os.path.exists(self.datastore.tempname) and remove:
@@ -401,6 +409,17 @@ class HazardCalculator(BaseCalculator):
                 logging.info(res)
         self.init()  # do this at the end of pre-execute
 
+        if not oq.hazard_calculation_id:
+            self.gzip_inputs()
+
+    def gzip_inputs(self):
+        """
+        Gzipping the inputs and saving them in the datastore
+        """
+        logging.info('gzipping the input files')
+        fnames = readinput.get_input_files(self.oqparam)
+        self.datastore.store_files(fnames)
+
     def save_multi_peril(self):
         """Defined in MultiRiskCalculator"""
 
@@ -463,7 +482,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            if not equivalent(oqp.minimum_intensity, oq.minimum_intensity):
+            if not consistent(oqp.minimum_intensity, oq.minimum_intensity):
                 raise ValueError(
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
@@ -699,6 +718,7 @@ class HazardCalculator(BaseCalculator):
                              len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap_lst
+            self.crmodel.vectorize_cons_model(self.assetcol.tagcol)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:
@@ -856,6 +876,9 @@ class RiskCalculator(HazardCalculator):
             riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
+        if self.oqparam.calculation_mode in (
+                'event_based_damage', 'scenario_damage', 'scenario_risk'):
+            self.datastore.swmr_on()
         return riskinputs
 
     def get_getter(self, kind, sid):
@@ -880,7 +903,11 @@ class RiskCalculator(HazardCalculator):
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you set '
                     'ground_motion_fields=False or a large minimum_intensity')
-        if dstore is self.datastore:
+        if (self.oqparam.calculation_mode not in
+                'event_based_damage scenario_damage scenario_risk'
+                and dstore is self.datastore):
+            # hack to make h5py happy; I could not get this to work with
+            # the SWMR mode
             getter.init()
         return getter
 
@@ -974,13 +1001,21 @@ def import_gmfs(dstore, fname, sids):
     if names[0] == 'rlzi':  # backward compatbility
         names = names[1:]  # discard the field rlzi
     imts = [name[4:] for name in names[2:]]
-    gmf_data_dt = dstore['oqparam'].gmf_data_dt()
-    arr = numpy.zeros(len(array), gmf_data_dt)
-    col = 0
+    oq = dstore['oqparam']
+    missing = set(oq.imtls) - set(imts)
+    if missing:
+        raise ValueError('The calculation needs %s which is missing from %s' %
+                         (', '.join(missing), fname))
+    imt2idx = {imt: i for i, imt in enumerate(oq.imtls)}
+    arr = numpy.zeros(len(array), oq.gmf_data_dt())
     for name in names:
         if name.startswith('gmv_'):
-            arr['gmv'][:, col] = array[name]
-            col += 1
+            try:
+                m = imt2idx[name[4:]]
+            except KeyError:  # the file contains more than enough IMTs
+                pass
+            else:
+                arr['gmv'][:, m] = array[name]
         else:
             arr[name] = array[name]
     # store the events
