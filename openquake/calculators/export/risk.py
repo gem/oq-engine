@@ -98,9 +98,9 @@ def export_agg_curve_rlzs(ekey, dstore):
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    rows = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value').to_table()
+    aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
     table = add_columns(
-        rows, loss_ratio=get_loss_ratio,
+        aw.to_table(), loss_ratio=get_loss_ratio,
         annual_frequency_of_exceedence=lambda rec: 1 / rec.return_periods)
     table[0] = [c[:-1] if c.endswith('s') else c for c in table[0]]
     writer.save(table, fname, comment=md)
@@ -232,12 +232,9 @@ def export_losses_by_event(ekey, dstore):
         year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
         columns['rup_id'] = lambda rec: events[rec.event_id]['rup_id']
         columns['year'] = lambda rec: year_of[rec.event_id]
-    tagcol = dstore['assetcol/tagcol']
     lbe = dstore['losses_by_event'][()]
     lbe.sort(order='event_id')
-    dic = dict(shape_descr=['event_id'] + oq.aggregate_by)
-    for tagname in oq.aggregate_by:
-        dic[tagname] = getattr(tagcol, tagname)[1:]
+    dic = dict(shape_descr=['event_id'])
     dic['event_id'] = list(lbe['event_id'])
     # example (0, 1, 2, 3) -> (0, 2, 3, 1)
     axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
