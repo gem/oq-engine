@@ -20,12 +20,14 @@ import itertools
 import operator
 import unittest.mock as mock
 import numpy
+from scipy.spatial import cKDTree
 from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib import calc, geo, probability_map, stats
-from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
-    EBRupture, BaseRupture, events_dt)
+    EBRupture, BaseRupture, events_dt, get_rupture)
+from openquake.hazardlib.geo.utils import spherical_to_cartesian
+from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -60,7 +62,7 @@ def sig_eps_dt(imts):
     """
     :returns: a composite data type for the sig_eps output
     """
-    lst = [('eid', U32), ('rlzi', U16)]
+    lst = [('eid', U32), ('rlz_id', U16)]
     for imt in imts:
         lst.append(('sig_' + imt, F32))
     for imt in imts:
@@ -444,8 +446,8 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), concurrent_tasks=1,
-                        filename=None):
+def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5,
+                        filename=None, use_kdt=True):
     """
     :yields: RuptureGetters
     """
@@ -460,14 +462,27 @@ def gen_rupture_getters(dstore, slc=slice(None), concurrent_tasks=1,
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    maxweight = numpy.ceil(len(rup_array) / (concurrent_tasks or 1))
     nr, ne = 0, 0
+    maxdist = dstore['oqparam'].maximum_distance
+    if 'sitecol' in dstore and use_kdt:
+        srcfilter = SourceFilter(dstore['sitecol'], maxdist)
+        kdt = cKDTree(srcfilter.sitecol.xyz)
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
             # in event_based_risk/case_3
             continue
-        for block in general.block_splitter(arr, maxweight):
+
+        if 'sitecol' in dstore and use_kdt:
+            def weight(rec, md=getdefault(maxdist, trt_by_grp[grp_id])):
+                xyz = spherical_to_cartesian(*rec['hypo'])
+                nsites = len(kdt.query_ball_point(xyz, md, eps=.001))
+                return rec['n_occ'] * numpy.ceil((nsites + 1) / 1000)
+        else:
+            def weight(rec):
+                return rec['n_occ']
+
+        for block in general.block_splitter(arr, maxweight, weight):
             if e0s is None:
                 e0 = numpy.zeros(len(block), U32)
             else:
@@ -475,6 +490,7 @@ def gen_rupture_getters(dstore, slc=slice(None), concurrent_tasks=1,
             rgetter = RuptureGetter(
                 numpy.array(block), filename or dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
+            rgetter.weight = block.weight
             yield rgetter
             nr += len(block)
             ne += rgetter.num_events
@@ -509,7 +525,7 @@ class RuptureGetter(object):
         self.num_events = n_occ if samples > 1 else n_occ * sum(
             len(rlzs) for rlzs in rlzs_by_gsim.values())
 
-    def split(self, srcfilter):
+    def split(self):
         """
         :returns: a list of RuptureGetters with 1 rupture each
         """
@@ -524,11 +540,8 @@ class RuptureGetter(object):
             rg.samples = self.samples
             rg.rlzs_by_gsim = self.rlzs_by_gsim
             rg.e0 = numpy.array([self.e0[i]])
-            n_occ = array[i]['n_occ']
-            sids = srcfilter.close_sids(array[i], self.trt)
-            rg.weight = len(sids) * n_occ
-            if rg.weight:
-                out.append(rg)
+            rg.weight = array[i]['n_occ']
+            out.append(rg)
         return out
 
     @property
@@ -559,7 +572,7 @@ class RuptureGetter(object):
             source_ids = dstore['source_info']['source_id']
             rec = self.rup_array[0]
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
-                rec['sy'], rec['sz'])
+                rec['sx'], rec['sy'])
             dic['lons'] = geom['lon']
             dic['lats'] = geom['lat']
             dic['deps'] = geom['depth']
@@ -575,7 +588,7 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, srcfilter):
+    def get_ruptures(self, srcfilter=calc.filters.nofilter, min_mag=0):
         """
         :returns: a list of EBRuptures filtered by bounding box
         """
@@ -583,49 +596,22 @@ class RuptureGetter(object):
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             for e0, rec in zip(self.e0, self.rup_array):
+                if rec['mag'] < min_mag:
+                    continue
                 if srcfilter.integration_distance:
                     sids = srcfilter.close_sids(rec, self.trt)
                     if len(sids) == 0:  # the rupture is far away
                         continue
                 else:
                     sids = None
-                mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
-                    rec['sy'], rec['sz'])
-                mesh[0] = geom['lon']
-                mesh[1] = geom['lat']
-                mesh[2] = geom['depth']
-                rupture_cls, surface_cls = code2cls[rec['code']]
-                rupture = object.__new__(rupture_cls)
-                rupture.rup_id = rec['serial']
-                rupture.surface = object.__new__(surface_cls)
-                rupture.mag = rec['mag']
-                rupture.rake = rec['rake']
-                rupture.hypocenter = geo.Point(*rec['hypo'])
-                rupture.occurrence_rate = rec['occurrence_rate']
-                rupture.tectonic_region_type = self.trt
-                if surface_cls is geo.PlanarSurface:
-                    rupture.surface = geo.PlanarSurface.from_array(
-                        mesh[:, 0, :])
-                elif surface_cls is geo.MultiSurface:
-                    # mesh has shape (3, n, 4)
-                    rupture.surface.__init__([
-                        geo.PlanarSurface.from_array(mesh[:, i, :])
-                        for i in range(mesh.shape[1])])
-                elif surface_cls is geo.GriddedSurface:
-                    # fault surface, strike and dip will be computed
-                    rupture.surface.strike = rupture.surface.dip = None
-                    rupture.surface.mesh = Mesh(*mesh)
-                else:
-                    # fault surface, strike and dip will be computed
-                    rupture.surface.strike = rupture.surface.dip = None
-                    rupture.surface.__init__(RectangularMesh(*mesh))
+                    rec['sx'], rec['sy'])
+                rupture = get_rupture(rec, geom, self.trt)
                 grp_id = rec['grp_id']
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id,
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 ebr.sids = sids
-                ebr.ridx = rec['id']
                 ebr.e0 = 0 if self.e0 is None else e0
                 ebr.id = rec['id']  # rup_id  in the datastore
                 ebrs.append(ebr)

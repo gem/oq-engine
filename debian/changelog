@@ -2,6 +2,77 @@
   * Implements Abrahamson et al (2018) update of the BC Hydro GMPE
 
   [Michele Simionato]
+  * Changed the generation of aggregate loss curves in ebrisk
+  * Introduced an experimental AvgGMPE and used it to implement (optional)
+    reduction of the gsim logic tree
+
+  [Graeme Weatherill]
+  * Adds configurable nonergodic sigma option to BC Hydro and SERA GMPEs
+  * Small refactoring and bug fix in average SA GMPE
+
+  [Michele Simionato]
+  * Avoided reading multiple times the GSIM logic tree
+  * Changed the GSIM logic tree sampling by ordering the branches by TRT
+  * Ignored IMT-dependent weights when using sampling to make such calculations
+    possible
+  * Storing (partially) the asset loss table
+
+  [Robin Gee]
+  * Set DEFINED_FOR_REFERENCE_VELOCITY in CampbellBozorgnia2003NSHMP2007
+  
+  [Graeme Weatherill]
+  * Re-adjustment of SERA Subduction model epistemic scaling factors
+
+  [Michele Simionato]
+  * Improved the task distribution in the ebrisk calculator
+  * Fixed a bug in ebrisk with aggregate_by when building the rup_loss_table
+  * Storing the asset loss table in scenario_risk, but only for assets and
+    events above over a `loss_ratio_threshold` parameter
+  * Storing the asset damage table in scenario_damage and event based damage,
+    but only for assets and events above a `collapse_threshold` parameter
+  * Avoided transferring the GMFs upfront in scenario_damage, scenario_risk
+    and event_based_damage
+  * Added a check for duplicate sites in the site model file
+  * Implemented an event_based_damage calculator
+  * Added an API /v1/calc/ID/extract/gmf_data?event_id=XXX
+  * Added an API /v1/calc/ID/extract/num_events
+  * Fixed the /v1/calc/ID/status endpoint to return an error 404 when needed
+  * Removed the "sites are overdetermined" check, since it now unneeded
+  * Turned the calculation of consequences into a plugin architecture
+
+  [Matteo Nastasi]
+  * Add '/v1/ini_defaults' web api entry point to retrieve all default
+    values for ini attributes (attrs without a default are not returned)
+
+  [Michele Simionato]
+  * Renamed rlzi -> rlzi in the sigma-epsilon dataset and exporter
+  * Renamed id -> asset_id in all the relevant CSV exporters
+  * Renamed rlzi -> rlz_id in the dmg_by_event.csv output
+  * Renamed rupid -> rup_id in the ruptures.csv output
+  * Renamed id -> event_id in the events.csv output and gmfs.csv output
+  * Renamed sid -> site_id in the gmfs.csv output
+  * Renamed ordinal -> rlz_id in the realizations.csv output
+
+  [Alberto Chiusole]
+  * Restored the `export_dir` to be relative to the current directory
+    and not to the input directory
+  * Changed the way how the available number of CPU cores is computed
+
+  [Kendra Johnson, Robin Gee]
+  * Added GMPEs for Rietbrock-Edwards (2019) and Yenier-Atkinson (2015)
+
+  [Michele Simionato]
+  * Added more check on the IMTs and made it possible to import a GMF.csv
+    file with more IMTs than needed
+  * Enabled magnitude-dependent pointsource_distance
+  * Removed the syntax for magnitude-dependent maximum distance, since
+    now it can be automatically determined by the engine
+  * Saving more information in the case of single-site classical hazard
+  * Extended `pointsource_distance` to generic sources
+  * Removed the boundary information from the CSV rupture exporter
+  * Changed the /extract/rupture/XXX API to returns a TOML that can be
+    used by a scenario calculator
+  * Added general support for file-reading GMPEs
   * Made it possible to disaggregate on multiple realizations
     with the parameters `rlz_index` or `num_rlzs_disagg`
   * Fixed downloading the ShakeMaps (again)
@@ -21,7 +92,6 @@
     distributions are now automatically optimized
   * Fixed an issue with missing noDamageLimit causing NaN values in
     scenario_damage calculations
-  * Changed the ruptures exporter: now we export only the bounding boxes
   * Added more validations for predefined hazard, like forbidding the site model
 
   [Marco Pagani]
@@ -62,7 +132,6 @@
     if `hazard_curves_from_gmfs=true`
   * `oq show job_info` now works while the calculation is running
   * Reduced the sent data transfer in ebrisk calculations
-  * Replaced the `pointsource_distance` concept with a `collapse_distance`
   * Deprecated the old syntax for the `reqv` feature
   * Added short aliases for hazard statistics `mean`, `max` and `std`
   * Reduced substantially the memory occupation in the task queue

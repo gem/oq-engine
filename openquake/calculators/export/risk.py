@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array,  deprecated
+from openquake.baselib.general import group_array
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -98,9 +98,9 @@ def export_agg_curve_rlzs(ekey, dstore):
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    rows = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value').to_table()
+    aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
     table = add_columns(
-        rows, loss_ratio=get_loss_ratio,
+        aw.to_table(), loss_ratio=get_loss_ratio,
         annual_frequency_of_exceedence=lambda rec: 1 / rec.return_periods)
     table[0] = [c[:-1] if c.endswith('s') else c for c in table[0]]
     writer.save(table, fname, comment=md)
@@ -147,7 +147,8 @@ def export_avg_losses(ekey, dstore):
         array = numpy.zeros(len(values), dt)
         for li, ln in enumerate(oq.loss_names):
             array[ln] = values[:, li]
-        writer.save(compose_arrays(assets, array), dest, comment=md)
+        writer.save(compose_arrays(assets, array), dest, comment=md,
+                    renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -207,7 +208,7 @@ def export_losses_by_asset(ekey, dstore):
         losses = losses_by_asset[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
         data = compose_arrays(assets, losses.copy().view(loss_dt)[:, 0])
-        writer.save(data, dest, comment=md)
+        writer.save(data, dest, comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -231,12 +232,9 @@ def export_losses_by_event(ekey, dstore):
         year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
         columns['rup_id'] = lambda rec: events[rec.event_id]['rup_id']
         columns['year'] = lambda rec: year_of[rec.event_id]
-    tagcol = dstore['assetcol/tagcol']
     lbe = dstore['losses_by_event'][()]
     lbe.sort(order='event_id')
-    dic = dict(shape_descr=['event_id'] + oq.aggregate_by)
-    for tagname in oq.aggregate_by:
-        dic[tagname] = getattr(tagcol, tagname)[1:]
+    dic = dict(shape_descr=['event_id'])
     dic['event_id'] = list(lbe['event_id'])
     # example (0, 1, 2, 3) -> (0, 2, 3, 1)
     axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
@@ -292,7 +290,8 @@ def export_loss_maps_csv(ekey, dstore):
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
         md.update(
             dict(kind=uid, risk_investigation_time=oq.risk_investigation_time))
-        writer.save(compose_arrays(assets, value[:, i]), fname, comment=md)
+        writer.save(compose_arrays(assets, value[:, i]), fname, comment=md,
+                    renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -331,7 +330,8 @@ def export_damages_csv(ekey, dstore):
     for lti, lt in enumerate(loss_types):
         for tag, values in zip(tags, value[:, :, lti].T):
             fname = dstore.build_fname('damages-%s' % lt, tag, ekey[1])
-            writer.save(compose_arrays(assets, values), fname)
+            writer.save(compose_arrays(assets, values), fname,
+                    renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -362,7 +362,8 @@ def export_dmg_by_asset_csv(ekey, dstore):
         else:
             dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        writer.save(compose_arrays(assets, dmg_by_asset), fname)
+        writer.save(compose_arrays(assets, dmg_by_asset), fname,
+                    renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -373,22 +374,23 @@ def export_dmg_by_event(ekey, dstore):
     :param dstore: datastore object
     """
     damage_dt = build_damage_dt(dstore, mean_std=False)
-    dt_list = [('event_id', numpy.uint64), ('rlzi', numpy.uint16)] + [
+    dt_list = [('event_id', numpy.uint64), ('rlz_id', numpy.uint16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
-    all_losses = dstore[ekey[0]][()]  # shape (E, R, LI)
+    data_by_eid = dict(dstore[ekey[0]][()])  # eid_dmg_dt
     events_by_rlz = group_array(dstore['events'], 'rlz_id')
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
     writer.save(numpy.zeros(0, dt_list), fname)
     with open(fname, 'ab') as dest:
-        for rlz in rlzs:
-            data = all_losses[:, rlz.ordinal].copy().view(damage_dt)  # shape E
+        for rlz, events in events_by_rlz.items():
+            data = numpy.array(  # shape (E, L, D)
+                [data_by_eid[eid] for eid in events['id']])
             arr = numpy.zeros(len(data), dt_list)
-            arr['event_id'] = events_by_rlz[rlz.ordinal]['id']
-            arr['rlzi'] = rlz.ordinal
-            for field in damage_dt.names:
-                arr[field] = data[field].squeeze()
+            arr['event_id'] = events['id']
+            arr['rlz_id'] = events['rlz_id']
+            for l, loss_type in enumerate(damage_dt.names):
+                for d, dmg_state in enumerate(damage_dt[loss_type].names):
+                    arr[loss_type][dmg_state] = data[:, l, d]
             writer.save_block(arr, dest)
     return [fname]
 
@@ -493,29 +495,10 @@ def export_bcr_map(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for t, tag in enumerate(tags):
         path = dstore.build_fname('bcr', tag, 'csv')
-        writer.save(compose_arrays(assets, bcr_data[:, t]), path)
+        writer.save(compose_arrays(assets, bcr_data[:, t]), path,
+                    renamedict=dict(id='asset_id'))
         fnames.append(path)
     return writer.getsaved()
-
-
-@export.add(('losses_by_tag', 'csv'))
-@deprecated(msg='This exporter will be removed soon')
-def export_by_tag_csv(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    token, tag = ekey[0].split('/')
-    data = extract(dstore, token + '/' + tag)
-    fnames = []
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for stat, arr in data:
-        tup = (ekey[0].replace('/', '-'), stat, ekey[1])
-        path = '%s-%s.%s' % tup
-        fname = dstore.export_path(path)
-        writer.save(arr, fname)
-        fnames.append(fname)
-    return fnames
 
 
 @export.add(('aggregate_by', 'csv'))
@@ -566,7 +549,8 @@ def export_asset_risk_csv(ekey, dstore):
             except KeyError:
                 row.append(value)
         rows.append(row)
-    writer.save(rows, fname, colnames)
+    writer.save(rows, fname, colnames,
+                renamedict=dict(id='asset_id'))
     return [fname]
 
 

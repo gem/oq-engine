@@ -27,6 +27,7 @@ import itertools
 from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
+import toml
 import numpy
 import h5py
 from openquake.baselib import InvalidFile
@@ -329,14 +330,25 @@ class File(h5py.File):
         elif (isinstance(obj, numpy.ndarray) and obj.shape and
               len(obj) and isinstance(obj[0], str)):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
+        elif (isinstance(obj, numpy.ndarray) and not obj.shape and
+              obj.dtype.name.startswith('bytes')):
+            self._set(path, numpy.void(bytes(obj)))
         elif isinstance(obj, list) and len(obj) and isinstance(
                 obj[0], numpy.ndarray):
             self.save_vlen(path, obj)
+        elif isinstance(obj, bytes):
+            self._set(path, numpy.void(obj))
         else:
-            super().__setitem__(path, obj)
+            self._set(path, obj)
         if pyclass:
             self.flush()  # make sure it is fully saved
             self.save_attrs(path, attrs, __pyclass__=pyclass)
+
+    def _set(self, path, obj):
+        try:
+            super().__setitem__(path, obj)
+        except Exception as exc:
+            raise exc.__class__('Could not set %s=%r' % (path, obj))
 
     def __getitem__(self, path):
         h5obj = super().__getitem__(path)
@@ -452,6 +464,16 @@ class ArrayWrapper(object):
     def shape(self):
         """shape of the underlying array"""
         return self.array.shape if hasattr(self, 'array') else ()
+
+    def toml(self):
+        """
+        :returns: a TOML string representation of the ArrayWrapper
+        """
+        if self.shape:
+            return toml.dumps(self.array)
+        dic = {k: v for k, v in vars(self).items()
+               if not k.startswith('_')}
+        return toml.dumps(dic)
 
     def save(self, path, **extra):
         """
@@ -641,7 +663,7 @@ def build_dt(dtypedict, names):
             dt = dtypedict[name]
         except KeyError:
             dt = dtypedict[None]
-        lst.append((name, dt))
+        lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 
 
@@ -668,6 +690,8 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
         try:
             rows = [tuple(row) for row in csv.reader(f)]
             arr = numpy.array(rows, build_dt(dtypedict, header))
+        except KeyError:
+            raise KeyError('Missing None -> default in dtypedict')
         except Exception as exc:
             raise InvalidFile('%s: %s' % (fname, exc))
     if renamedict:

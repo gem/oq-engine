@@ -91,7 +91,7 @@ rupture_dt = numpy.dtype([
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
     ('hypo', (F32, 3)), ('gidx1', U32), ('gidx2', U32),
-    ('sy', U16), ('sz', U16)])
+    ('sx', U16), ('sy', U16)])
 
 
 # this is really fast

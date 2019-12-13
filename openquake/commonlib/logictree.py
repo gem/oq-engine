@@ -24,6 +24,7 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
+import io
 import os
 import re
 import ast
@@ -36,12 +37,12 @@ import operator
 from collections import namedtuple
 import toml
 import numpy
-from openquake.baselib import hdf5, node, python3compat
+from openquake.baselib import hdf5, node
 from openquake.baselib.general import (groupby, group_array, duplicated,
                                        add_defaults)
 import openquake.hazardlib.source as ohs
+from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
@@ -1388,7 +1389,7 @@ class GsimLogicTree(object):
                                   'branchSetID': 'bs1',
                                   'uncertaintyType': 'gmpeModel'},
                                  nodes=[ltbranch])])])
-        return cls(repr(gsim), ['*'], ltnode=lt)
+        return cls('fake/' + gsim.__class__.__name__, ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         self.filename = fname
@@ -1399,8 +1400,9 @@ class GsimLogicTree(object):
                 ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or nrml.read(fname).logicTree
-        self.gmpe_tables = set()  # populated right below
-        self.branches = self._build_trts_branches(trts)
+        self.bs_id_by_trt = {}
+        self.branches = self._build_trts_branches(trts)  # sorted by trt
+        self.values = dict(sorted(self.values.items()))  # sorted by trt
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute '
@@ -1445,34 +1447,29 @@ class GsimLogicTree(object):
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches]
         dic = {'branches': numpy.array(branches, dt)}
-
-        # manage gmpe_tables, if any
-        if hasattr(self, 'filename'):  # missing for fake logic trees
+        if hasattr(self, 'filename'):
+            # missing in EventBasedRiskTestCase case_1f
             dirname = os.path.dirname(self.filename)
-            for gmpe_table in sorted(self.gmpe_tables):
-                dic[os.path.basename(gmpe_table)] = d = {}
-                with hdf5.File(os.path.join(dirname, gmpe_table), 'r') as f:
-                    for group, dset in f.items():
-                        if hasattr(dset, 'shape'):  # dataset, not group
-                            d[group] = dset[()]
-                            if group == 'Distances':
-                                d['distance_type'] = (
-                                    python3compat.decode(dset.attrs['metric']))
-                        else:
-                            d[group] = {k: ds[()] for k, ds in dset.items()}
+            for gsims in self.values.values():
+                for gsim in gsims:
+                    for k, v in gsim.kwargs.items():
+                        if k.endswith(('_file', '_table')):
+                            fname = os.path.join(dirname, v)
+                            with open(fname, 'rb') as f:
+                                dic[os.path.basename(v)] = f.read()
         return dic, {}
 
     def __fromh5__(self, dic, attrs):
         self.branches = []
         self.values = collections.defaultdict(list)
         for branch in dic.pop('branches'):
-            if 'id' in branch.dtype.names:  # engine < 3.6
-                br_id = branch['id']
-                gsim_ = branch['gsim']
-            else:
-                br_id = branch['branch']
-                gsim_ = branch['uncertainty']
-            gsim = valid.gsim(gsim_)
+            br_id = branch['branch']
+            gsim = valid.gsim(branch['uncertainty'])
+            for k, v in gsim.kwargs.items():
+                if k.endswith(('_file', '_table')):
+                    arr = numpy.asarray(dic[os.path.basename(v)][()])
+                    gsim.kwargs[k] = io.BytesIO(bytes(arr))
+            gsim.__init__(**gsim.kwargs)
             self.values[branch['trt']].append(gsim)
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
@@ -1497,6 +1494,37 @@ class GsimLogicTree(object):
                 branch = BranchTuple(br.trt, br.id, br.gsim, br.weight,
                                      br.trt in trts)
                 new.branches.append(branch)
+        return new
+
+    def collapse(self, branchset_ids):
+        """
+        Collapse the GsimLogicTree by using AgvGMPE instances if needed
+
+        :param branchset_ids: branchset ids to collapse
+        :returns: a collapse GsimLogicTree instance
+        """
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self))
+        new.branches = []
+        for trt, grp in itertools.groupby(self.branches, lambda b: b.trt):
+            bs_id = self.bs_id_by_trt[trt]
+            brs = []
+            gsims = []
+            weights = []
+            for br in grp:
+                brs.append(br.id)
+                gsims.append(br.gsim)
+                weights.append(br.weight)
+            if len(gsims) > 1 and bs_id in branchset_ids:
+                gsim = object.__new__(AvgGMPE)
+                gsim.kwargs = {brid: {gsim.__class__.__name__: gsim.kwargs}
+                               for brid, gsim in zip(brs, gsims)}
+                gsim.gsims = gsims
+                gsim.weights = numpy.array([w['weight'] for w in weights])
+                branch = BranchTuple(trt, bs_id, gsim, sum(weights), True)
+                new.branches.append(branch)
+            else:
+                new.branches.append(br)
         return new
 
     def get_num_branches(self):
@@ -1530,6 +1558,7 @@ class GsimLogicTree(object):
         trts = []
         branches = []
         branchsetids = set()
+        basedir = os.path.dirname(self.filename)
         for branching_level in self._ltnode:
             for branchset in _bsnodes(self.filename, branching_level):
                 if branchset['uncertaintyType'] != 'gmpeModel':
@@ -1543,9 +1572,11 @@ class GsimLogicTree(object):
                         (self.filename, bsid))
                 else:
                     branchsetids.add(bsid)
-                trt = branchset.attrib.get('applyToTectonicRegionType')
-                if trt:
+                trt = branchset.get('applyToTectonicRegionType')
+                if trt:  # missing in logictree_test.py
+                    self.bs_id_by_trt[trt] = bsid
                     trts.append(trt)
+                self.bs_id_by_trt[trt] = bsid
                 # NB: '*' is used in scenario calculations to disable filtering
                 effective = (tectonic_region_types == ['*'] or
                              trt in tectonic_region_types)
@@ -1557,18 +1588,11 @@ class GsimLogicTree(object):
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
                     uncertainty = to_toml(branch.uncertaintyModel)
-                    if isinstance(self.filename, str):
-                        # a bit hackish: set the GMPE_DIR equal to the
-                        # directory where the gsim_logic_tree file is
-                        GMPETable.GMPE_DIR = os.path.dirname(self.filename)
                     try:
-                        gsim = valid.gsim(uncertainty)
+                        gsim = valid.gsim(uncertainty, basedir)
                     except Exception as exc:
                         raise ValueError(
                             "%s in file %s" % (exc, self.filename)) from exc
-                    if (isinstance(gsim, GMPETable) and
-                            'gmpe_table' in gsim.kwargs):
-                        self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
                                                (self.filename, gsim))
