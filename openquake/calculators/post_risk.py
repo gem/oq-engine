@@ -98,34 +98,37 @@ def post_ebrisk(dstore, rlzi, monitor):
     :param monitor: Monitor instance
     :returns: a dictionary with keys rlzi, agg_curves, agg_losses, tot_curves
     """
-    with dstore:
-        oq = dstore['oqparam']
-        assetcol = dstore['assetcol']
-        data = dstore['asset_loss_table/data']
-        try:
-            ss = dstore['asset_loss_table/indices/rlz-%03d' % rlzi][()]
-        except KeyError:   # no data for this realization
-            return {}
-        alt = numpy.concatenate([data[start:stop] for start, stop in ss])
-        builder = get_loss_builder(dstore)
+    dstore.open('r')
+    oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
+    data = dstore['asset_loss_table/data']
+    try:
+        ss = dstore['asset_loss_table/indices/rlz-%03d' % rlzi][()]
+    except KeyError:   # no data for this realization
+        return {}
+    alt = numpy.concatenate([data[start:stop] for start, stop in ss])
+    builder = get_loss_builder(dstore)
     aggby = oq.aggregate_by
     L = len(oq.loss_names)
     P = len(builder.return_periods)
     acc = general.AccumDict(accum=general.AccumDict(accum=numpy.zeros(L)))
     tot = general.AccumDict(accum=numpy.zeros(L))  # eid -> totloss
-    if oq.aggregate_by:
-        shp = assetcol.tagcol.agg_shape((P, L), aggby)
-        agg_losses = numpy.zeros(shp[1:], F32)  # shape (L, T...)
-        for rec in general.add_columns(alt, assetcol.array[aggby], 'asset_id'):
-            key = tuple(rec[n] - 1 for n in aggby)
-            acc[key][rec['event_id']] += rec['loss']
-            tup = (slice(None),) + key  # (L, T...)
-            agg_losses[tup] += rec['loss']
-    else:
-        shp = (P, L)
-        agg_losses = alt['loss'].sum(axis=0)
-    for rec in alt:
-        tot[rec['event_id']] += rec['loss']
+    shp = assetcol.tagcol.agg_shape((P, L), aggby)
+    agg_losses = numpy.zeros(shp[1:], F32)  # shape (L, T...)
+    tagidxs = assetcol.array[aggby]
+    for start, stop in ss:
+        alt = data[start:stop]
+        if len(alt) == 0:
+            continue
+        if oq.aggregate_by:
+            for rec in general.add_columns(alt, tagidxs, 'asset_id'):
+                key = tuple(rec[n] - 1 for n in aggby)
+                acc[key][rec['event_id']] += rec['loss']
+                agg_losses[(slice(None),) + key] += rec['loss']
+        else:
+            agg_losses += alt['loss'].sum(axis=0)
+        for rec in alt:
+            tot[rec['event_id']] += rec['loss']
 
     res = {'agg_curves': numpy.zeros(shp, F32),  # shape (P, L, T...)
            'agg_losses': agg_losses * oq.ses_ratio,
