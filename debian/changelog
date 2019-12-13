@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Implements Abrahamson et al (2018) update of the BC Hydro GMPE
+
   [Michele Simionato]
   * Changed the generation of aggregate loss curves in ebrisk
   * Introduced an experimental AvgGMPE and used it to implement (optional)
@@ -136,6 +139,7 @@
   * Added a check on valid input keys in the job.ini
   * Fixed the check on dependent calculations
   * Specifying at the same time both a grid and individual sites is an error
+>>>>>>> master
 
   [Daniele Viganò]
   * Docker containers rebased on CentOS 8
