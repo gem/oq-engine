@@ -74,7 +74,7 @@ class Campbell1997(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        R = (dists.rrup)
+        R = dists.rrup
         M = rup.mag
         # get constants
         Ssr = self.get_Ssr_term(sites.vs30)
@@ -83,11 +83,11 @@ class Campbell1997(GMPE):
         F = self.get_fault_term(rake)
 
         # compute mean
-        mean = -3.512 + (0.904 * M) - (1.328 * np.log(np.sqrt(R**2
-               + (0.149 * np.exp(0.647 * M))**2))) \
-               + (1.125 - 0.112 * np.log(R) - 0.0957 * M) * F \
-               + (0.440 - 0.171 * np.log(R)) * Ssr \
-               + (0.405 - 0.222 * np.log(R)) * Shr
+        mean = -3.512 + (0.904 * M) - (
+            1.328 * np.log(np.sqrt(R**2 + (0.149 * np.exp(0.647 * M))**2))) \
+            + (1.125 - 0.112 * np.log(R) - 0.0957 * M) * F \
+            + (0.440 - 0.171 * np.log(R)) * Ssr \
+            + (0.405 - 0.222 * np.log(R)) * Shr
         stddevs = self.get_stddevs(mean, stddev_types)
         return mean, stddevs
 

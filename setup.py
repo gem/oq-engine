@@ -59,6 +59,7 @@ install_requires = [
     'h5py >=2.9, <2.10',
     'numpy >=1.16, <1.17',
     'scipy >=1.3, <1.4',
+    'pandas >=0.25, <0.26',
     'pyzmq <18.2',
     'psutil >=2.0, <5.7',
     'shapely >=1.3, <1.7',
@@ -73,11 +74,12 @@ install_requires = [
 ]
 
 extras_require = {
-    'setproctitle': ["setproctitle"],
-    'prctl': ["python-prctl ==1.6.1"],
     'celery':  ["celery >=4.0, <4.4"],
-    'dask':  ["dask", "distributed"],
-    'pam': ["python-pam", "django-pam"],
+    'cluster': ["python-pam",
+                "django-pam",
+                "gunicorn",
+                "python-prctl ==1.6.1",
+                "setproctitle"],
     'plotting':  [
         'basemap >=1.0',
         'pyproj >=1.9',

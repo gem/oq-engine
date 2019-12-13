@@ -19,11 +19,12 @@
 import os
 import numpy
 
+from openquake.baselib.general import fast_agg3
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9)
+    case_6, case_7, case_8, case_9, case_10)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -35,7 +36,8 @@ aae = numpy.testing.assert_almost_equal
 class ScenarioDamageTestCase(CalculatorTestCase):
     def assert_ok(self, pkg, job_ini, exports='csv', kind='dmg'):
         test_dir = os.path.dirname(pkg.__file__)
-        out = self.run_calc(test_dir, job_ini, exports=exports)
+        out = self.run_calc(test_dir, job_ini, exports=exports,
+                            collapse_threshold='0')
         got = out[kind + '_by_asset', exports]
         expected_dir = os.path.join(test_dir, 'expected')
         expected = sorted(f for f in os.listdir(expected_dir)
@@ -43,6 +45,16 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqual(len(got), len(expected))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual)
+        self.check_dmg_by_event()
+
+    def check_dmg_by_event(self):
+        number = self.calc.datastore['assetcol/array']['number']
+        data = self.calc.datastore['dd_data/data'][()]
+        if len(data):
+            data_by_eid = fast_agg3(data, 'eid', ['dd'], number[data['aid']])
+            dmg_by_event = self.calc.datastore['dmg_by_event'][()]
+            for rec1, rec2 in zip(data_by_eid, dmg_by_event):
+                aae(rec1['dd'], rec2['dmg'][:, 1:], decimal=1)
 
     def test_case_1(self):
         # test with a single event and a missing tag
@@ -149,6 +161,19 @@ RM       4,000
     def test_case_9(self):
         # case with noDamageLimit==0 that had NaNs in the past
         self.run_calc(case_9.__file__, 'job.ini')
+
+        fnames = export(('dmg_by_asset', 'csv'), self.calc.datastore)
+        for i, fname in enumerate(fnames):
+            self.assertEqualFiles('expected/dmg_by_asset-%d.csv' % i, fname)
+
+        fnames = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        for i, fname in enumerate(fnames):
+            self.assertEqualFiles('expected/losses_asset-%d.csv' % i, fname)
+
+    def test_case_10(self):
+        # case with more IMTs in the imported GMFs than required
+        self.run_calc(case_10.__file__, 'job.ini')
+
         fnames = export(('dmg_by_asset', 'csv'), self.calc.datastore)
         for i, fname in enumerate(fnames):
             self.assertEqualFiles('expected/dmg_by_asset-%d.csv' % i, fname)

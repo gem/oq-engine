@@ -1,4 +1,4 @@
-id,taxonomy,lon,lat,no_damage,slight,moderate,extreme,complete
+asset_id,taxonomy,lon,lat,no_damage,slight,moderate,extreme,complete
 "a3","Concrete",-122.57000,38.11300,9.19067E-01,4.70839E-02,2.69514E-02,5.71644E-03,1.18133E-03
 "a2","Wood",-122.11400,38.11300,1.62517E-01,9.68418E-02,1.88462E-01,1.84015E-01,3.68164E-01
 "a5","Steel",-122.00000,37.91000,6.41424E-01,2.26741E-01,8.84089E-02,3.41101E-02,9.31607E-03

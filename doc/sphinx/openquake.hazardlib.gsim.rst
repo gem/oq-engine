@@ -763,6 +763,14 @@ rietbrock_2013
     :undoc-members:
     :show-inheritance:
 
+rietbrock_edwards_2019
+----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.rietbrock_edwards_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 sadigh_1997
 -------------------------------------------
 
@@ -911,6 +919,14 @@ vanhoutte_2018
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.vanhoutte_2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+yenier_atkinson_2015
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.yenier_atkinson_2015
     :members:
     :undoc-members:
     :show-inheritance:

@@ -79,8 +79,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_1.__file__, 'job.ini', minimum_magnitude='4.5')
-        self.assertEqual(
-            str(ctx.exception), 'Empty logic tree: too much filtering?')
+        self.assertEqual(str(ctx.exception), 'All sources were discarded!?')
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -131,6 +130,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_6.__file__)
 
     def test_case_7(self):
+        # this is a case with duplicated sources
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
@@ -225,7 +225,7 @@ class ClassicalTestCase(CalculatorTestCase):
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.02237   447          447         
+0      0.33557   447          447         
 ====== ========= ============ ============""")
 
     def test_case_15(self):
@@ -345,12 +345,12 @@ hazard_uhs-std.csv
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     def test_case_19(self):
-        # this test is a lot faster without parallelism (from 89s to 25s)
+        # test for AvgGMPE
         self.assert_curves_ok([
             'hazard_curve-mean_PGA.csv',
             'hazard_curve-mean_SA(0.1).csv',
             'hazard_curve-mean_SA(0.15).csv',
-        ], case_19.__file__, delta=1E-5, concurrent_tasks='0')
+        ], case_19.__file__, delta=1E-5)
 
     def test_case_20(self):  # Source geometry enumeration
         self.assert_curves_ok([
@@ -465,15 +465,14 @@ hazard_uhs-std.csv
                  ('lat_', 3202), ('lon_', 3202), ('mag', 3202),
                  ('occurrence_rate', 3202), ('probs_occur', 3202),
                  ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
-                 ('rx_', 3202), ('sid_', 3202), ('srcidx', 3202),
+                 ('rx_', 3202), ('sid_', 3202),
                  ('weight', 3202), ('ztor', 3202)])
 
     def test_case_30_sampling(self):
-        # IMT-dependent weights with sampling are not implemented
-        with self.assertRaises(NotImplementedError):
-            self.assert_curves_ok(
-                ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-                case_30.__file__, number_of_logic_tree_samples='10')
+        # IMT-dependent weights with sampling by cheating
+        self.assert_curves_ok(
+            ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
+            case_30.__file__, number_of_logic_tree_samples='10')
 
     def test_case_31(self):
         # source specific logic tree
@@ -541,8 +540,7 @@ hazard_uhs-std.csv
                                "hazard_map-mean-PGA.csv"], case_42.__file__)
 
     def test_case_43(self):
-        # this is a test for
-        # collapse_factor = 3 * rupture radius > maximum_distance
+        # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
 
