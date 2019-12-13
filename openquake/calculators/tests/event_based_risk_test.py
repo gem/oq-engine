@@ -101,7 +101,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                       asset_loss_table='1')
 
         # check on the asset_loss_table, num_losses per asset
-        aids = self.calc.datastore['asset_loss_table']['asset_id']
+        aids = self.calc.datastore['asset_loss_table/data']['asset_id']
         numpy.testing.assert_equal(numpy.bincount(aids), [18,  8, 14, 14])
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
@@ -311,7 +311,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                       aggregate_by='id', asset_loss_table='1')
 
         # check on the asset_loss_table, num_losses per asset
-        aids = self.calc.datastore['asset_loss_table']['asset_id']
+        aids = self.calc.datastore['asset_loss_table/data']['asset_id']
         numpy.testing.assert_equal(numpy.bincount(aids),
                                    [6, 32, 22, 32, 32, 32, 31])
 
