@@ -568,6 +568,25 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
+# internal: used only for plotting the total vs approx mean loss curves
+@extract.add('app_tot_curves')
+def extract_app_tot_curves(dstore, what):
+    """
+    Extract portfolio loss curves from an ebrisk calculation
+
+    /extract/tot_app_curves
+    """
+    try:
+        tot = dstore['tot_curves-stats'][:, 0, 0]  # P, S, L
+        rps = dstore.get_attr('tot_curves-stats', 'return_periods')
+    except KeyError:
+        tot = dstore['agg_curves-stats'][:, 0, 0]  # P, S, L
+        rps = dstore.get_attr('agg_curves-stats', 'return_periods')
+    app = dstore['app_curves-stats'][:, 0, 0]  # P, S, L
+    return ArrayWrapper(numpy.array([tot, app]),
+                        dict(labels=['total', 'approx'], return_periods=rps))
+
+
 @extract.add('agg_curves')
 def extract_agg_curves(dstore, what):
     """
