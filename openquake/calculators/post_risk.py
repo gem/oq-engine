@@ -77,7 +77,6 @@ def post_risk(dstore, rlzi, monitor):
     """
     with dstore:
         oq = dstore['oqparam']
-        assert not oq.aggregate_by, oq.aggregate_by
         idxs = dstore['losses_by_event']['rlzi'] == rlzi
         alt = dstore['losses_by_event'][idxs]
         builder = get_loss_builder(dstore)
@@ -85,9 +84,12 @@ def post_risk(dstore, rlzi, monitor):
     tot = general.AccumDict(accum=numpy.zeros(L))  # eid -> totloss
     for rec in alt:
         tot[rec['event_id']] += rec['loss']
-    res = {'agg_losses': alt['loss'].sum(axis=0) * oq.ses_ratio,
-           'tot_curves': builder.build_curves(list(tot.values()), rlzi),
-           'rlzi': rlzi}
+    tot_curves = builder.build_curves(list(tot.values()), rlzi)
+    if len(tot_curves) == 0:  # like in test_case_2_sampling
+        P = len(builder.return_periods)
+        tot_curves = numpy.zeros((P, L), F32)
+    res = {'tot_losses': alt['loss'].sum(axis=0) * oq.ses_ratio,
+           'tot_curves': tot_curves, 'rlzi': rlzi}
     return res
 
 
@@ -106,13 +108,11 @@ def post_ebrisk(dstore, rlzi, monitor):
         ss = dstore['asset_loss_table/indices/rlz-%03d' % rlzi][()]
     except KeyError:   # no data for this realization
         return {}
-    alt = numpy.concatenate([data[start:stop] for start, stop in ss])
     builder = get_loss_builder(dstore)
     aggby = oq.aggregate_by
     L = len(oq.loss_names)
     P = len(builder.return_periods)
     acc = general.AccumDict(accum=general.AccumDict(accum=numpy.zeros(L)))
-    tot = general.AccumDict(accum=numpy.zeros(L))  # eid -> totloss
     shp = assetcol.tagcol.agg_shape((P, L), aggby)
     agg_losses = numpy.zeros(shp[1:], F32)  # shape (L, T...)
     tagidxs = assetcol.array[aggby]
@@ -125,18 +125,13 @@ def post_ebrisk(dstore, rlzi, monitor):
                 key = tuple(rec[n] - 1 for n in aggby)
                 acc[key][rec['event_id']] += rec['loss']
                 agg_losses[(slice(None),) + key] += rec['loss']
-        else:
-            agg_losses += alt['loss'].sum(axis=0)
-        for rec in alt:
-            tot[rec['event_id']] += rec['loss']
-
-    res = {'agg_curves': numpy.zeros(shp, F32),  # shape (P, L, T...)
-           'agg_losses': agg_losses * oq.ses_ratio,
-           'tot_curves': builder.build_curves(list(tot.values()), rlzi),
-           'rlzi': rlzi}
+    res = {'agg_curves': numpy.zeros(shp, F32)}  # shape (P, L, T...)
     for key, dic in acc.items():
         tup = (slice(None), slice(None)) + key
         res['agg_curves'][tup] = builder.build_curves(list(dic.values()), rlzi)
+    res.update(post_risk(dstore, rlzi, monitor))
+    if oq.aggregate_by:
+        res['agg_losses'] = agg_losses * oq.ses_ratio
     return res
 
 
@@ -179,23 +174,19 @@ class PostRiskCalculator(base.RiskCalculator):
         smap = parallel.Starmap(
             pr, [(self.datastore, rlzi) for rlzi in range(self.R)],
             h5=self.datastore.hdf5)
+        ds = self.datastore
         for dic in smap:
             if not dic:
                 continue
             r = dic['rlzi']
-            tot_curves = dic['tot_curves']  # shape P, L
-            agg_losses = dic['agg_losses']  # shape L, T...
             if oq.aggregate_by:
-                num_tags = len(oq.aggregate_by)
-                agg_curves = dic['agg_curves']  # shape P, L, T...
-                tot_losses = agg_losses.sum(axis=tuple(range(1, num_tags + 1)))
-                self.datastore['tot_losses-rlzs'][:, r] = tot_losses  # (L, R)
-                self.datastore['agg_curves-rlzs'][:, r] = agg_curves
-                self.datastore['agg_losses-rlzs'][:, r] = agg_losses
+                ds['tot_curves-rlzs'][:, r] = dic['tot_curves']  # PL
+                ds['tot_losses-rlzs'][:, r] = dic['tot_losses']  # L
+                ds['agg_curves-rlzs'][:, r] = dic['agg_curves']  # PLT..
+                ds['agg_losses-rlzs'][:, r] = dic['agg_losses']  # LT...
             else:
-                if len(tot_curves):  # is zero in test_case_2_sampling
-                    self.datastore['agg_curves-rlzs'][:, r] = tot_curves
-                self.datastore['agg_losses-rlzs'][:, r] = agg_losses
+                ds['agg_curves-rlzs'][:, r] = dic['tot_curves']  # PL
+                ds['agg_losses-rlzs'][:, r] = dic['tot_losses']  # L
         if self.R > 1:
             logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
