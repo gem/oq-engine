@@ -586,10 +586,7 @@ def boolean(value):
         raise ValueError('Not a boolean: %s' % value)
 
 
-range01 = FloatRange(0, 1)
-
-
-def probability(value):
+def range01(value):
     """
     :param value: a string convertible to a float in the range 0..1
     """
@@ -599,6 +596,9 @@ def probability(value):
     elif val == 'false':
         return 0.
     return FloatRange(0, 1)(val)
+
+
+probability = FloatRange(0, 1)
 
 
 def probabilities(value, rows=0, cols=0):
