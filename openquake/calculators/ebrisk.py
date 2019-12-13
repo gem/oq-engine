@@ -102,9 +102,11 @@ def calc_risk(hazard, assetcol, param, monitor):
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
-    acc['alt'] = numpy.fromiter(  # already sorted by aid
+    acc['alt'] = alt = numpy.fromiter(  # already sorted by aid
         ((aid, eid, eid2rlz[eid], loss) for (aid, eid), loss in alt.items()),
         param['ael_dt'])
+    alt.sort(order='rlzi')
+    acc['indices'] = general.get_indices(alt['rlzi'])
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -168,8 +170,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                                       for ln in oq.loss_names]
         self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
         self.A = A = len(self.assetcol)
-        self.datastore.create_dset('asset_loss_table', ael_dt(oq.loss_names))
-        self.datastore.create_dset('alt_rlzs', U16)
+        self.datastore.create_dset(
+            'asset_loss_table/data', ael_dt(oq.loss_names))
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
@@ -203,9 +205,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.events_per_sid = []
         self.lossbytes = 0
         self.datastore.swmr_on()
+        self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
+        self.offset = 0
         smap = parallel.Starmap(
             self.core_task.__func__, allargs, h5=self.datastore.hdf5)
         smap.reduce(self.agg_dicts)
+        self.datastore['asset_loss_table/indices'] = self.indices
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
@@ -225,9 +230,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
         with self.monitor('saving losses_by_event and asset_loss_table'):
             hdf5.extend(self.datastore['losses_by_event'], elt)
-            hdf5.extend(self.datastore['asset_loss_table'],
+            hdf5.extend(self.datastore['asset_loss_table/data'],
                         dic['alt'][['asset_id', 'event_id', 'loss']])
-            hdf5.extend(self.datastore['alt_rlzs'], dic['alt']['rlzi'])
+            for rlzi, [(start, stop)] in dic['indices'].items():
+                self.indices['rlz-%03d' % rlzi].append((
+                    start + self.offset, stop + self.offset))
+            self.offset += len(dic['alt'])
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']

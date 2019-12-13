@@ -79,8 +79,12 @@ def post_risk(dstore, rlzi, monitor):
         oq = dstore['oqparam']
         assetcol = dstore['assetcol']
         if 'asset_loss_table' in dstore:
-            idxs = dstore['alt_rlzs'][()] == rlzi
-            alt = dstore['asset_loss_table'][idxs]
+            data = dstore['asset_loss_table/data']
+            try:
+                ss = dstore['asset_loss_table/indices/rlz-%03d' % rlzi][()]
+            except KeyError:   # no data for this realization
+                return {}
+            alt = numpy.concatenate([data[start:stop] for start, stop in ss])
         else:
             assert not oq.aggregate_by, oq.aggregate_by
             idxs = dstore['losses_by_event']['rlzi'] == rlzi
@@ -152,6 +156,8 @@ class PostRiskCalculator(base.RiskCalculator):
             post_risk, [(self.datastore, rlzi) for rlzi in range(self.R)],
             h5=self.datastore.hdf5)
         for dic in smap:
+            if not dic:
+                continue
             r = dic['rlzi']
             tot_curves = dic['tot_curves']  # shape P, L
             agg_curves = dic['agg_curves']  # shape P, L, T...
