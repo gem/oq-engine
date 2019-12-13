@@ -1,3 +1,2 @@
-ordinal,branch_path,weight
-0,"[LinLee2008SSlab]\nminimum_distance = 10",6.0000002e-01
-1,"[YoungsEtAl1997SSlab]\nminimum_distance = 5",4.0000001e-01
+rlz_id,branch_path,weight
+0,"[FromShakeMap]",1.0000000e+00

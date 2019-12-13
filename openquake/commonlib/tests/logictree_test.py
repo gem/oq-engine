@@ -33,7 +33,6 @@ from copy import deepcopy
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.gsim import registry
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_ltmodels
 from openquake.hazardlib.tom import PoissonTOM
@@ -2114,7 +2113,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, ValueError, "Unknown GSIM: SAdighEtAl1997 in file")
+            xml, ValueError, "Unknown GSIM: SAdighEtAl1997")
 
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\
@@ -2207,43 +2206,6 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 413, ('b2',): 587})
-
-    def test_gsim_with_kwargs(self):
-        class FakeGMPETable(object):
-            REQUIRES_SITES_PARAMETERS = ()
-
-            def __init__(self, gmpe_table):
-                self.kwargs = {'gmpe_table': gmpe_table}
-
-            def init(self):
-                pass
-
-            def __str__(self):
-                return 'FakeGMPETable(%s)' % self.kwargs
-
-        registry['FakeGMPETable'] = FakeGMPETable
-        try:
-            xml = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-                <logicTreeBranchingLevel branchingLevelID="bl1">
-                    <logicTreeBranchSet uncertaintyType="gmpeModel"
-                                branchSetID="bs1"
-                                applyToTectonicRegionType="Shield">
-                        <logicTreeBranch branchID="b1">
-                            <uncertaintyModel gmpe_table="Wcrust_rjb_med.hdf5">
-                                FakeGMPETable
-                            </uncertaintyModel>
-                            <uncertaintyWeight>1.0</uncertaintyWeight>
-                        </logicTreeBranch>
-                    </logicTreeBranchSet>
-                </logicTreeBranchingLevel>
-            </logicTree>
-            """)
-            gsim_lt = self.parse_valid(xml, ['Shield'])
-            self.assertEqual(repr(gsim_lt), '''<GsimLogicTree
-Shield,b1,FakeGMPETable({'gmpe_table': 'Wcrust_rjb_med.hdf5'}),w=1.0>''')
-        finally:
-            del registry['FakeGMPETable']
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):

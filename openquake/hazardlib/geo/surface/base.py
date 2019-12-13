@@ -332,16 +332,16 @@ class BaseSurface:
     def get_surface_boundaries(self):
         """
         Returns the boundaries in the same format as a multiplanar
-        surface, with two one-element lists of lons and lats
+        surface, with two lists of lons and lats
         """
-        return [self._boundaries('lons')], [self._boundaries('lats')]
+        return self._boundaries('lons'), self._boundaries('lats')
 
     def get_surface_boundaries_3d(self):
         """
-        Returns the boundaries as three one-element lists of lons, lats, depths
+        Returns the boundaries as three lists of lons, lats, depths
         """
-        return ([self._boundaries('lons')], [self._boundaries('lats')],
-                [self._boundaries('depths')])
+        return (self._boundaries('lons'), self._boundaries('lats'),
+                self._boundaries('depths'))
 
     def get_resampled_top_edge(self, angle_var=0.1):
         """

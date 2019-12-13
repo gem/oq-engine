@@ -1,4 +1,4 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.8.0-gitdd2585023d', start_date='2019-10-12T07:04:54', checksum=3332310124, investigation_time=10.0, risk_investigation_time=50.0"
-cresta,id,occupancy,state,taxonomy,lon,lat,structural
-"0.11","a2","Res","01","tax1",-122.00000,38.10300,2.49416E+02
-"0.11","a1","Res","01","tax1",-122.00000,38.11300,1.76549E+03
+#,,,,,,,"generated_by='OpenQuake engine 3.8.0-git583a7f52a7', start_date='2019-12-08T12:29:37', checksum=3332310124, investigation_time=10.0, risk_investigation_time=50.0"
+cresta,asset_id,occupancy,state,taxonomy,lon,lat,structural
+"0.11","a2","Res","01","tax1",-122.00000,38.10300,2.45286E+02
+"0.11","a1","Res","01","tax1",-122.00000,38.11300,1.72990E+03

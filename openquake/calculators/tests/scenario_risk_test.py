@@ -34,8 +34,7 @@ aac = numpy.testing.assert_allclose
 
 
 def tot_loss(dstore):
-    dset = dstore['asset_loss_table']
-    return {name: dset[name].sum() for name in dset.dtype.names}
+    return dstore['loss_data/data']['loss'].sum(axis=0)
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -52,11 +51,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         [fname] = out['losses_by_event', 'csv']
         self.assertEqualFiles('expected/losses_by_event.csv', fname)
-
-        with self.assertRaises(ValueError):
-            # aggregate_by is implemented only for the ebrisk calculator
-            self.run_calc(case_1.__file__, 'job_risk.ini',
-                          aggregate_by='taxonomy')
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
@@ -182,8 +176,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         tot10 = tot_loss(self.calc.datastore)
         self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='20')
         tot20 = tot_loss(self.calc.datastore)
-        for name in tot10:
-            aac(tot10[name], tot20[name])
+        aac(tot10, tot20)
 
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are

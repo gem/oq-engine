@@ -55,6 +55,7 @@ Giovanni Lanzano        March 2019
 Guillaume Daniel        April 2019
 Richard Styron          July 2019
 Kris Vanneste           September 2019
+Alberto Chiusole        November 2019
 
 Project management
 ------------------

@@ -16,18 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import copy
 import time
 import logging
 import operator
+from datetime import datetime
+import itertools
 import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
-from openquake.hazardlib.contexts import ContextMaker
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib import mfd
+from openquake.hazardlib.contexts import (
+    ContextMaker, Effect, get_effect_by_mag, ruptures_by_mag_dist)
+from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, logs
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -36,6 +41,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+MINWEIGHT = 1000
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -82,22 +88,53 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield classical(srcs, srcfilter, gsims, params, monitor)
         return
     # NB: splitting all the sources improves the distribution significantly,
-    # compared to splitting only the big source
-    sources = []
-    with monitor("filtering/splitting sources"):
-        for src, _sites in srcfilter(srcs):
-            splits, _stime = split_sources([src])
-            sources.extend(srcfilter.filter(splits))
-    if sources:
-        sources.sort(key=weight)
-        totsites = len(srcfilter.sitecol)
-        mw = 1000 if totsites <= params['max_sites_disagg'] else 50000
-        mweight = max(mw, sum(src.weight for src in sources) /
-                      params['task_multiplier'])
-        blocks = list(block_splitter(sources, mweight, weight))
-        for block in blocks[:-1]:
-            yield classical, block, srcfilter, gsims, params
-        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
+    # compared to splitting only the big sources
+    with monitor("splitting/filtering sources"):
+        splits, _stime = split_sources(srcs)
+        sources = list(srcfilter.filter(splits))
+    if not sources:
+        yield {'pmap': {}}
+        return
+    maxw = min(sum(src.weight for src in sources)/5, params['max_weight'])
+    if maxw < MINWEIGHT*5:  # task too small to be resubmitted
+        yield classical(sources, srcfilter, gsims, params, monitor)
+        return
+    blocks = list(block_splitter(sources, maxw, weight))
+    subtasks = len(blocks) - 1
+    for block in blocks[:-1]:
+        yield classical, block, srcfilter, gsims, params
+    if monitor.calc_id and subtasks:
+        msg = 'produced %d subtask(s) with max weight=%d' % (
+            subtasks, max(b.weight for b in blocks))
+        try:
+            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                       'classical_split_filter#%d' % monitor.task_no, msg)
+        except Exception:
+            # a foreign key error in case of `oq run` is expected
+            print(msg)
+    yield classical(blocks[-1], srcfilter, gsims, params, monitor)
+
+
+def split_by_mag(sources):
+    """
+    Split sources by magnitude
+    """
+    out = []
+    for src in sources:
+        if hasattr(src, 'get_annual_occurrence_rates'):
+            for mag, rate in src.get_annual_occurrence_rates():
+                new = copy.copy(src)
+                new.mfd = mfd.ArbitraryMFD([mag], [rate])
+                new.num_ruptures = new.count_ruptures()
+                out.append(new)
+        else:  # nonparametric source
+            # data is a list of pairs (rup, pmf)
+            for mag, group in itertools.groupby(
+                    src.data, lambda pair: pair[0].mag):
+                new = src.__class__(src.source_id, src.name,
+                                    src.tectonic_region_type, list(group))
+                out.append(new)
+    return out
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
@@ -106,7 +143,9 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
-    for src in srcs:
+    with monitor("splitting/filtering sources"):
+        splits, _stime = split_sources(srcs)
+    for src in splits:
         t0 = time.time()
         if srcfilter.get_close_sites(src) is None:
             continue
@@ -133,11 +172,11 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, rup_data
         """
+        if not dic['pmap']:
+            return acc
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
-            if extra.get('maxdist'):
-                self.maxdists.append(extra['maxdist'])
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
             srcids = []
@@ -148,7 +187,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 eff_rups += rec[0]
                 if rec[0]:
                     eff_sites += rec[1] / rec[0]
-            self.sources_by_task[extra['task_no']] = (
+            self.by_task[extra['task_no']] = (
                 eff_rups, eff_sites, U32(srcids))
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
@@ -156,8 +195,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures[grp_id] += eff_rups
 
             rup_data = dic['rup_data']
-            if len(rup_data['grp_id']):
-                nr = len(rup_data['srcidx'])
+            nr = len(rup_data['grp_id'])
+            if nr:
                 default = (numpy.ones(nr, F32) * numpy.nan,
                            [numpy.zeros(0, F32)] * nr)
                 for k in self.rparams:
@@ -180,7 +219,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
-        rparams = {'grp_id', 'srcidx', 'occurrence_rate',
+        rparams = {'grp_id', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_', 'rrup_'}
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         for sm in self.csm_info.source_models:
@@ -209,7 +248,7 @@ class ClassicalCalculator(base.HazardCalculator):
         dparams = [p[:-1] for p in self.rparams if p.endswith('_')]
         logging.info('Scalar parameters %s', rparams)
         logging.info('Vector parameters %s', dparams)
-        self.sources_by_task = {}  # task_no => src_ids
+        self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         return zd
 
@@ -226,34 +265,78 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
-        smap = parallel.Starmap(self.core_task.__func__)
+        mags = self.datastore['source_mags'][()]
+        if len(mags) == 0:  # everything was discarded
+            raise RuntimeError('All sources were discarded!?')
+        gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
+                     for trt in gsims_by_trt}
+        if oq.pointsource_distance:
+            logging.info('Computing effect of the ruptures')
+            mon = self.monitor('rupture effect')
+            effect = parallel.Starmap.apply(
+                get_effect_by_mag,
+                (mags, self.sitecol.one(), gsims_by_trt,
+                 oq.maximum_distance, oq.imtls, mon)).reduce()
+            self.datastore['effect'] = effect
+            self.datastore.set_attrs('effect', **dist_bins)
+            self.effect = {
+                trt: Effect({mag: effect[mag][:, t] for mag in effect},
+                            dist_bins[trt],
+                            getdefault(oq.pointsource_distance, trt))
+                for t, trt in enumerate(gsims_by_trt)}
+            for trt, eff in self.effect.items():
+                oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
+                oq.pointsource_distance[trt] = eff.dist_by_mag(
+                    eff.collapse_value)
+        else:
+            self.effect = {}
+        if oq.calculation_mode == 'preclassical' and self.N == 1:
+            smap = parallel.Starmap(ruptures_by_mag_dist)
+            for func, args in self.gen_task_queue():
+                smap.submit(args)
+            counts = smap.reduce()
+            ndists = oq.maximum_distance.get_dist_bins.__defaults__[0]
+            for mag, mag in enumerate(mags):
+                arr = numpy.zeros((ndists, len(gsims_by_trt)), U32)
+                for trti, trt in enumerate(gsims_by_trt):
+                    try:
+                        arr[:, trti] = counts[trt][mag]
+                    except KeyError:
+                        pass
+                self.datastore['rups_by_mag_dist/' + mag] = arr
+            self.datastore.set_attrs('rups_by_mag_dist', **dist_bins)
+            self.datastore['csm_info'] = self.csm_info
+            return {}
+        smap = parallel.Starmap(
+            self.core_task.__func__, h5=self.datastore.hdf5)
         smap.task_queue = list(self.gen_task_queue())  # really fast
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        self.maxdists = []
         try:
             acc = smap.get_results().reduce(self.agg_dicts, acc0)
             self.store_rlz_info(acc.eff_ruptures)
         finally:
-            if self.maxdists:
-                maxdist = numpy.mean(self.maxdists)
-                logging.info('Using effective maximum distance for '
-                             'point sources %d km', maxdist)
             with self.monitor('store source_info'):
                 self.store_source_info(self.calc_times)
-            if self.sources_by_task:
-                num_tasks = max(self.sources_by_task) + 1
-                sbt = numpy.zeros(
-                    num_tasks, [('eff_ruptures', U32),
-                                ('eff_sites', U32),
-                                ('srcids', hdf5.vuint32)])
-                for task_no in range(num_tasks):
-                    sbt[task_no] = self.sources_by_task.get(
-                        task_no, (0, 0, U32([])))
-                self.datastore['sources_by_task'] = sbt
-                self.sources_by_task.clear()
+            if self.by_task:
+                logging.info('Storing by_task information')
+                num_tasks = max(self.by_task) + 1,
+                er = self.datastore.create_dset('by_task/eff_ruptures',
+                                                U32, num_tasks)
+                es = self.datastore.create_dset('by_task/eff_sites',
+                                                U32, num_tasks)
+                si = self.datastore.create_dset('by_task/srcids',
+                                                hdf5.vuint32, num_tasks,
+                                                fillvalue=None)
+                for task_no, rec in self.by_task.items():
+                    effrups, effsites, srcids = rec
+                    er[task_no] = effrups
+                    es[task_no] = effsites
+                    si[task_no] = srcids
+                self.by_task.clear()
         numrups = sum(arr[0] for arr in self.calc_times.values())
         if self.totrups != numrups:
             logging.info('Considered %d/%d ruptures', numrups, self.totrups)
@@ -280,24 +363,30 @@ class ClassicalCalculator(base.HazardCalculator):
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            collapse_factor=oq.collapse_factor, max_radius=oq.max_radius,
+            maximum_distance=oq.maximum_distance,
             pointsource_distance=oq.pointsource_distance,
-            shift_hypo=oq.shift_hypo,
-            task_multiplier=oq.task_multiplier,
+            shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
-        if oq.calculation_mode == 'preclassical':
+        if oq.calculation_mode == 'preclassical' and self.N == 1:
+            f1 = f2 = ruptures_by_mag_dist
+        elif oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
+        elif oq.split_by_magnitude:
+            f1 = f2 = classical
         else:
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
         for trt, sources, atomic in trt_sources:
+            param['effect'] = self.effect.get(trt)
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
                 nb = 1
                 yield f1, (sources, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
+                if oq.split_by_magnitude:
+                    sources = split_by_mag(sources)
                 blocks = list(block_splitter(sources, totweight/C, srcweight))
                 nb = len(blocks)
                 for block in blocks:

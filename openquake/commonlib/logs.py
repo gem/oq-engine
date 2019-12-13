@@ -19,6 +19,7 @@
 Set up some system-wide loggers
 """
 import os.path
+import socket
 import logging
 from datetime import datetime
 from contextlib import contextmanager
@@ -42,9 +43,9 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
+    host = socket.gethostbyname(config.dbserver.host)
     sock = zeromq.Socket(
-        'tcp://%s:%s' % (config.dbserver.listen, DBSERVER_PORT),
-        zeromq.zmq.REQ, 'connect')
+        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
