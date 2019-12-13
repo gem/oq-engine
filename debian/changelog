@@ -1,12 +1,11 @@
-  [Graeme Weatherill]
-  * Adds configurable nonergodic sigma option to BC Hydro and SERA GMPEs
-  
   [Michele Simionato]
+  * Changed the generation of aggregate loss curves in ebrisk
   * Introduced an experimental AvgGMPE and used it to implement (optional)
     reduction of the gsim logic tree
 
   [Graeme Weatherill]
-  * Small refactor and bug fix in average SA GMPE
+  * Adds configurable nonergodic sigma option to BC Hydro and SERA GMPEs
+  * Small refactoring and bug fix in average SA GMPE
 
   [Michele Simionato]
   * Avoided reading multiple times the GSIM logic tree

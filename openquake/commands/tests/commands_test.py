@@ -445,10 +445,6 @@ class EngineRunJobTestCase(unittest.TestCase):
         with read(job_id) as dstore:
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
-            task_info = view('task_info', dstore)
-            self.assertIn('compute_gmfs', task_info)
-            job_info = view('job_info', dstore)
-            self.assertIn('compute_gmfs', job_info)
 
     def test_smart_run(self):
         # test smart_run with gmf_ebrisk, since it was breaking

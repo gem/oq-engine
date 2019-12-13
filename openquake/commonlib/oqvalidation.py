@@ -69,7 +69,7 @@ class OqParam(valid.ParamSet):
         siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
-    asset_loss_table = valid.Param(valid.boolean, False)
+    asset_loss_table = valid.Param(valid.range01, 0.05)
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -118,7 +118,6 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
-    highest_losses = valid.Param(valid.positiveint, 10)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
@@ -658,15 +657,6 @@ class OqParam(valid.ParamSet):
         """
         if self.calculation_mode == 'disaggregation':
             return self.truncation_level is not None
-        else:
-            return True
-
-    def is_valid_aggregate_by(self):
-        """
-        aggregate_by is implemented only for the ebrisk calculator
-        """
-        if self.aggregate_by:
-            return self.calculation_mode == 'ebrisk'
         else:
             return True
 
