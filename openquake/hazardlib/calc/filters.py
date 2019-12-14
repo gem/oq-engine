@@ -330,7 +330,7 @@ class SourceFilter(object):
         lon, lat, dep = rec['hypo']
         xyz = spherical_to_cartesian(lon, lat, dep)
         maxdist = self.integration_distance(trt)  # TODO: add mag here?
-        # upper limit for the the diagonal size of the rupture
+        # compute the diagonal size of the rupture
         dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
         dlat = rec['maxlat'] - rec['minlat']
         diag = math.sqrt(dlon * dlon + dlat * dlat) / KM_TO_DEGREES
