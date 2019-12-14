@@ -27,8 +27,8 @@ from scipy.spatial import cKDTree, distance
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, BBoxError,
-    spherical_to_cartesian)
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
+    BBoxError, spherical_to_cartesian)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
