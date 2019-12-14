@@ -154,22 +154,16 @@ class GmfComputer(object):
         gmv_dt = [('sid', U32), ('eid', U32), ('gmv', (F32, m))]
         return numpy.array(data, gmv_dt)
 
-    def compute(self, gsim, num_events, seed=None):
+    def compute(self, gsim, num_events):
         """
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
-        :param seed: a random seed or None
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        try:  # read the seed from self.rupture.rup_id
-            seed = seed or self.rupture.rup_id
-        except AttributeError:
-            pass
-        if seed is not None:
-            numpy.random.seed(seed)
+        numpy.random.seed(self.rupture.rup_id)
         result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
