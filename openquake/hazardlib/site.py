@@ -277,10 +277,10 @@ class SiteCollection(object):
 
     def one(self):
         """
-        :returns: a SiteCollection with a site of the highest vs30
+        :returns: a SiteCollection with a site of the minimal vs30
         """
         if 'vs30' in self.dtype.names:
-            idx = self.array['vs30'].argmax()
+            idx = self.array['vs30'].argmin()
         else:
             idx = 0
         return self.filtered([self.sids[idx]])

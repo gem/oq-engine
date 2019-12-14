@@ -69,7 +69,7 @@ class OqParam(valid.ParamSet):
         siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
-    asset_loss_table = valid.Param(valid.boolean, False)
+    asset_loss_table = valid.Param(valid.range01, 0.05)
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -78,6 +78,7 @@ class OqParam(valid.ParamSet):
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
+    collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_threshold = valid.Param(valid.probability, 0.5)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
@@ -117,15 +118,13 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
-    highest_losses = valid.Param(valid.positiveint, 10)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_gmfs_size = valid.Param(valid.positiveint, 1E6)
-    max_potential_gmfs = valid.Param(valid.positiveint, 1E11)
+    max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
@@ -658,15 +657,6 @@ class OqParam(valid.ParamSet):
         """
         if self.calculation_mode == 'disaggregation':
             return self.truncation_level is not None
-        else:
-            return True
-
-    def is_valid_aggregate_by(self):
-        """
-        aggregate_by is implemented only for the ebrisk calculator
-        """
-        if self.aggregate_by:
-            return self.calculation_mode == 'ebrisk'
         else:
             return True
 
