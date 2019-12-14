@@ -760,13 +760,11 @@ class EBRupture(object):
 
 
 class RuptureProxy(object):
+    weight = 1  # overridden in calculators.getters
+
     def __init__(self, rec, sids=None):
         self.rec = rec
         self.sids = sids
-        if sids is None:
-            self.weight = rec['n_occ']
-        else:
-            self.weight = rec['n_occ'] * numpy.ceil(len(sids) / 1000)
 
     def __getitem__(self, name):
         return self.rec[name]
