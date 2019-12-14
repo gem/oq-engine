@@ -31,6 +31,7 @@ from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
+U16 = numpy.uint16
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
 
@@ -327,15 +328,15 @@ class SourceFilter(object):
             return self.sitecol.sids
         if not hasattr(self, 'kdt'):
             self.kdt = cKDTree(self.sitecol.xyz)
-        lon, lat, dep = rec['hypo']
-        xyz = spherical_to_cartesian(lon, lat, dep)
-        maxdist = self.integration_distance(trt)  # TODO: add mag here?
+        xyz = spherical_to_cartesian(*rec['hypo'])
         # compute the diagonal size of the rupture
         dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
         dlat = rec['maxlat'] - rec['minlat']
         diag = math.sqrt(dlon * dlon + dlat * dlat) / KM_TO_DEGREES
-        sids = self.kdt.query_ball_point(xyz, maxdist + diag / 2, eps=.001)
-        return sorted(sids)
+        maxradius = self.integration_distance(trt) + diag / 2
+        sids = U16(self.kdt.query_ball_point(xyz, maxradius, eps=.001))
+        sids.sort()
+        return sids
 
     # used for debugging purposes
     def get_cdist(self, rec):
