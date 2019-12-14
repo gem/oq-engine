@@ -350,7 +350,7 @@ class GmfGetter(object):
         if hasattr(self, 'computers'):  # init already called
             return
         self.computers = []
-        for ebr in self.rupgetter.get_ruptures(self.srcfilter):
+        for ebr in self.rupgetter.get_ruptures():
             sitecol = self.sitecol.filtered(ebr.sids)
             try:
                 computer = calc.gmf.GmfComputer(
@@ -585,7 +585,7 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, srcfilter=calc.filters.nofilter, min_mag=0):
+    def get_ruptures(self, min_mag=0):
         """
         :returns: a list of EBRuptures filtered by bounding box
         """
