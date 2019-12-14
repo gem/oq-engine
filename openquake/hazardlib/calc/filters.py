@@ -335,7 +335,7 @@ class SourceFilter(object):
         dlat = rec['maxlat'] - rec['minlat']
         diag = math.sqrt(dlon * dlon + dlat * dlat) / KM_TO_DEGREES
         sids = self.kdt.query_ball_point(xyz, maxdist + diag / 2, eps=.001)
-        return sids
+        return sorted(sids)
 
     # used for debugging purposes
     def get_cdist(self, rec):
