@@ -324,11 +324,10 @@ def view_totlosses(token, dstore):
 def portfolio_loss(dstore):
     R = dstore['csm_info'].get_num_rlzs()
     array = dstore['losses_by_event'][()]
-    L = array.dtype['loss'].shape[0]  # loss has shape L, T...
+    L, = array.dtype['loss'].shape  # loss has shape L
     data = numpy.zeros((R, L), F32)
     for row in array:
-        for lti in range(L):
-            data[row['rlzi'], lti] += row['loss'][lti].sum()
+        data[row['rlzi']] += row['loss']
     return data
 
 
