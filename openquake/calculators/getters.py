@@ -448,7 +448,7 @@ def weight_rup(rup):
     if rup.sids is None:
         rup.weight = rup['n_occ']
     else:
-        rup.weight = rup['n_occ'] * len(rup.sids)
+        rup.weight = rup['n_occ'] * numpy.ceil(len(rup.sids) / 1000)
     return rup.weight
 
 
