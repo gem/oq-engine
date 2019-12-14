@@ -474,7 +474,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5,
             proxies = []
             for rec in arr:
                 sids = srcfilter.close_sids(rec, trt)
-                if sids:
+                if len(sids):
                     proxies.append(RuptureProxy(rec, sids))
         else:
             proxies = map(RuptureProxy, arr)
