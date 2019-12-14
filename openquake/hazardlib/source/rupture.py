@@ -760,9 +760,16 @@ class EBRupture(object):
 
 
 class RuptureProxy(object):
-    def __init__(self, rec, sids):
+    def __init__(self, rec, sids=None):
         self.rec = rec
         self.sids = sids
+        if sids is None:
+            self.weight = rec['n_occ']
+        else:
+            self.weight = rec['n_occ'] * numpy.ceil(len(sids) / 1000)
+
+    def __getitem__(self, name):
+        return self.rec[name]
 
     def to_ebr(self, geom, trt, samples):
         # not implemented: rupture_slip_direction
