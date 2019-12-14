@@ -24,7 +24,7 @@ from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
-    EBRupture, BaseRupture, events_dt, get_rupture)
+    EBRupture, BaseRupture, events_dt, RuptureProxy)
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
@@ -601,16 +601,11 @@ class RuptureGetter(object):
                         continue
                 else:
                     sids = None
+                proxy = RuptureProxy(rec, sids)
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                     rec['sx'], rec['sy'])
-                rupture = get_rupture(rec, geom, self.trt)
-                grp_id = rec['grp_id']
-                ebr = EBRupture(rupture, rec['srcidx'], grp_id,
-                                rec['n_occ'], self.samples)
-                # not implemented: rupture_slip_direction
-                ebr.sids = sids
+                ebr = proxy.to_ebr(geom, self.trt, self.samples)
                 ebr.e0 = 0 if self.e0 is None else e0
-                ebr.id = rec['id']  # rup_id  in the datastore
                 ebrs.append(ebr)
         return ebrs
 
