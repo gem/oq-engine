@@ -20,14 +20,12 @@ import itertools
 import operator
 import unittest.mock as mock
 import numpy
-from scipy.spatial import cKDTree
 from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
     EBRupture, BaseRupture, events_dt, get_rupture)
-from openquake.hazardlib.geo.utils import spherical_to_cartesian
-from openquake.hazardlib.calc.filters import SourceFilter, getdefault
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -447,7 +445,7 @@ def group_by_rlz(data, rlzs):
 
 
 def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5,
-                        filename=None, use_kdt=True):
+                        filename=None, weight_rup=True):
     """
     :yields: RuptureGetters
     """
@@ -464,20 +462,19 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5,
     rup_array = dstore['ruptures'][slc]
     nr, ne = 0, 0
     maxdist = dstore['oqparam'].maximum_distance
-    if 'sitecol' in dstore and use_kdt:
+    if 'sitecol' in dstore and weight_rup:
         srcfilter = SourceFilter(dstore['sitecol'], maxdist)
-        kdt = cKDTree(srcfilter.sitecol.xyz)
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
             # in event_based_risk/case_3
             continue
+        trt = trt_by_grp[grp_id]
 
-        if 'sitecol' in dstore and use_kdt:
-            def weight(rec, md=getdefault(maxdist, trt_by_grp[grp_id])):
-                xyz = spherical_to_cartesian(*rec['hypo'])
-                nsites = len(kdt.query_ball_point(xyz, md, eps=.001))
-                return rec['n_occ'] * numpy.ceil((nsites + 1) / 1000)
+        if 'sitecol' in dstore and weight_rup:
+            def weight(rec):
+                nsites = len(srcfilter.close_sids(rec, trt))
+                return rec['n_occ'] * numpy.ceil(nsites / 1000)
         else:
             def weight(rec):
                 return rec['n_occ']
