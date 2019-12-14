@@ -1164,9 +1164,8 @@ def extract_rupture_info(dstore, what):
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     for rgetter in getters.gen_rupture_getters(dstore):
-        rups = rgetter.get_ruptures(sf, min_mag)
+        rups = rgetter.get_ruptures(min_mag)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
