@@ -444,8 +444,16 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5,
-                        filename=None, weight_rup=True):
+def weight_rup(rup):
+    if rup.sids is None:
+        rup.weight = rup['n_occ']
+    else:
+        rup.weight = rup['n_occ'] * len(rup.sids)
+    return rup.weight
+
+
+def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None,
+                        weight_rup=weight_rup):
     """
     :yields: RuptureGetters
     """
@@ -462,31 +470,31 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5,
     rup_array = dstore['ruptures'][slc]
     nr, ne = 0, 0
     maxdist = dstore['oqparam'].maximum_distance
-    if 'sitecol' in dstore and weight_rup:
+    if 'sitecol' in dstore:
         srcfilter = SourceFilter(dstore['sitecol'], maxdist)
+    else:
+        srcfilter = None
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        if 'sitecol' in dstore and weight_rup:
-            proxies = []
-            for rec in arr:
+        proxies = []
+        for rec in arr:
+            if srcfilter:
                 sids = srcfilter.close_sids(rec, trt)
                 if len(sids):
                     proxies.append(RuptureProxy(rec, sids))
-        else:
-            proxies = map(RuptureProxy, arr)
-
-        for block in general.block_splitter(
-                proxies, maxweight, operator.attrgetter('weight')):
+            else:
+                proxies.append(RuptureProxy(rec))
+        for block in general.block_splitter(proxies, maxweight, weight_rup):
             if e0s is None:
                 e0 = numpy.zeros(len(block), U32)
             else:
                 e0 = e0s[nr: nr + len(block)]
             rgetter = RuptureGetter(
-                list(block), filename or dstore.filename, grp_id,
+                block, filename or dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
             yield rgetter
             nr += len(block)
