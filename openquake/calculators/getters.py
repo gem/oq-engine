@@ -25,8 +25,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
     EBRupture, BaseRupture, events_dt, get_rupture)
-from openquake.hazardlib.geo.utils import spherical_to_cartesian
-from openquake.hazardlib.calc.filters import SourceFilter, getdefault
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
