@@ -470,24 +470,24 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5,
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-
         if 'sitecol' in dstore and weight_rup:
-            def weight(rec):
-                nsites = len(srcfilter.close_sids(rec, trt))
-                return rec['n_occ'] * numpy.ceil(nsites / 1000)
+            proxies = []
+            for rec in arr:
+                sids = srcfilter.close_sids(rec, trt)
+                if sids:
+                    proxies.append(RuptureProxy(rec, sids))
         else:
-            def weight(rec):
-                return rec['n_occ']
+            proxies = map(RuptureProxy, arr)
 
-        for block in general.block_splitter(arr, maxweight, weight):
+        for block in general.block_splitter(
+                proxies, maxweight, operator.attrgetter('weight')):
             if e0s is None:
                 e0 = numpy.zeros(len(block), U32)
             else:
                 e0 = e0s[nr: nr + len(block)]
             rgetter = RuptureGetter(
-                numpy.array(block), filename or dstore.filename, grp_id,
+                list(block), filename or dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
-            rgetter.weight = block.weight
             yield rgetter
             nr += len(block)
             ne += rgetter.num_events
@@ -496,8 +496,8 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5,
 # this is never called directly; gen_rupture_getters is used instead
 class RuptureGetter(object):
     """
-    :param rup_array:
-        an array of ruptures of the same group
+    :param proxies:
+        a list of RuptureProxies
     :param filename:
         path to the HDF5 file containing a 'rupgeoms' dataset
     :param grp_id:
@@ -509,16 +509,17 @@ class RuptureGetter(object):
     :param rlzs_by_gsim:
         dictionary gsim -> rlzs for the group
     """
-    def __init__(self, rup_array, filename, grp_id, trt, samples,
+    def __init__(self, proxies, filename, grp_id, trt, samples,
                  rlzs_by_gsim, e0=None):
-        self.rup_array = rup_array
+        self.proxies = proxies
+        self.weight = sum(proxy.weight for proxy in proxies)
         self.filename = filename
         self.grp_id = grp_id
         self.trt = trt
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         self.e0 = e0
-        n_occ = int(rup_array['n_occ'].sum())
+        n_occ = sum(int(proxy['n_occ']) for proxy in proxies)
         self.num_events = n_occ if samples > 1 else n_occ * sum(
             len(rlzs) for rlzs in rlzs_by_gsim.values())
 
@@ -527,30 +528,29 @@ class RuptureGetter(object):
         :returns: a list of RuptureGetters with 1 rupture each
         """
         out = []
-        array = self.rup_array
-        for i, ridx in enumerate(array['id']):
+        for i, proxy in enumerate(self.proxies):
             rg = object.__new__(self.__class__)
-            rg.rup_array = array[i: i+1]
+            rg.proxies = [proxy]
             rg.filename = self.filename
             rg.grp_id = self.grp_id
             rg.trt = self.trt
             rg.samples = self.samples
             rg.rlzs_by_gsim = self.rlzs_by_gsim
             rg.e0 = numpy.array([self.e0[i]])
-            rg.weight = array[i]['n_occ']
+            rg.weight = proxy.weight
             out.append(rg)
         return out
 
     @property
     def num_ruptures(self):
-        return len(self.rup_array)
+        return len(self.proxies)
 
     def get_eid_rlz(self):
         """
         :returns: a composite array with the associations eid->rlz
         """
         eid_rlz = []
-        for e0, rup in zip(self.e0, self.rup_array):
+        for e0, rup in zip(self.e0, self.proxies):
             ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['srcidx'],
                             self.grp_id, rup['n_occ'], self.samples)
             for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
@@ -562,12 +562,12 @@ class RuptureGetter(object):
         """
         :returns: a dictionary with the parameters of the rupture
         """
-        assert len(self.rup_array) == 1, 'Please specify a slice of length 1'
+        assert len(self.proxies) == 1, 'Please specify a slice of length 1'
         dic = {'trt': self.trt, 'samples': self.samples}
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             source_ids = dstore['source_info']['source_id']
-            rec = self.rup_array[0]
+            rec = self.proxies[0].rec
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                 rec['sx'], rec['sy'])
             dic['lons'] = geom['lon']
@@ -592,25 +592,18 @@ class RuptureGetter(object):
         ebrs = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            for e0, rec in zip(self.e0, self.rup_array):
-                if rec['mag'] < min_mag:
+            for e0, proxy in zip(self.e0, self.proxies):
+                if proxy['mag'] < min_mag:
                     continue
-                if srcfilter.integration_distance:
-                    sids = srcfilter.close_sids(rec, self.trt)
-                    if len(sids) == 0:  # the rupture is far away
-                        continue
-                else:
-                    sids = None
-                proxy = RuptureProxy(rec, sids)
-                geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
-                    rec['sx'], rec['sy'])
+                geom = rupgeoms[proxy['gidx1']:proxy['gidx2']].reshape(
+                    proxy['sx'], proxy['sy'])
                 ebr = proxy.to_ebr(geom, self.trt, self.samples)
                 ebr.e0 = 0 if self.e0 is None else e0
                 ebrs.append(ebr)
         return ebrs
 
     def __len__(self):
-        return len(self.rup_array)
+        return len(self.proxies)
 
     def __repr__(self):
         wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
