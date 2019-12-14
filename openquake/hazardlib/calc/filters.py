@@ -22,11 +22,13 @@ import operator
 import collections.abc
 from contextlib import contextmanager
 import numpy
+from scipy.spatial import cKDTree, distance
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, BBoxError)
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
+    BBoxError, spherical_to_cartesian)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
@@ -328,6 +330,13 @@ class SourceFilter(object):
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
         bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
         return self.sitecol.within_bbox(bb)
+
+    def get_cdist(self, rec):  # used for debugging
+        """
+        :returns: array of N euclidean distances from rec['hypo']
+        """
+        xyz = spherical_to_cartesian(*rec['hypo']).reshape(1, 3)
+        return distance.cdist(self.sitecol.xyz, xyz)[:, 0]
 
     def filter(self, sources):
         """
