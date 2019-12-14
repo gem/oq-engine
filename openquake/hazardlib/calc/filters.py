@@ -18,6 +18,7 @@
 import os
 import sys
 import time
+import math
 import operator
 import collections.abc
 from contextlib import contextmanager
@@ -28,7 +29,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
-    BBoxError, spherical_to_cartesian)
+    get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
@@ -329,12 +330,14 @@ class SourceFilter(object):
         lon, lat, dep = rec['hypo']
         xyz = spherical_to_cartesian(lon, lat, dep)
         maxdist = self.integration_distance(trt)  # TODO: add mag here?
-        # upper limit for the the size of the rupture
-        delta = max(rec['maxlon'] - lon,  lon - rec['minlon'],
-                    rec['maxlat'] - lat, lat - rec['minlat']) / KM_TO_DEGREES
-        sids = self.kdt.query_ball_point(xyz, maxdist + delta, eps=.001)
+        # upper limit for the the diagonal size of the rupture
+        dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
+        dlat = rec['maxlat'] - rec['minlat']
+        diag = math.sqrt(dlon * dlon + dlat * dlat) / KM_TO_DEGREES
+        sids = self.kdt.query_ball_point(xyz, maxdist + diag / 2, eps=.001)
         return sids
 
+    # used for debugging purposes
     def get_cdist(self, rec):
         """
         :returns: array of N euclidean distances from rec['hypo']
