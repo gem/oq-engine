@@ -5,8 +5,8 @@
     reduction of the gsim logic tree
 
   [Graeme Weatherill]
-  * Implements Abrahamson et al (2018) update of the BC Hydro GMPE
-  * Adds configurable nonergodic sigma option to BC Hydro and SERA GMPEs
+  * Implemented Abrahamson et al (2018) update of the BC Hydro GMPE
+  * Added configurable nonergodic sigma option to BC Hydro and SERA GMPEs
   * Small refactoring and bug fix in average SA GMPE
 
   [Michele Simionato]
