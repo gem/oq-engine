@@ -55,12 +55,11 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     num_ses = oq.ses_per_logic_tree_path
     ruptures_by_grp = {}
     for rgetter in gen_rupture_getters(dstore):
         ebrs = [ebr.export(rgetter.rlzs_by_gsim, num_ses)
-                for ebr in rgetter.get_ruptures(sf)]
+                for ebr in rgetter.get_ruptures()]
         if ebrs:
             ruptures_by_grp[rgetter.grp_id] = ebrs
     dest = dstore.export_path('ses.' + fmt)
