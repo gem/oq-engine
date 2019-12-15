@@ -38,7 +38,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-ONEGB = 1E9
+MAXSIZE = 128 * 1024 * 1024  # 128 MB
 get_n_occ = operator.itemgetter(1)
 
 gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
@@ -143,7 +143,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             nbytes += data.nbytes
         gmf_info.append((c.rupture.id, mon_haz.task_no, len(c.sids),
                          data.nbytes, mon_haz.dt))
-        if nbytes > ONEGB:
+        if nbytes > MAXSIZE:
             msg = 'produced subtask'
             try:
                 logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
