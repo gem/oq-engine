@@ -170,9 +170,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         except Exception:
             # a foreign key error in case of `oq run` is expected
             print(msg)
-    for hazard in hazards[1:]:
+    for hazard in hazards[:-1]:
         yield calc_risk, hazard, eids, assetcol, param
-    res = calc_risk(hazards[0], eids, assetcol, param, monitor)
+    res = calc_risk(hazards[-1], eids, assetcol, param, monitor)
     res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
     yield res
 
