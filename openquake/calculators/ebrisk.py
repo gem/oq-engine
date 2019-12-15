@@ -210,8 +210,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
         elt_nbytes = 4 * self.E * L
-        logging.info('Approx size of the event loss table: %s',
-                     general.humansize(elt_nbytes))
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
                                'red with %d tasks' % oq.concurrent_tasks)
