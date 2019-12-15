@@ -147,6 +147,9 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         tiles = cll.split_in_tiles(2)
         self.assertEqual(len(tiles), 2)
 
+        # test geohash
+        assert_eq(cll.geohash(4), numpy.array([b's5x1', b'7zrh']))
+
 
 class SiteCollectionFilterTestCase(unittest.TestCase):
     SITES = [
