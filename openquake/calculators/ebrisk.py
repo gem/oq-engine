@@ -112,6 +112,22 @@ def calc_risk(hazard, eids, assetcol, param, monitor):
     return acc
 
 
+def split_hazard(hazard, num_assets, maxweight):
+    """
+    :param hazard: a dictionary site_id -> gmfs
+    :param num_assets: an array with the number of assets per site
+    :param maxweight: the maximum weight of each generated dictionary
+    """
+    def weight(pair):
+        sid, gmfs = pair
+        return num_assets[sid] * len(gmfs)
+    items = sorted(hazard.items(), key=weight)
+    dicts = []
+    for block in general.block_splitter(items, maxweight, weight):
+        dicts.append(dict(block))
+    return dicts
+
+
 def ebrisk(rupgetter, srcfilter, param, monitor):
     """
     :param rupgetter: RuptureGetter with multiple ruptures
@@ -140,10 +156,15 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     eids = numpy.unique(gmfs['eid'])
     hazard = general.group_array(gmfs, 'sid')
     with monitor('getting assets'):
+        N = len(srcfilter.sitecol)
         assetcol = datastore.read(param['hdf5path'])['assetcol']
-    res = calc_risk(hazard, eids, assetcol, param, monitor)
+        num_assets = numpy.bincount(assetcol['site_id'], minlength=N)
+    hazards = split_hazard(hazard, num_assets, param['max_ebrisk_weight'])
+    for hazard in hazards[1:]:
+        yield calc_risk, hazard, eids, assetcol, param
+    res = calc_risk(hazards[0], eids, assetcol, param, monitor)
     res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
-    return res
+    yield res
 
 
 @base.calculators.add('ebrisk')
@@ -169,6 +190,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['minimum_loss'] = [getdefault(oq.minimum_asset_loss, ln)
                                       for ln in oq.loss_names]
         self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
+        self.param['max_ebrisk_weight'] = oq.max_ebrisk_weight
         self.A = A = len(self.assetcol)
         self.datastore.create_dset(
             'asset_loss_table/data', ael_dt(oq.loss_names))
@@ -223,11 +245,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         :param dummy: unused parameter
         :param dic: dictionary with keys elt, losses_by_A
         """
-        if not dic or len(dic['elt']) == 0:
+        if not dic:
             return
+        elif 'gmf_info' in dic:
+            hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
-        hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
         with self.monitor('saving losses_by_event and asset_loss_table'):
             hdf5.extend(self.datastore['losses_by_event'], elt)
             hdf5.extend(self.datastore['asset_loss_table/data'],
