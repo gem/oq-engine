@@ -44,15 +44,16 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
 
 def calc_risk(hazard, assetcol, param, monitor):
     gmfs = numpy.concatenate(hazard['gmfs'])
-    events = numpy.concatenate(hazard['events'])
+    eids = numpy.unique(gmfs['eid'])
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
     assets_by_site = assetcol.assets_by_site()
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
+        events = dstore['events'][list(eids)]
         weights = dstore['weights'][()]
-    E = len(events)
+    E = len(eids)
     L = len(param['lba'].loss_names)
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
     alt = general.AccumDict(accum=numpy.zeros(L, F32))  # aid, eid -> loss
@@ -62,7 +63,7 @@ def calc_risk(hazard, assetcol, param, monitor):
     lba = param['lba']
     tempname = param['tempname']
     eid2rlz = dict(events[['id', 'rlz_id']])
-    eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
+    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     factor = param['asset_loss_table']
     minimum_loss = param['minimum_loss']
     for sid, haz in general.group_array(gmfs, 'sid').items():
@@ -124,15 +125,15 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     """
     mon_haz = monitor('getting hazard', measuremem=False)
     mon_rup = monitor('getting ruptures', measuremem=False)
-    hazard = dict(gmfs=[], events=[], gmf_info=[])
+    hazard = dict(gmfs=[], gmf_info=[])
     with mon_rup:
         gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
         gg.init()  # read the ruptures and filter them
     for c in gg.computers:
         with mon_haz:
             data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
+        if len(data):
             hazard['gmfs'].append(data)
-            hazard['events'].append(c.rupture.get_events(gg.rlzs_by_gsim))
         hazard['gmf_info'].append(
             (c.rupture.id, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
