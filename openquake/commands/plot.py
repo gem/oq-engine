@@ -469,6 +469,24 @@ def make_figure_agg_curves(extractors, what):
     return plt
 
 
+def make_figure_app_tot_curves(extractors, what):
+    """
+    $ oq plot 'app_tot_curves?' -1
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    aw = ex.get(what)
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('return periods')
+    ax.set_ylabel('PoE')
+    for label, curve in zip(aw.labels, aw):
+        ax.loglog(aw.return_periods, curve, '-', label=label)
+    ax.grid(True)
+    ax.legend()
+    return plt
+
+
 @sap.script
 def plot(what='examples', calc_id=-1, other_id=None, webapi=False):
     """
