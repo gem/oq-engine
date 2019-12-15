@@ -38,7 +38,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-MAXSIZE = 128 * 1024 * 1024  # 128 MB
 get_n_occ = operator.itemgetter(1)
 
 gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
@@ -128,10 +127,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     :returns: a dictionary with keys elt, alt, ...
     """
     mon_haz = monitor('getting hazard', measuremem=False)
-    mon_rup = monitor('getting ruptures', measuremem=False)
     gmfs = []
     gmf_info = []
-    with mon_rup:
+    with monitor('getting ruptures', measuremem=True):
         gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
         gg.init()  # read the ruptures and filter them
     nbytes = 0
@@ -143,7 +141,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             nbytes += data.nbytes
         gmf_info.append((c.rupture.id, mon_haz.task_no, len(c.sids),
                          data.nbytes, mon_haz.dt))
-        if nbytes > MAXSIZE:
+        if nbytes > ebrisk.MAXSIZE:
             msg = 'produced subtask'
             try:
                 logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
@@ -158,6 +156,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     res = calc_risk(gmfs, param, monitor)
     res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
     yield res
+
+
+ebrisk.MAXSIZE = 64 * 1024 * 1024  # 64 MB, can be changed in the tests
 
 
 @base.calculators.add('ebrisk')
