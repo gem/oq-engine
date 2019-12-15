@@ -112,6 +112,7 @@ def post_ebrisk(dstore, rlzi, monitor):
     aggby = oq.aggregate_by
     L = len(oq.loss_names)
     P = len(builder.return_periods)
+    tot = general.AccumDict(accum=numpy.zeros(L))  # eid -> loss
     acc = general.AccumDict(accum=general.AccumDict(accum=numpy.zeros(L)))
     shp = assetcol.tagcol.agg_shape((P, L), aggby)
     agg_losses = numpy.zeros(shp[1:], F32)  # shape (L, T...)
@@ -120,6 +121,8 @@ def post_ebrisk(dstore, rlzi, monitor):
         alt = data[start:stop]
         if len(alt) == 0:
             continue
+        for rec in alt:
+            tot[rec['event_id']] += rec['loss']
         if oq.aggregate_by:
             for rec in general.add_columns(alt, tagidxs, 'asset_id'):
                 key = tuple(rec[n] - 1 for n in aggby)
@@ -132,6 +135,8 @@ def post_ebrisk(dstore, rlzi, monitor):
     res.update(post_risk(dstore, rlzi, monitor))
     if oq.aggregate_by:
         res['agg_losses'] = agg_losses * oq.ses_ratio
+    if tot:
+        res['app_curves'] = builder.build_curves(list(tot.values()), rlzi)
     return res
 
 
@@ -146,62 +151,6 @@ class PostRiskCalculator(base.RiskCalculator):
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
         self.L = len(oq.loss_names)
         self.tagcol = self.datastore['assetcol/tagcol']
-
-    def execute(self):
-        oq = self.oqparam
-        if oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            if eff_time < 2:
-                logging.warning(
-                    'eff_time=%s is too small to compute loss curves',
-                    eff_time)
-                return
-        logging.info('Building loss tables')
-        build_loss_tables(self.datastore)
-        shp = self.get_shape(self.L)  # (L, T...)
-        text = ' x '.join(
-            '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
-        logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
-        builder = get_loss_builder(self.datastore)
-        self.build_datasets(builder, [], 'tot_')
-        if oq.aggregate_by:
-            self.build_datasets(builder, oq.aggregate_by, 'agg_')
-        pr = (post_ebrisk if 'asset_loss_table' in self.datastore
-              or 'asset_loss_table' in self.datastore.parent
-              else post_risk)
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(
-            pr, [(self.datastore, rlzi) for rlzi in range(self.R)],
-            h5=self.datastore.hdf5)
-        ds = self.datastore
-        for dic in smap:
-            if not dic:
-                continue
-            r = dic['rlzi']
-            ds['tot_curves-rlzs'][:, r] = dic['tot_curves']  # PL
-            ds['tot_losses-rlzs'][:, r] = dic['tot_losses']  # L
-            if oq.aggregate_by:
-                ds['agg_curves-rlzs'][:, r] = dic['agg_curves']  # PLT..
-                ds['agg_losses-rlzs'][:, r] = dic['agg_losses']  # LT...
-        if self.R > 1:
-            logging.info('Computing aggregate statistics')
-            set_rlzs_stats(self.datastore, 'tot_curves')
-            set_rlzs_stats(self.datastore, 'tot_losses')
-            if oq.aggregate_by:
-                set_rlzs_stats(self.datastore, 'agg_curves')
-                set_rlzs_stats(self.datastore, 'agg_losses')
-
-    def post_execute(self, dummy):
-        pass
-
-    def get_shape(self, *sizes, aggregate_by=None):
-        """
-        :returns: a shape (S1, ... SN, T1 ... TN)
-        """
-        if aggregate_by is None:
-            aggregate_by = self.oqparam.aggregate_by
-        return self.tagcol.agg_shape(sizes, aggregate_by)
 
     def build_datasets(self, builder, aggregate_by, prefix):
         """
@@ -239,3 +188,68 @@ class PostRiskCalculator(base.RiskCalculator):
                 stats=[encode(name) for (name, func) in stats],
                 shape_descr=shape_descr, loss_types=loss_types, units=units,
                 **aggby)
+
+    def execute(self):
+        oq = self.oqparam
+        if oq.return_periods != [0]:
+            # setting return_periods = 0 disable loss curves
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            if eff_time < 2:
+                logging.warning(
+                    'eff_time=%s is too small to compute loss curves',
+                    eff_time)
+                return
+        logging.info('Building loss tables')
+        build_loss_tables(self.datastore)
+        shp = self.get_shape(self.L)  # (L, T...)
+        text = ' x '.join(
+            '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
+        logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
+        builder = get_loss_builder(self.datastore)
+        self.build_datasets(builder, oq.aggregate_by, 'agg_')
+        self.build_datasets(builder, [], 'app_')
+        self.build_datasets(builder, [], 'tot_')
+        if 'asset_loss_table' in self.datastore.parent:
+            dstore = self.datastore.parent
+            pr = post_ebrisk
+        elif 'asset_loss_table' in self.datastore:
+            dstore = self.datastore
+            pr = post_ebrisk
+        else:
+            dstore = self.datastore
+            pr = post_risk
+
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(pr, [(dstore, rlzi) for rlzi in range(self.R)],
+                                h5=self.datastore.hdf5)
+        ds = self.datastore
+        for dic in smap:
+            if not dic:
+                continue
+            r = dic['rlzi']
+            ds['tot_curves-rlzs'][:, r] = dic['tot_curves']  # PL
+            ds['tot_losses-rlzs'][:, r] = dic['tot_losses']  # L
+            if oq.aggregate_by:
+                ds['agg_curves-rlzs'][:, r] = dic['agg_curves']  # PLT..
+                ds['agg_losses-rlzs'][:, r] = dic['agg_losses']  # LT...
+            if 'app_curves' in dic:
+                ds['app_curves-rlzs'][:, r] = dic['app_curves']  # PL
+        if self.R > 1:
+            logging.info('Computing aggregate statistics')
+            set_rlzs_stats(self.datastore, 'app_curves')
+            set_rlzs_stats(self.datastore, 'tot_curves')
+            set_rlzs_stats(self.datastore, 'tot_losses')
+            if oq.aggregate_by:
+                set_rlzs_stats(self.datastore, 'agg_curves')
+                set_rlzs_stats(self.datastore, 'agg_losses')
+
+    def post_execute(self, dummy):
+        pass
+
+    def get_shape(self, *sizes, aggregate_by=None):
+        """
+        :returns: a shape (S1, ... SN, T1 ... TN)
+        """
+        if aggregate_by is None:
+            aggregate_by = self.oqparam.aggregate_by
+        return self.tagcol.agg_shape(sizes, aggregate_by)

@@ -125,13 +125,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     mon_haz = monitor('getting hazard', measuremem=False)
     mon_rup = monitor('getting ruptures', measuremem=False)
     hazard = dict(gmfs=[], events=[], gmf_info=[])
-    for rg in rupgetter.split():
-        with mon_rup:
-            gg = getters.GmfGetter(rg, srcfilter, param['oqparam'])
-            gg.init()
-        if not gg.computers:  # filtered out rupture
-            continue
-        [c] = gg.computers
+    with mon_rup:
+        gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
+        gg.init()  # read the ruptures and filter them
+    for c in gg.computers:
         with mon_haz:
             data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
             hazard['gmfs'].append(data)
