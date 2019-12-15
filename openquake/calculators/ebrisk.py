@@ -120,9 +120,9 @@ def split_hazard(hazard, num_assets, maxweight):
     :param num_assets: an array with the number of assets per site
     :param maxweight: the maximum weight of each generated dictionary
     """
-    def weight(pair):
+    def weight(pair, A=num_assets.sum()):
         sid, gmfs = pair
-        return num_assets[sid] * len(gmfs)
+        return num_assets[sid] / A * len(gmfs)
     items = sorted(hazard.items(), key=weight)
     dicts = []
     for block in general.block_splitter(items, maxweight, weight):
