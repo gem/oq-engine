@@ -193,19 +193,6 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 
-    def gen_rupture_getters(self, num_events=0, use_kdt=False):
-        """
-        :returns: a list of RuptureGetters
-        """
-        oq = self.oqparam
-        dstore = (self.datastore.parent if self.datastore.parent
-                  else self.datastore)
-        E = num_events or len(dstore['events'])
-        yield from gen_rupture_getters(
-            dstore, maxweight=E / (oq.concurrent_tasks or 1), use_kdt=use_kdt)
-        if self.datastore.parent:
-            self.datastore.parent.close()
-
     def agg_dicts(self, acc, result):
         """
         :param acc: accumulator dictionary
@@ -247,7 +234,9 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = self.gen_rupture_getters(len(events))
+        maxweight = len(events) / (self.oqparam.concurrent_tasks or 1)
+        rgetters = gen_rupture_getters(self.datastore, maxweight=maxweight,
+                                       weight_rup=operator.itemgetter('n_occ'))
 
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
@@ -357,7 +346,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
         allargs = [(rgetter, srcfilter, self.param)
-                   for rgetter in self.gen_rupture_getters(use_kdt=True)]
+                   for rgetter in gen_rupture_getters(self.datastore)]
         logging.info('Generated %d tasks', len(allargs))
         acc = parallel.Starmap(
             self.core_task.__func__, allargs, h5=self.datastore.hdf5,
