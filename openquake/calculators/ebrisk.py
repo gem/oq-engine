@@ -126,7 +126,9 @@ def split_hazard(hazard, num_assets, maxweight):
     items = sorted(hazard.items(), key=weight)
     dicts = []
     for block in general.block_splitter(items, maxweight, weight):
-        dicts.append(dict(block))
+        dic = general.AccumDict(block)
+        dic.weight = block.weight
+        dicts.append(dic)
     return dicts
 
 
