@@ -1,10 +1,12 @@
   [Michele Simionato]
-  * Changed the generation of aggregate loss curves in ebrisk
+  * Refined the rupture prefiltering mechanism
+  * Optimized the generation of aggregate loss curves in ebrisk
   * Introduced an experimental AvgGMPE and used it to implement (optional)
     reduction of the gsim logic tree
 
   [Graeme Weatherill]
-  * Adds configurable nonergodic sigma option to BC Hydro and SERA GMPEs
+  * Implemented Abrahamson et al (2018) update of the BC Hydro GMPE
+  * Added configurable nonergodic sigma option to BC Hydro and SERA GMPEs
   * Small refactoring and bug fix in average SA GMPE
 
   [Michele Simionato]
@@ -16,7 +18,7 @@
 
   [Robin Gee]
   * Set DEFINED_FOR_REFERENCE_VELOCITY in CampbellBozorgnia2003NSHMP2007
-  
+
   [Graeme Weatherill]
   * Re-adjustment of SERA Subduction model epistemic scaling factors
 
@@ -136,6 +138,7 @@
   * Added a check on valid input keys in the job.ini
   * Fixed the check on dependent calculations
   * Specifying at the same time both a grid and individual sites is an error
+>>>>>>> master
 
   [Daniele Viganò]
   * Docker containers rebased on CentOS 8

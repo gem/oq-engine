@@ -757,3 +757,23 @@ class EBRupture(object):
     def __repr__(self):
         return '<%s %d[%d]>' % (
             self.__class__.__name__, self.rup_id, self.n_occ)
+
+
+class RuptureProxy(object):
+    weight = 1  # overridden in calculators.getters
+
+    def __init__(self, rec, sids=None):
+        self.rec = rec
+        self.sids = sids
+
+    def __getitem__(self, name):
+        return self.rec[name]
+
+    def to_ebr(self, geom, trt, samples):
+        # not implemented: rupture_slip_direction
+        rupture = get_rupture(self.rec, geom, trt)
+        ebr = EBRupture(rupture, self.rec['srcidx'], self.rec['grp_id'],
+                        self.rec['n_occ'], samples)
+        ebr.sids = self.sids
+        ebr.id = self.rec['id']
+        return ebr
