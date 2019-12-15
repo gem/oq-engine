@@ -181,7 +181,6 @@ class OqParam(valid.ParamSet):
     split_by_magnitude = valid.Param(valid.boolean, False)
     task_duration = valid.Param(valid.positiveint, None)  # used in ebrisk
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
-    max_ebrisk_weight = valid.Param(valid.positiveint, 1000)  # used in ebrisk
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
