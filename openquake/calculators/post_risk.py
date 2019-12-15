@@ -208,8 +208,7 @@ class PostRiskCalculator(base.RiskCalculator):
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder, oq.aggregate_by, 'agg_')
         self.build_datasets(builder, [], 'app_')
-        if oq.aggregate_by:
-            self.build_datasets(builder, [], 'tot_')
+        self.build_datasets(builder, [], 'tot_')
         if 'asset_loss_table' in self.datastore.parent:
             dstore = self.datastore.parent
             pr = post_ebrisk
@@ -228,24 +227,21 @@ class PostRiskCalculator(base.RiskCalculator):
             if not dic:
                 continue
             r = dic['rlzi']
+            ds['tot_curves-rlzs'][:, r] = dic['tot_curves']  # PL
+            ds['tot_losses-rlzs'][:, r] = dic['tot_losses']  # L
             if oq.aggregate_by:
-                ds['tot_curves-rlzs'][:, r] = dic['tot_curves']  # PL
-                ds['tot_losses-rlzs'][:, r] = dic['tot_losses']  # L
                 ds['agg_curves-rlzs'][:, r] = dic['agg_curves']  # PLT..
                 ds['agg_losses-rlzs'][:, r] = dic['agg_losses']  # LT...
-            else:
-                ds['agg_curves-rlzs'][:, r] = dic['tot_curves']  # PL
-                ds['agg_losses-rlzs'][:, r] = dic['tot_losses']  # L
             if 'app_curves' in dic:
                 ds['app_curves-rlzs'][:, r] = dic['app_curves']  # PL
         if self.R > 1:
             logging.info('Computing aggregate statistics')
-            set_rlzs_stats(self.datastore, 'agg_curves')
             set_rlzs_stats(self.datastore, 'app_curves')
-            set_rlzs_stats(self.datastore, 'agg_losses')
+            set_rlzs_stats(self.datastore, 'tot_curves')
+            set_rlzs_stats(self.datastore, 'tot_losses')
             if oq.aggregate_by:
-                set_rlzs_stats(self.datastore, 'tot_curves')
-                set_rlzs_stats(self.datastore, 'tot_losses')
+                set_rlzs_stats(self.datastore, 'agg_curves')
+                set_rlzs_stats(self.datastore, 'agg_losses')
 
     def post_execute(self, dummy):
         pass

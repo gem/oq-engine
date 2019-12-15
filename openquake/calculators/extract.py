@@ -32,7 +32,6 @@ from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, get_array, println
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -568,23 +567,43 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
-# internal: used only for plotting the total vs approx mean loss curves
-@extract.add('app_tot_curves')
-def extract_app_tot_curves(dstore, what):
+@extract.add('tot_curves')
+def extract_tot_curves(dstore, what):
     """
-    Extract portfolio loss curves from an ebrisk calculation
+    Porfolio loss curves from the ebrisk calculator:
 
-    /extract/tot_app_curves
+    /extract/tot_curves?
+    kind=stats&absolute=1&loss_type=occupants
+
+    Returns an array of shape (P, S) or (P, R)
     """
-    try:
-        tot = dstore['tot_curves-stats'][:, 0, 0]  # P, S, L
+    info = get_info(dstore)
+    qdic = parse(what, info)
+    k = qdic['k']  # rlz or stat index
+    [l] = qdic['loss_type']  # loss type index
+    tup = (slice(None), k, l)
+    if qdic['rlzs']:
+        kinds = ['rlz-%d' % r for r in k]
+        arr = dstore['tot_curves-rlzs'][tup]  # shape P, R
+        units = dstore.get_attr('tot_curves-rlzs', 'units')
+        rps = dstore.get_attr('tot_curves-rlzs', 'return_periods')
+    else:
+        kinds = list(info['stats'])
+        arr = dstore['tot_curves-stats'][tup]  # shape P, S
+        units = dstore.get_attr('tot_curves-stats', 'units')
         rps = dstore.get_attr('tot_curves-stats', 'return_periods')
-    except KeyError:
-        tot = dstore['agg_curves-stats'][:, 0, 0]  # P, S, L
-        rps = dstore.get_attr('agg_curves-stats', 'return_periods')
-    app = dstore['app_curves-stats'][:, 0, 0]  # P, S, L
-    return ArrayWrapper(numpy.array([tot, app]),
-                        dict(labels=['total', 'approx'], return_periods=rps))
+    if qdic['absolute'] == [1]:
+        pass
+    elif qdic['absolute'] == [0]:
+        evalue = dstore['exposed_values/agg'][l]
+        arr /= evalue
+    else:
+        raise ValueError('"absolute" must be 0 or 1 in %s' % what)
+    attrs = dict(shape_descr=['return_period', 'kind'])
+    attrs['return_period'] = list(rps)
+    attrs['kind'] = kinds
+    attrs['units'] = units  # used by the QGIS plugin
+    return ArrayWrapper(arr, attrs)
 
 
 @extract.add('agg_curves')
@@ -1183,9 +1202,8 @@ def extract_rupture_info(dstore, what):
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     for rgetter in getters.gen_rupture_getters(dstore):
-        rups = rgetter.get_ruptures(sf, min_mag)
+        rups = rgetter.get_ruptures(min_mag)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
