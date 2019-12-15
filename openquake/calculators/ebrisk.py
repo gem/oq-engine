@@ -42,9 +42,7 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def calc_risk(hazard, assetcol, param, monitor):
-    gmfs = numpy.concatenate(hazard['gmfs'])
-    eids = numpy.unique(gmfs['eid'])
+def calc_risk(hazard, eids, assetcol, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
@@ -66,7 +64,7 @@ def calc_risk(hazard, assetcol, param, monitor):
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     factor = param['asset_loss_table']
     minimum_loss = param['minimum_loss']
-    for sid, haz in general.group_array(gmfs, 'sid').items():
+    for sid, haz in hazard.items():
         assets_on_sid = assets_by_site[sid]
         if len(assets_on_sid) == 0:
             continue
@@ -97,9 +95,8 @@ def calc_risk(hazard, assetcol, param, monitor):
                         lba.losses_by_A[aid, loss_idx] += (
                             losses @ ws * param['ses_ratio'])
                     acc['lossbytes'] += losses.nbytes
-    if len(gmfs):
-        acc['events_per_sid'] /= len(gmfs)
-    acc['gmf_info'] = numpy.array(hazard['gmf_info'], gmf_info_dt)
+    if len(hazard):
+        acc['events_per_sid'] /= len(hazard)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
@@ -125,7 +122,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     """
     mon_haz = monitor('getting hazard', measuremem=False)
     mon_rup = monitor('getting ruptures', measuremem=False)
-    hazard = dict(gmfs=[], gmf_info=[])
+    gmfs = []
+    gmf_info = []
     with mon_rup:
         gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
         gg.init()  # read the ruptures and filter them
@@ -133,15 +131,19 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         with mon_haz:
             data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
         if len(data):
-            hazard['gmfs'].append(data)
-        hazard['gmf_info'].append(
-            (c.rupture.id, mon_haz.task_no, len(c.sids),
-             data.nbytes, mon_haz.dt))
-    if not hazard['gmfs']:
+            gmfs.append(data)
+        gmf_info.append((c.rupture.id, mon_haz.task_no, len(c.sids),
+                         data.nbytes, mon_haz.dt))
+    if not gmfs:
         return {}
+    gmfs = numpy.concatenate(gmfs)
+    eids = numpy.unique(gmfs['eid'])
+    hazard = general.group_array(gmfs, 'sid')
     with monitor('getting assets'):
         assetcol = datastore.read(param['hdf5path'])['assetcol']
-    return calc_risk(hazard, assetcol, param, monitor)
+    res = calc_risk(hazard, eids, assetcol, param, monitor)
+    res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
+    return res
 
 
 @base.calculators.add('ebrisk')
