@@ -38,17 +38,22 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
+ONEGB = 1E9
 get_n_occ = operator.itemgetter(1)
 
 gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def calc_risk(hazard, eids, assetcol, param, monitor):
+def calc_risk(hazard, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
+    gmfs = numpy.concatenate(hazard)
+    eids = numpy.unique(gmfs['eid'])
     dstore = datastore.read(param['hdf5path'])
-    assets_by_site = assetcol.assets_by_site()
+    with monitor('getting assets'):
+        assetcol = dstore['assetcol']
+        assets_by_site = assetcol.assets_by_site()
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
         events = dstore['events'][list(eids)]
@@ -66,7 +71,7 @@ def calc_risk(hazard, eids, assetcol, param, monitor):
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     factor = param['asset_loss_table']
     minimum_loss = param['minimum_loss']
-    for sid, haz in hazard.items():
+    for sid, haz in general.group_array(gmfs, 'sid').items():
         assets_on_sid = assets_by_site[sid]
         if len(assets_on_sid) == 0:
             continue
@@ -114,24 +119,6 @@ def calc_risk(hazard, eids, assetcol, param, monitor):
     return acc
 
 
-def split_hazard(hazard, num_assets, maxweight):
-    """
-    :param hazard: a dictionary site_id -> gmfs
-    :param num_assets: an array with the number of assets per site
-    :param maxweight: the maximum weight of each generated dictionary
-    """
-    def weight(pair, A=num_assets.sum()):
-        sid, gmfs = pair
-        return num_assets[sid] / A * len(gmfs)
-    items = sorted(hazard.items(), key=weight)
-    dicts = []
-    for block in general.block_splitter(items, maxweight, weight):
-        dic = general.AccumDict(block)
-        dic.weight = block.weight
-        dicts.append(dic)
-    return dicts
-
-
 def ebrisk(rupgetter, srcfilter, param, monitor):
     """
     :param rupgetter: RuptureGetter with multiple ruptures
@@ -147,34 +134,28 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     with mon_rup:
         gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
         gg.init()  # read the ruptures and filter them
+    nbytes = 0
     for c in gg.computers:
         with mon_haz:
             data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
         if len(data):
             gmfs.append(data)
+            nbytes += data.nbytes
         gmf_info.append((c.rupture.id, mon_haz.task_no, len(c.sids),
                          data.nbytes, mon_haz.dt))
+        if nbytes > ONEGB:
+            msg = 'produced subtask'
+            try:
+                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                           'ebrisk#%d' % monitor.task_no, msg)
+            except Exception:  # for `oq run`
+                print(msg)
+            yield calc_risk, gmfs, param
+            nbytes = 0
+            gmfs = []
     if not gmfs:
         return {}
-    gmfs = numpy.concatenate(gmfs)
-    eids = numpy.unique(gmfs['eid'])
-    hazard = general.group_array(gmfs, 'sid')
-    with monitor('getting assets'):
-        N = len(srcfilter.sitecol)
-        assetcol = datastore.read(param['hdf5path'])['assetcol']
-        num_assets = numpy.bincount(assetcol['site_id'], minlength=N)
-    hazards = split_hazard(hazard, num_assets, param['max_ebrisk_weight'])
-    if len(hazards) > 1:
-        msg = 'produced %d subtask(s)' % (len(hazards) - 1)
-        try:
-            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                       'ebrisk#%d' % monitor.task_no, msg)
-        except Exception:
-            # a foreign key error in case of `oq run` is expected
-            print(msg)
-    for hazard in hazards[:-1]:
-        yield calc_risk, hazard, eids, assetcol, param
-    res = calc_risk(hazards[-1], eids, assetcol, param, monitor)
+    res = calc_risk(gmfs, param, monitor)
     res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
     yield res
 
@@ -202,7 +183,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['minimum_loss'] = [getdefault(oq.minimum_asset_loss, ln)
                                       for ln in oq.loss_names]
         self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
-        self.param['max_ebrisk_weight'] = oq.max_ebrisk_weight
         self.A = A = len(self.assetcol)
         self.datastore.create_dset(
             'asset_loss_table/data', ael_dt(oq.loss_names))
