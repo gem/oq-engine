@@ -32,7 +32,6 @@ from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, get_array, println
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -566,6 +565,45 @@ def get_loss_type_tags(what):
 def _get_curves(curves, li):
     shp = curves.shape + curves.dtype.shape
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
+
+
+@extract.add('tot_curves')
+def extract_tot_curves(dstore, what):
+    """
+    Porfolio loss curves from the ebrisk calculator:
+
+    /extract/tot_curves?
+    kind=stats&absolute=1&loss_type=occupants
+
+    Returns an array of shape (P, S) or (P, R)
+    """
+    info = get_info(dstore)
+    qdic = parse(what, info)
+    k = qdic['k']  # rlz or stat index
+    [l] = qdic['loss_type']  # loss type index
+    tup = (slice(None), k, l)
+    if qdic['rlzs']:
+        kinds = ['rlz-%d' % r for r in k]
+        arr = dstore['tot_curves-rlzs'][tup]  # shape P, R
+        units = dstore.get_attr('tot_curves-rlzs', 'units')
+        rps = dstore.get_attr('tot_curves-rlzs', 'return_periods')
+    else:
+        kinds = list(info['stats'])
+        arr = dstore['tot_curves-stats'][tup]  # shape P, S
+        units = dstore.get_attr('tot_curves-stats', 'units')
+        rps = dstore.get_attr('tot_curves-stats', 'return_periods')
+    if qdic['absolute'] == [1]:
+        pass
+    elif qdic['absolute'] == [0]:
+        evalue = dstore['exposed_values/agg'][l]
+        arr /= evalue
+    else:
+        raise ValueError('"absolute" must be 0 or 1 in %s' % what)
+    attrs = dict(shape_descr=['return_period', 'kind'])
+    attrs['return_period'] = list(rps)
+    attrs['kind'] = kinds
+    attrs['units'] = units  # used by the QGIS plugin
+    return ArrayWrapper(arr, attrs)
 
 
 @extract.add('agg_curves')
