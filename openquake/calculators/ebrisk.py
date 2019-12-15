@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 import operator
+from datetime import datetime
 import numpy
 
 from openquake.baselib import datastore, hdf5, parallel, general
@@ -26,6 +27,7 @@ from openquake.risklib import riskmodels
 from openquake.risklib.scientific import LossesByAsset
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
+from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.scenario_risk import highest_losses, ael_dt
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -160,6 +162,14 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         assetcol = datastore.read(param['hdf5path'])['assetcol']
         num_assets = numpy.bincount(assetcol['site_id'], minlength=N)
     hazards = split_hazard(hazard, num_assets, param['max_ebrisk_weight'])
+    if len(hazards) > 1:
+        msg = 'produced %d subtask(s)' % (len(hazards) - 1)
+        try:
+            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                       'ebrisk#%d' % monitor.task_no, msg)
+        except Exception:
+            # a foreign key error in case of `oq run` is expected
+            print(msg)
     for hazard in hazards[1:]:
         yield calc_risk, hazard, eids, assetcol, param
     res = calc_risk(hazards[0], eids, assetcol, param, monitor)
