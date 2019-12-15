@@ -525,25 +525,6 @@ class RuptureGetter(object):
         self.num_events = n_occ if samples > 1 else n_occ * sum(
             len(rlzs) for rlzs in rlzs_by_gsim.values())
 
-    def split(self):
-        """
-        :returns: a list of RuptureGetters with 1 rupture each
-        """
-        out = []
-        array = self.rup_array
-        for i, ridx in enumerate(array['id']):
-            rg = object.__new__(self.__class__)
-            rg.rup_array = array[i: i+1]
-            rg.filename = self.filename
-            rg.grp_id = self.grp_id
-            rg.trt = self.trt
-            rg.samples = self.samples
-            rg.rlzs_by_gsim = self.rlzs_by_gsim
-            rg.e0 = numpy.array([self.e0[i]])
-            rg.weight = array[i]['n_occ']
-            out.append(rg)
-        return out
-
     @property
     def num_ruptures(self):
         return len(self.rup_array)
