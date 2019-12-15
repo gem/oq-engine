@@ -24,7 +24,7 @@ from shapely import geometry
 from openquake.baselib.general import (
     split_in_blocks, not_equal, get_duplicates)
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects)
+    fix_lon, cross_idl, _GeographicObjects, geohash)
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -445,6 +445,22 @@ class SiteCollection(object):
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
+
+    def geohash(self, length):
+        """
+        :param length: length of the geohash
+        :returns: an array of N geohashes, one per site
+        """
+        lst = [geohash(lon, lat, length)
+               for lon, lat in zip(self.lons, self.lats)]
+        return numpy.array(lst, (numpy.string_, length))
+
+    def num_geohashes(self, length):
+        """
+        :param length: length of the geohash
+        :returns: number of distinct geohashes in the site collection
+        """
+        return len(numpy.unique(self.geohash(length)))
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)
