@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 import operator
+from datetime import datetime
 import numpy
 
 from openquake.baselib import datastore, hdf5, parallel, general
@@ -26,6 +27,7 @@ from openquake.risklib import riskmodels
 from openquake.risklib.scientific import LossesByAsset
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
+from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.scenario_risk import highest_losses, ael_dt
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -42,27 +44,28 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def calc_risk(hazard, assetcol, param, monitor):
-    gmfs = numpy.concatenate(hazard['gmfs'])
-    events = numpy.concatenate(hazard['events'])
+def calc_risk(gmfs, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
+    eids = numpy.unique(gmfs['eid'])
     dstore = datastore.read(param['hdf5path'])
-    assets_by_site = assetcol.assets_by_site()
+    with monitor('getting assets'):
+        assetcol = dstore['assetcol']
+        assets_by_site = assetcol.assets_by_site()
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
+        events = dstore['events'][list(eids)]
         weights = dstore['weights'][()]
-    E = len(events)
+    E = len(eids)
     L = len(param['lba'].loss_names)
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
     alt = general.AccumDict(accum=numpy.zeros(L, F32))  # aid, eid -> loss
-    acc = dict(elt=numpy.zeros((E, L), F32),
-               gmf_info=[], events_per_sid=0, lossbytes=0)
+    acc = dict(elt=numpy.zeros((E, L), F32), events_per_sid=0, lossbytes=0)
     arr = acc['elt']
     lba = param['lba']
     tempname = param['tempname']
     eid2rlz = dict(events[['id', 'rlz_id']])
-    eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
+    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     factor = param['asset_loss_table']
     minimum_loss = param['minimum_loss']
     for sid, haz in general.group_array(gmfs, 'sid').items():
@@ -98,7 +101,6 @@ def calc_risk(hazard, assetcol, param, monitor):
                     acc['lossbytes'] += losses.nbytes
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
-    acc['gmf_info'] = numpy.array(hazard['gmf_info'], gmf_info_dt)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
@@ -123,24 +125,36 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     :returns: a dictionary with keys elt, alt, ...
     """
     mon_haz = monitor('getting hazard', measuremem=False)
-    mon_rup = monitor('getting ruptures', measuremem=False)
-    hazard = dict(gmfs=[], events=[], gmf_info=[])
-    with mon_rup:
+    gmfs = []
+    gmf_info = []
+    with monitor('getting ruptures', measuremem=True):
         gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
         gg.init()  # read the ruptures and filter them
+    nbytes = 0
     for c in gg.computers:
         with mon_haz:
             data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
-            hazard['gmfs'].append(data)
-            hazard['events'].append(c.rupture.get_events(gg.rlzs_by_gsim))
-        hazard['gmf_info'].append(
-            (c.rupture.id, mon_haz.task_no, len(c.sids),
-             data.nbytes, mon_haz.dt))
-    if not hazard['gmfs']:
-        return {}
-    with monitor('getting assets'):
-        assetcol = datastore.read(param['hdf5path'])['assetcol']
-    return calc_risk(hazard, assetcol, param, monitor)
+        if len(data):
+            gmfs.append(data)
+            nbytes += data.nbytes
+        gmf_info.append((c.rupture.id, mon_haz.task_no, len(c.sids),
+                         data.nbytes, mon_haz.dt))
+        if nbytes > param['ebrisk_maxsize']:
+            msg = 'produced subtask'
+            try:
+                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                           'ebrisk#%d' % monitor.task_no, msg)
+            except Exception:  # for `oq run`
+                print(msg)
+            yield calc_risk, numpy.concatenate(gmfs), param
+            nbytes = 0
+            gmfs = []
+    res = {}
+    if gmfs:
+        res.update(calc_risk(numpy.concatenate(gmfs), param, monitor))
+    if gmf_info:
+        res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
+    yield res
 
 
 @base.calculators.add('ebrisk')
@@ -166,6 +180,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['minimum_loss'] = [getdefault(oq.minimum_asset_loss, ln)
                                       for ln in oq.loss_names]
         self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
+        self.param['ebrisk_maxsize'] = oq.ebrisk_maxsize
+
         self.A = A = len(self.assetcol)
         self.datastore.create_dset(
             'asset_loss_table/data', ael_dt(oq.loss_names))
@@ -175,8 +191,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
         elt_nbytes = 4 * self.E * L
-        logging.info('Approx size of the event loss table: %s',
-                     general.humansize(elt_nbytes))
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
                                'red with %d tasks' % oq.concurrent_tasks)
@@ -220,13 +234,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         :param dummy: unused parameter
         :param dic: dictionary with keys elt, losses_by_A
         """
-        if not dic or len(dic['elt']) == 0:
+        if 'gmf_info' in dic:
+            hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
+        if not dic:
             return
         self.oqparam.ground_motion_fields = False  # hack
-        elt = dic['elt']
-        hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
         with self.monitor('saving losses_by_event and asset_loss_table'):
-            hdf5.extend(self.datastore['losses_by_event'], elt)
+            hdf5.extend(self.datastore['losses_by_event'], dic['elt'])
             hdf5.extend(self.datastore['asset_loss_table/data'],
                         dic['alt'][['asset_id', 'event_id', 'loss']])
             for rlzi, [(start, stop)] in dic['indices'].items():

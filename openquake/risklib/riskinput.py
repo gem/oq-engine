@@ -136,8 +136,7 @@ class RiskInput(object):
         hazard_getter = self.hazard_getter
         [sid] = hazard_getter.sids
         if haz is None:
-            with monitor('getting hazard'):
-                haz = hazard_getter.get_hazard()
+            haz = hazard_getter.get_hazard()
         if isinstance(haz, dict):
             items = haz.items()
         else:  # list of length R
