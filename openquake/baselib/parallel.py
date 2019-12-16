@@ -424,7 +424,9 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         if inspect.isgeneratorfunction(func):
             it = func(*args)
         else:
-            it = iter([func(*args)])
+            def gen(*args):
+                yield func(*args)
+            it = gen(*args)
         while True:
             # StopIteration -> TASK_ENDED
             res = Result.new(next, (it,), mon)
