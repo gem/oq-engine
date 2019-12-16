@@ -94,7 +94,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     def test_case_1_eb(self):
-        # this is a case with insured losses, no tags
+        # this is a case with no insured losses, no tags
         # NB: asset_loss_table=1 below avoids discarding any loss; that would
         # make the loss curves depending on the number of spawned tasks
         self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4',

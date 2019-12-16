@@ -179,7 +179,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_by_magnitude = valid.Param(valid.boolean, False)
-    task_duration = valid.Param(valid.positiveint, None)  # used in ebrisk
+    ebrisk_maxsize = valid.Param(valid.positiveint, 5E7)  # used in ebrisk
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
