@@ -20,7 +20,7 @@ import itertools
 import operator
 import unittest.mock as mock
 import numpy
-from openquake.baselib import hdf5, datastore, general
+from openquake.baselib import hdf5, datastore, general, performance
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
@@ -331,6 +331,24 @@ class GmfGetter(object):
             rupgetter.trt, rupgetter.rlzs_by_gsim, param)
         self.correl_model = oqparam.correl_model
 
+    def gen_computers(self, mon):
+        """
+        Yield a GmfComputer instance for each non-discarded rupture
+        """
+        with mon:
+            for ebr in self.rupgetter.get_ruptures():
+                sitecol = self.sitecol.filtered(ebr.sids)
+                try:
+                    computer = calc.gmf.GmfComputer(
+                        ebr, sitecol, self.oqparam.imtls, self.cmaker,
+                        self.oqparam.truncation_level, self.correl_model)
+                except FarAwayRupture:
+                    continue
+                # due to numeric errors ruptures within the maximum_distance
+                # when written, can be outside when read; I found a case with
+                # a distance of 99.9996936 km over a maximum distance of 100 km
+                yield computer
+
     @property
     def sids(self):
         return self.sitecol.sids
@@ -349,19 +367,7 @@ class GmfGetter(object):
         """
         if hasattr(self, 'computers'):  # init already called
             return
-        self.computers = []
-        for ebr in self.rupgetter.get_ruptures():
-            sitecol = self.sitecol.filtered(ebr.sids)
-            try:
-                computer = calc.gmf.GmfComputer(
-                    ebr, sitecol, self.oqparam.imtls, self.cmaker,
-                    self.oqparam.truncation_level, self.correl_model)
-            except FarAwayRupture:
-                # due to numeric errors, ruptures within the maximum_distance
-                # when written, can be outside when read; I found a case with
-                # a distance of 99.9996936 km over a maximum distance of 100 km
-                continue
-            self.computers.append(computer)
+        self.computers = list(self.gen_computers(performance.Monitor()))
 
     def get_gmfdata(self):
         """
