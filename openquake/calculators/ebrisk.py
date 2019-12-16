@@ -44,10 +44,9 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def calc_risk(hazard, param, monitor):
+def calc_risk(gmfs, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    gmfs = numpy.concatenate(hazard)
     eids = numpy.unique(gmfs['eid'])
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
@@ -61,8 +60,7 @@ def calc_risk(hazard, param, monitor):
     L = len(param['lba'].loss_names)
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
     alt = general.AccumDict(accum=numpy.zeros(L, F32))  # aid, eid -> loss
-    acc = dict(elt=numpy.zeros((E, L), F32),
-               gmf_info=[], events_per_sid=0, lossbytes=0)
+    acc = dict(elt=numpy.zeros((E, L), F32), events_per_sid=0, lossbytes=0)
     arr = acc['elt']
     lba = param['lba']
     tempname = param['tempname']
@@ -101,8 +99,8 @@ def calc_risk(hazard, param, monitor):
                         lba.losses_by_A[aid, loss_idx] += (
                             losses @ ws * param['ses_ratio'])
                     acc['lossbytes'] += losses.nbytes
-    if len(hazard):
-        acc['events_per_sid'] /= len(hazard)
+    if len(gmfs):
+        acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
@@ -141,24 +139,22 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             nbytes += data.nbytes
         gmf_info.append((c.rupture.id, mon_haz.task_no, len(c.sids),
                          data.nbytes, mon_haz.dt))
-        if nbytes > ebrisk.MAXSIZE:
+        if nbytes > param['ebrisk_maxsize']:
             msg = 'produced subtask'
             try:
                 logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
                            'ebrisk#%d' % monitor.task_no, msg)
             except Exception:  # for `oq run`
                 print(msg)
-            yield calc_risk, gmfs, param
+            yield calc_risk, numpy.concatenate(gmfs), param
             nbytes = 0
             gmfs = []
-    if not gmfs:
-        return {}
-    res = calc_risk(gmfs, param, monitor)
-    res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
+    res = {}
+    if gmfs:
+        res.update(calc_risk(numpy.concatenate(gmfs), param, monitor))
+    if gmf_info:
+        res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
     yield res
-
-
-ebrisk.MAXSIZE = 64 * 1024 * 1024  # 64 MB, can be changed in the tests
 
 
 @base.calculators.add('ebrisk')
@@ -184,6 +180,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['minimum_loss'] = [getdefault(oq.minimum_asset_loss, ln)
                                       for ln in oq.loss_names]
         self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
+        self.param['ebrisk_maxsize'] = oq.ebrisk_maxsize
+
         self.A = A = len(self.assetcol)
         self.datastore.create_dset(
             'asset_loss_table/data', ael_dt(oq.loss_names))
@@ -236,14 +234,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         :param dummy: unused parameter
         :param dic: dictionary with keys elt, losses_by_A
         """
+        if 'gmf_info' in dic:
+            hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
         if not dic:
             return
-        elif 'gmf_info' in dic:
-            hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
         self.oqparam.ground_motion_fields = False  # hack
-        elt = dic['elt']
         with self.monitor('saving losses_by_event and asset_loss_table'):
-            hdf5.extend(self.datastore['losses_by_event'], elt)
+            hdf5.extend(self.datastore['losses_by_event'], dic['elt'])
             hdf5.extend(self.datastore['asset_loss_table/data'],
                         dic['alt'][['asset_id', 'event_id', 'loss']])
             for rlzi, [(start, stop)] in dic['indices'].items():
