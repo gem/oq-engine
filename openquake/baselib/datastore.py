@@ -21,11 +21,14 @@ import os
 import re
 import gzip
 import getpass
+import itertools
 import collections
 import numpy
 import h5py
+import pandas
 
 from openquake.baselib import hdf5, config, performance
+
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
@@ -132,6 +135,28 @@ def read(calc_id, mode='r', datadir=None):
     if hc_id:
         dstore.parent = read(hc_id, datadir=os.path.dirname(dstore.filename))
     return dstore
+
+
+def dset2df(dset):
+    """
+    Converts an HDF5 dataset with an attribute shape_descr into a Pandas
+    dataframe.
+    """
+    shape_descr = [v.decode('utf-8') for v in dset.attrs['shape_descr']]
+    out = []
+    tags = []
+    idxs = []
+    dtlist = []
+    for i, field in enumerate(shape_descr):
+        values = dset.attrs[field]
+        dtlist.append((field[:-1], values[0].dtype))
+        tags.append(values)
+        idxs.append(range(len(values)))
+    dtlist.append(('value', dset.dtype))
+    for idx, values in zip(itertools.product(*idxs),
+                           itertools.product(*tags)):
+        out.append(values + (dset[idx],))
+    return pandas.DataFrame(numpy.array(out, dtlist))
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -402,8 +427,9 @@ class DataStore(collections.abc.MutableMapping):
         :param index: if given, name of the "primary key" field
         :returns: pandas DataFrame associated to the dataset
         """
-        import pandas  # imported inside to save startup time
         dset = self.getitem(key)
+        if 'shape_descr' in dset.attrs:
+            return dset2df(dset)
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
