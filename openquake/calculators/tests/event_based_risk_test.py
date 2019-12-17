@@ -150,7 +150,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # extract agg_curves with tags
         self.run_calc(case_1.__file__, 'job_eb.ini',
-                      aggregate_by='policy,taxonomy')
+                      asset_loss_table='1', aggregate_by='policy,taxonomy')
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
