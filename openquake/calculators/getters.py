@@ -20,7 +20,7 @@ import itertools
 import operator
 import unittest.mock as mock
 import numpy
-from openquake.baselib import hdf5, datastore, general
+from openquake.baselib import hdf5, datastore, general, performance
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
@@ -331,6 +331,24 @@ class GmfGetter(object):
             rupgetter.trt, rupgetter.rlzs_by_gsim, param)
         self.correl_model = oqparam.correl_model
 
+    def gen_computers(self, mon):
+        """
+        Yield a GmfComputer instance for each non-discarded rupture
+        """
+        with mon:
+            for ebr in self.rupgetter.get_ruptures():
+                sitecol = self.sitecol.filtered(ebr.sids)
+                try:
+                    computer = calc.gmf.GmfComputer(
+                        ebr, sitecol, self.oqparam.imtls, self.cmaker,
+                        self.oqparam.truncation_level, self.correl_model)
+                except FarAwayRupture:
+                    continue
+                # due to numeric errors ruptures within the maximum_distance
+                # when written, can be outside when read; I found a case with
+                # a distance of 99.9996936 km over a maximum distance of 100 km
+                yield computer
+
     @property
     def sids(self):
         return self.sitecol.sids
@@ -343,33 +361,13 @@ class GmfGetter(object):
     def imts(self):
         return list(self.oqparam.imtls)
 
-    def init(self):
-        """
-        Initialize the computers. Should be called on the workers
-        """
-        if hasattr(self, 'computers'):  # init already called
-            return
-        self.computers = []
-        for ebr in self.rupgetter.get_ruptures():
-            sitecol = self.sitecol.filtered(ebr.sids)
-            try:
-                computer = calc.gmf.GmfComputer(
-                    ebr, sitecol, self.oqparam.imtls, self.cmaker,
-                    self.oqparam.truncation_level, self.correl_model)
-            except FarAwayRupture:
-                # due to numeric errors, ruptures within the maximum_distance
-                # when written, can be outside when read; I found a case with
-                # a distance of 99.9996936 km over a maximum distance of 100 km
-                continue
-            self.computers.append(computer)
-
-    def get_gmfdata(self):
+    def get_gmfdata(self, mon):
         """
         :returns: an array of the dtype (sid, eid, gmv)
         """
         alldata = []
         self.sig_eps = []
-        for computer in self.computers:
+        for computer in self.gen_computers(mon):
             data = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
             alldata.append(data)
@@ -394,13 +392,12 @@ class GmfGetter(object):
         :returns: a dict with keys gmfdata, indices, hcurves
         """
         oq = self.oqparam
-        with monitor('getting ruptures', measuremem=True):
-            self.init()
+        mon = monitor('getting ruptures', measuremem=True)
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
             with monitor('building hazard', measuremem=True):
-                gmfdata = self.get_gmfdata()  # returned later
+                gmfdata = self.get_gmfdata(mon)  # returned later
                 hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
                 dic = group_by_rlz(hazardr, rlzs)
@@ -415,7 +412,7 @@ class GmfGetter(object):
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
         with monitor('building hazard', measuremem=True):
-            gmfdata = self.get_gmfdata()
+            gmfdata = self.get_gmfdata(mon)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         indices = []
