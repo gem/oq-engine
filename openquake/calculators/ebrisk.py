@@ -29,7 +29,7 @@ from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters
-from openquake.calculators.scenario_risk import highest_losses, ael_dt
+from openquake.calculators.scenario_risk import ael_dt
 from openquake.calculators.post_risk import PostRiskCalculator
 
 U8 = numpy.uint8
@@ -52,6 +52,7 @@ def calc_risk(gmfs, param, monitor):
     with monitor('getting assets'):
         assetcol = dstore['assetcol']
         assets_by_site = assetcol.assets_by_site()
+        exposed_values = dstore['exposed_values/agg'][()]
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
         events = dstore['events'][list(eids)]
@@ -66,8 +67,15 @@ def calc_risk(gmfs, param, monitor):
     tempname = param['tempname']
     eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
-    factor = param['asset_loss_table']
-    minimum_loss = param['minimum_loss']
+
+    minimum_loss = []
+    fraction = (1 - param['asset_loss_table']) / len(assetcol)
+    for lt, lti in crmodel.lti.items():
+        val = exposed_values[lti] * fraction
+        minimum_loss.append(val)
+        if lt in lba.policy_dict:  # same order as in lba.compute
+            minimum_loss.append(val)
+
     for sid, haz in general.group_array(gmfs, 'sid').items():
         assets_on_sid = assets_by_site[sid]
         if len(assets_on_sid) == 0:
@@ -91,8 +99,8 @@ def calc_risk(gmfs, param, monitor):
                         losses = lratios * asset['value-' + lt]
                     losses_by_lt[lt] = losses
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
-                    for loss, eid in highest_losses(losses, out.eids, factor):
-                        if loss > minimum_loss[lti]:
+                    for loss, eid in zip(losses, out.eids):
+                        if loss >= minimum_loss[loss_idx]:
                             alt[aid, eid][loss_idx] = loss
                     arr[eidx, loss_idx] += losses
                     if param['avg_losses']:
@@ -219,7 +227,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         smap = parallel.Starmap(
             self.core_task.__func__, allargs, h5=self.datastore.hdf5)
         smap.reduce(self.agg_dicts)
-        self.datastore['asset_loss_table/indices'] = self.indices
+        if self.indices:
+            self.datastore['asset_loss_table/indices'] = self.indices
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
