@@ -361,21 +361,13 @@ class GmfGetter(object):
     def imts(self):
         return list(self.oqparam.imtls)
 
-    def init(self):
-        """
-        Initialize the computers. Should be called on the workers
-        """
-        if hasattr(self, 'computers'):  # init already called
-            return
-        self.computers = list(self.gen_computers(performance.Monitor()))
-
-    def get_gmfdata(self):
+    def get_gmfdata(self, mon):
         """
         :returns: an array of the dtype (sid, eid, gmv)
         """
         alldata = []
         self.sig_eps = []
-        for computer in self.computers:
+        for computer in self.gen_computers(mon):
             data = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
             alldata.append(data)
@@ -400,13 +392,12 @@ class GmfGetter(object):
         :returns: a dict with keys gmfdata, indices, hcurves
         """
         oq = self.oqparam
-        with monitor('getting ruptures', measuremem=True):
-            self.init()
+        mon = monitor('getting ruptures', measuremem=True)
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
             with monitor('building hazard', measuremem=True):
-                gmfdata = self.get_gmfdata()  # returned later
+                gmfdata = self.get_gmfdata(mon)  # returned later
                 hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
                 dic = group_by_rlz(hazardr, rlzs)
@@ -421,7 +412,7 @@ class GmfGetter(object):
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
         with monitor('building hazard', measuremem=True):
-            gmfdata = self.get_gmfdata()
+            gmfdata = self.get_gmfdata(mon)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         indices = []
