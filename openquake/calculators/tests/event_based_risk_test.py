@@ -313,7 +313,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # check on the asset_loss_table, num_losses per asset
         aids = self.calc.datastore['asset_loss_table/data']['asset_id']
         numpy.testing.assert_equal(numpy.bincount(aids),
-                                   [6, 32, 22, 32, 32, 32, 31])
+                                   [17, 32, 32, 32, 32, 32, 32])
 
         # tot_losses-rlzs has shape (L=5, R=9)
         # tot_losses-stats has shape (L=5, S=4)
