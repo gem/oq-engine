@@ -125,6 +125,8 @@ def info(calculators, gsims, views, exports, extracts, parameters,
             func = extract[key]
             if hasattr(func, '__wrapped__'):
                 fm = FunctionMaker(func.__wrapped__)
+            elif hasattr(func, 'func'):  # for partial objects
+                fm = FunctionMaker(func.func)
             else:
                 fm = FunctionMaker(func)
             print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))
