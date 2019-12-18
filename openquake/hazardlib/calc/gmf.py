@@ -157,22 +157,16 @@ class GmfComputer(object):
         arr = numpy.array(data, gmv_dt)
         return arr, time.time() - t0
 
-    def compute(self, gsim, num_events, seed=None):
+    def compute(self, gsim, num_events):
         """
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
-        :param seed: a random seed or None
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        try:  # read the seed from self.rupture.rup_id
-            seed = seed or self.rupture.rup_id
-        except AttributeError:
-            pass
-        if seed is not None:
-            numpy.random.seed(seed)
+        numpy.random.seed(self.rupture.rup_id)
         result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
@@ -316,7 +310,8 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         sites and second one is for realizations.
     """
     cmaker = ContextMaker(rupture.tectonic_region_type, [gsim])
+    rupture.rup_id = seed
     gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
                      cmaker, truncation_level, correlation_model)
-    res, _sig, _eps = gc.compute(gsim, realizations, seed)
+    res, _sig, _eps = gc.compute(gsim, realizations)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

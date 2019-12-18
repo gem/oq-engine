@@ -43,7 +43,7 @@ def aae(data, expected):
 class EventBasedRiskTestCase(CalculatorTestCase):
 
     def check_attr(self, name, value):
-        got = self.calc.datastore.get_attr('agg_curves-stats', name)
+        got = self.calc.datastore.get_attr('tot_curves-stats', name)
         numpy.testing.assert_equal(value, got)
 
     def assert_stats_ok(self, pkg, job_ini):
@@ -58,7 +58,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 if 'rlz' in fname:
                     continue
                 elif fname.endswith('.csv') and any(x in fname for x in (
-                        'agg_curves', 'agg_loss', 'avg_loss')):
+                        'tot_curves', 'tot_loss', 'avg_loss')):
                     all_csv.append(fname)
         assert all_csv, 'Could not find any CSV file??'
         for fname in all_csv:
@@ -67,13 +67,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
-        ekeys = [('agg_curves-stats', 'csv')]
+        ekeys = [('tot_curves-stats', 'csv')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
                 self.assertEqualFiles(
                     'expected/%s' % strip_calc_id(fname), fname)
 
-        # make sure the agg_curves-stats has the right attrs
+        # make sure the tot_curves-stats has the right attrs
         self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
         self.check_attr('units', [b'EUR', b'EUR'])
 
@@ -94,8 +94,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     def test_case_1_eb(self):
-        # this is a case with insured losses
-        self.run_calc(case_1.__file__, 'job_eb.ini')
+        # this is a case with no insured losses, no tags
+        # NB: asset_loss_table=1 below avoids discarding any loss; that would
+        # make the loss curves depending on the number of spawned tasks
+        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4',
+                      asset_loss_table='1')
+
+        # check on the asset_loss_table, num_losses per asset
+        aids = self.calc.datastore['asset_loss_table/data']['asset_id']
+        numpy.testing.assert_equal(numpy.bincount(aids), [18,  8, 14, 14])
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
@@ -104,12 +111,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(aw.stats, ['mean'])
         self.assertEqual(aw.array, numpy.float32([767.82324]))
 
-        fnames = export(('agg_curves-stats', 'csv'), self.calc.datastore)
+        fnames = export(('tot_curves-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/eb_%s' % strip_calc_id(fname),
-                                  fname)
+                                  fname, delta=1E-5)
 
-        fnames = export(('agg_losses-stats', 'csv'), self.calc.datastore)
+        fnames = export(('tot_losses-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-5)
@@ -117,33 +124,33 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
-        # extract agg_curves, no tags
-        aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
+        # extract tot_curves, no tags
+        aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
                      'loss_type=structural&absolute=1')
         tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves1.csv', tmp)
 
-        aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
+        aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
                      'loss_type=structural&absolute=1')
         tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves2.csv', tmp)
 
-        aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
+        aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
                      'loss_type=structural&absolute=0')
         tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves3.csv', tmp)
 
-        aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
+        aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
                      'loss_type=structural&absolute=0')
         tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves4.csv', tmp)
 
+    def test_insured_losses(self):
         # TODO: fix extract agg_curves for insured types
 
         # extract agg_curves with tags
         self.run_calc(case_1.__file__, 'job_eb.ini',
-                      aggregate_by='policy,taxonomy',
-                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+                      aggregate_by='policy,taxonomy')
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
@@ -187,7 +194,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(arr), 16)
         self.assertEqual(arr['event_id'].nbytes, 64)
         self.assertEqual(arr['rlzi'].nbytes, 32)
-        self.assertEqual(arr['loss'].nbytes, 128)
+        self.assertEqual(arr['loss'].nbytes, 64)
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_loss_12.csv', fname)
 
@@ -243,7 +250,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='csv', hazard_calculation_id=str(hc_id))
-        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('tot_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     def test_case_4(self):
@@ -259,7 +266,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
-        fnames = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
+        fnames = export(('tot_curves-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
@@ -300,14 +307,20 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master_eb(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
-                      aggregate_by='id')
+                      concurrent_tasks='4',
+                      aggregate_by='id', asset_loss_table='1')
 
-        # agg_losses-rlzs has shape (L=5, R=9)
-        # agg_losses-stats has shape (L=5, S=4)
-        fname = export(('agg_losses-stats', 'csv'), self.calc.datastore)[0]
+        # check on the asset_loss_table, num_losses per asset
+        aids = self.calc.datastore['asset_loss_table/data']['asset_id']
+        numpy.testing.assert_equal(numpy.bincount(aids),
+                                   [6, 32, 22, 32, 32, 32, 31])
+
+        # tot_losses-rlzs has shape (L=5, R=9)
+        # tot_losses-stats has shape (L=5, S=4)
+        fname = export(('tot_losses-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
 
-        fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
+        fname = export(('tot_curves-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-5)
 
         fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
@@ -362,7 +375,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_losses.csv', fname)
         rup_ids = set(read_csv(fname, {None: '<S50'})['rup_id'])
 
-        [fname] = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('tot_curves-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_curves.csv', fname)
 
         # check that the IDs in losses_by_event.csv exist in ruptures.csv
@@ -406,7 +419,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)
 
-        [fname] = out['agg_curves-rlzs', 'csv']
+        [fname] = out['tot_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
 
     def test_asset_loss_table(self):
