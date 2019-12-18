@@ -82,10 +82,6 @@ Current stable version is the **OpenQuake Engine 3.7** 'Richter'. The documentat
 * [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development-windows.md)
 * [Starting the software](https://github.com/gem/oq-engine/blob/master/doc/running/windows.md)
 
-#### VirtualBox
-
-* [Download OVA appliance](https://downloads.openquake.org/ova/stable/)
-
 #### Cloud
 
 * [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
