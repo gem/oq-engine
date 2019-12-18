@@ -79,6 +79,7 @@ Current stable version is the **OpenQuake Engine 3.7** 'Richter'. The documentat
 #### Windows
 
 * [Installing on Windows](https://github.com/gem/oq-engine/blob/master/doc/installing/windows.md)
+* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development-windows.md)
 * [Starting the software](https://github.com/gem/oq-engine/blob/master/doc/running/windows.md)
 
 #### VirtualBox
