@@ -473,21 +473,22 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        proxies = []
-        for rec in arr:
+        for block in general.block_splitter(
+                arr, maxweight, operator.itemgetter('n_occ')):
             if srcfilter:
-                sids = srcfilter.close_sids(rec, trt)
-                if len(sids):
-                    proxies.append(RuptureProxy(rec, sids))
+                proxies = []
+                for rec in block:
+                    sids = srcfilter.close_sids(rec, trt)
+                    if len(sids):
+                        proxies.append(RuptureProxy(rec, sids))
             else:
-                proxies.append(RuptureProxy(rec))
-        for block in general.block_splitter(proxies, maxweight, weight_rup):
+                proxies = block
             if e0s is None:
-                e0 = numpy.zeros(len(block), U32)
+                e0 = numpy.zeros(len(proxies), U32)
             else:
-                e0 = e0s[nr: nr + len(block)]
+                e0 = e0s[nr: nr + len(proxies)]
             rgetter = RuptureGetter(
-                block, filename or dstore.filename, grp_id,
+                proxies, filename or dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
             yield rgetter
             nr += len(block)
