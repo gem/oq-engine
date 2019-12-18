@@ -25,10 +25,11 @@ from openquake.calculators.post_risk import PostRiskCalculator
 def postrisk(calc_id):
     """Re-run the postprocessing after an event based risk calculation"""
     parent = datastore.read(calc_id)
-    calc_id = logs.init(level=logging.INFO)
-    prc = PostRiskCalculator(parent['oqparam'], calc_id)
-    prc.datastore.parent = parent
-    prc.run()
+    job_id = logs.init('job', level=logging.INFO)
+    with logs.handle(job_id, logging.INFO):
+        prc = PostRiskCalculator(parent['oqparam'], job_id)
+        prc.datastore.parent = parent
+        prc.run()
 
 postrisk.arg('calc_id', 'ID of the risk calculation', type=int)
 

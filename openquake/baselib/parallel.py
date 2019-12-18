@@ -422,14 +422,14 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         if msg:
             zsocket.send(Result(None, mon, msg=msg))
         if inspect.isgeneratorfunction(func):
-            gfunc = func
+            it = func(*args)
         else:
-            def gfunc(*args):
+            def gen(*args):
                 yield func(*args)
-        gobj = gfunc(*args)
-        for count in itertools.count():
-            res = Result.new(next, (gobj,), mon, count=count)
+            it = gen(*args)
+        while True:
             # StopIteration -> TASK_ENDED
+            res = Result.new(next, (it,), mon)
             try:
                 zsocket.send(res)
             except Exception:  # like OverflowError
@@ -437,9 +437,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
                 err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
                              count=count)
                 zsocket.send(err)
-            mon.duration = 0
-            mon.counts = 0
-            mon.children.clear()
             if res.msg == 'TASK_ENDED':
                 break
 
@@ -508,7 +505,7 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            if not result.func:  # real output
+            if result.msg == 'TASK_ENDED':
                 task_sent = ast.literal_eval(self.h5['task_sent'][()])
                 task_sent.update(self.sent)
                 del self.h5['task_sent']
@@ -517,6 +514,7 @@ class IterResult(object):
                 result.mon.save_task_info(self.h5, result, name, mem_gb)
                 result.mon.flush(self.h5)
                 self.h5.flush()
+            elif not result.func:  # real output
                 yield val
 
     def __iter__(self):
@@ -814,6 +812,7 @@ class Starmap(object):
                 logging.debug('%d tasks todo, %d in queue',
                               self.todo, len(self.task_queue))
                 self.log_percent()
+                yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
                 if self.todo < self.num_cores:
