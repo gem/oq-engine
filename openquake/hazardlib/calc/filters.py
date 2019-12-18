@@ -334,6 +334,7 @@ class SourceFilter(object):
         dlat = rec['maxlat'] - rec['minlat']
         diag = math.sqrt(dlon * dlon + dlat * dlat) / KM_TO_DEGREES
         maxradius = self.integration_distance(trt) + diag / 2
+        # using the same idea for the maxradius as in source/point.py
         sids = U16(self.kdt.query_ball_point(xyz, maxradius, eps=.001))
         sids.sort()
         return sids
