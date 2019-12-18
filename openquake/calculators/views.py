@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import ast
-import copy
 import os.path
 import numbers
 import operator
@@ -338,11 +337,10 @@ def view_totlosses(token, dstore):
 def portfolio_loss(dstore):
     R = dstore['csm_info'].get_num_rlzs()
     array = dstore['losses_by_event'][()]
-    L = array.dtype['loss'].shape[0]  # loss has shape L, T...
+    L, = array.dtype['loss'].shape  # loss has shape L
     data = numpy.zeros((R, L), F32)
     for row in array:
-        for lti in range(L):
-            data[row['rlzi'], lti] += row['loss'][lti].sum()
+        data[row['rlzi']] += row['loss']
     return data
 
 
@@ -442,16 +440,18 @@ def performance_view(dstore, add_calc_id=True):
         counts = 0
         time = 0
         mem = 0
-        for _operation, time_sec, memory_mb, counts_ in group:
-            counts += counts_
-            time += time_sec
-            mem = max(mem, memory_mb)
+        for rec in group:
+            counts += rec['counts']
+            time += rec['time_sec']
+            mem = max(mem, rec['memory_mb'])
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    dt = copy.copy(perf_dt)
     if add_calc_id:
-        dt.names = ('calc_%d' % dstore.calc_id,) + dt.names[1:]
-    return numpy.array(out, dt)
+        dtlist = [('calc_%d' % dstore.calc_id, perf_dt['operation'])]
+    else:
+        dtlist = [('operation', perf_dt['operation'])]
+    dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
+    return numpy.array(out, dtlist)
 
 
 @view.add('performance')
@@ -587,7 +587,7 @@ def view_task_hazard(token, dstore):
         raise RuntimeError('No task_info for %s' % name)
     data.sort(order='duration')
     rec = data[int(index)]
-    taskno = rec['taskno']
+    taskno = rec['task_no']
     eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
     eff_sites = dstore['by_task/eff_sites'][taskno]
     srcids = dstore['by_task/srcids'][taskno]
@@ -734,6 +734,20 @@ def view_global_gmfs(token, dstore):
     imtls = dstore['oqparam'].imtls
     row = dstore['gmf_data/data']['gmv'].mean(axis=0)
     return rst_table([row], header=imtls)
+
+
+@view.add('gmv_by_rup')
+def view_gmv_by_rup(token, dstore):
+    """
+    Display a synthetic gmv per rupture serial for debugging purposes
+    """
+    rup_id = dstore['events']['rup_id']
+    serial = dstore['ruptures']['serial']
+    data = dstore['gmf_data/data'][()]
+    gmv = fast_agg3(data, 'eid', ['gmv'])
+    gmv['eid'] = serial[rup_id[gmv['eid']]]
+    gm = fast_agg3(gmv, 'eid', ['gmv'])
+    return rst_table(gm, header=['serial', 'gmv'])
 
 
 @view.add('mean_disagg')

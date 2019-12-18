@@ -120,7 +120,6 @@ class StarmapTestCase(unittest.TestCase):
 
     def test_supertask(self):
         # this test has 4 supertasks generating 4 + 5 + 3 + 5 = 17 subtasks
-        # and 5 real outputs (one from the yield {})
         allargs = [('aaaaeeeeiii',),
                    ('uuuuaaaaeeeeiii',),
                    ('aaaaaaaaeeeeiii',),
@@ -137,7 +136,7 @@ class StarmapTestCase(unittest.TestCase):
         with hdf5.File(tmp, 'r') as h5:
             num = general.countby(h5['performance_data'][()], 'operation')
             self.assertEqual(num[b'waiting'], 4)
-            self.assertEqual(num[b'total supertask'], 5)  # outputs
+            self.assertEqual(num[b'total supertask'], 4)  # tasks
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
             self.assertGreater(len(h5['task_info']), 0)
         shutil.rmtree(tmpdir)
@@ -175,7 +174,8 @@ def pool_starmap(func, allargs, h5):
     import multiprocessing
     with multiprocessing.get_context('spawn').Pool() as pool:
         for i, res in enumerate(pool.starmap(func, allargs)):
-            perf = numpy.array([(func.__name__, 0, 0, i)], performance.perf_dt)
+            perf = numpy.array([(func.__name__, 0, 0, i, i)],
+                               performance.perf_dt)
             hdf5.extend(h5['performance_data'], perf)
             yield res
 
