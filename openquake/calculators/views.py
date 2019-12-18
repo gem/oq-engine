@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import ast
-import copy
 import os.path
 import numbers
 import operator
@@ -721,6 +720,20 @@ def view_global_gmfs(token, dstore):
     imtls = dstore['oqparam'].imtls
     row = dstore['gmf_data/data']['gmv'].mean(axis=0)
     return rst_table([row], header=imtls)
+
+
+@view.add('gmv_by_rup')
+def view_gmv_by_rup(token, dstore):
+    """
+    Display a synthetic gmv per rupture serial for debugging purposes
+    """
+    rup_id = dstore['events']['rup_id']
+    serial = dstore['ruptures']['serial']
+    data = dstore['gmf_data/data'][()]
+    gmv = fast_agg3(data, 'eid', ['gmv'])
+    gmv['eid'] = serial[rup_id[gmv['eid']]]
+    gm = fast_agg3(gmv, 'eid', ['gmv'])
+    return rst_table(gm, header=['serial', 'gmv'])
 
 
 @view.add('mean_disagg')
