@@ -69,7 +69,7 @@ def calc_risk(gmfs, param, monitor):
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
 
     minimum_loss = []
-    fraction = (1 - param['asset_loss_table']) / len(assetcol)
+    fraction = param['minimum_loss_fraction'] / len(assetcol)
     for lt, lti in crmodel.lti.items():
         val = exposed_values[lti] * fraction
         minimum_loss.append(val)
@@ -182,11 +182,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                           self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
-        self.param['asset_loss_table'] = oq.asset_loss_table
-        self.param['minimum_loss'] = [getdefault(oq.minimum_asset_loss, ln)
-                                      for ln in oq.loss_names]
         self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
         self.param['ebrisk_maxsize'] = oq.ebrisk_maxsize
+        self.param['minimum_loss_fraction'] = oq.minimum_loss_fraction
 
         self.A = A = len(self.assetcol)
         self.datastore.create_dset(
