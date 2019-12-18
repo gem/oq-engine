@@ -132,12 +132,13 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary with keys elt, alt, ...
     """
+    mon_rup = monitor('getting ruptures', measuremem=False)
     mon_haz = monitor('getting hazard', measuremem=False)
     gmfs = []
     gmf_info = []
     gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     nbytes = 0
-    for c in gg.gen_computers(monitor('getting ruptures')):
+    for c in gg.gen_computers(mon_rup):
         with mon_haz:
             data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
         if len(data):
