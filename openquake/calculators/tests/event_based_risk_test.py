@@ -95,14 +95,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_1_eb(self):
         # this is a case with no insured losses, no tags
-        # NB: asset_loss_table=1 below avoids discarding any loss; that would
-        # make the loss curves depending on the number of spawned tasks
-        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4',
-                      asset_loss_table='1')
+        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
 
         # check on the asset_loss_table, num_losses per asset
         aids = self.calc.datastore['asset_loss_table/data']['asset_id']
-        numpy.testing.assert_equal(numpy.bincount(aids), [18,  8, 14, 14])
+        numpy.testing.assert_equal(numpy.bincount(aids), [18, 8, 14, 14])
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
@@ -150,7 +147,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # extract agg_curves with tags
         self.run_calc(case_1.__file__, 'job_eb.ini',
-                      aggregate_by='policy,taxonomy')
+                      asset_loss_table='1', aggregate_by='policy,taxonomy')
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
@@ -307,8 +304,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master_eb(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
-                      concurrent_tasks='4',
-                      aggregate_by='id', asset_loss_table='1')
+                      concurrent_tasks='4', aggregate_by='id')
 
         # check on the asset_loss_table, num_losses per asset
         aids = self.calc.datastore['asset_loss_table/data']['asset_id']
