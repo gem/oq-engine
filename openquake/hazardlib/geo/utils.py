@@ -650,7 +650,7 @@ def geohash(lon, lat, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
 
-    >>> geohash(10, 45)
+    >>> geohash(lon=10, lat=45, length=5)
     b'spzpg'
     """
     lat_interval, lon_interval = (-90.0, 90.0), (-180.0, 180.0)
