@@ -330,15 +330,11 @@ class SourceFilter(object):
             return self.sitecol.sids
         if not hasattr(self, 'kdt'):
             self.kdt = cKDTree(self.sitecol.xyz)
-        lon, lat, dep = rec['hypo']
-        # ignore the dep to reduce the distance and discard less sites
-        xyz = spherical_to_cartesian(lon, lat, 0)
-        # compute the diagonal size of the rupture
+        xyz = spherical_to_cartesian(*rec['hypo'])
         dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
         dlat = rec['maxlat'] - rec['minlat']
-        diag = math.sqrt(dlon * dlon + dlat * dlat) / KM_TO_DEGREES
-        maxradius = self.integration_distance(trt) + diag / 2
-        # using the same idea for the maxradius as in source/point.py
+        delta = max(dlon, dlat) / KM_TO_DEGREES
+        maxradius = self.integration_distance(trt) + delta
         sids = U16(self.kdt.query_ball_point(xyz, maxradius, eps=.001))
         sids.sort()
         return sids
