@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Refined the rupture prefiltering mechanism
+  * Refined the rupture prefiltering mechanism, possibly changing the numbers
+    in calculations with nonzero coefficients of variations
   * Optimized the generation of aggregate loss curves in ebrisk
   * Introduced an experimental AvgGMPE and used it to implement (optional)
     reduction of the gsim logic tree
