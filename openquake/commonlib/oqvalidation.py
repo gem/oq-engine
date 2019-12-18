@@ -74,6 +74,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
+    asset_loss_table = valid.Param(valid.boolean, False)
     assets_per_site_limit = valid.Param(valid.positivefloat, 1000)
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
