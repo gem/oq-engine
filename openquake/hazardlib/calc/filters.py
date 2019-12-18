@@ -312,15 +312,17 @@ class SourceFilter(object):
             bbs.append(bb)
         return bbs
 
+    # used in the rupture prefiltering: it should not discard too much
     def close_sids(self, rec, trt):
         """
         :param rec:
-           a record with fields mag, minlon, minlat, maxlon, maxlat
+           a record with fields mag, minlon, minlat, maxlon, maxlat, hypo
         :param trt:
            tectonic region type string
         :returns:
-           the site indices within the enlarged integration
-           distance for the given TRT and magnitude
+           the site indices close to the given record, by considering as
+           maximum radius the distance from the hypocenter (ignoring the depth)
+           plus the half diagonal of the bounding box
         """
         if self.sitecol is None:
             return []
@@ -329,11 +331,10 @@ class SourceFilter(object):
         if not hasattr(self, 'kdt'):
             self.kdt = cKDTree(self.sitecol.xyz)
         xyz = spherical_to_cartesian(*rec['hypo'])
-        # compute the diagonal size of the rupture
         dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
         dlat = rec['maxlat'] - rec['minlat']
-        diag = math.sqrt(dlon * dlon + dlat * dlat) / KM_TO_DEGREES
-        maxradius = self.integration_distance(trt) + diag / 2
+        delta = max(dlon, dlat) / KM_TO_DEGREES
+        maxradius = self.integration_distance(trt) + delta
         sids = U16(self.kdt.query_ball_point(xyz, maxradius, eps=.001))
         sids.sort()
         return sids
