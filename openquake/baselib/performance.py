@@ -31,9 +31,10 @@ from openquake.baselib import hdf5
 # Can't read data (address of object past end of allocation)
 # this is why below I am using '<S50' byte strings
 perf_dt = numpy.dtype([('operation', '<S50'), ('time_sec', float),
-                       ('memory_mb', float), ('counts', int)])
+                       ('memory_mb', float), ('counts', int),
+                       ('task_no', numpy.int16)])
 task_info_dt = numpy.dtype(
-    [('taskname', '<S50'), ('taskno', numpy.uint32),
+    [('taskname', '<S50'), ('task_no', numpy.uint32),
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
@@ -121,6 +122,7 @@ class Monitor(object):
         self.counts = 0
         self.address = None
         self.username = getpass.getuser()
+        self.task_no = -1  # overridden in parallel
 
     @property
     def dt(self):
@@ -153,7 +155,8 @@ class Monitor(object):
         if self.counts:
             time_sec = self.duration
             memory_mb = self.mem / 1024. / 1024. if self.measuremem else 0
-            data.append((self.operation, time_sec, memory_mb, self.counts))
+            data.append((self.operation, time_sec, memory_mb, self.counts,
+                         self.task_no))
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
