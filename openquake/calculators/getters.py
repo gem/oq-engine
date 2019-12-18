@@ -335,8 +335,8 @@ class GmfGetter(object):
         """
         Yield a GmfComputer instance for each non-discarded rupture
         """
-        with mon:
-            for ebr in self.rupgetter.get_ruptures():
+        for ebr in self.rupgetter.get_ruptures():
+            with mon:
                 sitecol = self.sitecol.filtered(ebr.sids)
                 try:
                     computer = calc.gmf.GmfComputer(
@@ -347,7 +347,7 @@ class GmfGetter(object):
                 # due to numeric errors ruptures within the maximum_distance
                 # when written, can be outside when read; I found a case with
                 # a distance of 99.9996936 km over a maximum distance of 100 km
-                yield computer
+            yield computer
 
     @property
     def sids(self):
