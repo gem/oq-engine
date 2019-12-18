@@ -442,15 +442,11 @@ def group_by_rlz(data, rlzs):
 
 
 def weight_rup(rup):
-    if rup.sids is None:
-        rup.weight = rup['n_occ']
-    else:
-        rup.weight = rup['n_occ'] * numpy.ceil(len(rup.sids) / 1000)
+    rup.weight = rup['n_occ']
     return rup.weight
 
 
-def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None,
-                        weight_rup=weight_rup):
+def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
     """
     :yields: RuptureGetters
     """
