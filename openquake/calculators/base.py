@@ -248,6 +248,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
+                readinput.gsim_lt_cache.clear()
 
                 # remove temporary hdf5 file, if any
                 if os.path.exists(self.datastore.tempname) and remove:
@@ -732,11 +733,6 @@ class HazardCalculator(BaseCalculator):
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):
-            arr = self.assetcol.array
-            num_assets = list(general.countby(arr, 'site_id').values())
-            self.datastore['assets_by_site'] = get_stats(num_assets)
-            num_taxos = self.assetcol.num_taxonomies_by_site()
-            self.datastore['taxonomies_by_site'] = get_stats(num_taxos)
             save_exposed_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 

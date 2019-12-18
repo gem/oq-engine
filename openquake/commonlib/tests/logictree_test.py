@@ -33,7 +33,6 @@ from copy import deepcopy
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.gsim import registry
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_ltmodels
 from openquake.hazardlib.tom import PoissonTOM
@@ -2114,7 +2113,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, ValueError, "Unknown GSIM: SAdighEtAl1997 in file")
+            xml, ValueError, "Unknown GSIM: SAdighEtAl1997")
 
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\

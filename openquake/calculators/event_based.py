@@ -83,7 +83,8 @@ class EventBasedCalculator(base.HazardCalculator):
     def init(self):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
-        self.rupser = calc.RuptureSerializer(self.datastore)
+        if not self.datastore.parent:
+            self.rupser = calc.RuptureSerializer(self.datastore)
 
     def init_logic_tree(self, csm_info):
         self.trt_by_grp = csm_info.grp_by("trt")
@@ -192,17 +193,6 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 
-    def gen_rupture_getters(self):
-        """
-        :returns: a list of RuptureGetters
-        """
-        dstore = (self.datastore.parent if self.datastore.parent
-                  else self.datastore)
-        yield from gen_rupture_getters(
-            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1)
-        if self.datastore.parent:
-            self.datastore.parent.close()
-
     def agg_dicts(self, acc, result):
         """
         :param acc: accumulator dictionary
@@ -247,7 +237,9 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = self.gen_rupture_getters()
+        maxweight = len(events) / (self.oqparam.concurrent_tasks or 1)
+        rgetters = gen_rupture_getters(self.datastore, maxweight=maxweight,
+                                       weight_rup=operator.itemgetter('n_occ'))
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
         logging.info('Building assocs event_id -> rlz_id for {:_d} events'
@@ -359,10 +351,12 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # compute_gmfs in parallel
         self.datastore.swmr_on()
-        iterargs = ((rgetter, srcfilter, self.param)
-                    for rgetter in self.gen_rupture_getters())
+        logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
+        allargs = [(rgetter, srcfilter, self.param)
+                   for rgetter in gen_rupture_getters(self.datastore)]
+        logging.info('Generated %d tasks', len(allargs))
         acc = parallel.Starmap(
-            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
+            self.core_task.__func__, allargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores
         ).reduce(self.agg_dicts, self.acc0())
 

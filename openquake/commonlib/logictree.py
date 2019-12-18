@@ -41,6 +41,7 @@ from openquake.baselib import hdf5, node
 from openquake.baselib.general import (groupby, group_array, duplicated,
                                        add_defaults)
 import openquake.hazardlib.source as ohs
+from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
@@ -1399,7 +1400,9 @@ class GsimLogicTree(object):
                 ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or nrml.read(fname).logicTree
-        self.branches = self._build_trts_branches(trts)
+        self.bs_id_by_trt = {}
+        self.branches = self._build_trts_branches(trts)  # sorted by trt
+        self.values = dict(sorted(self.values.items()))  # sorted by trt
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute '
@@ -1493,6 +1496,37 @@ class GsimLogicTree(object):
                 new.branches.append(branch)
         return new
 
+    def collapse(self, branchset_ids):
+        """
+        Collapse the GsimLogicTree by using AgvGMPE instances if needed
+
+        :param branchset_ids: branchset ids to collapse
+        :returns: a collapse GsimLogicTree instance
+        """
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self))
+        new.branches = []
+        for trt, grp in itertools.groupby(self.branches, lambda b: b.trt):
+            bs_id = self.bs_id_by_trt[trt]
+            brs = []
+            gsims = []
+            weights = []
+            for br in grp:
+                brs.append(br.id)
+                gsims.append(br.gsim)
+                weights.append(br.weight)
+            if len(gsims) > 1 and bs_id in branchset_ids:
+                gsim = object.__new__(AvgGMPE)
+                gsim.kwargs = {brid: {gsim.__class__.__name__: gsim.kwargs}
+                               for brid, gsim in zip(brs, gsims)}
+                gsim.gsims = gsims
+                gsim.weights = numpy.array([w['weight'] for w in weights])
+                branch = BranchTuple(trt, bs_id, gsim, sum(weights), True)
+                new.branches.append(branch)
+            else:
+                new.branches.append(br)
+        return new
+
     def get_num_branches(self):
         """
         Return the number of effective branches for tectonic region type,
@@ -1538,9 +1572,11 @@ class GsimLogicTree(object):
                         (self.filename, bsid))
                 else:
                     branchsetids.add(bsid)
-                trt = branchset.attrib.get('applyToTectonicRegionType')
-                if trt:
+                trt = branchset.get('applyToTectonicRegionType')
+                if trt:  # missing in logictree_test.py
+                    self.bs_id_by_trt[trt] = bsid
                     trts.append(trt)
+                self.bs_id_by_trt[trt] = bsid
                 # NB: '*' is used in scenario calculations to disable filtering
                 effective = (tectonic_region_types == ['*'] or
                              trt in tectonic_region_types)
