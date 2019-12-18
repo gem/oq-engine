@@ -95,7 +95,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_1_eb(self):
         # this is a case with no insured losses, no tags
-        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
+        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4',
+                      minimum_loss_fraction='0.01')
 
         # check on the asset_loss_table, num_losses per asset
         aids = self.calc.datastore['asset_loss_table/data']['asset_id']
@@ -147,7 +148,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # extract agg_curves with tags
         self.run_calc(case_1.__file__, 'job_eb.ini',
-                      asset_loss_table='1', aggregate_by='policy,taxonomy')
+                      minimum_loss_fraction='0',
+                      aggregate_by='policy,taxonomy')
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
@@ -304,7 +306,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master_eb(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
-                      concurrent_tasks='4', aggregate_by='id')
+                      concurrent_tasks='4', aggregate_by='id',
+                      minimum_loss_fraction='0.01')
 
         # check on the asset_loss_table, num_losses per asset
         aids = self.calc.datastore['asset_loss_table/data']['asset_id']
@@ -420,7 +423,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_asset_loss_table(self):
         # this is a case with L=1, R=1, T=2, P=3
-        out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv')
+        out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv',
+                            minimum_loss_fraction='0.01')
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
 
