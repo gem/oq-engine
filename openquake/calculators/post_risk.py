@@ -147,7 +147,7 @@ class PostRiskCalculator(base.RiskCalculator):
     """
     def pre_execute(self):
         oq = self.oqparam
-        if oq.hazard_calculation_id:
+        if oq.hazard_calculation_id and not self.datastore.parent:
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
         self.L = len(oq.loss_names)
         self.tagcol = self.datastore['assetcol/tagcol']
@@ -209,19 +209,14 @@ class PostRiskCalculator(base.RiskCalculator):
         self.build_datasets(builder, oq.aggregate_by, 'agg_')
         self.build_datasets(builder, [], 'app_')
         self.build_datasets(builder, [], 'tot_')
-        if 'asset_loss_table' in self.datastore.parent:
-            dstore = self.datastore.parent
-            pr = post_ebrisk
-        elif 'asset_loss_table' in self.datastore:
-            dstore = self.datastore
+        if oq.aggregate_by:
             pr = post_ebrisk
         else:
-            dstore = self.datastore
             pr = post_risk
-
         self.datastore.swmr_on()
-        smap = parallel.Starmap(pr, [(dstore, rlzi) for rlzi in range(self.R)],
-                                h5=self.datastore.hdf5)
+        smap = parallel.Starmap(
+            pr, [(self.datastore, rlzi) for rlzi in range(self.R)],
+            h5=self.datastore.hdf5)
         ds = self.datastore
         for dic in smap:
             if not dic:
