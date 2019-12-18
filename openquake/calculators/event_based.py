@@ -235,8 +235,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
         maxweight = len(events) / (self.oqparam.concurrent_tasks or 1)
-        rgetters = gen_rupture_getters(self.datastore, maxweight=maxweight,
-                                       weight_rup=operator.itemgetter('n_occ'))
+        rgetters = gen_rupture_getters(self.datastore, maxweight=maxweight)
 
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
