@@ -214,16 +214,16 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         srcfilter = self.src_filter(self.datastore.tempname)
         maxw = self.E / (oq.concurrent_tasks or 1)
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
-        allargs = ((rgetter, srcfilter, self.param)
-                   for rgetter in getters.gen_rupture_getters(
-                           self.datastore, maxweight=maxw))
         self.events_per_sid = []
         self.lossbytes = 0
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         self.offset = 0
         smap = parallel.Starmap(
-            self.core_task.__func__, allargs, h5=self.datastore.hdf5)
+            self.core_task.__func__, h5=self.datastore.hdf5)
+        for rgetter in getters.gen_rupture_getters(
+                self.datastore, maxweight=maxw):
+            smap.submit((rgetter, srcfilter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
             self.datastore['asset_loss_table/indices'] = self.indices
