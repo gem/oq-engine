@@ -22,7 +22,6 @@ import numpy
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.baselib.python3compat import zip
-from openquake.hazardlib.calc.filters import getdefault
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import LossesByAsset
 from openquake.risklib.riskinput import (
@@ -92,16 +91,15 @@ def calc_risk(gmfs, param, monitor):
                 aid = asset['ordinal']
                 losses_by_lt = {}
                 for lti, lt in enumerate(crmodel.loss_types):
-                    lratios = out[lt][a]
                     if lt == 'occupants':
-                        losses = lratios * asset['occupants_None']
+                        losses_by_lt[lt] = out[lt][a] * asset['occupants_None']
                     else:
-                        losses = lratios * asset['value-' + lt]
-                    losses_by_lt[lt] = losses
+                        losses_by_lt[lt] = out[lt][a] * asset['value-' + lt]
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
-                    for loss, eid in zip(losses, out.eids):
-                        if loss >= minimum_loss[loss_idx]:
-                            alt[aid, eid][loss_idx] = loss
+                    if param['aggregate_by']:
+                        for loss, eid in zip(losses, out.eids):
+                            if loss >= minimum_loss[loss_idx]:
+                                alt[aid, eid][loss_idx] = loss
                     arr[eidx, loss_idx] += losses
                     if param['avg_losses']:
                         lba.losses_by_A[aid, loss_idx] += (
@@ -214,17 +212,17 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         srcfilter = self.src_filter(self.datastore.tempname)
         maxw = self.E / (oq.concurrent_tasks or 1)
-        logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
-        allargs = ((rgetter, srcfilter, self.param)
-                   for rgetter in getters.gen_rupture_getters(
-                           self.datastore, maxweight=maxw))
+        logging.info('Sending %d ruptures', len(self.datastore['ruptures']))
         self.events_per_sid = []
         self.lossbytes = 0
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         self.offset = 0
         smap = parallel.Starmap(
-            self.core_task.__func__, allargs, h5=self.datastore.hdf5)
+            self.core_task.__func__, h5=self.datastore.hdf5)
+        for rgetter in getters.gen_rupture_getters(
+                self.datastore, maxweight=maxw):
+            smap.submit((rgetter, srcfilter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
             self.datastore['asset_loss_table/indices'] = self.indices
