@@ -108,8 +108,7 @@ def calc_risk(gmfs, param, monitor):
                         arr[eidx, loss_idx] += losses
                     if param['avg_losses']:
                         with mon_avg:
-                            lba.losses_by_A[aid, loss_idx] += (
-                                losses @ ws * param['ses_ratio'])
+                            lba.losses_by_A[aid, loss_idx] += losses @ ws
                     acc['numlosses'] += numpy.array([kept, len(losses)])
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
@@ -122,7 +121,7 @@ def calc_risk(gmfs, param, monitor):
     alt.sort(order='rlzi')
     acc['indices'] = general.get_indices(alt['rlzi'])
     if param['avg_losses']:
-        acc['losses_by_A'] = param['lba'].losses_by_A
+        acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
         # without resetting the cache the sequential avg_losses would be wrong!
         del param['lba'].__dict__['losses_by_A']
     return acc
