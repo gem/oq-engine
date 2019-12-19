@@ -20,7 +20,7 @@ import itertools
 import operator
 import unittest.mock as mock
 import numpy
-from openquake.baselib import hdf5, datastore, general, performance
+from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
@@ -456,7 +456,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    nr, ne = 0, 0
+    nr = 0
     maxdist = dstore['oqparam'].maximum_distance
     if 'sitecol' in dstore:
         srcfilter = SourceFilter(dstore['sitecol'], maxdist)
@@ -478,16 +478,8 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        for block in general.block_splitter(
+        for proxies in general.block_splitter(
                 gen(arr), maxweight, operator.attrgetter('weight')):
-            if srcfilter:
-                proxies = []
-                for rec in block:
-                    sids = srcfilter.close_sids(rec, trt)
-                    if len(sids):
-                        proxies.append(RuptureProxy(rec, sids))
-            else:
-                proxies = block
             if e0s is None:
                 e0 = numpy.zeros(len(proxies), U32)
             else:
@@ -496,8 +488,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
                 proxies, filename or dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
             yield rgetter
-            nr += len(block)
-            ne += rgetter.num_events
+            nr += len(proxies)
 
 
 # this is never called directly; gen_rupture_getters is used instead
