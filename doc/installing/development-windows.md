@@ -1,4 +1,4 @@
-# Installing the OpenQuake Engine for development using Python 3.6 on Windows (provisional)
+# Installing the OpenQuake Engine for development using Python 3.6 on Windows
 
 ## Prerequisites
 
