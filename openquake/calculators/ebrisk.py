@@ -91,12 +91,10 @@ def calc_risk(gmfs, param, monitor):
                 aid = asset['ordinal']
                 losses_by_lt = {}
                 for lti, lt in enumerate(crmodel.loss_types):
-                    lratios = out[lt][a]
                     if lt == 'occupants':
-                        losses = lratios * asset['occupants_None']
+                        losses_by_lt[lt] = out[lt][a] * asset['occupants_None']
                     else:
-                        losses = lratios * asset['value-' + lt]
-                    losses_by_lt[lt] = losses
+                        losses_by_lt[lt] = out[lt][a] * asset['value-' + lt]
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     if param['aggregate_by']:
                         for loss, eid in zip(losses, out.eids):
