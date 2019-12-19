@@ -98,9 +98,10 @@ def calc_risk(gmfs, param, monitor):
                         losses = lratios * asset['value-' + lt]
                     losses_by_lt[lt] = losses
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
-                    for loss, eid in zip(losses, out.eids):
-                        if loss >= minimum_loss[loss_idx]:
-                            alt[aid, eid][loss_idx] = loss
+                    if param['aggregate_by']:
+                        for loss, eid in zip(losses, out.eids):
+                            if loss >= minimum_loss[loss_idx]:
+                                alt[aid, eid][loss_idx] = loss
                     arr[eidx, loss_idx] += losses
                     if param['avg_losses']:
                         lba.losses_by_A[aid, loss_idx] += (
