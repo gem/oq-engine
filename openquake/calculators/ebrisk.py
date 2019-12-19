@@ -87,13 +87,15 @@ def calc_risk(gmfs, param, monitor):
         with mon_risk:
             out = get_output(crmodel, assets_by_taxo, haz)
         with mon_agg:
-            for a, asset in enumerate(assets_on_sid):
-                aid = asset['ordinal']
-                for lti, lt in enumerate(crmodel.loss_types):
-                    if lt == 'occupants':
-                        ls = out[lt][a] * asset['occupants_None']
-                    else:
-                        ls = out[lt][a] * asset['value-' + lt]
+            for lti, lt in enumerate(crmodel.loss_types):
+                lratios = out[lt]
+                if lt == 'occupants':
+                    field = 'occupants_None'
+                else:
+                    field = 'value-' + lt
+                for a, asset in enumerate(assets_on_sid):
+                    aid = asset['ordinal']
+                    ls = asset[field] * lratios[a]
                     for loss_idx, losses in lba.compute(asset, ls, lt).items():
                         if param['aggregate_by']:
                             for loss, eid in zip(losses, out.eids):
