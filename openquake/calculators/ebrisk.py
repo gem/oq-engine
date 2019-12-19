@@ -84,7 +84,7 @@ def calc_risk(gmfs, param, monitor):
         if param['avg_losses']:
             ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, tempname)
-        eidx = [eid2idx[eid] for eid in haz['eid']]
+        eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])
         with mon_risk:
             out = get_output(crmodel, assets_by_taxo, haz)
         for lti, lt in enumerate(crmodel.loss_types):
