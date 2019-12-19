@@ -1465,15 +1465,15 @@ class LossesByAsset(object):
         """
         :param asset: an asset record
         :param losses_by_lt: a dictionary loss_type -> losses (of size E)
-        :return: a dictionary loss_index -> losses
+        :return: a list [(loss_index, losses)]
         """
-        dic = {self.lni[lt]: losses}
+        items = [(self.lni[lt], losses)]
         if lt in self.policy_dict:
             val = asset['value-' + lt]
             ded, lim = self.policy_dict[lt][asset[self.policy_name]]
             ins_losses = insured_losses(losses, ded * val, lim * val)
-            dic[self.lni[lt + '_ins']] = ins_losses
-        return dic
+            items.append((self.lni[lt + '_ins'], ins_losses))
+        return items
 
     @cached_property
     def losses_by_A(self):

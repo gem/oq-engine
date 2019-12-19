@@ -46,7 +46,6 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
 def calc_risk(gmfs, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    mon_avg = monitor('average losses', measuremem=False)
     eids = numpy.unique(gmfs['eid'])
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
@@ -97,7 +96,7 @@ def calc_risk(gmfs, param, monitor):
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
                 ls = asset[field] * lratios[a]
-                for loss_idx, losses in lba.compute(asset, ls, lt).items():
+                for loss_idx, losses in lba.compute(asset, ls, lt):
                     kept = 0
                     with mon_agg:
                         if param['aggregate_by']:
@@ -106,9 +105,8 @@ def calc_risk(gmfs, param, monitor):
                                     alt[aid, eid][loss_idx] = loss
                                     kept += 1
                         arr[eidx, loss_idx] += losses
-                    if param['avg_losses']:
-                        with mon_avg:
-                            lba.losses_by_A[aid, loss_idx] += losses @ ws
+                    if param['avg_losses']:  # this is really fast
+                        lba.losses_by_A[aid, loss_idx] += losses @ ws
                     acc['numlosses'] += numpy.array([kept, len(losses)])
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
