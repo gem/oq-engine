@@ -60,9 +60,8 @@ def calc_risk(gmfs, param, monitor):
     L = len(param['lba'].loss_names)
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
     alt = general.AccumDict(accum=numpy.zeros(L, F32))  # aid, eid -> loss
-    acc = dict(elt=numpy.zeros((E, L), F32), events_per_sid=0,
-               numlosses=numpy.zeros(2, int))  # (kept, total)
-    arr = acc['elt']
+    arr = numpy.zeros((E, L), F32)
+    acc = dict(events_per_sid=0, numlosses=numpy.zeros(2, int))  # (kept, tot)
     lba = param['lba']
     tempname = param['tempname']
     eid2rlz = dict(events[['id', 'rlz_id']])
