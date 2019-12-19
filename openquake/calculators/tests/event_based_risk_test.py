@@ -95,12 +95,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_1_eb(self):
         # this is a case with no insured losses, no tags
-        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4',
-                      minimum_loss_fraction='0.01')
-
-        # check on the asset_loss_table, num_losses per asset
-        aids = self.calc.datastore['asset_loss_table/data']['asset_id']
-        numpy.testing.assert_equal(numpy.bincount(aids), [18, 8, 14, 14])
+        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
