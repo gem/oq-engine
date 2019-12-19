@@ -18,6 +18,7 @@
 import collections
 import itertools
 import operator
+import logging
 import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
@@ -478,6 +479,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
+        logging.info('Reading ruptures of group #%d, %s', grp_id, trt)
         for proxies in general.block_splitter(
                 gen(arr), maxweight, operator.attrgetter('weight')):
             if e0s is None:
