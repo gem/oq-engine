@@ -20,7 +20,7 @@ import itertools
 import operator
 import unittest.mock as mock
 import numpy
-from openquake.baselib import hdf5, datastore, general, performance
+from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
@@ -441,11 +441,6 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def weight_rup(rup):
-    rup.weight = rup['n_occ']
-    return rup.weight
-
-
 def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
     """
     :yields: RuptureGetters
@@ -461,37 +456,39 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    nr, ne = 0, 0
+    nr = 0
     maxdist = dstore['oqparam'].maximum_distance
     if 'sitecol' in dstore:
         srcfilter = SourceFilter(dstore['sitecol'], maxdist)
     else:
         srcfilter = None
+
+    def gen(arr):
+        if srcfilter:
+            for rec in arr:
+                sids = srcfilter.close_sids(rec, trt)
+                if len(sids):
+                    yield RuptureProxy(rec, sids)
+        else:
+            yield from map(RuptureProxy, arr)
+
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        proxies = []
-        for rec in arr:
-            if srcfilter:
-                sids = srcfilter.close_sids(rec, trt)
-                if len(sids):
-                    proxies.append(RuptureProxy(rec, sids))
-            else:
-                proxies.append(RuptureProxy(rec))
-        for block in general.block_splitter(proxies, maxweight, weight_rup):
+        for proxies in general.block_splitter(
+                gen(arr), maxweight, operator.attrgetter('weight')):
             if e0s is None:
-                e0 = numpy.zeros(len(block), U32)
+                e0 = numpy.zeros(len(proxies), U32)
             else:
-                e0 = e0s[nr: nr + len(block)]
+                e0 = e0s[nr: nr + len(proxies)]
             rgetter = RuptureGetter(
-                block, filename or dstore.filename, grp_id,
+                proxies, filename or dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
             yield rgetter
-            nr += len(block)
-            ne += rgetter.num_events
+            nr += len(proxies)
 
 
 # this is never called directly; gen_rupture_getters is used instead
