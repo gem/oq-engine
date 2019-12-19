@@ -46,6 +46,7 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
 def calc_risk(gmfs, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
+    mon_avg = monitor('average losses', measuremem=False)
     eids = numpy.unique(gmfs['eid'])
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
@@ -86,23 +87,24 @@ def calc_risk(gmfs, param, monitor):
         eidx = [eid2idx[eid] for eid in haz['eid']]
         with mon_risk:
             out = get_output(crmodel, assets_by_taxo, haz)
-        with mon_agg:
-            for lti, lt in enumerate(crmodel.loss_types):
-                lratios = out[lt]
-                if lt == 'occupants':
-                    field = 'occupants_None'
-                else:
-                    field = 'value-' + lt
-                for a, asset in enumerate(assets_on_sid):
-                    aid = asset['ordinal']
-                    ls = asset[field] * lratios[a]
-                    for loss_idx, losses in lba.compute(asset, ls, lt).items():
+        for lti, lt in enumerate(crmodel.loss_types):
+            lratios = out[lt]
+            if lt == 'occupants':
+                field = 'occupants_None'
+            else:
+                field = 'value-' + lt
+            for a, asset in enumerate(assets_on_sid):
+                aid = asset['ordinal']
+                ls = asset[field] * lratios[a]
+                for loss_idx, losses in lba.compute(asset, ls, lt).items():
+                    with mon_agg:
                         if param['aggregate_by']:
                             for loss, eid in zip(losses, out.eids):
                                 if loss >= minimum_loss[loss_idx]:
                                     alt[aid, eid][loss_idx] = loss
                         arr[eidx, loss_idx] += losses
-                        if param['avg_losses']:
+                    if param['avg_losses']:
+                        with mon_avg:
                             lba.losses_by_A[aid, loss_idx] += (
                                 losses @ ws * param['ses_ratio'])
                         acc['lossbytes'] += losses.nbytes
