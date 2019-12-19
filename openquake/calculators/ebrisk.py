@@ -89,22 +89,21 @@ def calc_risk(gmfs, param, monitor):
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
-                losses_by_lt = {}
                 for lti, lt in enumerate(crmodel.loss_types):
                     if lt == 'occupants':
-                        losses_by_lt[lt] = out[lt][a] * asset['occupants_None']
+                        ls = out[lt][a] * asset['occupants_None']
                     else:
-                        losses_by_lt[lt] = out[lt][a] * asset['value-' + lt]
-                for loss_idx, losses in lba.compute(asset, losses_by_lt):
-                    if param['aggregate_by']:
-                        for loss, eid in zip(losses, out.eids):
-                            if loss >= minimum_loss[loss_idx]:
-                                alt[aid, eid][loss_idx] = loss
-                    arr[eidx, loss_idx] += losses
-                    if param['avg_losses']:
-                        lba.losses_by_A[aid, loss_idx] += (
-                            losses @ ws * param['ses_ratio'])
-                    acc['lossbytes'] += losses.nbytes
+                        ls = out[lt][a] * asset['value-' + lt]
+                    for loss_idx, losses in lba.compute(asset, ls, lt).items():
+                        if param['aggregate_by']:
+                            for loss, eid in zip(losses, out.eids):
+                                if loss >= minimum_loss[loss_idx]:
+                                    alt[aid, eid][loss_idx] = loss
+                        arr[eidx, loss_idx] += losses
+                        if param['avg_losses']:
+                            lba.losses_by_A[aid, loss_idx] += (
+                                losses @ ws * param['ses_ratio'])
+                        acc['lossbytes'] += losses.nbytes
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
