@@ -441,11 +441,6 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def weight_rup(rup):
-    rup.weight = rup['n_occ']
-    return rup.weight
-
-
 def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
     """
     :yields: RuptureGetters
@@ -467,6 +462,16 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
         srcfilter = SourceFilter(dstore['sitecol'], maxdist)
     else:
         srcfilter = None
+
+    def gen(arr):
+        if srcfilter:
+            for rec in arr:
+                sids = srcfilter.close_sids(rec, trt)
+                if len(sids):
+                    yield RuptureProxy(rec, sids)
+        else:
+            yield from map(RuptureProxy, arr)
+
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
@@ -474,7 +479,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             continue
         trt = trt_by_grp[grp_id]
         for block in general.block_splitter(
-                arr, maxweight, operator.itemgetter('n_occ')):
+                gen(arr), maxweight, operator.attrgetter('weight')):
             if srcfilter:
                 proxies = []
                 for rec in block:
