@@ -282,6 +282,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         of output files.
         """
 
+    def gzip_inputs(self):
+        """
+        Gzipping the inputs and saving them in the datastore
+        """
+        logging.info('gzipping the input files')
+        fnames = readinput.get_input_files(self.oqparam)
+        self.datastore.store_files(fnames)
+
     def export(self, exports=None):
         """
         Export all the outputs in the datastore in the given export formats.
@@ -411,14 +419,6 @@ class HazardCalculator(BaseCalculator):
 
         if not oq.hazard_calculation_id:
             self.gzip_inputs()
-
-    def gzip_inputs(self):
-        """
-        Gzipping the inputs and saving them in the datastore
-        """
-        logging.info('gzipping the input files')
-        fnames = readinput.get_input_files(self.oqparam)
-        self.datastore.store_files(fnames)
 
     def save_multi_peril(self):
         """Defined in MultiRiskCalculator"""
