@@ -1459,23 +1459,21 @@ class LossesByAsset(object):
         self.policy_name = policy_name
         self.policy_dict = policy_dict
         self.loss_names = loss_names
+        self.lni = {ln: i for i, ln in enumerate(loss_names)}
 
-    def compute(self, asset, losses_by_lt):
+    def compute(self, asset, losses, lt):
         """
         :param asset: an asset record
         :param losses_by_lt: a dictionary loss_type -> losses (of size E)
-        :yields: pairs (loss_idx, losses)
+        :return: a dictionary loss_index -> losses
         """
-        idx = 0
-        for lt, losses in losses_by_lt.items():
-            yield idx, losses
-            idx += 1
-            if lt in self.policy_dict:
-                val = asset['value-' + lt]
-                ded, lim = self.policy_dict[lt][asset[self.policy_name]]
-                ins_losses = insured_losses(losses, ded * val, lim * val)
-                yield idx, ins_losses
-                idx += 1
+        dic = {self.lni[lt]: losses}
+        if lt in self.policy_dict:
+            val = asset['value-' + lt]
+            ded, lim = self.policy_dict[lt][asset[self.policy_name]]
+            ins_losses = insured_losses(losses, ded * val, lim * val)
+            dic[self.lni[lt + '_ins']] = ins_losses
+        return dic
 
     @cached_property
     def losses_by_A(self):
