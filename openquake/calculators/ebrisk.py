@@ -60,8 +60,8 @@ def calc_risk(gmfs, param, monitor):
     L = len(param['lba'].loss_names)
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
     alt = general.AccumDict(accum=numpy.zeros(L, F32))  # aid, eid -> loss
-    acc = dict(elt=numpy.zeros((E, L), F32), events_per_sid=0, lossbytes=0)
-    arr = acc['elt']
+    arr = numpy.zeros((E, L), F32)
+    acc = dict(events_per_sid=0, numlosses=numpy.zeros(2, int))  # (kept, tot)
     lba = param['lba']
     tempname = param['tempname']
     eid2rlz = dict(events[['id', 'rlz_id']])
@@ -83,28 +83,30 @@ def calc_risk(gmfs, param, monitor):
         if param['avg_losses']:
             ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, tempname)
-        eidx = [eid2idx[eid] for eid in haz['eid']]
+        eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])
         with mon_risk:
             out = get_output(crmodel, assets_by_taxo, haz)
-        with mon_agg:
+        for lti, lt in enumerate(crmodel.loss_types):
+            lratios = out[lt]
+            if lt == 'occupants':
+                field = 'occupants_None'
+            else:
+                field = 'value-' + lt
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
-                losses_by_lt = {}
-                for lti, lt in enumerate(crmodel.loss_types):
-                    if lt == 'occupants':
-                        losses_by_lt[lt] = out[lt][a] * asset['occupants_None']
-                    else:
-                        losses_by_lt[lt] = out[lt][a] * asset['value-' + lt]
-                for loss_idx, losses in lba.compute(asset, losses_by_lt):
-                    if param['aggregate_by']:
-                        for loss, eid in zip(losses, out.eids):
-                            if loss >= minimum_loss[loss_idx]:
-                                alt[aid, eid][loss_idx] = loss
-                    arr[eidx, loss_idx] += losses
-                    if param['avg_losses']:
-                        lba.losses_by_A[aid, loss_idx] += (
-                            losses @ ws * param['ses_ratio'])
-                    acc['lossbytes'] += losses.nbytes
+                ls = asset[field] * lratios[a]
+                for loss_idx, losses in lba.compute(asset, ls, lt):
+                    kept = 0
+                    with mon_agg:
+                        if param['aggregate_by']:
+                            for loss, eid in zip(losses, out.eids):
+                                if loss >= minimum_loss[loss_idx]:
+                                    alt[aid, eid][loss_idx] = loss
+                                    kept += 1
+                        arr[eidx, loss_idx] += losses
+                    if param['avg_losses']:  # this is really fast
+                        lba.losses_by_A[aid, loss_idx] += losses @ ws
+                    acc['numlosses'] += numpy.array([kept, len(losses)])
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
@@ -116,7 +118,7 @@ def calc_risk(gmfs, param, monitor):
     alt.sort(order='rlzi')
     acc['indices'] = general.get_indices(alt['rlzi'])
     if param['avg_losses']:
-        acc['losses_by_A'] = param['lba'].losses_by_A
+        acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
         # without resetting the cache the sequential avg_losses would be wrong!
         del param['lba'].__dict__['losses_by_A']
     return acc
@@ -214,7 +216,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         maxw = self.E / (oq.concurrent_tasks or 1)
         logging.info('Sending %d ruptures', len(self.datastore['ruptures']))
         self.events_per_sid = []
-        self.lossbytes = 0
+        self.numlosses = 0
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         self.offset = 0
@@ -229,8 +231,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
-        logging.info(
-            'Produced %s of losses', general.humansize(self.lossbytes))
+        logging.info('Stored {:_d} / {:_d} losses'.format(*self.numlosses))
         return 1
 
     def agg_dicts(self, dummy, dic):
@@ -255,7 +256,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         self.events_per_sid.append(dic['events_per_sid'])
-        self.lossbytes += dic['lossbytes']
+        self.numlosses += dic['numlosses']
 
     def post_execute(self, dummy):
         """
