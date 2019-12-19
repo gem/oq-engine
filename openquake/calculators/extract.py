@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
-from functools import lru_cache
+from functools import lru_cache, partial
 import collections
 import logging
 import gzip
@@ -567,8 +567,7 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
-@extract.add('tot_curves')
-def extract_tot_curves(dstore, what):
+def extract_curves(dstore, what, tot):
     """
     Porfolio loss curves from the ebrisk calculator:
 
@@ -584,14 +583,14 @@ def extract_tot_curves(dstore, what):
     tup = (slice(None), k, l)
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
-        arr = dstore['tot_curves-rlzs'][tup]  # shape P, R
-        units = dstore.get_attr('tot_curves-rlzs', 'units')
-        rps = dstore.get_attr('tot_curves-rlzs', 'return_periods')
+        arr = dstore[tot + 'curves-rlzs'][tup]  # shape P, R
+        units = dstore.get_attr(tot + 'curves-rlzs', 'units')
+        rps = dstore.get_attr(tot + 'curves-rlzs', 'return_periods')
     else:
         kinds = list(info['stats'])
-        arr = dstore['tot_curves-stats'][tup]  # shape P, S
-        units = dstore.get_attr('tot_curves-stats', 'units')
-        rps = dstore.get_attr('tot_curves-stats', 'return_periods')
+        arr = dstore[tot + 'curves-stats'][tup]  # shape P, S
+        units = dstore.get_attr(tot + 'curves-stats', 'units')
+        rps = dstore.get_attr(tot + 'curves-stats', 'return_periods')
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
@@ -604,6 +603,10 @@ def extract_tot_curves(dstore, what):
     attrs['kind'] = kinds
     attrs['units'] = units  # used by the QGIS plugin
     return ArrayWrapper(arr, attrs)
+
+
+extract.add('tot_curves')(partial(extract_curves, tot='tot_'))
+extract.add('app_curves')(partial(extract_curves, tot='app_'))
 
 
 @extract.add('agg_curves')

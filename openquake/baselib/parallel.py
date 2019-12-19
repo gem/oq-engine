@@ -318,7 +318,7 @@ class Result(object):
     """
     func = None
 
-    def __init__(self, val, mon, tb_str='', msg='', count=0):
+    def __init__(self, val, mon, tb_str='', msg=''):
         if isinstance(val, dict):
             self.pik = Pickled(val)
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
@@ -332,7 +332,6 @@ class Result(object):
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
-        self.count = count
 
     def get(self):
         """
@@ -361,13 +360,13 @@ class Result(object):
             with mon:
                 val = func(*args)
         except StopIteration:
+            mon.counts -= 1  # StopIteration does not count
             res = Result(None, mon, msg='TASK_ENDED')
         except Exception:
             _etype, exc, tb = sys.exc_info()
-            res = Result(exc, mon, ''.join(traceback.format_tb(tb)),
-                         count=count)
+            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
         else:
-            res = Result(val, mon, count=count)
+            res = Result(val, mon)
         return res
 
 
