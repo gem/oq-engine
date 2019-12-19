@@ -213,7 +213,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         srcfilter = self.src_filter(self.datastore.tempname)
         maxw = self.E / (oq.concurrent_tasks or 1)
-        logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
+        logging.info('Sending %d ruptures', len(self.datastore['ruptures']))
         self.events_per_sid = []
         self.lossbytes = 0
         self.datastore.swmr_on()
