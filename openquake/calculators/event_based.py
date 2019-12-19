@@ -237,7 +237,6 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        maxweight = len(events) / (self.oqparam.concurrent_tasks or 1)
         rgetters = gen_rupture_getters(self.datastore)
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
@@ -351,9 +350,8 @@ class EventBasedCalculator(base.HazardCalculator):
         # compute_gmfs in parallel
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
-        allargs = [(rgetter, srcfilter, self.param)
-                   for rgetter in gen_rupture_getters(self.datastore)]
-        logging.info('Generated %d tasks', len(allargs))
+        allargs = ((rgetter, srcfilter, self.param)
+                   for rgetter in gen_rupture_getters(self.datastore))
         acc = parallel.Starmap(
             self.core_task.__func__, allargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores

@@ -760,8 +760,12 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
-        self.task_queue = [(self.task_func, args)
-                           for args in self.task_args]
+        if self.num_tasks is None:  # loop on the iterator
+            for args in self.task_args:
+                self.submit(args)
+        else:  # build a task queue in advance
+            self.task_queue = [(self.task_func, args)
+                               for args in self.task_args]
         return self.get_results()
 
     def get_results(self):
