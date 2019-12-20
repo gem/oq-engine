@@ -140,7 +140,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     nbytes = 0
     for c in gg.gen_computers(mon_rup):
         with mon_haz:
-            data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
+            data, time_by_rup = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
         if len(data):
             gmfs.append(data)
             nbytes += data.nbytes
