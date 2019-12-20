@@ -167,6 +167,20 @@ def view_slow_sources(token, dstore, maxrows=20):
     return rst_table(data[::-1][:maxrows])
 
 
+@view.add('slow_ruptures')
+def view_slow_ruptures(token, dstore, maxrows=25):
+    """
+    Show the slowest ruptures
+    """
+    fields = ['code', 'n_occ', 'mag', 'grp_id']
+    rups = dstore['ruptures'][()][fields]
+    time = dstore['gmf_data/time_by_rup'][()]
+    arr = util.compose_arrays(rups, time)
+    arr = arr[arr['nsites'] > 0]
+    arr.sort(order='time')
+    return rst_table(arr[-maxrows:])
+
+
 @view.add('contents')
 def view_contents(token, dstore):
     """
@@ -529,7 +543,7 @@ def view_task_info(token, dstore):
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
         [task] = args
-        array = get_array(task_info[()], taskname=task)
+        array = get_array(task_info[()], taskname=task.encode('utf8'))
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
@@ -592,7 +606,7 @@ def view_task_ebrisk(token, dstore):
     $ oq show task_ebrisk:-1  # the slowest task
     """
     idx = int(token.split(':')[1])
-    task_info = get_array(dstore['task_info'][()], taskname='ebrisk')
+    task_info = get_array(dstore['task_info'][()], taskname=b'ebrisk')
     task_info.sort(order='duration')
     info = task_info[idx]
     times = get_array(dstore['gmf_info'][()], task_no=info['taskno'])

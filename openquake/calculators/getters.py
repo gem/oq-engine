@@ -18,6 +18,7 @@
 import collections
 import itertools
 import operator
+import logging
 import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
@@ -305,6 +306,10 @@ class GmfDataGetter(collections.abc.Mapping):
         return len(self.sids)
 
 
+time_dt = numpy.dtype(
+    [('rup_id', U32), ('nsites', U16), ('time', F32), ('task_no', U16)])
+
+
 class GmfGetter(object):
     """
     An hazard getter with methods .get_gmfdata and .get_hazard returning
@@ -367,9 +372,11 @@ class GmfGetter(object):
         """
         alldata = []
         self.sig_eps = []
+        self.times = []  # rup_id, nsites, dt
         for computer in self.gen_computers(mon):
-            data = computer.compute_all(
+            data, dt = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
+            self.times.append((computer.rupture.id, len(computer.sids), dt))
             alldata.append(data)
         if not alldata:
             return []
@@ -396,9 +403,8 @@ class GmfGetter(object):
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
-            with monitor('building hazard', measuremem=True):
-                gmfdata = self.get_gmfdata(mon)  # returned later
-                hazard = self.get_hazard_by_sid(data=gmfdata)
+            gmfdata = self.get_gmfdata(mon)  # returned later
+            hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
                 dic = group_by_rlz(hazardr, rlzs)
                 for rlzi, array in dic.items():
@@ -411,8 +417,7 @@ class GmfGetter(object):
                             hcurves[rsi2str(rlzi, sid, imt)] = poes
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
-        with monitor('building hazard', measuremem=True):
-            gmfdata = self.get_gmfdata(mon)
+        gmfdata = self.get_gmfdata(mon)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         indices = []
@@ -423,7 +428,9 @@ class GmfGetter(object):
                 stop += 1
             indices.append((sid, start, stop))
             start = stop
-        res = dict(gmfdata=gmfdata, hcurves=hcurves,
+        times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
+                            time_dt)
+        res = dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
         return res
@@ -472,6 +479,8 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
         else:
             yield from map(RuptureProxy, arr)
 
+    light_rgetters = []
+    ntasks = 0
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
@@ -487,8 +496,15 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             rgetter = RuptureGetter(
                 proxies, filename or dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
-            yield rgetter
+            if rgetter.weight < maxweight / 2:
+                light_rgetters.append(rgetter)
+            else:
+                yield rgetter
             nr += len(proxies)
+            ntasks += 1
+    nheavy = ntasks - len(light_rgetters)
+    logging.info('There are %d/%d heavy tasks', nheavy, ntasks)
+    yield from light_rgetters  # IMPORTANT: send the small tasks later
 
 
 # this is never called directly; gen_rupture_getters is used instead
