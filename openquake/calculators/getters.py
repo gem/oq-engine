@@ -457,11 +457,10 @@ def gen_rupture_getters(dstore, slc=slice(None), srcfilter=None):
     except KeyError:
         e0s = None
     csm_info = dstore['csm_info']
+    ct = dstore['oqparam'].concurrent_tasks
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
-    rup_array = dstore['ruptures'][slc]
-    ct = dstore['oqparam'].concurrent_tasks
     maxweight = len(dstore['ruptures']) / (ct or 1)
 
     def gen(arr):
