@@ -18,6 +18,7 @@
 import collections
 import itertools
 import operator
+import logging
 import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
@@ -479,6 +480,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             yield from map(RuptureProxy, arr)
 
     light_rgetters = []
+    ntasks = 0
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
@@ -499,6 +501,9 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             else:
                 yield rgetter
             nr += len(proxies)
+            ntasks += 1
+    nheavy = ntasks - len(light_rgetters)
+    logging.info('There are %d/%d heavy tasks', nheavy, ntasks)
     yield from light_rgetters  # IMPORTANT: send the small tasks later
 
 
