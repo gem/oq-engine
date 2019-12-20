@@ -173,9 +173,9 @@ def view_slow_ruptures(token, dstore, maxrows=20):
     Show the slowest ruptures
     """
     fields = ['id', 'grp_id', 'code', 'n_occ', 'mag']
-    rups = dstore.parent['ruptures'] if dstore.parent else dstore['ruptures']
+    rups = dstore['ruptures'][()][fields]
     time = dstore['gmf_data/time_by_rup'][()]
-    arr = util.compose_arrays(rups[()][fields], time)
+    arr = util.compose_arrays(rups, time)
     arr = arr[arr['nsites'] > 0]
     arr.sort(order='time')
     return rst_table(arr[-maxrows:])

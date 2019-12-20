@@ -402,9 +402,8 @@ class GmfGetter(object):
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
-            with monitor('building hazard', measuremem=True):
-                gmfdata = self.get_gmfdata(mon)  # returned later
-                hazard = self.get_hazard_by_sid(data=gmfdata)
+            gmfdata = self.get_gmfdata(mon)  # returned later
+            hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
                 dic = group_by_rlz(hazardr, rlzs)
                 for rlzi, array in dic.items():
@@ -417,8 +416,7 @@ class GmfGetter(object):
                             hcurves[rsi2str(rlzi, sid, imt)] = poes
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
-        with monitor('building hazard', measuremem=True):
-            gmfdata = self.get_gmfdata(mon)
+        gmfdata = self.get_gmfdata(mon)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         indices = []
