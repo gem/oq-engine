@@ -456,8 +456,6 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5):
         e0s = dstore['eslices'][:, 0]
     except KeyError:
         e0s = None
-    if dstore.parent:
-        dstore = dstore.parent
     csm_info = dstore['csm_info']
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
