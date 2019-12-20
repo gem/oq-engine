@@ -739,7 +739,11 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-        dist = 'no' if self.num_tasks == 1 else self.distribute
+        OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
+        if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
+            self.task_no += 1
+            return
+        dist = 'no' if self.num_tasks == 1 or OQ_TASK_NO else self.distribute
         if dist != 'no':
             pickled = isinstance(args[0], Pickled)
             if not pickled:
