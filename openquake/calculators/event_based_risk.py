@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 import operator
 import numpy
@@ -270,6 +271,7 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')
+        os.environ['OQ_DISTRIBUTE'] = 'no'  # temporary hack
         prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run()
