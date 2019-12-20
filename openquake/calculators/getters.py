@@ -448,7 +448,7 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, srcfilter=None):
+def gen_rupture_getters(dstore, slc=slice(None), srcfilter=None):
     """
     :yields: RuptureGetters
     """
@@ -461,6 +461,8 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, srcfilter=None):
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
+    ct = dstore['oqparam'].concurrent_tasks
+    maxweight = len(dstore['ruptures']) / (ct or 1)
 
     def gen(arr):
         if srcfilter:
