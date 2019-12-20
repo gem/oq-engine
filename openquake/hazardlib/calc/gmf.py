@@ -118,7 +118,7 @@ class GmfComputer(object):
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
-        :returns: [(sid, eid, gmv), ...], {rupid: dt}
+        :returns: [(sid, eid, gmv), ...], dt
         """
         t0 = time.time()
         rup = self.rupture
@@ -153,9 +153,8 @@ class GmfComputer(object):
                             data.append((sid, eid, gmv))
                 n += e
         m = (len(min_iml),)
-        gmv_dt = [('sid', U32), ('eid', U32), ('gmv', (F32, m))]
-        arr = numpy.array(data, gmv_dt)
-        return arr, time.time() - t0
+        d = numpy.array(data, [('sid', U32), ('eid', U32), ('gmv', (F32, m))])
+        return d, time.time() - t0
 
     def compute(self, gsim, num_events):
         """

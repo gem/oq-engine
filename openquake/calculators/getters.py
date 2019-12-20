@@ -478,6 +478,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
         else:
             yield from map(RuptureProxy, arr)
 
+    light_rgetters = []
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
@@ -493,8 +494,12 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             rgetter = RuptureGetter(
                 proxies, filename or dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
-            yield rgetter
+            if rgetter.weight < maxweight / 2:
+                light_rgetters.append(rgetter)
+            else:
+                yield rgetter
             nr += len(proxies)
+    yield from light_rgetters  # IMPORTANT: send the small tasks later
 
 
 # this is never called directly; gen_rupture_getters is used instead
