@@ -384,12 +384,11 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
     _tmp_paths.append(path)
-    if content:
-        fh = os.fdopen(fh, "wb")
-        if hasattr(content, 'encode'):
-            content = content.encode('utf8')
-        fh.write(content)
-        fh.close()
+    with os.fdopen(fh, "wb") as fh:
+        if content:
+            if hasattr(content, 'encode'):
+                content = content.encode('utf8')
+            fh.write(content)
     return path
 
 
