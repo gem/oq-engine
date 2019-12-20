@@ -213,7 +213,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         srcfilter = self.src_filter(self.datastore.tempname)
-        maxw = self.E / (oq.concurrent_tasks or 1)
         logging.info('Sending %d ruptures', len(self.datastore['ruptures']))
         self.events_per_sid = []
         self.numlosses = 0
@@ -223,7 +222,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
         for rgetter in getters.gen_rupture_getters(
-                self.datastore, maxweight=maxw):
+                self.datastore, srcfilter=srcfilter):
             smap.submit((rgetter, srcfilter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
