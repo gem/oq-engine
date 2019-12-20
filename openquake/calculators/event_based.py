@@ -333,9 +333,7 @@ class EventBasedCalculator(base.HazardCalculator):
                               oq.inputs['job_ini'])
         N = len(self.sitecol.complete)
         if oq.ground_motion_fields:
-            nrups = len(self.datastore.parent['ruptures']
-                        if self.datastore.parent
-                        else self.datastore['ruptures'])
+            nrups = len(self.datastore['ruptures'])
             self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
@@ -350,10 +348,10 @@ class EventBasedCalculator(base.HazardCalculator):
         # compute_gmfs in parallel
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
-        allargs = ((rgetter, srcfilter, self.param)
-                   for rgetter in gen_rupture_getters(self.datastore))
+        iterargs = ((rgetter, srcfilter, self.param)
+                    for rgetter in gen_rupture_getters(self.datastore))
         acc = parallel.Starmap(
-            self.core_task.__func__, allargs, h5=self.datastore.hdf5,
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores
         ).reduce(self.agg_dicts, self.acc0())
 
