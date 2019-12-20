@@ -223,7 +223,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
         for rgetter in getters.gen_rupture_getters(
-                self.datastore, maxweight=maxw):
+                self.datastore, maxweight=maxw, srcfilter=srcfilter):
             smap.submit((rgetter, srcfilter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:

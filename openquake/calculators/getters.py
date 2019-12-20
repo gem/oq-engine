@@ -448,7 +448,7 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5):
+def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, srcfilter=None):
     """
     :yields: RuptureGetters
     """
@@ -461,12 +461,6 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5):
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    nr = 0
-    maxdist = dstore['oqparam'].maximum_distance
-    if 'sitecol' in dstore:
-        srcfilter = SourceFilter(dstore['sitecol'], maxdist)
-    else:
-        srcfilter = None
 
     def gen(arr):
         if srcfilter:
@@ -479,6 +473,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5):
 
     light_rgetters = []
     ntasks = 0
+    nr = 0
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
