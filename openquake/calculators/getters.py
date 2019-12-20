@@ -448,7 +448,7 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
+def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5):
     """
     :yields: RuptureGetters
     """
@@ -494,7 +494,7 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None):
             else:
                 e0 = e0s[nr: nr + len(proxies)]
             rgetter = RuptureGetter(
-                proxies, filename or dstore.filename, grp_id,
+                proxies, dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
             if rgetter.weight < maxweight / 2:
                 light_rgetters.append(rgetter)
