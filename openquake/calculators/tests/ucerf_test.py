@@ -36,11 +36,7 @@ class UcerfTestCase(CalculatorTestCase):
                                 3, 3, 3, 3])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        # check that we get the expected number of ruptures
-        with open(fname) as f:
-            self.assertEqual(len(f.readlines()), 72)
-        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20,
-                              delta=1E-5)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-5)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
