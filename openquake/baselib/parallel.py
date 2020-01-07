@@ -597,7 +597,7 @@ class Starmap(object):
     running_tasks = []  # currently running tasks
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
-    num_cores = CT
+    num_cores = None
 
     @classmethod
     def init(cls, poolsize=None, distribute=None):
@@ -689,7 +689,7 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
-        self.num_cores = num_cores or self.__class__.num_cores
+        self.num_cores = num_cores
         self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
@@ -800,9 +800,10 @@ class Starmap(object):
                 self.todo += 1
 
     def _loop(self):
+        num_cores = self.num_cores or CT // 2
         if self.task_queue:
-            first_args = self.task_queue[:self.num_cores]
-            self.task_queue[:] = self.task_queue[self.num_cores:]
+            first_args = self.task_queue[:num_cores]
+            self.task_queue[:] = self.task_queue[num_cores:]
             for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -817,15 +818,18 @@ class Starmap(object):
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
                 self.todo -= 1
-                self._submit_many(max(self.num_cores - self.todo, 2))
+                if self.num_cores:
+                    self._submit_many(max(self.num_cores - self.todo, 2))
+                else:
+                    self._submit_many(1)
                 logging.debug('%d tasks todo, %d in queue',
                               self.todo, len(self.task_queue))
                 self.log_percent()
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
-                if self.todo < self.num_cores:
-                    self._submit_many(self.num_cores - self.todo)
+                if self.todo < num_cores:
+                    self._submit_many(num_cores - self.todo)
             else:
                 yield res
         self.log_percent()
