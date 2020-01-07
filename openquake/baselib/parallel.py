@@ -174,6 +174,12 @@ sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
+# use only the "visible" cores, not the total system cores
+# if the underlying OS supports it (macOS does not)
+try:
+    CT = len(psutil.Process().cpu_affinity()) * 2
+except AttributeError:
+    CT = psutil.cpu_count() * 2
 
 
 @submit.add('no')
@@ -591,11 +597,7 @@ class Starmap(object):
     running_tasks = []  # currently running tasks
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
-    try:
-        num_cores = len(psutil.Process().cpu_affinity())
-    except AttributeError:
-        num_cores = psutil.cpu_count()
-    oversubmit = False
+    num_cores = None
 
     @classmethod
     def init(cls, poolsize=None, distribute=None):
@@ -663,7 +665,7 @@ class Starmap(object):
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
             if concurrent_tasks is None:
-                concurrent_tasks = cls.num_cores * 2
+                concurrent_tasks = CT
             taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(
@@ -687,7 +689,7 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
-        self.num_cores = num_cores or self.__class__.num_cores
+        self.num_cores = num_cores
         self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
@@ -798,9 +800,10 @@ class Starmap(object):
                 self.todo += 1
 
     def _loop(self):
+        num_cores = self.num_cores or CT // 2
         if self.task_queue:
-            first_args = self.task_queue[:self.num_cores]
-            self.task_queue[:] = self.task_queue[self.num_cores:]
+            first_args = self.task_queue[:num_cores]
+            self.task_queue[:] = self.task_queue[num_cores:]
             for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -815,17 +818,17 @@ class Starmap(object):
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
                 self.todo -= 1
-                self._submit_many(max(self.num_cores - self.todo, 2))
+                self._submit_many(1)
                 logging.debug('%d tasks todo, %d in queue',
                               self.todo, len(self.task_queue))
                 self.log_percent()
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
-                if self.todo < self.num_cores:
+                if self.num_cores is None:
+                    self._submit_many(1)  # oversubmit
+                elif self.todo < self.num_cores:
                     self._submit_many(self.num_cores - self.todo)
-                elif self.oversubmit:
-                    self._submit_many(1)
             else:
                 yield res
         self.log_percent()
@@ -833,7 +836,7 @@ class Starmap(object):
         self.tasks.clear()
 
 
-def sequential_apply(task, args, concurrent_tasks=Starmap.num_cores * 2,
+def sequential_apply(task, args, concurrent_tasks=CT,
                      weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks

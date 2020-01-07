@@ -29,7 +29,7 @@ import numpy
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
-from openquake.baselib.parallel import Starmap
+from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -160,7 +160,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         # info about Calculator.run since the file will be closed later on
         self.oqparam = oqparam
         if oqparam.num_cores:
-            Starmap.num_cores = oqparam.num_cores
+            parallel.CT = oqparam.num_cores * 2
 
     def monitor(self, operation='', **kw):
         """
@@ -937,7 +937,7 @@ class RiskCalculator(HazardCalculator):
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
-        res = Starmap.apply(
+        res = parallel.Starmap.apply(
             self.core_task.__func__,
             (self.riskinputs, self.crmodel, self.param, self.monitor()),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
