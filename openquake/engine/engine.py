@@ -80,8 +80,7 @@ if OQ_DISTRIBUTE == 'zmq':
             num_workers = os.cpu_count()
             logs.LOG.warn('Missing host_cores, no idea about how many cores '
                           'are available, using %d', num_workers)
-        parallel.Starmap.num_cores = num_workers
-        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
+        parallel.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.warn('Using %d zmq workers', num_workers)
 
@@ -99,8 +98,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        parallel.Starmap.num_cores = ncores
-        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
+        parallel.CT = ncores * 2
         OqParam.concurrent_tasks.default = ncores * 2
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
@@ -336,7 +334,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     try:
         if OQ_DISTRIBUTE.endswith('pool'):
             logs.LOG.warning('Using %d cores on %s',
-                             parallel.Starmap.num_cores, platform.node())
+                             parallel.CT, platform.node())
         if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
             logs.dbcmd('zmq_start')  # start the zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
