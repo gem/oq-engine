@@ -805,6 +805,7 @@ class Starmap(object):
             first_args = self.task_queue[:num_cores]
             self.task_queue[:] = self.task_queue[num_cores:]
             for func, args in first_args:
+                print('sending', func)
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
@@ -818,10 +819,7 @@ class Starmap(object):
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
                 self.todo -= 1
-                if self.num_cores:
-                    self._submit_many(max(self.num_cores - self.todo, 2))
-                else:
-                    self._submit_many(1)
+                self._submit_many(1)
                 logging.debug('%d tasks todo, %d in queue',
                               self.todo, len(self.task_queue))
                 self.log_percent()
@@ -830,8 +828,8 @@ class Starmap(object):
                 self.task_queue.append((res.func, res.pik))
                 if self.num_cores is None:
                     self._submit_many(1)  # oversubmit
-                elif self.todo < num_cores:
-                    self._submit_many(num_cores - self.todo)
+                elif self.todo < self.num_cores:
+                    self._submit_many(self.num_cores - self.todo)
             else:
                 yield res
         self.log_percent()
