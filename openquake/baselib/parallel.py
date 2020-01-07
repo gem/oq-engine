@@ -174,6 +174,12 @@ sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
+# use only the "visible" cores, not the total system cores
+# if the underlying OS supports it (macOS does not)
+try:
+    CT = len(psutil.Process().cpu_affinity()) * 2
+except AttributeError:
+    CT = psutil.cpu_count() * 2
 
 
 @submit.add('no')
@@ -591,11 +597,7 @@ class Starmap(object):
     running_tasks = []  # currently running tasks
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
-    try:
-        num_cores = len(psutil.Process().cpu_affinity())
-    except AttributeError:
-        num_cores = psutil.cpu_count()
-    oversubmit = False
+    num_cores = CT
 
     @classmethod
     def init(cls, poolsize=None, distribute=None):
@@ -663,7 +665,7 @@ class Starmap(object):
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
             if concurrent_tasks is None:
-                concurrent_tasks = cls.num_cores * 2
+                concurrent_tasks = CT
             taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(
@@ -824,8 +826,6 @@ class Starmap(object):
                 self.task_queue.append((res.func, res.pik))
                 if self.todo < self.num_cores:
                     self._submit_many(self.num_cores - self.todo)
-                elif self.oversubmit:
-                    self._submit_many(1)
             else:
                 yield res
         self.log_percent()
@@ -833,7 +833,7 @@ class Starmap(object):
         self.tasks.clear()
 
 
-def sequential_apply(task, args, concurrent_tasks=Starmap.num_cores * 2,
+def sequential_apply(task, args, concurrent_tasks=CT,
                      weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks
