@@ -271,7 +271,9 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')
-        os.environ['OQ_DISTRIBUTE'] = 'no'  # temporary hack
+        if self.datastore.hdf5.mode is None:  # instead of r+
+            logging.warn('Disabling task distribution')
+            os.environ['OQ_DISTRIBUTE'] = 'no'  # avoid SWMR issues
         prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run()
