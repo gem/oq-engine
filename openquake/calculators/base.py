@@ -1014,9 +1014,15 @@ def import_gmfs(dstore, fname, sids):
                 arr['gmv'][:, m] = array[name]
         else:
             arr[name] = array[name]
+
+    n = len(numpy.unique(array[['sid', 'eid']]))
+    if n != len(array):
+        raise ValueError('Duplicated site_id, event_id in %s' % fname)
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
+    if eids[0] != 0:
+        raise ValueError('The event_id must start from zero in %s' % fname)
     E = len(eids)
     events = numpy.zeros(E, rupture.events_dt)
     events['id'] = eids
