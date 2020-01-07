@@ -248,7 +248,10 @@ class PolygonPlotter():
         self.maxxs.append(maxx)
         self.minys.append(miny)
         self.maxys.append(maxy)
-        self.ax.add_patch(PolygonPatch(poly, **kw))
+        try:
+            self.ax.add_patch(PolygonPatch(poly, **kw))
+        except ValueError:  # LINESTRING, not POLYGON
+            pass
 
     def set_lim(self):
         if self.minxs and self.maxxs:
