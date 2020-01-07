@@ -828,7 +828,9 @@ class Starmap(object):
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
-                if self.todo < num_cores:
+                if self.num_cores is None:
+                    self._submit_many(1)  # oversubmit
+                elif self.todo < num_cores:
                     self._submit_many(num_cores - self.todo)
             else:
                 yield res
