@@ -23,12 +23,13 @@ pip uninstall openquake.engine
 ### Download the OpenQuake source code
 
 To be able to download the OpenQuake source code you must have [GIT](https://git-scm.com/download/windows) installed and available in the system `PATH`. If the `git` command is not available in
-the `oq-console.bat` terminal please use `GIT Bash` to run this step and then switch back to `oq-console.bat`.
+the `oq-console.bat` terminal please use `GIT Bash` to run this step and then switch back to `oq-console.bat`. 
 
+Considering that the complete repository is quite large given its long history, we recommend shallow cloning the repository to download only the latest revision. In case you need the source code with the full history of the repository, you should execute the `git clone` command below without the `--depth=1` flag.
 
 ```cmd
 mkdir src && cd src
-git clone https://github.com/gem/oq-engine.git
+git clone https://github.com/gem/oq-engine.git --depth=1
 ```
 
 ### Install OpenQuake
