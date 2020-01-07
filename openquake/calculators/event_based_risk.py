@@ -18,6 +18,7 @@
 import os
 import logging
 import operator
+import unittest
 import numpy
 
 from openquake.baselib.general import AccumDict
@@ -271,9 +272,11 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')
-        if self.datastore.hdf5.mode is None:  # instead of r+
-            logging.warn('Disabling task distribution')
-            os.environ['OQ_DISTRIBUTE'] = 'no'  # avoid SWMR issues
         prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
-        prc.run()
+        if self.datastore.hdf5.mode is None:  # instead of r+
+            logging.warn('Disabling task distribution')
+            with unittest.mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
+                prc.run()
+        else:
+            prc.run()
