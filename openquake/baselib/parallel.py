@@ -805,7 +805,6 @@ class Starmap(object):
             first_args = self.task_queue[:num_cores]
             self.task_queue[:] = self.task_queue[num_cores:]
             for func, args in first_args:
-                print('sending', func)
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
