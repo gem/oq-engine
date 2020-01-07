@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the error message if the `event_id` does not start from zero in
+    the gmfs.csv files
   * Changed the rupture exporter to export LINESTRINGs instead of degenerate
     POLYGONs
   * Introduced `minimum_loss_fraction` functionality in ebrisk
