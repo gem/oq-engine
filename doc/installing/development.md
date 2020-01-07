@@ -96,11 +96,16 @@ pip install -U pip setuptools
 ```
 
 ### Download the OpenQuake source code
+Considering that the complete repository is quite large given its long history, we recommend shallow cloning the repository to download only the latest revision.
 
 ```bash
 mkdir src && cd src
-git clone https://github.com/gem/oq-engine.git
+git clone https://github.com/gem/oq-engine.git --depth=1
 ```
+
+In case you needed the source code with the full history of the repository, you
+can convert the shallow clone into a full repository with the command
+`git fetch --unshallow`.
 
 ### Install OpenQuake
 
