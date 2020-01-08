@@ -653,10 +653,14 @@ def get_imts(oqparam):
 
 def get_amplification(oqparam):
     """
-    :returns: a composite array (amplification, imt0, imt1, ...)
+    :returns: a composite array (amplification, param, imt0, imt1, ...)
     """
-    dic = {'amplification': (numpy.string_, 2), None: F64}
-    return hdf5.read_csv(oqparam.inputs['amplification'], dic)
+    f = oqparam.inputs['amplification']
+    arr = hdf5.read_csv(f, {'amplification': 'S2', 'param': 'S1', None: F64})
+    expected = numpy.array([b'f', b's'] * (len(arr) // 2))
+    if (arr['param'] != expected).any():
+        raise InvalidFile('%s: param must be f or s alternatively' % f)
+    return arr
 
 
 def _cons_coeffs(records, limit_states):
