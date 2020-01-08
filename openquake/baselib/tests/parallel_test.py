@@ -138,7 +138,10 @@ class StarmapTestCase(unittest.TestCase):
             self.assertEqual(num[b'waiting'], 4)
             self.assertEqual(num[b'total supertask'], 4)  # tasks
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
-            self.assertGreater(len(h5['task_info']), 0)
+            info = h5['task_info'][()]
+            dic = dict(general.fast_agg3(info, 'taskname', ['received']))
+            self.assertGreater(dic[b'get_length'], 0)
+            self.assertGreater(dic[b'supertask'], 0)
         shutil.rmtree(tmpdir)
 
     def test_countletters(self):
