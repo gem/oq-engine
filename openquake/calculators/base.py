@@ -637,6 +637,9 @@ class HazardCalculator(BaseCalculator):
         if oq.hazard_calculation_id:
             with util.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
+                if ('amplification' in oq.inputs and
+                        'amplification' not in haz_sitecol.array.dtype.names):
+                    haz_sitecol.add_col('amplification', (numpy.string_, 1))
         else:
             haz_sitecol = readinput.get_site_collection(oq)
             if hasattr(self, 'rup'):
@@ -727,6 +730,12 @@ class HazardCalculator(BaseCalculator):
                 sm = readinput.get_site_model(oq)
                 self.sitecol.complete.assoc(sm, assoc_dist)
             self.datastore['sitecol'] = self.sitecol.complete
+
+        # store amplification functions if any
+        if 'amplification' in oq.inputs:
+            logging.info('Reading %s', oq.inputs['amplification'])
+            self.datastore['amplification'] = readinput.get_amplification(oq)
+
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
                           avg_losses=oq.avg_losses)

@@ -394,11 +394,14 @@ def get_site_model(oqparam):
         an array with fields lon, lat, vs30, ...
     """
     req_site_params = get_gsim_lt(oqparam).req_site_params
+    if 'amplification' in oqparam.inputs:
+        req_site_params.add('amplification')
     arrays = []
+    dtypedic = {None: float, 'vs30measured': numpy.uint8,
+                'amplification': (numpy.string_, 1)}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = hdf5.read_csv(
-                 fname, {None: float, 'vs30measured': numpy.uint8}).array
+            sm = hdf5.read_csv(fname, dtypedic).array
             sm['lon'] = numpy.round(sm['lon'], 5)
             sm['lat'] = numpy.round(sm['lat'], 5)
             dupl = get_duplicates(sm, 'lon', 'lat')
@@ -461,6 +464,8 @@ def get_site_collection(oqparam):
         return
     else:  # use the default site params
         req_site_params = get_gsim_lt(oqparam).req_site_params
+        if 'amplification' in oqparam.inputs:
+            req_site_params.add('amplification')
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -644,6 +649,14 @@ def get_imts(oqparam):
     Return a sorted list of IMTs as hazardlib objects
     """
     return list(map(imt.from_string, sorted(oqparam.imtls)))
+
+
+def get_amplification(oqparam):
+    """
+    :returns: a composite array (amplification, imt0, imt1, ...)
+    """
+    dic = {'amplification': (numpy.string_, 1), None: F64}
+    return hdf5.read_csv(oqparam.inputs['amplification'], dic)
 
 
 def _cons_coeffs(records, limit_states):
