@@ -315,6 +315,17 @@ def pickle_sequence(objects):
     return out
 
 
+class FakePickle:
+    def __init__(self, sentbytes):
+        self.sentbytes = sentbytes
+
+    def unpickle(self):
+        pass
+
+    def __len__(self):
+        return self.sentbytes
+
+
 class Result(object):
     """
     :param val: value to return or exception instance
@@ -358,7 +369,7 @@ class Result(object):
         return '<%s %s>' % (self.__class__.__name__, ' '.join(nbytes))
 
     @classmethod
-    def new(cls, func, args, mon, count=0):
+    def new(cls, func, args, mon, sentbytes=0):
         """
         :returns: a new Result instance
         """
@@ -368,6 +379,7 @@ class Result(object):
         except StopIteration:
             mon.counts -= 1  # StopIteration does not count
             res = Result(None, mon, msg='TASK_ENDED')
+            res.pik = FakePickle(sentbytes)
         except Exception:
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
@@ -422,6 +434,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)
+    sentbytes = 0
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
         if msg:
@@ -434,14 +447,14 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             it = gen(*args)
         while True:
             # StopIteration -> TASK_ENDED
-            res = Result.new(next, (it,), mon)
+            res = Result.new(next, (it,), mon, sentbytes)
             try:
                 zsocket.send(res)
             except Exception:  # like OverflowError
                 _etype, exc, tb = sys.exc_info()
-                err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
-                             count=count)
+                err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
                 zsocket.send(err)
+            sentbytes += len(res.pik)
             if res.msg == 'TASK_ENDED':
                 break
 
