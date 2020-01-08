@@ -992,7 +992,8 @@ def import_gmfs(dstore, fname, sids):
     :returns: event_ids, num_rlzs
     """
     array = hdf5.read_csv(fname, {'sid': U32, 'eid': U32, None: F32},
-                          renamedict=dict(site_id='sid', event_id='eid')).array
+                          renamedict=dict(site_id='sid', event_id='eid',
+                                          rlz_id='rlzi')).array
     names = array.dtype.names
     if names[0] == 'rlzi':  # backward compatbility
         names = names[1:]  # discard the field rlzi
