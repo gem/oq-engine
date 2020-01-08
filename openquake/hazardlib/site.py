@@ -124,6 +124,7 @@ site_param_dt = {
     'xvf': numpy.float64,
 
     # Parameters for site amplification
+    'amplification': (numpy.string_, 2),
     'ec8': (numpy.string_, 1),
     'ec8_p18': (numpy.string_, 2),
     'h800': numpy.float64,
@@ -266,6 +267,18 @@ class SiteCollection(object):
         new.array = self.array[indices]
         new.complete = self.complete
         return new
+
+    def add_col(self, colname, dtype):
+        """
+        Add a column to the underlying array
+        """
+        names = self.array.dtype.names
+        dtlist = [(name, self.array.dtype[name]) for name in names]
+        dtlist.append((colname, dtype))
+        arr = numpy.zeros(len(self), dtlist)
+        for name in names:
+            arr[name] = self.array[name]
+        self.array = arr
 
     def make_complete(self):
         """
