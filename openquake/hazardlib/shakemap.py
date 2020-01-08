@@ -207,8 +207,8 @@ def cross_correlation_matrix(imts, corr='yes'):
             if i == j:
                 cross_matrix[i, j] = 1
             else:
-                Tmax = max([T1, T2])
-                Tmin = min([T1, T2])
+                Tmax = max(T1, T2)
+                Tmin = min(T1, T2)
                 II = 1 if Tmin < 0.189 else 0
                 if corr == 'full':
                     cross_matrix[i, j] = 0.99999
