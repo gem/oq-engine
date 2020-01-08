@@ -398,7 +398,7 @@ def get_site_model(oqparam):
         req_site_params.add('amplification')
     arrays = []
     dtypedic = {None: float, 'vs30measured': numpy.uint8,
-                'amplification': (numpy.string_, 1)}
+                'amplification': (numpy.string_, 2)}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
             sm = hdf5.read_csv(fname, dtypedic).array
@@ -655,7 +655,7 @@ def get_amplification(oqparam):
     """
     :returns: a composite array (amplification, imt0, imt1, ...)
     """
-    dic = {'amplification': (numpy.string_, 1), None: F64}
+    dic = {'amplification': (numpy.string_, 2), None: F64}
     return hdf5.read_csv(oqparam.inputs['amplification'], dic)
 
 
