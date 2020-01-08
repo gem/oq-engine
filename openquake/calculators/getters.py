@@ -267,6 +267,17 @@ class GmfDataGetter(collections.abc.Mapping):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
+        if 'amplification' in self.dstore:
+            sitecol = self.dstore['sitecol']
+            arr = self.dstore['amplification']
+            dic = general.group_array(arr, 'amplification')
+            imts = self.dstore['gmf_data/imts'][()].split()
+            self.amplification = numpy.zeros((len(sitecol), len(imts)))
+            for m, imt in enumerate(imts):
+                for sid, ampl in enumerate(sitecol['amplification']):
+                    self.amplification[sid, m] = dic[ampl][imt]
+        else:
+            self.amplification = ()
         try:
             self.imts = self.dstore['gmf_data/imts'][()].split()
         except KeyError:  # engine < 3.3
@@ -297,7 +308,11 @@ class GmfDataGetter(collections.abc.Mapping):
         data = [dset[start:stop] for start, stop in idxs]
         if len(data) == 0:  # site ID with no data
             return {}
-        return group_by_rlz(numpy.concatenate(data), self.rlzs)
+        arr = numpy.concatenate(data)
+        if len(self.amplification):
+            for m, ampl in enumerate(self.amplification[sid]):
+                arr['gmv'][:, m] *= ampl
+        return group_by_rlz(arr, self.rlzs)
 
     def __iter__(self):
         return iter(self.sids)
