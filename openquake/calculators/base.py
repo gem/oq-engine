@@ -347,6 +347,19 @@ def check_time_event(oqparam, occupancy_periods):
              ', '.join(occupancy_periods)))
 
 
+def check_amplification(dstore):
+    """
+    Make sure the amplification codes in the site collection match the
+    ones in the amplification table
+    """
+    codeset = set(dstore['amplification']['amplification'])
+    codes = set(dstore['sitecol']['amplification'])
+    missing = codes - codeset
+    if missing:
+        raise ValueError('The site collection contains references to missing '
+                         'amplification functions:' + ' '.join(missing))
+
+
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
@@ -735,6 +748,7 @@ class HazardCalculator(BaseCalculator):
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
             self.datastore['amplification'] = readinput.get_amplification(oq)
+            check_amplification(self.datastore)
 
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
