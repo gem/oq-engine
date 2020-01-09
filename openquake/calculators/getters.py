@@ -26,7 +26,6 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
     EBRupture, BaseRupture, events_dt, RuptureProxy)
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -275,7 +274,8 @@ class GmfDataGetter(collections.abc.Mapping):
             self.amplification = numpy.zeros((len(sitecol), len(imts)))
             for m, imt in enumerate(imts):
                 for sid, ampl in enumerate(sitecol['amplification']):
-                    self.amplification[sid, m] = dic[ampl][imt]
+                    [f] = dic[ampl][imt]
+                    self.amplification[sid, m] = f
         else:
             self.amplification = ()
         try:
