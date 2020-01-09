@@ -51,6 +51,7 @@ from openquake.commonlib import logictree, source
 NORMALIZATION_FACTOR = 1E-2
 F32 = numpy.float32
 F64 = numpy.float64
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
@@ -653,10 +654,17 @@ def get_imts(oqparam):
 
 def get_amplification(oqparam):
     """
-    :returns: a composite array (amplification, imt0, imt1, ...)
+    :returns: a composite array (amplification, param, imt0, imt1, ...)
     """
-    dic = {'amplification': (numpy.string_, 2), None: F64}
-    return hdf5.read_csv(oqparam.inputs['amplification'], dic)
+    fname = oqparam.inputs['amplification']
+    aw = hdf5.read_csv(fname, {'amplification': 'S2', 'level': U8, None: F64})
+    levels = numpy.arange(len(aw.imls))
+    for records in group_array(aw, 'amplification').values():
+        if (records['level'] != levels).any():
+            raise InvalidFile('%s: levels for %s %s instead of %s' %
+                              (fname, records['amplification'][0],
+                               records['level'], levels))
+    return aw
 
 
 def _cons_coeffs(records, limit_states):
