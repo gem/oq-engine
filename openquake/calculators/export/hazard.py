@@ -23,7 +23,8 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib.general import group_array, deprecated, AccumDict
+from openquake.baselib.general import (
+    group_array, deprecated, AccumDict, DictArray)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
@@ -215,9 +216,13 @@ def export_hcurves_csv(ekey, dstore):
                                  hmap.flatten().view(hmap_dt), comment))
         elif key == 'hcurves':
             hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
+            if 'amplification' in oq.inputs:
+                imtls = DictArray({imt: oq.soil_intensities for imt in oq.imtls})
+            else:
+                imtls = oq.imtls
             fnames.extend(
                 export_hcurves_by_imt_csv(
-                    ekey, kind, fname, sitecol, hcurves, oq.imtls, comment))
+                    ekey, kind, fname, sitecol, hcurves, imtls, comment))
     return sorted(fnames)
 
 
