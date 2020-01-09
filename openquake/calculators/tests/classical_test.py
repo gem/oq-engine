@@ -504,7 +504,7 @@ hazard_uhs-std.csv
         self.assertEqual(self.calc.R, 9)  # there are 9 realizations
 
     def test_case_37(self):
-        # check gsims
+        # check gsims; this is a test with amplification functions
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_37.__file__)
 
     def test_case_38(self):

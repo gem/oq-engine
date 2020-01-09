@@ -459,9 +459,12 @@ class ClassicalCalculator(base.HazardCalculator):
         hstats = oq.hazard_stats()
         # initialize datasets
         N = len(self.sitecol.complete)
-        L = len(oq.imtls.array)
         P = len(oq.poes)
         M = len(oq.imtls)
+        if oq.soil_intensities is not None:
+            L = M * len(oq.soil_intensities)
+        else:
+            L = len(oq.imtls.array)
         R = len(self.rlzs_assoc.realizations)
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
@@ -519,7 +522,8 @@ def build_hazard(pgetter, N, hstats, individual_curves,
         if amplifier:
             ampl_codes = pgetter.dstore['sitecol'].amplification
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
-    L = len(imtls.array)
+    M = len(imtls)
+    L = len(imtls.array) if amplifier is None else len(amplifier.alevels) * M
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}
