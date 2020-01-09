@@ -23,7 +23,7 @@ from openquake.hazardlib.site_amplification import Amplifier
 
 ampl_func = '''#,,,,,,,"vs30_ref=760, imls=[.001, .01, .05, .1, .2, .5, 1., 1.21]"
 amplification,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5),sigma_PGA,sigma_SA(0.3),sigma_SA(0.6),sigma_SA(1.0),sigma_SA(1.5)
-A,0,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
+A,0,.9,1,1,1.1,1.1,.1,.1,.1,.1,.1
 A,1,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
 A,2,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
 A,3,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
@@ -42,12 +42,13 @@ def test():
     aw = read_csv(fname, {'amplification': 'S2', 'level': numpy.uint8,
                           None: numpy.float64})
     a = Amplifier(imtls, aw, soil_levels)
-    print(a.alpha)
-    print(a.imtdict)
     hcurve = [[.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01],  # PGA
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01],  # SA(0.1)
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01],  # SA(0.2)
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01]]  # SA(0.5)
+    acurve = a.amplify_one(b'A', 'SA(0.2)', hcurve[2])
+    numpy.testing.assert_allclose(
+        acurve, [0.98079, 0.97159, 0.955, 0.915, 0.84, 0.74, 0.39], atol=1E-5)
     acurve = a.amplify_one(b'A', 'SA(0.5)', hcurve[3])
-    print(hcurve[3])
-    print(acurve)
+    numpy.testing.assert_allclose(
+        acurve, [0.9825, 0.975, 0.955, 0.915, 0.84, 0.74, 0.39], atol=1E-6)
