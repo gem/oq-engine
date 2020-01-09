@@ -656,9 +656,15 @@ def get_amplification(oqparam):
     """
     :returns: a composite array (amplification, param, imt0, imt1, ...)
     """
-    f = oqparam.inputs['amplification']
-    arr = hdf5.read_csv(f, {'amplification': 'S2', 'level': U8, None: F64})
-    return arr
+    fname = oqparam.inputs['amplification']
+    aw = hdf5.read_csv(fname, {'amplification': 'S2', 'level': U8, None: F64})
+    levels = numpy.arange(len(aw.imls))
+    for records in group_array(aw, 'amplification').values():
+        if (records['level'] != levels).any():
+            raise InvalidFile('%s: levels for %s %s instead of %s' %
+                              (fname, records['amplification'][0],
+                               records['level'], levels))
+    return aw
 
 
 def _cons_coeffs(records, limit_states):
