@@ -51,6 +51,7 @@ from openquake.commonlib import logictree, source
 NORMALIZATION_FACTOR = 1E-2
 F32 = numpy.float32
 F64 = numpy.float64
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
@@ -656,10 +657,7 @@ def get_amplification(oqparam):
     :returns: a composite array (amplification, param, imt0, imt1, ...)
     """
     f = oqparam.inputs['amplification']
-    arr = hdf5.read_csv(f, {'amplification': 'S2', 'param': 'S1', None: F64})
-    expected = numpy.array([b'f', b's'] * (len(arr) // 2))
-    if (arr['param'] != expected).any():
-        raise InvalidFile('%s: param must be f or s alternatively' % f)
+    arr = hdf5.read_csv(f, {'amplification': 'S2', 'level': U8, None: F64})
     return arr
 
 
