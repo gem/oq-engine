@@ -239,6 +239,7 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
+              'pointsource_distance',
               'ground_motion_correlation_model', 'minimum_intensity',
               'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
