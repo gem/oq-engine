@@ -32,6 +32,7 @@ from openquake.hazardlib.contexts import (
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.site_amplification import Amplifier
 from openquake.commonlib import calc, util, logs
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
@@ -475,7 +476,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         if 'amplification' in oq.inputs:
-            amplifier = None
+            amplifier = Amplifier(oq.imtls, self.datastore['amplification'],
+                                  oq.soil_intensities)
         else:
             amplifier = None
         allargs = [  # this list is very fast to generate
