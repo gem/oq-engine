@@ -31,6 +31,7 @@ class Amplifier(object):
     :param alevels: levels used for the amplified curves
     """
     def __init__(self, imtls, ampl_funcs, alevels):
+        self.imtls = imtls
         self.alevels = alevels
         self.periods, self.levels = check_same_levels(imtls)
         imls = ampl_funcs.imls
@@ -100,5 +101,5 @@ class Amplifier(object):
                 slc = self.imtls(imt)
                 new = self.amplify_one(ampl_code, imt, pcurve.array[slc, 0])
                 lst.append(new)
-            out.append(ProbabilityCurve(numpy.concatenate(lst)))
+            out.append(ProbabilityCurve(numpy.concatenate(lst).reshape(-1, 1)))
         return out
