@@ -61,6 +61,25 @@ KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
                 }
 
 
+def check_same_levels(imtls):
+    """
+    :param imtls: a dictionary (or dict-like) imt -> imls
+    :returns: the periods and the levels
+    :raises: a ValueError if the levels are not the same across all IMTs
+    """
+    imls = imtls[next(iter(imtls))]
+    for imt in imtls:
+        if not imt.startswith(('PGA', 'SA')):
+            raise ValueError('Site amplification works only with '
+                             'PGA and SA, got %s' % imt)
+        if len(imtls[imt]) != len(imls) or any(
+                l1 != l2 for l1, l2 in zip(imtls[imt], imls)):
+            raise ValueError('Site amplification works only if the '
+                             'levels are the same across all IMTs')
+    periods = [from_string(imt).period for imt in imtls]
+    return periods, imls
+
+
 class OqParam(valid.ParamSet):
     siteparam = dict(
         vs30measured='reference_vs30_type',
@@ -348,6 +367,10 @@ class OqParam(valid.ParamSet):
         if self.region_grid_spacing and ('sites' in self.inputs or self.sites):
             raise ValueError('You are specifying grid and sites at the same '
                              'time: which one do you want?')
+
+        # check for amplification
+        if 'amplification' in self.inputs and self.imtls:
+            check_same_levels(self.imtls)
 
     def check_gsims(self, gsims):
         """
