@@ -474,9 +474,13 @@ class ClassicalCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        if 'amplification' in oq.inputs:
+            amplifier = None
+        else:
+            amplifier = None
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
-             N, hstats, oq.individual_curves, oq.max_sites_disagg)
+             N, hstats, oq.individual_curves, oq.max_sites_disagg, amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
         self.datastore.swmr_on()
         parallel.Starmap(
@@ -494,13 +498,14 @@ class PreCalculator(ClassicalCalculator):
 
 
 def build_hazard(pgetter, N, hstats, individual_curves,
-                 max_sites_disagg, monitor):
+                 max_sites_disagg, amplifier, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param N: the total number of sites
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_curves: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
+    :param amplifier: instance of Amplifier or None
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
@@ -509,6 +514,8 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     """
     with monitor('read PoEs'):
         pgetter.init()
+        if amplifier:
+            ampl_codes = pgetter.dstore['sitecol'].amplification
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     L = len(imtls.array)
     R = len(weights)
@@ -525,6 +532,8 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     for sid in pgetter.sids:
         with combine_mon:
             pcurves = pgetter.get_pcurves(sid)
+            if amplifier:
+                pcurves = amplifier.amplify(ampl_codes[sid], pcurves)
         if sum(pc.array.sum() for pc in pcurves) == 0:  # no data
             continue
         with compute_mon:
