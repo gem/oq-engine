@@ -84,7 +84,7 @@ class Amplifier(object):
         sigmas = self.sigma[ampl_code, stored_imt]
         ampl_poes = numpy.zeros_like(self.alevels)
         for l, p, a, s in zip(self.levels, -numpy.diff(poes), alphas, sigmas):
-            ampl_poes += p * (1. - norm.cdf(self.alevels / l, loc=a, scale=s))
+            ampl_poes += (1. - norm.cdf(self.alevels / l, loc=a, scale=s)) * p
         return ampl_poes
 
     def amplify(self, ampl_code, pcurves):
