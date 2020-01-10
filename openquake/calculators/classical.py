@@ -32,6 +32,7 @@ from openquake.hazardlib.contexts import (
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.site_amplification import Amplifier
 from openquake.commonlib import calc, util, logs
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
@@ -458,9 +459,12 @@ class ClassicalCalculator(base.HazardCalculator):
         hstats = oq.hazard_stats()
         # initialize datasets
         N = len(self.sitecol.complete)
-        L = len(oq.imtls.array)
         P = len(oq.poes)
         M = len(oq.imtls)
+        if oq.soil_intensities is not None:
+            L = M * len(oq.soil_intensities)
+        else:
+            L = len(oq.imtls.array)
         R = len(self.rlzs_assoc.realizations)
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
@@ -474,9 +478,14 @@ class ClassicalCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        if 'amplification' in oq.inputs:
+            amplifier = Amplifier(oq.imtls, self.datastore['amplification'],
+                                  oq.soil_intensities)
+        else:
+            amplifier = None
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
-             N, hstats, oq.individual_curves, oq.max_sites_disagg)
+             N, hstats, oq.individual_curves, oq.max_sites_disagg, amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
         self.datastore.swmr_on()
         parallel.Starmap(
@@ -494,13 +503,14 @@ class PreCalculator(ClassicalCalculator):
 
 
 def build_hazard(pgetter, N, hstats, individual_curves,
-                 max_sites_disagg, monitor):
+                 max_sites_disagg, amplifier, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param N: the total number of sites
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_curves: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
+    :param amplifier: instance of Amplifier or None
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
@@ -509,8 +519,11 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     """
     with monitor('read PoEs'):
         pgetter.init()
+        if amplifier:
+            ampl_codes = pgetter.dstore['sitecol'].ampcode
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
-    L = len(imtls.array)
+    M = len(imtls)
+    L = len(imtls.array) if amplifier is None else len(amplifier.amplevels) * M
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}
@@ -525,6 +538,8 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     for sid in pgetter.sids:
         with combine_mon:
             pcurves = pgetter.get_pcurves(sid)
+            if amplifier:
+                pcurves = amplifier.amplify(ampl_codes[sid], pcurves)
         if sum(pc.array.sum() for pc in pcurves) == 0:  # no data
             continue
         with compute_mon:
