@@ -81,10 +81,10 @@ class Amplifier(object):
     :attr alpha: dict code, imt-> I-1 amplification coefficients
     :attr sigma: dict code, imt-> I-1 amplification sigmas
     """
-    def __init__(self, imtls, ampl_funcs, amplevels):
+    def __init__(self, imtls, ampl_funcs, amplevels=None):
         self.imtls = imtls
-        self.amplevels = amplevels
         self.periods, levels = check_same_levels(imtls)
+        self.amplevels = levels if amplevels is None else amplevels
         self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
         imls = ampl_funcs.imls
         imts = [from_string(imt) for imt in ampl_funcs.dtype.names[2:]
