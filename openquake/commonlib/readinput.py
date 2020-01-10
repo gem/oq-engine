@@ -51,6 +51,7 @@ from openquake.commonlib import logictree, source
 NORMALIZATION_FACTOR = 1E-2
 F32 = numpy.float32
 F64 = numpy.float64
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
@@ -394,11 +395,14 @@ def get_site_model(oqparam):
         an array with fields lon, lat, vs30, ...
     """
     req_site_params = get_gsim_lt(oqparam).req_site_params
+    if 'amplification' in oqparam.inputs:
+        req_site_params.add('ampcode')
     arrays = []
+    dtypedic = {None: float, 'vs30measured': numpy.uint8,
+                'ampcode': (numpy.string_, 2)}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = hdf5.read_csv(
-                 fname, {None: float, 'vs30measured': numpy.uint8}).array
+            sm = hdf5.read_csv(fname, dtypedic).array
             sm['lon'] = numpy.round(sm['lon'], 5)
             sm['lat'] = numpy.round(sm['lat'], 5)
             dupl = get_duplicates(sm, 'lon', 'lat')
@@ -424,6 +428,10 @@ def get_site_model(oqparam):
             missing -= {'backarc'}
             for param in params:
                 param['backarc'] = False
+        if 'ampcode' in missing:  # use a default of b''
+            missing -= {'ampcode'}
+            for param in params:
+                param['ampcode'] = b''
         if missing:
             raise InvalidFile('%s: missing parameter %s' %
                               (oqparam.inputs['site_model'],
@@ -461,6 +469,8 @@ def get_site_collection(oqparam):
         return
     else:  # use the default site params
         req_site_params = get_gsim_lt(oqparam).req_site_params
+        if 'amplification' in oqparam.inputs:
+            req_site_params.add('ampcode')
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -644,6 +654,21 @@ def get_imts(oqparam):
     Return a sorted list of IMTs as hazardlib objects
     """
     return list(map(imt.from_string, sorted(oqparam.imtls)))
+
+
+def get_amplification(oqparam):
+    """
+    :returns: a composite array (amplification, param, imt0, imt1, ...)
+    """
+    fname = oqparam.inputs['amplification']
+    aw = hdf5.read_csv(fname, {'ampcode': 'S2', 'level': U8, None: F64})
+    levels = numpy.arange(len(aw.imls))
+    for records in group_array(aw, 'ampcode').values():
+        if (records['level'] != levels).any():
+            raise InvalidFile('%s: levels for %s %s instead of %s' %
+                              (fname, records['ampcode'][0],
+                               records['level'], levels))
+    return aw
 
 
 def _cons_coeffs(records, limit_states):
