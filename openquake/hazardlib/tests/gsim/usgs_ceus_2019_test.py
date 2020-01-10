@@ -29,6 +29,7 @@ import openquake.hazardlib.gsim.usgs_ceus_2019 as ceus
 
 MAX_DISCREP = 0.01
 
+
 class NGAEastUSGSCEUSUncertaintyEPRITestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSSeedPEER_EX
 
@@ -110,6 +111,7 @@ class NGAEastUSGSCEUSSiteAmpMinus1SigmaTestCase(BaseGSIMTestCase):
                    site_epsilon=-1.0)
 
 # Mean models Test Cases
+
 
 class NGAEastUSGSSeedSP15TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSSeedSP15
@@ -297,4 +299,3 @@ class NGAEastUSGSSammons16TestCase(NGAEastUSGSSeedSP15TestCase):
 class NGAEastUSGSSammons17TestCase(NGAEastUSGSSeedSP15TestCase):
     GSIM_CLASS = ceus.NGAEastUSGSSammons17
     MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons17_MEAN.csv"
-
