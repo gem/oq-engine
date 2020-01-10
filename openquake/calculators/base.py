@@ -353,7 +353,11 @@ def check_amplification(dstore):
     ones in the amplification table
     """
     codeset = set(dstore['amplification']['ampcode'])
-    codes = set(dstore['sitecol']['ampcode'])
+    if len(codeset) == 1:
+        # there is a single amplification function, there is no need to
+        # extend the sitecol with an ampcode field
+        return
+    codes = set(dstore['sitecol'].ampcode)
     missing = codes - codeset
     if missing:
         raise ValueError('The site collection contains references to missing '
