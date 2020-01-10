@@ -24,6 +24,31 @@ from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.commonlib.oqvalidation import check_same_levels
 
 
+# this is necessary since norm.cdf for scale=0 returns NaNs
+def norm_cdf(x, a, s):
+    """
+    Gaussian cumulative distribution function; if s=0, returns an
+    Heaviside function instead. NB: for x=a, 0.5 is returned for all s.
+
+    >>> norm_cdf(1.2, 1, .1)
+    0.9772498680518208
+    >>> norm_cdf(1.2, 1, 0)
+    1.0
+    >>> norm_cdf(.8, 1, .1)
+    0.022750131948179216
+    >>> norm_cdf(.8, 1, 0)
+    0.0
+    >>> norm_cdf(1, 1, .1)
+    0.5
+    >>> norm_cdf(1, 1, 0)
+    0.5
+    """
+    if s == 0:
+        return numpy.heaviside(x - a, .5)
+    else:
+        return norm.cdf(x, loc=a, scale=s)
+
+
 class Amplifier(object):
     """
     :param imtls: intensity measure types and levels DictArray
@@ -44,8 +69,8 @@ class Amplifier(object):
         L = len(l_indices)
         self.alpha = {}  # code, imt -> alphas
         self.sigma = {}  # code, imt -> sigmas
-        has_sigma = any(imt.startswith('sigma_')
-                        for imt in ampl_funcs.dtype.names[2:])
+        self.has_sigma = any(imt.startswith('sigma_')
+                             for imt in ampl_funcs.dtype.names[2:])
         for code, arr in group_array(ampl_funcs, 'amplification').items():
             for m in set(m_indices):
                 im = str(imts[m])
@@ -54,7 +79,7 @@ class Amplifier(object):
                 idx = 0
                 for rec in arr[l_indices]:
                     alpha[idx] = rec[im]
-                    if has_sigma:
+                    if self.has_sigma:
                         sigma[idx] = rec['sigma_' + im]
                     idx += 1
 
@@ -85,7 +110,7 @@ class Amplifier(object):
         sigmas = self.sigma[ampl_code, stored_imt]
         ampl_poes = numpy.zeros_like(self.alevels)
         for l, p, a, s in zip(self.levels, -numpy.diff(poes), alphas, sigmas):
-            ampl_poes += (1. - norm.cdf(self.alevels / l, loc=a, scale=s)) * p
+            ampl_poes += (1. - norm_cdf(self.alevels / l, a, s)) * p
         return ampl_poes
 
     def amplify(self, ampl_code, pcurves):
