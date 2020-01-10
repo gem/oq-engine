@@ -24,27 +24,23 @@ import numpy as np
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib import const
 
+dirname = os.path.dirname(__file__)
+BASE_PATH = os.path.join(dirname, 'ita04_tables')
+
 
 class ITA04Base(GMPETable):
     """
     This class is an general class used to implement the GMPEs used for the
     2004 version of the national hazard model for Italy.
     """
-
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,
                                                 const.StdDev.INTER_EVENT,
                                                 const.StdDev.INTRA_EVENT))
-
-    def __init__(self, gmpe_table):
-        """
-        """
-        super().__init__(gmpe_table=gmpe_table)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         Returns the mean and standard deviations
         """
-        print(rctx.mag)
         # Return Distance Tables
         imls = self._return_tables(rctx.mag, imt, "IMLs")
         # Get distance vector for the given magnitude
@@ -56,8 +52,6 @@ class ITA04Base(GMPETable):
         return np.log(mean), stddevs
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
-        """
-        """
         tau = self._get_tau(imt, mag)
         phi = self._get_phi(imt, mag)
         sigma = np.sqrt(tau ** 2. + phi ** 2.)
@@ -74,131 +68,52 @@ class ITA04Base(GMPETable):
 
 
 class AmbraseysEtAl1996Normal(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/asb96_normal.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "asb96_normal.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class AmbraseysEtAl1996Reverse(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/asb96_reverse.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "asb96_reverse.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class AmbraseysEtAl1996Strike(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/asb96_strike.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "asb96_strike.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class AmbraseysEtAl1996Undef(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/asb96_undef.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "asb96_undef.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class SabettaPugliese1996Normal(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/sp96_normal.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "sp96_normal.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class SabettaPugliese1996Reverse(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/sp96_reverse.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "sp96_reverse.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class SabettaPugliese1996Strike(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/sp96_strike.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "sp96_strike.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class SabettaPugliese1996Undef(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/sp96_undef.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "sp96_undef.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class REG1(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/reg1.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "reg1.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class REG2(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/reg2.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "reg2.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class REG3(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/reg3.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "reg3.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class VULC30bar(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/vulc30bar.hdf5")
+    gmpe_table = os.path.join(BASE_PATH, "vulc30bar.hdf5")
 
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
 
 class VULC50bar(ITA04Base):
-    """
-    """
-    TABLE_PATH = os.path.abspath("./ita04_tables/vulc50bar.hdf5")
-
-    def __init__(self):
-        if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
-        super().__init__(gmpe_table=self.TABLE_PATH)
+    gmpe_table = os.path.join(BASE_PATH, "vulc50bar.hdf5")
