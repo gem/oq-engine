@@ -269,11 +269,11 @@ class GmfDataGetter(collections.abc.Mapping):
         if 'amplification' in self.dstore:
             sitecol = self.dstore['sitecol']
             arr = self.dstore['amplification']
-            dic = general.group_array(arr, 'amplification')
+            dic = general.group_array(arr, 'ampcode')
             imts = self.dstore['gmf_data/imts'][()].split()
             self.amplification = numpy.zeros((len(sitecol), len(imts)))
             for m, imt in enumerate(imts):
-                for sid, ampl in enumerate(sitecol['amplification']):
+                for sid, ampl in enumerate(sitecol.ampcode):
                     [f] = dic[ampl][imt]
                     self.amplification[sid, m] = f
         else:
