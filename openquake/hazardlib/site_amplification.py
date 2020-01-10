@@ -91,9 +91,12 @@ class Amplifier(object):
                 if not imt.startswith('sigma_')]
         m_indices = digitize(
             'period', self.periods, [imt.period for imt in imts])
-        self.imtdict = {imt: str(imts[m]) for m, imt in zip(m_indices, imtls)}
-        l_indices = digitize('level', self.midlevels, imls)
+        if len(imls) == 1:  # one level means same values for all levels
+            l_indices = [0]
+        else:
+            l_indices = digitize('level', self.midlevels, imls)
         L = len(l_indices)
+        self.imtdict = {imt: str(imts[m]) for m, imt in zip(m_indices, imtls)}
         self.alpha = {}  # code, imt -> alphas
         self.sigma = {}  # code, imt -> sigmas
         self.ampcodes = []
