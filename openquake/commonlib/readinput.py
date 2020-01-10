@@ -428,6 +428,10 @@ def get_site_model(oqparam):
             missing -= {'backarc'}
             for param in params:
                 param['backarc'] = False
+        if 'ampcode' in missing:  # use a default of b''
+            missing -= {'ampcode'}
+            for param in params:
+                param['ampcode'] = b''
         if missing:
             raise InvalidFile('%s: missing parameter %s' %
                               (oqparam.inputs['site_model'],
