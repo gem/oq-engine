@@ -69,8 +69,6 @@ class Amplifier(object):
         L = len(l_indices)
         self.alpha = {}  # code, imt -> alphas
         self.sigma = {}  # code, imt -> sigmas
-        self.has_sigma = any(imt.startswith('sigma_')
-                             for imt in ampl_funcs.dtype.names[2:])
         for code, arr in group_array(ampl_funcs, 'amplification').items():
             for m in set(m_indices):
                 im = str(imts[m])
@@ -79,8 +77,10 @@ class Amplifier(object):
                 idx = 0
                 for rec in arr[l_indices]:
                     alpha[idx] = rec[im]
-                    if self.has_sigma:
+                    try:
                         sigma[idx] = rec['sigma_' + im]
+                    except ValueError:  # missing sigma
+                        pass
                     idx += 1
 
     def digitize(self, name, values, bins):
@@ -110,6 +110,9 @@ class Amplifier(object):
         sigmas = self.sigma[ampl_code, stored_imt]
         ampl_poes = numpy.zeros_like(self.amplevels)
         for l, p, a, s in zip(self.levels, -numpy.diff(poes), alphas, sigmas):
+            print(l, 1. - norm_cdf(self.amplevels / l, a, s))
+            if l == 1:
+                import pdb; pdb.set_trace()
             ampl_poes += (1. - norm_cdf(self.amplevels / l, a, s)) * p
         return ampl_poes
 
