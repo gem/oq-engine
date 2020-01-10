@@ -23,7 +23,7 @@ from openquake.baselib.general import gettemp
 from openquake.hazardlib.site_amplification import Amplifier
 
 trivial_ampl_func = '''#,,,,,,,"vs30_ref=760, imls=[.001, .01, .05, .1, .2, .5, 1., 1.21]"
-amplification,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
+ampcode,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
 A,0,1,1,1,1,1
 A,1,1,1,1,1,1
 A,2,1,1,1,1,1
@@ -35,7 +35,7 @@ A,7,1,1,1,1,1
 '''
 
 simple_ampl_func = '''#,,,,,,,"vs30_ref=760, imls=[.001, .01, .05, .1, .2, .5, 1., 1.21]"
-amplification,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5),sigma_PGA,sigma_SA(0.3),sigma_SA(0.6),sigma_SA(1.0),sigma_SA(1.5)
+ampcode,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5),sigma_PGA,sigma_SA(0.3),sigma_SA(0.6),sigma_SA(1.0),sigma_SA(1.5)
 A,0,1.01,1,1,1.1,1.1,.1,.1,.1,.1,.1
 A,1,1.05,1,1,1.1,1.1,.1,.1,.1,.1,.1
 A,2,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
@@ -64,7 +64,7 @@ class AmplifierTestCase(unittest.TestCase):
         # is lost and this is the reason why the first poe in 0.985
         # instead of 0.989
         fname = gettemp(trivial_ampl_func)
-        aw = read_csv(fname, {'amplification': 'S2', 'level': numpy.uint8,
+        aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
         numpy.testing.assert_allclose(
@@ -85,7 +85,7 @@ class AmplifierTestCase(unittest.TestCase):
 
     def test_simple(self):
         fname = gettemp(simple_ampl_func)
-        aw = read_csv(fname, {'amplification': 'S2', 'level': numpy.uint8,
+        aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1])
