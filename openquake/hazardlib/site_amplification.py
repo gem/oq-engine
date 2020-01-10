@@ -57,7 +57,7 @@ def digitize(name, values, bins):
     :returns: the indices of the values in the bins
 
     If there are V values and B bins with V < B, this functions returns
-    an array with V elements in the range 0 .. B - 1; for instance:
+    an array with V elements in the range 0 .. B - 2; for instance:
 
     >>> digitize('period', [0, .1, .2], [0, .05, .1, .15, .20, .25])
     array([0, 2, 4])
