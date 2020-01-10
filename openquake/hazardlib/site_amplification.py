@@ -49,26 +49,26 @@ def norm_cdf(x, a, s):
         return norm.cdf(x, loc=a, scale=s)
 
 
-def digitize(name, values, bins):
+def digitize(name, values, edges):
     """
     :param name: 'period' or 'level'
     :param values: periods or levels
-    :param bins: available periods or levels
+    :param edges: available periods or levels
     :returns: the indices of the values in the bins
 
-    If there are V values and B bins with V < B, this functions returns
-    an array with V elements in the range 0 .. B - 2; for instance:
+    If there are V values and E edges this functions returns an array
+    with V elements in the range 0 .. E - 2; for instance:
 
     >>> digitize('period', [0, .1, .2], [0, .05, .1, .15, .20, .25])
     array([0, 2, 4])
     """
-    if max(values) > max(bins):
+    if max(values) > max(edges):
         raise ValueError(
-            f'The {name} {max(values)} is outside the bins {bins}')
-    if min(values) < min(bins):
+            f'The {name} {max(values)} is outside the edges {edges}')
+    if min(values) < min(edges):
         raise ValueError(
-            f'The {name} {min(values)} is outside the bins {bins}')
-    return numpy.digitize(values, bins) - 1
+            f'The {name} {min(values)} is outside the edges {edges}')
+    return numpy.digitize(values, edges) - 1
 
 
 class Amplifier(object):
