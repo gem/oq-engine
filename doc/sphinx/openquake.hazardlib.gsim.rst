@@ -562,10 +562,10 @@ idriss_2014
     :undoc-members:
     :show-inheritance:
 
-ita04
+ita_2004
 -------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.ita04
+.. automodule:: openquake.hazardlib.gsim.ita_2004
     :members:
     :undoc-members:
     :show-inheritance:
