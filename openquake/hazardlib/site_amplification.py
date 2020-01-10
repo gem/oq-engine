@@ -96,7 +96,7 @@ class Amplifier(object):
         L = len(l_indices)
         self.alpha = {}  # code, imt -> alphas
         self.sigma = {}  # code, imt -> sigmas
-        for code, arr in group_array(ampl_funcs, 'amplification').items():
+        for code, arr in group_array(ampl_funcs, 'ampcode').items():
             for m in set(m_indices):
                 im = str(imts[m])
                 self.alpha[code, im] = alpha = numpy.zeros(L)

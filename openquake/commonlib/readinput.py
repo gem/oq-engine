@@ -396,10 +396,10 @@ def get_site_model(oqparam):
     """
     req_site_params = get_gsim_lt(oqparam).req_site_params
     if 'amplification' in oqparam.inputs:
-        req_site_params.add('amplification')
+        req_site_params.add('ampcode')
     arrays = []
     dtypedic = {None: float, 'vs30measured': numpy.uint8,
-                'amplification': (numpy.string_, 2)}
+                'ampcode': (numpy.string_, 2)}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
             sm = hdf5.read_csv(fname, dtypedic).array
@@ -466,7 +466,7 @@ def get_site_collection(oqparam):
     else:  # use the default site params
         req_site_params = get_gsim_lt(oqparam).req_site_params
         if 'amplification' in oqparam.inputs:
-            req_site_params.add('amplification')
+            req_site_params.add('ampcode')
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -657,12 +657,12 @@ def get_amplification(oqparam):
     :returns: a composite array (amplification, param, imt0, imt1, ...)
     """
     fname = oqparam.inputs['amplification']
-    aw = hdf5.read_csv(fname, {'amplification': 'S2', 'level': U8, None: F64})
+    aw = hdf5.read_csv(fname, {'ampcode': 'S2', 'level': U8, None: F64})
     levels = numpy.arange(len(aw.imls))
-    for records in group_array(aw, 'amplification').values():
+    for records in group_array(aw, 'ampcode').values():
         if (records['level'] != levels).any():
             raise InvalidFile('%s: levels for %s %s instead of %s' %
-                              (fname, records['amplification'][0],
+                              (fname, records['ampcode'][0],
                                records['level'], levels))
     return aw
 

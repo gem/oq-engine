@@ -520,7 +520,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     with monitor('read PoEs'):
         pgetter.init()
         if amplifier:
-            ampl_codes = pgetter.dstore['sitecol'].amplification
+            ampl_codes = pgetter.dstore['sitecol'].ampcode
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     M = len(imtls)
     L = len(imtls.array) if amplifier is None else len(amplifier.amplevels) * M
