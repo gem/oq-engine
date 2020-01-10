@@ -504,8 +504,22 @@ hazard_uhs-std.csv
         self.assertEqual(self.calc.R, 9)  # there are 9 realizations
 
     def test_case_37(self):
-        # check gsims
+        # test with amplification function == 1
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_37.__file__)
+        hc_id = str(self.calc.datastore.calc_id)
+        # test with amplification function == 2
+        self.run_calc(case_37.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      amplification_csv='amplification2.csv')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ampl_curve-PGA.csv', fname)
+
+        # test with amplification function == 2 and no levels
+        self.run_calc(case_37.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      amplification_csv='amplification2bis.csv')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
 
     def test_case_38(self):
         # BC Hydro GMPEs with epistemic adjustments

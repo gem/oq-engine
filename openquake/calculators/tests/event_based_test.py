@@ -349,7 +349,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/global_gmfs.txt', tmp)
 
     def test_case_17(self):  # oversampling and save_ruptures
-        # also, the grp-00 does not produce ruptures
+        # also, grp-00 does not produce ruptures
         expected = [
             'hazard_curve-mean.csv',
             'hazard_curve-rlz-001.csv',

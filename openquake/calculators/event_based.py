@@ -33,7 +33,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import source, calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, gen_rupture_getters, sig_eps_dt)
+    GmfGetter, RuptureGetter, gen_rupture_getters, sig_eps_dt, time_dt)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 
@@ -203,6 +203,9 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
+                times = result.pop('times')
+                rupids = list(times['rup_id'])
+                self.datastore['gmf_data/time_by_rup'][rupids] = times
                 hdf5.extend(self.datastore['gmf_data/data'], data)
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
@@ -234,10 +237,7 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        maxweight = len(events) / (self.oqparam.concurrent_tasks or 1)
-        rgetters = gen_rupture_getters(self.datastore, maxweight=maxweight,
-                                       weight_rup=operator.itemgetter('n_occ'))
-
+        rgetters = gen_rupture_getters(self.datastore)
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
         logging.info('Building assocs event_id -> rlz_id for {:_d} events'
@@ -333,23 +333,26 @@ class EventBasedCalculator(base.HazardCalculator):
                               oq.inputs['job_ini'])
         N = len(self.sitecol.complete)
         if oq.ground_motion_fields:
+            nrups = len(self.datastore['ruptures'])
             self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
             self.datastore.create_dset(
                 'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
+            self.datastore.create_dset('gmf_data/time_by_rup',
+                                       time_dt, (nrups,), fillvalue=None)
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
 
         # compute_gmfs in parallel
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
-        allargs = [(rgetter, srcfilter, self.param)
-                   for rgetter in gen_rupture_getters(self.datastore)]
-        logging.info('Generated %d tasks', len(allargs))
+        iterargs = ((rgetter, srcfilter, self.param)
+                    for rgetter in gen_rupture_getters(self.datastore,
+                                                       srcfilter=srcfilter))
         acc = parallel.Starmap(
-            self.core_task.__func__, allargs, h5=self.datastore.hdf5,
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores
         ).reduce(self.agg_dicts, self.acc0())
 

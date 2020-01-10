@@ -4,7 +4,14 @@
   * Implements NGA East site amplification model within NGA East Base class
 
   [Michele Simionato]
-  * Refined the rupture prefiltering mechanism
+  * Implemented site amplification by convolution
+  * Improved the error message if the `event_id` does not start from zero in
+    the gmfs.csv files
+  * Changed the rupture exporter to export LINESTRINGs instead of degenerate
+    POLYGONs
+  * Introduced `minimum_loss_fraction` functionality in ebrisk
+  * Refined the rupture prefiltering mechanism, possibly changing the numbers
+    in calculations with nonzero coefficients of variations
   * Optimized the generation of aggregate loss curves in ebrisk
   * Introduced an experimental AvgGMPE and used it to implement (optional)
     reduction of the gsim logic tree
