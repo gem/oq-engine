@@ -352,8 +352,8 @@ def check_amplification(dstore):
     Make sure the amplification codes in the site collection match the
     ones in the amplification table
     """
-    codeset = set(dstore['amplification']['amplification'])
-    codes = set(dstore['sitecol']['amplification'])
+    codeset = set(dstore['amplification']['ampcode'])
+    codes = set(dstore['sitecol']['ampcode'])
     missing = codes - codeset
     if missing:
         raise ValueError('The site collection contains references to missing '
@@ -651,8 +651,8 @@ class HazardCalculator(BaseCalculator):
             with util.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
                 if ('amplification' in oq.inputs and
-                        'amplification' not in haz_sitecol.array.dtype.names):
-                    haz_sitecol.add_col('amplification', (numpy.string_, 2))
+                        'ampcode' not in haz_sitecol.array.dtype.names):
+                    haz_sitecol.add_col('ampcode', (numpy.string_, 2))
         else:
             haz_sitecol = readinput.get_site_collection(oq)
             if hasattr(self, 'rup'):
