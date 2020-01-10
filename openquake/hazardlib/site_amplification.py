@@ -49,6 +49,28 @@ def norm_cdf(x, a, s):
         return norm.cdf(x, loc=a, scale=s)
 
 
+def digitize(name, values, bins):
+    """
+    :param name: 'period' or 'level'
+    :param values: periods or levels
+    :param bins: available periods or levels
+    :returns: the indices of the values in the bins
+
+    If there are V values and B bins with V < B, this functions returns
+    an array with V elements in the range 0 .. B - 1; for instance:
+
+    >>> digitize('period', [0, .1, .2], [0, .05, .1, .15, .20, .25])
+    array([0, 2, 4])
+    """
+    if max(values) > max(bins):
+        raise ValueError(
+            f'The {name} {max(values)} is outside the bins {bins}')
+    if min(values) < min(bins):
+        raise ValueError(
+            f'The {name} {min(values)} is outside the bins {bins}')
+    return numpy.digitize(values, bins) - 1
+
+
 class Amplifier(object):
     """
     :param imtls: intensity measure types and levels DictArray M x I
@@ -67,10 +89,10 @@ class Amplifier(object):
         imls = ampl_funcs.imls
         imts = [from_string(imt) for imt in ampl_funcs.dtype.names[2:]
                 if not imt.startswith('sigma_')]
-        m_indices = self.digitize(
+        m_indices = digitize(
             'period', self.periods, [imt.period for imt in imts])
         self.imtdict = {imt: str(imts[m]) for m, imt in zip(m_indices, imtls)}
-        l_indices = self.digitize('level', self.midlevels, imls)
+        l_indices = digitize('level', self.midlevels, imls)
         L = len(l_indices)
         self.alpha = {}  # code, imt -> alphas
         self.sigma = {}  # code, imt -> sigmas
@@ -87,21 +109,6 @@ class Amplifier(object):
                     except ValueError:  # missing sigma
                         pass
                     idx += 1
-
-    def digitize(self, name, values, bins):
-        """
-        :param name: 'period' or 'level'
-        :param values: periods or levels
-        :param bins: available periods or levels
-        :returns: the indices of the values in the bins
-        """
-        if max(values) > max(bins):
-            raise ValueError(
-                f'The {name} {max(values)} is outside the bins {bins}')
-        if min(values) < min(bins):
-            raise ValueError(
-                f'The {name} {min(values)} is outside the bins {bins}')
-        return numpy.digitize(values, bins) - 1
 
     def amplify_one(self, ampl_code, imt, poes):
         """
