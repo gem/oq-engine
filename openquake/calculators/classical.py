@@ -523,7 +523,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
             ampl_codes = pgetter.dstore['sitecol'].amplification
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     M = len(imtls)
-    L = len(imtls.array) if amplifier is None else len(amplifier.alevels) * M
+    L = len(imtls.array) if amplifier is None else len(amplifier.amplevels) * M
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}

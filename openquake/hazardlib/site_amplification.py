@@ -53,11 +53,11 @@ class Amplifier(object):
     """
     :param imtls: intensity measure types and levels DictArray
     :param ampl_funcs: an ArrayWrapper containing amplification functions
-    :param alevels: levels used for the amplified curves
+    :param amplevels: levels used for the amplified curves
     """
-    def __init__(self, imtls, ampl_funcs, alevels):
+    def __init__(self, imtls, ampl_funcs, amplevels):
         self.imtls = imtls
-        self.alevels = alevels
+        self.amplevels = amplevels
         self.periods, self.levels = check_same_levels(imtls)
         imls = ampl_funcs.imls
         imts = [from_string(imt) for imt in ampl_funcs.dtype.names[2:]
@@ -108,9 +108,9 @@ class Amplifier(object):
         stored_imt = self.imtdict[imt]
         alphas = self.alpha[ampl_code, stored_imt]
         sigmas = self.sigma[ampl_code, stored_imt]
-        ampl_poes = numpy.zeros_like(self.alevels)
+        ampl_poes = numpy.zeros_like(self.amplevels)
         for l, p, a, s in zip(self.levels, -numpy.diff(poes), alphas, sigmas):
-            ampl_poes += (1. - norm_cdf(self.alevels / l, a, s)) * p
+            ampl_poes += (1. - norm_cdf(self.amplevels / l, a, s)) * p
         return ampl_poes
 
     def amplify(self, ampl_code, pcurves):
