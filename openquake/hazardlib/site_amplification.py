@@ -96,7 +96,9 @@ class Amplifier(object):
         L = len(l_indices)
         self.alpha = {}  # code, imt -> alphas
         self.sigma = {}  # code, imt -> sigmas
+        self.ampcodes = []
         for code, arr in group_array(ampl_funcs, 'ampcode').items():
+            self.ampcodes.append(code)
             for m in set(m_indices):
                 im = str(imts[m])
                 self.alpha[code, im] = alpha = numpy.zeros(L)
@@ -117,6 +119,9 @@ class Amplifier(object):
         :param poes: the original PoEs
         :returns: the amplified PoEs
         """
+        if ampl_code == b'' and len(self.ampcodes) == 1:
+            # manage the case of a site collection with empty ampcode
+            ampl_code = self.ampcodes[0]
         stored_imt = self.imtdict[imt]
         alphas = self.alpha[ampl_code, stored_imt]
         sigmas = self.sigma[ampl_code, stored_imt]
