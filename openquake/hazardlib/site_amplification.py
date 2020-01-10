@@ -92,7 +92,7 @@ class Amplifier(object):
         m_indices = digitize(
             'period', self.periods, [imt.period for imt in imts])
         if len(imls) == 1:  # one level means same values for all levels
-            l_indices = [0]
+            l_indices = [0] * len(levels)
         else:
             l_indices = digitize('level', self.midlevels, imls)
         L = len(l_indices)
