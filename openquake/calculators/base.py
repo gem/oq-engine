@@ -29,7 +29,7 @@ import numpy
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
-from openquake.baselib.parallel import Starmap
+from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -160,7 +160,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         # info about Calculator.run since the file will be closed later on
         self.oqparam = oqparam
         if oqparam.num_cores:
-            Starmap.num_cores = oqparam.num_cores
+            parallel.CT = oqparam.num_cores * 2
 
     def monitor(self, operation='', **kw):
         """
@@ -282,6 +282,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         of output files.
         """
 
+    def gzip_inputs(self):
+        """
+        Gzipping the inputs and saving them in the datastore
+        """
+        logging.info('gzipping the input files')
+        fnames = readinput.get_input_files(self.oqparam)
+        self.datastore.store_files(fnames)
+
     def export(self, exports=None):
         """
         Export all the outputs in the datastore in the given export formats.
@@ -337,6 +345,23 @@ def check_time_event(oqparam, occupancy_periods):
             'time_event is %s in %s, but the exposure contains %s' %
             (time_event, oqparam.inputs['job_ini'],
              ', '.join(occupancy_periods)))
+
+
+def check_amplification(dstore):
+    """
+    Make sure the amplification codes in the site collection match the
+    ones in the amplification table
+    """
+    codeset = set(dstore['amplification']['ampcode'])
+    if len(codeset) == 1:
+        # there is a single amplification function, there is no need to
+        # extend the sitecol with an ampcode field
+        return
+    codes = set(dstore['sitecol'].ampcode)
+    missing = codes - codeset
+    if missing:
+        raise ValueError('The site collection contains references to missing '
+                         'amplification functions:' + ' '.join(missing))
 
 
 class HazardCalculator(BaseCalculator):
@@ -411,14 +436,6 @@ class HazardCalculator(BaseCalculator):
 
         if not oq.hazard_calculation_id:
             self.gzip_inputs()
-
-    def gzip_inputs(self):
-        """
-        Gzipping the inputs and saving them in the datastore
-        """
-        logging.info('gzipping the input files')
-        fnames = readinput.get_input_files(self.oqparam)
-        self.datastore.store_files(fnames)
 
     def save_multi_peril(self):
         """Defined in MultiRiskCalculator"""
@@ -637,6 +654,9 @@ class HazardCalculator(BaseCalculator):
         if oq.hazard_calculation_id:
             with util.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
+                if ('amplification' in oq.inputs and
+                        'ampcode' not in haz_sitecol.array.dtype.names):
+                    haz_sitecol.add_col('ampcode', (numpy.string_, 2))
         else:
             haz_sitecol = readinput.get_site_collection(oq)
             if hasattr(self, 'rup'):
@@ -727,6 +747,13 @@ class HazardCalculator(BaseCalculator):
                 sm = readinput.get_site_model(oq)
                 self.sitecol.complete.assoc(sm, assoc_dist)
             self.datastore['sitecol'] = self.sitecol.complete
+
+        # store amplification functions if any
+        if 'amplification' in oq.inputs:
+            logging.info('Reading %s', oq.inputs['amplification'])
+            self.datastore['amplification'] = readinput.get_amplification(oq)
+            check_amplification(self.datastore)
+
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
                           avg_losses=oq.avg_losses)
@@ -937,7 +964,7 @@ class RiskCalculator(HazardCalculator):
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
-        res = Starmap.apply(
+        res = parallel.Starmap.apply(
             self.core_task.__func__,
             (self.riskinputs, self.crmodel, self.param, self.monitor()),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
@@ -991,7 +1018,9 @@ def import_gmfs(dstore, fname, sids):
     :param sids: the site IDs (complete)
     :returns: event_ids, num_rlzs
     """
-    array = hdf5.read_csv(fname, {'sid': U32, 'eid': U32, None: F32}).array
+    array = hdf5.read_csv(fname, {'sid': U32, 'eid': U32, None: F32},
+                          renamedict=dict(site_id='sid', event_id='eid',
+                                          rlz_id='rlzi')).array
     names = array.dtype.names
     if names[0] == 'rlzi':  # backward compatbility
         names = names[1:]  # discard the field rlzi
@@ -1013,9 +1042,15 @@ def import_gmfs(dstore, fname, sids):
                 arr['gmv'][:, m] = array[name]
         else:
             arr[name] = array[name]
+
+    n = len(numpy.unique(array[['sid', 'eid']]))
+    if n != len(array):
+        raise ValueError('Duplicated site_id, event_id in %s' % fname)
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
+    if eids[0] != 0:
+        raise ValueError('The event_id must start from zero in %s' % fname)
     E = len(eids)
     events = numpy.zeros(E, rupture.events_dt)
     events['id'] = eids

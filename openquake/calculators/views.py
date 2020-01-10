@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import ast
-import copy
 import os.path
 import numbers
 import operator
@@ -168,6 +167,20 @@ def view_slow_sources(token, dstore, maxrows=20):
     return rst_table(data[::-1][:maxrows])
 
 
+@view.add('slow_ruptures')
+def view_slow_ruptures(token, dstore, maxrows=25):
+    """
+    Show the slowest ruptures
+    """
+    fields = ['code', 'n_occ', 'mag', 'grp_id']
+    rups = dstore['ruptures'][()][fields]
+    time = dstore['gmf_data/time_by_rup'][()]
+    arr = util.compose_arrays(rups, time)
+    arr = arr[arr['nsites'] > 0]
+    arr.sort(order='time')
+    return rst_table(arr[-maxrows:])
+
+
 @view.add('contents')
 def view_contents(token, dstore):
     """
@@ -226,6 +239,7 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
+              'pointsource_distance',
               'ground_motion_correlation_model', 'minimum_intensity',
               'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
@@ -530,7 +544,7 @@ def view_task_info(token, dstore):
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
         [task] = args
-        array = get_array(task_info[()], taskname=task)
+        array = get_array(task_info[()], taskname=task.encode('utf8'))
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
@@ -593,7 +607,7 @@ def view_task_ebrisk(token, dstore):
     $ oq show task_ebrisk:-1  # the slowest task
     """
     idx = int(token.split(':')[1])
-    task_info = get_array(dstore['task_info'][()], taskname='ebrisk')
+    task_info = get_array(dstore['task_info'][()], taskname=b'ebrisk')
     task_info.sort(order='duration')
     info = task_info[idx]
     times = get_array(dstore['gmf_info'][()], task_no=info['taskno'])
@@ -721,6 +735,20 @@ def view_global_gmfs(token, dstore):
     imtls = dstore['oqparam'].imtls
     row = dstore['gmf_data/data']['gmv'].mean(axis=0)
     return rst_table([row], header=imtls)
+
+
+@view.add('gmv_by_rup')
+def view_gmv_by_rup(token, dstore):
+    """
+    Display a synthetic gmv per rupture serial for debugging purposes
+    """
+    rup_id = dstore['events']['rup_id']
+    serial = dstore['ruptures']['serial']
+    data = dstore['gmf_data/data'][()]
+    gmv = fast_agg3(data, 'eid', ['gmv'])
+    gmv['eid'] = serial[rup_id[gmv['eid']]]
+    gm = fast_agg3(gmv, 'eid', ['gmv'])
+    return rst_table(gm, header=['serial', 'gmv'])
 
 
 @view.add('mean_disagg')

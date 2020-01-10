@@ -116,6 +116,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         points = mesh.reshape(3, -1).T   # shape (n, 3)
         rec = numpy.zeros(1, rupture_dt)[0]
+        rec['serial'] = rup.rup_id
         rec['minlon'] = minlon = points[:, 0].min()
         rec['minlat'] = minlat = points[:, 1].min()
         rec['maxlon'] = maxlon = points[:, 0].max()

@@ -41,6 +41,7 @@ EARTH_RADIUS = geodetic.EARTH_RADIUS
 spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
+BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 
 
 class BBoxError(ValueError):
@@ -638,3 +639,46 @@ def bbox2poly(bbox):
     """
     x1, x2, y2, y1 = bbox  # west, east, north, south
     return (x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)
+
+
+# geohash code adapted from Leonard Norrgard's implementation
+# https://github.com/vinsci/geohash/blob/master/Geohash/geohash.py
+# see also https://en.wikipedia.org/wiki/Geohash
+# length 5 = 2.4 km resolution, length 4 = 20 km, length 3 = 78 km
+# it may turn useful in the future (with SiteCollection.geohash)
+def geohash(lon, lat, length):
+    """
+    Encode a position given in lon, lat into a geohash of the given lenght
+
+    >>> geohash(lon=10, lat=45, length=5)
+    b'spzpg'
+    """
+    lat_interval, lon_interval = (-90.0, 90.0), (-180.0, 180.0)
+    chars = b''
+    bits = [16, 8, 4, 2, 1]
+    bit = 0
+    ch = 0
+    even = True
+    while len(chars) < length:
+        if even:
+            mid = (lon_interval[0] + lon_interval[1]) / 2
+            if lon > mid:
+                ch |= bits[bit]
+                lon_interval = (mid, lon_interval[1])
+            else:
+                lon_interval = (lon_interval[0], mid)
+        else:
+            mid = (lat_interval[0] + lat_interval[1]) / 2
+            if lat > mid:
+                ch |= bits[bit]
+                lat_interval = (mid, lat_interval[1])
+            else:
+                lat_interval = (lat_interval[0], mid)
+        even = not even
+        if bit < 4:
+            bit += 1
+        else:
+            chars += BASE32[ch]
+            bit = 0
+            ch = 0
+    return chars
