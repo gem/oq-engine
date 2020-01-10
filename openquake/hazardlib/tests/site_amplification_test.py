@@ -57,12 +57,19 @@ class AmplifierTestCase(unittest.TestCase):
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01]]  # SA(0.5)
 
     def test_trivial(self):
-        # using the heaviside function, i.e. amplify_one has contributions
-        # only for soil_intensity < rock_intensity
+        # using the heaviside function, i.e. `amplify_one` has contributions
+        # only for soil_intensity < a * mid_intensity with a=1
+        # in this case the minimimum mid_intensity is 0.0015 which is
+        # smaller than the minimum soil intensity 0.0020, so some contribution
+        # is lost and this is the reason why the first poe in 0.985
+        # instead of 0.989
         fname = gettemp(trivial_ampl_func)
         aw = read_csv(fname, {'amplification': 'S2', 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
+        numpy.testing.assert_allclose(
+            a.midlevels, [0.0015, 0.0035, 0.0075, 0.015, 0.035, 0.075,
+                          0.15, 0.35, 0.75, 1.1])
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1])
         numpy.testing.assert_allclose(
             poes, [0.985, 0.98, 0.97, 0.94, 0.89, 0.79, 0.69],
