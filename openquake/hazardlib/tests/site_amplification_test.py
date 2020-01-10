@@ -65,15 +65,16 @@ class AmplifierTestCase(unittest.TestCase):
         a = Amplifier(self.imtls, aw, self.soil_levels)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1])
         numpy.testing.assert_allclose(
-            poes, [0.9825, 0.975, 0.955, 0.915, 0.84, 0.74, 0.39],
+            poes, [0.985, 0.98, 0.97, 0.94, 0.89, 0.79, 0.69],
             atol=1E-6)
         poes = a.amplify_one(b'A', 'SA(0.2)', self.hcurve[2])
         numpy.testing.assert_allclose(
-            poes, [0.9825, 0.975, 0.955, 0.915, 0.84, 0.74, 0.39],
+            poes, [0.985, 0.98, 0.97, 0.94, 0.89, 0.79, 0.69],
             atol=1E-6)
         poes = a.amplify_one(b'A', 'SA(0.5)', self.hcurve[3])
         numpy.testing.assert_allclose(
-            poes, [0.9825, 0.975, 0.955, 0.915, 0.84, 0.74, 0.39], atol=1E-6)
+            poes, [0.985, 0.98, 0.97, 0.94, 0.89, 0.79, 0.69],
+            atol=1E-6)
 
     def test_simple(self):
         fname = gettemp(simple_ampl_func)
@@ -82,12 +83,13 @@ class AmplifierTestCase(unittest.TestCase):
         a = Amplifier(self.imtls, aw, self.soil_levels)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1])
         numpy.testing.assert_allclose(
-            poes, [0.982699, 0.975398, 0.960744, 0.924573, 0.84, 0.74, 0.39],
-            atol=1E-6)
+            poes, [0.985002, 0.979997, 0.970004, 0.940069, 0.889961,
+                   0.79, 0.690037], atol=1E-6)
         poes = a.amplify_one(b'A', 'SA(0.2)', self.hcurve[2])
         numpy.testing.assert_allclose(
-            poes, [0.982699, 0.975398, 0.960744, 0.924573, 0.84, 0.74, 0.39],
-            atol=1E-6)
+            poes, [0.985002, 0.979997, 0.970004, 0.940069, 0.889961,
+                   0.79, 0.690037], atol=1E-6)
         poes = a.amplify_one(b'A', 'SA(0.5)', self.hcurve[3])
         numpy.testing.assert_allclose(
-            poes, [0.9825, 0.975, 0.955, 0.915, 0.84, 0.74, 0.39], atol=1E-6)
+            poes, [0.985002, 0.979996, 0.969991, 0.940012,
+                   0.889958, 0.79, 0.690037], atol=1E-6)

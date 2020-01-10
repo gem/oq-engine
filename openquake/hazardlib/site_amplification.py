@@ -51,21 +51,26 @@ def norm_cdf(x, a, s):
 
 class Amplifier(object):
     """
-    :param imtls: intensity measure types and levels DictArray
+    :param imtls: intensity measure types and levels DictArray M x I
     :param ampl_funcs: an ArrayWrapper containing amplification functions
     :param amplevels: levels used for the amplified curves
+    :attr periods: array of M periods
+    :attr midlevels: array of I-1 levels
+    :attr alpha: dict code, imt-> I-1 amplification coefficients
+    :attr sigma: dict code, imt-> I-1 amplification sigmas
     """
     def __init__(self, imtls, ampl_funcs, amplevels):
         self.imtls = imtls
         self.amplevels = amplevels
-        self.periods, self.levels = check_same_levels(imtls)
+        self.periods, levels = check_same_levels(imtls)
+        self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
         imls = ampl_funcs.imls
         imts = [from_string(imt) for imt in ampl_funcs.dtype.names[2:]
                 if not imt.startswith('sigma_')]
         m_indices = self.digitize(
             'period', self.periods, [imt.period for imt in imts])
         self.imtdict = {imt: str(imts[m]) for m, imt in zip(m_indices, imtls)}
-        l_indices = self.digitize('level', self.levels, imls)
+        l_indices = self.digitize('level', self.midlevels, imls)
         L = len(l_indices)
         self.alpha = {}  # code, imt -> alphas
         self.sigma = {}  # code, imt -> sigmas
@@ -109,11 +114,9 @@ class Amplifier(object):
         alphas = self.alpha[ampl_code, stored_imt]
         sigmas = self.sigma[ampl_code, stored_imt]
         ampl_poes = numpy.zeros_like(self.amplevels)
-        for l, p, a, s in zip(self.levels, -numpy.diff(poes), alphas, sigmas):
-            print(l, 1. - norm_cdf(self.amplevels / l, a, s))
-            if l == 1:
-                import pdb; pdb.set_trace()
-            ampl_poes += (1. - norm_cdf(self.amplevels / l, a, s)) * p
+        for mid, prob, a, s in zip(
+                self.midlevels, -numpy.diff(poes), alphas, sigmas):
+            ampl_poes += (1. - norm_cdf(self.amplevels / mid, a, s)) * prob
         return ampl_poes
 
     def amplify(self, ampl_code, pcurves):
