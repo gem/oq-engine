@@ -21,8 +21,9 @@ Module exports :class:`NGAEastUSGSSeedSP15`
                :class:`NGAEastUSGSSeed2CVSP`
                :class:`NGAEastUSGSSeed1CVSP`
                :class:`NGAEastUSGSSeed2CCSP`
-               :class:`NGAEastUSGSSeedGrazier`
+               :class:`NGAEastUSGSSeedGraizer`
                :class:`NGAEastUSGSSeedB_ab95`
+               :class:`NGAEastUSGSSeedB_bca10d``
                :class:`NGAEastUSGSSeedB_sgd02`
                :class:`NGAEastUSGSSeedB_a04`
                :class:`NGAEastUSGSSeedB_bs11`
@@ -285,12 +286,16 @@ class NGAEastUSGSSeed2CCSP(NGAEastUSGSGMPE):
     gmpe_table = os.path.join(PATH, "nga_east_2CCSP.hdf5")
 
 
-class NGAEastUSGSSeedGrazier(NGAEastUSGSGMPE):
+class NGAEastUSGSSeedGraizer(NGAEastUSGSGMPE):
     gmpe_table = os.path.join(PATH, "nga_east_Graizer.hdf5")
 
 
 class NGAEastUSGSSeedB_ab95(NGAEastUSGSGMPE):
     gmpe_table = os.path.join(PATH, "nga_east_B_ab95.hdf5")
+
+
+class NGAEastUSGSSeedB_bca10d(NGAEastUSGSGMPE):
+    gmpe_table = os.path.join(PATH, "nga_east_B_bca10d.hdf5")
 
 
 class NGAEastUSGSSeedB_sgd02(NGAEastUSGSGMPE):
@@ -321,11 +326,11 @@ class NGAEastUSGSSeedPEER_GP(NGAEastUSGSGMPE):
     gmpe_table = os.path.join(PATH, "nga_east_PEER_GP.hdf5")
 
 
-class NGAEastUSGSSeedGrazier16(NGAEastUSGSGMPE):
+class NGAEastUSGSSeedGraizer16(NGAEastUSGSGMPE):
     gmpe_table = os.path.join(PATH, "nga_east_Graizer16.hdf5")
 
 
-class NGAEastUSGSSeedGrazier17(NGAEastUSGSGMPE):
+class NGAEastUSGSSeedGraizer17(NGAEastUSGSGMPE):
     gmpe_table = os.path.join(PATH, "nga_east_Graizer17.hdf5")
 
 
