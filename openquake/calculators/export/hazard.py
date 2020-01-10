@@ -23,9 +23,10 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib.general import group_array, deprecated
+from openquake.baselib.general import (
+    group_array, deprecated, AccumDict, DictArray)
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg, filters
+from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
@@ -56,12 +57,11 @@ def export_ruptures_xml(ekey, dstore):
     fmt = ekey[-1]
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
-    ruptures_by_grp = {}
+    ruptures_by_grp = AccumDict(accum=[])
     for rgetter in gen_rupture_getters(dstore):
         ebrs = [ebr.export(rgetter.rlzs_by_gsim, num_ses)
                 for ebr in rgetter.get_ruptures()]
-        if ebrs:
-            ruptures_by_grp[rgetter.grp_id] = ebrs
+        ruptures_by_grp[rgetter.grp_id].extend(ebrs)
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
@@ -216,9 +216,13 @@ def export_hcurves_csv(ekey, dstore):
                                  hmap.flatten().view(hmap_dt), comment))
         elif key == 'hcurves':
             hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
+            if 'amplification' in oq.inputs:
+                imtls = DictArray({imt: oq.soil_intensities for imt in oq.imtls})
+            else:
+                imtls = oq.imtls
             fnames.extend(
                 export_hcurves_by_imt_csv(
-                    ekey, kind, fname, sitecol, hcurves, oq.imtls, comment))
+                    ekey, kind, fname, sitecol, hcurves, imtls, comment))
     return sorted(fnames)
 
 

@@ -18,6 +18,7 @@
 import collections
 import itertools
 import operator
+import logging
 import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
@@ -25,7 +26,6 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
     EBRupture, BaseRupture, events_dt, RuptureProxy)
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -266,6 +266,18 @@ class GmfDataGetter(collections.abc.Mapping):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
+        if 'amplification' in self.dstore:
+            sitecol = self.dstore['sitecol']
+            arr = self.dstore['amplification']
+            dic = general.group_array(arr, 'ampcode')
+            imts = self.dstore['gmf_data/imts'][()].split()
+            self.amplification = numpy.zeros((len(sitecol), len(imts)))
+            for m, imt in enumerate(imts):
+                for sid, ampl in enumerate(sitecol.ampcode):
+                    [f] = dic[ampl][imt]
+                    self.amplification[sid, m] = f
+        else:
+            self.amplification = ()
         try:
             self.imts = self.dstore['gmf_data/imts'][()].split()
         except KeyError:  # engine < 3.3
@@ -296,13 +308,21 @@ class GmfDataGetter(collections.abc.Mapping):
         data = [dset[start:stop] for start, stop in idxs]
         if len(data) == 0:  # site ID with no data
             return {}
-        return group_by_rlz(numpy.concatenate(data), self.rlzs)
+        arr = numpy.concatenate(data)
+        if len(self.amplification):
+            for m, ampl in enumerate(self.amplification[sid]):
+                arr['gmv'][:, m] *= ampl
+        return group_by_rlz(arr, self.rlzs)
 
     def __iter__(self):
         return iter(self.sids)
 
     def __len__(self):
         return len(self.sids)
+
+
+time_dt = numpy.dtype(
+    [('rup_id', U32), ('nsites', U16), ('time', F32), ('task_no', U16)])
 
 
 class GmfGetter(object):
@@ -331,6 +351,24 @@ class GmfGetter(object):
             rupgetter.trt, rupgetter.rlzs_by_gsim, param)
         self.correl_model = oqparam.correl_model
 
+    def gen_computers(self, mon):
+        """
+        Yield a GmfComputer instance for each non-discarded rupture
+        """
+        for ebr in self.rupgetter.get_ruptures():
+            with mon:
+                sitecol = self.sitecol.filtered(ebr.sids)
+                try:
+                    computer = calc.gmf.GmfComputer(
+                        ebr, sitecol, self.oqparam.imtls, self.cmaker,
+                        self.oqparam.truncation_level, self.correl_model)
+                except FarAwayRupture:
+                    continue
+                # due to numeric errors ruptures within the maximum_distance
+                # when written, can be outside when read; I found a case with
+                # a distance of 99.9996936 km over a maximum distance of 100 km
+            yield computer
+
     @property
     def sids(self):
         return self.sitecol.sids
@@ -343,35 +381,17 @@ class GmfGetter(object):
     def imts(self):
         return list(self.oqparam.imtls)
 
-    def init(self):
-        """
-        Initialize the computers. Should be called on the workers
-        """
-        if hasattr(self, 'computers'):  # init already called
-            return
-        self.computers = []
-        for ebr in self.rupgetter.get_ruptures():
-            sitecol = self.sitecol.filtered(ebr.sids)
-            try:
-                computer = calc.gmf.GmfComputer(
-                    ebr, sitecol, self.oqparam.imtls, self.cmaker,
-                    self.oqparam.truncation_level, self.correl_model)
-            except FarAwayRupture:
-                # due to numeric errors, ruptures within the maximum_distance
-                # when written, can be outside when read; I found a case with
-                # a distance of 99.9996936 km over a maximum distance of 100 km
-                continue
-            self.computers.append(computer)
-
-    def get_gmfdata(self):
+    def get_gmfdata(self, mon):
         """
         :returns: an array of the dtype (sid, eid, gmv)
         """
         alldata = []
         self.sig_eps = []
-        for computer in self.computers:
-            data = computer.compute_all(
+        self.times = []  # rup_id, nsites, dt
+        for computer in self.gen_computers(mon):
+            data, dt = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
+            self.times.append((computer.rupture.id, len(computer.sids), dt))
             alldata.append(data)
         if not alldata:
             return []
@@ -394,14 +414,12 @@ class GmfGetter(object):
         :returns: a dict with keys gmfdata, indices, hcurves
         """
         oq = self.oqparam
-        with monitor('getting ruptures', measuremem=True):
-            self.init()
+        mon = monitor('getting ruptures', measuremem=True)
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
-            with monitor('building hazard', measuremem=True):
-                gmfdata = self.get_gmfdata()  # returned later
-                hazard = self.get_hazard_by_sid(data=gmfdata)
+            gmfdata = self.get_gmfdata(mon)  # returned later
+            hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
                 dic = group_by_rlz(hazardr, rlzs)
                 for rlzi, array in dic.items():
@@ -414,8 +432,7 @@ class GmfGetter(object):
                             hcurves[rsi2str(rlzi, sid, imt)] = poes
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
-        with monitor('building hazard', measuremem=True):
-            gmfdata = self.get_gmfdata()
+        gmfdata = self.get_gmfdata(mon)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         indices = []
@@ -426,7 +443,9 @@ class GmfGetter(object):
                 stop += 1
             indices.append((sid, start, stop))
             start = stop
-        res = dict(gmfdata=gmfdata, hcurves=hcurves,
+        times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
+                            time_dt)
+        res = dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
         return res
@@ -444,16 +463,7 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def weight_rup(rup):
-    if rup.sids is None:
-        rup.weight = rup['n_occ']
-    else:
-        rup.weight = rup['n_occ'] * numpy.ceil(len(rup.sids) / 1000)
-    return rup.weight
-
-
-def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None,
-                        weight_rup=weight_rup):
+def gen_rupture_getters(dstore, slc=slice(None), srcfilter=None):
     """
     :yields: RuptureGetters
     """
@@ -461,44 +471,50 @@ def gen_rupture_getters(dstore, slc=slice(None), maxweight=1E5, filename=None,
         e0s = dstore['eslices'][:, 0]
     except KeyError:
         e0s = None
-    if dstore.parent:
-        dstore = dstore.parent
     csm_info = dstore['csm_info']
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    nr, ne = 0, 0
-    maxdist = dstore['oqparam'].maximum_distance
-    if 'sitecol' in dstore:
-        srcfilter = SourceFilter(dstore['sitecol'], maxdist)
-    else:
-        srcfilter = None
+    ct = dstore['oqparam'].concurrent_tasks
+    maxweight = len(dstore['ruptures']) / (ct or 1)
+
+    def gen(arr):
+        if srcfilter:
+            for rec in arr:
+                sids = srcfilter.close_sids(rec, trt)
+                if len(sids):
+                    yield RuptureProxy(rec, sids)
+        else:
+            yield from map(RuptureProxy, arr)
+
+    light_rgetters = []
+    ntasks = 0
+    nr = 0
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        proxies = []
-        for rec in arr:
-            if srcfilter:
-                sids = srcfilter.close_sids(rec, trt)
-                if len(sids):
-                    proxies.append(RuptureProxy(rec, sids))
-            else:
-                proxies.append(RuptureProxy(rec))
-        for block in general.block_splitter(proxies, maxweight, weight_rup):
+        for proxies in general.block_splitter(
+                gen(arr), maxweight, operator.attrgetter('weight')):
             if e0s is None:
-                e0 = numpy.zeros(len(block), U32)
+                e0 = numpy.zeros(len(proxies), U32)
             else:
-                e0 = e0s[nr: nr + len(block)]
+                e0 = e0s[nr: nr + len(proxies)]
             rgetter = RuptureGetter(
-                block, filename or dstore.filename, grp_id,
+                proxies, dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
-            yield rgetter
-            nr += len(block)
-            ne += rgetter.num_events
+            if rgetter.weight < maxweight / 2:
+                light_rgetters.append(rgetter)
+            else:
+                yield rgetter
+            nr += len(proxies)
+            ntasks += 1
+    nheavy = ntasks - len(light_rgetters)
+    logging.info('There are %d/%d heavy tasks', nheavy, ntasks)
+    yield from light_rgetters  # IMPORTANT: send the small tasks later
 
 
 # this is never called directly; gen_rupture_getters is used instead

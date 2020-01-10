@@ -43,6 +43,7 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
 
 
 def duplicated(items):
@@ -384,12 +385,11 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
     _tmp_paths.append(path)
-    if content:
-        fh = os.fdopen(fh, "wb")
-        if hasattr(content, 'encode'):
-            content = content.encode('utf8')
-        fh.write(content)
-        fh.close()
+    with os.fdopen(fh, "wb") as fh:
+        if content:
+            if hasattr(content, 'encode'):
+                content = content.encode('utf8')
+            fh.write(content)
     return path
 
 
@@ -1320,3 +1320,28 @@ def add_columns(a, b, on, cols=None):
     for name in cols:
         new[name] = b[name][idxs]
     return new
+
+
+def categorize(values, nchars=2):
+    """
+    Takes an array with duplicate values and categorize it, i.e. replace
+    the values with codes of length nchars in base64. With nchars=2 4096
+    unique values can be encoded, if there are more nchars must be increased
+    otherwise a ValueError will be raised.
+
+    :param values: an array of V non-unique values
+    :param nchars: number of characters in base64 for each code
+    :returns: an array of V non-unique codes
+
+    >>> categorize([1,2,2,3,4,1,1,2]) # 8 values, 4 unique ones
+    array([b'AA', b'AB', b'AB', b'AC', b'AD', b'AA', b'AA', b'AB'],
+          dtype='|S2')
+    """
+    uvalues = numpy.unique(values)
+    mvalues = 64 ** nchars  # maximum number of unique values
+    if len(uvalues) > mvalues:
+        raise ValueError(
+            f'There are too many unique values ({len(uvalues)} > {mvalues})')
+    prod = itertools.product(*[BASE64] * nchars)
+    dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
+    return numpy.array([dic[v] for v in values], (numpy.string_, nchars))

@@ -174,6 +174,12 @@ sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
+# use only the "visible" cores, not the total system cores
+# if the underlying OS supports it (macOS does not)
+try:
+    CT = len(psutil.Process().cpu_affinity()) * 2
+except AttributeError:
+    CT = psutil.cpu_count() * 2
 
 
 @submit.add('no')
@@ -309,6 +315,17 @@ def pickle_sequence(objects):
     return out
 
 
+class FakePickle:
+    def __init__(self, sentbytes):
+        self.sentbytes = sentbytes
+
+    def unpickle(self):
+        pass
+
+    def __len__(self):
+        return self.sentbytes
+
+
 class Result(object):
     """
     :param val: value to return or exception instance
@@ -318,7 +335,7 @@ class Result(object):
     """
     func = None
 
-    def __init__(self, val, mon, tb_str='', msg='', count=0):
+    def __init__(self, val, mon, tb_str='', msg=''):
         if isinstance(val, dict):
             self.pik = Pickled(val)
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
@@ -332,7 +349,6 @@ class Result(object):
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
-        self.count = count
 
     def get(self):
         """
@@ -353,7 +369,7 @@ class Result(object):
         return '<%s %s>' % (self.__class__.__name__, ' '.join(nbytes))
 
     @classmethod
-    def new(cls, func, args, mon, count=0):
+    def new(cls, func, args, mon, sentbytes=0):
         """
         :returns: a new Result instance
         """
@@ -361,13 +377,14 @@ class Result(object):
             with mon:
                 val = func(*args)
         except StopIteration:
+            mon.counts -= 1  # StopIteration does not count
             res = Result(None, mon, msg='TASK_ENDED')
+            res.pik = FakePickle(sentbytes)
         except Exception:
             _etype, exc, tb = sys.exc_info()
-            res = Result(exc, mon, ''.join(traceback.format_tb(tb)),
-                         count=count)
+            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
         else:
-            res = Result(val, mon, count=count)
+            res = Result(val, mon)
         return res
 
 
@@ -417,6 +434,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)
+    sentbytes = 0
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
         if msg:
@@ -429,14 +447,14 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
             it = gen(*args)
         while True:
             # StopIteration -> TASK_ENDED
-            res = Result.new(next, (it,), mon)
+            res = Result.new(next, (it,), mon, sentbytes)
             try:
                 zsocket.send(res)
             except Exception:  # like OverflowError
                 _etype, exc, tb = sys.exc_info()
-                err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
-                             count=count)
+                err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
                 zsocket.send(err)
+            sentbytes += len(res.pik)
             if res.msg == 'TASK_ENDED':
                 break
 
@@ -592,11 +610,7 @@ class Starmap(object):
     running_tasks = []  # currently running tasks
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
-    try:
-        num_cores = len(psutil.Process().cpu_affinity())
-    except AttributeError:
-        num_cores = psutil.cpu_count()
-    oversubmit = False
+    num_cores = None
 
     @classmethod
     def init(cls, poolsize=None, distribute=None):
@@ -664,7 +678,7 @@ class Starmap(object):
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
             if concurrent_tasks is None:
-                concurrent_tasks = cls.num_cores * 2
+                concurrent_tasks = CT
             taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(
@@ -688,7 +702,7 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
-        self.num_cores = num_cores or self.__class__.num_cores
+        self.num_cores = num_cores
         self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
@@ -740,7 +754,11 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-        dist = 'no' if self.num_tasks == 1 else self.distribute
+        OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
+        if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
+            self.task_no += 1
+            return
+        dist = 'no' if self.num_tasks == 1 or OQ_TASK_NO else self.distribute
         if dist != 'no':
             pickled = isinstance(args[0], Pickled)
             if not pickled:
@@ -761,8 +779,12 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
-        self.task_queue = [(self.task_func, args)
-                           for args in self.task_args]
+        if self.num_tasks is None:  # loop on the iterator
+            for args in self.task_args:
+                self.submit(args)
+        else:  # build a task queue in advance
+            self.task_queue = [(self.task_func, args)
+                               for args in self.task_args]
         return self.get_results()
 
     def get_results(self):
@@ -791,9 +813,10 @@ class Starmap(object):
                 self.todo += 1
 
     def _loop(self):
+        num_cores = self.num_cores or CT // 2
         if self.task_queue:
-            first_args = self.task_queue[:self.num_cores]
-            self.task_queue[:] = self.task_queue[self.num_cores:]
+            first_args = self.task_queue[:num_cores]
+            self.task_queue[:] = self.task_queue[num_cores:]
             for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -808,17 +831,17 @@ class Starmap(object):
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
                 self.todo -= 1
-                self._submit_many(max(self.num_cores - self.todo, 2))
+                self._submit_many(1)
                 logging.debug('%d tasks todo, %d in queue',
                               self.todo, len(self.task_queue))
                 self.log_percent()
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
-                if self.todo < self.num_cores:
+                if self.num_cores is None:
+                    self._submit_many(1)  # oversubmit
+                elif self.todo < self.num_cores:
                     self._submit_many(self.num_cores - self.todo)
-                elif self.oversubmit:
-                    self._submit_many(1)
             else:
                 yield res
         self.log_percent()
@@ -826,7 +849,7 @@ class Starmap(object):
         self.tasks.clear()
 
 
-def sequential_apply(task, args, concurrent_tasks=Starmap.num_cores * 2,
+def sequential_apply(task, args, concurrent_tasks=CT,
                      weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks

@@ -15,8 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 import operator
+import unittest
 import numpy
 
 from openquake.baselib.general import AccumDict
@@ -271,5 +273,10 @@ class EbrCalculator(base.RiskCalculator):
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')
         prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
-        prc.datastore.parent = self.datastore.parent
-        prc.run()
+        if self.datastore.hdf5.mode is None:  # no parent
+            logging.warn('Disabling task distribution')
+            with unittest.mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
+                prc.run()
+        else:  # mode is r+
+            prc.datastore.parent = self.datastore.parent
+            prc.run()

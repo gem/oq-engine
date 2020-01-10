@@ -27,7 +27,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.risklib import asset
 from openquake.risklib.riskmodels import ValidationError
 from openquake.commonlib import readinput
-from openquake.qa_tests_data.classical import case_1, case_2, case_21
+from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_caracas
 
@@ -493,6 +493,13 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), 148)
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
+
+    def test_site_amplification(self):
+        oq = readinput.get_oqparam('job.ini', case_16)
+        oq.inputs['amplification'] = os.path.join(
+            oq.base_path, 'amplification.csv')
+        with self.assertRaises(InvalidFile):
+            readinput.get_amplification(oq)
 
     def test_site_model_sites(self):
         # you can set them at the same time
