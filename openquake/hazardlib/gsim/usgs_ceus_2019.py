@@ -224,12 +224,11 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             mean = np.copy(pga_r)
 
         mean += self.get_site_amplification(imt, np.exp(pga_r), sctx)
-        # Get standard deviation model 
+        # Get standard deviation model
         nsites = getattr(dctx, self.distance_type).shape
         stddevs = self.get_stddevs(rctx.mag, sctx.vs30, imt,
                                    stddev_types, nsites)
         return mean, stddevs
-
 
     def get_stddevs(self, mag, vs30, imt, stddev_types, num_sites):
         """
@@ -245,7 +244,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # Panel recommended model
             tau, phi0 = get_panel_tau_phi(imt, mag)
             tau += np.zeros(num_sites)
-            phi0 += np.zeros(num_sites) 
+            phi0 += np.zeros(num_sites)
             phis2s = get_stewart_2019_phis2s(imt, vs30)
             phi = np.sqrt(phi0 ** 2. + phis2s ** 2.)
 
@@ -260,6 +259,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(tau)
         return stddevs
+
 
 PATH = os.path.join(os.path.dirname(__file__), "usgs_nga_east_tables")
 
@@ -412,4 +412,3 @@ class NGAEastUSGSSammons16(NGAEastUSGSGMPE):
 
 class NGAEastUSGSSammons17(NGAEastUSGSGMPE):
     gmpe_table = os.path.join(PATH, "nga_east_usgs_17.hdf5")
-
