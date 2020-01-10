@@ -551,7 +551,7 @@ class NGAEastBaseGMPE(GMPETable):
             mean = np.copy(pga_r)
 
         mean += self.get_site_amplification(imt, np.exp(pga_r), sctx)
-        # Get standard deviation model 
+        # Get standard deviation model
         nsites = getattr(dctx, self.distance_type).shape
         stddevs = self.get_stddevs(rctx.mag, imt, stddev_types, nsites)
         return mean, stddevs
@@ -601,7 +601,7 @@ class NGAEastBaseGMPE(GMPETable):
             # assumed independent and the resulting sigma_flin is the root
             # sum of squares (SRSS)
             f760_stddev = self._get_f760(C_F760, sites.vs30,
-                                        self.CONSTANTS, is_stddev=True)
+                                         self.CONSTANTS, is_stddev=True)
             f_lin_stddev = np.sqrt(
                 f760_stddev ** 2. +
                 self.get_linear_stddev(C_LIN, sites.vs30, self.CONSTANTS) ** 2)
@@ -622,8 +622,7 @@ class NGAEastBaseGMPE(GMPETable):
         """
         wimp = (CONSTANTS["wt1"] - CONSTANTS["wt2"]) *\
             (np.log(vs30 / CONSTANTS["vw2"]) /
-             np.log(CONSTANTS["vw1"] / CONSTANTS["vw2"])) +\
-             CONSTANTS["wt2"]
+             np.log(CONSTANTS["vw1"] / CONSTANTS["vw2"])) + CONSTANTS["wt2"]
         wimp[vs30 >= CONSTANTS["vw1"]] = CONSTANTS["wt1"]
         wimp[vs30 < CONSTANTS["vw2"]] = CONSTANTS["wt2"]
         wgr = 1.0 - wimp
@@ -643,10 +642,9 @@ class NGAEastBaseGMPE(GMPETable):
         f_v = C_LIN["c"] * np.log(sites.vs30 / CONSTANTS["vref"])
         f_v[sites.vs30 <= C_LIN["v1"]] = const1
         f_v[sites.vs30 > C_LIN["v2"]] = const2
-        
         idx = sites.vs30 > CONSTANTS["vU"]
         if np.any(idx):
-            const3 =  np.log(3000. / CONSTANTS["vU"])
+            const3 = np.log(3000. / CONSTANTS["vU"])
             f_v[idx] = const2 - (const2 + f760[idx]) *\
                 (np.log(sites.vs30[idx] / CONSTANTS["vU"]) / const3)
         idx = sites.vs30 >= 3000.
@@ -789,30 +787,30 @@ class NGAEastBaseGMPE(GMPETable):
     # Coefficients for the nonlinear model, taken from Table 2.1 of
     # Hashash et al., (2017)
     NONLINEAR_COEFFS = CoeffsTable(sa_damping=5, table="""\
-    imt          f3         f4         f5     Vc   sigma_c    
-    pgv     0.06089   -0.08344   -0.00667   2257.0   0.120  
-    pga     0.07520   -0.43755   -0.00131   2990.0   0.120  
-    0.010   0.07520   -0.43755   -0.00131   2990.0   0.120  
-    0.020   0.05660   -0.41511   -0.00098   2990.0   0.120  
-    0.030   0.10360   -0.49871   -0.00127   2990.0   0.120  
-    0.050   0.16781   -0.58073   -0.00187   2990.0   0.120  
-    0.075   0.17386   -0.53646   -0.00259   2990.0   0.120  
-    0.100   0.15083   -0.44661   -0.00335   2990.0   0.120  
-    0.150   0.14272   -0.38264   -0.00410   2335.0   0.120  
-    0.200   0.12815   -0.30481   -0.00488   1533.0   0.120  
-    0.250   0.13286   -0.27506   -0.00564   1318.0   0.135  
-    0.300   0.13070   -0.22825   -0.00655   1152.0   0.150  
-    0.400   0.09414   -0.11591   -0.00872   1018.0   0.150  
-    0.500   0.09888   -0.07793   -0.01028    939.0   0.150  
-    0.750   0.06101   -0.01780   -0.01456    835.0   0.125  
-    1.000   0.04367   -0.00478   -0.01823    951.0   0.060  
-    1.500   0.00480   -0.00086   -0.02000    882.0   0.050  
-    2.000   0.00164   -0.00236   -0.01296    879.0   0.040  
-    3.000   0.00746   -0.00626   -0.01043    894.0   0.040  
-    4.000   0.00269   -0.00331   -0.01215    875.0   0.030  
-    5.000   0.00242   -0.00256   -0.01325    856.0   0.020  
-    7.500   0.04219   -0.00536   -0.01418    832.0   0.020  
-    10.00   0.05329   -0.00631   -0.01403    837.0   0.020  
+    imt          f3         f4         f5     Vc   sigma_c
+    pgv     0.06089   -0.08344   -0.00667   2257.0   0.120
+    pga     0.07520   -0.43755   -0.00131   2990.0   0.120
+    0.010   0.07520   -0.43755   -0.00131   2990.0   0.120
+    0.020   0.05660   -0.41511   -0.00098   2990.0   0.120
+    0.030   0.10360   -0.49871   -0.00127   2990.0   0.120
+    0.050   0.16781   -0.58073   -0.00187   2990.0   0.120
+    0.075   0.17386   -0.53646   -0.00259   2990.0   0.120
+    0.100   0.15083   -0.44661   -0.00335   2990.0   0.120
+    0.150   0.14272   -0.38264   -0.00410   2335.0   0.120
+    0.200   0.12815   -0.30481   -0.00488   1533.0   0.120
+    0.250   0.13286   -0.27506   -0.00564   1318.0   0.135
+    0.300   0.13070   -0.22825   -0.00655   1152.0   0.150
+    0.400   0.09414   -0.11591   -0.00872   1018.0   0.150
+    0.500   0.09888   -0.07793   -0.01028    939.0   0.150
+    0.750   0.06101   -0.01780   -0.01456    835.0   0.125
+    1.000   0.04367   -0.00478   -0.01823    951.0   0.060
+    1.500   0.00480   -0.00086   -0.02000    882.0   0.050
+    2.000   0.00164   -0.00236   -0.01296    879.0   0.040
+    3.000   0.00746   -0.00626   -0.01043    894.0   0.040
+    4.000   0.00269   -0.00331   -0.01215    875.0   0.030
+    5.000   0.00242   -0.00256   -0.01325    856.0   0.020
+    7.500   0.04219   -0.00536   -0.01418    832.0   0.020
+    10.00   0.05329   -0.00631   -0.01403    837.0   0.020
     """)
 
     # Note that the coefficient values at 0.1 s were adopted from Table E1
@@ -844,7 +842,7 @@ class NGAEastBaseGMPE(GMPETable):
     5.000    0.0640     0.220    0.108    0.115
     7.500    0.0560     0.216    0.082    0.130
     10.00    0.0530     0.218    0.069    0.137
-    """)    
+    """)
 
 
 # For the total standard deviation model the magnitude boundaries depend on

@@ -1,3 +1,8 @@
+  [Graeme Weatherill]
+  * Adds complete suite of GMPEs for the Central and Eastern US, as adopted
+    within the 2018 US National Seismic Hazard Map
+  * Implements NGA East site amplification model within NGA East Base class
+
   [Michele Simionato]
   * Refined the rupture prefiltering mechanism
   * Optimized the generation of aggregate loss curves in ebrisk
