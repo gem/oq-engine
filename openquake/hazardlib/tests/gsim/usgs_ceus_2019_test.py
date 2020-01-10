@@ -141,14 +141,19 @@ class NGAEastUSGSSeed2CCSPTestCase(NGAEastUSGSSeedSP15TestCase):
     MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeed2CCSP_MEAN.csv"
 
 
-class NGAEastUSGSSeedGrazierTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedGrazier
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedGrazier_MEAN.csv"
+class NGAEastUSGSSeedGraizerTestCase(NGAEastUSGSSeedSP15TestCase):
+    GSIM_CLASS = ceus.NGAEastUSGSSeedGraizer
+    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedGraizer_MEAN.csv"
 
 
 class NGAEastUSGSSeedB_ab95TestCase(NGAEastUSGSSeedSP15TestCase):
     GSIM_CLASS = ceus.NGAEastUSGSSeedB_ab95
     MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedB_ab95_MEAN.csv"
+
+
+class NGAEastUSGSSeedB_bca10dTestCase(NGAEastUSGSSeedSP15TestCase):
+    GSIM_CLASS = ceus.NGAEastUSGSSeedB_bca10d
+    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedB_bca10d_MEAN.csv"
 
 
 class NGAEastUSGSSeedB_sgd02TestCase(NGAEastUSGSSeedSP15TestCase):
@@ -186,14 +191,14 @@ class NGAEastUSGSSeedPEER_GPTestCase(NGAEastUSGSSeedSP15TestCase):
     MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedPEER_GP_MEAN.csv"
 
 
-class NGAEastUSGSSeedGrazier16TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedGrazier16
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedGrazier16_MEAN.csv"
+class NGAEastUSGSSeedGraizer16TestCase(NGAEastUSGSSeedSP15TestCase):
+    GSIM_CLASS = ceus.NGAEastUSGSSeedGraizer16
+    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedGraizer16_MEAN.csv"
 
 
 class NGAEastUSGSSeedGrazier17TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedGrazier17
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedGrazier17_MEAN.csv"
+    GSIM_CLASS = ceus.NGAEastUSGSSeedGraizer17
+    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedGraizer17_MEAN.csv"
 
 
 class NGAEastUSGSSeedFrankelTestCase(NGAEastUSGSSeedSP15TestCase):
