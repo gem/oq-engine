@@ -1,5 +1,5 @@
 #,,,"vs30_ref=760, imls=[.01, .1, .2, .5]"
-amplification,level,PGA,sigma_PGA
+ampcode,level,PGA,sigma_PGA
 A,0,2,.1
 A,1,2,.1
 A,2,2,.1

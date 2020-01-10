@@ -124,7 +124,7 @@ site_param_dt = {
     'xvf': numpy.float64,
 
     # Parameters for site amplification
-    'amplification': (numpy.string_, 2),
+    'ampcode': (numpy.string_, 2),
     'ec8': (numpy.string_, 1),
     'ec8_p18': (numpy.string_, 2),
     'h800': numpy.float64,
