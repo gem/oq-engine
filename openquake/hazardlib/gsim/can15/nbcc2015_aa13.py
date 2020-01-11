@@ -73,9 +73,12 @@ class NBCC2015_AA13(GMPETable):
     BA08 = BooreAtkinson2008()
 
     def __init__(self, **kwargs):
+        # kwargs must contain the keys REQUIRES_DISTANCES,
+        # DEFINED_FOR_TECTONIC_REGION_TYPE, gmpe_table
         kwargs['gmpe_table'] = os.path.join(
             BASE_PATH_AA13, os.path.basename(kwargs['gmpe_table']))
         super().__init__(**kwargs)
+        vars(self).update(kwargs)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
