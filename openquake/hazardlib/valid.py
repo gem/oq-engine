@@ -30,7 +30,7 @@ import numpy
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
-from openquake.hazardlib.gsim import registry
+from openquake.hazardlib.gsim.base import registry
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
