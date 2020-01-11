@@ -42,7 +42,7 @@ from openquake.baselib.general import (groupby, group_array, duplicated,
                                        add_defaults)
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
@@ -1346,6 +1346,7 @@ def to_toml(uncertainty):
     Converts an uncertainty node into a TOML string
     """
     text = uncertainty.text.strip()
+    text = gsim_aliases.get(text, text)  # use the gsim alias if any
     if not text.startswith('['):  # a bare GSIM name was passed
         text = '[%s]' % text
     for k, v in uncertainty.attrib.items():
