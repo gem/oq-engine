@@ -27,7 +27,6 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 import io
 import os
 import re
-import ast
 import copy
 import time
 import logging
@@ -1341,23 +1340,6 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def to_toml(uncertainty):
-    """
-    Converts an uncertainty node into a TOML string
-    """
-    text = uncertainty.text.strip()
-    text = gsim_aliases.get(text, text)  # use the gsim alias if any
-    if not text.startswith('['):  # a bare GSIM name was passed
-        text = '[%s]' % text
-    for k, v in uncertainty.attrib.items():
-        try:
-            v = ast.literal_eval(v)
-        except (SyntaxError, ValueError):
-            v = repr(v)
-        text += '\n%s = %s' % (k, v)
-    return text
-
-
 class GsimLogicTree(object):
     """
     A GsimLogicTree instance is an iterable yielding `Realization`
@@ -1588,9 +1570,8 @@ class GsimLogicTree(object):
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
-                    uncertainty = to_toml(branch.uncertaintyModel)
                     try:
-                        gsim = valid.gsim(uncertainty, basedir)
+                        gsim = valid.gsim(branch.uncertaintyModel, basedir)
                     except Exception as exc:
                         raise ValueError(
                             "%s in file %s" % (exc, self.filename)) from exc
