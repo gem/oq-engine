@@ -103,7 +103,7 @@ def gsim(value, basedir=''):
     >>> gsim('BooreAtkinson2011')
     [BooreAtkinson2011]
     """
-    value = to_toml(value)  # normalize the string
+    value = to_toml(value)  # convert to TOML
     [(gsim_name, kwargs)] = toml.loads(value).items()
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):
