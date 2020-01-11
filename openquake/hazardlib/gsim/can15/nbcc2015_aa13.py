@@ -15,6 +15,13 @@ from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 dirname = os.path.dirname(__file__)
 BASE_PATH_AA13 = os.path.join(dirname, 'nbcc2015_tables')
 
+# populating `gsim_aliases` so that the engine can associate a string
+# to a specific gsim; for instance the string "NBCC2015_AA13_offshore_high"
+# is associated to the gsim (in TOML representation)
+# [NBCC2015_AA13]
+# REQUIRES_DISTANCES = ["rhypo"]
+# DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
+# gmpe_table = "Woffshore_high_clC.hdf5"
 arguments = [
     ['stablecrust', 'rhypo', 'Stable Crust', 'ENA_%s_clC'],
     ['activecrust', 'rhypo', 'Active Crust', 'Wcrust_%s_clC'],
@@ -23,7 +30,6 @@ arguments = [
     ['inslab50', 'rhypo', 'Subduction Inslab 50', 'WinslabD50_%s_clC'],
     ['interface', 'rrup', 'Subduction Interface', 'WinterfaceCombo_%sclC'],
     ['offshore', 'rhypo', 'Offshore', 'Woffshore_%s_clC']]
-
 for key, dist, trt, hdf5 in arguments:
     for kind in ('low', 'med', 'high'):
         name = f"NBCC2015_AA13_{key}_" + ("central" if kind == "med" else kind)
