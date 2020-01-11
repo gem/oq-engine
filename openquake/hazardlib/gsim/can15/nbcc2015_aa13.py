@@ -15,7 +15,7 @@ from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 dirname = os.path.dirname(__file__)
 BASE_PATH_AA13 = os.path.join(dirname, 'nbcc2015_tables')
 
-records = [
+arguments = [
     ['stablecrust', 'rhypo', 'Stable Crust', 'ENA_%s_clC'],
     ['activecrust', 'rhypo', 'Active Crust', 'Wcrust_%s_clC'],
     ['activecrustFRjb', 'rjb', 'Active Crust Fault', 'WcrustFRjb_%s_clC'],
@@ -24,7 +24,7 @@ records = [
     ['interface', 'rrup', 'Subduction Interface', 'WinterfaceCombo_%sclC'],
     ['offshore', 'rhypo', 'Offshore', 'Woffshore_%s_clC']]
 
-for key, dist, trt, hdf5 in records:
+for key, dist, trt, hdf5 in arguments:
     for kind in ('low', 'med', 'high'):
         name = f"NBCC2015_AA13_{key}_" + ("central" if kind == "med" else kind)
         gsim_aliases[name] = f'''[NBCC2015_AA13]
