@@ -698,7 +698,7 @@ class CoeffsTable(object):
     >>> ct = CoeffsTable(sa_damping=5, table=coeffs)
     """
     num_instances = 0
-    
+
     def __init__(self, **kwargs):
         if 'table' not in kwargs:
             raise TypeError('CoeffsTable requires "table" kwarg')
