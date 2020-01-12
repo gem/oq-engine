@@ -26,7 +26,7 @@ and Eastern North America", Pacific Earthquake Engineering Research Center,
 Report Number 2015/08, University of California, Berkeley, August 2015
 """
 import os
-import openquake.hazardlib.gsim.nga_east as neb
+import openquake.hazardlib.gsim.nga_east as ne
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -38,24 +38,16 @@ def maketest(alias, key):
     def test(self):
         self.check(f"nga_east_median_tables/NGAEast_{key}_MEAN.csv",
                    max_discrep_percentage=MAX_DISC,
-                   gmpe_table=os.path.join(neb.PATH, f"NGAEast_{key}.hdf5"))
-        test.__name__ = f'test_mean_{alias}'
+                   gmpe_table=os.path.join(ne.PATH, f"NGAEast_{key}.hdf5"))
+        test.__name__ = f'test_{alias}'
     return test
 
 
-def build_tests(testcls):
-    for line in neb.lines:
-        alias, key = line.split()
-        setattr(testcls, f'test_mean_{alias}', maketest(alias, key))
-
-
 class NGAEastTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = neb.NGAEastGMPE
+    GSIM_CLASS = ne.NGAEastGMPE
 
 
-#class NGAEastTotalSigmaTestCase(BaseGSIMTestCase):
-#    GSIM_CLASS = neb.NGAEastGMPETotalSigma
-
-
-build_tests(NGAEastTestCase)
-#build_tests(NGAEastTotalSigmaTestCase)
+# add tests dynamically
+for line in ne.lines:
+    alias, key = line.split()
+    setattr(NGAEastTestCase, f'test_{alias}', maketest(alias, key))
