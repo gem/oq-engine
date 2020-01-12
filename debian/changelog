@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: reduced the number of NGAEastUSGS classes from 39 to 1
   * Internal: reduced the number of NGAEast classes from 44 to 2
   * Internal: reduced the 15 NSHMP2014 classes to a single class
   * Internal: reduced the 22 NBCC2015_AA13 classes to a single class
