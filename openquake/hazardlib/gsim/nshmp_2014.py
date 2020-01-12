@@ -17,26 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`AbrahamsonEtAl2014NSHMPUpper`
-               :class:`AbrahamsonEtAl2014NSHMPLower`
-               :class:`BooreEtAl2014NSHMPUpper`
-               :class:`BooreEtAl2014NSHMPLower`
-               :class:`CampbellBozorgnia2014NSHMPUpper`
-               :class:`CampbellBozorgnia2014NSHMPLower`
-               :class:`ChiouYoungs2014NSHMPUpper`
-               :class:`ChiouYoungs2014NSHMPLower`
-               :class:`Idriss2014NSHMPUpper`
-               :class:`Idriss2014NSHMPLower`
+Module exports :class:`AtkinsonMacias2009NSHMP2014` and :class:`NSHMP2014`
 """
 import numpy as np
-# NGA West 2 GMPEs
-from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
-from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
-    CampbellBozorgnia2014
-from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
-from openquake.hazardlib.gsim.idriss_2014 import Idriss2014
-# Required for Atkinson and Macias (2009)
+from openquake.hazardlib import const
+from openquake.hazardlib.gsim import base
 from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
 from openquake.hazardlib.gsim.can15.sinter import SInterCan15Mid
 
@@ -93,55 +78,58 @@ def nga_west2_epistemic_adjustment(magnitude, distance):
     return adjustment
 
 
-def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+class NSHMP2014(base.GMPE):
     """
-    See :meth:`superclass method
-    <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-    for spec of input and result values.
+    Implements the NSHMP adjustment factors for the NGA West GMPEs.
+    Requires two parameters `gmpe_name` (one of Idriss2014, ChiouYoungs2014,
+    CampbellBozorgnia2014, BooreEtAl2014, AbrahamsonEtAl2014) and `sgn`
+    (one of -1, 0, +1).
     """
-    mean, stddevs = self.__class__.__base__.get_mean_and_stddevs(
-        self, sctx, rctx, dctx, imt, stddev_types)
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ()
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = ()
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ()
+    REQUIRES_DISTANCES = ()
+    REQUIRES_RUPTURE_PARAMETERS = ()
+    REQUIRES_SITES_PARAMETERS = ()
 
-    # return mean, increased by the adjustment factor, and standard deviation
-    self.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
-    return mean + self.sgn * self.adjustment, stddevs
+    def __init__(self, **kwargs):
+        self.gmpe_name = kwargs['gmpe_name']
+        self.sgn = kwargs['sgn']
+        if self.sgn == 0:
+            # default weighting
+            self.weights_signs = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
+        cls = base.registry[self.gmpe_name]
+        for name in vars(cls):
+            if name.startswith(('DEFINED_FOR', 'REQUIRES_')):
+                setattr(self, name, getattr(cls, name))
+        # the gsim requires only Rjb, but the epistemic adjustment factors
+        # are given in terms of Rrup, so both are required in the subclass
+        self.REQUIRES_DISTANCES = frozenset(self.REQUIRES_DISTANCES | {'rrup'})
+        self.gsim = cls()  # underlying gsim
+        super().__init__(**kwargs)
+
+    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        mean, stddevs = self.gsim.get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
+        # return mean increased by the adjustment factor and standard deviation
+        self.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
+        return mean + self.sgn * self.adjustment, stddevs
 
 
-DEFAULT_WEIGHTING = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
+# populate gsim_aliases
 SUFFIX = {0: 'Mean', -1: 'Lower', 1: 'Upper'}
-
-
-def adjust(basecls, sgn):
-    """
-    :param basecls:
-        a base class (Idriss2014, ChiouYoungs2014, CampbellBozorgnia2014,
-        BooreEtAl2014, AbrahamsonEtAl2014)
-    :param sgn:
-        sign of the adjustement factor, -1, 0, +1
-    :returns:
-        adjusted subclass of basecls for use with the NSHMP 2014 model
-    """
-    name = basecls.__name__ + 'NSHMP' + SUFFIX[sgn]
-    dic = dict(get_mean_and_stddevs=get_mean_and_stddevs, sgn=sgn)
-    if sgn == 0:
-        dic['weights_signs'] = DEFAULT_WEIGHTING
-        dic['__doc__'] = ("Implements the %s GMPE for application to the "
-                          "weighted mean case") % basecls.__name__
-    else:
-        dic['__doc__'] = ("Implements the %d NSHMP adjustment factor for the"
-                          " %s NGA West 2 GMPE" % (sgn, basecls.__name__))
-    # the base class requires only Rjb, but the epistemic adjustment factors
-    # are given in terms of Rrup, so both are required in the subclass
-    dic['REQUIRES_DISTANCES'] = frozenset(
-        basecls.REQUIRES_DISTANCES | {'rrup'})
-
-    dic['__module__'] = AtkinsonMacias2009NSHMP2014.__module__
-    return type(name, (basecls,), dic)
-
-
-for cls in (Idriss2014, ChiouYoungs2014, CampbellBozorgnia2014, BooreEtAl2014,
-            AbrahamsonEtAl2014):
-    # register Upper/Lower/Mean subclasses
+for name in ('Idriss2014', 'ChiouYoungs2014', 'CampbellBozorgnia2014',
+             'BooreEtAl2014', 'AbrahamsonEtAl2014'):
     for sgn in (1, -1, 0):
-        c = adjust(cls, sgn)
-        globals()[c.__name__] = c
+        alias = name + 'NSHMP' + SUFFIX[sgn]
+        base.gsim_aliases[alias] = f'''\
+        [NSHMP2014]
+        gmpe_name = "{name}"
+        sgn = {sgn}
+        '''
