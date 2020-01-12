@@ -123,6 +123,10 @@ class NSHMP2014(base.GMPE):
 
 
 # populate gsim_aliases
+# for instance "AbrahamsonEtAl2014NSHMPMean" is associated to the TOML string
+# [NSHMP2014]
+# gmpe_name = "AbrahamsonEtAl2014"
+# sgn = 0
 SUFFIX = {0: 'Mean', -1: 'Lower', 1: 'Upper'}
 for name in ('Idriss2014', 'ChiouYoungs2014', 'CampbellBozorgnia2014',
              'BooreEtAl2014', 'AbrahamsonEtAl2014'):
