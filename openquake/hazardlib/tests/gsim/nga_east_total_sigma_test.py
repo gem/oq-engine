@@ -29,8 +29,7 @@ def maketest(phi_model, phi_s2ss_model, sigma_quantile, csvname):
     # choosing DARRAGH_1CCSP, but anything would work
     def test(self):
         self.check(csvname, max_discrep_percentage=MAX_DISC,
-                   gmpe_table=os.path.join(
-                       ne.PATH, "NGAEast_DARRAGH_1CCSP.hdf5"),
+                   gmpe_table="NGAEast_DARRAGH_1CCSP.hdf5",
                    phi_model=phi_model,
                    phi_s2ss_model=phi_s2ss_model,
                    sigma_quantile=sigma_quantile)

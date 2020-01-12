@@ -602,8 +602,7 @@ class NGAEastUncertaintyTestCase(BaseGSIMTestCase):
             phi_s2ss_quantile = QUANTILE[phi_s2ss_branch]
             # Instantiate GSIM
             gsim = ne.NGAEastGMPE(
-                gmpe_table=os.path.join(
-                    ne.PATH, "NGAEast_DARRAGH_1CCSP.hdf5"),
+                gmpe_table="NGAEast_DARRAGH_1CCSP.hdf5",
                 tau_model=tau_model, phi_model=phi_model,
                 phi_s2ss_model=phi_s2ss_model,
                 tau_quantile=tau_quantile,
