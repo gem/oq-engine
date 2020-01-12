@@ -3,6 +3,7 @@
 """
 Module exports :class:`NBCC2015_AA13`
 """
+import io
 import os
 import numpy as np
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -75,10 +76,18 @@ class NBCC2015_AA13(GMPETable):
     def __init__(self, **kwargs):
         # kwargs must contain the keys REQUIRES_DISTANCES,
         # DEFINED_FOR_TECTONIC_REGION_TYPE, gmpe_table
-        kwargs['gmpe_table'] = os.path.join(
-            BASE_PATH_AA13, os.path.basename(kwargs['gmpe_table']))
+        fname = kwargs['gmpe_table']
+        if isinstance(fname, io.BytesIO):
+            # magic happening in the engine when reading the gsim from HDF5
+            pass
+        else:
+            # fname is really a filename (absolute in the engine)
+            kwargs['gmpe_table'] = os.path.join(
+                BASE_PATH_AA13, os.path.basename(fname))
         super().__init__(**kwargs)
-        vars(self).update(kwargs)
+        self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
+        self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
+            'DEFINED_FOR_TECTONIC_REGION_TYPE']
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
