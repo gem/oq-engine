@@ -78,12 +78,12 @@ def to_toml(uncertainty):
     Converts an uncertainty node into a TOML string
     """
     if hasattr(uncertainty, 'attrib'):  # is a node
-        text = uncertainty.text
+        text = uncertainty.text.strip()
         kvs = uncertainty.attrib.items()
     else:  # is a string
-        text = uncertainty
+        text = uncertainty.strip()
         kvs = []
-    text = gsim_aliases.get(text, text).strip()  # use the gsim alias if any
+    text = gsim_aliases.get(text, text)  # use the gsim alias if any
     if not text.startswith('['):  # a bare GSIM name was passed
         text = '[%s]' % text
     for k, v in kvs:
