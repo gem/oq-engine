@@ -473,8 +473,8 @@ class NGAEastGMPE(GMPETable):
         self.site_epsilon = kwargs.get('site_epsilon')
         fname = kwargs['gmpe_table']
         if not isinstance(fname, io.BytesIO):  # real path name
-            kwargs['gmpe_name'] = os.path.join(PATH, os.path.basename(fname))
-            assert os.path.exists(kwargs['gmpe_name']), kwargs['gmpe_name']
+            kwargs['gmpe_table'] = os.path.join(PATH, os.path.basename(fname))
+            assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
         super().__init__(**kwargs)
 
     def _setup_standard_deviations(self, fle):
