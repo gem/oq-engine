@@ -131,9 +131,5 @@ SUFFIX = {0: 'Mean', -1: 'Lower', 1: 'Upper'}
 for name in ('Idriss2014', 'ChiouYoungs2014', 'CampbellBozorgnia2014',
              'BooreEtAl2014', 'AbrahamsonEtAl2014'):
     for sgn in (1, -1, 0):
-        alias = name + 'NSHMP' + SUFFIX[sgn]
-        base.gsim_aliases[alias] = f'''\
-        [NSHMP2014]
-        gmpe_name = "{name}"
-        sgn = {sgn}
-        '''
+        a = name + 'NSHMP' + SUFFIX[sgn]
+        base.gsim_aliases[a] = f'[NSHMP2014]\ngmpe_name="{name}"\nsgn={sgn}'
