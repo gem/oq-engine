@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced the 22 NBCC2015_AA13 classes to a single class
   * Implemented site amplification by convolution
   * Improved the error message if the `event_id` does not start from zero in
     the gmfs.csv files
