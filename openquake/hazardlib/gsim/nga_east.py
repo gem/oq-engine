@@ -392,7 +392,7 @@ def get_phi_ss(imt, mag, params):
     return phi
 
 
-class NGAEastBaseGMPE(GMPETable):
+class NGAEastGMPE(GMPETable):
     """
     A generalised base class for the implementation of a GMPE in which the
     mean values are determined from tables (input by the user) and the standard
@@ -474,10 +474,7 @@ class NGAEastBaseGMPE(GMPETable):
     # Requires Vs30 only - common to all models
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
-    def __init__(self, gmpe_table, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None,
-                 phi_ss_quantile=None, phi_s2ss_quantile=None,
-                 site_epsilon=0.0):
+    def __init__(self, **kwargs):
         """
         Instantiates the class with additional terms controlling which
         type of aleatory uncertainty model is preferred ('global',
@@ -499,9 +496,9 @@ class NGAEastBaseGMPE(GMPETable):
             deviation models. Float in the range 0 to 1, or None (mean value
             used)
         """
-        self.tau_model = tau_model
-        self.phi_model = phi_model
-        self.phi_s2ss_model = phi_s2ss_model
+        self.tau_model = kwargs.get('tau_model', "global")
+        self.phi_model = kwargs.get('phi_model', "global")
+        self.phi_s2ss_model = kwargs.get('phi_s2ss_model')
         self.TAU = None
         self.PHI_SS = None
         self.PHI_S2SS = None
@@ -509,12 +506,12 @@ class NGAEastBaseGMPE(GMPETable):
             self.ergodic = True
         else:
             self.ergodic = False
-        self.tau_quantile = tau_quantile
-        self.phi_ss_quantile = phi_ss_quantile
-        self.phi_s2ss_quantile = phi_s2ss_quantile
+        self.tau_quantile = kwargs.get('tau_quantile')
+        self.phi_ss_quantile = kwargs.get('phi_ss_quantile')
+        self.phi_s2ss_quantile = kwargs.get('phi_s2ss_quantile')
         self._setup_standard_deviations(fle=None)
-        self.site_epsilon = site_epsilon
-        super().__init__(gmpe_table=gmpe_table)
+        self.site_epsilon = kwargs.get('site_epsilon')
+        super().__init__(gmpe_table=self.gmpe_table, **kwargs)
 
     def _setup_standard_deviations(self, fle):
         # setup tau
@@ -855,30 +852,7 @@ MAG_LIMS_KEYS = {
     }
 
 
-class NGAEastGMPE(NGAEastBaseGMPE):
-    """
-    For the "core" NGA East set the table is provided in the code in a
-    subdirectory fixed to the path of the present file. The GMPE table option
-    is therefore no longer needed
-    """
-    gmpe_table = ""
-
-    def __init__(self, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None,
-                 phi_ss_quantile=None, phi_s2ss_quantile=None,
-                 site_epsilon=0.0):
-        if not self.gmpe_table:
-            raise NotImplementedError("NGA East Fixed-Table GMPE requires "
-                                      "input table")
-        super().__init__(
-            gmpe_table=self.gmpe_table,
-            tau_model=tau_model, phi_model=phi_model,
-            phi_s2ss_model=phi_s2ss_model, tau_quantile=tau_quantile,
-            phi_ss_quantile=phi_ss_quantile,
-            phi_s2ss_quantile=phi_s2ss_quantile, site_epsilon=site_epsilon)
-
-
-class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
+class NGAEastGMPETotalSigma(NGAEastGMPE):
     """
     The Al Atik (2015) standard deviation model defines mean and quantiles
     for the inter- and intra-event residuals. However, it also defines
@@ -901,8 +875,7 @@ class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
 
-    def __init__(self, gmpe_table, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, sigma_quantile=None, site_epsilon=0.0):
+    def __init__(self, **kwargs):
         """
         Instantiates the model call the BaseNGAEastModel to return the
         expected TAU, PHI_SS and PHI_S2SS values then uses these to
@@ -915,17 +888,13 @@ class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
             standard deviation. Should be float between 0 and 1, or None (mean
             value taken)
         """
-        super().__init__(gmpe_table=gmpe_table,
-                         tau_model=tau_model, phi_model=phi_model,
-                         phi_s2ss_model=phi_s2ss_model, tau_quantile=None,
-                         phi_ss_quantile=None, phi_s2ss_quantile=None,
-                         site_epsilon=site_epsilon)
+        super().__init__(**kwargs)
         # Upon instantiation the TAU, PHI_SS, and PHI_S2SS objects contain
         # the mean values
         self.SIGMA = None
         self.magnitude_limits = []
         self.tau_keys = []
-        self._get_sigma_at_quantile(sigma_quantile)
+        self._get_sigma_at_quantile(kwargs.get('sigma_quantile'))
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """
@@ -1055,32 +1024,10 @@ class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
                                 u_m - l_m)
 
 
-class NGAEastGMPETotalSigma(NGAEastBaseGMPETotalSigma):
-    """
-    Subclass of the :class:`NGAEastBaseGMPETotalSigma` for the cases when the
-    GMPE table is fixed. This forms the main base-class for the total sigma
-    version of the core set of NGA East models
-    """
-    gmpe_table = ""
-
-    def __init__(self, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, sigma_quantile=None):
-        """
-        Instantiates the GMPE without the hdf5 table fort the median values
-        """
-        if not self.gmpe_table:
-            raise NotImplementedError("NGA East Fixed-Table GMPE requires "
-                                      "input table")
-        super().__init__(
-            self.gmpe_table, tau_model=tau_model, phi_model=phi_model,
-            phi_s2ss_model=phi_s2ss_model, sigma_quantile=sigma_quantile)
-
-
 # /////////////////////////////////////////////////////////////////////////////
 # Now to start adding the actual NGA East GMPEs
 # /////////////////////////////////////////////////////////////////////////////
 PATH = os.path.join(os.path.dirname(__file__), "nga_east_tables")
-
 
 # Boore (2015) suite
 
