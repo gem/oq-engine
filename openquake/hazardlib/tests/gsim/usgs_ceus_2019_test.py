@@ -21,7 +21,6 @@ National Seismic Hazard Map. Tests generated from test tables adopted in USGS
 NSHMP software:
 https://github.com/usgs/nshmp-haz/tree/master/src/gov/usgs/earthquake/nshmp/gmm/tables
 """
-import unittest
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 import openquake.hazardlib.gsim.usgs_ceus_2019 as ceus
 
@@ -111,6 +110,6 @@ def add_tests(cls):
     return cls
 
 
-@add_tests
+@add_tests  # 38 tests
 class NGAEastUSGSTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSGMPE
