@@ -30,7 +30,7 @@ import numpy
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
-from openquake.hazardlib.gsim import registry
+from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
@@ -73,16 +73,37 @@ class FromFile(object):
         return '[FromFile]'
 
 
+def to_toml(uncertainty):
+    """
+    Converts an uncertainty node into a TOML string
+    """
+    if hasattr(uncertainty, 'attrib'):  # is a node
+        text = uncertainty.text.strip()
+        kvs = uncertainty.attrib.items()
+    else:  # is a string
+        text = uncertainty
+        kvs = []
+    text = gsim_aliases.get(text, text)  # use the gsim alias if any
+    if not text.startswith('['):  # a bare GSIM name was passed
+        text = '[%s]' % text
+    for k, v in kvs:
+        try:
+            v = ast.literal_eval(v)
+        except (SyntaxError, ValueError):
+            v = repr(v)
+        text += '\n%s = %s' % (k, v)
+    return text
+
+
 # more tests are in tests/valid_test.py
 def gsim(value, basedir=''):
     """
-    Convert a string in TOML format into a GSIM instance
+    Convert a string into a GSIM instance
 
-    >>> gsim('[BooreAtkinson2011]')
+    >>> gsim('BooreAtkinson2011')
     [BooreAtkinson2011]
     """
-    if not value.startswith('['):  # assume the GSIM name
-        value = '[%s]' % value
+    value = to_toml(value)  # convert to TOML
     [(gsim_name, kwargs)] = toml.loads(value).items()
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):

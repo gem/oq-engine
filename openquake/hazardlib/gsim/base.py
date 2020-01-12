@@ -47,6 +47,7 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
 registry = {}  # GSIM name -> GSIM class
+gsim_aliases = {}  # populated for instance in nbcc2015_AA13.py
 
 
 class NotVerifiedWarning(UserWarning):
@@ -697,7 +698,7 @@ class CoeffsTable(object):
     >>> ct = CoeffsTable(sa_damping=5, table=coeffs)
     """
     num_instances = 0
-    
+
     def __init__(self, **kwargs):
         if 'table' not in kwargs:
             raise TypeError('CoeffsTable requires "table" kwarg')
