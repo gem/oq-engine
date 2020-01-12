@@ -28,8 +28,6 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
-PATH = os.path.join(os.path.dirname(__file__), "nga_east_tables")
-
 
 # Common interpolation function
 def ITPL(mag, tu, tl, ml, f):
@@ -427,10 +425,10 @@ class NGAEastGMPE(GMPETable):
         Number of standard deviations above or below median for the uncertainty
         in the site amplification model
     """
+    PATH = os.path.join(os.path.dirname(__file__), "nga_east_tables")
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,
                                                 const.StdDev.INTER_EVENT,
                                                 const.StdDev.INTRA_EVENT))
-
     # Requires Vs30 only - common to all models
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
@@ -473,7 +471,8 @@ class NGAEastGMPE(GMPETable):
         self.site_epsilon = kwargs.get('site_epsilon')
         fname = kwargs['gmpe_table']
         if not isinstance(fname, io.BytesIO):  # real path name
-            kwargs['gmpe_table'] = os.path.join(PATH, os.path.basename(fname))
+            kwargs['gmpe_table'] = os.path.join(
+                self.PATH, os.path.basename(fname))
             assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
         super().__init__(**kwargs)
 

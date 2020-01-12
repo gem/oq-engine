@@ -25,7 +25,6 @@ PEER (2015) "NGA-East: Adjustments to Median Ground-Motion Models for Central
 and Eastern North America", Pacific Earthquake Engineering Research Center,
 Report Number 2015/08, University of California, Berkeley, August 2015
 """
-import os
 import openquake.hazardlib.gsim.nga_east as ne
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -38,7 +37,7 @@ def maketest(alias, key):
     def test(self):
         self.check(f"nga_east_median_tables/NGAEast_{key}_MEAN.csv",
                    max_discrep_percentage=MAX_DISC,
-                   gmpe_table=os.path.join(ne.PATH, f"NGAEast_{key}.hdf5"))
+                   gmpe_table=f"NGAEast_{key}.hdf5")
         test.__name__ = f'test_{alias}'
     return test
 
