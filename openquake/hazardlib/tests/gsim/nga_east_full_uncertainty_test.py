@@ -31,11 +31,7 @@ For delta_s2s: Table 5.15
 import os
 import unittest
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
-from openquake.hazardlib.gsim.nga_east import DarraghEtAl2015NGAEast1CCSP
-
-# Use a reference GMPE, it doesn't matter which as the mean is not being tested
-DUMMY_GSIM = DarraghEtAl2015NGAEast1CCSP
-
+from openquake.hazardlib.gsim import nga_east as ne
 
 # From Al Atik (2015) three branches are defined that correspond to epistemic
 # quantile: low (0.05), central (0.5) and high (0.95)
@@ -604,10 +600,13 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
                 phi_s2ss_model = None
             phi_s2ss_quantile = QUANTILE[phi_s2ss_branch]
             # Instantiate GSIM
-            gsim = DUMMY_GSIM(tau_model=tau_model, phi_model=phi_model,
-                              phi_s2ss_model=phi_s2ss_model,
-                              tau_quantile=tau_quantile,
-                              phi_ss_quantile=phi_quantile,
-                              phi_s2ss_quantile=phi_s2ss_quantile)
+            gsim = ne.NGAEastGMPE(
+                gmpe_table=os.path.join(
+                    ne.PATH, "NGAEast_DARRAGH_1CCSP.hdf5"),
+                tau_model=tau_model, phi_model=phi_model,
+                phi_s2ss_model=phi_s2ss_model,
+                tau_quantile=tau_quantile,
+                phi_ss_quantile=phi_quantile,
+                phi_s2ss_quantile=phi_s2ss_quantile)
             # Run Checks
             self._test_uncertainty_model(gsim, filestem, MAX_DISC)
