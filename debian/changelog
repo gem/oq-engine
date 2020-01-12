@@ -1,3 +1,8 @@
+  [Graeme Weatherill]
+  * Adds complete suite of GMPEs for the Central and Eastern US, as adopted
+    within the 2018 US National Seismic Hazard Map
+  * Implements NGA East site amplification model within NGA East Base class
+
   [Michele Simionato]
   * Internal: reduced the 15 NSHMP2014 classes to a single class
   * Internal: reduced the 22 NBCC2015_AA13 classes to a single class
