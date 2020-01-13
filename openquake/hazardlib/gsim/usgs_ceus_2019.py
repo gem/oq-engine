@@ -16,50 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`NGAEastUSGSSeedSP15`
-               :class:`NGAEastUSGSSeed1CCSP`
-               :class:`NGAEastUSGSSeed2CVSP`
-               :class:`NGAEastUSGSSeed1CVSP`
-               :class:`NGAEastUSGSSeed2CCSP`
-               :class:`NGAEastUSGSSeedGraizer`
-               :class:`NGAEastUSGSSeedB_ab95`
-               :class:`NGAEastUSGSSeedB_bca10d``
-               :class:`NGAEastUSGSSeedB_sgd02`
-               :class:`NGAEastUSGSSeedB_a04`
-               :class:`NGAEastUSGSSeedB_bs11`
-               :class:`NGAEastUSGSSeedB_ab14`
-               :class:`NGAEastUSGSSeedHA15`
-               :class:`NGAEastUSGSSeedPEER_EX`
-               :class:`NGAEastUSGSSeedPEER_GP`
-               :class:`NGAEastUSGSSeedGrazier16`
-               :class:`NGAEastUSGSSeedGrazier17`
-               :class:`NGAEastUSGSSeedFrankel`
-               :class:`NGAEastUSGSSeedYA15`
-               :class:`NGAEastUSGSSeedPZCT15_M1SS`
-               :class:`NGAEastUSGSSeedPZCT15_M2ES`
-               :class:`NGAEastUSGSSammons1`
-               :class:`NGAEastUSGSSammons2`
-               :class:`NGAEastUSGSSammons3`
-               :class:`NGAEastUSGSSammons4`
-               :class:`NGAEastUSGSSammons5`
-               :class:`NGAEastUSGSSammons6`
-               :class:`NGAEastUSGSSammons7`
-               :class:`NGAEastUSGSSammons8`
-               :class:`NGAEastUSGSSammons9`
-               :class:`NGAEastUSGSSammons10`
-               :class:`NGAEastUSGSSammons11`
-               :class:`NGAEastUSGSSammons12`
-               :class:`NGAEastUSGSSammons13`
-               :class:`NGAEastUSGSSammons14`
-               :class:`NGAEastUSGSSammons15`
-               :class:`NGAEastUSGSSammons16`
-               :class:`NGAEastUSGSSammons17`
+Module exports :class:`NGAEastUSGSGMPE`
 """
 import os
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
 from openquake.hazardlib.gsim.nga_east import ITPL, NGAEastGMPE
 
 # Coefficients for EPRI sigma model taken from Table 5.5 of Goulet et al.
@@ -189,16 +152,16 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
     is therefore no longer needed
     """
     gmpe_table = ""
+    PATH = os.path.join(os.path.dirname(__file__), "usgs_nga_east_tables")
 
-    def __init__(self, sigma_model="EPRI", site_epsilon=0.0):
-        if not self.gmpe_table:
-            raise NotImplementedError("NGA East Fixed-Table GMPE requires "
-                                      "input table")
-        super().__init__(site_epsilon=site_epsilon)
-        if not (sigma_model in ("EPRI", "PANEL")):
+    def __init__(self, **kwargs):
+        if 'sigma_model' not in kwargs:
+            kwargs['sigma_model'] = "EPRI"
+        self.sigma_model = kwargs['sigma_model']
+        if kwargs['sigma_model'] not in ("EPRI", "PANEL"):
             raise ValueError("USGS CEUS Sigma Model %s not supported"
-                             % sigma_model)
-        self.sigma_model = sigma_model
+                             % kwargs['sigma_model'])
+        super().__init__(**kwargs)
 
     def _setup_standard_deviations(self, fle):
         # Not needed here
@@ -262,158 +225,46 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         return stddevs
 
 
-PATH = os.path.join(os.path.dirname(__file__), "usgs_nga_east_tables")
-
-
-# USGS Seed Models
-class NGAEastUSGSSeedSP15(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_SP15.hdf5")
-
-
-class NGAEastUSGSSeed1CCSP(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_1CCSP.hdf5")
-
-
-class NGAEastUSGSSeed2CVSP(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_2CVSP.hdf5")
-
-
-class NGAEastUSGSSeed1CVSP(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_1CVSP.hdf5")
-
-
-class NGAEastUSGSSeed2CCSP(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_2CCSP.hdf5")
-
-
-class NGAEastUSGSSeedGraizer(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_Graizer.hdf5")
-
-
-class NGAEastUSGSSeedB_ab95(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_B_ab95.hdf5")
-
-
-class NGAEastUSGSSeedB_bca10d(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_B_bca10d.hdf5")
-
-
-class NGAEastUSGSSeedB_sgd02(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_B_sgd02.hdf5")
-
-
-class NGAEastUSGSSeedB_a04(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_B_a04.hdf5")
-
-
-class NGAEastUSGSSeedB_bs11(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_B_bs11.hdf5")
-
-
-class NGAEastUSGSSeedB_ab14(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_B_ab14.hdf5")
-
-
-class NGAEastUSGSSeedHA15(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_HA15.hdf5")
-
-
-class NGAEastUSGSSeedPEER_EX(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_PEER_EX.hdf5")
-
-
-class NGAEastUSGSSeedPEER_GP(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_PEER_GP.hdf5")
-
-
-class NGAEastUSGSSeedGraizer16(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_Graizer16.hdf5")
-
-
-class NGAEastUSGSSeedGraizer17(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_Graizer17.hdf5")
-
-
-class NGAEastUSGSSeedFrankel(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_Frankel.hdf5")
-
-
-class NGAEastUSGSSeedYA15(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_YA15.hdf5")
-
-
-class NGAEastUSGSSeedPZCT15_M1SS(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_PZCT15_M1SS.hdf5")
-
-
-class NGAEastUSGSSeedPZCT15_M2ES(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_PZCT15_M2ES.hdf5")
-
-
-# USGS Sammons Models
-class NGAEastUSGSSammons1(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_1.hdf5")
-
-
-class NGAEastUSGSSammons2(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_2.hdf5")
-
-
-class NGAEastUSGSSammons3(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_3.hdf5")
-
-
-class NGAEastUSGSSammons4(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_4.hdf5")
-
-
-class NGAEastUSGSSammons5(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_5.hdf5")
-
-
-class NGAEastUSGSSammons6(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_6.hdf5")
-
-
-class NGAEastUSGSSammons7(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_7.hdf5")
-
-
-class NGAEastUSGSSammons8(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_8.hdf5")
-
-
-class NGAEastUSGSSammons9(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_9.hdf5")
-
-
-class NGAEastUSGSSammons10(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_10.hdf5")
-
-
-class NGAEastUSGSSammons11(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_11.hdf5")
-
-
-class NGAEastUSGSSammons12(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_12.hdf5")
-
-
-class NGAEastUSGSSammons13(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_13.hdf5")
-
-
-class NGAEastUSGSSammons14(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_14.hdf5")
-
-
-class NGAEastUSGSSammons15(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_15.hdf5")
-
-
-class NGAEastUSGSSammons16(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_16.hdf5")
-
-
-class NGAEastUSGSSammons17(NGAEastUSGSGMPE):
-    gmpe_table = os.path.join(PATH, "nga_east_usgs_17.hdf5")
+lines = '''\
+NGAEastUSGSSeedSP15 SP15
+NGAEastUSGSSeed1CCSP 1CCSP
+NGAEastUSGSSeed2CVSP 2CVSP
+NGAEastUSGSSeed1CVSP 1CVSP
+NGAEastUSGSSeed2CCSP 2CCSP
+NGAEastUSGSSeedGraizer Graizer
+NGAEastUSGSSeedB_ab95 B_ab95
+NGAEastUSGSSeedB_bca10d B_bca10d
+NGAEastUSGSSeedB_sgd02 B_sgd02
+NGAEastUSGSSeedB_a04 B_a04
+NGAEastUSGSSeedB_bs11 B_bs11
+NGAEastUSGSSeedB_ab14 B_ab14
+NGAEastUSGSSeedHA15 HA15
+NGAEastUSGSSeedPEER_EX PEER_EX
+NGAEastUSGSSeedPEER_GP PEER_GP
+NGAEastUSGSSeedGraizer16 Graizer16
+NGAEastUSGSSeedGraizer17 Graizer17
+NGAEastUSGSSeedFrankel Frankel
+NGAEastUSGSSeedYA15 YA15
+NGAEastUSGSSeedPZCT15_M1SS PZCT15_M1SS
+NGAEastUSGSSeedPZCT15_M2ES PZCT15_M2ES
+NGAEastUSGSSammons1 usgs_1
+NGAEastUSGSSammons2 usgs_2
+NGAEastUSGSSammons3 usgs_3
+NGAEastUSGSSammons4 usgs_4
+NGAEastUSGSSammons5 usgs_5
+NGAEastUSGSSammons6 usgs_6
+NGAEastUSGSSammons7 usgs_7
+NGAEastUSGSSammons8 usgs_8
+NGAEastUSGSSammons9 usgs_9
+NGAEastUSGSSammons10 usgs_10
+NGAEastUSGSSammons11 usgs_11
+NGAEastUSGSSammons12 usgs_12
+NGAEastUSGSSammons13 usgs_13
+NGAEastUSGSSammons14 usgs_14
+NGAEastUSGSSammons15 usgs_15
+NGAEastUSGSSammons16 usgs_16
+NGAEastUSGSSammons17 usgs_17'''.splitlines()
+for line in lines:
+    alias, key = line.split()
+    gsim_aliases[alias] = (f'[NGAEastUSGSGMPE]\n'
+                           'gmpe_table="nga_east_{key}.hdf5"')

@@ -21,7 +21,6 @@ National Seismic Hazard Map. Tests generated from test tables adopted in USGS
 NSHMP software:
 https://github.com/usgs/nshmp-haz/tree/master/src/gov/usgs/earthquake/nshmp/gmm/tables
 """
-import unittest
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 import openquake.hazardlib.gsim.usgs_ceus_2019 as ceus
 
@@ -31,276 +30,86 @@ MAX_DISCREP = 0.01
 
 
 class NGAEastUSGSCEUSUncertaintyEPRITestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedPEER_EX
+    GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
     def test_std_intra(self):
         self.check("usgs_ceus_2019/USGS_CEUS_EPRI_INTRA_EVENT_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5",
                    sigma_model="EPRI")
 
     def test_std_inter(self):
         self.check("usgs_ceus_2019/USGS_CEUS_EPRI_INTER_EVENT_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5",
                    sigma_model="EPRI")
 
     def test_std_total(self):
         self.check("usgs_ceus_2019/USGS_CEUS_EPRI_TOTAL_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5",
                    sigma_model="EPRI")
 
 
 class NGAEastUSGSCEUSUncertaintyPANELTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedPEER_EX
+    GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
     def test_std_intra(self):
         self.check("usgs_ceus_2019/USGS_CEUS_PANEL_INTRA_EVENT_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5",
                    sigma_model="PANEL")
 
     def test_std_inter(self):
         self.check("usgs_ceus_2019/USGS_CEUS_PANEL_INTER_EVENT_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5",
                    sigma_model="PANEL")
 
     def test_std_total(self):
         self.check("usgs_ceus_2019/USGS_CEUS_PANEL_TOTAL_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5",
                    sigma_model="PANEL")
 
 
-class UnsupportedSigmaModelTestCase(unittest.TestCase):
-    """
-    Class to test that the correct error is raised when an unsupported
-    aleatory uncertainty model is input
-    """
-    def setUp(self):
-        self.gsim = ceus.NGAEastUSGSSeedPEER_EX
-
-    def test_unsupported_sigma_model(self):
-        with self.assertRaises(ValueError) as ve:
-            self.gsim(sigma_model="XYZ")
-        self.assertEqual(
-            str(ve.exception),
-            "USGS CEUS Sigma Model XYZ not supported")
-
-
 # Site Amplification Test Cases
-class NGAEastUSGSCEUSSiteAmpMedianTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedPEER_EX
-    MEAN_FILE = "usgs_ceus_2019/NGAEAST_SITE_MEDIAN_MEAN.csv"
+class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=MAX_DISCREP)
+    def test_median(self):
+        self.check("usgs_ceus_2019/NGAEAST_SITE_MEDIAN_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table="nga_east_PEER_EX.hdf5")
 
+    def test_plus1(self):
+        self.check("usgs_ceus_2019/NGAEAST_SITE_PLUS1EPSILON_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   site_epsilon=1.0, gmpe_table="nga_east_PEER_EX.hdf5")
 
-class NGAEastUSGSCEUSSiteAmpPlus1SigmaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedPEER_EX
-    MEAN_FILE = "usgs_ceus_2019/NGAEAST_SITE_PLUS1EPSILON_MEAN.csv"
+    def test_minus1(self):
+        self.check("usgs_ceus_2019/NGAEAST_SITE_MINUS1EPSILON_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   site_epsilon=-1.0, gmpe_table="nga_east_PEER_EX.hdf5")
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=MAX_DISCREP,
-                   site_epsilon=1.0)
-
-
-class NGAEastUSGSCEUSSiteAmpMinus1SigmaTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedPEER_EX
-    MEAN_FILE = "usgs_ceus_2019/NGAEAST_SITE_MINUS1EPSILON_MEAN.csv"
-
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=MAX_DISCREP,
-                   site_epsilon=-1.0)
 
 # Mean models Test Cases
-
-
-class NGAEastUSGSSeedSP15TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedSP15
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedSP15_MEAN.csv"
-
-    def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=MAX_DISCREP)
-
-
-class NGAEastUSGSSeed1CCSPTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeed1CCSP
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeed1CCSP_MEAN.csv"
-
-
-class NGAEastUSGSSeed2CVSPTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeed2CVSP
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeed2CVSP_MEAN.csv"
-
-
-class NGAEastUSGSSeed1CVSPTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeed1CVSP
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeed1CVSP_MEAN.csv"
-
-
-class NGAEastUSGSSeed2CCSPTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeed2CCSP
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeed2CCSP_MEAN.csv"
-
-
-class NGAEastUSGSSeedGraizerTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedGraizer
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedGraizer_MEAN.csv"
-
-
-class NGAEastUSGSSeedB_ab95TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedB_ab95
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedB_ab95_MEAN.csv"
-
-
-class NGAEastUSGSSeedB_bca10dTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedB_bca10d
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedB_bca10d_MEAN.csv"
-
-
-class NGAEastUSGSSeedB_sgd02TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedB_sgd02
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedB_sgd02_MEAN.csv"
-
-
-class NGAEastUSGSSeedB_a04TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedB_a04
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedB_a04_MEAN.csv"
-
-
-class NGAEastUSGSSeedB_bs11TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedB_bs11
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedB_bs11_MEAN.csv"
-
-
-class NGAEastUSGSSeedB_ab14TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedB_ab14
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedB_ab14_MEAN.csv"
-
-
-class NGAEastUSGSSeedHA15TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedHA15
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedHA15_MEAN.csv"
-
-
-class NGAEastUSGSSeedPEER_EXTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedPEER_EX
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedPEER_EX_MEAN.csv"
-
-
-class NGAEastUSGSSeedPEER_GPTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedPEER_GP
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedPEER_GP_MEAN.csv"
-
-
-class NGAEastUSGSSeedGraizer16TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedGraizer16
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedGraizer16_MEAN.csv"
-
-
-class NGAEastUSGSSeedGrazier17TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedGraizer17
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedGraizer17_MEAN.csv"
-
-
-class NGAEastUSGSSeedFrankelTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedFrankel
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedFrankel_MEAN.csv"
-
-
-class NGAEastUSGSSeedYA15TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedYA15
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedYA15_MEAN.csv"
-
-
-class NGAEastUSGSSeedPZCT15_M1SSTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedPZCT15_M1SS
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedPZCT15_M1SS_MEAN.csv"
-
-
-class NGAEastUSGSSeedPZCT15_M2ESTestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSeedPZCT15_M2ES
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSeedPZCT15_M2ES_MEAN.csv"
-
-
-class NGAEastUSGSSammons1TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons1
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons1_MEAN.csv"
-
-
-class NGAEastUSGSSammons2TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons2
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons2_MEAN.csv"
-
-
-class NGAEastUSGSSammons3TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons3
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons3_MEAN.csv"
-
-
-class NGAEastUSGSSammons4TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons4
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons4_MEAN.csv"
-
-
-class NGAEastUSGSSammons5TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons5
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons5_MEAN.csv"
-
-
-class NGAEastUSGSSammons6TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons6
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons6_MEAN.csv"
-
-
-class NGAEastUSGSSammons7TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons7
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons7_MEAN.csv"
-
-
-class NGAEastUSGSSammons8TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons8
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons8_MEAN.csv"
-
-
-class NGAEastUSGSSammons9TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons9
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons9_MEAN.csv"
-
-
-class NGAEastUSGSSammons10TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons10
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons10_MEAN.csv"
-
-
-class NGAEastUSGSSammons11TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons11
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons11_MEAN.csv"
-
-
-class NGAEastUSGSSammons12TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons12
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons12_MEAN.csv"
-
-
-class NGAEastUSGSSammons13TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons13
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons13_MEAN.csv"
-
-
-class NGAEastUSGSSammons14TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons14
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons14_MEAN.csv"
-
-
-class NGAEastUSGSSammons15TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons15
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons15_MEAN.csv"
-
-
-class NGAEastUSGSSammons16TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons16
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons16_MEAN.csv"
-
-
-class NGAEastUSGSSammons17TestCase(NGAEastUSGSSeedSP15TestCase):
-    GSIM_CLASS = ceus.NGAEastUSGSSammons17
-    MEAN_FILE = "usgs_ceus_2019/NGAEastUSGSSammons17_MEAN.csv"
+def maketest(alias, key):
+    def test(self):
+        self.check(f"usgs_ceus_2019/{alias}_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   gmpe_table=f"nga_east_{key}.hdf5")
+    test.__name__ = 'test_' + key
+    return test
+
+
+def add_tests(cls):
+    for line in ceus.lines:
+        alias, key = line.split()
+        setattr(cls, 'test_' + key, maketest(alias, key))
+    return cls
+
+
+@add_tests  # 38 tests
+class NGAEastUSGSTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ceus.NGAEastUSGSGMPE
