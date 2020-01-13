@@ -101,7 +101,7 @@ $ oq1 workers inspect
 ```
 
 For each worker in the cluster you can see its IP and the task which are
-currently running, identified an incremental number.
+currently running, identified by an incremental number.
 
 ## Shared filesystem
 
