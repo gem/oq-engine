@@ -310,7 +310,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore['csm_info'] = self.csm_info
             return {}
         smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore.hdf5)
+            self.core_task.__func__, h5=self.datastore.hdf5,
+            num_cores=oq.num_cores)
         smap.task_queue = list(self.gen_task_queue())  # really fast
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
