@@ -49,6 +49,7 @@ def add_quotes(values):
 
 
 @export.add(('ruptures', 'xml'))
+@deprecated(msg='This exporter will disappear in the future')
 def export_ruptures_xml(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -217,7 +218,8 @@ def export_hcurves_csv(ekey, dstore):
         elif key == 'hcurves':
             hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
             if 'amplification' in oq.inputs:
-                imtls = DictArray({imt: oq.soil_intensities for imt in oq.imtls})
+                imtls = DictArray(
+                    {imt: oq.soil_intensities for imt in oq.imtls})
             else:
                 imtls = oq.imtls
             fnames.extend(
