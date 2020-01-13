@@ -16,56 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`NGAEastBaseGMPE`,
-               :class:`NGAEastGMPE`,
-               :class:`NGAEastBaseGMPETotalSigma`,
-               :class:`NGAEastGMPETotalSigma`,
-               :class:`Boore2015NGAEastA04`,
-               :class:`Boore2015NGAEastA04TotalSigma`,
-               :class:`Boore2015NGAEastAB14`,
-               :class:`Boore2015NGAEastAB14TotalSigma`,
-               :class:`Boore2015NGAEastAB95`,
-               :class:`Boore2015NGAEastAB95TotalSigma`,
-               :class:`Boore2015NGAEastBCA10D`,
-               :class:`Boore2015NGAEastBCA10DTotalSigma`,
-               :class:`Boore2015NGAEastBS11`,
-               :class:`Boore2015NGAEastBS11TotalSigma`,
-               :class:`Boore2015NGAEastSGD02`,
-               :class:`Boore2015NGAEastSGD02TotalSigma`,
-               :class:`DarraghEtAl2015NGAEast1CCSP`,
-               :class:`DarraghEtAl2015NGAEast1CCSPTotalSigma`,
-               :class:`DarraghEtAl2015NGAEast1CVSP`,
-               :class:`DarraghEtAl2015NGAEast1CVSPTotalSigma`,
-               :class:`DarraghEtAl2015NGAEast2CCSP`,
-               :class:`DarraghEtAl2015NGAEast2CCSPTotalSigma`,
-               :class:`DarraghEtAl2015NGAEast2CVSP`,
-               :class:`DarraghEtAl2015NGAEast2CVSPTotalSigma`,
-               :class:`YenierAtkinson2015NGAEast`,
-               :class:`YenierAtkinson2015NGAEastTotalSigma`,
-               :class:`PezeschkEtAl2015NGAEastM1SS`,
-               :class:`PezeschkEtAl2015NGAEastM1SSTotalSigma`,
-               :class:`PezeschkEtAl2015NGAEastM2ES`,
-               :class:`PezeschkEtAl2015NGAEastM2ESTotalSigma`,
-               :class:`Frankel2015NGAEast`,
-               :class:`Frankel2015NGAEastTotalSigma`,
-               :class:`ShahjoueiPezeschk2015NGAEast`,
-               :class:`ShahjoueiPezeschk2015NGAEastTotalSigma`,
-               :class:`AlNomanCramer2015NGAEast`,
-               :class:`AlNomanCramer2015NGAEastTotalSigma`,
-               :class:`Graizer2015NGAEast`,
-               :class:`Graizer2015NGAEastTotalSigma`,
-               :class:`HassaniAtkinson2015NGAEast`,
-               :class:`HassaniAtkinson2015NGAEastTotalSigma`,
-               :class:`HollenbackEtAl2015NGAEastGP`,
-               :class:`HollenbackEtAl2015NGAEastGPTotalSigma`,
-               :class:`HollenbackEtAl2015NGAEastEX`,
-               :class:`HollenbackEtAl2015NGAEastEXTotalSigma`
+Module exports :class:`NGAEastGMPE` and :class:`NGAEastGMPETotalSigma`
 """
+import io
 import os
 import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -392,7 +350,7 @@ def get_phi_ss(imt, mag, params):
     return phi
 
 
-class NGAEastBaseGMPE(GMPETable):
+class NGAEastGMPE(GMPETable):
     """
     A generalised base class for the implementation of a GMPE in which the
     mean values are determined from tables (input by the user) and the standard
@@ -432,7 +390,7 @@ class NGAEastBaseGMPE(GMPETable):
     Eastern North America", Earthquake Spectra, in press
 
     Note that the uncertainty provided in this model is treated as an
-    epistemic rather than aleatory variablr. As such there is no modification
+    epistemic rather than aleatory variable. As such there is no modification
     of the standard deviation model used for the bedrock case. The epistemic
     uncertainty can be added to the model by the user input site_epsilon term,
     which describes the number of standard deviations by which to multiply
@@ -467,17 +425,14 @@ class NGAEastBaseGMPE(GMPETable):
         Number of standard deviations above or below median for the uncertainty
         in the site amplification model
     """
+    PATH = os.path.join(os.path.dirname(__file__), "nga_east_tables")
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,
                                                 const.StdDev.INTER_EVENT,
                                                 const.StdDev.INTRA_EVENT))
-
     # Requires Vs30 only - common to all models
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
-    def __init__(self, gmpe_table, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None,
-                 phi_ss_quantile=None, phi_s2ss_quantile=None,
-                 site_epsilon=0.0):
+    def __init__(self, **kwargs):
         """
         Instantiates the class with additional terms controlling which
         type of aleatory uncertainty model is preferred ('global',
@@ -499,9 +454,9 @@ class NGAEastBaseGMPE(GMPETable):
             deviation models. Float in the range 0 to 1, or None (mean value
             used)
         """
-        self.tau_model = tau_model
-        self.phi_model = phi_model
-        self.phi_s2ss_model = phi_s2ss_model
+        self.tau_model = kwargs.get('tau_model', "global")
+        self.phi_model = kwargs.get('phi_model', "global")
+        self.phi_s2ss_model = kwargs.get('phi_s2ss_model')
         self.TAU = None
         self.PHI_SS = None
         self.PHI_S2SS = None
@@ -509,12 +464,17 @@ class NGAEastBaseGMPE(GMPETable):
             self.ergodic = True
         else:
             self.ergodic = False
-        self.tau_quantile = tau_quantile
-        self.phi_ss_quantile = phi_ss_quantile
-        self.phi_s2ss_quantile = phi_s2ss_quantile
+        self.tau_quantile = kwargs.get('tau_quantile')
+        self.phi_ss_quantile = kwargs.get('phi_ss_quantile')
+        self.phi_s2ss_quantile = kwargs.get('phi_s2ss_quantile')
         self._setup_standard_deviations(fle=None)
-        self.site_epsilon = site_epsilon
-        super().__init__(gmpe_table=gmpe_table)
+        self.site_epsilon = kwargs.get('site_epsilon')
+        fname = kwargs['gmpe_table']
+        if not isinstance(fname, io.BytesIO):  # real path name
+            kwargs['gmpe_table'] = os.path.join(
+                self.PATH, os.path.basename(fname))
+            assert os.path.exists(kwargs['gmpe_table']), kwargs['gmpe_table']
+        super().__init__(**kwargs)
 
     def _setup_standard_deviations(self, fle):
         # setup tau
@@ -852,33 +812,10 @@ MAG_LIMS_KEYS = {
     "cena_constant": {"mag": [np.inf], "keys": ["tau"]},
     "global": {"mag": [4.5, 5.0, 5.5, 6.5],
                "keys": ["tau1", "tau2", "tau3", "tau4"]}
-    }
+}
 
 
-class NGAEastGMPE(NGAEastBaseGMPE):
-    """
-    For the "core" NGA East set the table is provided in the code in a
-    subdirectory fixed to the path of the present file. The GMPE table option
-    is therefore no longer needed
-    """
-    gmpe_table = ""
-
-    def __init__(self, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None,
-                 phi_ss_quantile=None, phi_s2ss_quantile=None,
-                 site_epsilon=0.0):
-        if not self.gmpe_table:
-            raise NotImplementedError("NGA East Fixed-Table GMPE requires "
-                                      "input table")
-        super().__init__(
-            gmpe_table=self.gmpe_table,
-            tau_model=tau_model, phi_model=phi_model,
-            phi_s2ss_model=phi_s2ss_model, tau_quantile=tau_quantile,
-            phi_ss_quantile=phi_ss_quantile,
-            phi_s2ss_quantile=phi_s2ss_quantile, site_epsilon=site_epsilon)
-
-
-class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
+class NGAEastGMPETotalSigma(NGAEastGMPE):
     """
     The Al Atik (2015) standard deviation model defines mean and quantiles
     for the inter- and intra-event residuals. However, it also defines
@@ -901,8 +838,7 @@ class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
 
-    def __init__(self, gmpe_table, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, sigma_quantile=None, site_epsilon=0.0):
+    def __init__(self, **kwargs):
         """
         Instantiates the model call the BaseNGAEastModel to return the
         expected TAU, PHI_SS and PHI_S2SS values then uses these to
@@ -915,17 +851,13 @@ class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
             standard deviation. Should be float between 0 and 1, or None (mean
             value taken)
         """
-        super().__init__(gmpe_table=gmpe_table,
-                         tau_model=tau_model, phi_model=phi_model,
-                         phi_s2ss_model=phi_s2ss_model, tau_quantile=None,
-                         phi_ss_quantile=None, phi_s2ss_quantile=None,
-                         site_epsilon=site_epsilon)
+        super().__init__(**kwargs)
         # Upon instantiation the TAU, PHI_SS, and PHI_S2SS objects contain
         # the mean values
         self.SIGMA = None
         self.magnitude_limits = []
         self.tau_keys = []
-        self._get_sigma_at_quantile(sigma_quantile)
+        self._get_sigma_at_quantile(kwargs.get('sigma_quantile'))
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """
@@ -1055,415 +987,31 @@ class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
                                 u_m - l_m)
 
 
-class NGAEastGMPETotalSigma(NGAEastBaseGMPETotalSigma):
-    """
-    Subclass of the :class:`NGAEastBaseGMPETotalSigma` for the cases when the
-    GMPE table is fixed. This forms the main base-class for the total sigma
-    version of the core set of NGA East models
-    """
-    gmpe_table = ""
-
-    def __init__(self, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, sigma_quantile=None):
-        """
-        Instantiates the GMPE without the hdf5 table fort the median values
-        """
-        if not self.gmpe_table:
-            raise NotImplementedError("NGA East Fixed-Table GMPE requires "
-                                      "input table")
-        super().__init__(
-            self.gmpe_table, tau_model=tau_model, phi_model=phi_model,
-            phi_s2ss_model=phi_s2ss_model, sigma_quantile=sigma_quantile)
-
-
-# /////////////////////////////////////////////////////////////////////////////
-# Now to start adding the actual NGA East GMPEs
-# /////////////////////////////////////////////////////////////////////////////
-PATH = os.path.join(os.path.dirname(__file__), "nga_east_tables")
-
-
-# Boore (2015) suite
-
-
-class Boore2015NGAEastA04(NGAEastGMPE):
-    """
-    Boore (2015) NGA East GMPE using the Atkinson (2004) attenuation model
-
-    Boore, DM (2015) "Point-Source Stochastic-Method Simulations of
-    Ground Motions for the PEER NGA-East Project", in "NGA-East: Median
-    Ground Motion Models for the Central and Eastern North America Region",
-    PEER Report 2015/04, Pacific Earthquake Engineering Research Center
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_A04_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastA04TotalSigma(NGAEastGMPETotalSigma):
-    """
-    Boore (2015) NGA East GMPE using the Atkinson (2004) attenuation model
-    for use with the total sigma aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_A04_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastAB14(NGAEastGMPE):
-    """
-    Boore (2015) NGA East GMPE using the Atkinson & Boore (2014) attenuation
-    model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_AB14_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastAB14TotalSigma(NGAEastGMPETotalSigma):
-    """
-    Boore (2015) NGA East GMPE using the Atkinson & Boore (2014) attenuation
-    model for use with the total sigma aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_AB14_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastAB95(NGAEastGMPE):
-    """
-    Boore (2015) NGA East GMPE using the Atkinson & Boore (1995) attenuation
-    model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_AB95_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastAB95TotalSigma(NGAEastGMPETotalSigma):
-    """
-    Boore (2015) NGA East GMPE using the Atkinson & Boore (1995) attenuation
-    model for use with the total sigma aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_AB95_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastBCA10D(NGAEastGMPE):
-    """
-    Boore (2015) NGA East GMPE using the Boore et al (2010) attenuation
-    model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_BCA10D_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastBCA10DTotalSigma(NGAEastGMPETotalSigma):
-    """
-    Boore (2015) NGA East GMPE using the Boore et al (2010) attenuation
-    model for use with the total sigma aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_BCA10D_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastBS11(NGAEastGMPE):
-    """
-    Boore (2015) NGA East GMPE using the Boatwright and Seekins (2011)
-    attenuation model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_BS11_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastBS11TotalSigma(NGAEastGMPETotalSigma):
-    """
-    Boore (2015) NGA East GMPE using the Boatwright and Seekins (2011)
-    attenuation model for use with the total sigma aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_BS11_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastSGD02(NGAEastGMPE):
-    """
-    Boore (2015) NGA East GMPE using the Silva et al (2002) attenuation model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_SGD02_J15_Adjusted.hdf5")
-
-
-class Boore2015NGAEastSGD02TotalSigma(NGAEastGMPETotalSigma):
-    """
-    Boore (2015) NGA East GMPE using the Silva et al (2002) attenuation model
-    for use with the total sigma aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_BOORE_SGD02_J15_Adjusted.hdf5")
-
-
-# Darragh, Abrahamson, Silva and Gregor (2015) suite
-
-class DarraghEtAl2015NGAEast1CCSP(NGAEastGMPE):
-    """
-    NGA East model of Darragh et al. (2015) adopting the single-corner
-    constant stress parameter (1CCSP)
-
-    Darragh, RB, Abrahamson, NA, Wilva, WJ, Gregor, N (2015) "Development of
-    Hard Rock Ground Motion Models for Region 2 of Central and Eastern
-    North America" in ...
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_1CCSP.hdf5")
-
-
-class DarraghEtAl2015NGAEast1CCSPTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East model of Darragh et al. (2015) adopting the single-corner
-    constant stress parameter (1CCSP) for use with the total sigma aleatory
-    uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_1CCSP.hdf5")
-
-
-class DarraghEtAl2015NGAEast1CVSP(NGAEastGMPE):
-    """
-    NGA East model of Darragh et al. (2015) adopting the single-corner
-    variable stress parameter (1CVSP)
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_1CVSP.hdf5")
-
-
-class DarraghEtAl2015NGAEast1CVSPTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East model of Darragh et al. (2015) adopting the single-corner
-    variable stress parameter (1CVSP) for use with the total sigma aleatory
-    uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_1CVSP.hdf5")
-
-
-class DarraghEtAl2015NGAEast2CCSP(NGAEastGMPE):
-    """
-    NGA East model of Darragh et al. (2015) adopting the two-corner
-    constant stress parameter (2CCSP)
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_2CCSP.hdf5")
-
-
-class DarraghEtAl2015NGAEast2CCSPTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East model of Darragh et al. (2015) adopting the two-corner
-    constant stress parameter (2CCSP) for use with the total sigma aleatory
-    uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_2CCSP.hdf5")
-
-
-class DarraghEtAl2015NGAEast2CVSP(NGAEastGMPE):
-    """
-    NGA East model of Darragh et al. (2015) adopting the two-corner
-    variable stress parameter (1CVSP)
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_2CVSP.hdf5")
-
-
-class DarraghEtAl2015NGAEast2CVSPTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East model of Darragh et al. (2015) adopting the two-corner
-    variable stress parameter (2CVSP) for use with the total sigma aleatory
-    uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_DARRAGH_2CVSP.hdf5")
-
-# Yenier & Atkinson (2015)
-
-
-class YenierAtkinson2015NGAEast(NGAEastGMPE):
-    """
-    NGA East Model of Yenier & Atkinson (2015)
-    Yenier, E and Atkinson, GA (2015) "Regionally-Adjustable Generic Ground-
-    Motion Prediction Equation based on Equivalent Point-Source Simulations:
-    Application to Central and Eastern North America" in PEER 2015/04, Chapter
-    4
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_YENIER_ATKINSON.hdf5")
-
-
-class YenierAtkinson2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Yenier & Atkinson (2015) for use with the total sigma
-    aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_YENIER_ATKINSON.hdf5")
-
-
-# Pezeschk et al. (2015)
-
-
-class PezeschkEtAl2015NGAEastM1SS(NGAEastGMPE):
-    """
-    NGA East Model of Pezeschk et al (2015) for the large-M simulation scaling
-
-    Pezeschk, S., Zandieh, A., Campbell, KW and Tavakoli B (2015) "Ground-
-    Motion Prediction Equations for Eastern North America using a Hybrid
-    Empirical Method" in PEER 2015/04, Chapter 5
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_PEZESCHK_M1SS.hdf5")
-
-
-class PezeschkEtAl2015NGAEastM1SSTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Pezeschk et al (2015) for the large-M simulation scaling
-    for use with the total sigma aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_PEZESCHK_M1SS.hdf5")
-
-
-class PezeschkEtAl2015NGAEastM2ES(NGAEastGMPE):
-    """
-    NGA East Model of Pezeschk et al (2015) for the large-M empirical scaling
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_PEZESCHK_M2ES.hdf5")
-
-
-class PezeschkEtAl2015NGAEastM2ESTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Pezeschk et al (2015) for the large-M empirical scaling
-    for use with the total sigma aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_PEZESCHK_M2ES.hdf5")
-
-# Frankel (2015)
-
-
-class Frankel2015NGAEast(NGAEastGMPE):
-    """
-    NGA East Model of Frankel (2015) for application to Central & Eastern
-    United States
-
-    Frankel, A (2015) "Ground-Motion Predictions for Eastern North American
-    Earthquakes Using Hybrid Broadband Seismograms from Finite-Fault
-    Simulation with Constant Stress-Drop Scaling" in PEER 2015/04, Chapter 6
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_FRANKEL_J15.hdf5")
-
-
-class Frankel2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Frankel (2015) for application to Central & Eastern
-    United States for use with the total sigma aleatory uncertainty model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_FRANKEL_J15.hdf5")
-
-# Shahjouei & Pezeschk (2015)
-
-
-class ShahjoueiPezeschk2015NGAEast(NGAEastGMPE):
-    """
-    NGA East Model of Shahjouei & Pezeschk (2015) for application to Central &
-    Eastern United States
-
-    Shajouei, A and Pezeschk, S (2015) "Hybrid Empirical Ground-Motion Model
-    for Central and Eastern North America using Hybrid Broadband Simulations
-    and NGA-West2 GMPEs" in PEER 2015/04, Chapter 7
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_SHAHJOUEI_PEZESCHK.hdf5")
-
-
-class ShahjoueiPezeschk2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Shahjouei & Pezeschk (2015) for application to Central &
-    Eastern United States, for use with the total sigma aleatory uncertainty
-    model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_SHAHJOUEI_PEZESCHK.hdf5")
-
-# Al Noman and Cramer (2015)
-
-
-class AlNomanCramer2015NGAEast(NGAEastGMPE):
-    """
-    NGA East Model of Al Noman & Cramer (2015) for application to Central &
-    Eastern United States
-
-    Al Noman & Cramer (2015) "Empirical Ground-Motion Prediction Equations for
-    Eastern North America" in PEER 2015/04, Chapter 8
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_ALNOMAN_CRAMER.hdf5")
-
-
-class AlNomanCramer2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Al Noman & Cramer (2015) for application to Central &
-    Eastern United States, for use with the total sigma aleatory uncertainty
-    model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_ALNOMAN_CRAMER.hdf5")
-
-# Graizer (2015)
-
-
-class Graizer2015NGAEast(NGAEastGMPE):
-    """
-    NGA East Model of Graizer (2015) for application to Central & Eastern
-    United States
-
-    Graizer, V (2015) "Ground-Motion Prediction Equations for the Central and
-    Eastern United States" in PEER 2015/04, Chapter 9
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_GRAIZER.hdf5")
-
-
-class Graizer2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Graizer (2015) for application to Central & Eastern
-    United States, for use with the total sigma aleatory uncertainty
-    model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_GRAIZER.hdf5")
-
-# Hassani & Atkinson (2015)
-
-
-class HassaniAtkinson2015NGAEast(NGAEastGMPE):
-    """
-    NGA East Model of Hassani & Atkinson (2015) for application to Central &
-    Eastern United States
-
-    Hassani, B & Atkinson, GA (2015) "Referenced Empirical Ground-Motion Model
-    for Eastern North America" in PEER 2015/04, Chapter 10
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_HASSANI_ATKINSON.hdf5")
-
-
-class HassaniAtkinson2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Hassani & Atkinson (2015) for application to Central &
-    Eastern United States, for use with the total sigma aleatory uncertainty
-    model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_HASSANI_ATKINSON.hdf5")
-
-# Hollenback et al. (2015)
-
-
-class HollenbackEtAl2015NGAEastGP(NGAEastGMPE):
-    """
-    NGA East Model of Hollenback et al (2015) for application to Central &
-    Eastern United States using the GP Finite-Fault model
-
-    Hollenback, J, Keuhn, N, Goulet, CA and Abrahamson, NA (2015) "PEER NGA-
-    East Median Ground Motion Models" in PEER 2015/04, Chapter 11
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_PEER_GP.hdf5")
-
-
-class HollenbackEtAl2015NGAEastGPTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Hollenback et al (2015) for application to Central &
-    Eastern United States, for use with the total sigma aleatory uncertainty
-    model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_PEER_GP.hdf5")
-
-
-class HollenbackEtAl2015NGAEastEX(NGAEastGMPE):
-    """
-    NGA East Model of Hollenback et al (2015) for application to Central &
-    Eastern United States using the EXSIM Finite-Fault model
-
-    Hollenback, J, Keuhn, N, Goulet, CA and Abrahamson, NA (2015) "PEER NGA-
-    East Median Ground Motion Models" in PEER 2015/04, Chapter 11
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_PEER_EX.hdf5")
-
-
-class HollenbackEtAl2015NGAEastEXTotalSigma(NGAEastGMPETotalSigma):
-    """
-    NGA East Model of Hollenback et al (2015) for application to Central &
-    Eastern United States, for use with the total sigma aleatory uncertainty
-    model
-    """
-    gmpe_table = os.path.join(PATH, "NGAEast_PEER_EX.hdf5")
+# populate gsim_aliases for the NGA East GMPEs
+lines = '''\
+Boore2015NGAEastA04 BOORE_A04_J15
+Boore2015NGAEastAB14 BOORE_AB14_J15
+Boore2015NGAEastAB95 BOORE_AB95_J15
+Boore2015NGAEastBCA10D BOORE_BCA10D_J15
+Boore2015NGAEastBS11 BOORE_BS11_J15
+Boore2015NGAEastSGD02 BOORE_SGD02_J15
+DarraghEtAl2015NGAEast1CCSP DARRAGH_1CCSP
+DarraghEtAl2015NGAEast1CVSP DARRAGH_1CVSP
+DarraghEtAl2015NGAEast2CCSP DARRAGH_2CCSP
+DarraghEtAl2015NGAEast2CVSP DARRAGH_2CVSP
+YenierAtkinson2015NGAEast YENIER_ATKINSON
+PezeschkEtAl2015NGAEastM1SS PEZESCHK_M1SS
+PezeschkEtAl2015NGAEastM2ES PEZESCHK_M2ES
+Frankel2015NGAEast FRANKEL_J15
+ShahjoueiPezeschk2015NGAEast SHAHJOUEI_PEZESCHK
+AlNomanCramer2015NGAEast ALNOMAN_CRAMER
+Graizer2015NGAEast GRAIZER
+HassaniAtkinson2015NGAEast HASSANI_ATKINSON
+HollenbackEtAl2015NGAEastGP PEER_GP
+HollenbackEtAl2015NGAEastEX PEER_EX
+'''.splitlines()
+for line in lines:
+    alias, key = line.split()
+    gsim_aliases[alias] = f'[NGAEastGMPE]\ngmpe_table="NGAEast_{key}.hdf5"'
+    gsim_aliases[alias + 'TotalSigma'] = (
+        f'[NGAEastGMPETotalSigma]\ngmpe_table="NGAEast_{key}.hdf5"')
