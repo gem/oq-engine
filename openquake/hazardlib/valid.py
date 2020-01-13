@@ -81,7 +81,7 @@ def to_toml(uncertainty):
         text = uncertainty.text.strip()
         kvs = uncertainty.attrib.items()
     else:  # is a string
-        text = uncertainty
+        text = uncertainty.strip()
         kvs = []
     text = gsim_aliases.get(text, text)  # use the gsim alias if any
     if not text.startswith('['):  # a bare GSIM name was passed
