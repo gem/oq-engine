@@ -75,6 +75,7 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
+# NB: this is NOT called if split_by_magnitude is true
 def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
