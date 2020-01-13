@@ -390,7 +390,7 @@ class NGAEastGMPE(GMPETable):
     Eastern North America", Earthquake Spectra, in press
 
     Note that the uncertainty provided in this model is treated as an
-    epistemic rather than aleatory variablr. As such there is no modification
+    epistemic rather than aleatory variable. As such there is no modification
     of the standard deviation model used for the bedrock case. The epistemic
     uncertainty can be added to the model by the user input site_epsilon term,
     which describes the number of standard deviations by which to multiply
