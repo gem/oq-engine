@@ -915,6 +915,14 @@ utils_swiss_gmpe
     :undoc-members:
     :show-inheritance:
 
+usgs_ceus_2019
+-------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.usgs_ceus_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 vanhoutte_2018
 -------------------------------------------
 
