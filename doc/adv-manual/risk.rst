@@ -350,8 +350,10 @@ calculation. Clearly it is a matter of compromise: by sacrificing precision
 it is possible to reduce enourmously the size of the stored asset loss table
 and to make an impossible calculation possible.
 
-It is worth noting that the engine always stores the full event loss table (i.e.
-the asset loss table aggregated by asset *without discarding anything*).
-Thanks to that it is always possible to compute the total loss curve
-and compare it with the approximated loss curve, to assess the goodness
+NB: the asset loss table is interesting only when computing the aggregate
+loss curves by tag: if there are no tags the total loss curve can be
+computed from the event loss table (i.e.  the asset loss table
+aggregated by asset *without discarding anything*) which is always
+stored. Thanks to that it is always possible to compare the total loss curve
+with the approximated loss curve, to assess the goodness
 of the approximation.
