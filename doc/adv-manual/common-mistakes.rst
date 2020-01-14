@@ -164,21 +164,5 @@ certain point the calculation will run out of memory. I have seen this
 to happen when generating tens of thousands of tasks. Again, it is
 best not to touch this parameter unless you know what you are doing.
 
-NB: depending on the calculator and on the engine version, the effect
-of this parameter can be counter-intuitive. For instance starting from
-engine 3.8 in classical calculations the parameter is used to
-determine the value ``maxweight=total_weight_of_the_sources /
-concurrent_tasks``. Light sources (i.e. with weight < ``maxweigh``)
-are processed as is, while heavy sources are split first, and they
-produce subtasks. This means that a large value of
-``concurrent_tasks`` produces a small value of ``maxweight``, i.e. it
-increases the number of heavy sources and thus the number of split
-sources; more splitting means more memory used. So in order to reduce
-the memory occupation while computing the PoEs, it may be useful to reduce
-``concurrent_tasks``, contrarily to what happens during the calculation
-of the statistics. Yet another reason not to set this parameter unless
-you are forced to.
-
-
 .. _equivalent distance approximation: equivalent_distance_approximation.rst
 .. _rupture radius: https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/source/point.py
