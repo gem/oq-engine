@@ -174,6 +174,10 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, rup_data
         """
+        # NB: dic should be a dictionary, but when the calculation dies
+        # for an OOM it can become None, thus giving a very confusing error
+        if dic is None:
+            raise MemoryError('You ran out of memory!')
         if not dic['pmap']:
             return acc
         with self.monitor('aggregate curves'):
