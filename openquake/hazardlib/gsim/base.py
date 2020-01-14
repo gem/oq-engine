@@ -138,10 +138,7 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
         function of that truncated Gaussian applied to IMLs.
 
     :returns:
-        A dictionary of the same structure as parameter ``imts`` (see
-        above). Instead of lists of IMLs values of the dictionaries
-        have 2d numpy arrays of corresponding PoEs, first dimension
-        represents sites and the second represents IMLs.
+        array of PoEs of shape (N, L, G)
 
     :raises ValueError:
         If truncation level is not ``None`` and neither non-negative
