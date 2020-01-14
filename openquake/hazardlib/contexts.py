@@ -192,7 +192,7 @@ class ContextMaker(object):
         """
         distances = get_distances(rupture, sites, self.filter_distance)
         mdist = mdist or self.maximum_distance(
-            rupture.tectonic_region_type)  # TODO: add rupture.mag here
+            rupture.tectonic_region_type, rupture.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
@@ -691,8 +691,9 @@ class Effect(object):
         self.dists = dists
         self.nbins = len(dists)
         effectmax = effect_by_mag[max(effect_by_mag)]
-        # intensity at the maximum magnitude and distance
-        self.zero_value = effectmax[-1]
+        # 1/10th of the intensity at the maximum magnitude and distance:
+        # this is the value used to discard ruptures producing little effect
+        self.zero_value = effectmax[-1] / 10
         if collapse_dist is not None:
             # intensity at the maximum magnitude and collapse distance
             idx = numpy.searchsorted(dists, collapse_dist)
@@ -716,15 +717,15 @@ class Effect(object):
         """
         if intensity is None:
             intensity = self.zero_value
-        dic = {}  # magnitude -> distance
+        dst = {}  # magnitude -> distance
         for mag, intensities in self.effect_by_mag.items():
             if intensity < intensities.min():
-                dic[mag] = self.dists[-1]
+                dst[mag] = self.dists[-1]  # largest distance
             elif intensity > intensities.max():
-                dic[mag] = self.dists[0]
+                dst[mag] = self.dists[0]  # smallest distance
             else:
-                dic[mag] = interp1d(intensities, self.dists)(intensity)
-        return dic
+                dst[mag] = interp1d(intensities, self.dists)(intensity)
+        return dst
 
 
 # used in calculators/classical.py

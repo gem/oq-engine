@@ -288,7 +288,9 @@ class ClassicalCalculator(base.HazardCalculator):
                             getdefault(oq.pointsource_distance, trt))
                 for t, trt in enumerate(gsims_by_trt)}
             for trt, eff in self.effect.items():
+                # ex: {'4.700': 12.1, ..., '8.700': 200}
                 oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
+                # ex: {'4.700': 0.01, ..., '8.700': 52.01}
                 oq.pointsource_distance[trt] = eff.dist_by_mag(
                     eff.collapse_value)
         else:
