@@ -178,6 +178,10 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
         return _get_poes(mean_std, loglevels, truncation_level)
 
 
+# this is the critical function for the performance of the classical calculator
+# it is dominated by memory allocations (i.e. _truncnorm_sf is ultra-fast)
+# the only way to speedup is to reduce the maximum_distance, then the array
+# will become shorted in the N dimension (number of affected sites)
 def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
     mean, stddev = mean_std  # shape (N, M, G) each
     N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
