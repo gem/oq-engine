@@ -341,8 +341,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     si[task_no] = srcids
                 self.by_task.clear()
         numrups = sum(arr[0] for arr in self.calc_times.values())
-        if self.totrups != numrups:
-            logging.info('Considered %d/%d ruptures', numrups, self.totrups)
+        numsites = sum(arr[1] for arr in self.calc_times.values())
+        logging.info('Effective number of ruptures: %d/%d',
+                     numrups, self.totrups)
+        logging.info('Effective number of sites per rupture: %d',
+                     numsites / numrups)
         self.calc_times.clear()  # save a bit of memory
         return acc
 
