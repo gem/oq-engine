@@ -1200,6 +1200,7 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     <MyParams a='2', b=7.2>
     """
     params = {}
+    KNOWN_INPUTS = {}
 
     @classmethod
     def check(cls, dic):
@@ -1247,8 +1248,9 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             try:
                 convert = getattr(self.__class__, name).validator
             except AttributeError:
-                logging.warning(
-                    "The parameter '%s' is unknown, ignoring" % name)
+                if name not in self.KNOWN_INPUTS:
+                    logging.warning(
+                        "The parameter '%s' is unknown, ignoring" % name)
                 continue
             try:
                 value = convert(val)
