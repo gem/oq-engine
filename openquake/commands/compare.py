@@ -91,7 +91,8 @@ def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-2,
     diff_idxs = get_diff_idxs(array_imt, rtol, atol, threshold)
     if len(diff_idxs) == 0:
         print('There are no differences within the tolerances '
-              'atol=%s, rtol=%d%%' % (atol, rtol * 100))
+              'atol=%s, rtol=%d%%, threshold=%s' % (atol, rtol * 100,
+                                                    threshold))
         return
     arr = array_imt.transpose(1, 0, 2)  # shape (N, C, L)
     for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
