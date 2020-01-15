@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an option `oq engine --param` to override the job.ini parameters
   * Internal: reduced the number of NGAEastUSGS classes from 39 to 1
   * Internal: reduced the number of NGAEast classes from 44 to 2
   * Internal: reduced the 15 NSHMP2014 classes to a single class
@@ -70,8 +71,6 @@
   * Renamed ordinal -> rlz_id in the realizations.csv output
 
   [Alberto Chiusole]
-  * Restored the `export_dir` to be relative to the current directory
-    and not to the input directory
   * Changed the way how the available number of CPU cores is computed
 
   [Kendra Johnson, Robin Gee]
