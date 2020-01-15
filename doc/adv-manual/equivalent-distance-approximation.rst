@@ -31,7 +31,7 @@ You can enable it in the engine by adding a ``reqv_hdf5`` parameter to the
 ``job.ini``, like in our example in
 openquake/qa_tests_data/classical/case_2/job.ini::
 
-  reqv_hdf5 = {'active shallow crust': 'lookup_asc.hdf5',
+  reqv_file = {'active shallow crust': 'lookup_asc.hdf5',
                'stable shallow crust': 'lookup_sta.hdf5'}
 
 For each tectonic region type to which the approximation should be applied,
