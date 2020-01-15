@@ -117,10 +117,10 @@ class Amplifier(object):
 
     def amplify_one(self, ampl_code, imt, poes):
         """
-        :param ampl_code: 2-letter code for the amplification function
+        :param ampl_code: code for the amplification function
         :param imt: an intensity measure type
-        :param poes: the original PoEs
-        :returns: the amplified PoEs
+        :param poes: the original PoEs as an array of shape (I, G)
+        :returns: the amplified PoEs as an array of shape (A, G)
         """
         if ampl_code == b'' and len(self.ampcodes) == 1:
             # manage the case of a site collection with empty ampcode
@@ -128,10 +128,12 @@ class Amplifier(object):
         stored_imt = self.imtdict[imt]
         alphas = self.alpha[ampl_code, stored_imt]  # array with I-1 elements
         sigmas = self.sigma[ampl_code, stored_imt]  # array with I-1 elements
-        ampl_poes = numpy.zeros_like(self.amplevels)  # array with A elements
-        for mid, prob, a, s in zip(
-                self.midlevels, -numpy.diff(poes), alphas, sigmas):
-            ampl_poes += (1. - norm_cdf(self.amplevels / mid, a, s)) * prob
+        A, G = len(self.amplevels), poes.shape[1]
+        ampl_poes = numpy.zeros((A, G))
+        for g in range(G):
+            p_occ = -numpy.diff(poes[:, g])
+            for mid, p, a, s in zip(self.midlevels, p_occ, alphas, sigmas):
+                ampl_poes[:, g] += (1-norm_cdf(self.amplevels/mid, a, s)) * p
         return ampl_poes
 
     def amplify(self, ampl_code, pcurves):
@@ -142,10 +144,11 @@ class Amplifier(object):
         """
         out = []
         for pcurve in pcurves:
+            L, G = pcurve.array.shape
             lst = []
             for imt in self.imtls:
                 slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc, 0])
+                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
                 lst.append(new)
-            out.append(ProbabilityCurve(numpy.concatenate(lst).reshape(-1, 1)))
+            out.append(ProbabilityCurve(numpy.concatenate(lst).reshape(-1, G)))
         return out
