@@ -38,29 +38,6 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
-KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
-                'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
-                'source_model_logic_tree', 'hazard_curves', 'insurance',
-                'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
-                'fragility', 'consequence', 'reqv', 'input_zip',
-                'amplification',
-                'nonstructural_vulnerability',
-                'nonstructural_fragility',
-                'nonstructural_consequence',
-                'structural_vulnerability',
-                'structural_fragility',
-                'structural_consequence',
-                'contents_vulnerability',
-                'contents_fragility',
-                'contents_consequence',
-                'business_interruption_vulnerability',
-                'business_interruption_fragility',
-                'business_interruption_consequence',
-                'structural_vulnerability_retrofitted',
-                'occupants_vulnerability',
-                }
-
-
 def check_same_levels(imtls):
     """
     :param imtls: a dictionary (or dict-like) imt -> imls
@@ -81,6 +58,26 @@ def check_same_levels(imtls):
 
 
 class OqParam(valid.ParamSet):
+    KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
+                    'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
+                    'source_model_logic_tree', 'hazard_curves', 'insurance',
+                    'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
+                    'fragility', 'consequence', 'reqv', 'input_zip',
+                    'amplification',
+                    'nonstructural_vulnerability',
+                    'nonstructural_fragility',
+                    'nonstructural_consequence',
+                    'structural_vulnerability',
+                    'structural_fragility',
+                    'structural_consequence',
+                    'contents_vulnerability',
+                    'contents_fragility',
+                    'contents_consequence',
+                    'business_interruption_vulnerability',
+                    'business_interruption_fragility',
+                    'business_interruption_consequence',
+                    'structural_vulnerability_retrofitted',
+                    'occupants_vulnerability'}
     siteparam = dict(
         vs30measured='reference_vs30_type',
         vs30='reference_vs30_value',
@@ -308,7 +305,7 @@ class OqParam(valid.ParamSet):
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
 
         # check inputs
-        unknown = set(self.inputs) - KNOWN_INPUTS
+        unknown = set(self.inputs) - self.KNOWN_INPUTS
         if unknown:
             raise ValueError('Unknown key %s_file in %s' %
                              (unknown.pop(), self.inputs['job_ini']))
