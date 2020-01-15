@@ -75,7 +75,7 @@ class Amplifier(object):
     """
     :param imtls: intensity measure types and levels DictArray M x I
     :param ampl_funcs: an ArrayWrapper containing amplification functions
-    :param amplevels: levels used for the amplified curves
+    :param amplevels: A levels used for the amplified curves
     :attr periods: array of M periods
     :attr midlevels: array of I-1 levels
     :attr alpha: dict code, imt-> I-1 amplification coefficients
@@ -126,9 +126,9 @@ class Amplifier(object):
             # manage the case of a site collection with empty ampcode
             ampl_code = self.ampcodes[0]
         stored_imt = self.imtdict[imt]
-        alphas = self.alpha[ampl_code, stored_imt]
-        sigmas = self.sigma[ampl_code, stored_imt]
-        ampl_poes = numpy.zeros_like(self.amplevels)
+        alphas = self.alpha[ampl_code, stored_imt]  # array with I-1 elements
+        sigmas = self.sigma[ampl_code, stored_imt]  # array with I-1 elements
+        ampl_poes = numpy.zeros_like(self.amplevels)  # array with A elements
         for mid, prob, a, s in zip(
                 self.midlevels, -numpy.diff(poes), alphas, sigmas):
             ampl_poes += (1. - norm_cdf(self.amplevels / mid, a, s)) * prob
