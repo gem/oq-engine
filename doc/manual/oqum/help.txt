@@ -61,3 +61,6 @@ optional arguments:
   -l, --log-level {debug, info, warn, error, critical}
                         Defaults to "info"
   -r, --reuse-hazard    Reuse the event based hazard if available
+  --param PARAM, -p PARAM
+                        Override parameters specified with the syntax
+                        NAME1=VALUE1,NAME2=VALUE2,...
