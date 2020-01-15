@@ -38,6 +38,7 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
+
 def check_same_levels(imtls):
     """
     :param imtls: a dictionary (or dict-like) imt -> imls
@@ -805,14 +806,15 @@ class OqParam(valid.ParamSet):
         and the user must have the permission to write on it.
         """
         if self.export_dir and not os.path.isabs(self.export_dir):
-            self.export_dir = os.getcwd()
+            self.export_dir = os.path.normpath(
+                os.path.join(self.input_dir, self.export_dir))
             logging.info('Using export_dir=%s', self.export_dir)
         if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
             logging.warning('export_dir not specified. Using export_dir=%s'
                             % self.export_dir)
             return True
-        elif not os.path.exists(self.export_dir):
+        if not os.path.exists(self.export_dir):
             try:
                 os.makedirs(self.export_dir)
             except PermissionError:
