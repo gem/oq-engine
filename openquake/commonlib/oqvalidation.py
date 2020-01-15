@@ -814,7 +814,7 @@ class OqParam(valid.ParamSet):
             logging.warning('export_dir not specified. Using export_dir=%s'
                             % self.export_dir)
             return True
-        elif not os.path.exists(self.export_dir):
+        if not os.path.exists(self.export_dir):
             try:
                 os.makedirs(self.export_dir)
             except PermissionError:

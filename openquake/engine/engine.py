@@ -253,7 +253,7 @@ def job_from_file(job_ini, job_id, username, **kw):
     """
     hc_id = kw.get('hazard_calculation_id')
     try:
-        oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
+        oq = readinput.get_oqparam(job_ini, hc_id=hc_id, **kw)
     except Exception:
         logs.dbcmd('finish', job_id, 'deleted')
         raise
