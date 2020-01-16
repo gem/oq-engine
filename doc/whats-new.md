@@ -6,13 +6,13 @@ https://github.com/gem/oq-engine/blob/engine-3.8/debian/changelog
 
 # Major optimizations
 
-Classical calculations dominated by point sources with nontrivial
-nodal plane / hypocenter distributions an using the
+Classical calculations dominated by point sources with non-trivial
+nodal plane / hypocenter distributions and using the
 `pointsource_distance` approximation (see
 https://github.com/gem/oq-engine/blob/engine-3.8/doc/adv-manual/common-mistakes.rst#pointsource_distance)
 have been optimized. The improvement applies to several models, and in
-particular the once extra-slow Canada and Australia calculations are
-2-3 times faster.
+particular the once extra-slow Canada and Australia national hazard
+calculations are now 2-3× faster.
 
 Large ebrisk calculations has been substantially optimized in
 memory occupation, particularly when generating aggregate loss curves
@@ -20,7 +20,7 @@ for a large numbers of tags. The gain can be of orders of
 magnitude. This was made possible by storing the (partial) asset loss
 table (see
 https://github.com/gem/oq-engine/blob/engine-3.8/doc/adv-manual/risk.rst#the-asset-loss-table)
-and by computing the loss curves in postprocessing.
+and by computing the loss curves in post-processing.
 
 In general the memory occupation of the engine in calculations with subtasks
 (i.e. classical and ebrisk) has gone down, since we
@@ -31,8 +31,8 @@ the master node for the Australia calculation).
 
 The task distribution, has been substantially changed and
 improved. Now we are back to an algorithm that makes the number of
-generated tasks deterministic, while in engine 3.6 and 3.7 is was
-depending on the load on the server. The difficult part was to make
+generated tasks deterministic, while in engine 3.6 and 3.7 the number was
+dependent on the load on the server. The difficult part was to make
 this possible without incurring in the slow task penalty and actually
 we managed to improve on that front too. Moreover, differently from
 engine 3.7, now the engine will try to submit all tasks upfront,
@@ -48,7 +48,7 @@ We were parsing the gsim logic tree file (and the underlying files, if any)
 multiple times; this has been fixed.
 
 We changed the seed algorithm used when sampling the source models to
-avoid using more GMPEs than needed in some cases. Due to thes change
+avoid using more GMPEs than needed in some cases. Due to this change,
 if there is more than one source model you could get different numbers
 with respect to engine 3.7, but this is a non-issue. We also changed
 the logic tree sampling algorithm by ordering the branchsets
@@ -68,7 +68,7 @@ distance is required: then the hypocenter distribution can be collapsed.
 Some models (like the Canada model 2015) may have duplicated values
 in the nodal plane or hypocenter distributions, causing the calculation
 to become slower. This has been fixed and now the engine automatically
-regularize the nodal plane and hypocenter distributions, by printing
+regularizes the nodal plane and hypocenter distributions, by printing
 a warning.
 
 # New features
@@ -86,7 +86,7 @@ https://github.com/gem/oq-engine/blob/engine-3.8/doc/adv-manual/risk-features.rs
 for an explanation).
 
 There is a new experimental calculator `event_based_damage` which is
-able to compute damage probabilities starting from an event based
+able to compute damage probabilities starting from an event based hazard
 calculation and a set of fragility curves. Essentially, it is a
 generalization of the `scenario_damage` calculator to the case of
 multiple ruptures. The calculator is also able to compute extended consequences
@@ -107,7 +107,7 @@ Beta testers are welcome.
 We extended the disaggregation calculator so that it can work with
 multiple realizations at once, provided the user specifies
 the `rlz_index` or the `num_rlzs_disagg` parameters in the job.ini.
-This useful in order to assess the variability of the disaggregation
+This is useful in order to assess the variability of the disaggregation
 results depending on the chosen realizations. Beta testers are welcome.
 
 We revised the logic to manage GMPE depending on an external file - like
@@ -129,23 +129,23 @@ parameter:
 
 # Work on hazardlib
 
-G. Weatherill added a configurable nonergodic option to BC Hydro and
+[G. Weatherill](https://github.com/g-weatherill) added a configurable nonergodic option to BC Hydro and
 SERA GMPEs. Moreover he revised the SERA BCHydro Epistemic GMPES,
 updated the SERA craton GMPE coefficients, added a fix to the Kotha
 2019 GMPE, and implemented Abrahamson et al. (2018) "BC Hydro Update"
 GMPE.
 
-M. Pagani added some of the Morikawa-Fujiwara GMPEs for Japan.
+[M. Pagani](https://github.com/mmpagani) added some of the Morikawa-Fujiwara GMPEs for Japan.
 Moreover he added an alternative way controlling the way the OQ Engine
 models hypocenters in distributed seismicity (see
 https://github.com/gem/oq-engine/pull/5209). In order to use this option,
 the user must set in the .ini file `shift_hypo = true`.
 
-R. Gee fixed the `CampbellBozorgnia2003NSHMP2007` GMPEs which was
+[R. Gee](https://github.com/rcgee) fixed the `CampbellBozorgnia2003NSHMP2007` GMPEs which was
 missing the line `DEFINED_FOR_REFERENCE_VELOCITY= 760`. This affected
 the latest Alaska model that could not be run.
 
-M. Simionato introduced a geometric average GMPE called
+[M. Simionato](https://github.com/micheles) introduced a geometric average GMPE called
 `AvgGMPE` which is able to compute the geometric average of its underlying
 GMPEs, with the proper weights. It can be used to collapse the GMPE logic
 tree, for users wanting to do so. This can reduce the size of the generated
@@ -179,7 +179,7 @@ and it is correctly flagged so.
 On the other hand, speciying both sites and site models at the same time
 is now valid again and the "sites overdetermined" check has been removed.
 
-Trying to read a GMFs file in XML format, a feature which has been
+Trying to read a GMFs file in XML format, a feature which had been
 removed long ago, now raises a clear error message.
 
 The GMF importer in CSV format has been extended, and it can import
@@ -187,18 +187,18 @@ files with more IMTs than the ones used in the calculation: they are
 simply imported and then ignored, without raising an exception.
 
 We added a check on acceptable input keys in `the job.ini` to protect against
-mispelling like `esposure_file` instead of `exposure_file`.
+mispellings like `esposure_file` instead of `exposure_file`.
 
 # Changes in the outputs
 
-We normalized the headers in the CSV files exported from the engine.
+We harmonized the headers in the CSV files exported from the engine.
 In particular we renamed rlzi -> rlz_id, ordinal -> rlz_id, asset ->
-asset_id, id -> asset_id, rupid -> rup_id, id->event_id in various
-files (there were plenty of inconsistencies for historical reasons).
+asset_id, id -> asset_id, rupid -> rup_id, id -> event_id in various
+files (there were plenty of such inconsistencies for historical reasons).
 
 We fixed the order when exporting the ruptures in CSV: this is very
-useful when comparing the results of two calculation with different
-parameters. The order is by rupture ID, `rup_id`.
+useful when comparing the results of two calculations with different
+parameters. The order is now by rupture ID, `rup_id`.
 
 We fixed the CSV exporter for the ruptures, since the boundary
 information was truncated at 100 characters. Actually, we completely
@@ -232,7 +232,7 @@ a regression accidentally introduced in engine 3.7.1.
 
 We fixed an issue of quotes in the exposure tags.
 
-We fixed a long standing issue with NaNs in scenario_damage calculations:
+We fixed a long standing issue with NaNs in `scenario_damage` calculations:
 the cause was a missing `noDamageLimit` in the fragility files. Now a
 missing `noDamageLimit` is treated as zero.
 
@@ -243,14 +243,14 @@ The GMFs were stored even with `ground_motion_fields=false` in case of
 `hazard_curves_from_gmfs=true`. This has been fixed.
 
 The removal of calculations that was not working since it was
-trying to delete obsolete and non-existing files. We fixed it.
+trying to delete obsolete and non-existing files has now been fixed.
 We also fixed the command `oq reset` when used with a stopped DbServer.
 
 We hard-coded the distance used in the filtering to `rrup`, to simplify
 the logic and to avoid an error in disaggregation with GMPEs not using
 `rrup` (the distance was not saved but needed, thus causing a failure).
 
-We fixed a bug in ebrisk with `aggregate_by` when building the `rup_loss_table`.
+We fixed a bug in `ebrisk` with `aggregate_by` when building the `rup_loss_table`.
 
 One of our users discovered a RecursionError when pickling Python
 objects in a disaggregation calculation:
@@ -259,7 +259,7 @@ objects in a disaggregation calculation:
   pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
   RecursionError: maximum recursion depth exceeded while calling a Python object
 ```
-We temporarily fixed by raising the recursion limit, but let us know if you get
+We temporarily fixed this by raising the recursion limit, but let us know if you get
 the same error (it should appear only in extra-large calculations).
 
 The error message for pickling over the 4 GB limit is now sent back
