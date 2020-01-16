@@ -225,19 +225,12 @@ computed from the asset loss table. We have also removed the outputs
 `agg_maps-rlzs` and `agg_maps-stats` that were only accidentally
 exported in engine 3.7.
 
-# Bug fixes and new checks
+# Bug fixes
 
 We fixed the ShakeMap download to support again ShakeMaps in zipped format,
 a regression accidentally introduced in engine 3.7.1.
 
 We fixed an issue of quotes in the exposure tags.
-
-We improved the error message when using precomputed gmfs in scenarios
-with `event_id` not starting from zero.
-
-We improved the error message for empty risk EB calculations: now you
-will get *There are no GMFs available: perhaps you set
-ground_motion_fields=False or a large minimum_intensity*.
 
 We fixed a long standing issue with NaNs in scenario_damage calculations:
 the cause was a missing `noDamageLimit` in the fragility files. Now a
@@ -257,18 +250,10 @@ We hard-coded the distance used in the filtering to `rrup`, to simplify
 the logic and to avoid an error in disaggregation with GMPEs not using
 `rrup` (the distance was not saved but needed, thus causing a failure).
 
-We relaxed a check that was too string on the `minimum_intensity` parameter
-of the previous calculation.
+We fixed a bug in ebrisk with `aggregate_by` when building the `rup_loss_table`.
 
-We relaxed the check on IMT-dependent weights: now in case of sampling the
-IMT-dependent weights are ignored and the engine prints a warning, but does
-not stop.
-
-We added a warning against implicit hazard levels, extracted from the
-risk functions. In the future specifying explicitly the hazard levels
-will become mandatory.
-
-One of our users discovered a RecursionError when pickling Python objects:
+One of our users discovered a RecursionError when pickling Python
+objects in a disaggregation calculation:
 
 ```python
   pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
@@ -280,7 +265,25 @@ the same error (it should appear only in extra-large calculations).
 The error message for pickling over the 4 GB limit is now sent back
 to the controller node instead of appearing only in the worker logs.
 
-We fixed a bug in ebrisk with `aggregate_by` when building the `rup_loss_table`.
+# New checks
+
+We improved the error message when using precomputed gmfs in scenarios
+with `event_id` not starting from zero.
+
+We improved the error message for empty risk EB calculations: now you
+will get *There are no GMFs available: perhaps you set
+ground_motion_fields=False or a large minimum_intensity*.
+
+We relaxed a check that was too string on the `minimum_intensity` parameter
+of the previous calculation.
+
+We relaxed the check on IMT-dependent weights: now in case of sampling the
+IMT-dependent weights are ignored and the engine prints a warning, but does
+not stop.
+
+We added a warning against implicit hazard levels, extracted from the
+risk functions. In the future specifying explicitly the hazard levels
+will become mandatory.
 
 There is a new upper limit on the size of event based calculations, to
 stop people from trying to run impossibly large calculations. You will
