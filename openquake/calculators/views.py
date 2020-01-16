@@ -58,7 +58,7 @@ def form(value):
     >>> form(0.0001)
     '1.000E-04'
     >>> form(1003.4)
-    '1,003'
+    '1_003'
     >>> form(103.4)
     '103'
     >>> form(9.3)
@@ -74,7 +74,7 @@ def form(value):
         elif value < 10 and isinstance(value, FLOAT):
             return '%.5f' % value
         elif value > 1000:
-            return '{:,d}'.format(int(round(value)))
+            return '{:_d}'.format(int(round(value)))
         elif numpy.isnan(value):
             return 'NaN'
         else:  # in the range 10-1000
