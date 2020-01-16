@@ -115,7 +115,7 @@ class Amplifier(object):
                         pass
                     idx += 1
 
-    def amplify_one(self, ampl_code, imt, poes, G=1):
+    def amplify_one(self, ampl_code, imt, poes):
         """
         :param ampl_code: code for the amplification function
         :param imt: an intensity measure type
@@ -123,16 +123,14 @@ class Amplifier(object):
         :returns: the amplified PoEs as an array of shape (A, G)
         """
         if isinstance(poes, list):  # in the tests
-            poes = numpy.array(poes).reshape(-1, G)
-        else:
-            assert poes.shape[1] == G, (poes.shape[1], G)
+            poes = numpy.array(poes).reshape(-1, 1)
         if ampl_code == b'' and len(self.ampcodes) == 1:
             # manage the case of a site collection with empty ampcode
             ampl_code = self.ampcodes[0]
         stored_imt = self.imtdict[imt]
         alphas = self.alpha[ampl_code, stored_imt]  # array with I-1 elements
         sigmas = self.sigma[ampl_code, stored_imt]  # array with I-1 elements
-        A = len(self.amplevels)
+        A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
         for g in range(G):
             p_occ = -numpy.diff(poes[:, g])
