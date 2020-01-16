@@ -28,7 +28,7 @@ from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
 from openquake.hazardlib.contexts import (
-    ContextMaker, Effect, get_effect_by_mag, ruptures_by_mag_dist)
+    ContextMaker, Effect, get_effect_by_mag)
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -471,6 +471,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if 'amplification' in oq.inputs:
             amplifier = Amplifier(oq.imtls, self.datastore['amplification'],
                                   oq.soil_intensities)
+            amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
         else:
             amplifier = None
         allargs = [  # this list is very fast to generate
