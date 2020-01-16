@@ -68,8 +68,8 @@ def get_diff_idxs(array, rtol, atol, threshold):
 
 
 @sap.script
-def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-2,
-            threshold=.1):
+def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-3,
+            threshold=1E-2):
     """
     Compare the hazard curves or maps of two or more calculations
     """
@@ -91,8 +91,8 @@ def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-2,
     diff_idxs = get_diff_idxs(array_imt, rtol, atol, threshold)
     if len(diff_idxs) == 0:
         print('There are no differences within the tolerances '
-              'atol=%s, rtol=%d%%, threshold=%s' % (atol, rtol * 100,
-                                                    threshold))
+              'atol=%s, rtol=%d%%, threshold=%s, samplesites=%d' %
+              (atol, rtol * 100, threshold, samplesites))
         return
     arr = array_imt.transpose(1, 0, 2)  # shape (N, C, L)
     for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
