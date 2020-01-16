@@ -75,6 +75,7 @@ class Amplifier(object):
     """
     :param imtls: intensity measure types and levels DictArray M x I
     :param ampl_funcs: an ArrayWrapper containing amplification functions
+    :param vs30: an array of vs30 values, one per site
     :param amplevels: A levels used for the amplified curves
     :attr periods: array of M periods
     :attr midlevels: array of I-1 levels
@@ -86,6 +87,7 @@ class Amplifier(object):
         self.periods, levels = check_same_levels(imtls)
         self.amplevels = levels if amplevels is None else amplevels
         self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
+        self.vs30_ref = ampl_funcs.vs30_ref
         imls = ampl_funcs.imls
         imts = [from_string(imt) for imt in ampl_funcs.dtype.names[2:]
                 if not imt.startswith('sigma_')]
@@ -114,6 +116,16 @@ class Amplifier(object):
                     except ValueError:  # missing sigma
                         pass
                     idx += 1
+
+    def check(self, vs30, vs30_tolerance):
+        """
+        Raise a ValueError if some vs30 is different from vs30_ref
+        within the tolerance. Called by the engine.
+        """
+        if (numpy.abs(vs30 - self.vs30_ref) > vs30_tolerance).any():
+            raise ValueError('Some vs30 in the site collection is different '
+                             'from vs30_ref=%d over the tolerance of %d' %
+                             (self.vs30_ref, vs30_tolerance))
 
     def amplify_one(self, ampl_code, imt, poes):
         """

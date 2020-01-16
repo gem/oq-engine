@@ -56,6 +56,7 @@ A,0,2,2,2,2,2
 
 
 class AmplifierTestCase(unittest.TestCase):
+    vs30 = numpy.array([760])
     imls = [.001, .002, .005, .01, .02, .05, .1, .2, .5, 1., 1.2]
     soil_levels = numpy.array([.002, .005, .01, .02, .05, .1, .2])
     imtls = {'PGA': imls, 'SA(0.1)': imls, 'SA(0.2)': imls, 'SA(0.5)': imls}
@@ -75,6 +76,7 @@ class AmplifierTestCase(unittest.TestCase):
         aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
+        a.check(self.vs30, 0)
         numpy.testing.assert_allclose(
             a.midlevels, [0.0015, 0.0035, 0.0075, 0.015, 0.035, 0.075,
                           0.15, 0.35, 0.75, 1.1])
@@ -96,6 +98,7 @@ class AmplifierTestCase(unittest.TestCase):
         aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
+        a.check(self.vs30, 1)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
             poes, [0.985002, 0.979997, 0.970004, 0.940069, 0.889961,
