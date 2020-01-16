@@ -2,9 +2,9 @@ Escenario Santiago DC - Daño y pérdidas
 =======================================
 
 ============== ===================
-checksum32     636,647,998        
-date           2019-10-23T16:26:02
-engine_version 3.8.0-git2e0d8e6795
+checksum32     2_464_158_893      
+date           2020-01-16T05:30:50
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 10, num_levels = 202, num_rlzs = 2
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     113               
@@ -31,16 +32,16 @@ ses_seed                        42
 
 Input files
 -----------
-====================== ======================================================================
-Name                   File                                                                  
-====================== ======================================================================
-exposure               `exposure_model.xml <exposure_model.xml>`_                            
-gsim_logic_tree        `gmpe.xml <gmpe.xml>`_                                                
-job_ini                `job.ini <job.ini>`_                                                  
-rupture_model          `earthquake_rupture_model.xml <earthquake_rupture_model.xml>`_        
-structural_consequence `ccara_consequence_model_CARA.xml <ccara_consequence_model_CARA.xml>`_
-structural_fragility   `ccara_fragility_model_CARA.xml <ccara_fragility_model_CARA.xml>`_    
-====================== ======================================================================
+==================== ==================================================================
+Name                 File                                                              
+==================== ==================================================================
+exposure             `exposure_model.xml <exposure_model.xml>`_                        
+gsim_logic_tree      `gmpe.xml <gmpe.xml>`_                                            
+job_ini              `job.ini <job.ini>`_                                              
+reqv:taxonomy        `consequences_by_taxonomy.csv <consequences_by_taxonomy.csv>`_    
+rupture_model        `earthquake_rupture_model.xml <earthquake_rupture_model.xml>`_    
+structural_fragility `ccara_fragility_model_CARA.xml <ccara_fragility_model_CARA.xml>`_
+==================== ==================================================================
 
 Composite source model
 ----------------------
@@ -90,11 +91,11 @@ task sent received
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44452             time_sec memory_mb counts
+calc_43236             time_sec memory_mb counts
 ====================== ======== ========= ======
-ScenarioCalculator.run 0.17265  1.71484   1     
-saving gmfs            0.07408  1.71484   1     
-building riskinputs    0.03959  0.0       1     
-computing gmfs         0.01008  0.0       1     
-reading exposure       0.00225  0.0       1     
+ScenarioCalculator.run 0.13431  2.80859   1     
+saving gmfs            0.06415  1.80859   1     
+computing gmfs         0.00922  0.0       1     
+building riskinputs    0.00222  0.0       1     
+reading exposure       0.00199  0.0       1     
 ====================== ======== ========= ======

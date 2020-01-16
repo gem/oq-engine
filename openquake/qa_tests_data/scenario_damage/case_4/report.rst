@@ -2,9 +2,9 @@ Scenario Damage QA Test 4
 =========================
 
 ============== ===================
-checksum32     1,140,149,609      
-date           2019-10-23T16:26:02
-engine_version 3.8.0-git2e0d8e6795
+checksum32     1_140_149_609      
+date           2020-01-16T05:30:50
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 3, num_levels = 60, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            10.0
 complex_fault_mesh_spacing      10.0              
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     3                 
@@ -83,7 +84,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ========= ========= ======
-calc_44449       time_sec  memory_mb counts
+calc_43232       time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.628E-04 0.0       1     
+reading exposure 3.810E-04 0.0       1     
 ================ ========= ========= ======

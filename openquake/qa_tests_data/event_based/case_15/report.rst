@@ -2,9 +2,9 @@ Hazard Japan (HERP model 2014) reduced
 ======================================
 
 ============== ===================
-checksum32     2,896,463,652      
-date           2019-10-23T16:26:14
-engine_version 3.8.0-git2e0d8e6795
+checksum32     2_896_463_652      
+date           2020-01-16T05:31:00
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 5, num_levels = 1, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      10.0              
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     113               
@@ -69,20 +70,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00613 NaN    0.00613 0.00613 1      
+SourceReader       0.00469 NaN    0.00469 0.00469 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+============ ==== ========
+task         sent received
+SourceReader      8.19 KB 
+============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44490             time_sec memory_mb counts
+calc_43274             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.02856  0.0       1     
-total SourceReader     0.00613  0.0       1     
+composite source model 0.01664  0.76562   1     
+total SourceReader     0.00469  0.0       1     
 ====================== ======== ========= ======

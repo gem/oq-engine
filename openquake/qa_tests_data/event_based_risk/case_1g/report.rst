@@ -2,9 +2,9 @@ event based hazard
 ==================
 
 ============== ===================
-checksum32     2,978,822,966      
-date           2019-10-23T16:26:23
-engine_version 3.8.0-git2e0d8e6795
+checksum32     2_978_822_966      
+date           2020-01-16T05:31:07
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
+pointsource_distance            None              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     24                
@@ -79,21 +80,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.02103 NaN    0.02103 0.02103 1      
+SourceReader       0.00484 NaN    0.00484 0.00484 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+============ ==== ========
+task         sent received
+SourceReader      2.4 KB  
+============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_44509             time_sec  memory_mb counts
+calc_43293             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.03016   0.0       1     
-total SourceReader     0.02103   0.0       1     
-reading exposure       5.658E-04 0.0       1     
+composite source model 0.01408   0.0       1     
+total SourceReader     0.00484   0.0       1     
+reading exposure       4.904E-04 0.0       1     
 ====================== ========= ========= ======

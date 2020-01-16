@@ -2,9 +2,9 @@ test for POE_TOO_BIG
 ====================
 
 ============== ===================
-checksum32     3,490,620,350      
-date           2019-10-23T16:26:01
-engine_version 3.8.0-git2e0d8e6795
+checksum32     3_490_620_350      
+date           2020-01-16T05:30:45
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 200, num_rlzs = 6
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      5.0                                                                                                                                                           
 width_of_mfd_bin                0.1                                                                                                                                                           
 area_source_discretization      15.0                                                                                                                                                          
+pointsource_distance            None                                                                                                                                                          
 ground_motion_correlation_model None                                                                                                                                                          
 minimum_intensity               {}                                                                                                                                                            
 random_seed                     23                                                                                                                                                            
@@ -69,7 +70,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      4.333E-04 2,308        2,308       
+0      0.01603   2_308        2_308       
 1      0.00641   624          624         
 ====== ========= ============ ============
 
@@ -78,11 +79,11 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-f1        0      C    2,308        0.00228   4.333E-04 2,308       
-p1        1      P    156          0.00184   0.00641   156         
-p2        1      P    156          1.080E-04 0.00641   156         
-p3        1      P    156          9.465E-05 0.00641   156         
-p4        1      P    156          8.965E-05 0.00641   156         
+f1        0      C    2_308        0.08848   0.01603   2_308       
+p1        1      P    156          0.00261   0.00641   156         
+p2        1      P    156          2.799E-04 0.00641   156         
+p3        1      P    156          2.413E-04 0.00641   156         
+p4        1      P    156          2.286E-04 0.00641   156         
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -90,34 +91,35 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    0.00228  
-P    0.00214  
+C    0.08848  
+P    0.00336  
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-SourceReader       0.08153 0.11001   0.00374 0.15932 2      
-preclassical       0.00248 9.121E-05 0.00241 0.00254 2      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+SourceReader       0.06006 0.07547 0.00669 0.11343 2      
+preclassical       2.37030 3.34546 0.00471 4.73590 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.43 KB ltmodel=406 B fname=224 B 14.35 KB
-preclassical srcs=5.42 KB params=4.61 KB gsims=960 B     817 B   
+SourceReader apply_unc=2.43 KB ltmodel=406 B fname=224 B 8.1 KB  
+preclassical srcs=5.48 KB params=5.1 KB gsims=960 B      865 B   
 ============ =========================================== ========
 
 Slowest operations
 ------------------
-====================== ========= ========= ======
-calc_44445             time_sec  memory_mb counts
-====================== ========= ========= ======
-composite source model 0.17198   0.0       1     
-total SourceReader     0.16306   0.0       2     
-total preclassical     0.00496   0.0       2     
-store source_info      0.00219   0.0       1     
-aggregate curves       4.520E-04 0.0       2     
-====================== ========= ========= ======
+=========================== ========= ========= ======
+calc_43228                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+total preclassical          4.74060   2.74609   2     
+splitting/filtering sources 4.64479   2.92578   2     
+composite source model      0.13495   0.0       1     
+total SourceReader          0.12012   0.25781   2     
+store source_info           0.00231   0.0       1     
+aggregate curves            4.227E-04 0.0       2     
+=========================== ========= ========= ======

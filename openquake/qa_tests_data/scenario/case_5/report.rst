@@ -2,9 +2,9 @@ Scenario QA Test with Spatial Correlation - Case 1
 ==================================================
 
 ============== ===================
-checksum32     1,970,708,270      
-date           2019-10-23T16:25:53
-engine_version 3.8.0-git2e0d8e6795
+checksum32     1_970_708_270      
+date           2020-01-16T05:30:40
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            1.0
 complex_fault_mesh_spacing      1.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     3                 
@@ -66,6 +67,6 @@ task sent received
 Slowest operations
 ------------------
 ========== ======== ========= ======
-calc_44415 time_sec memory_mb counts
+calc_43197 time_sec memory_mb counts
 ========== ======== ========= ======
 ========== ======== ========= ======
