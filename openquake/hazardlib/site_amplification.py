@@ -146,11 +146,10 @@ class Amplifier(object):
         """
         out = []
         for pcurve in pcurves:
-            L, G = pcurve.array.shape
             lst = []
             for imt in self.imtls:
                 slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc], G)
+                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
                 lst.append(new)
-            out.append(ProbabilityCurve(numpy.concatenate(lst).reshape(-1, G)))
+            out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
