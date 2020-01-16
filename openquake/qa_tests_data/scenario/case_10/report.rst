@@ -2,9 +2,9 @@ Hazard France Reduced
 =====================
 
 ============== ===================
-checksum32     3,844,410,873      
-date           2019-10-23T16:25:53
-engine_version 3.8.0-git2e0d8e6795
+checksum32     3_844_410_873      
+date           2020-01-16T05:30:40
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 66, num_levels = 0, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            None
 complex_fault_mesh_spacing      None      
 width_of_mfd_bin                None      
 area_source_discretization      None      
+pointsource_distance            None      
 ground_motion_correlation_model None      
 minimum_intensity               {}        
 random_seed                     42        
@@ -84,7 +85,7 @@ CR/LWAL+CDH/HBET:3-5    1.00000 0.0     1   1   2         2
 MUR+ST/LWAL+CDN/H:2     1.00000 NaN     1   1   1         1         
 CR/LFINF+CDH/H:1        1.00000 NaN     1   1   1         1         
 CR/LFINF+CDH/H:2        1.00000 NaN     1   1   1         1         
-*ALL*                   0.00964 0.09774 0   1   6,843     66        
+*ALL*                   0.00964 0.09774 0   1   6_843     66        
 ======================= ======= ======= === === ========= ==========
 
 Information about the tasks
@@ -100,7 +101,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ======== ========= ======
-calc_44417       time_sec memory_mb counts
+calc_43199       time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.01569  0.0       1     
+reading exposure 0.01321  0.0       1     
 ================ ======== ========= ======

@@ -2,9 +2,9 @@ Subduction backbone logic tree - 9 branch
 =========================================
 
 ============== ===================
-checksum32     4,289,257,090      
-date           2019-10-23T16:26:31
-engine_version 3.8.0-git2e0d8e6795
+checksum32     4_289_257_090      
+date           2020-01-16T05:31:12
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 2, num_levels = 8, num_rlzs = 9
@@ -22,6 +22,7 @@ rupture_mesh_spacing            1.0
 complex_fault_mesh_spacing      10.0               
 width_of_mfd_bin                0.05               
 area_source_discretization      1.0                
+pointsource_distance            None               
 ground_motion_correlation_model None               
 minimum_intensity               {}                 
 random_seed                     23                 
@@ -75,7 +76,7 @@ Slowest sources
 ============ ====== ==== ============ ========= ========= ============
 source_id    grp_id code num_ruptures calc_time num_sites eff_ruptures
 ============ ====== ==== ============ ========= ========= ============
-PEERS3C3_TOR 0      X    1            0.00128   2.00000   1.00000     
+PEERS3C3_TOR 0      X    1            0.00172   2.00000   1.00000     
 ============ ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -83,32 +84,34 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-X    0.00128  
+X    0.00172  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.06507 NaN    0.06507 0.06507 1      
-preclassical       0.00154 NaN    0.00154 0.00154 1      
+SourceReader       0.02935 NaN    0.02935 0.02935 1      
+preclassical       0.00243 NaN    0.00243 0.00243 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ======================================= ========
 task         sent                                    received
-preclassical srcs=5.26 KB gsims=1.09 KB params=599 B 342 B   
+SourceReader                                         7.5 KB  
+preclassical srcs=5.27 KB gsims=1.36 KB params=703 B 366 B   
 ============ ======================================= ========
 
 Slowest operations
 ------------------
-====================== ========= ========= ======
-calc_44518             time_sec  memory_mb counts
-====================== ========= ========= ======
-composite source model 0.08878   0.0       1     
-total SourceReader     0.06507   0.0       1     
-store source_info      0.00215   0.0       1     
-total preclassical     0.00154   0.0       1     
-aggregate curves       2.222E-04 0.0       1     
-====================== ========= ========= ======
+=========================== ========= ========= ======
+calc_43302                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+composite source model      0.03943   0.0       1     
+total SourceReader          0.02935   0.0       1     
+store source_info           0.00280   0.0       1     
+total preclassical          0.00243   0.0       1     
+splitting/filtering sources 1.693E-04 0.0       1     
+aggregate curves            1.483E-04 0.0       1     
+=========================== ========= ========= ======

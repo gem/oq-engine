@@ -2,9 +2,9 @@ Event Based PSHA
 ================
 
 ============== ===================
-checksum32     269,549,222        
-date           2019-10-23T16:26:11
-engine_version 3.8.0-git2e0d8e6795
+checksum32     269_549_222        
+date           2020-01-16T05:30:59
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      5.0               
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -66,20 +67,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.04644 NaN    0.04644 0.04644 1      
+SourceReader       0.02382 NaN    0.02382 0.02382 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+============ ==== ========
+task         sent received
+SourceReader      28.93 KB
+============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44481             time_sec memory_mb counts
+calc_43265             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.25397  0.0       1     
-total SourceReader     0.04644  0.0       1     
+composite source model 0.12292  1.02734   1     
+total SourceReader     0.02382  0.0       1     
 ====================== ======== ========= ======

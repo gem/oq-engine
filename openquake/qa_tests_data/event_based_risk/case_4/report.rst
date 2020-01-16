@@ -2,9 +2,9 @@ Event Based Risk for Turkey reduced
 ===================================
 
 ============== ===================
-checksum32     3,898,885,399      
-date           2019-10-23T16:26:21
-engine_version 3.8.0-git2e0d8e6795
+checksum32     3_359_983_435      
+date           2020-01-16T05:31:05
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 13, num_levels = 91, num_rlzs = 8
@@ -22,6 +22,7 @@ rupture_mesh_spacing            4.0
 complex_fault_mesh_spacing      4.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      20.0              
+pointsource_distance            {'default': 0}    
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     323               
@@ -75,7 +76,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      2.10000   2,982        10          
+0      2.10000   2_982        10          
 1      0.50000   108          2.00000     
 2      NaN       9            0.0         
 ====== ========= ============ ============
@@ -110,12 +111,12 @@ Slowest sources
 ============ ====== ==== ============ ========= ========= ============
 source_id    grp_id code num_ruptures calc_time num_sites eff_ruptures
 ============ ====== ==== ============ ========= ========= ============
-AS_TRAS334   0      A    760          0.06095   3.00000   2.00000     
-AS_TRAS346   0      A    527          0.04044   2.50000   2.00000     
-AS_TRAS458   0      A    399          0.03084   1.00000   2.00000     
-AS_TRAS395   0      A    432          0.01521   1.50000   2.00000     
-AS_TRAS360   0      A    624          0.01138   1.50000   2.00000     
-FSBG_TRBG989 1      A    108          0.00483   0.50000   2.00000     
+AS_TRAS334   0      A    760          0.02219   3.00000   2.00000     
+AS_TRAS346   0      A    527          0.02094   2.50000   2.00000     
+AS_TRAS458   0      A    399          0.01913   1.00000   2.00000     
+AS_TRAS360   0      A    624          0.01685   1.50000   2.00000     
+AS_TRAS395   0      A    432          0.01305   1.50000   2.00000     
+FSBG_TRBG989 1      A    108          0.00553   0.50000   2.00000     
 ============ ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -123,7 +124,7 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.16704  
+A    0.10504  
 P    0.0      
 ==== =========
 
@@ -131,37 +132,36 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.02896 0.04385 0.00117 0.07951 3      
-compute_gmfs       0.03486 0.01350 0.01405 0.05707 29     
-sample_ruptures    0.02287 0.02185 0.00149 0.06415 8      
+SourceReader       0.03028 0.03928 0.00284 0.07528 3      
+compute_gmfs       0.03619 0.01129 0.01421 0.05358 12     
+sample_ruptures    0.01680 0.00868 0.00311 0.02689 8      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-=============== ==================================================== =========
-task            sent                                                 received 
-SourceReader    apply_unc=4.68 KB ltmodel=610 B fname=353 B          23.65 KB 
-sample_ruptures param=56.72 KB sources=17.1 KB srcfilter=1.74 KB     9.92 KB  
-compute_gmfs    param=208.98 KB rupgetter=52.96 KB srcfilter=6.32 KB 199.17 KB
-=============== ==================================================== =========
+=============== ================================================= =========
+task            sent                                              received 
+SourceReader    apply_unc=4.68 KB ltmodel=610 B fname=353 B       16.02 KB 
+sample_ruptures param=56.41 KB sources=17.23 KB srcfilter=1.74 KB 9.92 KB  
+compute_gmfs    param=86 KB rupgetter=26.97 KB srcfilter=2.61 KB  110.79 KB
+=============== ================================================= =========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_44502               time_sec memory_mb counts
+calc_43286               time_sec memory_mb counts
 ======================== ======== ========= ======
-total compute_gmfs       1.01101  1.10156   29    
-EventBasedCalculator.run 0.93622  0.0       1     
-building hazard          0.57146  0.27734   29    
-getting ruptures         0.18582  1.10156   29    
-total sample_ruptures    0.18296  0.28516   8     
-building hazard curves   0.17351  0.0       236   
-composite source model   0.09645  0.0       1     
-total SourceReader       0.08688  0.15234   3     
-saving events            0.08576  0.0       1     
-saving ruptures          0.02776  0.0       6     
-aggregating hcurves      0.00978  0.0       29    
-saving gmfs              0.00580  0.0       29    
-store source_info        0.00258  0.0       1     
-reading exposure         0.00193  0.0       1     
+EventBasedCalculator.run 0.72986  1.53125   1     
+total compute_gmfs       0.43431  1.58984   12    
+total sample_ruptures    0.13440  0.53516   8     
+composite source model   0.09922  0.0       1     
+total SourceReader       0.09085  0.0       3     
+saving events            0.07637  0.0       1     
+getting ruptures         0.03605  0.0       29    
+building hazard curves   0.01910  0.0       132   
+saving ruptures          0.01141  0.0       6     
+aggregating hcurves      0.00415  0.0       12    
+store source_info        0.00238  0.0       1     
+reading exposure         0.00179  0.0       1     
+saving gmfs              0.00151  0.0       12    
 ======================== ======== ========= ======

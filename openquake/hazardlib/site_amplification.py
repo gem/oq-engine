@@ -75,7 +75,8 @@ class Amplifier(object):
     """
     :param imtls: intensity measure types and levels DictArray M x I
     :param ampl_funcs: an ArrayWrapper containing amplification functions
-    :param amplevels: levels used for the amplified curves
+    :param vs30: an array of vs30 values, one per site
+    :param amplevels: A levels used for the amplified curves
     :attr periods: array of M periods
     :attr midlevels: array of I-1 levels
     :attr alpha: dict code, imt-> I-1 amplification coefficients
@@ -86,6 +87,7 @@ class Amplifier(object):
         self.periods, levels = check_same_levels(imtls)
         self.amplevels = levels if amplevels is None else amplevels
         self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
+        self.vs30_ref = ampl_funcs.vs30_ref
         imls = ampl_funcs.imls
         imts = [from_string(imt) for imt in ampl_funcs.dtype.names[2:]
                 if not imt.startswith('sigma_')]
@@ -115,23 +117,37 @@ class Amplifier(object):
                         pass
                     idx += 1
 
+    def check(self, vs30, vs30_tolerance):
+        """
+        Raise a ValueError if some vs30 is different from vs30_ref
+        within the tolerance. Called by the engine.
+        """
+        if (numpy.abs(vs30 - self.vs30_ref) > vs30_tolerance).any():
+            raise ValueError('Some vs30 in the site collection is different '
+                             'from vs30_ref=%d over the tolerance of %d' %
+                             (self.vs30_ref, vs30_tolerance))
+
     def amplify_one(self, ampl_code, imt, poes):
         """
-        :param ampl_code: 2-letter code for the amplification function
+        :param ampl_code: code for the amplification function
         :param imt: an intensity measure type
-        :param poes: the original PoEs
-        :returns: the amplified PoEs
+        :param poes: the original PoEs as an array of shape (I, G)
+        :returns: the amplified PoEs as an array of shape (A, G)
         """
+        if isinstance(poes, list):  # in the tests
+            poes = numpy.array(poes).reshape(-1, 1)
         if ampl_code == b'' and len(self.ampcodes) == 1:
             # manage the case of a site collection with empty ampcode
             ampl_code = self.ampcodes[0]
         stored_imt = self.imtdict[imt]
-        alphas = self.alpha[ampl_code, stored_imt]
-        sigmas = self.sigma[ampl_code, stored_imt]
-        ampl_poes = numpy.zeros_like(self.amplevels)
-        for mid, prob, a, s in zip(
-                self.midlevels, -numpy.diff(poes), alphas, sigmas):
-            ampl_poes += (1. - norm_cdf(self.amplevels / mid, a, s)) * prob
+        alphas = self.alpha[ampl_code, stored_imt]  # array with I-1 elements
+        sigmas = self.sigma[ampl_code, stored_imt]  # array with I-1 elements
+        A, G = len(self.amplevels), poes.shape[1]
+        ampl_poes = numpy.zeros((A, G))
+        for g in range(G):
+            p_occ = -numpy.diff(poes[:, g])
+            for mid, p, a, s in zip(self.midlevels, p_occ, alphas, sigmas):
+                ampl_poes[:, g] += (1-norm_cdf(self.amplevels/mid, a, s)) * p
         return ampl_poes
 
     def amplify(self, ampl_code, pcurves):
@@ -145,7 +161,7 @@ class Amplifier(object):
             lst = []
             for imt in self.imtls:
                 slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc, 0])
+                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
                 lst.append(new)
-            out.append(ProbabilityCurve(numpy.concatenate(lst).reshape(-1, 1)))
+            out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out

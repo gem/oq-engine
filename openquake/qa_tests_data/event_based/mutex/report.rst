@@ -2,9 +2,9 @@ Event Based QA Test, Case 1
 ===========================
 
 ============== ===================
-checksum32     4,095,491,784      
-date           2019-10-23T16:26:16
-engine_version 3.8.0-git2e0d8e6795
+checksum32     4_095_491_784      
+date           2020-01-16T05:31:02
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 46, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                1.0               
 area_source_discretization      20.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -66,20 +67,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.86480 NaN    0.86480 0.86480 1      
+SourceReader       0.36695 NaN    0.36695 0.36695 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+============ ==== =========
+task         sent received 
+SourceReader      775.92 KB
+============ ==== =========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44496             time_sec memory_mb counts
+calc_43280             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.88286  6.68359   1     
-total SourceReader     0.86480  0.25391   1     
+composite source model 0.38048  2.88672   1     
+total SourceReader     0.36695  0.31250   1     
 ====================== ======== ========= ======

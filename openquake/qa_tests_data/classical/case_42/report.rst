@@ -2,9 +2,9 @@ SAM int July 2019 A15, 300km
 ============================
 
 ============== ===================
-checksum32     3,450,566,160      
-date           2019-10-23T16:26:38
-engine_version 3.8.0-git2e0d8e6795
+checksum32     3_450_566_160      
+date           2020-01-16T05:31:17
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 15, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            20.0
 complex_fault_mesh_spacing      50.0               
 width_of_mfd_bin                0.2                
 area_source_discretization      None               
+pointsource_distance            None               
 ground_motion_correlation_model None               
 minimum_intensity               {}                 
 random_seed                     23                 
@@ -67,7 +68,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      5.698E-04 1,755        1,755       
+0      0.02108   1_755        1_755       
 ====== ========= ============ ============
 
 Slowest sources
@@ -75,7 +76,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-int_2     0      C    1,755        0.01377   5.698E-04 1,755       
+int_2     0      C    1_755        0.03678   0.02108   1_755       
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -83,32 +84,34 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    0.01377  
+C    0.03678  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.61391 NaN    0.61391 0.61391 1      
-preclassical       0.01402 NaN    0.01402 0.01402 1      
+SourceReader       0.57106 NaN    0.57106 0.57106 1      
+preclassical       19      NaN    19      19      1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ========================================== ========
 task         sent                                       received
-preclassical srcs=34.47 KB params=657 B srcfilter=223 B 342 B   
+SourceReader                                            36.44 KB
+preclassical srcs=34.48 KB params=761 B srcfilter=223 B 366 B   
 ============ ========================================== ========
 
 Slowest operations
 ------------------
-====================== ========= ========= ======
-calc_44536             time_sec  memory_mb counts
-====================== ========= ========= ======
-composite source model 0.72110   0.0       1     
-total SourceReader     0.61391   0.0       1     
-total preclassical     0.01402   0.0       1     
-store source_info      0.00230   0.0       1     
-aggregate curves       2.258E-04 0.0       1     
-====================== ========= ========= ======
+=========================== ========= ========= ======
+calc_43320                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+total preclassical          19        5.09766   1     
+splitting/filtering sources 19        7.09766   1     
+composite source model      0.58301   0.00781   1     
+total SourceReader          0.57106   0.00781   1     
+store source_info           0.00232   0.0       1     
+aggregate curves            3.660E-04 0.0       1     
+=========================== ========= ========= ======
