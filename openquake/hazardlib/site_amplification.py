@@ -115,20 +115,22 @@ class Amplifier(object):
                         pass
                     idx += 1
 
-    def amplify_one(self, ampl_code, imt, poes):
+    def amplify_one(self, ampl_code, imt, poes, G=1):
         """
         :param ampl_code: code for the amplification function
         :param imt: an intensity measure type
         :param poes: the original PoEs as an array of shape (I, G)
         :returns: the amplified PoEs as an array of shape (A, G)
         """
+        if isinstance(poes, list):  # in the tests
+            poes = numpy.array(poes).reshape(-1, G)
         if ampl_code == b'' and len(self.ampcodes) == 1:
             # manage the case of a site collection with empty ampcode
             ampl_code = self.ampcodes[0]
         stored_imt = self.imtdict[imt]
         alphas = self.alpha[ampl_code, stored_imt]  # array with I-1 elements
         sigmas = self.sigma[ampl_code, stored_imt]  # array with I-1 elements
-        A, G = len(self.amplevels), poes.shape[1]
+        A = len(self.amplevels)
         ampl_poes = numpy.zeros((A, G))
         for g in range(G):
             p_occ = -numpy.diff(poes[:, g])
@@ -148,7 +150,7 @@ class Amplifier(object):
             lst = []
             for imt in self.imtls:
                 slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
+                new = self.amplify_one(ampl_code, imt, pcurve.array[slc], G)
                 lst.append(new)
             out.append(ProbabilityCurve(numpy.concatenate(lst).reshape(-1, G)))
         return out
