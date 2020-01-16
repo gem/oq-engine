@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============== ===================
-checksum32     687,330,760        
-date           2019-10-23T16:26:22
-engine_version 3.8.0-git2e0d8e6795
+checksum32     687_330_760        
+date           2020-01-16T05:31:06
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     24                
@@ -94,7 +95,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-1         0      S    482          0.04756   3.50000   2.00000     
+1         0      S    482          0.04446   3.50000   2.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -102,34 +103,36 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.04756  
+S    0.04446  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00474 NaN    0.00474 0.00474 1      
-sample_ruptures    0.07896 NaN    0.07896 0.07896 1      
+SourceReader       0.00491 NaN    0.00491 0.00491 1      
+sample_ruptures    0.09132 NaN    0.09132 0.09132 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+=============== ==== ========
+task            sent received
+SourceReader         2.4 KB  
+sample_ruptures      69.7 KB 
+=============== ==== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_44503               time_sec  memory_mb counts
+calc_43287               time_sec  memory_mb counts
 ======================== ========= ========= ======
-EventBasedCalculator.run 0.16160   0.0       1     
-total sample_ruptures    0.07896   0.0       1     
-saving events            0.02446   0.0       1     
-composite source model   0.01458   0.0       1     
-total SourceReader       0.00474   0.0       1     
-saving ruptures          0.00240   0.0       1     
-store source_info        0.00219   0.0       1     
-reading exposure         7.455E-04 0.0       1     
+EventBasedCalculator.run 0.17443   0.0       1     
+total sample_ruptures    0.09132   0.0       1     
+saving events            0.02687   0.0       1     
+composite source model   0.01452   0.0       1     
+total SourceReader       0.00491   0.0       1     
+saving ruptures          0.00220   0.0       1     
+store source_info        0.00200   0.0       1     
+reading exposure         5.925E-04 0.0       1     
 ======================== ========= ========= ======

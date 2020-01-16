@@ -2,9 +2,9 @@ Event Based QA Test, Case 13
 ============================
 
 ============== ===================
-checksum32     465,446,619        
-date           2019-10-23T16:26:15
-engine_version 3.8.0-git2e0d8e6795
+checksum32     465_446_619        
+date           2020-01-16T05:31:02
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                1.0               
 area_source_discretization      20.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -64,22 +65,23 @@ P    0.0
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-SourceReader       0.00103 NaN    0.00103 0.00103 1      
-================== ======= ====== ======= ======= =======
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+SourceReader       9.165E-04 NaN    9.165E-04 9.165E-04 1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+============ ==== ========
+task         sent received
+SourceReader      2.07 KB 
+============ ==== ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_44494             time_sec memory_mb counts
-====================== ======== ========= ======
-composite source model 0.01008  0.0       1     
-total SourceReader     0.00103  0.0       1     
-====================== ======== ========= ======
+====================== ========= ========= ======
+calc_43278             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.01000   0.0       1     
+total SourceReader     9.165E-04 0.0       1     
+====================== ========= ========= ======
