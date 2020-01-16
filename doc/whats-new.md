@@ -4,7 +4,7 @@ fixes. More than 275 pull requests were merged.
 For the complete list of changes, see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.8/debian/changelog
 
-* Major optimizations
+# Major optimizations
 
 Classical calculations dominated by point sources with nontrivial
 nodal plane / hypocenter distributions an using the
@@ -38,7 +38,7 @@ we managed to improve on that front too. Moreover, differently from
 engine 3.7, now the engine will try to submit all tasks upfront,
 unless the parameter `num_cores` is set in the `job.ini` file.
 
-* Other optimizations
+# Other optimizations
 
 We reduced the data transfer in classical and event based calculations
 by reading the site collection instead of transferring it, thus fixing
@@ -71,7 +71,7 @@ to become slower. This has been fixed and now the engine automatically
 regularize the nodal plane and hypocenter distributions, by printing
 a warning.
 
-* New features
+# New features
 
 We extended the framework to compute consequences from scenario
 damage calculations. Any kind of consequence can be
@@ -127,7 +127,7 @@ parameter:
   $ oq engine --run job.ini --exports csv --param export_dir=/my/output/dir
 ```
 
-* Work on hazardlib
+# Work on hazardlib
 
 G. Weatherill added a configurable nonergodic option to BC Hydro and
 SERA GMPEs. Moreover he revised the SERA BCHydro Epistemic GMPES,
@@ -159,7 +159,7 @@ bad idea performance-wise. Now we have added a check to forbid such
 instantiation. The right place where to instantiate the `CoeffsTable` is
 inside the `__init__` method of the GMPE.
 
-* Changes in the inputs
+# Changes in the inputs
 
 In the `job.ini` file we recommend to use the names `mean` and `quantiles`
 instead of old names `mean_hazard_curves` and `quantile_hazard_curves`. The old
@@ -189,7 +189,7 @@ simply imported and then ignored, without raising an exception.
 We added a check on acceptable input keys in `the job.ini` to protect against
 mispelling like `esposure_file` instead of `exposure_file`.
 
-* Changes in the outputs
+# Changes in the outputs
 
 We normalized the headers in the CSV files exported from the engine.
 In particular we renamed rlzi -> rlz_id, ordinal -> rlz_id, asset ->
@@ -225,7 +225,7 @@ computed from the asset loss table. We have also removed the outputs
 `agg_maps-rlzs` and `agg_maps-stats` that were only accidentally
 exported in engine 3.7.
 
-* Bug fixes and new checks
+# Bug fixes and new checks
 
 We fixed the ShakeMap download to support again ShakeMaps in zipped format,
 a regression accidentally introduced in engine 3.7.1.
@@ -287,7 +287,7 @@ stop people from trying to run impossibly large calculations. You will
 get an error if the number of sites times the number of events is larger
 than the parameter `max_potential_gmfs` which has a default value of 2E11.
 
-* WebUI and WebAPI
+# WebUI and WebAPI
 
 As usual, we worked on the WebAPI to better support the
 QGIS plugin; in particular it is now possible to extract a specific
@@ -312,7 +312,7 @@ ran by other users, if the calculation ID is known.
 
 Finally, Django has been upgraded to the version 2.2.
 
-* IT
+# IT
 
 The `zmq` mechanism, which has been in experimental stage
 for years, has finally been promoted to *production*: both of our clusters
