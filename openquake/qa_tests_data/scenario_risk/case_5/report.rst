@@ -2,9 +2,9 @@ Scenario Risk with site model
 =============================
 
 ============== ===================
-checksum32     3,193,187,389      
-date           2019-10-23T16:25:57
-engine_version 3.8.0-git2e0d8e6795
+checksum32     3_193_187_389      
+date           2020-01-16T05:30:42
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 8, num_levels = 106, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     42                
@@ -70,7 +71,7 @@ EMCA_PRIM_2L 1.00000 0.0     1   1   3         3
 EMCA_PRIM_4L 1.00000 NaN     1   1   1         1         
 concrete_spl 1.00000 0.0     1   1   2         2         
 steel_spl    1.00000 0.0     1   1   3         3         
-*ALL*        0.03704 0.20995 0   2   243       9         
+*ALL*        0.03719 0.21037 0   2   242       9         
 ============ ======= ======= === === ========= ==========
 
 Information about the tasks
@@ -86,11 +87,11 @@ task sent received
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44426             time_sec memory_mb counts
+calc_43209             time_sec memory_mb counts
 ====================== ======== ========= ======
-ScenarioCalculator.run 0.36028  0.50391   1     
-building riskinputs    0.01462  0.0       1     
-saving gmfs            0.00581  0.33984   1     
-computing gmfs         0.00326  0.16406   1     
+ScenarioCalculator.run 0.14262  1.90625   1     
+saving gmfs            0.00502  0.0       1     
+computing gmfs         0.00299  0.03125   1     
 reading exposure       0.00282  0.0       1     
+building riskinputs    0.00199  0.0       1     
 ====================== ======== ========= ======

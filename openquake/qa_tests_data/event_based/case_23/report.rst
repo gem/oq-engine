@@ -2,9 +2,9 @@ Example EB Hazard. Infer region from exposure model
 ===================================================
 
 ============== ===================
-checksum32     1,469,780,630      
-date           2019-10-23T16:26:17
-engine_version 3.8.0-git2e0d8e6795
+checksum32     1_469_780_630      
+date           2020-01-16T05:31:02
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 93, num_levels = 0, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      5.0               
 width_of_mfd_bin                0.5               
 area_source_discretization      10.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -46,7 +47,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      NaN       23,314       0.0         
+0      NaN       23_314       0.0         
 ====== ========= ============ ============
 
 Exposure model
@@ -63,7 +64,7 @@ Adobe                      1.00000 0.0     1   1   29        29
 Stone-Masonry              1.00000 0.0     1   1   16        16        
 Unreinforced-Brick-Masonry 1.00000 0.0     1   1   27        27        
 Concrete                   1.00000 NaN     1   1   1         1         
-*ALL*                      0.03601 0.19229 0   2   2,666     96        
+*ALL*                      0.03601 0.19229 0   2   2_666     96        
 ========================== ======= ======= === === ========= ==========
 
 Slowest sources
@@ -85,21 +86,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       1.33519 NaN    1.33519 1.33519 1      
+SourceReader       0.94569 NaN    0.94569 0.94569 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+============ ==== ========
+task         sent received
+SourceReader      23.61 KB
+============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44500             time_sec memory_mb counts
+calc_43284             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 1.34992  0.0       1     
-total SourceReader     1.33519  0.0       1     
-reading exposure       0.01463  0.0       1     
+composite source model 0.95940  0.0       1     
+total SourceReader     0.94569  0.0       1     
+reading exposure       0.01314  0.0       1     
 ====================== ======== ========= ======

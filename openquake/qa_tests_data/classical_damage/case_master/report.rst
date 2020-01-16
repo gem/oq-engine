@@ -2,9 +2,9 @@ classical damage hazard
 =======================
 
 ============== ===================
-checksum32     3,129,914,875      
-date           2019-10-23T16:26:05
-engine_version 3.8.0-git2e0d8e6795
+checksum32     3_129_914_875      
+date           2020-01-16T05:30:56
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 7, num_levels = 79, num_rlzs = 8
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     24                
@@ -75,9 +76,9 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.01452   482          482         
+0      0.21784   482          482         
 1      1.75000   4            4.00000     
-2      0.01452   482          482         
+2      NaN       482          0.0         
 3      7.00000   1            1.00000     
 ====== ========= ============ ============
 
@@ -101,10 +102,9 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-1         0      S    482          0.00286   0.01452   482         
-2         1      S    4            0.00270   1.75000   4.00000     
-1         2      S    482          0.00253   0.01452   482         
-2         3      X    1            1.004E-04 7.00000   1.00000     
+1         0      S    482          0.02703   0.21784   482         
+2         1      S    4            0.00298   1.75000   4.00000     
+2         3      X    1            0.00209   7.00000   1.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -112,8 +112,8 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.00808  
-X    1.004E-04
+S    0.03002  
+X    0.00209  
 ==== =========
 
 Duplicated sources
@@ -122,29 +122,30 @@ Found 2 unique sources and 1 duplicate sources with multiplicity 2.0: ['1']
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-SourceReader       0.01390 0.00730   0.00874 0.01907 2      
-preclassical       0.00300 2.060E-04 0.00276 0.00314 3      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+SourceReader       0.02069 0.00739 0.01547 0.02591 2      
+preclassical       0.01715 0.01555 0.00615 0.02815 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.49 KB ltmodel=378 B fname=234 B 20.26 KB
-preclassical srcs=13.56 KB params=3.86 KB gsims=810 B    1.05 KB 
+SourceReader apply_unc=2.49 KB ltmodel=378 B fname=234 B 18.36 KB
+preclassical srcs=12.49 KB params=2.78 KB gsims=538 B    787 B   
 ============ =========================================== ========
 
 Slowest operations
 ------------------
-====================== ========= ========= ======
-calc_44463             time_sec  memory_mb counts
-====================== ========= ========= ======
-composite source model 0.04018   0.0       1     
-total SourceReader     0.02781   0.23828   2     
-total preclassical     0.00899   0.0       3     
-store source_info      0.00249   0.0       1     
-aggregate curves       7.682E-04 0.0       3     
-reading exposure       6.073E-04 0.0       1     
-====================== ========= ========= ======
+=========================== ========= ========= ======
+calc_43247                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+composite source model      0.04326   0.0       1     
+total SourceReader          0.04138   0.36328   2     
+total preclassical          0.03430   0.0       2     
+store source_info           0.00276   0.0       1     
+splitting/filtering sources 7.155E-04 0.0       2     
+reading exposure            6.180E-04 0.0       1     
+aggregate curves            5.937E-04 0.0       2     
+=========================== ========= ========= ======

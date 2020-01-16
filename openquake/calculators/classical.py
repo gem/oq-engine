@@ -28,7 +28,7 @@ from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
 from openquake.hazardlib.contexts import (
-    ContextMaker, Effect, get_effect_by_mag, ruptures_by_mag_dist)
+    ContextMaker, Effect, get_effect_by_mag)
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -174,6 +174,10 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, rup_data
         """
+        # NB: dic should be a dictionary, but when the calculation dies
+        # for an OOM it can become None, thus giving a very confusing error
+        if dic is None:
+            raise MemoryError('You ran out of memory!')
         if not dic['pmap']:
             return acc
         with self.monitor('aggregate curves'):
@@ -295,23 +299,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     eff.collapse_value)
         else:
             self.effect = {}
-        if oq.calculation_mode == 'preclassical' and self.N == 1:
-            smap = parallel.Starmap(ruptures_by_mag_dist)
-            for func, args in self.gen_task_queue():
-                smap.submit(args)
-            counts = smap.reduce()
-            ndists = oq.maximum_distance.get_dist_bins.__defaults__[0]
-            for mag, mag in enumerate(mags):
-                arr = numpy.zeros((ndists, len(gsims_by_trt)), U32)
-                for trti, trt in enumerate(gsims_by_trt):
-                    try:
-                        arr[:, trti] = counts[trt][mag]
-                    except KeyError:
-                        pass
-                self.datastore['rups_by_mag_dist/' + mag] = arr
-            self.datastore.set_attrs('rups_by_mag_dist', **dist_bins)
-            self.datastore['csm_info'] = self.csm_info
-            return {}
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)
@@ -343,8 +330,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     si[task_no] = srcids
                 self.by_task.clear()
         numrups = sum(arr[0] for arr in self.calc_times.values())
-        if self.totrups != numrups:
-            logging.info('Considered %d/%d ruptures', numrups, self.totrups)
+        numsites = sum(arr[1] for arr in self.calc_times.values())
+        logging.info('Effective number of ruptures: %d/%d',
+                     numrups, self.totrups)
+        logging.info('Effective number of sites per rupture: %d',
+                     numsites / numrups)
         self.calc_times.clear()  # save a bit of memory
         return acc
 
@@ -373,9 +363,7 @@ class ClassicalCalculator(base.HazardCalculator):
             shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
-        if oq.calculation_mode == 'preclassical' and self.N == 1:
-            f1 = f2 = ruptures_by_mag_dist
-        elif oq.calculation_mode == 'preclassical':
+        if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
         elif oq.split_by_magnitude:
             f1 = f2 = classical
@@ -485,6 +473,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if 'amplification' in oq.inputs:
             amplifier = Amplifier(oq.imtls, self.datastore['amplification'],
                                   oq.soil_intensities)
+            amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
         else:
             amplifier = None
         allargs = [  # this list is very fast to generate

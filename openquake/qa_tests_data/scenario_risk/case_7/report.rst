@@ -2,9 +2,9 @@ Scenario Risk Test
 ==================
 
 ============== ===================
-checksum32     4,057,024,737      
-date           2019-10-23T16:25:59
-engine_version 3.8.0-git2e0d8e6795
+checksum32     4_057_024_737      
+date           2020-01-16T05:30:43
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 27, num_levels = 8, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            None
 complex_fault_mesh_spacing      None           
 width_of_mfd_bin                None           
 area_source_discretization      None           
+pointsource_distance            None           
 ground_motion_correlation_model None           
 minimum_intensity               {}             
 random_seed                     42             
@@ -85,8 +86,8 @@ task sent received
 Slowest operations
 ------------------
 =================== ========= ========= ======
-calc_44437          time_sec  memory_mb counts
+calc_43220          time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.04310   0.0       1     
-reading exposure    6.800E-04 0.0       1     
+building riskinputs 0.00517   0.0       1     
+reading exposure    6.394E-04 0.0       1     
 =================== ========= ========= ======

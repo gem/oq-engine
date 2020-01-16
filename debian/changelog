@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an option `oq engine --param` to override the job.ini parameters
   * Internal: reduced the number of NGAEastUSGS classes from 39 to 1
   * Internal: reduced the number of NGAEast classes from 44 to 2
   * Internal: reduced the 15 NSHMP2014 classes to a single class
@@ -70,8 +71,6 @@
   * Renamed ordinal -> rlz_id in the realizations.csv output
 
   [Alberto Chiusole]
-  * Restored the `export_dir` to be relative to the current directory
-    and not to the input directory
   * Changed the way how the available number of CPU cores is computed
 
   [Kendra Johnson, Robin Gee]
@@ -155,7 +154,6 @@
   * Added a check on valid input keys in the job.ini
   * Fixed the check on dependent calculations
   * Specifying at the same time both a grid and individual sites is an error
->>>>>>> master
 
   [Daniele Viganò]
   * Docker containers rebased on CentOS 8
@@ -167,6 +165,22 @@
   * Added a check for no GMFs in event_based_risk
   * Avoided transferring the site collection
   * Storing the sources in TOML format
+
+python3-oq-engine (3.7.1-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed disaggregation with a parent calculation
+  * Fixed the case of implicit grid with a site model: sites could be
+    incorrectly discarded
+  * Fixed the ShakeMap downloader to find also unzipped `uncertaintly.xml`
+    files
+  * Fixed the rupture exporters to export the rupture ID and not the
+    rupture serial
+
+  [Marco Pagani]
+  * Fixed a bug in the GenericGmpeAvgSA
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 25 Oct 2019 08:05:41 +0000
 
 python3-oq-engine (3.7.0-1~xenial01) xenial; urgency=low
 
