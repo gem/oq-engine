@@ -75,7 +75,8 @@ class AmplifierTestCase(unittest.TestCase):
         fname = gettemp(trivial_ampl_func)
         aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
                               None: numpy.float64})
-        a = Amplifier(self.imtls, aw, self.vs30, self.soil_levels)
+        a = Amplifier(self.imtls, aw, self.soil_levels)
+        a.check(self.vs30, 0)
         numpy.testing.assert_allclose(
             a.midlevels, [0.0015, 0.0035, 0.0075, 0.015, 0.035, 0.075,
                           0.15, 0.35, 0.75, 1.1])
@@ -96,7 +97,8 @@ class AmplifierTestCase(unittest.TestCase):
         fname = gettemp(simple_ampl_func)
         aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
                               None: numpy.float64})
-        a = Amplifier(self.imtls, aw, self.vs30, self.soil_levels)
+        a = Amplifier(self.imtls, aw, self.soil_levels)
+        a.check(self.vs30, 1)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
             poes, [0.985002, 0.979997, 0.970004, 0.940069, 0.889961,
@@ -114,7 +116,7 @@ class AmplifierTestCase(unittest.TestCase):
         fname = gettemp(double_ampl_func)
         aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
                               None: numpy.float64})
-        a = Amplifier(self.imtls, aw, self.vs30)
+        a = Amplifier(self.imtls, aw)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
             poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
