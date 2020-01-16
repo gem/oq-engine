@@ -124,6 +124,8 @@ class Amplifier(object):
         """
         if isinstance(poes, list):  # in the tests
             poes = numpy.array(poes).reshape(-1, G)
+        else:
+            assert poes.shape[1] == G, (poes.shape[1], G)
         if ampl_code == b'' and len(self.ampcodes) == 1:
             # manage the case of a site collection with empty ampcode
             ampl_code = self.ampcodes[0]
