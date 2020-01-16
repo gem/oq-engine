@@ -2,9 +2,9 @@ Scenario QA Test, Case 3
 ========================
 
 ============== ===================
-checksum32     785,876,355        
-date           2019-10-23T16:25:55
-engine_version 3.8.0-git2e0d8e6795
+checksum32     785_876_355        
+date           2020-01-16T05:30:41
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 3, num_levels = 2, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            1.0
 complex_fault_mesh_spacing      1.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     3                 
@@ -66,6 +67,6 @@ task sent received
 Slowest operations
 ------------------
 ========== ======== ========= ======
-calc_44422 time_sec memory_mb counts
+calc_43205 time_sec memory_mb counts
 ========== ======== ========= ======
 ========== ======== ========= ======

@@ -2,9 +2,9 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
 ============== ===================
-checksum32     2,162,355,116      
-date           2019-10-23T16:26:11
-engine_version 3.8.0-git2e0d8e6795
+checksum32     2_162_355_116      
+date           2020-01-16T05:30:59
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      20.0              
+pointsource_distance            None              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     42                
@@ -66,20 +67,21 @@ Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =======
 operation-duration mean      stddev min       max       outputs
-SourceReader       9.241E-04 NaN    9.241E-04 9.241E-04 1      
+SourceReader       8.552E-04 NaN    8.552E-04 8.552E-04 1      
 ================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+============ ==== ========
+task         sent received
+SourceReader      2.08 KB 
+============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_44482             time_sec  memory_mb counts
+calc_43266             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.01045   0.0       1     
-total SourceReader     9.241E-04 0.0       1     
+composite source model 0.00966   0.0       1     
+total SourceReader     8.552E-04 0.0       1     
 ====================== ========= ========= ======

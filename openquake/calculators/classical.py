@@ -297,23 +297,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     eff.collapse_value)
         else:
             self.effect = {}
-        if oq.calculation_mode == 'preclassical' and self.N == 1:
-            smap = parallel.Starmap(ruptures_by_mag_dist)
-            for func, args in self.gen_task_queue():
-                smap.submit(args)
-            counts = smap.reduce()
-            ndists = oq.maximum_distance.get_dist_bins.__defaults__[0]
-            for mag, mag in enumerate(mags):
-                arr = numpy.zeros((ndists, len(gsims_by_trt)), U32)
-                for trti, trt in enumerate(gsims_by_trt):
-                    try:
-                        arr[:, trti] = counts[trt][mag]
-                    except KeyError:
-                        pass
-                self.datastore['rups_by_mag_dist/' + mag] = arr
-            self.datastore.set_attrs('rups_by_mag_dist', **dist_bins)
-            self.datastore['csm_info'] = self.csm_info
-            return {}
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)
@@ -378,9 +361,7 @@ class ClassicalCalculator(base.HazardCalculator):
             shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
-        if oq.calculation_mode == 'preclassical' and self.N == 1:
-            f1 = f2 = ruptures_by_mag_dist
-        elif oq.calculation_mode == 'preclassical':
+        if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
         elif oq.split_by_magnitude:
             f1 = f2 = classical

@@ -2,9 +2,9 @@ British Columbia With Vs30
 ==========================
 
 ============== ===================
-checksum32     226,163,923        
-date           2019-10-23T16:26:13
-engine_version 3.8.0-git2e0d8e6795
+checksum32     226_163_923        
+date           2020-01-16T05:31:00
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      10.0                                                                    
 width_of_mfd_bin                0.1                                                                     
 area_source_discretization      15.0                                                                    
+pointsource_distance            None                                                                    
 ground_motion_correlation_model None                                                                    
 minimum_intensity               {'SA(0.3)': 0.001, 'SA(0.6)': 0.001, 'SA(1.0)': 0.001, 'default': 0.001}
 random_seed                     24                                                                      
@@ -46,11 +47,11 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      NaN       8,778        0.0         
-1      NaN       15,618       0.0         
-2      NaN       8,778        0.0         
-3      NaN       8,778        0.0         
-4      NaN       15,618       0.0         
+0      NaN       8_778        0.0         
+1      NaN       15_618       0.0         
+2      NaN       8_778        0.0         
+3      NaN       8_778        0.0         
+4      NaN       15_618       0.0         
 ====== ========= ============ ============
 
 Exposure model
@@ -90,22 +91,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.09775 0.04013 0.06138 0.15518 5      
+SourceReader       0.05873 0.01272 0.04735 0.07553 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=8.64 KB ltmodel=985 B fname=570 B 23.52 KB
+SourceReader apply_unc=8.64 KB ltmodel=985 B fname=570 B 17.68 KB
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44489             time_sec memory_mb counts
+calc_43273             time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.48875  0.0       5     
-composite source model 0.17017  0.0       1     
-reading exposure       0.00173  0.0       1     
+total SourceReader     0.29364  0.28125   5     
+composite source model 0.10041  0.95312   1     
+reading exposure       0.00183  0.0       1     
 ====================== ======== ========= ======
