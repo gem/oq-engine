@@ -2,9 +2,9 @@ Ucerf test
 ==========
 
 ============== ===================
-checksum32     3,422,077,956      
-date           2019-10-23T16:26:03
-engine_version 3.8.0-git2e0d8e6795
+checksum32     3_422_077_956      
+date           2020-01-16T05:30:51
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 155, num_levels = 6, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            1.0
 complex_fault_mesh_spacing      1.0               
 width_of_mfd_bin                1.0               
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {'default': 0.1}  
 random_seed                     1066              
@@ -120,7 +121,7 @@ task sent received
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44456             time_sec memory_mb counts
+calc_43240             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.06563  0.0       1     
+composite source model 0.02864  0.0       1     
 ====================== ======== ========= ======

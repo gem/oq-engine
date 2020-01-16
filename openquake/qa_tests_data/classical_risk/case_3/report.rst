@@ -2,9 +2,9 @@ Classical PSHA - Loss fractions QA test
 =======================================
 
 ============== ===================
-checksum32     177,006,542        
-date           2019-10-23T16:25:46
-engine_version 3.8.0-git2e0d8e6795
+checksum32     177_006_542        
+date           2020-01-16T05:30:35
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 12, num_levels = 19, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      5.0               
 width_of_mfd_bin                0.2               
 area_source_discretization      10.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     23                
@@ -70,7 +71,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      3.56913   33,831       1,613       
+0      3.56913   33_831       1_613       
 ====== ========= ============ ============
 
 Exposure model
@@ -94,8 +95,8 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-232       0      A    1,612        2.66010   3.57072   1,612       
-225       0      A    520          0.16627   1.00000   1.00000     
+232       0      A    1_612        1.94330   3.57072   1_612       
+225       0      A    520          0.15081   1.00000   1.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -103,48 +104,50 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    2.82636  
+A    2.09411  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ====================== ======= ======= ======= ======= =======
 operation-duration     mean    stddev  min     max     outputs
-SourceReader           1.53942 NaN     1.53942 1.53942 1      
-build_hazard           0.00457 0.00215 0.00268 0.00924 12     
-classical_split_filter 1.46068 1.80554 0.18397 2.73739 2      
+SourceReader           0.98020 NaN     0.98020 0.98020 1      
+build_hazard           0.00631 0.00197 0.00292 0.00877 12     
+classical_split_filter 0.26262 0.51047 0.03246 2.00157 14     
 ====================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-====================== ============================================== ========
-task                   sent                                           received
-classical_split_filter srcs=28.28 KB params=9.42 KB srcfilter=3.05 KB 3.08 KB 
-build_hazard           pgetter=5.78 KB hstats=780 B N=60 B            5.07 KB 
-====================== ============================================== ========
+====================== =============================================== ========
+task                   sent                                            received
+SourceReader                                                           16.38 KB
+classical_split_filter srcs=28.52 KB params=10.84 KB srcfilter=3.05 KB 3.39 KB 
+build_hazard           pgetter=5.78 KB hstats=780 B N=60 B             4.89 KB 
+====================== =============================================== ========
 
 Slowest operations
 ------------------
 ============================ ========= ========= ======
-calc_44409                   time_sec  memory_mb counts
+calc_43191                   time_sec  memory_mb counts
 ============================ ========= ========= ======
-ClassicalCalculator.run      4.47232   0.0       1     
-total classical_split_filter 2.92135   0.58203   2     
-composite source model       1.55256   0.0       1     
-total SourceReader           1.53942   0.0       1     
-make_contexts                1.23631   0.0       1,846 
-computing mean_std           0.33969   0.0       1,613 
-get_poes                     0.21157   0.0       1,613 
-filtering/splitting sources  0.09191   0.31641   2     
-total build_hazard           0.05489   1.50391   12    
-composing pnes               0.05245   0.0       1,613 
-read PoEs                    0.05044   1.50391   12    
-building riskinputs          0.02600   0.12891   1     
-saving statistics            0.02340   0.0       12    
-store source_info            0.00219   0.0       1     
-saving probability maps      0.00148   0.0       1     
-compute stats                8.724E-04 0.0       9     
-reading exposure             5.271E-04 0.0       1     
-combine pmaps                4.835E-04 0.0       12    
-aggregate curves             4.590E-04 0.0       2     
+total classical_split_filter 3.67661   0.30469   14    
+ClassicalCalculator.run      3.14681   1.59766   1     
+splitting/filtering sources  1.57324   0.30469   14    
+composite source model       0.99300   1.08984   1     
+total SourceReader           0.98020   0.0       1     
+make_contexts                0.96601   0.0       1_846 
+iter_ruptures                0.66812   0.0       142   
+computing mean_std           0.23476   0.0       1_613 
+get_poes                     0.15729   0.0       1_613 
+total build_hazard           0.07570   1.13672   12    
+read PoEs                    0.06453   1.13672   12    
+composing pnes               0.03641   0.0       1_613 
+building riskinputs          0.02977   0.0       1     
+saving statistics            0.00595   0.0       12    
+store source_info            0.00244   0.0       1     
+saving probability maps      0.00190   0.0       1     
+compute stats                0.00144   0.0       9     
+combine pmaps                7.813E-04 0.0       12    
+reading exposure             4.954E-04 0.0       1     
+aggregate curves             4.478E-04 0.0       2     
 ============================ ========= ========= ======

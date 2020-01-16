@@ -2,9 +2,9 @@ Event Based Risk SJ
 ===================
 
 ============== ===================
-checksum32     2,863,568,899      
-date           2019-10-23T16:26:12
-engine_version 3.8.0-git2e0d8e6795
+checksum32     2_863_568_899      
+date           2020-01-16T05:31:00
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 61, num_levels = 1, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      5.0              
 width_of_mfd_bin                0.3              
 area_source_discretization      20.0             
+pointsource_distance            None             
 ground_motion_correlation_model 'JB2009'         
 minimum_intensity               {}               
 random_seed                     23               
@@ -67,20 +68,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.04165 NaN    0.04165 0.04165 1      
+SourceReader       0.00592 NaN    0.00592 0.00592 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+============ ==== ========
+task         sent received
+SourceReader      3.07 KB 
+============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44486             time_sec memory_mb counts
+calc_43270             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.06774  0.0       1     
-total SourceReader     0.04165  0.0       1     
+composite source model 0.01641  0.0       1     
+total SourceReader     0.00592  0.0       1     
 ====================== ======== ========= ======

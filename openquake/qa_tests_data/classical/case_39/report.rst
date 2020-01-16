@@ -2,9 +2,9 @@ Reduced USGS 1998 Hawaii model
 ==============================
 
 ============== ===================
-checksum32     1,744,669,526      
-date           2019-10-23T16:26:34
-engine_version 3.8.0-git2e0d8e6795
+checksum32     4_283_469_194      
+date           2020-01-16T05:31:14
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 80, num_rlzs = 8
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      10.0              
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
+pointsource_distance            {'default': 0}    
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     23                
@@ -69,8 +70,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      1.440E-04 6,945        6,945       
-1      0.00962   104          104         
+0      0.06667   6_945        6_945       
+1      0.11538   104          104         
 2      0.02222   45           45          
 ====== ========= ============ ============
 
@@ -79,9 +80,9 @@ Slowest sources
 ========== ====== ==== ============ ========= ========= ============
 source_id  grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========== ====== ==== ============ ========= ========= ============
-HLEKAOSFL  1      C    104          0.00267   0.00962   104         
-Deep_10014 2      P    45           0.00143   0.02222   45          
-HLE        0      A    6,945        0.00119   1.440E-04 6,945       
+HLE        0      A    6_945        0.04169   0.06667   6_945       
+HLEKAOSFL  1      C    104          0.00666   0.11538   104         
+Deep_10014 2      P    45           0.00229   0.02222   45          
 ========== ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -89,35 +90,36 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00119  
-C    0.00267  
-P    0.00143  
+A    0.04169  
+C    0.00666  
+P    0.00229  
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-SourceReader       0.05875 0.08093   0.00133 0.15131 3      
-preclassical       0.00204 7.864E-04 0.00148 0.00294 3      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+SourceReader       0.04968 0.05651 0.00273 0.11239 3      
+preclassical       0.19931 0.21323 0.00339 0.42642 3      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-============ =========================================== ========
-task         sent                                        received
-SourceReader apply_unc=4.15 KB ltmodel=813 B fname=362 B 12.19 KB
-preclassical srcs=5.15 KB params=4.11 KB gsims=1.87 KB   1 KB    
-============ =========================================== ========
+============ ============================================ ========
+task         sent                                         received
+SourceReader apply_unc=4.15 KB ltmodel=813 B fname=362 B  8.84 KB 
+preclassical params=113.42 KB srcfilter=20 KB srcs=5.2 KB 1.07 KB 
+============ ============================================ ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_44528             time_sec memory_mb counts
-====================== ======== ========= ======
-composite source model 0.17991  0.0       1     
-total SourceReader     0.17625  0.0       3     
-aggregate curves       0.00963  0.0       3     
-total preclassical     0.00611  0.0       3     
-store source_info      0.00224  0.0       1     
-====================== ======== ========= ======
+=========================== ========= ========= ======
+calc_43312                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+total preclassical          0.59793   0.51953   3     
+splitting/filtering sources 0.54082   0.0       3     
+total SourceReader          0.14903   0.0       3     
+composite source model      0.13521   0.0       1     
+store source_info           0.00242   0.0       1     
+aggregate curves            9.551E-04 0.0       3     
+=========================== ========= ========= ======

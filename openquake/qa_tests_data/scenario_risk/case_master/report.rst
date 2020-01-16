@@ -2,9 +2,9 @@ scenario risk
 =============
 
 ============== ===================
-checksum32     314,695,229        
-date           2019-10-23T16:25:58
-engine_version 3.8.0-git2e0d8e6795
+checksum32     314_695_229        
+date           2020-01-16T05:30:42
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 7, num_levels = 46, num_rlzs = 2
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     42                
@@ -91,11 +92,11 @@ task sent received
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_44432             time_sec  memory_mb counts
+calc_43215             time_sec  memory_mb counts
 ====================== ========= ========= ======
-ScenarioCalculator.run 0.12315   0.51172   1     
-building riskinputs    0.01348   0.0       1     
-computing gmfs         0.00997   0.0       1     
-saving gmfs            0.00795   0.0       1     
-reading exposure       6.962E-04 0.0       1     
+ScenarioCalculator.run 0.08411   0.25391   1     
+computing gmfs         0.00930   0.25391   1     
+saving gmfs            0.00717   0.0       1     
+building riskinputs    0.00178   0.0       1     
+reading exposure       5.763E-04 0.0       1     
 ====================== ========= ========= ======
