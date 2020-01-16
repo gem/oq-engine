@@ -2,9 +2,9 @@ Mutex sources for Nankai, Japan, case_27
 ========================================
 
 ============== ===================
-checksum32     3,403,305,238      
-date           2019-10-23T16:26:35
-engine_version 3.8.0-git2e0d8e6795
+checksum32     3_403_305_238      
+date           2020-01-16T05:31:16
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 6, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            1.0
 complex_fault_mesh_spacing      1.0               
 width_of_mfd_bin                1.0               
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     1066              
@@ -75,21 +76,21 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-case_01   0      N    1            0.00148   1.00000   1.00000     
-case_02   0      N    1            1.431E-04 1.00000   1.00000     
-case_14   0      N    2            1.428E-04 0.50000   2.00000     
-case_12   0      N    2            1.352E-04 0.50000   2.00000     
-case_13   0      N    2            1.333E-04 0.50000   2.00000     
-case_15   0      N    2            1.316E-04 0.50000   2.00000     
-case_03   0      N    1            1.223E-04 1.00000   1.00000     
-case_04   0      N    1            1.197E-04 1.00000   1.00000     
-case_06   0      N    1            1.128E-04 1.00000   1.00000     
-case_05   0      N    1            1.125E-04 1.00000   1.00000     
-case_08   0      N    1            1.106E-04 1.00000   1.00000     
-case_10   0      N    1            1.101E-04 1.00000   1.00000     
-case_09   0      N    1            1.094E-04 1.00000   1.00000     
-case_07   0      N    1            1.094E-04 1.00000   1.00000     
-case_11   0      N    1            1.061E-04 1.00000   1.00000     
+case_01   0      N    1            0.00289   1.00000   1.00000     
+case_02   0      N    1            3.140E-04 1.00000   1.00000     
+case_12   0      N    2            3.004E-04 0.50000   2.00000     
+case_13   0      N    2            2.940E-04 0.50000   2.00000     
+case_14   0      N    2            2.933E-04 0.50000   2.00000     
+case_15   0      N    2            2.899E-04 0.50000   2.00000     
+case_03   0      N    1            2.732E-04 1.00000   1.00000     
+case_04   0      N    1            2.673E-04 1.00000   1.00000     
+case_05   0      N    1            2.613E-04 1.00000   1.00000     
+case_10   0      N    1            2.592E-04 1.00000   1.00000     
+case_06   0      N    1            2.508E-04 1.00000   1.00000     
+case_08   0      N    1            2.449E-04 1.00000   1.00000     
+case_07   0      N    1            2.446E-04 1.00000   1.00000     
+case_09   0      N    1            2.365E-04 1.00000   1.00000     
+case_11   0      N    1            2.339E-04 1.00000   1.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -97,32 +98,34 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-N    0.00317  
+N    0.00665  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       1.43755 NaN    1.43755 1.43755 1      
-preclassical       0.00364 NaN    0.00364 0.00364 1      
+SourceReader       0.48143 NaN    0.48143 0.48143 1      
+preclassical       0.00845 NaN    0.00845 0.00845 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============ ======================================== ========
-task         sent                                     received
-preclassical srcs=2.4 MB params=575 B srcfilter=223 B 959 B   
-============ ======================================== ========
+============ ========================================= ========
+task         sent                                      received
+SourceReader                                           1.11 MB 
+preclassical srcs=1.11 MB params=679 B srcfilter=223 B 983 B   
+============ ========================================= ========
 
 Slowest operations
 ------------------
-====================== ========= ========= ======
-calc_44532             time_sec  memory_mb counts
-====================== ========= ========= ======
-composite source model 1.45887   7.00391   1     
-total SourceReader     1.43755   3.46094   1     
-store source_info      0.00420   1.28516   1     
-total preclassical     0.00364   0.51562   1     
-aggregate curves       2.444E-04 0.0       1     
-====================== ========= ========= ======
+=========================== ========= ========= ======
+calc_43316                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+composite source model      0.49536   3.01562   1     
+total SourceReader          0.48143   3.73828   1     
+total preclassical          0.00845   0.51562   1     
+store source_info           0.00265   0.0       1     
+splitting/filtering sources 4.468E-04 0.0       1     
+aggregate curves            2.456E-04 0.0       1     
+=========================== ========= ========= ======

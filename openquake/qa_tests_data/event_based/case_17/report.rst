@@ -2,9 +2,9 @@ Event Based Hazard QA Test, Case 17
 ===================================
 
 ============== ===================
-checksum32     1,693,427,193      
-date           2019-10-23T16:26:12
-engine_version 3.8.0-git2e0d8e6795
+checksum32     1_693_427_193      
+date           2020-01-16T05:31:00
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                1.0               
 area_source_discretization      20.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     106               
@@ -67,21 +68,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.00141 4.754E-04 0.00107 0.00175 2      
+SourceReader       0.00166 7.489E-04 0.00113 0.00219 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.29 KB ltmodel=378 B fname=216 B 6.05 KB 
+SourceReader apply_unc=2.29 KB ltmodel=378 B fname=216 B 4.55 KB 
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44487             time_sec memory_mb counts
+calc_43271             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.03497  0.0       1     
-total SourceReader     0.00282  0.0       2     
+composite source model 0.02533  0.0       1     
+total SourceReader     0.00332  0.0       2     
 ====================== ======== ========= ======

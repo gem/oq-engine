@@ -183,7 +183,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 @base.calculators.add('event_based_damage')
 class EventBasedDamageCalculator(ScenarioDamageCalculator):
     """
-    Event Based Damage calculator, able to compute dmg_by_asset
+    Event Based Damage calculator, able to compute dmg_by_asset, dmg_by_event
+    and consequences.
     """
     core_task = scenario_damage
     precalc = 'event_based'

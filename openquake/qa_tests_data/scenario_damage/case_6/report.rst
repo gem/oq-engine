@@ -2,9 +2,9 @@ oq-test03, depth=15km
 =====================
 
 ============== ===================
-checksum32     1,635,481,027      
-date           2019-10-23T16:26:01
-engine_version 3.8.0-git2e0d8e6795
+checksum32     1_635_481_027      
+date           2020-01-16T05:30:50
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 40, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            0.1
 complex_fault_mesh_spacing      0.1               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     3                 
@@ -85,7 +86,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ========= ========= ======
-calc_44447       time_sec  memory_mb counts
+calc_43230       time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.878E-04 0.0       1     
+reading exposure 5.133E-04 0.0       1     
 ================ ========= ========= ======

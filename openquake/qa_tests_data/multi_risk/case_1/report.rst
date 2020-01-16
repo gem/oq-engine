@@ -2,9 +2,9 @@ Volcano example
 ===============
 
 ============== ===================
-checksum32     3,488,609,606      
-date           2019-10-23T16:25:56
-engine_version 3.8.0-git2e0d8e6795
+checksum32     3_488_609_606      
+date           2020-01-16T05:30:42
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 173, num_levels = 45, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            None
 complex_fault_mesh_spacing      None        
 width_of_mfd_bin                None        
 area_source_discretization      None        
+pointsource_distance            None        
 ground_motion_correlation_model None        
 minimum_intensity               {}          
 random_seed                     42          
@@ -89,7 +90,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ======== ========= ======
-calc_44424       time_sec memory_mb counts
+calc_43207       time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00304  0.0       1     
+reading exposure 0.00261  0.0       1     
 ================ ======== ========= ======

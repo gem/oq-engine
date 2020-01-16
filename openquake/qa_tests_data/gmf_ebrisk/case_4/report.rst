@@ -2,9 +2,9 @@ event based two source models
 =============================
 
 ============== ===================
-checksum32     1,291,658,938      
-date           2019-10-23T16:25:52
-engine_version 3.8.0-git2e0d8e6795
+checksum32     1_291_658_938      
+date           2020-01-16T05:30:40
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 11, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
+pointsource_distance            None              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     24                
@@ -88,22 +89,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.01242 0.00602 0.00816 0.01668 2      
+SourceReader       0.01511 0.01110 0.00726 0.02295 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ ========================================== ========
 task         sent                                       received
-SourceReader apply_unc=2.4 KB ltmodel=378 B fname=212 B 20.24 KB
+SourceReader apply_unc=2.4 KB ltmodel=378 B fname=212 B 18.33 KB
 ============ ========================================== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_44411             time_sec  memory_mb counts
+calc_43193             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.02833   0.0       1     
-total SourceReader     0.02484   0.43359   2     
-reading exposure       5.648E-04 0.0       1     
+composite source model 0.04023   0.0       1     
+total SourceReader     0.03021   0.0       2     
+reading exposure       6.764E-04 0.0       1     
 ====================== ========= ========= ======

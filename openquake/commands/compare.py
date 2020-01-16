@@ -50,7 +50,7 @@ def getdata(what, calc_ids, samplesites):
     return sids, imtls, poes, numpy.array(arrays)  # shape (C, N, L)
 
 
-def get_diff_idxs(array, rtol, atol):
+def get_diff_idxs(array, rtol, atol, threshold):
     """
     Given an array with (C, N, L) values, being the first the reference value,
     compute the relative differences and discard the one below the tolerance.
@@ -58,15 +58,18 @@ def get_diff_idxs(array, rtol, atol):
     """
     C, N, L = array.shape
     diff_idxs = set()  # indices of the sites with differences
-    for c in range(1, C):
-        for n in range(N):
+    for n in range(N):
+        if (array[:, n, 0] < threshold).all():
+            continue
+        for c in range(1, C):
             if not numpy.allclose(array[c, n], array[0, n], rtol, atol):
                 diff_idxs.add(n)
     return numpy.fromiter(diff_idxs, int)
 
 
 @sap.script
-def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-2):
+def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-3,
+            threshold=1E-2):
     """
     Compare the hazard curves or maps of two or more calculations
     """
@@ -85,10 +88,11 @@ def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-2):
         array_imt = arrays[:, :, imt2idx[imt]]
         header = head + [str(poe) for poe in poes]
     rows = collections.defaultdict(list)
-    diff_idxs = get_diff_idxs(array_imt, rtol, atol)
+    diff_idxs = get_diff_idxs(array_imt, rtol, atol, threshold)
     if len(diff_idxs) == 0:
         print('There are no differences within the tolerances '
-              'atol=%s, rtol=%d%%' % (atol, rtol * 100))
+              'atol=%s, rtol=%d%%, threshold=%s, samplesites=%d' %
+              (atol, rtol * 100, threshold, samplesites))
         return
     arr = array_imt.transpose(1, 0, 2)  # shape (N, C, L)
     for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
@@ -114,3 +118,4 @@ compare.flg('files', 'write the results in multiple files')
 compare.opt('samplesites', 'number of sites to sample', type=int)
 compare.opt('rtol', 'relative tolerance', type=float)
 compare.opt('atol', 'absolute tolerance', type=float)
+compare.opt('threshold', 'ignore the hazard curves below it', type=float)
