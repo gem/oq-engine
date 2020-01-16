@@ -2,9 +2,9 @@ Scenario Calculation with Simple Fault Rupture
 ==============================================
 
 ============== ===================
-checksum32     1,923,070,683      
-date           2019-10-23T16:25:56
-engine_version 3.8.0-git2e0d8e6795
+checksum32     1_923_070_683      
+date           2020-01-16T05:30:42
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = 2
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -67,6 +68,6 @@ task sent received
 Slowest operations
 ------------------
 ========== ======== ========= ======
-calc_44425 time_sec memory_mb counts
+calc_43208 time_sec memory_mb counts
 ========== ======== ========= ======
 ========== ======== ========= ======

@@ -2,9 +2,9 @@ Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 =====================================================================
 
 ============== ===================
-checksum32     1,038,141,016      
-date           2019-10-23T16:26:11
-engine_version 3.8.0-git2e0d8e6795
+checksum32     1_038_141_016      
+date           2020-01-16T05:30:59
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      20.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -64,22 +65,23 @@ P    0.0
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-SourceReader       0.00113 NaN    0.00113 0.00113 1      
-================== ======= ====== ======= ======= =======
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+SourceReader       9.608E-04 NaN    9.608E-04 9.608E-04 1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-==== ==== ========
-task sent received
-==== ==== ========
+============ ==== ========
+task         sent received
+SourceReader      2.08 KB 
+============ ==== ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_44483             time_sec memory_mb counts
-====================== ======== ========= ======
-composite source model 0.01011  0.0       1     
-total SourceReader     0.00113  0.0       1     
-====================== ======== ========= ======
+====================== ========= ========= ======
+calc_43267             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.01030   0.0       1     
+total SourceReader     9.608E-04 0.0       1     
+====================== ========= ========= ======

@@ -2,9 +2,9 @@ scenario hazard
 ===============
 
 ============== ===================
-checksum32     2,482,429,138      
-date           2019-10-23T16:26:03
-engine_version 3.8.0-git2e0d8e6795
+checksum32     2_482_429_138      
+date           2020-01-16T05:30:51
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 2
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     42                
@@ -83,7 +84,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ========= ========= ======
-calc_44453       time_sec  memory_mb counts
+calc_43237       time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 6.912E-04 0.0       1     
+reading exposure 5.813E-04 0.0       1     
 ================ ========= ========= ======

@@ -2,9 +2,9 @@ Test the use of the `shift_hypo` option
 =======================================
 
 ============== ===================
-checksum32     865,288,112        
-date           2019-10-23T16:26:39
-engine_version 3.8.0-git2e0d8e6795
+checksum32     865_288_112        
+date           2020-01-16T05:31:37
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 20, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.2               
 area_source_discretization      10.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     23                
@@ -49,11 +50,11 @@ b1        1.00000 trivial(1)      1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================ ========== ========== ==========
-grp_id gsims            distances  siteparams ruptparams
-====== ================ ========== ========== ==========
-0      '[Atkinson2015]' rhypo rrup            mag       
-====== ================ ========== ========== ==========
+====== ================ ========= ========== ==========
+grp_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+0      '[Atkinson2015]' rhypo                mag       
+====== ================ ========= ========== ==========
 
 Realizations per (GRP, GSIM)
 ----------------------------
@@ -67,7 +68,7 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.00500   200          200         
+0      0.02000   200          200         
 ====== ========= ============ ============
 
 Slowest sources
@@ -75,7 +76,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-1         0      A    200          0.00115   0.00500   200         
+1         0      A    200          0.00183   0.02000   200         
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -83,32 +84,34 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00115  
+A    0.00183  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00282 NaN    0.00282 0.00282 1      
-preclassical       0.00141 NaN    0.00141 0.00141 1      
+SourceReader       0.00323 NaN    0.00323 0.00323 1      
+preclassical       0.00409 NaN    0.00409 0.00409 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============ ========================================= ========
-task         sent                                      received
-preclassical srcs=1.99 KB params=697 B srcfilter=223 B 342 B   
-============ ========================================= ========
+============ ====================================== ========
+task         sent                                   received
+SourceReader                                        2.95 KB 
+preclassical srcs=2 KB params=801 B srcfilter=223 B 366 B   
+============ ====================================== ========
 
 Slowest operations
 ------------------
-====================== ========= ========= ======
-calc_44538             time_sec  memory_mb counts
-====================== ========= ========= ======
-composite source model 0.02814   0.0       1     
-store source_info      0.01320   0.0       1     
-total SourceReader     0.00282   0.0       1     
-total preclassical     0.00141   0.0       1     
-aggregate curves       2.224E-04 0.0       1     
-====================== ========= ========= ======
+=========================== ========= ========= ======
+calc_43322                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+composite source model      0.01435   0.0       1     
+total preclassical          0.00409   0.0       1     
+total SourceReader          0.00323   0.0       1     
+store source_info           0.00256   0.0       1     
+splitting/filtering sources 0.00175   0.0       1     
+aggregate curves            3.781E-04 0.0       1     
+=========================== ========= ========= ======

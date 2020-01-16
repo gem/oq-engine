@@ -2,9 +2,9 @@ Scenario Damage
 ===============
 
 ============== ===================
-checksum32     711,595,636        
-date           2019-10-23T16:26:03
-engine_version 3.8.0-git2e0d8e6795
+checksum32     711_595_636        
+date           2020-01-16T05:30:51
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 26, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     42                
@@ -81,11 +82,11 @@ task sent received
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_44455             time_sec  memory_mb counts
+calc_43239             time_sec  memory_mb counts
 ====================== ========= ========= ======
-ScenarioCalculator.run 0.07791   0.0       1     
-saving gmfs            0.00343   0.0       1     
-building riskinputs    0.00235   0.0       1     
-computing gmfs         0.00156   0.0       1     
-reading exposure       6.523E-04 0.0       1     
+ScenarioCalculator.run 0.04228   0.0       1     
+saving gmfs            0.00313   0.0       1     
+computing gmfs         0.00147   0.0       1     
+building riskinputs    7.408E-04 0.0       1     
+reading exposure       5.548E-04 0.0       1     
 ====================== ========= ========= ======

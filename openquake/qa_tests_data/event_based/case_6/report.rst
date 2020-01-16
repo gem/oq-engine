@@ -2,9 +2,9 @@ Event-based PSHA producing hazard curves only
 =============================================
 
 ============== ===================
-checksum32     2,319,316,155      
-date           2019-10-23T16:26:09
-engine_version 3.8.0-git2e0d8e6795
+checksum32     2_319_316_155      
+date           2020-01-16T05:30:58
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 5, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.2               
 area_source_discretization      20.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -44,8 +45,8 @@ Number of ruptures per source group
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      NaN       2,456        0.0         
-1      NaN       2,456        0.0         
+0      NaN       2_456        0.0         
+1      NaN       2_456        0.0         
 ====== ========= ============ ============
 
 Slowest sources
@@ -67,21 +68,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.10679 0.01768 0.09428 0.11929 2      
+SourceReader       0.06690 0.00174 0.06567 0.06813 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.28 KB ltmodel=378 B fname=212 B 14.7 KB 
+SourceReader apply_unc=2.28 KB ltmodel=378 B fname=212 B 11.4 KB 
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_44476             time_sec memory_mb counts
+calc_43260             time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.21357  0.10938   2     
-composite source model 0.13156  0.0       1     
+total SourceReader     0.13380  0.0       2     
+composite source model 0.08687  0.0       1     
 ====================== ======== ========= ======
