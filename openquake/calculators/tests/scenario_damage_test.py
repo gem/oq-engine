@@ -64,9 +64,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 ======== =========
 taxonomy num_units
 ======== =========
-RC       2,000    
-RM       4,000    
-*ALL*    6,000    
+RC       2_000    
+RM       4_000    
+*ALL*    6_000    
 ======== =========''', got)
 
         # test agg_damages, 1 realization x 3 damage states
