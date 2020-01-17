@@ -285,10 +285,12 @@ We added a warning against implicit hazard levels, extracted from the
 risk functions. In the future specifying explicitly the hazard levels
 will become mandatory.
 
-We added a check for duplicated sites in the site model. The typical issue
+We added a check for duplicated sites in the site model. This typically
 happens when the user supplies more than 5 digits for the geographic
-coordinates, while the engine truncate to 5 digits (1 meter resolution):
-then sites that looks different becomes duplicated.
+coordinates, while the engine truncate to 5 digits (1 meter resolution)
+and then sites that looks different becomes duplicated. In turn, this
+may cause wrong asset associations and produce completely bogus numbers
+in the final results.
 
 There is a new upper limit on the size of event based calculations, to
 stop people from trying to run impossibly large calculations. You will
