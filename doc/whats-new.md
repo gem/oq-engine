@@ -334,8 +334,9 @@ from Erlang.
 
 The engine distribution now includes pandas, a feature much
 requested by our users. There is also some support for converting datasets
-in the datastore into pandas DataFrames. The final goal is to make it easy
-to postprocess the engine results with pandas.
+in the datastore into pandas DataFrames. The goal is to make it easy
+to postprocess the engine results with pandas. For instance the portfolio
+loss curves in event based risk calculations are now computed with pandas.
 
 We introduced support for RHEL and CentOS 8, which is used for our
 docker images.
