@@ -268,10 +268,4 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')
-        prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
-        if self.datastore.hdf5.mode is None:  # no parent
-            logging.warn('Disabling task distribution')
-            with unittest.mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
-                prc.run()
-        else:  # mode is r+
-            prc.run()
+        post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
