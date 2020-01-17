@@ -171,17 +171,6 @@ In the `job.ini` we changed the syntax for the `RepiEquivalent` feature, see
 https://github.com/gem/oq-engine/blob/engine-3.8/doc/adv-manual/equivalent-distance-approximation.rst#equivalent-epicenter-distance-approximation
 The old syntax is still working but it raises a deprecation warning.
 
-There is now an error *You are specifying grid and sites at the same time:
-which one do you want?* to force users to be explicit with their input files.
-Moreover, setting both `hazard_curves.csv` and `site_model.csv` is an error
-and it is correctly flagged so.
-
-On the other hand, speciying both sites and site models at the same time
-is now valid again and the "sites overdetermined" check has been removed.
-
-Trying to read a GMFs file in XML format, a feature which had been
-removed long ago, now raises a clear error message.
-
 The GMF importer in CSV format has been extended, and it can import
 files with more IMTs than the ones used in the calculation: they are
 simply imported and then ignored, without raising an exception.
@@ -285,6 +274,17 @@ coordinates, while the engine truncate to 5 digits (1 meter resolution)
 and then sites that looks different becomes duplicated. In turn, this
 may cause wrong asset associations and produce completely bogus numbers
 in the final results.
+
+There is now an error *You are specifying grid and sites at the same time:
+which one do you want?* to force users to be explicit with their input files.
+Moreover, setting both `hazard_curves.csv` and `site_model.csv` is an error
+and it is correctly flagged so.
+
+On the other hand, speciying both sites and site models at the same time
+is now valid again and the "sites overdetermined" check has been removed.
+
+Trying to read a GMFs file in XML format, a feature which had been
+removed long ago, now raises a clear error message.
 
 There is a new upper limit on the size of event based calculations, to
 stop people from trying to run impossibly large calculations. You will
