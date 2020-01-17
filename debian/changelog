@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Updates SERA Craton GMPE to incorporate NGA East site response and reflect
+    changes in CEUS USGS model
+
   [Michele Simionato]
   * Added an option `oq engine --param` to override the job.ini parameters
   * Internal: reduced the number of NGAEastUSGS classes from 39 to 1
