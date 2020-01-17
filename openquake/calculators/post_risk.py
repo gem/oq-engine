@@ -217,13 +217,16 @@ class PostRiskCalculator(base.RiskCalculator):
                 pr, [(self.datastore, rlzi) for rlzi in range(self.R)],
                 h5=self.datastore.hdf5)
         else:
-            elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
-            smap = []
-            for rlzi, losses_df in elt.groupby('rlzi'):
-                losses = numpy.array(losses_df)
-                smap.append({'tot_curves': builder.build_curves(losses, rlzi),
-                             'tot_losses': losses.sum(axis=0) * oq.ses_ratio,
-                             'rlzi': rlzi})
+            # do everything in process since it is really fast
+            with self.monitor('building total loss curves'):
+                elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
+                smap = []
+                for rlzi, losses_df in elt.groupby('rlzi'):
+                    losses = numpy.array(losses_df)
+                    smap.append(
+                        {'tot_curves': builder.build_curves(losses, rlzi),
+                         'tot_losses': losses.sum(axis=0) * oq.ses_ratio,
+                         'rlzi': rlzi})
         for dic in smap:
             if not dic:
                 continue
