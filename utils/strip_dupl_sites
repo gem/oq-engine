@@ -18,6 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+import shutil
 from openquake.baselib import sap, hdf5
 from openquake.commonlib.writers import write_csv
 
@@ -39,8 +40,10 @@ def strip_dupl(fname, ndigits=5):
     if len(new) == len(arr):
         print('There are no duplicate sites')
     else:
-        write_csv(fname + '~', numpy.array(new, arr.dtype))
-        print('Saved %s~' % fname)
+        shutil.copy(fname, fname + '.bak')
+        write_csv(fname, numpy.array(new, arr.dtype))
+        print(f'Reduced {fname} from {len(arr)} to {len(new)} sites and saved '
+              f'the original in {fname}.bak')
 
 strip_dupl.arg('fname', 'CSV file with fields lon, lat')
 strip_dupl.arg('ndigits', 'number of digits to keep', type=int)
