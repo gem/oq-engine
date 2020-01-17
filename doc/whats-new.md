@@ -164,16 +164,16 @@ inside the `__init__` method of the GMPE.
 In the `job.ini` file we recommend to use the names `mean` and `quantiles`
 instead of old names `mean_hazard_curves` and `quantile_hazard_curves`. The old
 names still work and will always work for backward compatibility, but the
-new names are since since the calculation of statistics applies also to
+new names are better since the calculation of statistics applies also to
 other outputs and not only to the hazard curves.
 
-In the `job.ini` we changed the syntax for the RepiEquivalent feature, see
+In the `job.ini` we changed the syntax for the `RepiEquivalent` feature, see
 https://github.com/gem/oq-engine/blob/engine-3.8/doc/adv-manual/equivalent-distance-approximation.rst#equivalent-epicenter-distance-approximation
 The old syntax is still working but it raises a deprecation warning.
 
 There is now an error *You are specifying grid and sites at the same time:
 which one do you want?* to force users to be explicit with their input files.
-Moreover, setting both hazard_curves.csv and site_model.csv is an error
+Moreover, setting both `hazard_curves.csv` and `site_model.csv` is an error
 and it is correctly flagged so.
 
 On the other hand, speciying both sites and site models at the same time
@@ -185,9 +185,6 @@ removed long ago, now raises a clear error message.
 The GMF importer in CSV format has been extended, and it can import
 files with more IMTs than the ones used in the calculation: they are
 simply imported and then ignored, without raising an exception.
-
-We added a check on acceptable input keys in `the job.ini` to protect against
-mispellings like `esposure_file` instead of `exposure_file`.
 
 # Changes in the outputs
 
@@ -250,7 +247,8 @@ We hard-coded the distance used in the filtering to `rrup`, to simplify
 the logic and to avoid an error in disaggregation with GMPEs not using
 `rrup` (the distance was not saved but needed, thus causing a failure).
 
-We fixed a bug in `ebrisk` with `aggregate_by` when building the `rup_loss_table`.
+We fixed a bug in `ebrisk` with `aggregate_by` when building the
+`rup_loss_table`.
 
 One of our users discovered a RecursionError when pickling Python
 objects in a disaggregation calculation:
@@ -267,19 +265,15 @@ to the controller node instead of appearing only in the worker logs.
 
 # New checks
 
-We improved the error message when using precomputed gmfs in scenarios
-with `event_id` not starting from zero.
-
-We improved the error message for empty risk EB calculations: now you
-will get *There are no GMFs available: perhaps you set
-ground_motion_fields=False or a large minimum_intensity*.
-
 We relaxed a check that was too string on the `minimum_intensity` parameter
 of the previous calculation.
 
 We relaxed the check on IMT-dependent weights: now in case of sampling the
 IMT-dependent weights are ignored and the engine prints a warning, but does
 not stop.
+
+We added a check on acceptable input keys in `the job.ini` to protect against
+mispellings like `esposure_file` instead of `exposure_file`.
 
 We added a warning against implicit hazard levels, extracted from the
 risk functions. In the future specifying explicitly the hazard levels
@@ -296,6 +290,13 @@ There is a new upper limit on the size of event based calculations, to
 stop people from trying to run impossibly large calculations. You will
 get an error if the number of sites times the number of events is larger
 than the parameter `max_potential_gmfs` which has a default value of 2E11.
+
+We improved the error message when using precomputed gmfs in scenarios
+with `event_id` not starting from zero.
+
+We improved the error message for empty risk EB calculations: now you
+will get *There are no GMFs available: perhaps you set
+ground_motion_fields=False or a large minimum_intensity*.
 
 # WebUI and WebAPI
 
