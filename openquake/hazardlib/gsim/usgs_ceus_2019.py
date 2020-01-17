@@ -267,4 +267,4 @@ NGAEastUSGSSammons17 usgs_17'''.splitlines()
 for line in lines:
     alias, key = line.split()
     gsim_aliases[alias] = (f'[NGAEastUSGSGMPE]\n'
-                           'gmpe_table="nga_east_{key}.hdf5"')
+                           f'gmpe_table="nga_east_{key}.hdf5"')
