@@ -14,11 +14,12 @@ There are listed here, in order of precedence.
    missing but `region_grid_spacing` is specified and there is an exposure,
    a grid is implicitely generated from the convex hull of the exposure
 5. Otherwise the sites can be inferred from the site model, if any.
-6. Finally, if the user is running a `classical_risk` or
+6. If the user is running a `classical_risk` or
    `classical_damage` calculation starting from a set of hazard curves
    in CSV format, then the sites are read from such file.
+7. Finally, the sites can be extracted from the exposure.
 
-Moreover, it should be noticed that the engine rounds longitudes and latitudes
+It must be noticed that the engine rounds longitudes and latitudes
 to 5 digits (1 meter resolution) so sites that differs at the 6 digit or so
 end up as being duplicated for the engine, and they may give issues.
    
@@ -42,3 +43,22 @@ There are a number of error situations:
    to manually prepare a site model on the location of the sites.
 5. Having duplicates (i.e. rows with identical lon, lat) in the site model
    is an error.
+
+In short, the precedence is *sites, site model, exposure*. It should
+be noticed that at the beginning of the engine the precedence was
+sites, exposure, site model, but it had to be changed. The typical
+situation for our models is to have many assets on few sites:
+for instance Chile has million of assets in different locations but
+the site model file we use is defined only on a few thousand sites. With
+the precedence we have now the site model wins and the engine can
+perform a calculation with a few thousand sites, which is
+feasibile. If the exposure had the precedence, then the site
+collection would contain million of sites and the calculation would
+immediately run out of memory or die for some other reason.
+
+Should you have a very large site model file with million of points,
+you can always specify a large enough `region_grid_spacing`: then the
+sites would be inferred from the implicit grid, the site parameters
+would be inferred from the closest site parameters and the assets
+would be associated to the closest grid site. Since the result site
+collection would be small, everything will work efficiently.
