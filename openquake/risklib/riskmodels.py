@@ -47,7 +47,7 @@ def get_risk_files(inputs):
     """
     rfs = {}
     job_ini = inputs['job_ini']
-    for key in inputs:
+    for key in sorted(inputs):
         if key == 'fragility':
             # backward compatibily for .ini files with key fragility_file
             # instead of structural_fragility_file

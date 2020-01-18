@@ -1,5 +1,5 @@
 This is a major release featuring several optimizations, new features and bug
-fixes. More than 275 pull requests were merged.
+fixes: around 285 pull requests were merged.
 
 For the complete list of changes, see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.8/debian/changelog
@@ -342,7 +342,7 @@ We introduced support for RHEL and CentOS 8, which is also used for our
 Docker images.
 
 We improved the Windows distribution that now can be
-used also to migrate to a development installation from an nightly
+used also to migrate to a development installation from a nightly
 release.
 
 Alberto Chiusole made the point that the engine should report the
