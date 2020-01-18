@@ -317,7 +317,7 @@ added an endpoint `/extract/source_info?sm_id=0` to get that information.
 We added an endpoint `/v1/calc/validate_zip` for use in the Input
 Preparation Toolkit, to validate the input files.
 
-When using access control in the WebUI we changed the default ACL_ON = True
+When using access control in the WebUI we changed the default `ACL_ON = True`
 to False, thus making it possible to export results from calculations
 ran by other users, if the calculation ID is known.
 
@@ -326,7 +326,7 @@ Finally, Django has been upgraded to the version 2.2.
 # IT
 
 The `zmq` mechanism, which has been in experimental stage
-for years, has finally been promoted to *production*: both of our clusters
+for years, has finally been promoted *production ready*: both of our clusters
 use it. The celery/rabbitmq distribution mechanism is not deprecated yet,
 but eventually it will be, because `zmq` is a superior alternative, using
 less memory and being more efficient, as well as having no dependency
@@ -338,16 +338,16 @@ in the datastore into pandas DataFrames. The goal is to make it easy
 to postprocess the engine results with pandas. For instance the portfolio
 loss curves in event based risk calculations are now computed with pandas.
 
-We introduced support for RHEL and CentOS 8, which is used for our
-docker images.
+We introduced support for RHEL and CentOS 8, which is also used for our
+Docker images.
 
-We improved the Windows installer that now can be
-used also to migrate to a development installation from an official
+We improved the Windows distribution that now can be
+used also to migrate to a development installation from an nightly
 release.
 
 Alberto Chiusole made the point that the engine should report the
 number of available cores, not the number of real cores, since they
-are not necessarily the same in a docker environment. We fixed that on
+are not necessarily the same in a container. We fixed that on
 Linux by using the cpu_affinity function (not available on macOS).
 
 Some internal commands (in particular `oq show performance`,
