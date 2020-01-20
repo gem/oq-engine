@@ -20,7 +20,7 @@ import logging
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, get_indices
-from openquake.risklib import scientific
+from openquake.risklib.scientific import mean_std
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -73,19 +73,25 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                 for l, loss_type in enumerate(crmodel.loss_types):
                     for asset, fractions in zip(ri.assets, out[loss_type]):
                         aid = asset['ordinal']
-                        dmg = fractions * asset['number']  # shape (F, D)
+                        n = int(asset['number'])
+                        dmg = fractions * n  # shape (F, D)
+                        idmgs = numpy.zeros((len(fractions), D), F64)
                         for e, dmgdist in enumerate(dmg):
+                            frac = fractions[e] / fractions[e].sum()
                             eid = out.eids[e]
-                            acc[eid][l] += dmgdist
-                            if dmgdist[-1] >= collapse_threshold:
-                                ddic[aid, eid][l] = fractions[e, 1:]
+                            if dmgdist[-1] >= 0:  # collapse_threshold
+                                idmg = numpy.bincount(
+                                    numpy.random.choice(D, n, p=frac),
+                                    minlength=D)
+                                ddic[aid, eid][l] = idmg[1:]
+                                acc[eid][l] += idmg
+                                idmgs[e] = idmg
                         result['d_asset'].append(
-                            (l, r, asset['ordinal'], scientific.mean_std(dmg)))
+                            (l, r, asset['ordinal'], mean_std(idmgs)))
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
                             result[name + '_by_asset'].append(
-                                (l, r, asset['ordinal'],
-                                 scientific.mean_std(values)))
+                                (l, r, asset['ordinal'], mean_std(values)))
                             by_event = res[name + '_by_event']
                             for eid, value in zip(out.eids, values):
                                 by_event[eid][l] += value
@@ -122,6 +128,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if len(aed) == 0:
             return acc + res
         for aid, [(i1, i2)] in get_indices(aed['aid']).items():
+
             self.datastore['dd_data/indices'][aid] = (
                 self.start + i1, self.start + i2)
         self.start += len(aed)
