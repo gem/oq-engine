@@ -219,13 +219,7 @@ class PostRiskCalculator(base.RiskCalculator):
         else:
             # do everything in process since it is really fast
             elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
-            smap = []
-            for rlzi, losses_df in elt.groupby('rlzi'):
-                losses = numpy.array(losses_df)
-                smap.append(
-                    {'tot_curves': builder.build_curves(losses, rlzi),
-                     'tot_losses': losses.sum(axis=0) * oq.ses_ratio,
-                     'rlzi': rlzi})
+            smap = builder.gen_curves_by_rlz(elt, oq.ses_ratio)
         for dic in smap:
             if not dic:
                 continue
