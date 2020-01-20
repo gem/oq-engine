@@ -326,7 +326,7 @@ Finally, Django has been upgraded to the version 2.2.
 # IT
 
 The `zmq` mechanism, which has been in experimental stage
-for years, has finally been promoted *production ready*: both of our clusters
+for years, has finally been promoted to *production ready*: both of our clusters
 use it. The celery/rabbitmq distribution mechanism is not deprecated yet,
 but eventually it will be, because `zmq` is a superior alternative, using
 less memory and being more efficient, as well as having no dependency
