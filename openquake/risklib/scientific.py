@@ -1445,6 +1445,18 @@ class LossCurvesMapsBuilder(object):
                 losses, self.return_periods, num_events, self.eff_time)
         return curves
 
+    def gen_curves_by_rlz(self, losses_by_event, ses_ratio):
+        """
+        :param losses_by_event: a dataframe
+        :param ses_ratio: ses ratio
+        :yield: dictionaries with keys tot_curves, tot_losses, rlzi
+        """
+        for rlzi, losses_df in losses_by_event.groupby('rlzi'):
+            losses = numpy.array(losses_df)
+            yield {'tot_curves': self.build_curves(losses, rlzi),
+                   'tot_losses': losses.sum(axis=0) * ses_ratio,
+                   'rlzi': rlzi}
+
 
 class LossesByAsset(object):
     """
