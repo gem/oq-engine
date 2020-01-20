@@ -285,8 +285,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 get_effect_by_mag,
                 (mags, self.sitecol.one(), gsims_by_trt,
                  oq.maximum_distance, oq.imtls, mon)).reduce()
-            self.datastore['effect'] = effect
-            self.datastore.set_attrs('effect', **dist_bins)
+            self.datastore['effect_by_mag_dst_trt'] = effect
+            self.datastore.set_attrs('effect_by_mag_dst_trt', **dist_bins)
             if oq.pointsource_distance:
                 self.effect.update({
                     trt: Effect({mag: effect[mag][:, t] for mag in effect},
