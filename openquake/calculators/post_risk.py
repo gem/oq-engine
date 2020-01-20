@@ -209,15 +209,23 @@ class PostRiskCalculator(base.RiskCalculator):
         self.build_datasets(builder, oq.aggregate_by, 'agg_')
         self.build_datasets(builder, [], 'app_')
         self.build_datasets(builder, [], 'tot_')
+        ds = self.datastore
         if oq.aggregate_by:
             pr = post_ebrisk
+            ds.swmr_on()
+            smap = parallel.Starmap(
+                pr, [(self.datastore, rlzi) for rlzi in range(self.R)],
+                h5=self.datastore.hdf5)
         else:
-            pr = post_risk
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(
-            pr, [(self.datastore, rlzi) for rlzi in range(self.R)],
-            h5=self.datastore.hdf5)
-        ds = self.datastore
+            # do everything in process since it is really fast
+            elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
+            smap = []
+            for rlzi, losses_df in elt.groupby('rlzi'):
+                losses = numpy.array(losses_df)
+                smap.append(
+                    {'tot_curves': builder.build_curves(losses, rlzi),
+                     'tot_losses': losses.sum(axis=0) * oq.ses_ratio,
+                     'rlzi': rlzi})
         for dic in smap:
             if not dic:
                 continue
