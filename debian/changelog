@@ -1,4 +1,9 @@
+  [Graeme Weatherill]
+  * Updates SERA Craton GMPE to incorporate NGA East site response and reflect
+    changes in CEUS USGS model
+
   [Michele Simionato]
+  * The total loss curves in event_based_risk are now built with pandas
   * Added an option `oq engine --param` to override the job.ini parameters
   * Internal: reduced the number of NGAEastUSGS classes from 39 to 1
   * Internal: reduced the number of NGAEast classes from 44 to 2
@@ -49,6 +54,12 @@
     but only for assets and events above a `collapse_threshold` parameter
   * Avoided transferring the GMFs upfront in scenario_damage, scenario_risk
     and event_based_damage
+
+  [Daniele Viganò]
+  * Included pandas in the engine distribution
+
+  [Michele Simionato]
+  * Avoided reading multiple time the gsim logic tree file and relative files
   * Added a check for duplicate sites in the site model file
   * Implemented an event_based_damage calculator
   * Added an API /v1/calc/ID/extract/gmf_data?event_id=XXX
