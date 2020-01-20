@@ -1449,13 +1449,12 @@ class LossCurvesMapsBuilder(object):
         """
         :param losses_by_event: a dataframe
         :param ses_ratio: ses ratio
-        :yield: dictionaries with keys tot_curves, tot_losses, rlzi
+        :yield: triples (rlzi, curves, losses)
         """
         for rlzi, losses_df in losses_by_event.groupby('rlzi'):
             losses = numpy.array(losses_df)
-            yield {'tot_curves': self.build_curves(losses, rlzi),
-                   'tot_losses': losses.sum(axis=0) * ses_ratio,
-                   'rlzi': rlzi}
+            yield (rlzi, self.build_curves(losses, rlzi),
+                   losses.sum(axis=0) * ses_ratio)
 
 
 class LossesByAsset(object):
