@@ -84,7 +84,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                     for asset, fractions in zip(ri.assets, out[loss_type]):
                         aid = asset['ordinal']
                         n = int(asset['number'])
-                        idmgs = integral_damages(fractions, n, seed)  # E, D
+                        idmgs = integral_damages(fractions, n, seed + aid)
                         for e, idmg in enumerate(idmgs):
                             eid = out.eids[e]
                             if idmg[1:].any():
