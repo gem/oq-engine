@@ -123,7 +123,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.param['collapse_threshold'] = self.oqparam.collapse_threshold
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         A = len(self.assetcol)
-        self.datastore.create_dset('dd_data/data', aed_dt)
+        self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
         self.datastore.create_dset('dd_data/indices', U32, (A, 2))
         self.riskinputs = self.build_riskinputs('gmf')
         self.start = 0
