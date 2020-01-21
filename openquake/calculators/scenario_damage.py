@@ -35,21 +35,23 @@ def ddd_slow(fractions, n, seed):
     and numpy.random.choice
     """
     D = fractions.shape[1]  # shape (E, D)
-    idmg = numpy.zeros(fractions.shape, U16)
+    ddd = numpy.zeros(fractions.shape, U16)
     numpy.random.seed(seed)
     for e, frac in enumerate(fractions):
-        idmg[e] = numpy.bincount(
+        ddd[e] = numpy.bincount(
             numpy.random.choice(D, n, p=frac/frac.sum()), minlength=D)
-    return idmg
+    return ddd
 
 
 def ddd_fast(fractions, n, seed=None):
     """
     Converting fractions into uint16 discrete damage distributions
     """
-    idmg = U16(fractions * n)
-    idmg[:, 0] = n - idmg[:, 1:].sum(axis=1)
-    return idmg
+    ddd = U16(fractions * n)
+    # fix the no-damage discrete damage distributions by making sure
+    # that the total sum is n: nodamage = n - sum(others)
+    ddd[:, 0] = n - ddd[:, 1:].sum(axis=1)
+    return ddd
 
 
 def scenario_damage(riskinputs, crmodel, param, monitor):
@@ -102,11 +104,11 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         aid = asset['ordinal']
                         n = int(asset['number'])
                         ddds = make_ddd(fractions, n, seed + aid)
-                        for e, idmg in enumerate(ddds):
+                        for e, ddd in enumerate(ddds):
                             eid = out.eids[e]
-                            if idmg[1:].any():
-                                ddic[aid, eid][l] = idmg[1:]
-                                acc[eid][l] += idmg
+                            if ddd[1:].any():
+                                ddic[aid, eid][l] = ddd[1:]
+                                acc[eid][l] += ddd
                         result['d_asset'].append(
                             (l, r, asset['ordinal'], mean_std(ddds)))
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
