@@ -9,7 +9,7 @@
       </costTypes>
     </conversions>
     <tagNames>CRESTA region</tagNames>
-    <assets check_number="integer">
+    <assets>
       <asset id="a1" taxonomy="RM" number="3000">
         <location lon="15.48" lat="38.09"/>
         <costs>
