@@ -24,15 +24,16 @@ from openquake.risklib import read_nrml  # this is necessary
 
 
 @sap.script
-def check_input(job_ini_or_zip_or_nrml):
-    if job_ini_or_zip_or_nrml.endswith('.xml'):
-        try:
-            print(nrml.to_python(job_ini_or_zip_or_nrml))
-        except Exception as exc:
-            sys.exit(exc)
-    else:
-        calc = base.calculators(readinput.get_oqparam(job_ini_or_zip_or_nrml))
-        calc.read_inputs()
+def check_input(job_ini_or_zip_or_nrmls):
+    for job_ini_or_zip_or_nrml in job_ini_or_zip_or_nrmls:
+        if job_ini_or_zip_or_nrml.endswith('.xml'):
+            try:
+                print(nrml.to_python(job_ini_or_zip_or_nrml))
+            except Exception as exc:
+                sys.exit(exc)
+        else:
+            base.calculators(readinput.get_oqparam(
+                job_ini_or_zip_or_nrml)).read_inputs()
 
 
-check_input.arg('job_ini_or_zip_or_nrml', 'Check the input')
+check_input.arg('job_ini_or_zip_or_nrmls', 'Check the input', nargs='+')
