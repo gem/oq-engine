@@ -531,16 +531,16 @@ def wkt_polygon(value):
     return 'POLYGON((%s))' % ', '.join(points)
 
 
-def uint16(value):
+def asset_number(value):
     """
     :param value: input string
-    :returns: positive integer in the range 0..65535
+    :returns: positive integer in the range 1..65535
     """
-    i = int(not_empty(value))
-    if i < 0:
-        raise ValueError('integer %d < 0' % i)
+    i = int(value)
+    if i < 1:
+        raise ValueError('got %d < 1' % i)
     elif i > 65535:
-        raise ValueError('integer %d > 65535' % i)
+        raise ValueError('got %d > 65535' % i)
     return i
 
 
