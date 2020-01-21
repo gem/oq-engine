@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -79,14 +79,14 @@ xmlns:gml="http://www.opengis.net/gml"
         <assets>
             <asset
             id="asset_01"
-            number="7.000000000E+00"
+            number="7"
             taxonomy="IT-PV"
             >
                 <location lat="4.516667000E+01" lon="9.150000000E+00"/>
             </asset>
             <asset
             id="asset_02"
-            number="7.000000000E+00"
+            number="7"
             taxonomy="IT-CE"
             >
                 <location lat="4.512200000E+01" lon="9.153330000E+00"/>
