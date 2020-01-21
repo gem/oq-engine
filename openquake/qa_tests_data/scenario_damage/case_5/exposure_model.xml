@@ -22,7 +22,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <assets>
             <asset
             id="a125"
-            number="4.000000000E+00"
+            number="4"
             taxonomy="W"
             >
                 <location lat="2.893617200E+01" lon="8.346382300E+01"/>
@@ -37,7 +37,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a395"
-            number="1.800000000E+01"
+            number="18"
             taxonomy="W"
             >
                 <location lat="2.871117200E+01" lon="8.121382300E+01"/>
@@ -52,7 +52,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a2544"
-            number="2.900000000E+01"
+            number="29"
             taxonomy="A"
             >
                 <location lat="2.946117200E+01" lon="8.278882300E+01"/>
@@ -67,7 +67,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a2925"
-            number="1.300000000E+02"
+            number="130"
             taxonomy="A"
             >
                 <location lat="2.796117200E+01" lon="8.196382300E+01"/>
@@ -82,7 +82,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a3518"
-            number="5.930000000E+02"
+            number="593"
             taxonomy="A"
             >
                 <location lat="2.856117200E+01" lon="8.196382300E+01"/>
@@ -97,7 +97,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a4102"
-            number="1.880000000E+03"
+            number="1880"
             taxonomy="A"
             >
                 <location lat="2.811117200E+01" lon="8.323882300E+01"/>
@@ -112,7 +112,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a4351"
-            number="3.662000000E+03"
+            number="3662"
             taxonomy="A"
             >
                 <location lat="2.841117200E+01" lon="8.113882300E+01"/>
@@ -127,7 +127,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a4498"
-            number="1.000000000E+00"
+            number="1"
             taxonomy="DS"
             >
                 <location lat="2.931117200E+01" lon="8.391382300E+01"/>
@@ -142,7 +142,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a5229"
-            number="4.400000000E+01"
+            number="44"
             taxonomy="DS"
             >
                 <location lat="2.743617200E+01" lon="8.758882300E+01"/>
@@ -157,7 +157,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a7180"
-            number="3.900000000E+01"
+            number="39"
             taxonomy="UFB"
             >
                 <location lat="2.998617200E+01" lon="8.121382300E+01"/>
@@ -172,7 +172,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a8309"
-            number="7.150000000E+02"
+            number="715"
             taxonomy="UFB"
             >
                 <location lat="2.736117200E+01" lon="8.526382300E+01"/>
