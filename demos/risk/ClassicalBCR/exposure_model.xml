@@ -26974,7 +26974,7 @@
           <cost type="structural" value="11340" retrofitted="5670.0"/>
         </costs>
       </asset>
-      <asset id="a4495" taxonomy="Stone-Masonry" number="76825">
+      <asset id="a4495" taxonomy="Stone-Masonry" number="60825">
         <location lon="85.30416667" lat="27.7625"/>
         <costs>
           <cost type="structural" value="11340" retrofitted="5670.0"/>
