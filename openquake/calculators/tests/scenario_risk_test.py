@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -183,7 +183,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
-        aac(agglosses.array, [1159817.1])
+        aac(agglosses.array, [1159325.6])
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
