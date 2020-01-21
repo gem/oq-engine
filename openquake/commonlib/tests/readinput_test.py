@@ -343,7 +343,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Could not convert number->compose"
-                      "(positivefloat,nonzero): '0' is zero, line 17",
+                      "(uint16,nonzero): '0' is zero, line 17",
                       str(ctx.exception))
 
     def test_invalid_asset_id(self):
