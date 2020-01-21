@@ -183,7 +183,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
-        aac(agglosses.array, [1159817.1])
+        aac(agglosses.array, [1159325.6])
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
