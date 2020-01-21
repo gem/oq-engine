@@ -29,13 +29,26 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def integral_damages(fractions, n, seed):
+def ddd_slow(fractions, n, seed):
+    """
+    Converting fractions into discrete damage distributions using bincount
+    and numpy.random.choice
+    """
     D = fractions.shape[1]  # shape (E, D)
     idmg = numpy.zeros(fractions.shape, U16)
     numpy.random.seed(seed)
     for e, frac in enumerate(fractions):
         idmg[e] = numpy.bincount(
             numpy.random.choice(D, n, p=frac/frac.sum()), minlength=D)
+    return idmg
+
+
+def ddd_fast(fractions, n, seed=None):
+    """
+    Converting fractions into uint16 discrete damage distributions
+    """
+    idmg = U16(fractions * n)
+    idmg[:, 0] = n - idmg[:, 1:].sum(axis=1)
     return idmg
 
 
@@ -70,6 +83,8 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         # using F64 here is necessary: with F32 the non-commutativity
         # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
+    # algorithm used to compute the discrete damage distributions
+    make_ddd = ddd_fast if param['ddd_fast'] else ddd_slow
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
@@ -86,14 +101,14 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                     for asset, fractions in zip(ri.assets, out[loss_type]):
                         aid = asset['ordinal']
                         n = int(asset['number'])
-                        idmgs = integral_damages(fractions, n, seed + aid)
-                        for e, idmg in enumerate(idmgs):
+                        ddds = make_ddd(fractions, n, seed + aid)
+                        for e, idmg in enumerate(ddds):
                             eid = out.eids[e]
                             if idmg[1:].any():
                                 ddic[aid, eid][l] = idmg[1:]
                                 acc[eid][l] += idmg
                         result['d_asset'].append(
-                            (l, r, asset['ordinal'], mean_std(idmgs)))
+                            (l, r, asset['ordinal'], mean_std(ddds)))
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
                             result[name + '_by_asset'].append(
@@ -121,9 +136,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        self.param['master_seed'] = self.oqparam.master_seed
-        self.param['collapse_threshold'] = self.oqparam.collapse_threshold
+        self.param['ddd_fast'] = self.oqparam.ddd_fast
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
+        self.param['master_seed'] = self.oqparam.master_seed
         A = len(self.assetcol)
         self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
         self.datastore.create_dset('dd_data/indices', U32, (A, 2))
