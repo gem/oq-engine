@@ -66,7 +66,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     acc = AccumDict(accum=numpy.zeros((L, D), U32))
     res = {'d_event': acc}
     for name in consequences:
-        res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, U32))
+        res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F32))
     seed = param['master_seed']
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
