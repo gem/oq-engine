@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import ast
 import logging
-import itertools
 import numpy
 
 from openquake.baselib import general, parallel, datastore
@@ -74,7 +74,7 @@ def post_ebrisk(dstore, aggkey, monitor):
     :param dstore: a DataStore instance
     :param aggkey: aggregation key
     :param monitor: Monitor instance
-    :returns: a dictionary with keys rlzi, agg_curves, agg_losses, tot_curves
+    :returns: a dictionary with keys rlzi, agg_curves, agg_losses, idx
     """
     dstore.open('r')
     oq = dstore['oqparam']
@@ -83,11 +83,13 @@ def post_ebrisk(dstore, aggkey, monitor):
                             ['event_id', 'rlzi'])
     except KeyError:   # no data for this realization
         return {}
+    if ',' in aggkey:
+        idx = tuple(idx - 1 for idx in ast.literal_eval(aggkey))
+    else:
+        idx = (int(aggkey) - 1,)
     builder = get_loss_builder(dstore)
-    L = len(oq.loss_names)
-    tot = general.AccumDict(accum=numpy.zeros(L))  # eid -> loss
     for rlzi, curves, losses in builder.gen_curves_by_rlz(df, oq.ses_ratio):
-        yield dict(rlzi=rlzi, agg_curves=curves, agg_losses=losses)
+        yield dict(rlzi=rlzi, agg_curves=curves, agg_losses=losses, idx=idx)
 
 
 @base.calculators.add('post_risk')
@@ -178,9 +180,10 @@ class PostRiskCalculator(base.RiskCalculator):
                 continue
             r = dic['rlzi']
             if oq.aggregate_by:
-                ds['agg_curves-rlzs'][:, r] = dic['agg_curves']  # PLT..
-                ds['agg_losses-rlzs'][:, r] = dic['agg_losses']  # LT...
-                #ds['app_curves-rlzs'][:, r] = dic['app_curves']  # PL
+                idx = (slice(None), r, slice(None)) + dic['idx']  # (PRLT...)
+                ds['agg_curves-rlzs'][idx] = dic['agg_curves']  # PLT..
+                ds['agg_losses-rlzs'][idx[1:]] = dic['agg_losses']  # LT...
+                ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
         if self.R > 1:
             logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'app_curves')
