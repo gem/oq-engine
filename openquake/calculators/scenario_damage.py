@@ -29,6 +29,16 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
+def integral_damages(fractions, n, seed):
+    D = fractions.shape[1]  # shape (E, D)
+    idmg = numpy.zeros(fractions.shape, U16)
+    numpy.random.seed(seed)
+    for e, frac in enumerate(fractions):
+        idmg[e] = numpy.bincount(
+            numpy.random.choice(D, n, p=frac/frac.sum()), minlength=D)
+    return idmg
+
+
 def scenario_damage(riskinputs, crmodel, param, monitor):
     """
     Core function for a damage computation.
@@ -51,13 +61,13 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
-    collapse_threshold = param['collapse_threshold']
     haz_mon = monitor('getting hazard', measuremem=False)
     rsk_mon = monitor('aggregating risk', measuremem=False)
-    acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
+    acc = AccumDict(accum=numpy.zeros((L, D), U32))
     res = {'d_event': acc}
     for name in consequences:
-        res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
+        res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, U32))
+    seed = param['master_seed']
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
@@ -74,18 +84,12 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                     for asset, fractions in zip(ri.assets, out[loss_type]):
                         aid = asset['ordinal']
                         n = int(asset['number'])
-                        dmg = fractions * n  # shape (F, D)
-                        idmgs = numpy.zeros((len(fractions), D), F64)
-                        for e, dmgdist in enumerate(dmg):
-                            frac = fractions[e] / fractions[e].sum()
+                        idmgs = integral_damages(fractions, n, seed)  # E, D
+                        for e, idmg in enumerate(idmgs):
                             eid = out.eids[e]
-                            if dmgdist[-1] >= 0:  # collapse_threshold
-                                idmg = numpy.bincount(
-                                    numpy.random.choice(D, n, p=frac),
-                                    minlength=D)
+                            if idmg[1:].any():
                                 ddic[aid, eid][l] = idmg[1:]
                                 acc[eid][l] += idmg
-                                idmgs[e] = idmg
                         result['d_asset'].append(
                             (l, r, asset['ordinal'], mean_std(idmgs)))
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
@@ -115,6 +119,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
+        self.param['master_seed'] = self.oqparam.master_seed
         self.param['collapse_threshold'] = self.oqparam.collapse_threshold
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         A = len(self.assetcol)
