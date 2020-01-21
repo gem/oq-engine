@@ -531,6 +531,19 @@ def wkt_polygon(value):
     return 'POLYGON((%s))' % ', '.join(points)
 
 
+def uint16(value):
+    """
+    :param value: input string
+    :returns: positive integer in the range 0..65535
+    """
+    i = int(not_empty(value))
+    if i < 0:
+        raise ValueError('integer %d < 0' % i)
+    elif i > 65535:
+        raise ValueError('integer %d > 65535' % i)
+    return i
+
+
 def positiveint(value):
     """
     :param value: input string
