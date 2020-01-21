@@ -398,7 +398,7 @@ def update_validators():
         'occupants': valid.positivefloat,
         'value': valid.positivefloat,
         'retrofitted': valid.positivefloat,
-        'number': valid.compose(valid.positiveint, valid.nonzero),
+        'number': valid.compose(valid.uint16, valid.nonzero),
         'vulnerabilitySetID': str,  # any ASCII string is fine
         'vulnerabilityFunctionID': str,  # any ASCII string is fine
         'lossCategory': valid.utf8,  # a description field
