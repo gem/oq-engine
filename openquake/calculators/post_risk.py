@@ -74,7 +74,7 @@ def post_ebrisk(dstore, aggkey, monitor):
     :param dstore: a DataStore instance
     :param aggkey: aggregation key
     :param monitor: Monitor instance
-    :returns: a dictionary with keys rlzi, agg_curves, agg_losses, idx
+    :returns: a dictionary rlzi -> {agg_curves, agg_losses, idx}
     """
     dstore.open('r')
     oq = dstore['oqparam']
@@ -88,8 +88,10 @@ def post_ebrisk(dstore, aggkey, monitor):
     else:
         idx = (int(aggkey) - 1,)
     builder = get_loss_builder(dstore)
+    out = {}
     for rlzi, curves, losses in builder.gen_curves_by_rlz(df, oq.ses_ratio):
-        yield dict(rlzi=rlzi, agg_curves=curves, agg_losses=losses, idx=idx)
+        out[rlzi] = dict(agg_curves=curves, agg_losses=losses, idx=idx)
+    return out
 
 
 @base.calculators.add('post_risk')
@@ -175,18 +177,18 @@ class PostRiskCalculator(base.RiskCalculator):
         for r, curves, losses in builder.gen_curves_by_rlz(elt, oq.ses_ratio):
             ds['tot_curves-rlzs'][:, r] = curves  # PL
             ds['tot_losses-rlzs'][:, r] = losses  # L
-        for dic in smap:
-            if not dic:
+        for res in smap:
+            if not res:
                 continue
-            r = dic['rlzi']
-            if oq.aggregate_by:
-                ds['agg_curves-rlzs'][
-                    (slice(None), r, slice(None)) + dic['idx']  # PRLT..
-                ] = dic['agg_curves']
-                ds['agg_losses-rlzs'][
-                    (slice(None), r) + dic['idx']  # LRT...
-                ] = dic['agg_losses']
-                ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
+            for r, dic in res.items():
+                if oq.aggregate_by:
+                    ds['agg_curves-rlzs'][
+                        (slice(None), r, slice(None)) + dic['idx']  # PRLT..
+                    ] = dic['agg_curves']
+                    ds['agg_losses-rlzs'][
+                        (slice(None), r) + dic['idx']  # LRT...
+                    ] = dic['agg_losses']
+                    ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
         if self.R > 1:
             logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'app_curves')
