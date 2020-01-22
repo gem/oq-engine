@@ -279,7 +279,7 @@ class ContextMaker(object):
             ctxs.append((rup, sctx, dctx))
         return ctxs
 
-    def make_gmv(self, onesite, mags, dists):
+    def max_intensity(self, onesite, mags, dists):
         """
         :param onesite: a SiteCollection instance with a single site
         :param mags: a sequence of magnitudes
@@ -298,18 +298,9 @@ class ContextMaker(object):
             rup.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             dctx = DistancesContext(
                 (dst, numpy.array([dist])) for dst in self.REQUIRES_DISTANCES)
-            max_imt = self.imts[-1]
-            means = []
-            for gsim in self.gsims:
-                try:
-                    mean = base.get_mean_std(  # shape (2, N, M, G) -> 1
-                        onesite, rup, dctx, [max_imt], [gsim])[0, 0, 0, 0]
-                except ValueError:  # magnitude outside of supported range
-                    continue
-                else:
-                    means.append(mean)
-            if means:
-                gmv[m, d] = numpy.exp(max(means))
+            maxmean = base.get_mean_std(  # shape (2, N, M, G) -> 1
+                onesite, rup, dctx, self.imts, self.gsims)[0].max()
+            gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
     def get_pmap_by_grp(self, srcfilter, group):
@@ -740,7 +731,7 @@ def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
     for t, trt in enumerate(trts):
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.make_gmv(
+        gmv[:, :, t] = cmaker.max_intensity(
             onesite, [float(mag) for mag in mags], dist_bins)
     return dict(zip(mags, gmv))
 
