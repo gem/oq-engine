@@ -181,6 +181,10 @@ class DataStore(collections.abc.MutableMapping):
     and a dictionary and populating the object.
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
+
+    class EmptyDataset(ValueError):
+        """Raised when reading an empty dataset"""
+
     def __init__(self, calc_id=None, datadir=None, params=(), mode=None):
         datadir = datadir or get_datadir()
         if isinstance(calc_id, str):  # passed a real path
@@ -428,6 +432,8 @@ class DataStore(collections.abc.MutableMapping):
         :returns: pandas DataFrame associated to the dataset
         """
         dset = self.getitem(key)
+        if len(dset) == 0:
+            raise self.EmptyDataset('Dataset %s is empty' % key)
         if 'shape_descr' in dset.attrs:
             return dset2df(dset)
         dtlist = []
