@@ -679,8 +679,7 @@ class RuptureContext(BaseContext):
 
 class Effect(object):
     """
-    Compute the effect of a rupture of a given magnitude and distance,
-    as a float in the range [0, 1] (0=no effect, 1=maximum effect).
+    Compute the effect of a rupture of a given magnitude and distance.
 
     :param effect_by_mag: a dictionary magstring -> intensities
     :param dists: array of distances, one per each intensity
