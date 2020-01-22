@@ -199,7 +199,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
         for idxs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
             idx = ','.join(map(str, idxs))
-            self.datastore.create_dset('asset_loss_table/' + idx, elt_dt)
+            self.datastore.create_dset('event_loss_table/' + idx, elt_dt)
         self.param.pop('oqparam', None)  # unneeded
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
@@ -233,7 +233,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             smap.submit((rgetter, srcfilter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
-            self.datastore['asset_loss_table/indices'] = self.indices
+            self.datastore['event_loss_table/indices'] = self.indices
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
@@ -250,10 +250,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if not dic:
             return
         self.oqparam.ground_motion_fields = False  # hack
-        with self.monitor('saving losses_by_event and asset_loss_table'):
+        with self.monitor('saving losses_by_event and event_loss_table'):
             hdf5.extend(self.datastore['losses_by_event'], dic['elt'])
             for idx, arr in dic['alt'].items():
-                hdf5.extend(self.datastore['asset_loss_table/' + idx], arr)
+                hdf5.extend(self.datastore['event_loss_table/' + idx], arr)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
