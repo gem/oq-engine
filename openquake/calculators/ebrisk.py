@@ -105,7 +105,7 @@ def calc_risk(gmfs, param, monitor):
                         if aggby:
                             for loss, eid in zip(losses, out.eids):
                                 if loss >= minimum_loss[loss_idx]:
-                                    alt[idx][eid][loss_idx] = loss
+                                    alt[idx][eid][loss_idx] += loss
                                     kept += 1
                         arr[eidx, loss_idx] += losses
                     if param['avg_losses']:  # this is really fast

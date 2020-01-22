@@ -180,9 +180,12 @@ class PostRiskCalculator(base.RiskCalculator):
                 continue
             r = dic['rlzi']
             if oq.aggregate_by:
-                idx = (slice(None), r, slice(None)) + dic['idx']  # (PRLT...)
-                ds['agg_curves-rlzs'][idx] = dic['agg_curves']  # PLT..
-                ds['agg_losses-rlzs'][idx[1:]] = dic['agg_losses']  # LT...
+                ds['agg_curves-rlzs'][
+                    (slice(None), r, slice(None)) + dic['idx']  # PRLT..
+                ] = dic['agg_curves']
+                ds['agg_losses-rlzs'][
+                    (slice(None), r) + dic['idx']  # LRT...
+                ] = dic['agg_losses']
                 ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
         if self.R > 1:
             logging.info('Computing aggregate statistics')
