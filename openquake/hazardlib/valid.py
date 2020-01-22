@@ -536,7 +536,10 @@ def asset_number(value):
     :param value: input string
     :returns: positive integer in the range 1..65535
     """
-    i = int(value)
+    try:
+        i = int(value)
+    except ValueError:
+        i = int(float(value))
     if i < 1:
         raise ValueError('got %d < 1' % i)
     elif i > 65535:
