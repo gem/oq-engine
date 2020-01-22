@@ -431,7 +431,13 @@ class DataStore(collections.abc.MutableMapping):
         :param index: if given, name of the "primary key" field
         :returns: pandas DataFrame associated to the dataset
         """
-        dset = self.getitem(key)
+        try:
+            dset = self.getitem(key)
+        except KeyError:
+            if self.parent:
+                dset = self.parent.getitem(key)
+            else:
+                raise
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
         if 'shape_descr' in dset.attrs:
