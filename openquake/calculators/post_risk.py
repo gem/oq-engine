@@ -79,7 +79,7 @@ def post_ebrisk(dstore, aggkey, monitor):
     dstore.open('r')
     oq = dstore['oqparam']
     try:
-        df = dstore.read_df('asset_loss_table/' + aggkey,
+        df = dstore.read_df('event_loss_table/' + aggkey,
                             ['event_id', 'rlzi'])
     except (KeyError, dstore.EmptyDataset):   # no data for this realization
         return {}
@@ -163,7 +163,7 @@ class PostRiskCalculator(base.RiskCalculator):
         self.build_datasets(builder, [], 'tot_')
         ds = self.datastore
         if oq.aggregate_by:
-            aggkeys = list(ds['asset_loss_table'])
+            aggkeys = list(ds['event_loss_table'])
             ds.swmr_on()
             smap = parallel.Starmap(
                 post_ebrisk, [(self.datastore, aggkey) for aggkey in aggkeys],
