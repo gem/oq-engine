@@ -81,7 +81,7 @@ def post_ebrisk(dstore, aggkey, monitor):
     try:
         df = dstore.read_df('asset_loss_table/' + aggkey,
                             ['event_id', 'rlzi'])
-    except KeyError:   # no data for this realization
+    except (KeyError, dstore.EmptyDataset):   # no data for this realization
         return {}
     if ',' in aggkey:
         idx = tuple(idx - 1 for idx in ast.literal_eval(aggkey))
