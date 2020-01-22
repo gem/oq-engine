@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the aggregate loss curves generation to not use the partial
+    asset loss table, with a huge memory reduction
   * Extended `oq check_input` to accept multiple files
   * Changed the scenario damage calculator to use discrete damage distributions
   * Forced the "number" attribute in the exposure must be an integer in the
