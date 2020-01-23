@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2019 GEM Foundation
+# Copyright (c) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,6 +40,8 @@ def std_curve(values, weights=None):
     return res
 
 
+# NB: for equal weights and sorted values the quantile is computed a
+# numpy.interp(q, [1/N, 2/N, ..., N/N], values)
 def quantile_curve(quantile, curves, weights=None):
     """
     Compute the weighted quantile aggregate of a set of curves.
