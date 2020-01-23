@@ -164,7 +164,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     Build source models from the logic tree and to store
     them inside the `source_info` dataset.
     """
-    if not oq.pointsource_distance['default']:
+    if oq.pointsource_distance['default'] == {}:
         spinning_off = False
     else:
         spinning_off = sum(oq.pointsource_distance.values()) == 0
