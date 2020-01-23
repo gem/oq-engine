@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -304,11 +304,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                       concurrent_tasks='4', aggregate_by='id',
                       minimum_loss_fraction='0.01')
 
-        # check on the asset_loss_table, num_losses per asset
-        aids = self.calc.datastore['asset_loss_table/data']['asset_id']
-        numpy.testing.assert_equal(numpy.bincount(aids),
-                                   [6, 32, 22, 32, 32, 32, 31])
-
         # tot_losses-rlzs has shape (L=5, R=9)
         # tot_losses-stats has shape (L=5, S=4)
         fname = export(('tot_losses-stats', 'csv'), self.calc.datastore)[0]
@@ -425,7 +420,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
 
     def test_asset_loss_table(self):
-        # this is a case with L=1, R=1, T=2, P=3
+        # this is a case with L=1, R=1, T1=2, P=3
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv',
                             minimum_loss_fraction='0.01')
         [fname] = out['agg_curves-rlzs', 'csv']
