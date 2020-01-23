@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array
+from openquake.baselib.general import group_array, AccumDict
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -374,11 +374,14 @@ def export_dmg_by_event(ekey, dstore):
     :param dstore: datastore object
     """
     damage_dt = build_damage_dt(dstore, mean_std=False)
-    dt_list = [('event_id', numpy.uint64), ('rlz_id', numpy.uint16)] + [
+    dt_list = [('event_id', U32), ('rlz_id', U16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
-    data_by_eid = dict(dstore[ekey[0]][()])  # eid_dmg_dt
+    L = len(damage_dt.names)
+    D = len(damage_dt[damage_dt.names[0]].names)
+    zero = numpy.zeros((L, D), U32)
+    data_by_eid = AccumDict(dict(dstore[ekey[0]][()]), accum=zero)
     events_by_rlz = group_array(dstore['events'], 'rlz_id')
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    writer = writers.CsvWriter(fmt='%d')
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
     writer.save(numpy.zeros(0, dt_list), fname)
     with open(fname, 'ab') as dest:

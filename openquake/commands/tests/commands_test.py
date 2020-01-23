@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -473,12 +473,12 @@ class CheckInputTestCase(unittest.TestCase):
         job_zip = os.path.join(list(test_data.__path__)[0],
                                'archive_err_1.zip')
         with self.assertRaises(ValueError):
-            check_input(job_zip)
+            check_input([job_zip])
 
     def test_valid(self):
         job_ini = os.path.join(list(test_data.__path__)[0],
                                'event_based_hazard/job.ini')
-        check_input(job_ini)
+        check_input([job_ini])
 
 
 class PrepareSiteModelTestCase(unittest.TestCase):

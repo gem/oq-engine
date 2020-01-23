@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -181,6 +181,10 @@ class DataStore(collections.abc.MutableMapping):
     and a dictionary and populating the object.
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
+
+    class EmptyDataset(ValueError):
+        """Raised when reading an empty dataset"""
+
     def __init__(self, calc_id=None, datadir=None, params=(), mode=None):
         datadir = datadir or get_datadir()
         if isinstance(calc_id, str):  # passed a real path
@@ -427,7 +431,15 @@ class DataStore(collections.abc.MutableMapping):
         :param index: if given, name of the "primary key" field
         :returns: pandas DataFrame associated to the dataset
         """
-        dset = self.getitem(key)
+        try:
+            dset = self.getitem(key)
+        except KeyError:
+            if self.parent:
+                dset = self.parent.getitem(key)
+            else:
+                raise
+        if len(dset) == 0:
+            raise self.EmptyDataset('Dataset %s is empty' % key)
         if 'shape_descr' in dset.attrs:
             return dset2df(dset)
         dtlist = []

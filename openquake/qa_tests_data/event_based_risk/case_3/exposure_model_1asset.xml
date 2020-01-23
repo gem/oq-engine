@@ -14,7 +14,7 @@
 	    </costTypes>
 	  </conversions>
 	  <assets>
-		<asset id="a2371" area="187.72"  number="379.0"  taxonomy="M1_2_PC" >
+		<asset id="a2371" area="187.72"  number="379"  taxonomy="M1_2_PC" >
 		 <location lon="-9.46228" lat="38.79563" />
 		 <costs>
 		   <cost type="structural" value="793.21"  />
