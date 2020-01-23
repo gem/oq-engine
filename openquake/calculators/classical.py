@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -287,7 +287,8 @@ class ClassicalCalculator(base.HazardCalculator):
                  oq.maximum_distance, oq.imtls, mon)).reduce()
             self.datastore['effect_by_mag_dst_trt'] = effect
             self.datastore.set_attrs('effect_by_mag_dst_trt', **dist_bins)
-            if oq.pointsource_distance:
+            if oq.pointsource_distance['default']:
+                # replace pointsource_distance with a dict trt -> mag -> dst
                 self.effect.update({
                     trt: Effect({mag: effect[mag][:, t] for mag in effect},
                                 dist_bins[trt],
@@ -297,9 +298,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
                     oq.pointsource_distance[trt] = eff.dist_by_mag(
                         eff.collapse_value)
-        else:
-            if oq.pointsource_distance is None:
-                oq.pointsource_distance = {'default': 1000}
+        elif oq.pointsource_distance['default']:
+            # replace pointsource_distance with a dict trt -> mag -> dst
             for trt in gsims_by_trt:
                 try:
                     dst = getdefault(oq.pointsource_distance, trt)
