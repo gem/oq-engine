@@ -89620,7 +89620,7 @@
 				</occupancies>
 				<tags NAME_1="East" NAME_2="Sagarmatha" NAME_3="Udayapur" NAME_4="TriyugaN.P." />
 			</asset>
-			<asset id="a9041" number="76825"  taxonomy="Stone-Masonry" >
+			<asset id="a9041" number="60825"  taxonomy="Stone-Masonry" >
 				<location lon="85.30417" lat="27.7625" />
 				<costs>
 					<cost type="structural" value="11340"/>

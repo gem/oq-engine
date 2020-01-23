@@ -22,7 +22,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <assets>
             <asset
             id="asset_4350"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="MCF/LWAL+DUC/HBET:3,6"
             >
                 <location lat="4.6509700E+00" lon="-7.4134660E+01"/>
@@ -33,7 +33,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="asset_8308"
-            number="7.0000000E+00"
+            number="7"
             taxonomy="MUR/HBET:4,5"
             >
                 <location lat="4.5852400E+00" lon="-7.4100520E+01"/>
@@ -44,7 +44,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="asset_9809"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="MCF/LWAL+DUC/HBET:3,6"
             >
                 <location lat="4.7572200E+00" lon="-7.4089760E+01"/>
@@ -55,7 +55,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="asset_13074"
-            number="3.1000000E+01"
+            number="31"
             taxonomy="CR/LDUAL+DUC"
             >
                 <location lat="4.6447100E+00" lon="-7.4063520E+01"/>
@@ -66,7 +66,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="asset_14473"
-            number="5.0000000E+01"
+            number="50"
             taxonomy="CR/LFINF+DUC"
             >
                 <location lat="4.7072300E+00" lon="-7.4036840E+01"/>
