@@ -150,8 +150,9 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        psd = param.get('pointsource_distance') or {'default': {}}
-        self.pointsource_distance = getdefault(psd, trt)
+        psd = param.get('pointsource_distance', {'default': {}})
+        self.pointsource_distance = getdefault(psd, trt) or {}
+        # NB: self.pointsource_distance is a dict mag -> pdist, possibly empty
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]

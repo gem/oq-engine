@@ -218,8 +218,8 @@ class SiteCollection(object):
             par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
             req.append('vs30measured')
-        self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
-        self.array = arr = numpy.zeros(len(lons), self.dtype)
+        dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
+        self.array = arr = numpy.zeros(len(lons), dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
         arr['lon'] = fix_lon(numpy.array(lons))
         arr['lat'] = numpy.array(lats)
@@ -292,7 +292,7 @@ class SiteCollection(object):
         """
         :returns: a SiteCollection with a site of the minimal vs30
         """
-        if 'vs30' in self.dtype.names:
+        if 'vs30' in self.array.dtype.names:
             idx = self.array['vs30'].argmin()
         else:
             idx = 0
