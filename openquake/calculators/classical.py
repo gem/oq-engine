@@ -141,7 +141,7 @@ def split_by_mag(sources):
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
-    Prefilter the sources
+    Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
@@ -278,7 +278,7 @@ class ClassicalCalculator(base.HazardCalculator):
         dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                      for trt in gsims_by_trt}
         self.effect = {}
-        if len(self.sitecol) > oq.max_sites_disagg:
+        if len(self.sitecol) >= oq.max_sites_disagg:
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
