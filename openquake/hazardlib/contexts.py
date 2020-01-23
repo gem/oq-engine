@@ -150,8 +150,9 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        psd = param.get('pointsource_distance') or {'default': {}}
+        psd = param.get('pointsource_distance', {'default': {}})
         self.pointsource_distance = getdefault(psd, trt)
+        # NB: self.pointsource_distance is a dict mag -> pdist, possibly empty
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
@@ -497,6 +498,8 @@ class PmapMaker(object):
                 loc.depth = numpy.average(depths, weights=weights)
                 trt = src.tectonic_region_type
                 for mag, rups in self.mag_rups:
+                    import pdb; pdb.set_trace()
+
                     mdist = self.maximum_distance(trt)  # FIXME: mag-dep
                     pdist = self.pointsource_distance.get('%.3f' % mag)
                     close, far = sites.split(loc, min(pdist, mdist))
