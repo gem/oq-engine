@@ -157,10 +157,9 @@ class OqParam(valid.ParamSet):
     num_cores = valid.Param(valid.positiveint, None)
     num_epsilon_bins = valid.Param(valid.positiveint)
     num_rlzs_disagg = valid.Param(valid.positiveint, 1)
-    oversubmit = valid.Param(valid.boolean, False)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.floatdict, None)
+    pointsource_distance = valid.Param(valid.floatdict, {'default': {}})
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
