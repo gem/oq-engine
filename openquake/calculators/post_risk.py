@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import ast
 import logging
 import numpy
 
@@ -68,76 +69,29 @@ def build_loss_tables(dstore):
     dstore['rup_loss_table'] = tbl
 
 
-def post_risk(dstore, rlzi, monitor):
+def post_ebrisk(dstore, aggkey, monitor):
     """
     :param dstore: a DataStore instance
-    :param rlzi: realization index
+    :param aggkey: aggregation key
     :param monitor: Monitor instance
-    :returns: a dictionary with keys rlzi, agg_losses, tot_curves
-    """
-    with dstore:
-        oq = dstore['oqparam']
-        idxs = dstore['losses_by_event']['rlzi'] == rlzi
-        alt = dstore['losses_by_event'][idxs]
-        builder = get_loss_builder(dstore)
-    L = len(oq.loss_names)
-    tot = general.AccumDict(accum=numpy.zeros(L))  # eid -> totloss
-    for rec in alt:
-        tot[rec['event_id']] += rec['loss']
-    tot_curves = builder.build_curves(list(tot.values()), rlzi)
-    if len(tot_curves) == 0:  # like in test_case_2_sampling
-        P = len(builder.return_periods)
-        tot_curves = numpy.zeros((P, L), F32)
-    res = {'tot_losses': alt['loss'].sum(axis=0) * oq.ses_ratio,
-           'tot_curves': tot_curves, 'rlzi': rlzi}
-    return res
-
-
-def post_ebrisk(dstore, rlzi, monitor):
-    """
-    :param dstore: a DataStore instance
-    :param rlzi: realization index
-    :param monitor: Monitor instance
-    :returns: a dictionary with keys rlzi, agg_curves, agg_losses, tot_curves
+    :returns: a dictionary rlzi -> {agg_curves, agg_losses, idx}
     """
     dstore.open('r')
     oq = dstore['oqparam']
-    assetcol = dstore['assetcol']
-    data = dstore['asset_loss_table/data']
     try:
-        ss = dstore['asset_loss_table/indices/rlz-%03d' % rlzi][()]
-    except KeyError:   # no data for this realization
+        df = dstore.read_df('event_loss_table/' + aggkey,
+                            ['event_id', 'rlzi'])
+    except (KeyError, dstore.EmptyDataset):   # no data for this realization
         return {}
+    if ',' in aggkey:
+        idx = tuple(idx - 1 for idx in ast.literal_eval(aggkey))
+    else:
+        idx = (int(aggkey) - 1,)
     builder = get_loss_builder(dstore)
-    aggby = oq.aggregate_by
-    L = len(oq.loss_names)
-    P = len(builder.return_periods)
-    tot = general.AccumDict(accum=numpy.zeros(L))  # eid -> loss
-    acc = general.AccumDict(accum=general.AccumDict(accum=numpy.zeros(L)))
-    shp = assetcol.tagcol.agg_shape((P, L), aggby)
-    agg_losses = numpy.zeros(shp[1:], F32)  # shape (L, T...)
-    tagidxs = assetcol.array[aggby]
-    for start, stop in ss:
-        alt = data[start:stop]
-        if len(alt) == 0:
-            continue
-        for rec in alt:
-            tot[rec['event_id']] += rec['loss']
-        if oq.aggregate_by:
-            for rec in general.add_columns(alt, tagidxs, 'asset_id'):
-                key = tuple(rec[n] - 1 for n in aggby)
-                acc[key][rec['event_id']] += rec['loss']
-                agg_losses[(slice(None),) + key] += rec['loss']
-    res = {'agg_curves': numpy.zeros(shp, F32)}  # shape (P, L, T...)
-    for key, dic in acc.items():
-        tup = (slice(None), slice(None)) + key
-        res['agg_curves'][tup] = builder.build_curves(list(dic.values()), rlzi)
-    res.update(post_risk(dstore, rlzi, monitor))
-    if oq.aggregate_by:
-        res['agg_losses'] = agg_losses * oq.ses_ratio
-    if tot:
-        res['app_curves'] = builder.build_curves(list(tot.values()), rlzi)
-    return res
+    out = {}
+    for rlzi, curves, losses in builder.gen_curves_by_rlz(df, oq.ses_ratio):
+        out[rlzi] = dict(agg_curves=curves, agg_losses=losses, idx=idx)
+    return out
 
 
 @base.calculators.add('post_risk')
@@ -211,32 +165,30 @@ class PostRiskCalculator(base.RiskCalculator):
         self.build_datasets(builder, [], 'tot_')
         ds = self.datastore
         if oq.aggregate_by:
-            pr = post_ebrisk
+            aggkeys = list(ds['event_loss_table'])
             ds.swmr_on()
             smap = parallel.Starmap(
-                pr, [(self.datastore, rlzi) for rlzi in range(self.R)],
+                post_ebrisk, [(self.datastore, aggkey) for aggkey in aggkeys],
                 h5=self.datastore.hdf5)
         else:
-            # do everything in process since it is really fast
-            elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
-            smap = []
-            for rlzi, losses_df in elt.groupby('rlzi'):
-                losses = numpy.array(losses_df)
-                smap.append(
-                    {'tot_curves': builder.build_curves(losses, rlzi),
-                     'tot_losses': losses.sum(axis=0) * oq.ses_ratio,
-                     'rlzi': rlzi})
-        for dic in smap:
-            if not dic:
+            smap = ()
+        # do everything in process since it is really fast
+        elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
+        for r, curves, losses in builder.gen_curves_by_rlz(elt, oq.ses_ratio):
+            ds['tot_curves-rlzs'][:, r] = curves  # PL
+            ds['tot_losses-rlzs'][:, r] = losses  # L
+        for res in smap:
+            if not res:
                 continue
-            r = dic['rlzi']
-            ds['tot_curves-rlzs'][:, r] = dic['tot_curves']  # PL
-            ds['tot_losses-rlzs'][:, r] = dic['tot_losses']  # L
-            if oq.aggregate_by:
-                ds['agg_curves-rlzs'][:, r] = dic['agg_curves']  # PLT..
-                ds['agg_losses-rlzs'][:, r] = dic['agg_losses']  # LT...
-            if 'app_curves' in dic:
-                ds['app_curves-rlzs'][:, r] = dic['app_curves']  # PL
+            for r, dic in res.items():
+                if oq.aggregate_by:
+                    ds['agg_curves-rlzs'][
+                        (slice(None), r, slice(None)) + dic['idx']  # PRLT..
+                    ] = dic['agg_curves']
+                    ds['agg_losses-rlzs'][
+                        (slice(None), r) + dic['idx']  # LRT...
+                    ] = dic['agg_losses']
+                    ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
         if self.R > 1:
             logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'app_curves')
