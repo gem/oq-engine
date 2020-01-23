@@ -237,7 +237,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
-        logging.info('Stored {:_d} / {:_d} losses'.format(*self.numlosses))
+        logging.info('Considered {:_d} / {:_d} losses'.format(*self.numlosses))
         return 1
 
     def agg_dicts(self, dummy, dic):
