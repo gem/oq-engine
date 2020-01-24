@@ -174,7 +174,8 @@ class ContextMaker(object):
             # avoid RuntimeWarning: divide by zero encountered in log
             warnings.simplefilter("ignore")
             for imt, imls in self.imtls.items():
-                self.loglevels[imt] = numpy.log(imls)
+                if imt != 'MMI':
+                    self.loglevels[imt] = numpy.log(imls)
 
     def filter(self, sites, rupture, mdist=None):
         """
