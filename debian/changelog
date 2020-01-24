@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: removed the class hazardlib.gsim.base.IPE
   * Changed the aggregate loss curves generation to not use the partial
     asset loss table, with a huge memory reduction
   * Extended `oq check_input` to accept multiple files
