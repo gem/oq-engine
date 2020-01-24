@@ -569,5 +569,4 @@ hazard_uhs-std.csv
 
     def test_case_45(self):
         # this is a test for MMI
-        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
-                               "hazard_map-mean-PGA.csv"], case_45.__file__)
+        self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
