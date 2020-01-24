@@ -81,10 +81,10 @@ def check_effect(effect, oqparam):
     """
     maxmag = list(effect)[-1]
     effect_at_maxdist = effect[maxmag][-1].max()  # max on the TRTs
-    minlevel = min(imls[0] for imls in oqparam.imtls.values())
-    if effect_at_maxdist > minlevel:
-        logging.warn('The maximum_distance is too small, you are losing '
-                     'ruptures with an effect > %.3f g', effect_at_maxdist)
+    # minlevel = min(imls[0] for imls in oqparam.imtls.values())
+    if effect_at_maxdist > .05:  # TODO: decide what to use instead of .05
+        logging.warning('The maximum_distance is too small, you are losing '
+                        'ruptures with an effect > %.3f g', effect_at_maxdist)
 
 
 # NB: this is NOT called if split_by_magnitude is true
