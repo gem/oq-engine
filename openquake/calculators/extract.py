@@ -491,7 +491,7 @@ def extract_sources(dstore, what):
     Use it as /extract/sources?sm_id=0
     """
     qdict = parse(what)
-    sm_id = int(qdict['sm_id'][0])
+    sm_id = int(qdict.get('sm_id', ['0'])[0])
     arr = dstore['source_info']['sm_id', 'source_id', 'eff_ruptures', 'wkt']
     if sm_id not in numpy.unique(arr['sm_id']):
         raise ValueError('There is no source model #%d' % sm_id)
