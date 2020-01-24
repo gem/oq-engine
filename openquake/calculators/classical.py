@@ -75,6 +75,18 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
+def check_effect(effect, oqparam):
+    """
+    Raise a warning if the maximum distance is too small
+    """
+    maxmag = list(effect)[-1]
+    effect_at_maxdist = effect[maxmag][-1].max()  # max on the TRTs
+    minlevel = min(imls[0] for imls in oqparam.imtls.values())
+    if effect_at_maxdist > minlevel:
+        logging.warn('The maximum_distance is too small, you are losing '
+                     'ruptures with an effect > %.3f g', effect_at_maxdist)
+
+
 # NB: this is NOT called if split_by_magnitude is true
 def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
@@ -277,14 +289,20 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                      for trt in gsims_by_trt}
+        # computing the effect make sense only if all IMTs have the same
+        # unity of measure; for simplicity we will consider only PGA and SA
         self.effect = {}
-        if len(self.sitecol) >= oq.max_sites_disagg:
+        imts_with_period = [imt for imt in oq.imtls
+                            if imt == 'PGA' or imt.startswith('SA')]
+        imts_ok = len(imts_with_period) == len(oq.imtls)
+        if len(self.sitecol) >= oq.max_sites_disagg and imts_ok:
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
                 get_effect_by_mag,
                 (mags, self.sitecol.one(), gsims_by_trt,
                  oq.maximum_distance, oq.imtls, mon)).reduce()
+            check_effect(effect, oq)
             self.datastore['effect_by_mag_dst_trt'] = effect
             self.datastore.set_attrs('effect_by_mag_dst_trt', **dist_bins)
             if oq.pointsource_distance['default']:
