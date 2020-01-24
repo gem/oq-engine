@@ -495,11 +495,11 @@ def _truncnorm_sf(truncation_level, values):
     return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
 
 
-def to_distribution_values(vals, imt=None):
+def to_distribution_values(vals, imt):
     """
     :returns: the logarithm of the values unless the IMT is MMI
     """
-    if imt and str(imt) == 'MMI':
+    if str(imt) == 'MMI':
         return vals
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")

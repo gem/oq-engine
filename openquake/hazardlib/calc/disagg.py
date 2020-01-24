@@ -90,7 +90,9 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
             mean_std = get_mean_std(
                 sitecol, rctx, dctx, iml2.imts, [gsim])[..., 0]  # (2, N, M)
         with pne_mon:
-            iml = to_distribution_values(iml2)
+            iml = numpy.array(
+                [to_distribution_values(lvl, imt) for imt, lvl in zip(
+                    iml2.imts, iml2)])
             pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)
             acc['pnes'].append(pne)
     return pack(acc, 'mags dists lons lats pnes'.split())
