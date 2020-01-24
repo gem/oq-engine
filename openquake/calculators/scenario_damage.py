@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,13 +20,23 @@ import logging
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, get_indices
-from openquake.risklib import scientific
+from openquake.risklib.scientific import mean_std
 from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+
+
+def integral_damages(fractions, n, seed):
+    D = fractions.shape[1]  # shape (E, D)
+    idmg = numpy.zeros(fractions.shape, U16)
+    numpy.random.seed(seed)
+    for e, frac in enumerate(fractions):
+        idmg[e] = numpy.bincount(
+            numpy.random.choice(D, n, p=frac/frac.sum()), minlength=D)
+    return idmg
 
 
 def scenario_damage(riskinputs, crmodel, param, monitor):
@@ -51,13 +61,15 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
-    collapse_threshold = param['collapse_threshold']
     haz_mon = monitor('getting hazard', measuremem=False)
     rsk_mon = monitor('aggregating risk', measuremem=False)
-    acc = AccumDict(accum=numpy.zeros((L, D), F64))  # must be 64 bit
+    acc = AccumDict(accum=numpy.zeros((L, D), U32))
     res = {'d_event': acc}
     for name in consequences:
         res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
+        # using F64 here is necessary: with F32 the non-commutativity
+        # of addition would hurt too much with multiple tasks
+    seed = param['master_seed']
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
@@ -73,19 +85,19 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                 for l, loss_type in enumerate(crmodel.loss_types):
                     for asset, fractions in zip(ri.assets, out[loss_type]):
                         aid = asset['ordinal']
-                        dmg = fractions * asset['number']  # shape (F, D)
-                        for e, dmgdist in enumerate(dmg):
+                        n = int(asset['number'])
+                        idmgs = integral_damages(fractions, n, seed + aid)
+                        for e, idmg in enumerate(idmgs):
                             eid = out.eids[e]
-                            acc[eid][l] += dmgdist
-                            if dmgdist[-1] >= collapse_threshold:
-                                ddic[aid, eid][l] = fractions[e, 1:]
+                            if idmg[1:].any():
+                                ddic[aid, eid][l] = idmg[1:]
+                                acc[eid][l] += idmg
                         result['d_asset'].append(
-                            (l, r, asset['ordinal'], scientific.mean_std(dmg)))
+                            (l, r, asset['ordinal'], mean_std(idmgs)))
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
                             result[name + '_by_asset'].append(
-                                (l, r, asset['ordinal'],
-                                 scientific.mean_std(values)))
+                                (l, r, asset['ordinal'], mean_std(values)))
                             by_event = res[name + '_by_event']
                             for eid, value in zip(out.eids, values):
                                 by_event[eid][l] += value
@@ -109,10 +121,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
+        self.param['master_seed'] = self.oqparam.master_seed
         self.param['collapse_threshold'] = self.oqparam.collapse_threshold
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         A = len(self.assetcol)
-        self.datastore.create_dset('dd_data/data', aed_dt)
+        self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
         self.datastore.create_dset('dd_data/indices', U32, (A, 2))
         self.riskinputs = self.build_riskinputs('gmf')
         self.start = 0
@@ -122,6 +135,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if len(aed) == 0:
             return acc + res
         for aid, [(i1, i2)] in get_indices(aed['aid']).items():
+
             self.datastore['dd_data/indices'][aid] = (
                 self.start + i1, self.start + i2)
         self.start += len(aed)
