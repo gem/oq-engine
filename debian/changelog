@@ -1,3 +1,13 @@
+  [Michele Simionato]
+  * Changed the aggregate loss curves generation to not use the partial
+    asset loss table, with a huge memory reduction
+  * Extended `oq check_input` to accept multiple files
+  * Changed the scenario damage calculator to use discrete damage distributions
+  * Forced the "number" attribute in the exposure must be an integer in the
+    range 1..65535, extrema included
+
+python3-oq-engine (3.8.0-1~xenial01) xenial; urgency=low
+
   [Graeme Weatherill]
   * Updates SERA Craton GMPE to incorporate NGA East site response and reflect
     changes in CEUS USGS model
@@ -176,6 +186,8 @@
   * Added a check for no GMFs in event_based_risk
   * Avoided transferring the site collection
   * Storing the sources in TOML format
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 20 Jan 2020 10:14:51 +0000
 
 python3-oq-engine (3.7.1-1~xenial01) xenial; urgency=low
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -617,7 +617,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         L = len(self.lti)
         D1 = len(self.damage_states) - 1
         return numpy.dtype(
-            [('aid', U32), ('eid', U32), ('dd', (F32, (L, D1)))])
+            [('aid', U32), ('eid', U32), ('dd', (U16, (L, D1)))])
 
     def vectorize_cons_model(self, tagcol):
         """

@@ -23,7 +23,7 @@ xmlns:gml="http://www.opengis.net/gml"
             
             <asset
             id="a125"
-            number="8.0000000E+00"
+            number="8"
             taxonomy="Adobe"
             >
                 
@@ -35,7 +35,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a395"
-            number="3.9000000E+01"
+            number="39"
             taxonomy="Adobe"
             >
                 
@@ -47,7 +47,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a2544"
-            number="6.0000000E+00"
+            number="6"
             taxonomy="Stone-Masonry"
             >
                 
@@ -59,7 +59,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a2925"
-            number="2.8000000E+01"
+            number="28"
             taxonomy="Stone-Masonry"
             >
                 
@@ -71,7 +71,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a3518"
-            number="1.3500000E+02"
+            number="135"
             taxonomy="Stone-Masonry"
             >
                 
@@ -83,7 +83,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a4102"
-            number="4.3000000E+02"
+            number="430"
             taxonomy="Stone-Masonry"
             >
                 
@@ -95,7 +95,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a4351"
-            number="8.0600000E+02"
+            number="806"
             taxonomy="Stone-Masonry"
             >
                 
@@ -107,7 +107,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a4498"
-            number="2.5003000E+04"
+            number="25003"
             taxonomy="Stone-Masonry"
             >
                 
@@ -119,7 +119,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a5229"
-            number="6.0000000E+01"
+            number="60"
             taxonomy="Unreinforced-Brick-Masonry"
             >
                 
@@ -131,7 +131,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a7180"
-            number="1.3000000E+01"
+            number="13"
             taxonomy="Wood"
             >
                 
@@ -143,7 +143,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a8309"
-            number="3.6900000E+02"
+            number="369"
             taxonomy="Wood"
             >
                 
