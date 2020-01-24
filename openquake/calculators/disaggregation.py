@@ -349,7 +349,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             if sid == 0:
                 logging.info('nbins=%s for site=#%d', shape_dic, sid)
             matrix_size = numpy.prod(shape)
-            if matrix_size > 1E7:
+            if matrix_size > 1E6:
                 raise ValueError(
                     'The disaggregation matrix for site #%d is too large '
                     '(%d elements): fix the binnning!' % (sid, matrix_size))
