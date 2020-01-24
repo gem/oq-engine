@@ -52,6 +52,15 @@ def rvs(distribution, *size):
     return array
 
 
+def to_imt_unit_values(vals, imt):
+    """
+    Exponentiate the values unless the IMT is MMI
+    """
+    if str(imt) == 'MMI':
+        return vals
+    return numpy.exp(vals)
+
+
 class GmfComputer(object):
     """
     Given an earthquake rupture, the ground motion field computer computes
@@ -202,7 +211,7 @@ class GmfComputer(object):
                                  'no correlation model')
             mean, _stddevs = gsim.get_mean_and_stddevs(
                 self.sctx, rctx, dctx, imt, stddev_types=[])
-            mean = gsim.to_imt_unit_values(mean)
+            mean = to_imt_unit_values(mean, imt)
             mean.shape += (1, )
             mean = mean.repeat(num_events, axis=1)
             return (mean,
@@ -232,7 +241,7 @@ class GmfComputer(object):
 
             total_residual = stddev_total * rvs(
                 distribution, num_sids, num_events)
-            gmf = gsim.to_imt_unit_values(mean + total_residual)
+            gmf = to_imt_unit_values(mean + total_residual, imt)
             stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
@@ -256,8 +265,8 @@ class GmfComputer(object):
             epsilons = rvs(distribution, num_events)
             inter_residual = stddev_inter * epsilons
 
-            gmf = gsim.to_imt_unit_values(
-                mean + intra_residual + inter_residual)
+            gmf = to_imt_unit_values(
+                mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
         return gmf, stdi, epsilons
 
