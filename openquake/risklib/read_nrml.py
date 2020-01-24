@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4#
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -398,7 +398,7 @@ def update_validators():
         'occupants': valid.positivefloat,
         'value': valid.positivefloat,
         'retrofitted': valid.positivefloat,
-        'number': valid.compose(valid.positivefloat, valid.nonzero),
+        'number': valid.asset_number,
         'vulnerabilitySetID': str,  # any ASCII string is fine
         'vulnerabilityFunctionID': str,  # any ASCII string is fine
         'lossCategory': valid.utf8,  # a description field

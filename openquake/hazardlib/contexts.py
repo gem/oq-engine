@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -150,8 +150,9 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        psd = param.get('pointsource_distance') or {'default': {}}
-        self.pointsource_distance = getdefault(psd, trt)
+        psd = param.get('pointsource_distance', {'default': {}})
+        self.pointsource_distance = getdefault(psd, trt) or {}
+        # NB: self.pointsource_distance is a dict mag -> pdist, possibly empty
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
@@ -279,7 +280,7 @@ class ContextMaker(object):
             ctxs.append((rup, sctx, dctx))
         return ctxs
 
-    def make_gmv(self, onesite, mags, dists):
+    def max_intensity(self, onesite, mags, dists):
         """
         :param onesite: a SiteCollection instance with a single site
         :param mags: a sequence of magnitudes
@@ -298,16 +299,14 @@ class ContextMaker(object):
             rup.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             dctx = DistancesContext(
                 (dst, numpy.array([dist])) for dst in self.REQUIRES_DISTANCES)
-            max_imt = self.imts[-1]
             means = []
             for gsim in self.gsims:
                 try:
-                    mean = base.get_mean_std(  # shape (2, N, M, G) -> 1
-                        onesite, rup, dctx, [max_imt], [gsim])[0, 0, 0, 0]
+                    mean = base.get_mean_std(  # shape (2, N, M, G) -> M
+                        onesite, rup, dctx, self.imts, [gsim])[0, 0, :, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
-                else:
-                    means.append(mean)
+                means.append(mean.max())
             if means:
                 gmv[m, d] = numpy.exp(max(means))
         return gmv
@@ -679,8 +678,7 @@ class RuptureContext(BaseContext):
 
 class Effect(object):
     """
-    Compute the effect of a rupture of a given magnitude and distance,
-    as a float in the range [0, 1] (0=no effect, 1=maximum effect).
+    Compute the effect of a rupture of a given magnitude and distance.
 
     :param effect_by_mag: a dictionary magstring -> intensities
     :param dists: array of distances, one per each intensity
@@ -742,7 +740,7 @@ def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
     for t, trt in enumerate(trts):
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.make_gmv(
+        gmv[:, :, t] = cmaker.max_intensity(
             onesite, [float(mag) for mag in mags], dist_bins)
     return dict(zip(mags, gmv))
 
