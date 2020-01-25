@@ -22,7 +22,7 @@ import os.path
 import cProfile
 import pstats
 
-from openquake.baselib import performance, general, sap, datastore
+from openquake.baselib import performance, general, sap, datastore, parallel
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base, views
@@ -130,6 +130,7 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     print('See the output with silx view %s' % calc.datastore.filename)
     calc_path, _ = os.path.splitext(calc.datastore.filename)  # used below
+    parallel.Starmap.shutdown()
     return calc
 
 

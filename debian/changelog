@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: we are now shutting down the ProcessPool explicitly in order
+    to support Python 3.8
   * Internal: removed the class hazardlib.gsim.base.IPE
   * Changed the aggregate loss curves generation to not use the partial
     asset loss table, with a huge memory reduction
