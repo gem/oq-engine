@@ -406,7 +406,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 md = ', '.join('%s->%d' % item for item in sorted(
                     oq.maximum_distance.magdist[trt].items()))
             else:
-                md = oq.maximum_distance.magdist(trt)
+                md = oq.maximum_distance(trt)
             logging.info('max_dist=%s, gsims=%d, ruptures=%d, blocks=%d',
                          md, len(gsims), nr, nb)
 
