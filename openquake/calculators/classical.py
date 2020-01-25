@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -141,7 +141,7 @@ def split_by_mag(sources):
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
-    Prefilter the sources
+    Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
@@ -277,28 +277,41 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                      for trt in gsims_by_trt}
-        if oq.pointsource_distance:
+        # computing the effect make sense only if all IMTs have the same
+        # unity of measure; for simplicity we will consider only PGA and SA
+        self.effect = {}
+        imts_with_period = [imt for imt in oq.imtls
+                            if imt == 'PGA' or imt.startswith('SA')]
+        imts_ok = len(imts_with_period) == len(oq.imtls)
+        if len(self.sitecol) >= oq.max_sites_disagg and imts_ok:
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
                 get_effect_by_mag,
                 (mags, self.sitecol.one(), gsims_by_trt,
                  oq.maximum_distance, oq.imtls, mon)).reduce()
-            self.datastore['effect'] = effect
-            self.datastore.set_attrs('effect', **dist_bins)
-            self.effect = {
-                trt: Effect({mag: effect[mag][:, t] for mag in effect},
-                            dist_bins[trt],
-                            getdefault(oq.pointsource_distance, trt))
-                for t, trt in enumerate(gsims_by_trt)}
-            for trt, eff in self.effect.items():
-                # ex: {'4.700': 68.2, ..., '8.700': 200}
-                oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
-                # ex: {'4.700': 0.01, ..., '8.700': 52.01}
-                oq.pointsource_distance[trt] = eff.dist_by_mag(
-                    eff.collapse_value)
-        else:
-            self.effect = {}
+            self.datastore['effect_by_mag_dst_trt'] = effect
+            self.datastore.set_attrs('effect_by_mag_dst_trt', **dist_bins)
+            if oq.pointsource_distance['default']:
+                # replace pointsource_distance with a dict trt -> mag -> dst
+                self.effect.update({
+                    trt: Effect({mag: effect[mag][:, t] for mag in effect},
+                                dist_bins[trt],
+                                getdefault(oq.pointsource_distance, trt))
+                    for t, trt in enumerate(gsims_by_trt)})
+                minint = oq.minimum_intensity.get('default', 0)
+                for trt, eff in self.effect.items():
+                    oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
+                    oq.pointsource_distance[trt] = eff.dist_by_mag(
+                        eff.collapse_value)
+        elif oq.pointsource_distance['default']:
+            # replace pointsource_distance with a dict trt -> mag -> dst
+            for trt in gsims_by_trt:
+                try:
+                    dst = getdefault(oq.pointsource_distance, trt)
+                except TypeError:  # 'NoneType' object is not subscriptable
+                    dst = getdefault(oq.maximum_distance, trt)
+                oq.pointsource_distance[trt] = {mag: dst for mag in mags}
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)

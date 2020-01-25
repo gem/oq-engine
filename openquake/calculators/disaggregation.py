@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -349,7 +349,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             if sid == 0:
                 logging.info('nbins=%s for site=#%d', shape_dic, sid)
             matrix_size = numpy.prod(shape)
-            if matrix_size > 1E7:
+            if matrix_size > 1E6:
                 raise ValueError(
                     'The disaggregation matrix for site #%d is too large '
                     '(%d elements): fix the binnning!' % (sid, matrix_size))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,12 +21,12 @@ Module exports :class:`DowrickRhoades2005Asc`,:class:`DowrickRhoades2005SInter`
 :class:`DowrickRhoades2005SSlab`, and :class:`DowrickRhoades2005Volc`.
 """
 import numpy as np
-from openquake.hazardlib.gsim.base import IPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
 
 
-class DowrickRhoades2005Asc(IPE):
+class DowrickRhoades2005Asc(GMPE):
     """
     Implements IPE developed by D.J. Dowrick and D.A. Rhoades published as
     "Revised models for attenuation of Modified Mercalli Intensity in
