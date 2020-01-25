@@ -689,15 +689,16 @@ class Effect(object):
         self.effect_by_mag = effect_by_mag
         self.dists = dists
         self.nbins = len(dists)
-        effectmax = effect_by_mag[max(effect_by_mag)]
-        if collapse_dist is not None:
-            # intensity at the maximum magnitude and collapse distance
-            idx = numpy.searchsorted(dists, collapse_dist)
-            if idx == self.nbins:
-                idx -= 1
-            self.collapse_value = effectmax[idx]
-        else:
-            self.collapse_value = None
+
+    def collapse_value(self, collapse_dist):
+        """
+        :returns: intensity at the maximum magnitude and collapse distance
+        """
+        effectmax = self.effect_by_mag[max(self.effect_by_mag)]
+        idx = numpy.searchsorted(self.dists, collapse_dist)
+        if idx == self.nbins:
+            return effectmax[idx-1]
+        return 0
 
     def __call__(self, mag, dist):
         di = numpy.searchsorted(self.dists, dist)
