@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,7 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import sap, config, datastore
+from openquake.baselib import sap, config, datastore, parallel
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, readinput, oqvalidation
@@ -70,6 +70,7 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         eng.run_calc(job_id, oqparam, exports)
         for line in logs.dbcmd('list_outputs', job_id, False):
             safeprint(line)
+    parallel.Starmap.shutdown()
     return job_id
 
 
