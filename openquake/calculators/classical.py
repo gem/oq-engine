@@ -292,18 +292,17 @@ class ClassicalCalculator(base.HazardCalculator):
                  oq.maximum_distance, oq.imtls, mon)).reduce()
             self.datastore['effect_by_mag_dst_trt'] = effect
             self.datastore.set_attrs('effect_by_mag_dst_trt', **dist_bins)
-            if oq.pointsource_distance['default']:
+            self.effect.update({
+                trt: Effect({mag: effect[mag][:, t] for mag in effect},
+                            dist_bins[trt])
+                for t, trt in enumerate(gsims_by_trt)})
+            minint = oq.minimum_intensity.get('default', 0)
+            for trt, eff in self.effect.items():
+                oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
                 # replace pointsource_distance with a dict trt -> mag -> dst
-                self.effect.update({
-                    trt: Effect({mag: effect[mag][:, t] for mag in effect},
-                                dist_bins[trt],
-                                getdefault(oq.pointsource_distance, trt))
-                    for t, trt in enumerate(gsims_by_trt)})
-                minint = oq.minimum_intensity.get('default', 0)
-                for trt, eff in self.effect.items():
-                    oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
+                if oq.pointsource_distance['default']:
                     oq.pointsource_distance[trt] = eff.dist_by_mag(
-                        eff.collapse_value)
+                        eff.collapse_value(oq.pointsource_distance['default']))
         elif oq.pointsource_distance['default']:
             # replace pointsource_distance with a dict trt -> mag -> dst
             for trt in gsims_by_trt:
