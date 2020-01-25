@@ -239,7 +239,7 @@ class SiteCollection(object):
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
                     self._set(name, sitemodel[name])
-        dupl = get_duplicates(self, 'lon', 'lat')
+        dupl = get_duplicates(self.array, 'lon', 'lat')
         if dupl:
             raise ValueError('There are duplicate points %s' % dupl)
         return self
