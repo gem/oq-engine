@@ -1,4 +1,22 @@
   [Michele Simionato]
+  * Internal: we are now shutting down the ProcessPool explicitly in order
+    to support Python 3.8
+  * Internal: removed the class hazardlib.gsim.base.IPE
+  * Changed the aggregate loss curves generation to not use the partial
+    asset loss table, with a huge memory reduction
+  * Extended `oq check_input` to accept multiple files
+  * Changed the scenario damage calculator to use discrete damage distributions
+  * Forced the "number" attribute in the exposure must be an integer in the
+    range 1..65535, extrema included
+
+python3-oq-engine (3.8.0-1~xenial01) xenial; urgency=low
+
+  [Graeme Weatherill]
+  * Updates SERA Craton GMPE to incorporate NGA East site response and reflect
+    changes in CEUS USGS model
+
+  [Michele Simionato]
+  * The total loss curves in event_based_risk are now built with pandas
   * Added an option `oq engine --param` to override the job.ini parameters
   * Internal: reduced the number of NGAEastUSGS classes from 39 to 1
   * Internal: reduced the number of NGAEast classes from 44 to 2
@@ -49,6 +67,12 @@
     but only for assets and events above a `collapse_threshold` parameter
   * Avoided transferring the GMFs upfront in scenario_damage, scenario_risk
     and event_based_damage
+
+  [Daniele Viganò]
+  * Included pandas in the engine distribution
+
+  [Michele Simionato]
+  * Avoided reading multiple time the gsim logic tree file and relative files
   * Added a check for duplicate sites in the site model file
   * Implemented an event_based_damage calculator
   * Added an API /v1/calc/ID/extract/gmf_data?event_id=XXX
@@ -165,6 +189,8 @@
   * Added a check for no GMFs in event_based_risk
   * Avoided transferring the site collection
   * Storing the sources in TOML format
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 20 Jan 2020 10:14:51 +0000
 
 python3-oq-engine (3.7.1-1~xenial01) xenial; urgency=low
 

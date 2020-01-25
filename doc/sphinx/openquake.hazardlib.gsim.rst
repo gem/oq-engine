@@ -790,7 +790,7 @@ sera_amplification_models
 sera_2019_craton
 -------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.sera_2019_craton
+.. automodule:: openquake.hazardlib.gsim.sera_2020_craton
     :members:
     :undoc-members:
     :show-inheritance:

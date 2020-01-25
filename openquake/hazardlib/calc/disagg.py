@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,8 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.gsim.base import ContextMaker, get_mean_std
+from openquake.hazardlib.gsim.base import (
+    ContextMaker, get_mean_std, to_distribution_values)
 
 
 def _eps3(truncation_level, n_epsilons):
@@ -89,7 +90,9 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
             mean_std = get_mean_std(
                 sitecol, rctx, dctx, iml2.imts, [gsim])[..., 0]  # (2, N, M)
         with pne_mon:
-            iml = gsim.to_distribution_values(iml2)
+            iml = numpy.array(
+                [to_distribution_values(lvl, imt) for imt, lvl in zip(
+                    iml2.imts, iml2)])  # shape (M, P)
             pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)
             acc['pnes'].append(pne)
     return pack(acc, 'mags dists lons lats pnes'.split())
