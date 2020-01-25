@@ -402,8 +402,13 @@ class ClassicalCalculator(base.HazardCalculator):
 
             nr = sum(src.weight for src in sources)
             logging.info('TRT = %s', trt)
-            logging.info('max_dist=%d km, gsims=%d, ruptures=%d, blocks=%d',
-                         oq.maximum_distance(trt), len(gsims), nr, nb)
+            if oq.maximum_distance.magdist:
+                md = ', '.join('%s->%d' % item for item in sorted(
+                    oq.maximum_distance.magdist[trt].items()))
+            else:
+                md = oq.maximum_distance.magdist(trt)
+            logging.info('max_dist=%s, gsims=%d, ruptures=%d, blocks=%d',
+                         md, len(gsims), nr, nb)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
