@@ -75,18 +75,6 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def check_effect(effect, oqparam):
-    """
-    Raise a warning if the maximum distance is too small
-    """
-    maxmag = list(effect)[-1]
-    effect_at_maxdist = effect[maxmag][-1].max()  # max on the TRTs
-    # minlevel = min(imls[0] for imls in oqparam.imtls.values())
-    if effect_at_maxdist > .05:  # TODO: decide what to use instead of .05
-        logging.warning('The maximum_distance is too small, you are losing '
-                        'ruptures with an effect > %.3f g', effect_at_maxdist)
-
-
 # NB: this is NOT called if split_by_magnitude is true
 def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
@@ -302,7 +290,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 get_effect_by_mag,
                 (mags, self.sitecol.one(), gsims_by_trt,
                  oq.maximum_distance, oq.imtls, mon)).reduce()
-            check_effect(effect, oq)
             self.datastore['effect_by_mag_dst_trt'] = effect
             self.datastore.set_attrs('effect_by_mag_dst_trt', **dist_bins)
             if oq.pointsource_distance['default']:
@@ -312,8 +299,9 @@ class ClassicalCalculator(base.HazardCalculator):
                                 dist_bins[trt],
                                 getdefault(oq.pointsource_distance, trt))
                     for t, trt in enumerate(gsims_by_trt)})
+                minint = oq.minimum_intensity.get('default', 0)
                 for trt, eff in self.effect.items():
-                    oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
+                    oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
                     oq.pointsource_distance[trt] = eff.dist_by_mag(
                         eff.collapse_value)
         elif oq.pointsource_distance['default']:
