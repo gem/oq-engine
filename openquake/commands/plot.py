@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -253,7 +253,12 @@ class PolygonPlotter():
         except ValueError:  # LINESTRING, not POLYGON
             pass
 
-    def set_lim(self):
+    def set_lim(self, sitecol=None):
+        if sitecol:
+            self.minxs.append(min(sitecol['lon']))
+            self.maxxs.append(max(sitecol['lon']))
+            self.minys.append(min(sitecol['lat']))
+            self.maxys.append(max(sitecol['lat']))
         if self.minxs and self.maxxs:
             self.ax.set_xlim(min(self.minxs), max(self.maxxs))
         if self.minys and self.maxys:
@@ -270,9 +275,10 @@ def make_figure_sources(extractors, what):
     info = ex.get(what)
     fig, ax = plt.subplots()
     ax.grid(True)
-    # sitecol = ex.get('sitecol')
+    sitecol = ex.get('sitecol')
     # bmap = basemap('cyl', sitecol)
     # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
+    ax.plot(sitecol['lon'], sitecol['lat'], '+')
     pp = PolygonPlotter(ax)
     n = 0
     tot = 0
@@ -285,7 +291,7 @@ def make_figure_sources(extractors, what):
                 alpha = .1
             pp.add(shapely.wkt.loads(rec['wkt']), alpha=alpha)
             tot += 1
-    pp.set_lim()
+    pp.set_lim(sitecol)
     ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
     return plt
 

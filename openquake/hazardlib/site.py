@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -218,8 +218,8 @@ class SiteCollection(object):
             par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
             req.append('vs30measured')
-        self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
-        self.array = arr = numpy.zeros(len(lons), self.dtype)
+        dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
+        self.array = arr = numpy.zeros(len(lons), dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
         arr['lon'] = fix_lon(numpy.array(lons))
         arr['lat'] = numpy.array(lats)
@@ -239,7 +239,7 @@ class SiteCollection(object):
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
                     self._set(name, sitemodel[name])
-        dupl = get_duplicates(self, 'lon', 'lat')
+        dupl = get_duplicates(self.array, 'lon', 'lat')
         if dupl:
             raise ValueError('There are duplicate points %s' % dupl)
         return self
@@ -292,7 +292,7 @@ class SiteCollection(object):
         """
         :returns: a SiteCollection with a site of the minimal vs30
         """
-        if 'vs30' in self.dtype.names:
+        if 'vs30' in self.array.dtype.names:
             idx = self.array['vs30'].argmin()
         else:
             idx = 0

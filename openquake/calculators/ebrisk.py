@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 import operator
+import itertools
 from datetime import datetime
 import numpy
 
@@ -28,7 +29,6 @@ from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters
-from openquake.calculators.scenario_risk import ael_dt
 from openquake.calculators.post_risk import PostRiskCalculator
 
 U8 = numpy.uint8
@@ -59,13 +59,15 @@ def calc_risk(gmfs, param, monitor):
     E = len(eids)
     L = len(param['lba'].loss_names)
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
-    alt = general.AccumDict(accum=numpy.zeros(L, F32))  # aid, eid -> loss
+    alt = general.AccumDict(accum=general.AccumDict(accum=numpy.zeros(L, F32)))
+    # aggkey -> eid -> loss
     arr = numpy.zeros((E, L), F32)
     acc = dict(events_per_sid=0, numlosses=numpy.zeros(2, int))  # (kept, tot)
     lba = param['lba']
     tempname = param['tempname']
     eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+    aggby = param['aggregate_by']
 
     minimum_loss = []
     fraction = param['minimum_loss_fraction'] / len(assetcol)
@@ -93,15 +95,17 @@ def calc_risk(gmfs, param, monitor):
             else:
                 field = 'value-' + lt
             for a, asset in enumerate(assets_on_sid):
+                if aggby:
+                    idx = ','.join(map(str, asset[aggby]))
                 aid = asset['ordinal']
                 ls = asset[field] * lratios[a]
                 for loss_idx, losses in lba.compute(asset, ls, lt):
                     kept = 0
                     with mon_agg:
-                        if param['aggregate_by']:
+                        if aggby:
                             for loss, eid in zip(losses, out.eids):
                                 if loss >= minimum_loss[loss_idx]:
-                                    alt[aid, eid][loss_idx] = loss
+                                    alt[idx][eid][loss_idx] += loss
                                     kept += 1
                         arr[eidx, loss_idx] += losses
                     if param['avg_losses']:  # this is really fast
@@ -112,11 +116,9 @@ def calc_risk(gmfs, param, monitor):
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
-    acc['alt'] = alt = numpy.fromiter(  # already sorted by aid
-        ((aid, eid, eid2rlz[eid], loss) for (aid, eid), loss in alt.items()),
-        param['ael_dt'])
-    alt.sort(order='rlzi')
-    acc['indices'] = general.get_indices(alt['rlzi'])
+    acc['alt'] = {idx: numpy.fromiter(  # already sorted by aid
+        ((eid, eid2rlz[eid], loss) for eid, loss in alt[idx].items()),
+        elt_dt) for idx in alt}
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -164,6 +166,12 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     yield res
 
 
+def gen_indices(tagcol, aggby):
+    ranges = [range(1, len(getattr(tagcol, tagname))) for tagname in aggby]
+    for idxs in itertools.product(*ranges):
+        yield idxs
+
+
 @base.calculators.add('ebrisk')
 class EbriskCalculator(event_based.EventBasedCalculator):
     """
@@ -183,18 +191,18 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                           self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
-        self.param['ael_dt'] = ael_dt(oq.loss_names, rlz=True)
         self.param['ebrisk_maxsize'] = oq.ebrisk_maxsize
         self.param['minimum_loss_fraction'] = oq.minimum_loss_fraction
 
         self.A = A = len(self.assetcol)
-        self.datastore.create_dset(
-            'asset_loss_table/data', ael_dt(oq.loss_names))
-        self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
+        elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
+        for idxs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
+            idx = ','.join(map(str, idxs))
+            self.datastore.create_dset('event_loss_table/' + idx, elt_dt)
+        self.param.pop('oqparam', None)  # unneeded
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
-        elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
         elt_nbytes = 4 * self.E * L
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
@@ -218,7 +226,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.numlosses = 0
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
-        self.offset = 0
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
         for rgetter in getters.gen_rupture_getters(
@@ -226,11 +233,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             smap.submit((rgetter, srcfilter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
-            self.datastore['asset_loss_table/indices'] = self.indices
+            self.datastore['event_loss_table/indices'] = self.indices
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
-        logging.info('Stored {:_d} / {:_d} losses'.format(*self.numlosses))
+        logging.info('Considered {:_d} / {:_d} losses'.format(*self.numlosses))
         return 1
 
     def agg_dicts(self, dummy, dic):
@@ -243,14 +250,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if not dic:
             return
         self.oqparam.ground_motion_fields = False  # hack
-        with self.monitor('saving losses_by_event and asset_loss_table'):
+        with self.monitor('saving losses_by_event and event_loss_table'):
             hdf5.extend(self.datastore['losses_by_event'], dic['elt'])
-            hdf5.extend(self.datastore['asset_loss_table/data'],
-                        dic['alt'][['asset_id', 'event_id', 'loss']])
-            for rlzi, [(start, stop)] in dic['indices'].items():
-                self.indices['rlz-%03d' % rlzi].append((
-                    start + self.offset, stop + self.offset))
-            self.offset += len(dic['alt'])
+            for idx, arr in dic['alt'].items():
+                hdf5.extend(self.datastore['event_loss_table/' + idx], arr)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']

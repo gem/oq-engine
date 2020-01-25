@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,10 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
 import logging
 import operator
-import unittest
 import numpy
 
 from openquake.baselib.general import AccumDict
@@ -177,10 +176,6 @@ class EbrCalculator(base.RiskCalculator):
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L))
         self.agglosses = numpy.zeros((self.E, self.L), F32)
         if 'builder' in self.param:
-            logging.warning(
-                'Building the loss curves and maps for each asset is '
-                'deprecated: consider building the aggregate curves and '
-                'maps with the ebrisk calculator instead')
             self.build_datasets(self.param['builder'])
         if parent:
             parent.close()  # avoid concurrent reading issues
@@ -272,11 +267,4 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')
-        prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
-        if self.datastore.hdf5.mode is None:  # no parent
-            logging.warn('Disabling task distribution')
-            with unittest.mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
-                prc.run()
-        else:  # mode is r+
-            prc.datastore.parent = self.datastore.parent
-            prc.run()
+        post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()

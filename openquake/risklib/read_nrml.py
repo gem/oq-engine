@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4#
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -165,7 +165,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     # NB: noDamageLimit=None is now treated as noDamageLimit=0
     nodamage = imls.attrib.get('noDamageLimit', 0)
     if nodamage == 0:
-        # use a cutoff to avoid log(0) in GMPE.to_distribution_values
+        # use a cutoff to avoid log(0) in to_distribution_values
         logging.debug('Using noDamageLimit=%g in %s, line %s', min_iml,
                       fname, ff.lineno)
         nodamage = min_iml
@@ -183,7 +183,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     if ff['format'] == 'continuous':
         minIML = float(imls['minIML'])
         if minIML == 0:
-            # use a cutoff to avoid log(0) in GMPE.to_distribution_values
+            # use a cutoff to avoid log(0) in to_distribution_values
             logging.warning('Found minIML=0 in %s, line %s, using %g instead',
                             fname, imls.lineno, min_iml)
             minIML = min_iml
@@ -398,7 +398,7 @@ def update_validators():
         'occupants': valid.positivefloat,
         'value': valid.positivefloat,
         'retrofitted': valid.positivefloat,
-        'number': valid.compose(valid.positivefloat, valid.nonzero),
+        'number': valid.asset_number,
         'vulnerabilitySetID': str,  # any ASCII string is fine
         'vulnerabilityFunctionID': str,  # any ASCII string is fine
         'lossCategory': valid.utf8,  # a description field

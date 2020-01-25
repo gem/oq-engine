@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
-from openquake.hazardlib.gsim.sera_2019_craton import SERA2019Craton
+from openquake.hazardlib.gsim.sera_2020_craton import SERA2020Craton
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -23,7 +23,7 @@ MAX_DISCREP = 0.01
 
 
 class SERA2019CratonTestCaseMean(BaseGSIMTestCase):
-    GSIM_CLASS = SERA2019Craton
+    GSIM_CLASS = SERA2020Craton
 
     def test_mean(self):
         self.check("sera_craton/SERA_CRATON_MEAN_MEDIAN_MODEL.csv",
@@ -36,7 +36,7 @@ class SERA2019CratonTestCaseMean(BaseGSIMTestCase):
 
 
 class SERA2019CratonTestCasePlus1Sigma(BaseGSIMTestCase):
-    GSIM_CLASS = SERA2019Craton
+    GSIM_CLASS = SERA2020Craton
 
     def test_mean(self):
         self.check("sera_craton/SERA_CRATON_MEAN_PLUS1SIGMA_MODEL.csv",
@@ -45,7 +45,7 @@ class SERA2019CratonTestCasePlus1Sigma(BaseGSIMTestCase):
 
 
 class SERA2019CratonErgodicTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = SERA2019Craton
+    GSIM_CLASS = SERA2020Craton
 
     def test_std_total(self):
         self.check("sera_craton/SERA_CRATON_TOTAL_STDDEV_ERGODIC.csv",

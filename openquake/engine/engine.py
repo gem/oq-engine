@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -122,11 +122,10 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)
-
 else:
 
     def set_concurrent_tasks_default(calc):
-        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
+        pass
 
 
 def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):

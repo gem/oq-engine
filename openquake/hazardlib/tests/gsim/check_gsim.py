@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Check GMPE/IPE class versus data file in CSV format by calculating standard
+Check GSIM class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
 """
 import csv
@@ -30,7 +30,7 @@ import copy
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
                                           DistancesContext)
 from openquake.hazardlib.imt import registry
@@ -50,8 +50,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     Test GSIM against the data file and return test result.
 
     :param gsim_cls:
-        A subclass of either :class:`~openquake.hazardlib.gsim.base.GMPE`
-        or :class:`~openquake.hazardlib.gsim.base.IPE` to test.
+        A subclass of :class:`~openquake.hazardlib.gsim.base.GMPE` to test.
     :param datafile:
         A file object containing test data in csv format.
     :param max_discrep_percentage:
@@ -86,7 +85,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
             mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
                                                       imt, stddev_types)
             if result_type == 'MEAN':
-                if isinstance(gsim, IPE):
+                if str(imt) == 'MMI':
                     # For IPEs it is the values, not the logarithms returned
                     result = mean
                 else:

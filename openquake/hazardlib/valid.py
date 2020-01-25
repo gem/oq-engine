@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -529,6 +529,22 @@ def wkt_polygon(value):
     # close the linear polygon ring by appending the first coord to the end
     points.append(points[0])
     return 'POLYGON((%s))' % ', '.join(points)
+
+
+def asset_number(value):
+    """
+    :param value: input string
+    :returns: positive integer in the range 1..65535
+    """
+    try:
+        i = int(value)
+    except ValueError:
+        i = int(float(value))
+    if i < 1:
+        raise ValueError('got %d < 1' % i)
+    elif i > 65535:
+        raise ValueError('got %d > 65535' % i)
+    return i
 
 
 def positiveint(value):
