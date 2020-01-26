@@ -696,9 +696,7 @@ class Effect(object):
         """
         effectmax = self.effect_by_mag[max(self.effect_by_mag)]
         idx = numpy.searchsorted(self.dists, collapse_dist)
-        if idx == self.nbins:
-            return effectmax[idx-1]
-        return 0
+        return effectmax[idx-1 if idx == self.nbins else idx]
 
     def __call__(self, mag, dist):
         di = numpy.searchsorted(self.dists, dist)
