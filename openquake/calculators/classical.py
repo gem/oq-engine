@@ -298,7 +298,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 for t, trt in enumerate(gsims_by_trt)})
             minint = oq.minimum_intensity.get('default', 0)
             for trt, eff in self.effect.items():
-                oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
+                if minint:
+                    oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
                 # replace pointsource_distance with a dict trt -> mag -> dst
                 if oq.pointsource_distance['default']:
                     oq.pointsource_distance[trt] = eff.dist_by_mag(
@@ -408,6 +409,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 md = oq.maximum_distance(trt)
             logging.info('max_dist=%s, gsims=%d, ruptures=%d, blocks=%d',
                          md, len(gsims), nr, nb)
+            if oq.pointsource_distance['default']:
+                pd = ', '.join('%s->%d' % item for item in sorted(
+                    oq.pointsource_distance[trt].items()))
+                logging.info('ps_dist=%s', pd)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
