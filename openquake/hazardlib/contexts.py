@@ -480,13 +480,13 @@ class PmapMaker(object):
 
     def _gen_rups_sites(self, src, sites):
         loc = getattr(src, 'location', None)
-        pairs = ((rups, sites) for mag, rups in self.mag_rups)
+        rupsites = ((rups, sites) for mag, rups in self.mag_rups)
         if loc:
             # implements pointsource_distance: finite site effects
             # are ignored for sites over that distance, if any
             simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
             if simple or not self.pointsource_distance:
-                yield from pairs  # there is nothing to collapse
+                yield from rupsites  # there is nothing to collapse
             else:
                 weights, depths = zip(*src.hypocenter_distribution.data)
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
@@ -502,7 +502,7 @@ class PmapMaker(object):
                         yield _collapse(rups), far
                         yield rups, close
         else:  # no point source or site-specific analysis
-            yield from pairs
+            yield from rupsites
 
 
 class BaseContext(metaclass=abc.ABCMeta):
