@@ -178,29 +178,26 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
 
-    def filter(self, sites, rupture, mdist=None):
+    def filter(self, sites, rup):
         """
         Filter the site collection with respect to the rupture.
 
         :param sites:
             Instance of :class:`openquake.hazardlib.site.SiteCollection`.
-        :param rupture:
+        :param rup:
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
-        :param mdist:
-           if not None, use it as maximum distance
         :returns:
             (filtered sites, distance context)
         """
-        distances = get_distances(rupture, sites, self.filter_distance)
-        mdist = mdist or self.maximum_distance(
-            rupture.tectonic_region_type, rupture.mag)
+        distances = get_distances(rup, sites, self.filter_distance)
+        mdist = self.maximum_distance(rup.tectonic_region_type, rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
         else:
             raise FarAwayRupture(
-                '%d: %d km' % (rupture.rup_id, distances.min()))
+                '%d: %d km' % (rup.rup_id, distances.min()))
         return sites, DistancesContext([(self.filter_distance, distances)])
 
     def add_rup_params(self, rupture):
@@ -231,7 +228,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture, mdist=None):
+    def make_contexts(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -243,9 +240,6 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
-        :param mdist:
-            Maximum distance for the rupture magnitude (if None use the max)
-
         :returns:
             Tuple of two items: sites and distances context.
 
@@ -253,7 +247,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        sites, dctx = self.filter(sites, rupture, mdist)
+        sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -268,14 +262,14 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def make_ctxs(self, ruptures, sites, mdist=None):
+    def make_ctxs(self, ruptures, sites):
         """
         :returns: a list of triples (rctx, sctx, dctx)
         """
         ctxs = []
         for rup in ruptures:
             try:
-                sctx, dctx = self.make_contexts(sites, rup, mdist)
+                sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             ctxs.append((rup, sctx, dctx))
@@ -423,9 +417,9 @@ class PmapMaker(object):
         totrups, numrups, nsites = 0, 0, 0
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
-        for rups, sites, mdist in self._gen_rups_sites(src, sites):
+        for rups, sites in self._gen_rups_sites(src, sites):
             with self.ctx_mon:
-                ctxs = self.cmaker.make_ctxs(rups, sites, mdist)
+                ctxs = self.cmaker.make_ctxs(rups, sites)
                 if ctxs:
                     totrups += len(ctxs)
                     ctxs = self.collapse(ctxs)
@@ -486,31 +480,29 @@ class PmapMaker(object):
 
     def _gen_rups_sites(self, src, sites):
         loc = getattr(src, 'location', None)
-        triples = ((rups, sites, None) for mag, rups in self.mag_rups)
+        pairs = ((rups, sites) for mag, rups in self.mag_rups)
         if loc:
             # implements pointsource_distance: finite site effects
             # are ignored for sites over that distance, if any
             simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
             if simple or not self.pointsource_distance:
-                yield from triples  # there is nothing to collapse
+                yield from pairs  # there is nothing to collapse
             else:
                 weights, depths = zip(*src.hypocenter_distribution.data)
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
                 loc.depth = numpy.average(depths, weights=weights)
-                trt = src.tectonic_region_type
                 for mag, rups in self.mag_rups:
-                    mdist = self.maximum_distance(trt)  # FIXME: mag-dep
                     pdist = self.pointsource_distance.get('%.3f' % mag)
-                    close, far = sites.split(loc, min(pdist, mdist))
+                    close, far = sites.split(loc, pdist)
                     if close is None:  # all is far
-                        yield _collapse(rups), far, mdist
+                        yield _collapse(rups), far
                     elif far is None:  # all is close
-                        yield rups, close, mdist
+                        yield rups, close
                     else:  # some sites are far, some are close
-                        yield _collapse(rups), far, mdist
-                        yield rups, close, mdist
+                        yield _collapse(rups), far
+                        yield rups, close
         else:  # no point source or site-specific analysis
-            yield from triples
+            yield from pairs
 
 
 class BaseContext(metaclass=abc.ABCMeta):
