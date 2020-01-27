@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check to forbid multiple `complexFaultGeometry` nodes
   * Internal: we are now shutting down the ProcessPool explicitly in order
     to support Python 3.8
   * Internal: removed the class hazardlib.gsim.base.IPE
