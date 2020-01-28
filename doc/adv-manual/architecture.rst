@@ -1,49 +1,26 @@
-Architecture of the OpenQuake Engine v2+
+Architecture of the OpenQuake engine
 =========================================
 
-The OpenQuake Engine version 2 is a complete rewrite of version
-1.0, so a new document describing the overall architecture is
-needed. Whereas in the past the Engine was database-centric and
-structured as a Web application with an Object Relational Mapper, now
-it is calculation-centric and structured as a scientific application:
-everything is done in memory and in the core
-engine there is no database, nor ORM. Intermediate results are stored
-in HDF5 format. In the calculators we work as much as possible in
-terms of arrays which are efficiently manipulated at C/Fortran speed
-with a stack of well established scientific libraries (numpy/scipy).
+The engine is structured as a regular scientific application: we try
+to perform calculations as much as possible in memory and when it is
+not possible intermediate results are stored in HDF5 format.
+We try work as much as possible in terms of arrays which are
+efficiently manipulated at C/Fortran speed with a stack of well
+established scientific libraries (numpy/scipy).
 
-Design principles
------------------
+CPU-intensity calculations
+are parallelized with a custom framework (the engine is ten years old and
+predates frameworks like dask or ray) which however is quite easy to
+use and mostly compatible with Python multiprocessing or concurrent.futures.
+The concurrency architecture is the standard Single Writer Multiple Reader
+(SWMR), used at the HDF5 level): only one process can write data while multiple
+processes can read it.
 
-The main design principle has been *simplicity*: everything has to be
-as simple as possible (but not simplest). The goal has been to keep
-the engine simple enough that a single person can understand it, can
-debug it and can extend it without tremendous efforts. All the rest
-comes from simplicity: transparency, ability to inspect and debug, modularity,
-adaptability of the code, etc. Even efficiency: in the last three
-years most of the performance improvements came from free, just from
-removing complications. When a thing is simple it is easy to make it
-fast. The battle for simplicity is never ending, so there are still
-several things in the engine that are more complex than they should:
-we are working on that.
-
-After simplicity the second design goal has been *performance*: the
-engine is a number chrunching application after all, and we need to run
-massively parallel calculations taking days or weeks of
-runtime. Efficiency in terms of computation time and memory
-requirements is of paramount importance, since it makes the difference
-between being able to run a computation and being unable to do it.
-Being too slow to be usable should be considered as a bug.
-
-The third requirement is *reproducibility*, which is the
-same as testability: it is essential to have a suite of tests checking
-that the calculators are providing the expected outputs against a set
-of predefined inputs.  With respect to OpenQuake Engine 1.0 we have at
-least tripled the number of scientific tests. We are testing a lot more
-corner cases and a lot more functionalities. On the other hand several
-programming unit tests have been removed: they were testing
-implementations details of an implementation that has been removed and
-replaced with a simpler one.
+In the past the engine had a database-centric architecture and was
+more class-oriented than numpy-oriented: some remnants of such dark
+past are still there, but they are slowly disappearing. Currently
+the database is only used for storing accessory data and it is a simple
+SQLite file. It is mainly used by the WebUI to display the logs.
 
 Components of the OpenQuake Engine
 -----------------------------------
@@ -68,9 +45,9 @@ The OpenQuake Engine suite is composed of several components:
   computations, the owner of a calculation, the calculation descriptions,
   the performances, the logs, etc; the bulk scientific data
   (essentially big arrays) are kept in the datastore
-- the *database server*, which is a service mediating the interaction
+- the *DbServer*, which is a service mediating the interaction
   between the calculators and the database
-- the *Web UI* is a web applications that allows to run and monitor
+- the *WebUI* is a web applications that allows to run and monitor
   computations via a browser; multiple calculations can be run in parallel
 - the *oq* command-line tool; it allows to run computations
   and provides an interface to the underlying
@@ -123,3 +100,34 @@ of functionality in the API which is documented here:
 https://github.com/gem/oq-engine/blob/master/doc/web-api.md. It is
 possible to build your own user interface for the engine on top of it,
 since the API is stable and kept backward compatible.
+
+Design principles
+-----------------
+
+The main design principle has been *simplicity*: everything has to be
+as simple as possible (but not simplest). The goal has been to keep
+the engine simple enough that a single person can understand it, can
+debug it and can extend it without tremendous efforts. All the rest
+comes from simplicity: transparency, ability to inspect and debug, modularity,
+adaptability of the code, etc. Even efficiency: in the last three
+years most of the performance improvements came from free, just from
+removing complications. When a thing is simple it is easy to make it
+fast. The battle for simplicity is never ending, so there are still
+several things in the engine that are more complex than they should:
+we are working on that.
+
+After simplicity the second design goal has been *performance*: the
+engine is a number chrunching application after all, and we need to run
+massively parallel calculations taking days or weeks of
+runtime. Efficiency in terms of computation time and memory
+requirements is of paramount importance, since it makes the difference
+between being able to run a computation and being unable to do it.
+Being too slow to be usable should be considered as a bug.
+
+The third requirement is *reproducibility*, which is the
+same as testability: it is essential to have a suite of tests checking
+that the calculators are providing the expected outputs against a set
+of predefined inputs. We have literally thousands of tests which are
+run multiple times per day in our Continuous Integration environments
+(travis, GitLab, Jenkins), split in unit tests, end-to-end tests and
+long running tests.
