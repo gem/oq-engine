@@ -13,7 +13,6 @@ Contents:
 
    baselib
    hazardlib
-   architecture
    how-to-change-the-XML-for-sources
    internals
               
