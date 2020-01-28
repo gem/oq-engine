@@ -75,9 +75,7 @@ The OpenQuake Engine suite is composed of several components:
 - the *oq* command-line tool; it allows to run computations
   and provides an interface to the underlying
   database and datastores so that it is possible to list and export the results
-- the engine can run on a cluster of machines: in that case
-  you have to start the *rabbitmq* and *celery* components which
-  are not required on a single machine installation. In that case a
+- the engine can run on a cluster of machines: in that case a
   minimal amount of configuration is needed, whereas in single machine
   installations the engine works out of the box
 
@@ -90,11 +88,11 @@ depend on the lower levels but not viceversa:
 - level 8: server (database and Web UI)
 - level 7: engine (command-line tool, export, logs)
 - level 6: calculators (hazard and risk calculators)
-- level 5: commonlib (configuration, logic trees, datastore, I/O)
+- level 5: commonlib (configuration, logic trees, I/O)
 - level 4: risklib (risk validation, risk models, risk inputs)
 - level 3: hmtk (catalogues, plotting, ...)
 - level 2: hazardlib (validation, read/write XML, source and site objects, geospatial utilities, GSIM library)
-- level 1: baselib (programming utilities, parallelization, monitoring, Python 3 compatibility)
+- level 1: baselib (programming utilities, parallelization, monitoring, hdf5...)
 
 `baselib` and `hazardlib` are very stable and can be used outside of the
 engine; the other libraries are directly related to the engine and
@@ -110,13 +108,13 @@ often easier to add a specific calculator optimized for a given use case rather
 than complicating the current calculators.
 
 The results of a computation are automatically saved in the datastore
-and can be exported in a portable format, such as XML or CSV.  You can
-assume that the datastore of version X of the engine *will not work*
-with version X + 1: on the contrary, the exported files will likely be
-same across different versions. It is important to export all of the
-outputs you are interested in before doing an upgrade, otherwise you
-would be forced to downgrade in order to be able to export the previous
-results.
+and can be exported in a portable format, such as CSV (or XML, for
+legacy reasons). You can assume that the datastore of version X of
+the engine *will not work* with version X + 1: on the contrary, the
+exported files will likely be same across different versions. It is
+important to export all of the outputs you are interested in before
+doing an upgrade, otherwise you would be forced to downgrade in order
+to be able to export the previous results.
 
 The WebUI provides a REST API that can be used in third party
 applications: for instance a QGIS plugin could download the maps
