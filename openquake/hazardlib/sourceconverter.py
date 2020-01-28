@@ -469,11 +469,11 @@ class RuptureConverter(object):
         """
         mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
-            surfaces = [node.complexFaultGeometry]
+            [surface] = node.getnodes('complexFaultGeometry')
         rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces))
+            surface=self.convert_surfaces([surface]))
         return rupt
 
     def convert_singlePlaneRupture(self, node):
