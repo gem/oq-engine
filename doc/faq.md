@@ -24,6 +24,16 @@ and IT expertise, for a cluster setup see the [hardware suggestions](hardware-su
 If you are running the OpenQuake Engine on a multi-node cluster you should also
 have a look at [FAQ related to cluster deployments](faq-cluster.md).
 
+### Help! Should I disable Hyperthreading?
+
+It depends. If you have memory issue for sure you should disable
+HyperThreading since it will save you a lot of memory.
+If memory is not not a issue, enabling HyperThreading may still be a bad
+idea: depending on the hardware and the software (in particular the patches
+for Spectre/Meltdown) it may slow down your system. The only way to assess
+the effect of HyperThreading is to run a (big) calculation with HyperThreading
+on and HyperThreading off and then compare the runtimes.
+
 ******
 
 ### Different installation methods
