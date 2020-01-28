@@ -10,17 +10,21 @@ established scientific libraries (numpy/scipy).
 
 CPU-intensity calculations
 are parallelized with a custom framework (the engine is ten years old and
-predates frameworks like dask or ray) which however is quite easy to
+predates frameworks like dask_ or ray_) which however is quite easy to
 use and mostly compatible with Python multiprocessing or concurrent.futures.
 The concurrency architecture is the standard Single Writer Multiple Reader
-(SWMR), used at the HDF5 level): only one process can write data while multiple
-processes can read it.
+(SWMR), used at the HDF5 level: only one process can write data while multiple
+processes can read it. The engine run seemlessly on a single machine or a
+cluster, using as much cores as possible.
 
 In the past the engine had a database-centric architecture and was
 more class-oriented than numpy-oriented: some remnants of such dark
 past are still there, but they are slowly disappearing. Currently
 the database is only used for storing accessory data and it is a simple
 SQLite file. It is mainly used by the WebUI to display the logs.
+
+.. _dask: https://dask.org/
+.. _ray: https://ray.readthedocs.io/en/latest/
 
 Components of the OpenQuake Engine
 -----------------------------------
@@ -47,7 +51,7 @@ The OpenQuake Engine suite is composed of several components:
   (essentially big arrays) are kept in the datastore
 - the *DbServer*, which is a service mediating the interaction
   between the calculators and the database
-- the *WebUI* is a web applications that allows to run and monitor
+- the *WebUI* is a web application that allows to run and monitor
   computations via a browser; multiple calculations can be run in parallel
 - the *oq* command-line tool; it allows to run computations
   and provides an interface to the underlying
@@ -55,6 +59,8 @@ The OpenQuake Engine suite is composed of several components:
 - the engine can run on a cluster of machines: in that case a
   minimal amount of configuration is needed, whereas in single machine
   installations the engine works out of the box
+- since v3.8 the engine does not depend anymore from celery and rabbitmq,
+  but can still use such tools until they will be deprecated
 
 This is the full stack of internal libraries used by the engine: each of those
 is a Python package containing several modules or event
@@ -127,7 +133,7 @@ Being too slow to be usable should be considered as a bug.
 The third requirement is *reproducibility*, which is the
 same as testability: it is essential to have a suite of tests checking
 that the calculators are providing the expected outputs against a set
-of predefined inputs. We have literally thousands of tests which are
+of predefined inputs. Currently we have thousands of tests which are
 run multiple times per day in our Continuous Integration environments
-(travis, GitLab, Jenkins), split in unit tests, end-to-end tests and
+r(avis, GitLab, Jenkins), split into unit tests, end-to-end tests and
 long running tests.
