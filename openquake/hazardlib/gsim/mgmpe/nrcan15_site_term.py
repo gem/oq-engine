@@ -72,7 +72,7 @@ class NRCan15SiteTerm(GMPE):
         for spec of input and result values.
         """
         # Prepare sites
-        sites_rock = copy.deepcopy(sites)
+        sites_rock = copy.copy(sites)
         sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 760.
         # compute mean and standard deviation
         mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
