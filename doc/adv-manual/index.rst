@@ -24,3 +24,5 @@ Contents:
    special-features
    asset-site-association
    risk-features
+   developing
+   architecture
