@@ -21,15 +21,16 @@ should do some study on your own and come back later. There is a huge
 amount of resources in the net about these topics. This manual will
 focus solely on the OpenQuake engine.
 
-It may be useful to have an idea of the architecture of the engine
-and its internal components, like the DbServer and the WebUI.
-For that you should read the architecture_ document.
+Before starting, it may be useful to have an idea of the architecture
+of the engine and its internal components, like the DbServer and the
+WebUI.  For that you should read the architecture_ document.
 
 .. _architecture: architecture.rst
 
 There are also external tools which are able to interact with the engine,
 like the QGIS plugin to run calculations and visualize the outputs and the
 IPT tool to prepare the required input files (except the hazard models).
+Unless you are developing for such tools you can safely ignore them.
 
 The first thing to do
 ---------------------
