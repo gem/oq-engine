@@ -7,16 +7,22 @@ how to install the engine. If you have already installed it and have
 issues running calculations you should go [here for hazard calculations](
 faq-hazard.md) and [here for risk calculations](faq-risk.md).
 
+******
+
+### Help! What is the recommended hardware to run engine calculations?
+
+It depends on your use case and your level of expertise. Most of our users
+are scientists which little IT experience and/or little support from their IT
+departments. For them we recommend to buy a very powerful server and not
+a cluster, which is complex to manage. A server with 256 GB of RAM
+and 64 real core is currently powerful enough to run all of the calculations
+in the GEM global hazard and risk mosaic. If you have larger calculations
+and IT expertise, for a cluster setup see the [hardware suggestions](hardware-suggestions.md) and [cluster](installing/cluster.md) pages.
+
 ### Help! I have a multi-node cluster and I'm in trouble
 
 If you are running the OpenQuake Engine on a multi-node cluster you should also
 have a look at [FAQ related to cluster deployments](faq-cluster.md).
-
-******
-
-### Python 2.7 compatibility 
-
-Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
 
 ******
 
@@ -37,14 +43,11 @@ Binary packages are provided for the following 64bit operating systems:
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
 
-#### Windows 7 compatibility
-
-**Windows 7** is **deprecated** as a platform for running the Engine since it is reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support). Compatibility with Windows 7 will be removed in next Engine releases. Please upgrade your Windows installation to Windows 10.
-
 ******
 
 ### Unsupported operating systems
 
+- Windows 7 may or may not work and we will not provide support for it
 Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
 - Ubuntu 16.04 (Xenial) packages work on **Mint Linux 18** and on **Debian 9.0** (Stretch)
 - Ubuntu 18.04 (Bionic) packages work on **Mint Linux 19** and on **Debian 10.0** (Buster)
@@ -63,16 +66,21 @@ The OpenQuake Engine **requires a 64bit operating system**. Starting with versio
 
 ### Celery support
 
-Starting with OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
-Celery must be enabled on a cluster / multi-node setup. To enable it please refer to the [multiple nodes installation guidelines](installing/cluster.md).
+Starting with OpenQuake Engine 3.8 Celery is not needed anymore, so if have troubles with it you can try using the new zmq mechanism, see the [multiple nodes installation guidelines](installing/cluster.md).
 
 ******
 
 ### MPI support
 
-MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is made via *Celery* and *RabbitMQ* as broker. No filesystem sharing is needed between the nodes and data transfer is made on plain TCP/IP connection. For a cluster setup see the [hardware suggestions](hardware-suggestions.md) and [cluster](installing/cluster.md) pages.
+MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is made via *zmq*. The worker nodes must have read access to a shared file system writeable from the master node. Data transfer is made on mmq TCP/IP connection.
 
 MPI support may be added in the future if sponsored by someone. If you would like to help support development of OpenQuake, please contact us at [partnership@globalquakemodel.org](mailto:partnership@globalquakemodel.org).
+
+******
+
+### Python 2.7 compatibility 
+
+Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
 
 ******
 
