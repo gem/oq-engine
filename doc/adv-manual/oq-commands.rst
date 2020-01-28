@@ -242,7 +242,7 @@ if you have a vs30 file with fields lon, lat, vs30 and you want to generate a
 site model from it. Normally this feature is used for risk calculations: 
 given an exposure, one wants to generate a collection of hazard sites covering 
 the exposure and with vs30 values extracted from the vs30 file with a nearest 
-neighbour algorithm.
+neighbour algorithm::
 
   $ oq prepare_site_model -h
   usage: oq prepare_site_model [-h] [-e [EXPOSURE_XML [EXPOSURE_XML ...]]]
