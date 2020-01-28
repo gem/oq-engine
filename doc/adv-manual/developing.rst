@@ -103,6 +103,6 @@ the input parameters in the `job.ini` of the model, without changing much the
 results.
 
 There a lot of `oq` commands: if you are doing development you should study
-all of them. There are documented here_.
+all of them. They are documented here_.
 
 .. _here: oq-commands.md
