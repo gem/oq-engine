@@ -26,3 +26,4 @@ Contents:
    risk-features
    developing
    architecture
+   oq-commands

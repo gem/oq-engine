@@ -12,18 +12,22 @@ Prerequisites
 It is assumed here that you are a competent scientific Python
 programmer, i.e. that you have a good familiarity with the Python
 ecosystem (including pip and virtualenv) and its scientific stack
-(numpy, scipy, h5py, ...). Fortunately, since engine 2.0, there is no
-need to know anything about databases and web development, unless you
-want to develop on the WebUI part. On the other hand, it is necessary
-to know git and the tools of Open Source development in general (in
-particular testing tools like pytest). If this is not the case you
-should do some study on your own and come back later. There is a huge
-amount of resources in the net about these topics. This manual will
-focus solely on the OpenQuake engine.
+(numpy, scipy, h5py, ...). It should be noticed that since engine v2.0
+there is no need to know anything about databases and web development
+(unless you want to develop on the WebUI part) so the barrier for
+contribution to the engine is much lower than it used to be. However,
+contributing is still nontrivial, and it absolutely necessary
+to know git and the tools of Open Source development in
+general, in particular about testing. If this is not the
+case, you should do some study on your own and come back later. There
+is a huge amount of resources in the net about these topics. This
+manual will focus solely on the OpenQuake engine and it assume that
+you already know how to use it, i.e. you have read the User Manual
+first.
 
 Before starting, it may be useful to have an idea of the architecture
 of the engine and its internal components, like the DbServer and the
-WebUI.  For that you should read the architecture_ document.
+WebUI. For that you should read the architecture_ document.
 
 .. _architecture: architecture.rst
 
@@ -55,7 +59,7 @@ encounter difficulties. We recommend Linux, but Mac also works.
 
 Since you are going to develop with the engine, you should also install
 the development dependencies that by default are not installed. They
-are lister in the setup.py file, and currently (January 2020) they are
+are listed in the setup.py file, and currently (January 2020) they are
 pytest, flake8, pdbpp and ipython. They are not required but very
 handy and recommended. It is the stack we use daily for development.
 
@@ -69,15 +73,15 @@ following command::
 
  $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini 
 
-You should notice that I used here the command `oq run` while the engine
+You should notice that we used here the command `oq run` while the engine
 manual recommend the usage of `oq engine --run`. There is no contradiction.
 The command `oq engine --run` is meant for production usage, it will work
 with the WebUI and store the logs of the calculation in the engine database.
-But here you are doing development, so the recommended command is `oq run`
+But here we are doing development, so the recommended command is `oq run`
 which will not interact with the database, will be easier to debug and
 accept the essential flag ``--pdb``, which will start the python debugger
 should the calculation fail. Since during development is normal to have
-errors and problems in the calculation this ability is invaluable.
+errors and problems in the calculation, so this ability is invaluable.
 
 Then, if you want to understand what happened during the calculation
 you should generate the associated .rst report, which can be seen with
@@ -95,5 +99,10 @@ Also, it is very useful to play with the parameters of the calculation
 etc etc) and see how the performance change. There is also a command to
 plot hazard curves and a command to compare hazard curves between different
 calculations: it is common to be able to get big speedups simply by changing
-the input parameters in the job.ini or the model, without changing much the
+the input parameters in the `job.ini` of the model, without changing much the
 results.
+
+There a lot of `oq` commands: if you are doing development you should study
+all of them. There are documented here_.
+
+.. _here: oq-commands.md
