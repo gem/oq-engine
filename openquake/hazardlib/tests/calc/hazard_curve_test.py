@@ -173,6 +173,10 @@ class HazardCurvesParallelTestCase(unittest.TestCase):
             numpy.testing.assert_almost_equal(
                 curves_seq[name], curves_par[name])
 
+    @classmethod
+    def tearDown(cls):
+        Starmap.shutdown()
+
 
 class AvgGMPETestCase(unittest.TestCase):
     def test(self):
