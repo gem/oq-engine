@@ -27,3 +27,6 @@ Contents:
    developing
    architecture
    oq-commands
+
+Latest (master) PDF version:
+https://docs.openquake.org/oq-engine/advanced/OpenQuakeforAdvancedUsers.pdf
