@@ -6,6 +6,9 @@
 OpenQuake for Advanced Users
 ============================
 
+Latest (master) PDF version:
+https://docs.openquake.org/oq-engine/advanced/OpenQuakeforAdvancedUsers.pdf
+
 Contents:
 
 .. toctree::
@@ -27,6 +30,3 @@ Contents:
    developing
    architecture
    oq-commands
-
-Latest (master) PDF version:
-https://docs.openquake.org/oq-engine/advanced/OpenQuakeforAdvancedUsers.pdf
