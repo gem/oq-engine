@@ -68,8 +68,7 @@ class Mesh(object):
     efficient way of keeping those collections in memory.
 
     :param lons:
-        A numpy array of longitude values of points. Array may be
-        of arbitrary shape.
+        A numpy array of longitude values of points. Array may be 1D or 2D.
     :param lats:
         Numpy array of latitude values. The array must be of the same
         shape as ``lons``.
@@ -101,8 +100,8 @@ class Mesh(object):
             return numpy.zeros(self.shape)
 
     def __init__(self, lons, lats, depths=None):
-        assert ((lons.shape == lats.shape) and
-                (depths is None or depths.shape == lats.shape)
+        assert ((lons.shape == lats.shape) and len(lons.shape) in (1, 2)
+                and (depths is None or depths.shape == lats.shape)
                 ), (lons.shape, lats.shape)
         assert lons.size > 0
         if depths is None:
