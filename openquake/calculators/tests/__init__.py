@@ -29,7 +29,7 @@ import numpy
 
 from openquake.calculators import base
 from openquake.calculators.export import export
-from openquake.baselib import datastore, general
+from openquake.baselib import datastore, general, parallel
 from openquake.commonlib import readinput, oqvalidation, writers
 
 
@@ -250,6 +250,7 @@ class CalculatorTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        parallel.Starmap.shutdown()
         print('durations =', cls.duration)
         builtins.open = orig_open
         export.sanity_check = False
