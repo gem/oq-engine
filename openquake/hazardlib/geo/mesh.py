@@ -68,9 +68,9 @@ class Mesh(object):
     efficient way of keeping those collections in memory.
 
     :param lons:
-        A numpy array of longitude values of points. Array may be 1D or 2D.
+        A numpy array of longitudes. Can be 1D or 2D.
     :param lats:
-        Numpy array of latitude values. The array must be of the same
+        Numpy array of latitudes. The array must be of the same
         shape as ``lons``.
     :param depths:
         Either ``None``, which means that all points the mesh consists
