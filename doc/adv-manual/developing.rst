@@ -60,7 +60,7 @@ encounter difficulties. We recommend Linux, but Mac also works.
 Since you are going to develop with the engine, you should also install
 the development dependencies that by default are not installed. They
 are listed in the setup.py file, and currently (January 2020) they are
-pytest, flake8, pdbpp and ipython. They are not required but very
+pytest, flake8, pdbpp, silx and ipython. They are not required but very
 handy and recommended. It is the stack we use daily for development.
 
 Understanding the engine
