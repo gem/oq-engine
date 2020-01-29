@@ -277,8 +277,13 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                      for trt in gsims_by_trt}
+        # computing the effect make sense only if all IMTs have the same
+        # unity of measure; for simplicity we will consider only PGA and SA
         self.effect = {}
-        if len(self.sitecol) >= oq.max_sites_disagg:
+        imts_with_period = [imt for imt in oq.imtls
+                            if imt == 'PGA' or imt.startswith('SA')]
+        imts_ok = len(imts_with_period) == len(oq.imtls)
+        if len(self.sitecol) >= oq.max_sites_disagg and imts_ok:
             logging.info('Computing effect of the ruptures')
             mon = self.monitor('rupture effect')
             effect = parallel.Starmap.apply(
@@ -287,17 +292,18 @@ class ClassicalCalculator(base.HazardCalculator):
                  oq.maximum_distance, oq.imtls, mon)).reduce()
             self.datastore['effect_by_mag_dst_trt'] = effect
             self.datastore.set_attrs('effect_by_mag_dst_trt', **dist_bins)
-            if oq.pointsource_distance['default']:
+            self.effect.update({
+                trt: Effect({mag: effect[mag][:, t] for mag in effect},
+                            dist_bins[trt])
+                for t, trt in enumerate(gsims_by_trt)})
+            minint = oq.minimum_intensity.get('default', 0)
+            for trt, eff in self.effect.items():
+                if minint:
+                    oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
                 # replace pointsource_distance with a dict trt -> mag -> dst
-                self.effect.update({
-                    trt: Effect({mag: effect[mag][:, t] for mag in effect},
-                                dist_bins[trt],
-                                getdefault(oq.pointsource_distance, trt))
-                    for t, trt in enumerate(gsims_by_trt)})
-                for trt, eff in self.effect.items():
-                    oq.maximum_distance.magdist[trt] = eff.dist_by_mag()
+                if oq.pointsource_distance['default']:
                     oq.pointsource_distance[trt] = eff.dist_by_mag(
-                        eff.collapse_value)
+                        eff.collapse_value(oq.pointsource_distance['default']))
         elif oq.pointsource_distance['default']:
             # replace pointsource_distance with a dict trt -> mag -> dst
             for trt in gsims_by_trt:
@@ -336,12 +342,12 @@ class ClassicalCalculator(base.HazardCalculator):
                     es[task_no] = effsites
                     si[task_no] = srcids
                 self.by_task.clear()
-        numrups = sum(arr[0] for arr in self.calc_times.values())
+        self.numrups = sum(arr[0] for arr in self.calc_times.values())
         numsites = sum(arr[1] for arr in self.calc_times.values())
         logging.info('Effective number of ruptures: %d/%d',
-                     numrups, self.totrups)
+                     self.numrups, self.totrups)
         logging.info('Effective number of sites per rupture: %d',
-                     numsites / numrups)
+                     numsites / self.numrups)
         self.calc_times.clear()  # save a bit of memory
         return acc
 
@@ -396,8 +402,17 @@ class ClassicalCalculator(base.HazardCalculator):
 
             nr = sum(src.weight for src in sources)
             logging.info('TRT = %s', trt)
-            logging.info('max_dist=%d km, gsims=%d, ruptures=%d, blocks=%d',
-                         oq.maximum_distance(trt), len(gsims), nr, nb)
+            if oq.maximum_distance.magdist:
+                md = ', '.join('%s->%d' % item for item in sorted(
+                    oq.maximum_distance.magdist[trt].items()))
+            else:
+                md = oq.maximum_distance(trt)
+            logging.info('max_dist=%s, gsims=%d, ruptures=%d, blocks=%d',
+                         md, len(gsims), nr, nb)
+            if oq.pointsource_distance['default']:
+                pd = ', '.join('%s->%d' % item for item in sorted(
+                    oq.pointsource_distance[trt].items()))
+                logging.info('ps_dist=%s', pd)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
