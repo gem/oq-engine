@@ -81,12 +81,12 @@ def calc_risk(gmfs, param, monitor):
         assets_on_sid = assets_by_site[sid]
         if len(assets_on_sid) == 0:
             continue
-        acc['events_per_sid'] += len(haz)
-        if param['avg_losses']:
-            ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
-        assets_by_taxo = get_assets_by_taxo(assets_on_sid, tempname)
-        eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])
         with mon_risk:
+            acc['events_per_sid'] += len(haz)
+            if param['avg_losses']:
+                ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
+            assets_by_taxo = get_assets_by_taxo(assets_on_sid, tempname)
+            eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])
             out = get_output(crmodel, assets_by_taxo, haz)
         for lti, lt in enumerate(crmodel.loss_types):
             lratios = out[lt]
