@@ -44,13 +44,18 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
 
 
 def calc_risk(gmfs, param, monitor):
+    """
+    :param gmfs: an array of GMFs with fields sid, eid, gmv
+    :param param: a dictionary of parameters coming from the job.ini
+    :param monitor: a Monitor instance
+    :returns: a dictionary of arrays with keys elt, alt, losses_by_A, ...
+    """
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     eids = numpy.unique(gmfs['eid'])
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
-        assetcol = dstore['assetcol']
-        assets_by_site = assetcol.assets_by_site()
+        assets_df = dstore.read_df('assetcol/array', 'ordinal')
         exposed_values = dstore['exposed_values/agg'][()]
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
@@ -70,53 +75,58 @@ def calc_risk(gmfs, param, monitor):
     aggby = param['aggregate_by']
 
     minimum_loss = []
-    fraction = param['minimum_loss_fraction'] / len(assetcol)
+    fraction = param['minimum_loss_fraction'] / len(assets_df)
     for lt, lti in crmodel.lti.items():
         val = exposed_values[lti] * fraction
         minimum_loss.append(val)
         if lt in lba.policy_dict:  # same order as in lba.compute
             minimum_loss.append(val)
 
-    for sid, haz in general.group_array(gmfs, 'sid').items():
-        assets_on_sid = assets_by_site[sid]
-        if len(assets_on_sid) == 0:
+    haz_by_sid = general.group_array(gmfs, 'sid')
+    for sid, asset_df in assets_df.groupby('site_id'):
+        try:
+            haz = haz_by_sid[sid]
+        except KeyError:  # no hazard here
             continue
+        assets = asset_df.to_records()
         with mon_risk:
             acc['events_per_sid'] += len(haz)
             if param['avg_losses']:
                 ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
-            assets_by_taxo = get_assets_by_taxo(assets_on_sid, tempname)
+            assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
             eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])
             out = get_output(crmodel, assets_by_taxo, haz)
-        for lti, lt in enumerate(crmodel.loss_types):
-            lratios = out[lt]
-            if lt == 'occupants':
-                field = 'occupants_None'
-            else:
-                field = 'value-' + lt
-            for a, asset in enumerate(assets_on_sid):
+        with mon_agg:
+            for lti, lt in enumerate(crmodel.loss_types):
+                lratios = out[lt]
+                if lt == 'occupants':
+                    field = 'occupants_None'
+                else:
+                    field = 'value-' + lt
                 if aggby:
-                    idx = ','.join(map(str, asset[aggby]))
-                aid = asset['ordinal']
-                ls = asset[field] * lratios[a]
-                for loss_idx, losses in lba.compute(asset, ls, lt):
-                    kept = 0
-                    with mon_agg:
+                    tagidxs = assets[aggby]
+                for a, asset in enumerate(assets):
+                    if aggby:
+                        idx = ','.join(map(str, tagidxs[a]))
+                    aid = asset['ordinal']
+                    ls = asset[field] * lratios[a]
+                    for loss_idx, losses in lba.compute(asset, ls, lt):
+                        kept = 0
                         if aggby:
                             for loss, eid in zip(losses, out.eids):
                                 if loss >= minimum_loss[loss_idx]:
                                     alt[idx][eid][loss_idx] += loss
                                     kept += 1
                         arr[eidx, loss_idx] += losses
-                    if param['avg_losses']:  # this is really fast
-                        lba.losses_by_A[aid, loss_idx] += losses @ ws
-                    acc['numlosses'] += numpy.array([kept, len(losses)])
+                        if param['avg_losses']:  # this is really fast
+                            lba.losses_by_A[aid, loss_idx] += losses @ ws
+                        acc['numlosses'] += numpy.array([kept, len(losses)])
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
-    acc['alt'] = {idx: numpy.fromiter(  # already sorted by aid
+    acc['alt'] = {idx: numpy.fromiter(  # already sorted by aid, ultra-fast
         ((eid, eid2rlz[eid], loss) for eid, loss in alt[idx].items()),
         elt_dt) for idx in alt}
     if param['avg_losses']:
