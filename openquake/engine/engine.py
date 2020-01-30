@@ -334,7 +334,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     try:
         if OQ_DISTRIBUTE.endswith('pool'):
             logs.LOG.warning('Using %d cores on %s',
-                             parallel.CT, platform.node())
+                             parallel.CT // 2, platform.node())
         if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
             logs.dbcmd('zmq_start')  # start the zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
