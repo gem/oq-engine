@@ -1508,7 +1508,7 @@ class LossesByAsset(object):
         """
         numlosses = numpy.zeros(2, int)
         for lni, losses in self.gen_losses(out):
-            if ws is not None:  # slow with millions of assets
+            if ws is not None:
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
             self.losses_by_E[eidx, lni] += losses.sum(axis=0)
