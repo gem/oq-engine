@@ -351,9 +351,10 @@ and hazard maps. Here is the help message::
     -h, --help            show this help message and exit
     -f, --files           write the results in multiple files
     -s 100, --samplesites 100
-                          number of sites to sample
+                          sites to sample (or fname with site IDs)
     -r 0, --rtol 0        relative tolerance
     -a 0.001, --atol 0.001
                           absolute tolerance
     -t 0.01, --threshold 0.01
                           ignore the hazard curves below it
+
