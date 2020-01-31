@@ -101,7 +101,8 @@ def calc_risk(gmfs, param, monitor):
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
             tagidxs = assets[aggby] if aggby else None
-            acc['numlosses'] += lba.agg(eidx, out, minimum_loss, tagidxs, ws)
+            acc['numlosses'] += lba.aggregate(
+                out, eidx, minimum_loss, tagidxs, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast

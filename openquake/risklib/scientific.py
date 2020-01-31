@@ -1483,6 +1483,9 @@ class LossesByAsset(object):
         self.lni = {ln: i for i, ln in enumerate(loss_names)}
 
     def gen_losses(self, out):
+        """
+        :yields: pairs (loss_name_index, losses array of shape (A, E))
+        """
         for lt in out.loss_types:
             lratios = out[lt]  # shape (A, E)
             losses = numpy.zeros_like(lratios)
@@ -1499,7 +1502,7 @@ class LossesByAsset(object):
                         losses[a], ded * avalues[a], lim * avalues[a])
                 yield self.lni[lt + '_ins'], ins_losses
 
-    def agg(self, eidx, out, minimum_loss, tagidxs, ws):
+    def aggregate(self, out, eidx, minimum_loss, tagidxs, ws):
         """
         Populate .losses_by_A, .losses_by_E and .alt
         """
@@ -1509,15 +1512,14 @@ class LossesByAsset(object):
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
             self.losses_by_E[eidx, lni] += losses.sum(axis=0)
-            for a, asset in enumerate(out.assets):
-                if tagidxs is not None:
+            if tagidxs is not None:
+                for a, asset in enumerate(out.assets):
                     idx = ','.join(map(str, tagidxs[a]))
                     kept = 0
-                    if tagidxs is not None:
-                        for loss, eid in zip(losses[a], out.eids):
-                            if loss >= minimum_loss[lni]:
-                                self.alt[idx][eid][lni] += loss
-                                kept += 1
+                    for loss, eid in zip(losses[a], out.eids):
+                        if loss >= minimum_loss[lni]:
+                            self.alt[idx][eid][lni] += loss
+                            kept += 1
                     numlosses += numpy.array([kept, len(losses[a])])
         return numlosses
 
