@@ -355,7 +355,9 @@ class GmfGetter(object):
         """
         Yield a GmfComputer instance for each non-discarded rupture
         """
-        for ebr in self.rupgetter.get_ruptures():
+        with mon:
+            ebrs = self.rupgetter.get_ruptures()
+        for ebr in ebrs:
             with mon:
                 sitecol = self.sitecol.filtered(ebr.sids)
                 try:
