@@ -94,6 +94,8 @@ def calc_risk(gmfs, param, monitor):
             acc['events_per_sid'] += len(haz)
             if param['avg_losses']:
                 ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
+            else:
+                ws = None
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
             eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow

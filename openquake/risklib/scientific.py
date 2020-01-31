@@ -1502,27 +1502,25 @@ class LossesByAsset(object):
         """
         numlosses = numpy.zeros(2, int)
         for lt in out.loss_types:
-            lratios = out[lt]
-            if lt == 'occupants':
-                field = 'occupants_None'
-            else:
-                field = 'value-' + lt
+            lratios = out[lt]  # shape (A, E)
+            avalues = (out.assets['occupants_None'] if lt == 'occupants'
+                       else out.assets['value-' + lt])
             for a, asset in enumerate(out.assets):
                 if tagidxs is not None:
                     idx = ','.join(map(str, tagidxs[a]))
                 aid = asset['ordinal']
-                ls = asset[field] * lratios[a]
-                for loss_idx, losses in self._compute(asset, ls, lt):
+                for loss_idx, losses in self._compute(
+                        asset, avalues[a] * lratios[a], lt):
+                    self.losses_by_E[eidx, loss_idx] += losses
+                    if ws is not None:  # slow with millions of assets
+                        self.losses_by_A[aid, loss_idx] += losses @ ws
                     kept = 0
                     if tagidxs is not None:
                         for loss, eid in zip(losses, out.eids):
                             if loss >= minimum_loss[loss_idx]:
                                 self.alt[idx][eid][loss_idx] += loss
                                 kept += 1
-                    self.losses_by_E[eidx, loss_idx] += losses
                     numlosses += numpy.array([kept, len(losses)])
-                    if ws is not None:  # slow with millions of assets
-                        self.losses_by_A[aid, loss_idx] += losses @ ws
         return numlosses
 
 
