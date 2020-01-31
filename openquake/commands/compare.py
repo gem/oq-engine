@@ -23,18 +23,12 @@ from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
 
-def getdata(what, calc_ids, samplesites):
+def getdata(what, calc_ids, sitecol, sids):
     extractors = [Extractor(calc_id) for calc_id in calc_ids]
     extractor = extractors[0]
-    sitecol = extractor.get('sitecol')
     oq = extractor.oqparam
     imtls = oq.imtls
     poes = oq.poes
-    if len(sitecol) > samplesites:
-        numpy.random.seed(samplesites)
-        sids = numpy.random.choice(len(sitecol), samplesites, replace=False)
-    else:  # keep all sites
-        sids = sitecol['sids']
     arrays = [extractor.get(what + '?kind=mean').mean[sids]]
     extractor.close()
     for extractor in extractors[1:]:
@@ -47,7 +41,7 @@ def getdata(what, calc_ids, samplesites):
             numpy.testing.assert_equal(oq.poes, poes)
         arrays.append(extractor.get(what + '?kind=mean').mean[sids])
         extractor.close()
-    return sids, imtls, poes, numpy.array(arrays)  # shape (C, N, L)
+    return imtls, poes, numpy.array(arrays)  # shape (C, N, L)
 
 
 def get_diff_idxs(array, rtol, atol, threshold):
@@ -73,7 +67,19 @@ def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-3,
     """
     Compare the hazard curves or maps of two or more calculations
     """
-    sids, imtls, poes, arrays = getdata(what, calc_ids, samplesites)
+    sitecol = Extractor(calc_ids[0]).get('sitecol')
+    try:
+        numsamples = int(samplesites)
+    except ValueError:
+        sids = [int(sid) for sid in open(samplesites).read().split()]
+    else:
+        if len(sitecol) > numsamples:
+            numpy.random.seed(numsamples)
+            sids = numpy.random.choice(len(sitecol), numsamples, replace=False)
+        else:  # keep all sites
+            sids = sitecol['sids']
+    sids.sort()
+    imtls, poes, arrays = getdata(what, calc_ids, sitecol, sids)
     try:
         levels = imtls[imt]
     except KeyError:
@@ -91,8 +97,8 @@ def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-3,
     diff_idxs = get_diff_idxs(array_imt, rtol, atol, threshold)
     if len(diff_idxs) == 0:
         print('There are no differences within the tolerances '
-              'atol=%s, rtol=%d%%, threshold=%s, samplesites=%d' %
-              (atol, rtol * 100, threshold, samplesites))
+              'atol=%s, rtol=%d%%, threshold=%s, sids=%s' %
+              (atol, rtol * 100, threshold, sids))
         return
     arr = array_imt.transpose(1, 0, 2)  # shape (N, C, L)
     for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
@@ -115,7 +121,7 @@ compare.arg('what', 'hmaps or hcurves', choices={'hmaps', 'hcurves'})
 compare.arg('imt', 'intensity measure type to compare')
 compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
 compare.flg('files', 'write the results in multiple files')
-compare.opt('samplesites', 'number of sites to sample', type=int)
+compare.opt('samplesites', 'sites to sample (or fname with site IDs)')
 compare.opt('rtol', 'relative tolerance', type=float)
 compare.opt('atol', 'absolute tolerance', type=float)
 compare.opt('threshold', 'ignore the hazard curves below it', type=float)
