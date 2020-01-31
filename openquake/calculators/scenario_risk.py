@@ -42,15 +42,6 @@ def _event_slice(num_gmfs, r):
     return slice(r * num_gmfs, (r + 1) * num_gmfs)
 
 
-def highest_losses(losses, eids, fraction):
-    """
-    >>> highest_losses([.4, .2, .5, .7, .1], [1, 2, 3, 4, 5],  .1)
-    [(0.1, 5), (0.2, 2), (0.4, 1), (0.5, 3), (0.7, 4)]
-    """
-    n = max(int(len(losses) * fraction), 10)
-    return sorted(zip(losses, eids))[-n:]
-
-
 def ael_dt(loss_names, rlz=False):
     """
     :returns: (asset_id, event_id, loss) or (asset_id, event_id, rlzi, loss)
@@ -106,7 +97,7 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
                     stats['mean'][a] = losses[a].mean()
                     stats['stddev'][a] = losses[a].std(ddof=1)
                     result['avg'].append((l, r, asset['ordinal'], stats[a]))
-                    for loss, eid in highest_losses(losses[a], out.eids, alt):
+                    for loss, eid in zip(losses[a], out.eids):
                         acc[aid, eid][l] = loss
                 agglosses = losses.sum(axis=0)  # shape num_gmfs
                 result['agg'][slc, l] += agglosses
