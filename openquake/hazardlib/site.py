@@ -241,7 +241,10 @@ class SiteCollection(object):
                     self._set(name, sitemodel[name])
         dupl = get_duplicates(self.array, 'lon', 'lat')
         if dupl:
-            raise ValueError('There are duplicate points %s' % dupl)
+            n = len(dupl)
+            dots = ' ...' if n > 10 else ''
+            raise ValueError('There are %d duplicate sites %s%s' %
+                             (n, dupl[:n], dots))
         return self
 
     def _set(self, param, value):
