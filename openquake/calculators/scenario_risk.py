@@ -80,7 +80,6 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
     result = dict(agg=numpy.zeros((E, L), F32), avg=[])
     mon = monitor('getting hazard', measuremem=False)
     acc = AccumDict(accum=numpy.zeros(L, F64))  # aid,eid->loss
-    alt = param['asset_loss_table']
     for ri in riskinputs:
         with mon:
             ri.hazard_getter.init()
@@ -138,7 +137,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         except KeyError:
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
         self.param['event_slice'] = self.event_slice
-        self.param['asset_loss_table'] = oq.asset_loss_table
         self.param['ael_dt'] = dt = ael_dt(oq.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('loss_data/data', dt)
