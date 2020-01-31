@@ -1496,32 +1496,33 @@ class LossesByAsset(object):
             items.append((self.lni[lt + '_ins'], ins_losses))
         return items
 
-    def agg(self, eidx, out, minimum_loss, tagidxs, lt, ws):
+    def agg(self, eidx, out, minimum_loss, tagidxs, ws):
         """
         Populate .losses_by_A, .losses_by_E and .alt
         """
-        lratios = out[lt]
-        if lt == 'occupants':
-            field = 'occupants_None'
-        else:
-            field = 'value-' + lt
         numlosses = numpy.zeros(2, int)
-        for a, asset in enumerate(out.assets):
-            if tagidxs is not None:
-                idx = ','.join(map(str, tagidxs[a]))
-            aid = asset['ordinal']
-            ls = asset[field] * lratios[a]
-            for loss_idx, losses in self._compute(asset, ls, lt):
-                kept = 0
+        for lt in out.loss_types:
+            lratios = out[lt]
+            if lt == 'occupants':
+                field = 'occupants_None'
+            else:
+                field = 'value-' + lt
+            for a, asset in enumerate(out.assets):
                 if tagidxs is not None:
-                    for loss, eid in zip(losses, out.eids):
-                        if loss >= minimum_loss[loss_idx]:
-                            self.alt[idx][eid][loss_idx] += loss
-                            kept += 1
-                self.losses_by_E[eidx, loss_idx] += losses
-                numlosses += numpy.array([kept, len(losses)])
-                if ws is not None:  # slow with millions of assets
-                    self.losses_by_A[aid, loss_idx] += losses @ ws
+                    idx = ','.join(map(str, tagidxs[a]))
+                aid = asset['ordinal']
+                ls = asset[field] * lratios[a]
+                for loss_idx, losses in self._compute(asset, ls, lt):
+                    kept = 0
+                    if tagidxs is not None:
+                        for loss, eid in zip(losses, out.eids):
+                            if loss >= minimum_loss[loss_idx]:
+                                self.alt[idx][eid][loss_idx] += loss
+                                kept += 1
+                    self.losses_by_E[eidx, loss_idx] += losses
+                    numlosses += numpy.array([kept, len(losses)])
+                    if ws is not None:  # slow with millions of assets
+                        self.losses_by_A[aid, loss_idx] += losses @ ws
         return numlosses
 
 

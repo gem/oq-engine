@@ -98,10 +98,8 @@ def calc_risk(gmfs, param, monitor):
             eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
-            for lti, lt in enumerate(crmodel.loss_types):
-                tagidxs = assets[aggby] if aggby else None
-                acc['numlosses'] += lba.agg(eidx, out, minimum_loss,
-                                            tagidxs, lt, ws)
+            tagidxs = assets[aggby] if aggby else None
+            acc['numlosses'] += lba.agg(eidx, out, minimum_loss, tagidxs, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast

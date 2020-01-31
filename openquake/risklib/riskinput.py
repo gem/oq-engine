@@ -77,7 +77,8 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         data = []
     else:
         raise ValueError('Unexpected haz=%s' % haz)
-    dic = dict(eids=eids, assets=assets_by_taxo.assets)
+    dic = dict(eids=eids, assets=assets_by_taxo.assets,
+               loss_types=crmodel.loss_types)
     if rlzi is not None:
         dic['rlzi'] = rlzi
     for l, lt in enumerate(crmodel.loss_types):
