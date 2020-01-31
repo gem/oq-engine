@@ -1495,9 +1495,9 @@ class LossesByAsset(object):
             items.append((self.lni[lt + '_ins'], ins_losses))
         return items
 
-    def agg(self, alt, eidx, out, minimum_loss, tagidxs, lt, ws):
+    def agg(self, eidx, out, minimum_loss, tagidxs, lt, ws):
         """
-        Build the asset loss table from the given output
+        Populate .losses_by_A, .losses_by_E and .alt
         """
         lratios = out[lt]
         if lt == 'occupants':
@@ -1515,7 +1515,7 @@ class LossesByAsset(object):
                 if tagidxs is not None:
                     for loss, eid in zip(losses, out.eids):
                         if loss >= minimum_loss[loss_idx]:
-                            alt[idx][eid][loss_idx] += loss
+                            self.alt[idx][eid][loss_idx] += loss
                             kept += 1
                 self.losses_by_E[eidx, loss_idx] += losses
                 numlosses += numpy.array([kept, len(losses)])

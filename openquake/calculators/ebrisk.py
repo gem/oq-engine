@@ -52,7 +52,6 @@ def calc_risk(gmfs, param, monitor):
     """
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    mon_avg = monitor('average losses', measuremem=False)
     eids = numpy.unique(gmfs['eid'])
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
@@ -65,10 +64,11 @@ def calc_risk(gmfs, param, monitor):
     E = len(eids)
     L = len(param['lba'].loss_names)
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
-    alt = general.AccumDict(accum=general.AccumDict(accum=numpy.zeros(L, F32)))
     # aggkey -> eid -> loss
     acc = dict(events_per_sid=0, numlosses=numpy.zeros(2, int))  # (kept, tot)
     lba = param['lba']
+    lba.alt = general.AccumDict(
+        accum=general.AccumDict(accum=numpy.zeros(L, F32)))
     lba.losses_by_E = numpy.zeros((E, L), F32)
     tempname = param['tempname']
     eid2rlz = dict(events[['id', 'rlz_id']])
@@ -97,10 +97,11 @@ def calc_risk(gmfs, param, monitor):
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
             eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
-        for lti, lt in enumerate(crmodel.loss_types):
-            tagidxs = assets[aggby] if aggby else None
-            acc['numlosses'] += lba.agg(alt, eidx, out, minimum_loss, tagidxs,
-                                        lt, ws)
+        with mon_agg:
+            for lti, lt in enumerate(crmodel.loss_types):
+                tagidxs = assets[aggby] if aggby else None
+                acc['numlosses'] += lba.agg(eidx, out, minimum_loss,
+                                            tagidxs, lt, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
@@ -108,8 +109,8 @@ def calc_risk(gmfs, param, monitor):
          for event, losses in zip(events, lba.losses_by_E) if losses.sum()),
         elt_dt)
     acc['alt'] = {idx: numpy.fromiter(  # already sorted by aid, ultra-fast
-        ((eid, eid2rlz[eid], loss) for eid, loss in alt[idx].items()),
-        elt_dt) for idx in alt}
+        ((eid, eid2rlz[eid], loss) for eid, loss in lba.alt[idx].items()),
+        elt_dt) for idx in lba.alt}
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
         # without resetting the cache the sequential avg_losses would be wrong!
