@@ -343,12 +343,9 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
                  hazard_calculation_id=hazard_calculation_id, **kw)
         logs.LOG.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
-        duration = time.time() - t0
-        records = views.performance_view(calc.datastore, add_calc_id=False)
-        logs.dbcmd('save_performance', job_id, records)
         calc.datastore.close()
         logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                      job_id, duration)
+                      job_id, time.time() - t0)
         logs.dbcmd('finish', job_id, 'complete')
     except BaseException as exc:
         if isinstance(exc, MasterKilled):
