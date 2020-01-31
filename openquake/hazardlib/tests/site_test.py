@@ -150,6 +150,15 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         # test geohash
         assert_eq(cll.geohash(4), numpy.array([b's5x1', b'7zrh']))
 
+        # test duplicate points
+        lons = numpy.arange(10, 20, .1)
+        lons[40:50] = lons[30:40]  # add 10 duplicates
+        lats = [0] * 100
+        req_params = 'vs30 vs30measured z1pt0 z2pt5 backarc'.split()
+        with self.assertRaises(ValueError):
+            SiteCollection.from_points(
+                lons, lats, None, SiteModelParam(), req_params)
+
 
 class SiteCollectionFilterTestCase(unittest.TestCase):
     SITES = [
