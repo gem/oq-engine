@@ -1482,45 +1482,43 @@ class LossesByAsset(object):
         self.loss_names = loss_names
         self.lni = {ln: i for i, ln in enumerate(loss_names)}
 
-    def _compute(self, asset, losses, lt):
-        """
-        :param asset: an asset record
-        :param losses_by_lt: a dictionary loss_type -> losses (of size E)
-        :return: a list [(loss_index, losses)]
-        """
-        items = [(self.lni[lt], losses)]
-        if lt in self.policy_dict:
-            val = asset['value-' + lt]
-            ded, lim = self.policy_dict[lt][asset[self.policy_name]]
-            ins_losses = insured_losses(losses, ded * val, lim * val)
-            items.append((self.lni[lt + '_ins'], ins_losses))
-        return items
+    def gen_losses(self, out):
+        for lt in out.loss_types:
+            lratios = out[lt]  # shape (A, E)
+            losses = numpy.zeros_like(lratios)
+            avalues = (out.assets['occupants_None'] if lt == 'occupants'
+                       else out.assets['value-' + lt])
+            for a, avalue in enumerate(avalues):
+                losses[a] = avalue * lratios[a]
+            yield self.lni[lt], losses  # shape (A, E)
+            if lt in self.policy_dict:
+                ins_losses = numpy.zeros_like(lratios)
+                for a, asset in enumerate(out.assets):
+                    ded, lim = self.policy_dict[lt][asset[self.policy_name]]
+                    ins_losses[a] = insured_losses(
+                        losses[a], ded * avalues[a], lim * avalues[a])
+                yield self.lni[lt + '_ins'], ins_losses
 
     def agg(self, eidx, out, minimum_loss, tagidxs, ws):
         """
         Populate .losses_by_A, .losses_by_E and .alt
         """
         numlosses = numpy.zeros(2, int)
-        for lt in out.loss_types:
-            lratios = out[lt]  # shape (A, E)
-            avalues = (out.assets['occupants_None'] if lt == 'occupants'
-                       else out.assets['value-' + lt])
+        for lni, losses in self.gen_losses(out):
+            if ws is not None:  # slow with millions of assets
+                aids = out.assets['ordinal']
+                self.losses_by_A[aids, lni] += losses @ ws
+            self.losses_by_E[eidx, lni] += losses.sum(axis=0)
             for a, asset in enumerate(out.assets):
                 if tagidxs is not None:
                     idx = ','.join(map(str, tagidxs[a]))
-                aid = asset['ordinal']
-                for loss_idx, losses in self._compute(
-                        asset, avalues[a] * lratios[a], lt):
-                    self.losses_by_E[eidx, loss_idx] += losses
-                    if ws is not None:  # slow with millions of assets
-                        self.losses_by_A[aid, loss_idx] += losses @ ws
                     kept = 0
                     if tagidxs is not None:
-                        for loss, eid in zip(losses, out.eids):
-                            if loss >= minimum_loss[loss_idx]:
-                                self.alt[idx][eid][loss_idx] += loss
+                        for loss, eid in zip(losses[a], out.eids):
+                            if loss >= minimum_loss[lni]:
+                                self.alt[idx][eid][lni] += loss
                                 kept += 1
-                    numlosses += numpy.array([kept, len(losses)])
+                    numlosses += numpy.array([kept, len(losses[a])])
         return numlosses
 
 
