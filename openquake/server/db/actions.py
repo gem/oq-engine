@@ -417,22 +417,6 @@ def get_output(db, output_id):
     return out.ds_key, out.oq_job_id, os.path.dirname(out.ds_calc_dir)
 
 
-def save_performance(db, job_id, records):
-    """
-    Save in the database the performance information about the given job.
-
-    :param db: a :class:`openquake.server.dbapi.Db` instance
-    :param job_id: a job ID
-    :param records: a list of performance records
-    """
-    # NB: rec['counts'] is a numpy.uint64 which is not automatically converted
-    # into an int in Ubuntu 12.04, so we convert it manually below
-    rows = [(job_id, rec['operation'], rec['time_sec'], rec['memory_mb'],
-             int(rec['counts'])) for rec in records]
-    db.insert('performance',
-              'job_id operation time_sec memory_mb counts'.split(), rows)
-
-
 # used in make_report
 def fetch(db, templ, *args):
     """
