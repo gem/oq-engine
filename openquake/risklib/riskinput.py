@@ -34,6 +34,7 @@ def get_assets_by_taxo(assets, tempname=None):
     :returns: assets_by_taxo with attributes eps and idxs
     """
     assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
+    assets_by_taxo.assets = assets
     assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
         a['ordinal'] for a in assets_by_taxo.values()]))
     assets_by_taxo.eps = {}
@@ -76,7 +77,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         data = []
     else:
         raise ValueError('Unexpected haz=%s' % haz)
-    dic = dict(eids=eids)
+    dic = dict(eids=eids, assets=assets_by_taxo.assets)
     if rlzi is not None:
         dic['rlzi'] = rlzi
     for l, lt in enumerate(crmodel.loss_types):

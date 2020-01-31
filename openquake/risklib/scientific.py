@@ -1465,6 +1465,15 @@ class LossesByAsset(object):
     :param policy_name: the name of the policy field (can be empty)
     :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
     """
+    losses_by_E = None  # set by the ebrisk calculator
+
+    @cached_property
+    def losses_by_A(self):
+        """
+        :returns: an array of shape (A, L)
+        """
+        return numpy.zeros((self.A, len(self.loss_names)), F32)
+
     def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
         self.A = len(assetcol)
         self.policy_name = policy_name
@@ -1472,7 +1481,7 @@ class LossesByAsset(object):
         self.loss_names = loss_names
         self.lni = {ln: i for i, ln in enumerate(loss_names)}
 
-    def compute(self, asset, losses, lt):
+    def _compute(self, asset, losses, lt):
         """
         :param asset: an asset record
         :param losses_by_lt: a dictionary loss_type -> losses (of size E)
@@ -1486,12 +1495,33 @@ class LossesByAsset(object):
             items.append((self.lni[lt + '_ins'], ins_losses))
         return items
 
-    @cached_property
-    def losses_by_A(self):
+    def agg(self, alt, eidx, out, minimum_loss, tagidxs, lt, ws):
         """
-        :returns: an array of shape (A, L)
+        Build the asset loss table from the given output
         """
-        return numpy.zeros((self.A, len(self.loss_names)), F32)
+        lratios = out[lt]
+        if lt == 'occupants':
+            field = 'occupants_None'
+        else:
+            field = 'value-' + lt
+        numlosses = numpy.zeros(2, int)
+        for a, asset in enumerate(out.assets):
+            if tagidxs is not None:
+                idx = ','.join(map(str, tagidxs[a]))
+            aid = asset['ordinal']
+            ls = asset[field] * lratios[a]
+            for loss_idx, losses in self._compute(asset, ls, lt):
+                kept = 0
+                if tagidxs is not None:
+                    for loss, eid in zip(losses, out.eids):
+                        if loss >= minimum_loss[loss_idx]:
+                            alt[idx][eid][loss_idx] += loss
+                            kept += 1
+                self.losses_by_E[eidx, loss_idx] += losses
+                numlosses += numpy.array([kept, len(losses)])
+                if ws is not None:  # slow with millions of assets
+                    self.losses_by_A[aid, loss_idx] += losses @ ws
+        return numlosses
 
 
 # ####################### Consequences ##################################### #
