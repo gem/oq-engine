@@ -1465,6 +1465,7 @@ class LossesByAsset(object):
     :param policy_name: the name of the policy field (can be empty)
     :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
     """
+    alt = None  # set by the ebrisk calculator
     losses_by_E = None  # set by the ebrisk calculator
 
     @cached_property
