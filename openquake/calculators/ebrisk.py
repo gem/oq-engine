@@ -160,9 +160,11 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
 
 
 def gen_indices(tagcol, aggby):
-    ranges = [range(1, len(getattr(tagcol, tagname))) for tagname in aggby]
+    alltags = [getattr(tagcol, tagname) for tagname in aggby]
+    ranges = [range(1, len(tags)) for tags in alltags]
     for idxs in itertools.product(*ranges):
-        yield idxs
+        d = {name: tags[idx] for idx, name, tags in zip(idxs, aggby, alltags)}
+        yield idxs, d
 
 
 @base.calculators.add('ebrisk')
@@ -190,9 +192,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.A = A = len(self.assetcol)
         self.L = L = len(lba.loss_names)
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
-        for idxs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
+        for idxs, attrs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
             idx = ','.join(map(str, idxs))
-            self.datastore.create_dset('event_loss_table/' + idx, elt_dt)
+            self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
+                                       attrs=attrs)
         self.param.pop('oqparam', None)  # unneeded
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
