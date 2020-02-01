@@ -1508,11 +1508,12 @@ class LossesByAsset(object):
         """
         numlosses = numpy.zeros(2, int)
         for lni, losses in self.gen_losses(out):
-            if ws is not None:
+            if ws is not None:  # compute avg_losses, really fast
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
             self.losses_by_E[eidx, lni] += losses.sum(axis=0)
             if tagidxs is not None:
+                # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
                     idx = ','.join(map(str, tagidxs[a]))
                     kept = 0

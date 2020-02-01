@@ -137,7 +137,7 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-def dset2df(dset):
+def dset2df(dset, index):
     """
     Converts an HDF5 dataset with an attribute shape_descr into a Pandas
     dataframe.
@@ -149,14 +149,18 @@ def dset2df(dset):
     dtlist = []
     for i, field in enumerate(shape_descr):
         values = dset.attrs[field]
-        dtlist.append((field[:-1], values[0].dtype))
+        try:
+            dt = values[0].dtype
+        except AttributeError:  # for instance a string has no dtype
+            dt = type(values[0])
+        dtlist.append((field, dt))
         tags.append(values)
         idxs.append(range(len(values)))
     dtlist.append(('value', dset.dtype))
     for idx, values in zip(itertools.product(*idxs),
                            itertools.product(*tags)):
         out.append(values + (dset[idx],))
-    return pandas.DataFrame(numpy.array(out, dtlist))
+    return pandas.DataFrame.from_records(numpy.array(out, dtlist), index)
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -441,7 +445,7 @@ class DataStore(collections.abc.MutableMapping):
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
         if 'shape_descr' in dset.attrs:
-            return dset2df(dset)
+            return dset2df(dset, index)
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
