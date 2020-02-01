@@ -33,7 +33,8 @@ def encode(val):
     :param: a unicode or bytes object
     :returns: bytes
     """
-    if isinstance(val, (list, tuple)):  # encode a list or tuple of strings
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        # encode a sequence of strings
         return [encode(v) for v in val]
     elif isinstance(val, str):
         return val.encode('utf-8')

@@ -426,6 +426,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
 
+        curves = self.calc.datastore.read_df('agg_curves-rlzs',
+                                             ['NAME_1', 'return_periods'])
+        self.assertEqual(len(curves), 6)  # 2 names x 3 periods
+
         # regenerate loss curves and maps
         out = self.run_calc(
             case_6c.__file__, 'job_eb.ini', exports='csv',
