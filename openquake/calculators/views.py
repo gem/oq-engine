@@ -610,7 +610,7 @@ def view_task_ebrisk(token, dstore):
     task_info = get_array(dstore['task_info'][()], taskname=b'ebrisk')
     task_info.sort(order='duration')
     info = task_info[idx]
-    times = get_array(dstore['gmf_info'][()], task_no=info['taskno'])
+    times = get_array(dstore['gmf_info'][()], task_no=info['task_no'])
     extra = times[['nsites', 'gmfbytes', 'dt']]
     ds = dstore.parent if dstore.parent else dstore
     rups = ds['ruptures']['rup_id', 'code', 'n_occ', 'mag'][times['ridx']]
@@ -619,7 +619,7 @@ def view_task_ebrisk(token, dstore):
     codes = ['%s: %s' % it for it in ds.getitem('ruptures').attrs.items()
              if it[0] in codeset]
     msg = '%s\n%s\nHazard time for task %d: %d of %d s, ' % (
-        tbl, '\n'.join(codes), info['taskno'], extra['dt'].sum(),
+        tbl, '\n'.join(codes), info['task_no'], extra['dt'].sum(),
         info['duration'])
     msg += 'gmfbytes=%s, w=%d' % (
         humansize(extra['gmfbytes'].sum()),
