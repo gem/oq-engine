@@ -613,7 +613,7 @@ def view_task_ebrisk(token, dstore):
     times = get_array(dstore['gmf_info'][()], task_no=info['task_no'])
     extra = times[['nsites', 'gmfbytes', 'dt']]
     ds = dstore.parent if dstore.parent else dstore
-    rups = ds['ruptures']['rup_id', 'code', 'n_occ', 'mag'][times['ridx']]
+    rups = ds['ruptures']['id', 'code', 'n_occ', 'mag'][times['rup_id']]
     codeset = set('code_%d' % code for code in numpy.unique(rups['code']))
     tbl = rst_table(util.compose_arrays(rups, extra))
     codes = ['%s: %s' % it for it in ds.getitem('ruptures').attrs.items()
