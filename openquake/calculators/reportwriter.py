@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,7 +44,7 @@ class ReportWriter(object):
         'dupl_sources': 'Duplicated sources',
         'required_params_per_trt':
         'Required parameters per tectonic region type',
-        'ruptures_per_trt': 'Number of ruptures per tectonic region type',
+        'ruptures_per_grp': 'Number of ruptures per source group',
         'ruptures_events': 'Specific information for event based',
         'rlzs_assoc': 'Realizations per (GRP, GSIM)',
         'job_info': 'Data transfer',
@@ -94,8 +94,8 @@ class ReportWriter(object):
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
             self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
-        if 'csm_info' in ds:
-            self.add('ruptures_per_trt')
+        if 'source_info' in ds:
+            self.add('ruptures_per_grp')
         if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
@@ -108,7 +108,7 @@ class ReportWriter(object):
             self.add('dupl_sources')
         if 'task_info' in ds:
             self.add('task_info')
-            tasks = set(ds['task_info'])
+            tasks = set(ds['task_info']['taskname'])
             if 'classical_split_filter' in tasks:
                 self.add('task:classical_split_filter:0')
                 self.add('task:classical_split_filter:-1')
@@ -148,8 +148,6 @@ def build_report(job_ini, output_dir=None):
     calc.pre_execute()
     if oq.calculation_mode == 'preclassical':
         calc.execute()
-    for key in calc.datastore:
-        calc.datastore.set_nbytes(key)
     logging.info('Making the .rst report')
     rw = ReportWriter(calc.datastore)
     rw.make_report()

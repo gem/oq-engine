@@ -1,4 +1,5 @@
-cresta,id,occupancy,state,taxonomy,lon,lat,business_interruption,contents,nonstructural,occupants,structural
+#,,,,,,,,,,,"generated_by='OpenQuake engine 3.8.0-git4c93a33098', start_date='2019-11-21T14:28:32', checksum=1238055533, investigation_time=1.0, risk_investigation_time=50.0"
+cresta,asset_id,occupancy,state,taxonomy,lon,lat,business_interruption,contents,nonstructural,occupants,structural
 "0.21","a3","Com","02","tax1",-122.57000,38.11300,3.97183E+01,2.01389E+02,3.02084E+02,7.94365E-04,0.00000E+00
 "0.12","a2","Res","01","tax2",-122.11400,38.11300,3.28734E+02,3.41538E+03,4.91942E+03,6.57469E-03,1.85358E+02
 "0.23","a5","Res","02","tax1",-122.00000,37.91000,1.52756E+02,7.94961E+02,1.19244E+03,3.05511E-03,0.00000E+00

@@ -1,4 +1,4 @@
-id,taxonomy,lon,lat,no_damage,slight,moderate,extreme,complete
+asset_id,taxonomy,lon,lat,no_damage,slight,moderate,extreme,complete
 "a3","Wood",-122.57000,38.11300,9.33218E-01,3.02789E-02,2.72674E-02,5.95173E-03,3.28399E-03
 "a2","Wood",-122.11400,38.11300,1.31470E-01,8.97911E-02,2.47759E-01,1.86834E-01,3.44146E-01
 "a5","Wood",-122.00000,37.91000,2.78139E-01,1.30604E-01,2.60230E-01,1.41242E-01,1.89785E-01

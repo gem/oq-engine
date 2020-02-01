@@ -1,11 +1,32 @@
-# vi:syntax=dockerfile
-FROM centos:7
-MAINTAINER Daniele Viganò <daniele@openquake.org>
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# vim: syntax=dockerfile
+#
+# Copyright (C) 2019 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-RUN curl -so /etc/yum.repos.d/gem-openquake-stable-epel-7.repo \
-    https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo
-RUN yum -q -y install oq-python36 && \
-    yum -q -y clean all
+FROM centos:8
+LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
+      vendor="GEM Foundation"
+
+ARG repo=openquake-stable
+
+RUN dnf install -y dnf-plugins-core && \
+    dnf copr enable -y gem/$repo && \
+    dnf install -y oq-python36 && \
+    dnf clean all
 
 RUN useradd -u 1000 openquake && \
     mkdir /etc/openquake

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,9 +33,13 @@ def extract(what, calc_id, webapi=True, local=False):
             obj = WebExtractor(calc_id).get(what)
         else:
             obj = Extractor(calc_id).get(what)
-        fname = '%s_%d.hdf5' % (what.replace('/', '-').replace('?', '-'),
-                                calc_id)
-        obj.save(fname)
+        w = what.replace('/', '-').replace('?', '-')
+        if not obj.shape:  # is a dictionary of arrays
+            fname = '%s_%d.txt' % (w, calc_id)
+            open(fname, 'w').write(obj.toml())
+        else:  # a regular ArrayWrapper
+            fname = '%s_%d.hdf5' % (w, calc_id)
+            obj.save(fname)
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)

@@ -1,4 +1,295 @@
   [Michele Simionato]
+  * Enhanced oq compare to accept a file with the control sites
+  * Improved the error message for duplicate sites
+  * Speedup of the ebrisk calculator
+  * Extended the `minimum_intensity` feature to the classical calculator
+  * Solved a memory bug when using the nrcan site term: due to a deepcopy
+    the engine could run out of memory in the workers for large site collections
+  * Added a check to forbid multiple `complexFaultGeometry` nodes
+  * Internal: we are now shutting down the ProcessPool explicitly in order
+    to support Python 3.8
+  * Internal: removed the class hazardlib.gsim.base.IPE
+  * Changed the aggregate loss curves generation to not use the partial
+    asset loss table, with a huge memory reduction
+  * Extended `oq check_input` to accept multiple files
+  * Changed the scenario damage calculator to use discrete damage distributions
+  * Forced the "number" attribute in the exposure must be an integer in the
+    range 1..65535, extrema included
+
+python3-oq-engine (3.8.0-1~xenial01) xenial; urgency=low
+
+  [Graeme Weatherill]
+  * Updates SERA Craton GMPE to incorporate NGA East site response and reflect
+    changes in CEUS USGS model
+
+  [Michele Simionato]
+  * The total loss curves in event_based_risk are now built with pandas
+  * Added an option `oq engine --param` to override the job.ini parameters
+  * Internal: reduced the number of NGAEastUSGS classes from 39 to 1
+  * Internal: reduced the number of NGAEast classes from 44 to 2
+  * Internal: reduced the 15 NSHMP2014 classes to a single class
+  * Internal: reduced the 22 NBCC2015_AA13 classes to a single class
+
+  [Graeme Weatherill]
+  * Adds complete suite of GMPEs for the Central and Eastern US, as adopted
+    within the 2018 US National Seismic Hazard Map
+  * Implements NGA East site amplification model within NGA East Base class
+
+  * Implemented site amplification by convolution
+  * Improved the error message if the `event_id` does not start from zero in
+    the gmfs.csv files
+  * Changed the rupture exporter to export LINESTRINGs instead of degenerate
+    POLYGONs
+  * Introduced `minimum_loss_fraction` functionality in ebrisk
+  * Refined the rupture prefiltering mechanism, possibly changing the numbers
+    in calculations with nonzero coefficients of variations
+  * Optimized the generation of aggregate loss curves in ebrisk
+  * Introduced an experimental AvgGMPE and used it to implement (optional)
+    reduction of the gsim logic tree
+
+  [Graeme Weatherill]
+  * Implemented Abrahamson et al (2018) update of the BC Hydro GMPE
+  * Added configurable nonergodic sigma option to BC Hydro and SERA GMPEs
+  * Small refactoring and bug fix in average SA GMPE
+
+  [Michele Simionato]
+  * Avoided reading multiple times the GSIM logic tree
+  * Changed the GSIM logic tree sampling by ordering the branches by TRT
+  * Ignored IMT-dependent weights when using sampling to make such calculations
+    possible
+  * Storing (partially) the asset loss table
+
+  [Robin Gee]
+  * Set DEFINED_FOR_REFERENCE_VELOCITY in CampbellBozorgnia2003NSHMP2007
+
+  [Graeme Weatherill]
+  * Re-adjustment of SERA Subduction model epistemic scaling factors
+
+  [Michele Simionato]
+  * Improved the task distribution in the ebrisk calculator
+  * Fixed a bug in ebrisk with aggregate_by when building the rup_loss_table
+  * Storing the asset loss table in scenario_risk, but only for assets and
+    events above over a `loss_ratio_threshold` parameter
+  * Storing the asset damage table in scenario_damage and event based damage,
+    but only for assets and events above a `collapse_threshold` parameter
+  * Avoided transferring the GMFs upfront in scenario_damage, scenario_risk
+    and event_based_damage
+
+  [Daniele Viganò]
+  * Included pandas in the engine distribution
+
+  [Michele Simionato]
+  * Avoided reading multiple time the gsim logic tree file and relative files
+  * Added a check for duplicate sites in the site model file
+  * Implemented an event_based_damage calculator
+  * Added an API /v1/calc/ID/extract/gmf_data?event_id=XXX
+  * Added an API /v1/calc/ID/extract/num_events
+  * Fixed the /v1/calc/ID/status endpoint to return an error 404 when needed
+  * Removed the "sites are overdetermined" check, since it now unneeded
+  * Turned the calculation of consequences into a plugin architecture
+
+  [Matteo Nastasi]
+  * Add '/v1/ini_defaults' web api entry point to retrieve all default
+    values for ini attributes (attrs without a default are not returned)
+
+  [Michele Simionato]
+  * Renamed rlzi -> rlzi in the sigma-epsilon dataset and exporter
+  * Renamed id -> asset_id in all the relevant CSV exporters
+  * Renamed rlzi -> rlz_id in the dmg_by_event.csv output
+  * Renamed rupid -> rup_id in the ruptures.csv output
+  * Renamed id -> event_id in the events.csv output and gmfs.csv output
+  * Renamed sid -> site_id in the gmfs.csv output
+  * Renamed ordinal -> rlz_id in the realizations.csv output
+
+  [Alberto Chiusole]
+  * Changed the way how the available number of CPU cores is computed
+
+  [Kendra Johnson, Robin Gee]
+  * Added GMPEs for Rietbrock-Edwards (2019) and Yenier-Atkinson (2015)
+
+  [Michele Simionato]
+  * Added more check on the IMTs and made it possible to import a GMF.csv
+    file with more IMTs than needed
+  * Enabled magnitude-dependent pointsource_distance
+  * Removed the syntax for magnitude-dependent maximum distance, since
+    now it can be automatically determined by the engine
+  * Saving more information in the case of single-site classical hazard
+  * Extended `pointsource_distance` to generic sources
+  * Removed the boundary information from the CSV rupture exporter
+  * Changed the /extract/rupture/XXX API to returns a TOML that can be
+    used by a scenario calculator
+  * Added general support for file-reading GMPEs
+  * Made it possible to disaggregate on multiple realizations
+    with the parameters `rlz_index` or `num_rlzs_disagg`
+  * Fixed downloading the ShakeMaps (again)
+  * Better error message in case of too large maximum_distance
+  * Optimized the case of point sources with an hypocenter distribution and
+    GSIMs independent from it and in general the case of ruptures with
+    similar distances
+
+  [Graeme Weatherill]
+  * Updates SERA craton GMPE to reflect updates to NGA East site response model
+
+  [Michele Simionato]
+  * Fixed and HDF5 SWMR issue in large disaggregation calculations
+  * Made `rrup` the unique acceptable `filter_distance`
+  * Fixed disaggregation with a parent calculation
+  * Models with duplicated values in the hypocenter and/or nodal plane
+    distributions are now automatically optimized
+  * Fixed an issue with missing noDamageLimit causing NaN values in
+    scenario_damage calculations
+  * Added more validations for predefined hazard, like forbidding the site model
+
+  [Marco Pagani]
+  * Adding the shift_hypo option for distributed seismicity
+
+  [Michele Simionato]
+  * Raised an early error for extra-large GMF calculations
+  * Reduced the GMF storage by using 32 bit per event ID instead of 64 bit
+  * Raised an error in case of duplicated sites in the site model
+  * Fixed the case of implicit grid with a site model: sites could be
+    incorrectly discarded
+  * Fixed the ShakeMap downloader to find also unzipped `uncertaintly.xml`
+    files
+  * Fixed the rupture exporters to export the rupture ID and not the
+    rupture serial
+  * Removed the non-interesting `agg_maps` outputs
+  * Changed the task distribution in the classical calculator and added
+    a `task_multiplier` parameter
+
+  [Marco Pagani]
+  * Fixed a bug in the GenericGmpeAvgSA
+
+  [Michele Simionato]
+  * Added a `/v1/calc/validate_zip` endpoint to validate input archives
+  * Deprecated inferring the intensity measure levels from the risk functions
+  * Fixed a too strict check on the minimum intensities of parent an child
+    calculations
+  * Extended the ebrisk calculator to compute at the same time both the
+    aggregate curves by tag and the total curves
+
+  [Marco Pagani]
+  * Implemented Morikawa and Fujiwara (2013) GMM
+
+  [Michele Simionato]
+  * Changed the seed algorithm in sampling with more than one source model,
+    thus avoiding using more GMPEs than needed in some cases
+  * If `ground_motion_fields=false` is set, the GMFs are not stored even
+    if `hazard_curves_from_gmfs=true`
+  * `oq show job_info` now works while the calculation is running
+  * Reduced the sent data transfer in ebrisk calculations
+  * Deprecated the old syntax for the `reqv` feature
+  * Added short aliases for hazard statistics `mean`, `max` and `std`
+  * Reduced substantially the memory occupation in the task queue
+  * Added an API `/extract/sources` and an experimental `oq plot sources`
+  * Added a check on valid input keys in the job.ini
+  * Fixed the check on dependent calculations
+  * Specifying at the same time both a grid and individual sites is an error
+
+  [Daniele Viganò]
+  * Docker containers rebased on CentOS 8
+  * Fixed an issue causing zombie `ssh` processes
+    when using `zmq` as task distribution mechanism
+  * Introduced support for RHEL/CentOS 8
+
+  [Michele Simionato]
+  * Added a check for no GMFs in event_based_risk
+  * Avoided transferring the site collection
+  * Storing the sources in TOML format
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 20 Jan 2020 10:14:51 +0000
+
+python3-oq-engine (3.7.1-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed disaggregation with a parent calculation
+  * Fixed the case of implicit grid with a site model: sites could be
+    incorrectly discarded
+  * Fixed the ShakeMap downloader to find also unzipped `uncertaintly.xml`
+    files
+  * Fixed the rupture exporters to export the rupture ID and not the
+    rupture serial
+
+  [Marco Pagani]
+  * Fixed a bug in the GenericGmpeAvgSA
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 25 Oct 2019 08:05:41 +0000
+
+python3-oq-engine (3.7.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Hiding calculations that fail before the pre-execute phase (for instance,
+    because of missing files); they already give a clear error
+  * Added an early check on truncation_level in presence of correlation model
+
+  [Guillaume Daniel]
+  * Implemented Ameri (2017) GMPE
+
+  [Michele Simionato]
+  * Changed the ruptures CSV exporter to use commas instead of tabs
+  * Added a check forbidding `aggregate_by` for non-ebrisk calculators
+  * Introduced a task queue
+  * Removed the `cache_XXX.hdf5` files by using the SWMR mode of h5py
+
+  [Kris Vanneste]
+  * Updated the coefficients table for the atkinson_2015 to the actual
+    values in the paper.
+
+  [Michele Simionato]
+  * Added an `/extract/agg_curves` API to extract both absolute and relative
+    loss curves from an ebrisk calculation
+  * Changed `oq reset --yes` to remove oqdata/user only in single-user mode
+  * Now the engine automatically sorts the user-provided intensity_measure_types
+  * Optimized the aggregation by tag
+  * Fixed a bug with the binning when disaggregating around the date line
+  * Fixed a prefiltering bug with complex fault sources: in some cases, blocks
+    ruptures were incorrectly discarded
+  * Changed the sampling algorithm for the GMPE logic trees: now it does
+    not require building the full tree in memory
+  * Raised clear errors for geometry files without quotes or with the wrong
+    header in the multi_risk calculator
+  * Changed the realizations.csv exporter to export '[FromShakeMap]' instead
+    of '[FromFile]' when needed
+  * Changed the agg_curves exporter to export all realizations in a single file
+    and all statistics in a single file
+  * Added rlz_id, rup_id and year to the losses_by_event output for ebrisk
+  * Fixed a bug in the ruptures XML exporter: the multiplicity was multiplied
+    (incorrectly) by the number of realizations
+  * Fixed the pre-header of the CSV outputs to get proper CSV files
+  * Replaced the 64 bit event IDs in event based and scenario calculations
+    with 32 bit integers, for the happiness of Excel users
+
+  [Daniele Viganò]
+  * Numpy 1.16, Scipy 1.3 and h5py 2.9 are now required
+
+  [Michele Simionato]
+  * Changed the ebrisk calculator to read the CompositeRiskModel directly
+    from the datastore, which means 20x less data transfer for Canada
+
+  [Anirudh Rao]
+  * Fixed a bug in the gmf CSV importer: the coordinates were being
+    sorted and new site_ids assigned even though the user input sites
+    csv file had site_ids defined
+
+  [Michele Simionato]
+  * Fixed a bug in the rupture CSV exporter: the boundaries of a GriddedRupture
+    were exported with lons and lats inverted
+  * Added some metadata to the CSV risk outputs
+  * Changed the distribution mechanism in ebrisk to reduce the slow tasks
+
+  [Graeme Weatherill]
+  * Updates Kotha et al. (2019) GMPE to July 2019 coefficients
+  * Adds subclasses to Kotha et al. (2019) to implement polynomial site
+    response models and geology+slope site response model
+  * Adds QA test to exercise all of the SERA site response calculators
+
+  [Michele Simionato]
+  * Internal: there is not need to call ``gsim.init()`` anymore
+
+  [Graeme Weatherill]
+  * Adds parametric GMPE for cratonic regions in Europe
+
+  [Michele Simionato]
   * In the agglosses output of scenario_risk the losses were incorrectly
     multiplied by the realization weight
   * Removed the output `sourcegroups` and added the output `events`
@@ -52,6 +343,8 @@
   * Moved `max_sites_disagg` from openquake.cfg into the job.ini
   * Fixed a bug with the --config option: serialize_jobs could not be overridden
   * Implemented insured losses
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 26 Sep 2019 08:51:44 +0000
 
 python3-oq-engine (3.6.0-1~xenial01) xenial; urgency=low
 

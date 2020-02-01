@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -47,6 +47,8 @@ def urlextract(url, fname):
     """
     Download and unzip an archive and extract the underlying fname
     """
+    if not url.endswith('.zip'):
+        return urlopen(url)
     with urlopen(url) as f:
         data = io.BytesIO(f.read())
     with zipfile.ZipFile(data) as z:
@@ -76,7 +78,8 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
     grid = contents.get('download/grid.xml')
     if grid is None:
         raise MissingLink('Could not find grid.xml link in %s' % url)
-    uncertainty = contents.get('download/uncertainty.xml.zip')
+    uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
+        'download/uncertainty.xml')
     if uncertainty is None:
         with urlopen(grid['url']) as f:
             return get_shakemap_array(f)
@@ -204,8 +207,8 @@ def cross_correlation_matrix(imts, corr='yes'):
             if i == j:
                 cross_matrix[i, j] = 1
             else:
-                Tmax = max([T1, T2])
-                Tmin = min([T1, T2])
+                Tmax = max(T1, T2)
+                Tmin = min(T1, T2)
                 II = 1 if Tmin < 0.189 else 0
                 if corr == 'full':
                     cross_matrix[i, j] = 0.99999
@@ -266,7 +269,7 @@ def cholesky(spatial_cov, cross_corr):
     L = numpy.array([numpy.linalg.cholesky(spatial_cov[i]) for i in range(M)])
     LLT = []
     for i in range(M):
-        row = [numpy.dot(L[i], L[j].T) * cross_corr[i, j] for j in range(M)]
+        row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]
         for j in range(N):
             singlerow = numpy.zeros(M * N)
             for i in range(M):
@@ -309,7 +312,7 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     else:
         Z = norm.rvs(loc=0, scale=1, size=(M * N, num_gmfs), random_state=seed)
     # Z has shape (M * N, E)
-    gmfs = numpy.exp(numpy.dot(L, Z) + mu) / PCTG
+    gmfs = numpy.exp(L @ Z + mu) / PCTG
     if site_effects:
         gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs)
     if gmfs.max() > MAX_GMV:

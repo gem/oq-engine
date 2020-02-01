@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,6 +20,7 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
+import time
 import numpy
 import scipy.stats
 
@@ -28,6 +29,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.imt import from_string
 
+U32 = numpy.uint32
 F32 = numpy.float32
 
 
@@ -48,6 +50,15 @@ intra event standard deviations.''' % (
 def rvs(distribution, *size):
     array = distribution.rvs(size)
     return array
+
+
+def to_imt_unit_values(vals, imt):
+    """
+    Exponentiate the values unless the IMT is MMI
+    """
+    if str(imt) == 'MMI':
+        return vals
+    return numpy.exp(vals)
 
 
 class GmfComputer(object):
@@ -101,9 +112,11 @@ class GmfComputer(object):
         # `rupture` can be an EBRupture instance
         if hasattr(rupture, 'srcidx'):
             self.srcidx = rupture.srcidx  # the source the rupture comes from
+            self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:
             self.srcidx = '?'
+            self.e0 = 0
         try:
             self.sctx, self.dctx = rupture.sctx, rupture.dctx
         except AttributeError:
@@ -112,22 +125,56 @@ class GmfComputer(object):
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
 
-    def compute(self, gsim, num_events, seed=None):
+    def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
+        """
+        :returns: [(sid, eid, gmv), ...], dt
+        """
+        t0 = time.time()
+        rup = self.rupture
+        sids = self.sids
+        eids_by_rlz = rup.get_eids_by_rlz(rlzs_by_gsim)
+        data = []
+        for gs, rlzs in rlzs_by_gsim.items():
+            num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
+            # NB: the trick for performance is to keep the call to
+            # compute.compute outside of the loop over the realizations
+            # it is better to have few calls producing big arrays
+            array, sig, eps = self.compute(gs, num_events)
+            array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
+            for i, miniml in enumerate(min_iml):  # gmv < minimum
+                arr = array[:, i, :]
+                arr[arr < miniml] = 0
+            n = 0
+            for rlzi in rlzs:
+                eids = eids_by_rlz[rlzi] + self.e0
+                e = len(eids)
+                for ei, eid in enumerate(eids):
+                    gmf = array[:, :, n + ei]  # shape (N, M)
+                    tot = gmf.sum(axis=0)  # shape (M,)
+                    if not tot.sum():
+                        continue
+                    if sig_eps is not None:
+                        tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
+                                    list(eps[:, n + ei]))
+                        sig_eps.append(tup)
+                    for sid, gmv in zip(sids, gmf):
+                        if gmv.sum():
+                            data.append((sid, eid, gmv))
+                n += e
+        m = (len(min_iml),)
+        d = numpy.array(data, [('sid', U32), ('eid', U32), ('gmv', (F32, m))])
+        return d, time.time() - t0
+
+    def compute(self, gsim, num_events):
         """
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
-        :param seed: a random seed or None
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        try:  # read the seed from self.rupture.serial
-            seed = seed or self.rupture.serial
-        except AttributeError:
-            pass
-        if seed is not None:
-            numpy.random.seed(seed)
+        numpy.random.seed(self.rupture.rup_id)
         result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
@@ -159,10 +206,12 @@ class GmfComputer(object):
             numpy.random.seed(seed)
         dctx = self.dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
-            assert self.correlation_model is None
+            if self.correlation_model:
+                raise ValueError('truncation_level=0 requires '
+                                 'no correlation model')
             mean, _stddevs = gsim.get_mean_and_stddevs(
                 self.sctx, rctx, dctx, imt, stddev_types=[])
-            mean = gsim.to_imt_unit_values(mean)
+            mean = to_imt_unit_values(mean, imt)
             mean.shape += (1, )
             mean = mean.repeat(num_events, axis=1)
             return (mean,
@@ -171,7 +220,7 @@ class GmfComputer(object):
         elif self.truncation_level is None:
             distribution = scipy.stats.norm()
         else:
-            assert self.truncation_level > 0
+            assert self.truncation_level > 0, self.truncation_level
             distribution = scipy.stats.truncnorm(
                 - self.truncation_level, self.truncation_level)
 
@@ -192,7 +241,7 @@ class GmfComputer(object):
 
             total_residual = stddev_total * rvs(
                 distribution, num_sids, num_events)
-            gmf = gsim.to_imt_unit_values(mean + total_residual)
+            gmf = to_imt_unit_values(mean + total_residual, imt)
             stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
@@ -216,8 +265,8 @@ class GmfComputer(object):
             epsilons = rvs(distribution, num_events)
             inter_residual = stddev_inter * epsilons
 
-            gmf = gsim.to_imt_unit_values(
-                mean + intra_residual + inter_residual)
+            gmf = to_imt_unit_values(
+                mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
         return gmf, stdi, epsilons
 
@@ -269,7 +318,8 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         sites and second one is for realizations.
     """
     cmaker = ContextMaker(rupture.tectonic_region_type, [gsim])
+    rupture.rup_id = seed
     gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
                      cmaker, truncation_level, correlation_model)
-    res, _sig, _eps = gc.compute(gsim, realizations, seed)
+    res, _sig, _eps = gc.compute(gsim, realizations)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

@@ -2,9 +2,9 @@ Etna No Topo
 ============
 
 ============== ===================
-checksum32     380,532,669        
-date           2019-07-30T15:04:31
-engine_version 3.7.0-git3b3dff46da
+checksum32     380_532_669        
+date           2020-01-16T05:31:50
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 28, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            1.0
 complex_fault_mesh_spacing      1.0              
 width_of_mfd_bin                0.1              
 area_source_discretization      1.0              
+pointsource_distance            None             
 ground_motion_correlation_model None             
 minimum_intensity               {}               
 random_seed                     23               
@@ -49,11 +50,11 @@ b1        1.00000 trivial(1)      1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================= ========== ========== ==========
-grp_id gsims                   distances  siteparams ruptparams
-====== ======================= ========== ========== ==========
-0      '[TusaLanger2016Rhypo]' rhypo rrup vs30       mag       
-====== ======================= ========== ========== ==========
+====== ======================= ========= ========== ==========
+grp_id gsims                   distances siteparams ruptparams
+====== ======================= ========= ========== ==========
+0      '[TusaLanger2016Rhypo]' rhypo     vs30       mag       
+====== ======================= ========= ========== ==========
 
 Realizations per (GRP, GSIM)
 ----------------------------
@@ -62,54 +63,55 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ======== ============ ============
-source_model     grp_id trt      eff_ruptures tot_ruptures
-================ ====== ======== ============ ============
-source_model.xml 0      Volcanic 150          150         
-================ ====== ======== ============ ============
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.06000   150          150         
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== ======
-source_id grp_id code num_ruptures calc_time num_sites weight speed 
-========= ====== ==== ============ ========= ========= ====== ======
-SVF       0      S    150          0.00256   1.00000   150    58,667
-========= ====== ==== ============ ========= ========= ====== ======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+SVF       0      S    150          0.02331   0.06000   150         
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-S    0.00256   1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+S    0.02331  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-preclassical       0.00286 NaN    0.00286 0.00286 1      
-read_source_models 0.00225 NaN    0.00225 0.00225 1      
+SourceReader       0.00341 NaN    0.00341 0.00341 1      
+preclassical       0.02464 NaN    0.02464 0.02464 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ==================================================== ========
-task               sent                                                 received
-preclassical       srcs=1.4 KB params=719 B srcfilter=220 B gsims=162 B 342 B   
-read_source_models converter=314 B fnames=100 B                         1.76 KB 
-================== ==================================================== ========
+============ ========================================= ========
+task         sent                                      received
+SourceReader                                           2.58 KB 
+preclassical srcs=1.41 KB params=865 B srcfilter=223 B 366 B   
+============ ========================================= ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_15544               time_sec  memory_mb counts
-======================== ========= ========= ======
-total preclassical       0.00286   0.0       1     
-total read_source_models 0.00225   0.0       1     
-store source_info        0.00215   0.0       1     
-managing sources         9.735E-04 0.0       1     
-aggregate curves         1.380E-04 0.0       1     
-======================== ========= ========= ======
+=========================== ========= ========= ======
+calc_43334                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+total preclassical          0.02464   0.0       1     
+composite source model      0.01233   0.0       1     
+total SourceReader          0.00341   0.0       1     
+store source_info           0.00194   0.0       1     
+splitting/filtering sources 5.844E-04 0.0       1     
+aggregate curves            2.303E-04 0.0       1     
+=========================== ========= ========= ======

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
-import numpy
 from copy import deepcopy
 from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
@@ -46,10 +45,7 @@ class AreaSource(ParametricSeismicSource):
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth nodal_plane_distribution hypocenter_distribution
     polygon area_discretization'''.split()
-
     MODIFICATIONS = set(())
-
-    RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -72,7 +68,7 @@ class AreaSource(ParametricSeismicSource):
         self.area_discretization = area_discretization
         self.max_radius = 0
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`
@@ -113,8 +109,10 @@ class AreaSource(ParametricSeismicSource):
                                            depth=hc_depth)
                     occurrence_rate = (mag_occ_rate * np_prob * hc_prob
                                        * rate_scaling_factor)
-                    surface = PointSource._get_rupture_surface(
+                    surface, nhc = PointSource._get_rupture_surface(
                         self, mag, np, hypocenter)
+                    if kwargs.get('shift_hypo'):
+                        hc_depth = nhc.depth
                     ref_ruptures.append((mag, np.rake, hc_depth,
                                          surface, occurrence_rate))
 
@@ -201,9 +199,8 @@ class AreaSource(ParametricSeismicSource):
             pt.num_ruptures = pt.count_ruptures()
             yield pt
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a WKT string
         """
-        return numpy.array([(lon, lat, 0) for lon, lat in zip(
-            self.polygon.lons, self.polygon.lats)])
+        return self.polygon.wkt

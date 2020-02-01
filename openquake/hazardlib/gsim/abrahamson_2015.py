@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -85,6 +85,10 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: Required distance measure is closest distance to rupture, for
     #: interface events
     REQUIRES_DISTANCES = set(('rrup',))
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.ergodic = kwargs.get('ergodic', True)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -205,12 +209,17 @@ class AbrahamsonEtAl2015SInter(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
+                sigma = C["sigma"] if self.ergodic else C["sigma_ss"]
+                stddevs.append(sigma + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(C['tau'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['phi'] + np.zeros(num_sites))
-
+                if self.ergodic:
+                    phi = C["phi"]
+                else:
+                    # Get single station phi
+                    phi = np.sqrt(C["sigma_ss"] ** 2. - C["tau"] ** 2.)
+                stddevs.append(phi + np.zeros(num_sites))
         return stddevs
 
     # Period-dependent coefficients (Table 3)

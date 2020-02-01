@@ -2,9 +2,9 @@ QA test for blocksize independence (hazard)
 ===========================================
 
 ============== ===================
-checksum32     2,348,158,649      
-date           2019-07-30T15:03:50
-engine_version 3.7.0-git3b3dff46da
+checksum32     62_194_572         
+date           2020-01-16T05:30:58
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 2, num_levels = 4, num_rlzs = ?
@@ -22,6 +22,7 @@ rupture_mesh_spacing            20.0
 complex_fault_mesh_spacing      20.0              
 width_of_mfd_bin                0.5               
 area_source_discretization      20.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -39,39 +40,48 @@ job_ini                 `job.ini <job.ini>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      NaN       5_572        0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.0       9     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.37688 NaN    0.37688 0.37688 1      
+SourceReader       0.44239 NaN    0.44239 0.44239 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=314 B fnames=104 B 9.44 KB 
-================== ============================ ========
+============ ==== ========
+task         sent received
+SourceReader      11.17 KB
+============ ==== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_15472               time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.37688  0.0       1     
-======================== ======== ========= ======
+====================== ======== ========= ======
+calc_43259             time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.45439  0.0       1     
+total SourceReader     0.44239  0.0       1     
+====================== ======== ========= ======

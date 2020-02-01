@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -55,7 +55,7 @@ def restore(archive, oqdata):
             detect_types=sqlite3.PARSE_DECLTYPES)
     n = 0
     for fname in os.listdir(oqdata):
-        mo = re.match('calc_(\d+)\.hdf5', fname)
+        mo = re.match(r'calc_(\d+)\.hdf5', fname)
         if mo:
             job_id = int(mo.group(1))
             fullname = os.path.join(oqdata, fname)[:-5]  # strip .hdf5

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2019 GEM Foundation
+# Copyright (C) 2019, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,8 @@
 
 import os
 import unittest
-
+import numpy
+from openquake.hazardlib.contexts import Effect
 
 from openquake.hazardlib.pmf import PMF
 
@@ -34,6 +35,12 @@ from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 BASE_PATH = os.path.dirname(__file__)
 
+dists = numpy.array([0, 10, 20, 30, 40, 50])
+intensities = {
+    '4.5': numpy.array([1.0, .95, .7, .6, .5, .3]),
+    '5.0': numpy.array([1.2, 1.1, .7, .69, .6, .5]),
+    '5.5': numpy.array([1.5, 1.2, .89, .85, .82, .6]),
+    '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
 
 class InstantiateContextTest(unittest.TestCase):
 
@@ -74,4 +81,16 @@ class GetPmapTest(unittest.TestCase):
         cm = ContextMaker(self.trt, gsims, param=self.param)
         # Computing probability map
         poemap = cm.get_pmap(self.src, self.sitesc)
-        # print(poemap)
+
+
+class EffectTestCase(unittest.TestCase):
+    def test_dist_by_mag(self):
+        effect = Effect(intensities, dists)
+        dist = list(effect.dist_by_mag().values())
+        numpy.testing.assert_allclose(dist, [50, 50, 50, 50])
+
+        dist = list(effect.dist_by_mag(.9).values())
+        numpy.testing.assert_allclose(dist, [12, 15, 19.677419, 20])
+
+        dist = list(effect.dist_by_mag(1.1).values())
+        numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])

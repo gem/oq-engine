@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,8 @@ from numpy.testing import assert_almost_equal as aae
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_9, case_10)
+    case_9, case_10, case_11, case_12)
+from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
 
@@ -131,3 +132,14 @@ class ScenarioTestCase(CalculatorTestCase):
         # test importing an exposure with automatic gridding
         self.run_calc(case_10.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['sitecol']), 66)
+
+    def test_case_11(self):
+        # importing exposure + site model with duplicate sites
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_11.__file__, 'job.ini')
+        self.assertIn('duplicate sites', str(ctx.exception))
+
+    def test_case_12(self):
+        # test for DowrickRhoades2005Asc IPE with MMI
+        out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
+        self.assertEqualFiles('gmf.csv', out['gmf_data', 'csv'][0])

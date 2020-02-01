@@ -2,9 +2,9 @@ Scenario Risk Test
 ==================
 
 ============== ===================
-checksum32     4,057,024,737      
-date           2019-07-30T15:03:55
-engine_version 3.7.0-git3b3dff46da
+checksum32     4_057_024_737      
+date           2020-01-16T05:30:43
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 27, num_levels = 8, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            None
 complex_fault_mesh_spacing      None           
 width_of_mfd_bin                None           
 area_source_discretization      None           
+pointsource_distance            None           
 ground_motion_correlation_model None           
 minimum_intensity               {}             
 random_seed                     42             
@@ -56,14 +57,6 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Exposure model
 --------------
 =========== ==
@@ -80,11 +73,21 @@ taxonomy mean    stddev min max num_sites num_assets
 *ALL*    1.00000 0.0    1   1   27        27        
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 =================== ========= ========= ======
-calc_15497          time_sec  memory_mb counts
+calc_43220          time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.03479   0.0       1     
-reading exposure    5.906E-04 0.0       1     
+building riskinputs 0.00517   0.0       1     
+reading exposure    6.394E-04 0.0       1     
 =================== ========= ========= ======

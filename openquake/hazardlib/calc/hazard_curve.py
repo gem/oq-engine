@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -126,24 +126,24 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Compute the probability map. The probability map is a
     # :class:`openquake.baselib.general.AccumDict` instance i.e. a specialised
     # dictionary
-    pmap, rup_data, calc_times = cmaker.get_pmap_by_grp(
+    pmap, rup_data, calc_times, extra = cmaker.get_pmap_by_grp(
         src_filter(group), src_mutex, rup_mutex)
+    extra['task_no'] = getattr(monitor, 'task_no', 0)
     # Now we prepare for computation of hazard.
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
         pmap[src.src_group_id] *= group_probability
-
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(param['imtls'], tom, gsims, pmap)
 
     return dict(pmap=pmap, calc_times=calc_times, rup_data=rup_data,
-                task_no=getattr(monitor, 'task_no', 0))
+                extra=extra)
 
 
 def calc_hazard_curves(
         groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
-        apply=sequential_apply, filter_distance='rjb', reqv=None):
+        apply=sequential_apply, filter_distance='rjb', reqv=None, **kwargs):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
     groups and a dictionary of ground shaking intensity models (one per
@@ -191,9 +191,10 @@ def calc_hazard_curves(
             if src.src_group_id is None:
                 src.src_group_id = i
     imtls = DictArray(imtls)
+    shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level,
                  filter_distance=filter_distance, reqv=reqv,
-                 cluster=grp.cluster)
+                 cluster=grp.cluster, shift_hypo=shift_hypo)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]

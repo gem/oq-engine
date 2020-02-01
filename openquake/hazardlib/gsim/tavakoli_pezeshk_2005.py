@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -133,7 +133,8 @@ class TavakoliPezeshk2005(GMPE):
         Compute magnitude scaling term as defined in equation 19, page 2291
         (Tavakoli and Pezeshk, 2005)
         """
-        assert mag <= 8.5
+        if mag > 8.5:
+            raise ValueError('Magnitude %s > 8.5' % mag)
         return C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
 
     def _compute_geometrical_spreading_term(self, C, rrup):

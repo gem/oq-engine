@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,10 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
 from shapely import geometry
-from openquake.baselib.general import split_in_blocks, not_equal
-from openquake.hazardlib.geo.utils import fix_lon, cross_idl
+from openquake.baselib.general import (
+    split_in_blocks, not_equal, get_duplicates)
+from openquake.hazardlib.geo.utils import (
+    fix_lon, cross_idl, _GeographicObjects, geohash)
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -117,9 +119,12 @@ site_param_dt = {
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
+    'z1pt4': numpy.float64,
     'backarc': numpy.bool,
+    'xvf': numpy.float64,
 
     # Parameters for site amplification
+    'ampcode': (numpy.string_, 2),
     'ec8': (numpy.string_, 1),
     'ec8_p18': (numpy.string_, 2),
     'h800': numpy.float64,
@@ -213,8 +218,8 @@ class SiteCollection(object):
             par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
             req.append('vs30measured')
-        self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
-        self.array = arr = numpy.zeros(len(lons), self.dtype)
+        dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
+        self.array = arr = numpy.zeros(len(lons), dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
         arr['lon'] = fix_lon(numpy.array(lons))
         arr['lat'] = numpy.array(lats)
@@ -234,6 +239,15 @@ class SiteCollection(object):
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
                     self._set(name, sitemodel[name])
+        dupl = get_duplicates(self.array, 'lon', 'lat')
+        if dupl:
+            # raise a decent error message displaying only the first 9
+            # duplicates (there could be millions)
+            n = len(dupl)
+            dots = ' ...' if n > 9 else ''
+            items = list(dupl.items())[:9]
+            raise ValueError('There are %d duplicate sites %s%s' %
+                             (n, items, dots))
         return self
 
     def _set(self, param, value):
@@ -255,10 +269,22 @@ class SiteCollection(object):
         if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
-        indices = numpy.uint32(sorted(indices))
+        indices = numpy.uint32(indices)
         new.array = self.array[indices]
         new.complete = self.complete
         return new
+
+    def add_col(self, colname, dtype):
+        """
+        Add a column to the underlying array
+        """
+        names = self.array.dtype.names
+        dtlist = [(name, self.array.dtype[name]) for name in names]
+        dtlist.append((colname, dtype))
+        arr = numpy.zeros(len(self), dtlist)
+        for name in names:
+            arr[name] = self.array[name]
+        self.array = arr
 
     def make_complete(self):
         """
@@ -267,6 +293,16 @@ class SiteCollection(object):
         # reset the site indices from 0 to N-1 and set self.complete to self
         self.array['sids'] = numpy.arange(len(self), dtype=numpy.uint32)
         self.complete = self
+
+    def one(self):
+        """
+        :returns: a SiteCollection with a site of the minimal vs30
+        """
+        if 'vs30' in self.array.dtype.names:
+            idx = self.array['vs30'].argmin()
+        else:
+            idx = 0
+        return self.filtered([self.sids[idx]])
 
     def __init__(self, sites):
         """
@@ -293,6 +329,10 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         arr.flags.writeable = False
+
+        # NB: in test_correlation.py we define a SiteCollection with
+        # non-unique sites, so we cannot do an
+        # assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
 
     def __eq__(self, other):
         return not self.__ne__(other)
@@ -376,6 +416,29 @@ class SiteCollection(object):
         indices, = mask.nonzero()
         return self.filtered(indices)
 
+    def assoc(self, site_model, assoc_dist, ignore=()):
+        """
+        Associate the `site_model` parameters to the sites.
+        Log a warning if the site parameters are more distant than
+        `assoc_dist`.
+
+        :returns: the site model array reduced to the hazard sites
+        """
+        m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
+        if len(m1) != len(m2) or (m1 != m2).any():  # associate
+            _sitecol, site_model, _discarded = _GeographicObjects(
+                site_model).assoc(self, assoc_dist, 'warn')
+        ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
+            ignore) - {'lon', 'lat', 'depth'}
+        for name in ok:
+            self._set(name, site_model[name])
+        for name in set(self.array.dtype.names) - set(site_model.dtype.names):
+            if name in ('vs30measured', 'backarc'):
+                self._set(name, 0)  # default
+                # NB: by default reference_vs30_type == 'measured' is 1
+                # but vs30measured is 0 (the opposite!!)
+        return site_model
+
     def within(self, region):
         """
         :param region: a shapely polygon
@@ -401,6 +464,22 @@ class SiteCollection(object):
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
+
+    def geohash(self, length):
+        """
+        :param length: length of the geohash
+        :returns: an array of N geohashes, one per site
+        """
+        lst = [geohash(lon, lat, length)
+               for lon, lat in zip(self.lons, self.lats)]
+        return numpy.array(lst, (numpy.string_, length))
+
+    def num_geohashes(self, length):
+        """
+        :param length: length of the geohash
+        :returns: number of distinct geohashes in the site collection
+        """
+        return len(numpy.unique(self.geohash(length)))
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)

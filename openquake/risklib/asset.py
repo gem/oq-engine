@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -163,17 +163,6 @@ class Asset(object):
         self.area = area
         self._retrofitted = retrofitted
         self.calc = calc
-        self._cost = {}  # cache for the costs
-
-    @property
-    def taxonomy(self):
-        return self.tagvalue('taxonomy')
-
-    def tagvalue(self, tagname):
-        """
-        :returns: the tagvalue associated to the given tagname
-        """
-        return self.tagidxs[self.calc.tagi[tagname]]
 
     def value(self, loss_type, time_event=None):
         """
@@ -181,12 +170,7 @@ class Asset(object):
         """
         if loss_type == 'occupants':
             return self.values['occupants_' + str(time_event)]
-        try:  # extract from the cache
-            val = self._cost[loss_type]
-        except KeyError:  # compute
-            val = self.calc(loss_type, self.values, self.area, self.number)
-            self._cost[loss_type] = val
-        return val
+        return self.calc(loss_type, self.values, self.area, self.number)
 
     def retrofitted(self):
         """
@@ -194,19 +178,6 @@ class Asset(object):
         """
         return self.calc('structural', {'structural': self._retrofitted},
                          self.area, self.number)
-
-    def tagmask(self, tags):
-        """
-        :returns: a boolean array with True where the assets has tags
-        """
-        mask = numpy.zeros(len(tags), bool)
-        for t, tag in enumerate(tags):
-            tagname, tagvalue = tag.split('=')
-            mask[t] = self.tagvalue(tagname) == tagvalue
-        return mask
-
-    def __lt__(self, other):
-        return self.ordinal < other.ordinal
 
     def __repr__(self):
         return '<Asset #%s>' % self.ordinal
@@ -237,6 +208,12 @@ class TagCollection(object):
         self.tagnames = []
         for tagname in tagnames:
             self.add_tagname(tagname)
+
+    def get_tagidx(self, tagname):
+        """
+        :returns: a dictionary tag string -> tag index
+        """
+        return {tag: idx for idx, tag in enumerate(getattr(self, tagname))}
 
     def add_tagname(self, tagname):
         self.tagnames.append(tagname)
@@ -428,11 +405,21 @@ class AssetCollection(object):
                              (len(self), A))
         if not tagnames:
             return array.sum(axis=0)
+        elif len(tagnames) == 1:
+            # fast track for single-tag aggregation
+            # for the Canada exposure it is 30x faster
+            # fast_agg(assets['taxonomy'], values)  => 47.6 ms
+            # fast_agg2(assets[['taxonomy']], values) => 1.4 s
+            [tagname] = tagnames
+            avalues = general.fast_agg(self.array[tagname], array)[1:]
+            tags = [(i + 1,) for i in range(len(avalues))]
+        else:  # multi-tag aggregation
+            tags, avalues = general.fast_agg2(self.array[tagnames], array)
         shape = [len(getattr(self.tagcol, tagname))-1 for tagname in tagnames]
-        acc = numpy.zeros(shape, (F32, shp) if shp else F32)
-        for asset, row in zip(self.array, array):
-            acc[tuple(idx - 1 for idx in asset[tagnames])] += row
-        return acc
+        arr = numpy.zeros(shape, (F32, tuple(shp)) if shp else F32)
+        for tag, aval in zip(tags, avalues):
+            arr[tuple(i - 1 for i in tag)] = aval
+        return arr
 
     def agg_value(self, loss_types, *tagnames):
         """
@@ -892,6 +879,8 @@ class Exposure(object):
             rename[field] = 'occupants_' + field
         for fname in self.datafiles:
             array = hdf5.read_csv(fname, conv, rename).array
+            array['lon'] = numpy.round(array['lon'], 5)
+            array['lat'] = numpy.round(array['lat'], 5)
             yield from array
 
     def _populate_from(self, asset_array, param, check_dupl):

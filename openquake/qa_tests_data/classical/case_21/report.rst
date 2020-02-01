@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 21
 =================================
 
 ============== ===================
-checksum32     2,852,175,627      
-date           2019-07-30T15:04:20
-engine_version 3.7.0-git3b3dff46da
+checksum32     3_516_643_643      
+date           2020-01-16T05:31:15
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = 27
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                1.0               
 area_source_discretization      10.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     106               
@@ -114,62 +115,66 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=27, rlzs=27)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 543          296         
-source_model.xml 1      Active Shallow Crust 307          296         
-source_model.xml 2      Active Shallow Crust 248          296         
-source_model.xml 3      Active Shallow Crust 534          296         
-source_model.xml 4      Active Shallow Crust 298          296         
-source_model.xml 5      Active Shallow Crust 239          296         
-source_model.xml 6      Active Shallow Crust 474          296         
-source_model.xml 7      Active Shallow Crust 238          296         
-source_model.xml 8      Active Shallow Crust 179          296         
-source_model.xml 9      Active Shallow Crust 568          296         
-source_model.xml 10     Active Shallow Crust 332          296         
-source_model.xml 11     Active Shallow Crust 273          296         
-source_model.xml 12     Active Shallow Crust 465          296         
-source_model.xml 13     Active Shallow Crust 229          296         
-source_model.xml 14     Active Shallow Crust 170          296         
-source_model.xml 15     Active Shallow Crust 568          296         
-source_model.xml 16     Active Shallow Crust 332          296         
-source_model.xml 17     Active Shallow Crust 273          296         
-source_model.xml 18     Active Shallow Crust 543          296         
-source_model.xml 19     Active Shallow Crust 307          296         
-source_model.xml 20     Active Shallow Crust 248          296         
-source_model.xml 21     Active Shallow Crust 582          296         
-source_model.xml 22     Active Shallow Crust 346          296         
-source_model.xml 23     Active Shallow Crust 287          296         
-source_model.xml 24     Active Shallow Crust 568          296         
-source_model.xml 25     Active Shallow Crust 332          296         
-source_model.xml 26     Active Shallow Crust 273          296         
-================ ====== ==================== ============ ============
-
-============= =====
-#TRT models   27   
-#eff_ruptures 9,756
-#tot_ruptures 7,992
-============= =====
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.00676   444          444         
+1      0.01351   208          148         
+2      0.02247   149          89          
+3      0.00667   534          150         
+4      NaN       298          0.0         
+5      NaN       239          0.0         
+6      0.01111   474          90          
+7      NaN       238          0.0         
+8      NaN       179          0.0         
+9      0.04000   409          25          
+10     NaN       173          0.0         
+11     NaN       114          0.0         
+12     0.01235   465          81          
+13     NaN       229          0.0         
+14     NaN       170          0.0         
+15     0.03704   411          27          
+16     NaN       175          0.0         
+17     NaN       116          0.0         
+18     0.01010   483          99          
+19     NaN       247          0.0         
+20     NaN       188          0.0         
+21     0.00505   582          198         
+22     NaN       346          0.0         
+23     NaN       287          0.0         
+24     0.00758   516          132         
+25     NaN       280          0.0         
+26     NaN       221          0.0         
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== ======
-source_id grp_id code num_ruptures calc_time num_sites weight speed 
-========= ====== ==== ============ ========= ========= ====== ======
-SFLT1     0      S    60           0.03352   9.00000   862    25,712
-SFLT2     0      S    384          0.01786   3.00000   621    34,767
-========= ====== ==== ============ ========= ========= ====== ======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+SFLT1     21     S    198          0.00558   0.00505   198         
+SFLT2     2      S    89           0.00543   0.02247   89          
+SFLT2     1      S    148          0.00496   0.01351   148         
+SFLT1     24     S    132          0.00474   0.00758   132         
+SFLT1     0      S    60           0.00451   0.01667   60          
+SFLT1     12     S    81           0.00447   0.01235   81          
+SFLT1     18     S    99           0.00423   0.01010   99          
+SFLT1     3      S    150          0.00416   0.00667   150         
+SFLT2     0      S    384          0.00342   0.00521   384         
+SFLT1     6      S    90           0.00332   0.01111   90          
+SFLT1     9      S    25           0.00243   0.04000   25          
+SFLT1     15     S    27           0.00116   0.03704   27          
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-S    0.05139   54    
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+S    0.04841  
+==== =========
 
 Duplicated sources
 ------------------
@@ -178,28 +183,29 @@ Found 0 unique sources and 12 duplicate sources with multiplicity 4.5: ['SFLT1' 
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-preclassical       0.00612 0.00289 0.00389 0.01195 9      
-read_source_models 0.05093 0.02054 0.02536 0.09856 27     
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+SourceReader       0.04375 0.00452   0.03582 0.05478 27     
+preclassical       0.00545 9.606E-04 0.00413 0.00684 11     
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================================ ========
-task               sent                                                         received
-preclassical       srcs=10.87 KB params=4.61 KB srcfilter=1.93 KB gsims=1.29 KB 3.19 KB 
-read_source_models converter=8.28 KB fnames=2.64 KB                             49.86 KB
-================== ============================================================ ========
+============ ================================================ ========
+task         sent                                             received
+SourceReader apply_unc=52.47 KB ltmodel=5.62 KB fname=2.74 KB 80.81 KB
+preclassical srcs=12.57 KB params=7.21 KB srcfilter=2.4 KB    4.15 KB 
+============ ================================================ ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_15527               time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 1.37508  0.0       27    
-total preclassical       0.05508  0.0       9     
-managing sources         0.00939  0.0       1     
-aggregate curves         0.00245  0.0       9     
-store source_info        0.00223  0.0       1     
-======================== ======== ========= ======
+=========================== ======== ========= ======
+calc_43315                  time_sec memory_mb counts
+=========================== ======== ========= ======
+total SourceReader          1.18137  0.0       27    
+composite source model      0.19664  0.0       1     
+total preclassical          0.05992  0.25391   11    
+splitting/filtering sources 0.00389  0.0       11    
+store source_info           0.00277  0.0       1     
+aggregate curves            0.00264  0.0       11    
+=========================== ======== ========= ======

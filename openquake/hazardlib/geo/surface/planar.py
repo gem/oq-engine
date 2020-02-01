@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -618,13 +618,13 @@ class PlanarSurface(BaseSurface):
         """
         The corners lons/lats in WKT-friendly order (clockwise)
         """
-        return ([self.corner_lons.take([0, 1, 3, 2, 0])],
-                [self.corner_lats.take([0, 1, 3, 2, 0])])
+        return (self.corner_lons.take([0, 1, 3, 2, 0]),
+                self.corner_lats.take([0, 1, 3, 2, 0]))
 
     def get_surface_boundaries_3d(self):
         """
         The corners lons/lats/depths in WKT-friendly order (clockwise)
         """
-        return ([self.corner_lons.take([0, 1, 3, 2, 0])],
-                [self.corner_lats.take([0, 1, 3, 2, 0])],
-                [self.corner_depths.take([0, 1, 3, 2, 0])])
+        return (self.corner_lons.take([0, 1, 3, 2, 0]),
+                self.corner_lats.take([0, 1, 3, 2, 0]),
+                self.corner_depths.take([0, 1, 3, 2, 0]))

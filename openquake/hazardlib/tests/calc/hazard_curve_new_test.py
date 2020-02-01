@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -222,12 +222,12 @@ class MultiPointTestCase(unittest.TestCase):
         imtls = DictArray({'PGA': [0.01, 0.02, 0.04, 0.08, 0.16]})
         gsim_by_trt = {'Stable Continental Crust': Campbell2003()}
         hcurves = calc_hazard_curves(groups, sitecol, imtls, gsim_by_trt)
-        expected = [0.99999778, 0.9084039, 0.148975348,
-                    0.0036909656, 2.76326e-05]
-        npt.assert_almost_equal(hcurves['PGA'][0], expected)
+        expected = [9.999978e-01, 9.084040e-01, 1.489753e-01, 3.690966e-03,
+                    2.763261e-05]
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=1E-6, atol=1E-6)
 
         # splitting in point sources
         [[mps1, mps2]] = groups
         psources = list(mps1) + list(mps2)
         hcurves = calc_hazard_curves(psources, sitecol, imtls, gsim_by_trt)
-        npt.assert_almost_equal(hcurves['PGA'][0], expected)
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=1E-4, atol=1E-6)

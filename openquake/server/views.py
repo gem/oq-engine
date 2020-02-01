@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,9 +44,11 @@ from django.shortcuts import render
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
-from openquake.hazardlib import nrml, gsim
+from openquake.hazardlib import nrml, gsim, valid
+
 
 from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
@@ -212,6 +214,21 @@ def get_available_gsims(request):
     return HttpResponse(content=json.dumps(gsims), content_type=JSON)
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_ini_defaults(request):
+    """
+    Return a list of ini attributes with a default value
+    """
+    ini_defs = {}
+    for name in dir(oqvalidation.OqParam):
+        obj = getattr(oqvalidation.OqParam, name)
+        if (isinstance(obj, valid.Param)
+                and obj.default is not valid.Param.NODEFAULT):
+            ini_defs[name] = obj.default
+    return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)
+
+
 def _make_response(error_msg, error_line, valid):
     response_data = dict(error_msg=error_msg,
                          error_line=error_line,
@@ -276,6 +293,34 @@ def validate_nrml(request):
         return _make_response(error_msg=None, error_line=None, valid=True)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def validate_zip(request):
+    """
+    Leverage the engine libraries to check if a given zip archive is a valid
+    calculation input
+
+    :param request:
+        a `django.http.HttpRequest` object containing a zip archive
+
+    :returns: a JSON object, containing:
+        * 'valid': a boolean indicating if the provided archive is valid
+        * 'error_msg': the error message, if any error was found
+                       (None otherwise)
+    """
+    archive = request.FILES.get('archive')
+    if not archive:
+        return HttpResponseBadRequest('Missing archive file')
+    job_zip = archive.temporary_file_path()
+    try:
+        base.calculators(readinput.get_oqparam(job_zip)).read_inputs()
+    except Exception as exc:
+        return _make_response(str(exc), None, valid=False)
+    else:
+        return _make_response(None, None, valid=True)
+
+
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc(request, calc_id):
@@ -305,9 +350,10 @@ def calc_list(request, id=None):
     Responses are in JSON.
     """
     base_url = _get_base_url(request)
+    # always filter calculation list unless user is a superuser
     calc_data = logs.dbcmd('get_calcs', request.GET,
                            utils.get_valid_users(request),
-                           utils.get_acl_on(request), id)
+                           not utils.is_superuser(request), id)
 
     response_data = []
     username = psutil.Process(os.getpid()).username()
@@ -329,6 +375,8 @@ def calc_list(request, id=None):
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
+        if not response_data:
+            return HttpResponseNotFound()
         [response_data] = response_data
 
     return HttpResponse(content=json.dumps(response_data),
@@ -351,9 +399,11 @@ def calc_abort(request, calc_id):
         message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
-    if not utils.user_has_permission(request, job.user_name):
+    # only the owner or superusers can abort a calculation
+    if (job.user_name not in utils.get_valid_users(request) and
+            not utils.is_superuser(request)):
         message = {'error': ('User %s has no permission to abort job %s' %
-                             (job.user_name, job.id))}
+                             (request.user, job.id))}
         return HttpResponse(content=json.dumps(message), content_type=JSON,
                             status=403)
 
@@ -679,7 +729,6 @@ def extract(request, calc_id, what):
             aw = _extract(ds, what + query_string)
             a = {}
             for key, val in vars(aw).items():
-                key = str(key)  # can be a numpy.bytes_
                 if key.startswith('_'):
                     continue
                 elif isinstance(val, str):

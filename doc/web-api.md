@@ -249,6 +249,22 @@ Parameters:
 Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
 
 
+#### POST /v1/calc/validate_zip
+
+Check if a given job.zip archive is valid
+
+Parameters:
+
+    * archive: the zip file to be validated
+
+Response:
+
+a JSON object, containing:
+
+    * valid: a boolean indicating if the provided archive is a valid job.zip
+    * error_msg: the error message, if any error was found (None otherwise)
+
+
 #### POST /v1/valid/
 
 Check if a given XML text is a valid NRML.
@@ -270,6 +286,8 @@ a JSON object, containing:
 
 Check if a given filename exists and if the first 32 bytes of its content have the same checksum passed as argument of POST.
 
+*(developed for internal purposes)*
+
 Parameters:
 
     * filename: filename (with path) of file to be checked
@@ -281,6 +299,30 @@ a JSON object, containing:
 
     * success: a boolean indicating that filename is accessible by engine server and that calculated checksum matches passed parameter
 
+
+#### GET /v1/ini_defaults
+
+Retrieve all default values for ini file parameters (parameters without a default value are not returned).
+
+*(developed for internal purposes)*
+
+Parameters: None
+
+Response:
+```json
+{"aggregate_by": [],
+ "area_source_discretization": null,
+ "ash_wet_amplification_factor": 1.0,
+ "asset_correlation": 0,
+ "asset_hazard_distance": {"default": 15},
+ "asset_loss_table": false,
+ "assets_per_site_limit": 1000,
+ "avg_losses": true,
+ "base_path": ".",
+ "calculation_mode": "",
+ ...
+ }
+```
 
 #### POST /accounts/ajax_login/
 

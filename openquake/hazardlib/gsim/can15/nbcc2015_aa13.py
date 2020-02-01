@@ -1,44 +1,47 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Module exports :class:`NBCC2015_AA13_Base`,
-               :class:`NBCC2015_AA13_activecrustFRjb_low`,
-               :class:`NBCC2015_AA13_activecrustFRjb_central`,
-               :class:`NBCC2015_AA13_activecrustFRjb_high`,
-               :class:`NBCC2015_AA13_interface_low`,
-               :class:`NBCC2015_AA13_interface_central`,
-               :class:`NBCC2015_AA13_interface_high`,
-               :class:`NBCC2015_AA13_activecrust_low`,
-               :class:`NBCC2015_AA13_activecrust_central`,
-               :class:`NBCC2015_AA13_activecrust_high`,
-               :class:`NBCC2015_AA13_inslab30_low`,
-               :class:`NBCC2015_AA13_inslab30_central`,
-               :class:`NBCC2015_AA13_inslab30_high`,
-               :class:`NBCC2015_AA13_inslab50_low`,
-               :class:`NBCC2015_AA13_inslab50_central`,
-               :class:`NBCC2015_AA13_inslab50_high`,
-               :class:`NBCC2015_AA13_offshore_low`,
-               :class:`NBCC2015_AA13_offshore_central`,
-               :class:`NBCC2015_AA13_offshore_high`,
-               :class:`NBCC2015_AA13_stablecrust_low`,
-               :class:`NBCC2015_AA13_stablecrust_central`,
-               :class:`NBCC2015_AA13_stablecrust_high`,
-
+Module exports :class:`NBCC2015_AA13`
 """
+import io
 import os
 import numpy as np
-from openquake.baselib import hdf5
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.base import gsim_aliases
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 dirname = os.path.dirname(__file__)
 BASE_PATH_AA13 = os.path.join(dirname, 'nbcc2015_tables')
 
+# populating `gsim_aliases` so that the engine can associate a string
+# to a specific gsim; for instance the string "NBCC2015_AA13_offshore_high"
+# is associated to the gsim (in TOML representation)
+# [NBCC2015_AA13]
+# REQUIRES_DISTANCES = ["rhypo"]
+# DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
+# gmpe_table = "Woffshore_high_clC.hdf5"
+arguments = [
+    ['stablecrust', 'rhypo', 'Stable Crust', 'ENA_%s_clC'],
+    ['activecrust', 'rhypo', 'Active Crust', 'Wcrust_%s_clC'],
+    ['activecrustFRjb', 'rjb', 'Active Crust Fault', 'WcrustFRjb_%s_clC'],
+    ['inslab30', 'rhypo', 'Subduction Inslab 30', 'WinslabD30_%s_clC'],
+    ['inslab50', 'rhypo', 'Subduction Inslab 50', 'WinslabD50_%s_clC'],
+    ['interface', 'rrup', 'Subduction Interface', 'WinterfaceCombo_%sclC'],
+    ['offshore', 'rhypo', 'Offshore', 'Woffshore_%s_clC']]
+for key, dist, trt, hdf5 in arguments:
+    for kind in ('low', 'med', 'high'):
+        name = f"NBCC2015_AA13_{key}_" + ("central" if kind == "med" else kind)
+        gsim_aliases[name] = f'''[NBCC2015_AA13]
+REQUIRES_DISTANCES = ["{dist}"]
+DEFINED_FOR_TECTONIC_REGION_TYPE = "{trt}"
+gmpe_table = "{hdf5}.hdf5"
+''' % kind
 
-class NBCC2015_AA13_Base(GMPETable):
+
+class NBCC2015_AA13(GMPETable):
     """
     Implements the GMMs of the 5th Generation seismic hazard model of Canada
     as used in the 2015 National Building Code of Canada (NBCC2015).
@@ -60,7 +63,7 @@ class NBCC2015_AA13_Base(GMPETable):
     gsim/nga_east.html
     """
     experimental = True
-    AA13_TABLE = ""
+    gmpe_table = ""
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
@@ -70,11 +73,21 @@ class NBCC2015_AA13_Base(GMPETable):
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
     BA08 = BooreAtkinson2008()
 
-    def init(self):
-        if not self.AA13_TABLE:
-            raise NotImplementedError("AA13 GMPE requires input table")
-        with hdf5.File(self.AA13_TABLE, 'r') as fle:
-            super().init(fle)
+    def __init__(self, **kwargs):
+        # kwargs must contain the keys REQUIRES_DISTANCES,
+        # DEFINED_FOR_TECTONIC_REGION_TYPE, gmpe_table
+        fname = kwargs['gmpe_table']
+        if isinstance(fname, io.BytesIO):
+            # magic happening in the engine when reading the gsim from HDF5
+            pass
+        else:
+            # fname is really a filename (absolute in the engine)
+            kwargs['gmpe_table'] = os.path.join(
+                BASE_PATH_AA13, os.path.basename(fname))
+        super().__init__(**kwargs)
+        self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
+        self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
+            'DEFINED_FOR_TECTONIC_REGION_TYPE']
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
@@ -164,234 +177,3 @@ class NBCC2015_AA13_Base(GMPETable):
     5.0 1.148
     10.0 1.072
     """)
-
-
-class NBCC2015_AA13_stablecrust_low(NBCC2015_AA13_Base):
-    """
-    AA13 Stable Crust (low branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Crust"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Stable Crust Low"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "ENA_low_clC.hdf5")
-
-
-class NBCC2015_AA13_stablecrust_central(NBCC2015_AA13_Base):
-    """
-    AA13 Stable Crust (central branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Crust"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Stable Crust Central"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "ENA_med_clC.hdf5")
-
-
-class NBCC2015_AA13_stablecrust_high(NBCC2015_AA13_Base):
-    """
-    AA13 Stable Crust (high branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Crust"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Stable Crust High"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "ENA_high_clC.hdf5")
-
-
-class NBCC2015_AA13_activecrust_low(NBCC2015_AA13_Base):
-    """
-    AA13 Active Crust (low branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Active Crust Low"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "Wcrust_low_clC.hdf5")
-
-
-class NBCC2015_AA13_activecrust_central(NBCC2015_AA13_Base):
-    """
-    AA13 Active Crust (central branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Active Crust Central"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "Wcrust_med_clC.hdf5")
-
-
-class NBCC2015_AA13_activecrust_high(NBCC2015_AA13_Base):
-    """
-    AA13 Active Crust (high branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Active Crust High"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "Wcrust_high_clC.hdf5")
-
-
-class NBCC2015_AA13_activecrustFRjb_low(NBCC2015_AA13_Base):
-    """
-    AA13 Active Fault (low branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust Fault"
-    REQUIRES_DISTANCES = set(('rjb',))
-    gsim = "AA13 Active Crust Fault Low"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WcrustFRjb_low_clC.hdf5")
-
-
-class NBCC2015_AA13_activecrustFRjb_central(NBCC2015_AA13_Base):
-    """
-    AA13 Active Fault (central branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust Fault"
-    REQUIRES_DISTANCES = set(('rjb',))
-    gsim = "AA13 Active Crust Fault Central"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WcrustFRjb_med_clC.hdf5")
-
-
-class NBCC2015_AA13_activecrustFRjb_high(NBCC2015_AA13_Base):
-    """
-    AA13 Active Fault (high branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Crust Fault"
-    REQUIRES_DISTANCES = set(('rjb',))
-    gsim = "AA13 Active Crust Fault High"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WcrustFRjb_high_clC.hdf5")
-
-
-class NBCC2015_AA13_inslab30_low(NBCC2015_AA13_Base):
-    """
-    AA13 Inslab 30km depth (low branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 30"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Subduction Inslab 30 Low"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD30_low_clC.hdf5")
-
-
-class NBCC2015_AA13_inslab30_central(NBCC2015_AA13_Base):
-    """
-    AA13 Inslab 30km depth (central branch) as used in the 5th generation
-    seismic hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 30"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Subduction Inslab 30 Central"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD30_med_clC.hdf5")
-
-
-class NBCC2015_AA13_inslab30_high(NBCC2015_AA13_Base):
-    """
-    AA13 Inslab 30km depth (high branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 30"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Subduction Inslab 30 High"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD30_high_clC.hdf5")
-
-
-class NBCC2015_AA13_inslab50_low(NBCC2015_AA13_Base):
-    """
-    AA13 Inslab 50km depth (low branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 50"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Subduction Inslab 50 Low"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD50_low_clC.hdf5")
-
-
-class NBCC2015_AA13_inslab50_central(NBCC2015_AA13_Base):
-    """
-    AA13 Inslab 50km depth (central branch) as used in the 5th generation
-    seismic hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 50"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Subduction Inslab 50 Central"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD50_med_clC.hdf5")
-
-
-class NBCC2015_AA13_inslab50_high(NBCC2015_AA13_Base):
-    """
-    AA13 Inslab 50km depth (high branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Inslab 50"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Subduction Inslab 50 High"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WinslabD50_high_clC.hdf5")
-
-
-class NBCC2015_AA13_interface_low(NBCC2015_AA13_Base):
-    """
-    AA13 Interface (low branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Interface"
-    REQUIRES_DISTANCES = set(('rrup',))
-    gsim = "AA13 Subduction Interface Low"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WinterfaceCombo_lowclC.hdf5")
-
-
-class NBCC2015_AA13_interface_central(NBCC2015_AA13_Base):
-    """
-    AA13 Interface (central branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Interface"
-    REQUIRES_DISTANCES = set(('rrup',))
-    gsim = "AA13 Subduction Interface Central"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WinterfaceCombo_medclC.hdf5")
-
-
-class NBCC2015_AA13_interface_high(NBCC2015_AA13_Base):
-    """
-    AA13 Interface (high branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Subduction Interface"
-    REQUIRES_DISTANCES = set(('rrup',))
-    gsim = "AA13 Subduction Interface High"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "WinterfaceCombo_highclC.hdf5")
-
-
-class NBCC2015_AA13_offshore_low(NBCC2015_AA13_Base):
-    """
-    AA13 Western Offshore (low branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Offshore Low"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "Woffshore_low_clC.hdf5")
-
-
-class NBCC2015_AA13_offshore_central(NBCC2015_AA13_Base):
-    """
-    AA13 Western Offshore (central branch) as used in the 5th generation
-    seismic hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Offshore Central"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "Woffshore_med_clC.hdf5")
-
-
-class NBCC2015_AA13_offshore_high(NBCC2015_AA13_Base):
-    """
-    AA13 Western Offshore (high branch) as used in the 5th generation seismic
-    hazard model of Canada.
-    """
-    DEFINED_FOR_TECTONIC_REGION_TYPE = "Offshore"
-    REQUIRES_DISTANCES = set(('rhypo',))
-    gsim = "AA13 Offshore High"
-    AA13_TABLE = os.path.join(BASE_PATH_AA13, "Woffshore_high_clC.hdf5")

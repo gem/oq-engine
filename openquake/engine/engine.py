@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
-import io
 import os
 import re
 import sys
@@ -31,7 +30,6 @@ import logging
 import traceback
 import platform
 import psutil
-import numpy
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -40,9 +38,9 @@ except ImportError:
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
-    parallel, general, config, __version__, zeromq as z, workerpool as w)
+    parallel, general, config, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, oqzip
+from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
@@ -60,27 +58,36 @@ AND is_running=1 AND pid > 0 ORDER BY id'''
 
 if OQ_DISTRIBUTE == 'zmq':
 
-    def set_concurrent_tasks_default(job_id):
+    def set_concurrent_tasks_default(calc):
         """
         Set the default for concurrent_tasks based on the available
         worker pools .
         """
         num_workers = 0
         w = config.zworkers
-        for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
+        if w.host_cores:
+            host_cores = [hc.split() for hc in w.host_cores.split(',')]
+        else:
+            host_cores = []
+        for host, _cores in host_cores:
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
             with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                 if not general.socket_ready(url):
                     logs.LOG.warn('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
+        if num_workers == 0:
+            num_workers = os.cpu_count()
+            logs.LOG.warn('Missing host_cores, no idea about how many cores '
+                          'are available, using %d', num_workers)
+        parallel.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.warn('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
-    import celery.task.control
+    import celery.task.control  # noqa: E402
 
-    def set_concurrent_tasks_default(job_id):
+    def set_concurrent_tasks_default(calc):
         """
         Set the default for concurrent_tasks based on the number of available
         celery workers.
@@ -88,9 +95,10 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
             logs.LOG.critical("No live compute nodes, aborting calculation")
-            logs.dbcmd('finish', job_id, 'failed')
+            logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        parallel.CT = ncores * 2
         OqParam.concurrent_tasks.default = ncores * 2
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
@@ -114,6 +122,10 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)
+else:
+
+    def set_concurrent_tasks_default(calc):
+        pass
 
 
 def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
@@ -238,11 +250,11 @@ def job_from_file(job_ini, job_id, username, **kw):
     :returns:
         an oqparam instance
     """
-    hc_id = kw.get('hazard_calculation_id')
+    hc_id = kw.pop('hazard_calculation_id', None)
     try:
-        oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
+        oq = readinput.get_oqparam(job_ini, hc_id=hc_id, **kw)
     except Exception:
-        logs.dbcmd('finish', job_id, 'failed')
+        logs.dbcmd('finish', job_id, 'deleted')
         raise
     if 'calculation_mode' in kw:
         oq.calculation_mode = kw.pop('calculation_mode')
@@ -313,40 +325,27 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     calc.from_engine = True
     tb = 'None\n'
     try:
-        if not oqparam.hazard_calculation_id:
-            if 'input_zip' in oqparam.inputs:  # starting from an archive
-                with open(oqparam.inputs['input_zip'], 'rb') as arch:
-                    data = numpy.array(arch.read())
-            else:
-                logs.LOG.info('Zipping the input files')
-                bio = io.BytesIO()
-                oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
-                              logging.debug)
-                data = numpy.array(bio.getvalue())
-                del bio
-            calc.datastore['input/zip'] = data
-            calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
-            del data  # save memory
-
         poll_queue(job_id, _PID, poll_time=15)
-        if OQ_DISTRIBUTE == 'zmq':  # start zworkers
-            master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
-            logs.dbcmd('start_zworkers', master)
-            logging.info('WorkerPool %s',  master.wait_pools(seconds=30))
-        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-            set_concurrent_tasks_default(job_id)
+    except BaseException:
+        # the job aborted even before starting
+        logs.dbcmd('finish', job_id, 'aborted')
+        return
+    try:
+        if OQ_DISTRIBUTE.endswith('pool'):
+            logs.LOG.warning('Using %d cores on %s',
+                             parallel.CT, platform.node())
+        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
+            logs.dbcmd('zmq_start')  # start the zworkers
+            logs.dbcmd('zmq_wait')  # wait for them to go up
+        set_concurrent_tasks_default(calc)
         t0 = time.time()
         calc.run(exports=exports,
-                 hazard_calculation_id=hazard_calculation_id,
-                 close=False, **kw)
+                 hazard_calculation_id=hazard_calculation_id, **kw)
         logs.LOG.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
-        duration = time.time() - t0
-        records = views.performance_view(calc.datastore, add_calc_id=False)
-        logs.dbcmd('save_performance', job_id, records)
         calc.datastore.close()
         logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                      job_id, duration)
+                      job_id, time.time() - t0)
         logs.dbcmd('finish', job_id, 'complete')
     except BaseException as exc:
         if isinstance(exc, MasterKilled):
@@ -364,8 +363,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         # if there was an error in the calculation, this part may fail;
         # in such a situation, we simply log the cleanup error without
         # taking further action, so that the real error can propagate
-        if OQ_DISTRIBUTE == 'zmq':  # stop zworkers
-            logs.dbcmd('stop_zworkers', master)
+        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
+            logs.dbcmd('zmq_stop')  # stop the zworkers
         try:
             if OQ_DISTRIBUTE.startswith('celery'):
                 celery_cleanup(TERMINATE)

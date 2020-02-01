@@ -1,11 +1,12 @@
-event_id,structural
-0,8.51288E+02
-1,3.28829E+02
-2,4.09643E+02
-3,3.74689E+02
-4,3.42458E+02
-5,2.52500E+02
-6,4.81053E+02
-7,1.98583E+02
-8,5.79551E+02
-9,5.03661E+02
+#,,"generated_by='OpenQuake engine 3.7.0-git2cf1ae85ae', start_date='2019-09-05T18:14:35', checksum=1296573449, investigation_time=None, risk_investigation_time=None"
+event_id,structural,rlz_id
+0,8.51288E+02,0
+1,3.28829E+02,0
+2,4.09643E+02,0
+3,3.74689E+02,0
+4,3.42458E+02,0
+5,2.52500E+02,0
+6,4.81053E+02,0
+7,1.98583E+02,0
+8,5.79551E+02,0
+9,5.03661E+02,0

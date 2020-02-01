@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -57,6 +57,10 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
+        if ZMQ:
+            self.zmaster = w.WorkerMaster(address[0], **config.zworkers)
+        else:
+            self.zmaster = None
 
     def dworker(self, sock):
         # a database worker responding to commands
@@ -65,6 +69,11 @@ class DbServer(object):
                 cmd, args = cmd_[0], cmd_[1:]
                 if cmd == 'getpid':
                     sock.send(self.pid)
+                    continue
+                elif cmd.startswith('zmq_') and self.zmaster:
+                    msg = getattr(self.zmaster, cmd[4:])()
+                    logging.info(msg)
+                    sock.send(msg)
                     continue
                 try:
                     func = getattr(actions, cmd)
@@ -110,6 +119,7 @@ class DbServer(object):
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
         if ZMQ:
+            self.zmaster.stop()
             z.context.term()
         self.db.close()
 

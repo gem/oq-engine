@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -177,7 +177,7 @@ class YuEtAl2013Ms(GMPE):
     ])
 
     #: No site parameters required
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
@@ -193,7 +193,7 @@ class YuEtAl2013Ms(GMPE):
         """
         # Check that the requested standard deviation type is available
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                    for stddev_type in stddev_types)
+                   for stddev_type in stddev_types)
         #
         # Set parameters
         mag = rup.mag

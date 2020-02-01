@@ -2,9 +2,9 @@ Scenario Calculation with Simple Fault Rupture
 ==============================================
 
 ============== ===================
-checksum32     1,923,070,683      
-date           2019-07-30T15:03:55
-engine_version 3.7.0-git3b3dff46da
+checksum32     1_923_070_683      
+date           2020-01-16T05:30:42
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = 2
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -54,10 +55,19 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=4, rlzs=2)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
+Slowest operations
+------------------
+========== ======== ========= ======
+calc_43208 time_sec memory_mb counts
+========== ======== ========= ======
+========== ======== ========= ======

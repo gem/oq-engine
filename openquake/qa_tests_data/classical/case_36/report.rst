@@ -2,9 +2,9 @@ applyToSources with multiple sources
 ====================================
 
 ============== ===================
-checksum32     3,235,130,248      
-date           2019-07-30T15:04:22
-engine_version 3.7.0-git3b3dff46da
+checksum32     3_235_130_248      
+date           2020-01-16T05:31:46
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = 9
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      50.0                                                                                                               
 width_of_mfd_bin                0.5                                                                                                                
 area_source_discretization      50.0                                                                                                               
+pointsource_distance            {'default': 0}                                                                                                     
 ground_motion_correlation_model None                                                                                                               
 minimum_intensity               {}                                                                                                                 
 random_seed                     42                                                                                                                 
@@ -72,64 +73,67 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=3, rlzs=9)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 1      Subduction Interface 1,922        633         
-source_model.xml 4      Subduction Interface 1,922        633         
-source_model.xml 7      Subduction Interface 1,922        633         
-================ ====== ==================== ============ ============
-
-============= ======
-#TRT models   3     
-#eff_ruptures 5,766 
-#tot_ruptures 24,093
-============= ======
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      NaN       80           0.0         
+1      0.01264   633          633         
+2      NaN       7_318        0.0         
+3      NaN       100          0.0         
+4      0.01372   656          656         
+5      NaN       7_545        0.0         
+6      NaN       80           0.0         
+7      0.01264   633          633         
+8      NaN       7_107        0.0         
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =======
-source_id grp_id code num_ruptures calc_time num_sites weight speed  
-========= ====== ==== ============ ========= ========= ====== =======
-1         1      C    633          0.01521   3.00000   1,922  126,399
-========= ====== ==== ============ ========= ========= ====== =======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+1         4      C    656          0.01197   0.01372   656         
+1         1      C    633          0.01025   0.01264   633         
+1         7      C    633          0.00986   0.01264   633         
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.0       21    
-C    0.01521   3     
-S    0.0       9     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.0      
+C    0.03208  
+S    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-preclassical       0.00763 0.00435 0.00215 0.01628 12     
-read_source_models 0.35274 0.05023 0.29476 0.38301 3      
+SourceReader       0.46927 0.02449 0.44325 0.49187 3      
+preclassical       0.24616 0.43455 0.01725 1.14366 15     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================== ========
-task               sent                                                     received
-preclassical       srcs=52.45 KB params=7 KB srcfilter=3.8 KB gsims=1.72 KB 3.48 KB 
-read_source_models converter=942 B fnames=300 B                             47.79 KB
-================== ======================================================== ========
+============ ================================================ ========
+task         sent                                             received
+SourceReader apply_unc=10.92 KB ltmodel=753 B fname=312 B     65.21 KB
+preclassical params=112.53 KB srcs=55.23 KB srcfilter=23.1 KB 4.78 KB 
+============ ================================================ ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_15529               time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 1.05822  0.16797   3     
-total preclassical       0.09158  0.0       12    
-managing sources         0.00588  0.0       1     
-store source_info        0.00210  0.0       1     
-aggregate curves         0.00164  0.0       12    
-======================== ======== ========= ======
+=========================== ========= ========= ======
+calc_43325                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+total preclassical          3.69243   1.33984   15    
+splitting/filtering sources 3.38230   1.33984   15    
+total SourceReader          1.40782   0.73828   3     
+composite source model      0.52910   0.0       1     
+store source_info           0.00258   0.0       1     
+aggregate curves            8.090E-04 0.0       3     
+=========================== ========= ========= ======

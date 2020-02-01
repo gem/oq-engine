@@ -40,7 +40,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </ruptAspectRatio>
                 <truncGutenbergRichterMFD aValue="2.6922000E+00" bValue="7.5220000E-01" maxMag="7.8000000E+00" minMag="5.0000000E+00"/>
                 <nodalPlaneDist>
-                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="2.7300000E+02"/>
+                    <nodalPlane dip="6.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="2.7300000E+02"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
                     <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>

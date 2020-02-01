@@ -6,8 +6,6 @@ python:
 
 cache:
   pip: true
-  directories:
-  - wheels  
 
 jobs:
   include:
@@ -15,8 +13,18 @@ jobs:
     env: HAZARDLIB
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
-          pytest --doctest-modules -xv openquake/baselib --tb=short;
+          pytest --doctest-modules -xv openquake/baselib --tb=short &&
           OQ_DISTRIBUTE=no pytest --doctest-modules -xv -nauto openquake/hazardlib openquake/hmtk --tb=short;
+          fi
+    after_success:
+        - pip install sphinx==1.6.5
+        - sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk
+        - cd doc/sphinx && make html && cd ../adv-manual && make html && make latexpdf
+        - if [[ "$BRANCH" == "master" ]]; then
+            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d &&
+            chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
+            eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa &&
+            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
           fi
   - stage: tests
     env: ENGINE
@@ -30,15 +38,6 @@ jobs:
         - pytest --doctest-modules -xv openquake/commonlib --tb=short
         - pytest --doctest-modules -xv openquake/commands --tb=short
         - oq webui migrate
-    after_success:  # old sphinx does not work well with Python 3.5.4+
-        - pip install sphinx==1.6.5
-        - cd doc/sphinx && make html && cd ../adv-manual && make html
-        - if [[ "$BRANCH" == "master" ]]; then
-            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d &&
-            chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
-            eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa &&
-            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
-          fi
     after_script:
         - oq reset -y
   - stage: tests
@@ -47,6 +46,7 @@ jobs:
         # Upload oqdata.zip to http://artifacts.openquake.org/travis/ only if
         # the commit message includes a [demos] tag at the end or branch is master
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[demos\]' || test "$BRANCH" == "master"; then
+            zip -q -r /tmp/demos.zip demos/ &&
             OQ_DISTRIBUTE=zmq bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
             oq dump /tmp/oqdata.zip &&
             oq restore /tmp/oqdata.zip /tmp/oqdata &&
@@ -54,21 +54,19 @@ jobs:
             openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d &&
             chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
             eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa &&
+            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip &&
             scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip;
           fi
 
 before_install:
   - if [ "$TRAVIS_PULL_REQUEST_BRANCH" != "" ]; then BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; else BRANCH=$TRAVIS_BRANCH; fi
+  - pip install -U pip
 
 install:
   # Use '[skip wheels]' to get dependencies from upstream pypi without using cached wheels;
   # this is needed to test that (max) requirements in setup.py are still valid.
-  # Also pip does not cache data when requirements includes full http URLs, so we need
-  # to download the wheels first, put the folder in cache and then install the wheels from there.
-  # A second run of 'pip download' will download only the missing wheels.
   - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
-      pip download -r requirements-py36-linux64.txt -r requirements-extra-py36-linux64.txt -d wheels &&
-      pip -q install wheels/* ;
+      pip install -r requirements-py36-linux64.txt -r requirements-extra-py36-linux64.txt;
     fi
   - pip install pytest-xdist
   - pip -q install -e .

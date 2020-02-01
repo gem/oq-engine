@@ -1,3 +1,0 @@
-# generated_by='OpenQuake engine 3.7.0-git4da03f8c5d', start_date='2019-07-31T08:45:22', checksum=1136041000, smlt_path='b1', gsimlt_path='@_b21_@_@', imt='PGA', investigation_time=1.0, lon=-74.0, lat=4.6, poe='0.0001000', iml='1.2217387e-02', rlz=0
-mag,poe
-6.50000E+00,1.00238E-04

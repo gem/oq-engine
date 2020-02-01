@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -47,7 +47,6 @@ class MultiPointSource(ParametricSeismicSource):
     """
     code = b'M'
     MODIFICATIONS = set(())
-    RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -88,12 +87,12 @@ class MultiPointSource(ParametricSeismicSource):
     def __len__(self):
         return len(self.mfd)
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         Yield the ruptures of the underlying point sources
         """
         for ps in self:
-            for rupture in ps.iter_ruptures():
+            for rupture in ps.iter_ruptures(**kwargs):
                 yield rupture
 
     def count_ruptures(self):
@@ -168,9 +167,8 @@ class MultiPointSource(ParametricSeismicSource):
         kw['kind'] = mfd_kind
         self.mfd = MultiMFD(**kw)
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a wkt string
         """
-        return numpy.array([(p.x, p.y, p.z) for p in self.mesh],
-                           numpy.float32)
+        return self.mesh.get_convex_hull().wkt

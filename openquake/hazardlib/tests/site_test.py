@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -146,6 +146,18 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
 
         tiles = cll.split_in_tiles(2)
         self.assertEqual(len(tiles), 2)
+
+        # test geohash
+        assert_eq(cll.geohash(4), numpy.array([b's5x1', b'7zrh']))
+
+        # test duplicate points
+        lons = numpy.arange(10, 20, .1)
+        lons[40:50] = lons[30:40]  # add 10 duplicates
+        lats = [0] * 100
+        req_params = 'vs30 vs30measured z1pt0 z2pt5 backarc'.split()
+        with self.assertRaises(ValueError):
+            SiteCollection.from_points(
+                lons, lats, None, SiteModelParam(), req_params)
 
 
 class SiteCollectionFilterTestCase(unittest.TestCase):

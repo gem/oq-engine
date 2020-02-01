@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -64,11 +64,11 @@ def source_model_info(nodes):
 
 def print_csm_info(fname):
     """
-    Parse the composite source model without instantiating the sources and
+    Parse the composite source model and
     prints information about its composition and the full logic tree
     """
     oqparam = readinput.get_oqparam(fname)
-    csm = readinput.get_composite_source_model(oqparam, in_memory=False)
+    csm = readinput.get_composite_source_model(oqparam)
     print(csm.info)
     print('See http://docs.openquake.org/oq-engine/stable/'
           'effective-realizations.html for an explanation')
@@ -125,6 +125,8 @@ def info(calculators, gsims, views, exports, extracts, parameters,
             func = extract[key]
             if hasattr(func, '__wrapped__'):
                 fm = FunctionMaker(func.__wrapped__)
+            elif hasattr(func, 'func'):  # for partial objects
+                fm = FunctionMaker(func.func)
             else:
                 fm = FunctionMaker(func)
             print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))

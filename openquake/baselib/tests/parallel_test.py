@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,7 @@ import unittest
 import itertools
 import tempfile
 import numpy
-from openquake.baselib import parallel, general, hdf5, config, workerpool
+from openquake.baselib import parallel, general, hdf5, workerpool, performance
 
 try:
     import celery
@@ -56,6 +56,11 @@ def supertask(text, monitor):
         # for instance items = [('a', 4), ('e', 4), ('i', 2)]
         for k, v in items:
             yield get_length, k * v
+
+
+def countletters(text1, text2, monitor):
+    for block in general.block_splitter(text1 + text2, 5):
+        yield get_length, ''.join(block)
 
 
 class StarmapTestCase(unittest.TestCase):
@@ -115,7 +120,6 @@ class StarmapTestCase(unittest.TestCase):
 
     def test_supertask(self):
         # this test has 4 supertasks generating 4 + 5 + 3 + 5 = 17 subtasks
-        # and 18 outputs (1 output does not produce a subtask)
         allargs = [('aaaaeeeeiii',),
                    ('uuuuaaaaeeeeiii',),
                    ('aaaaaaaaeeeeiii',),
@@ -123,18 +127,27 @@ class StarmapTestCase(unittest.TestCase):
         numchars = sum(len(arg) for arg, in allargs)  # 61
         tmpdir = tempfile.mkdtemp()
         tmp = os.path.join(tmpdir, 'calc_1.hdf5')
-        hdf5.File(tmp, 'w').close()  # the file must exist
-        smap = parallel.Starmap(supertask, allargs, hdf5path=tmp)
+        performance.init_performance(tmp, swmr=True)
+        smap = parallel.Starmap(supertask, allargs, h5=hdf5.File(tmp, 'a'))
         res = smap.reduce()
+        smap.h5.close()
         self.assertEqual(res, {'n': numchars})
         # check that the correct information is stored in the hdf5 file
         with hdf5.File(tmp, 'r') as h5:
             num = general.countby(h5['performance_data'][()], 'operation')
             self.assertEqual(num[b'waiting'], 4)
-            self.assertEqual(num[b'total supertask'], 5)  # outputs
+            self.assertEqual(num[b'total supertask'], 4)  # tasks
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
-            self.assertGreater(len(h5['task_info/supertask']), 0)
+            info = h5['task_info'][()]
+            dic = dict(general.fast_agg3(info, 'taskname', ['received']))
+            self.assertGreater(dic[b'get_length'], 0)
+            self.assertGreater(dic[b'supertask'], 0)
         shutil.rmtree(tmpdir)
+
+    def test_countletters(self):
+        data = [('hello', 'world'), ('ciao', 'mondo')]
+        smap = parallel.Starmap(countletters, data)
+        self.assertEqual(smap.reduce(), {'n': 19})
 
     @classmethod
     def tearDownClass(cls):
@@ -153,3 +166,42 @@ class ThreadPoolTestCase(unittest.TestCase):
                 self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
             finally:
                 parallel.Starmap.shutdown()
+
+
+def sum_chunk(slc, hdf5path):
+    with hdf5.File(hdf5path, 'r') as f:
+        return f['array'][slc].sum()
+
+
+def pool_starmap(func, allargs, h5):
+    import multiprocessing
+    with multiprocessing.get_context('spawn').Pool() as pool:
+        for i, res in enumerate(pool.starmap(func, allargs)):
+            perf = numpy.array([(func.__name__, 0, 0, i, i)],
+                               performance.perf_dt)
+            hdf5.extend(h5['performance_data'], perf)
+            yield res
+
+
+class SWMRTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        tmpdir = tempfile.mkdtemp()
+        cls.tmp = os.path.join(tmpdir, 'calc_1.hdf5')
+        with hdf5.File(cls.tmp, 'w') as h:
+            h['array'] = numpy.arange(100)
+        performance.init_performance(cls.tmp, swmr=True)
+
+    def test(self):
+        allargs = []
+        for s in range(0, 100, 10):
+            allargs.append((slice(s, s + 10), self.tmp))
+        with hdf5.File(self.tmp, 'a') as h5:
+            h5.swmr_mode = True
+            tot = sum(pool_starmap(sum_chunk, allargs, h5))
+        self.assertEqual(tot, 4950)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(os.path.dirname(cls.tmp))

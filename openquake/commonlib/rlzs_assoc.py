@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,6 +20,7 @@ import logging
 import operator
 import collections
 import numpy
+from openquake.commonlib.logictree import get_effective_rlzs
 
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
@@ -230,37 +231,41 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
     :param trts: tectonic region types to accept
     """
     assoc = RlzsAssoc(cinfo)
-    offset = 0
     trtset = set(cinfo.gsim_lt.values)
+    offset = 0
     for smodel in cinfo.source_models:
         # discard source models with non-acceptable lt_path
         if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
             continue
-
-        # collect the effective tectonic region types and ruptures
-        trts_ = set()
-        for sg in smodel.src_groups:
-            if sg.eff_ruptures:
-                if (trts and sg.trt in trts) or not trts:
-                    trts_.add(sg.trt)
-
-        # recompute the GSIM logic tree if needed
-        if trts_ != {'*'} and trtset != trts_:
-            before = cinfo.gsim_lt.get_num_paths()
-            gsim_lt = cinfo.gsim_lt.reduce(trts_)
-            after = gsim_lt.get_num_paths()
-            if sm_lt_path and before > after:
-                # print the warning only when saving the logic tree,
-                # i.e. when called with sm_lt_path in store_rlz_info
-                logging.warning('Reducing the logic tree of %s from %d to %d '
-                                'realizations', smodel.name, before, after)
-            gsim_rlzs = list(gsim_lt)
-            all_trts = list(gsim_lt.values)
-        else:
-            gsim_rlzs = list(cinfo.gsim_lt)
+        elif cinfo.num_samples:  # sampling, do not reduce the logic tree
+            rlzs = cinfo.gsim_lt.sample(
+                smodel.samples, cinfo.seed + smodel.ordinal)
             all_trts = list(cinfo.gsim_lt.values)
+        else:  # full enumeration
+            # collect the effective tectonic region types and ruptures
+            trts_ = set()
+            for sg in smodel.src_groups:
+                if sg.eff_ruptures:
+                    if (trts and sg.trt in trts) or not trts:
+                        trts_.add(sg.trt)
 
-        rlzs = cinfo._get_rlzs(smodel, gsim_rlzs, cinfo.seed + offset)
+            # recompute the GSIM logic tree if needed
+            if trts_ != {'*'} and trtset != trts_:
+                before = cinfo.gsim_lt.get_num_paths()
+                gsim_lt = cinfo.gsim_lt.reduce(trts_)
+                after = gsim_lt.get_num_paths()
+                if sm_lt_path and before > after:
+                    # print the warning only when saving the logic tree,
+                    # i.e. when called with sm_lt_path in store_rlz_info
+                    logging.warning(
+                        'Reducing the logic tree of %s from %d to %d '
+                        'realizations', smodel.name, before, after)
+                rlzs = get_effective_rlzs(gsim_lt)
+                all_trts = list(gsim_lt.values)
+            else:
+                rlzs = get_effective_rlzs(cinfo.gsim_lt)
+                all_trts = list(cinfo.gsim_lt.values)
+
         assoc._add_realizations(offset, smodel, all_trts, rlzs)
         offset += len(rlzs)
 

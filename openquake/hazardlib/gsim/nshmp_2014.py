@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,27 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`AbrahamsonEtAl2014NSHMPUpper`
-               :class:`AbrahamsonEtAl2014NSHMPLower`
-               :class:`BooreEtAl2014NSHMPUpper`
-               :class:`BooreEtAl2014NSHMPLower`
-               :class:`CampbellBozorgnia2014NSHMPUpper`
-               :class:`CampbellBozorgnia2014NSHMPLower`
-               :class:`ChiouYoungs2014NSHMPUpper`
-               :class:`ChiouYoungs2014NSHMPLower`
-               :class:`Idriss2014NSHMPUpper`
-               :class:`Idriss2014NSHMPLower`
+Module exports :class:`AtkinsonMacias2009NSHMP2014` and :class:`NSHMP2014`
 """
-import copy
 import numpy as np
-# NGA West 2 GMPEs
-from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
-from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
-    CampbellBozorgnia2014
-from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
-from openquake.hazardlib.gsim.idriss_2014 import Idriss2014
-# Required for Atkinson and Macias (2009)
+from openquake.hazardlib import const
+from openquake.hazardlib.gsim import base
 from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
 from openquake.hazardlib.gsim.can15.sinter import SInterCan15Mid
 
@@ -66,8 +50,7 @@ class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
         # Get original mean and standard deviations
         mean, stddevs = super().get_mean_and_stddevs(
             sctx, rctx, dctx, imt, stddev_types)
-        cff = SInterCan15Mid.SITE_COEFFS[imt]
-        mean += np.log(cff['mf'])
+        mean += np.log(SInterCan15Mid.SITE_COEFFS[imt]['mf'])
         return mean, stddevs
 
 
@@ -95,180 +78,58 @@ def nga_west2_epistemic_adjustment(magnitude, distance):
     return adjustment
 
 
-def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+class NSHMP2014(base.GMPE):
     """
-    See :meth:`superclass method
-    <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-    for spec of input and result values.
+    Implements the NSHMP adjustment factors for the NGA West GMPEs.
+    Requires two parameters `gmpe_name` (one of Idriss2014, ChiouYoungs2014,
+    CampbellBozorgnia2014, BooreEtAl2014, AbrahamsonEtAl2014) and `sgn`
+    (one of -1, 0, +1).
     """
-    cname = self.__class__.__name__
-    if cname.endswith('Upper'):
-        sgn = 1
-    elif cname.endswith('Lower'):
-        sgn = -1
-    elif cname.endswith('Mean'):
-        sgn = 0
-    else:
-        raise NameError(cname)
-    mean, stddevs = self.__class__.__base__.get_mean_and_stddevs(
-        self, sctx, rctx, dctx, imt, stddev_types)
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ()
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = ()
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ()
+    REQUIRES_DISTANCES = ()
+    REQUIRES_RUPTURE_PARAMETERS = ()
+    REQUIRES_SITES_PARAMETERS = ()
 
-    # return mean, increased by the adjustment factor, and standard deviation
-    self.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
-    return mean + sgn * self.adjustment, stddevs
+    def __init__(self, **kwargs):
+        self.gmpe_name = kwargs['gmpe_name']
+        self.sgn = kwargs['sgn']
+        if self.sgn == 0:
+            # default weighting
+            self.weights_signs = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
+        cls = base.registry[self.gmpe_name]
+        for name in vars(cls):
+            if name.startswith(('DEFINED_FOR', 'REQUIRES_')):
+                setattr(self, name, getattr(cls, name))
+        # the gsim requires only Rjb, but the epistemic adjustment factors
+        # are given in terms of Rrup, so both are required in the subclass
+        self.REQUIRES_DISTANCES = frozenset(self.REQUIRES_DISTANCES | {'rrup'})
+        self.gsim = cls()  # underlying gsim
+        super().__init__(**kwargs)
 
-
-DEFAULT_WEIGHTING = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
-
-
-def get_weighted_poes(gsim, mean_std, imls, truncation_level,
-                      weighting=DEFAULT_WEIGHTING):
-    """
-    This function implements the NGA West 2 GMPE epistemic uncertainty
-    adjustment factor without re-calculating the actual GMPE each time.
-
-    :param gsim:
-        Instance of the GMPE
-    :param list weighting:
-        Weightings as a list of tuples of (weight, number standard deviations
-        of the epistemic uncertainty adjustment)
-    """
-    mean = np.array(mean_std[0])  # make a copy
-    output = np.zeros([len(mean), len(imls)])
-    for w, s in weighting:
-        mean_std[0] = mean + s * gsim.adjustment
-        output += gsim.__class__.__base__.get_poes(
-            gsim, mean_std, imls, truncation_level) * w
-    return output
+    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        mean, stddevs = self.gsim.get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
+        # return mean increased by the adjustment factor and standard deviation
+        self.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
+        return mean + self.sgn * self.adjustment, stddevs
 
 
-class AbrahamsonEtAl2014NSHMPUpper(AbrahamsonEtAl2014):
-    """
-    Implements the positive NSHMP adjustment factor for the Abrahamson et al.
-    (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class AbrahamsonEtAl2014NSHMPLower(AbrahamsonEtAl2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Abrahamson et al.
-    (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class AbrahamsonEtAl2014NSHMPMean(AbrahamsonEtAl2014):
-    """
-    Implements the Abrahamson et al (2014) GMPE for application to the
-    weighted mean case
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
-
-
-class BooreEtAl2014NSHMPUpper(BooreEtAl2014):
-    """
-    Implements the positive NSHMP adjustment factor for the Boore et al.
-    (2014) NGA West 2 GMPE
-    """
-    # Originally Boore et al. (2014) requires only Rjb, but the epistemic
-    # adjustment factors are given in terms of Rrup, so both are required here
-    REQUIRES_DISTANCES = set(("rjb", "rrup"))
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class BooreEtAl2014NSHMPLower(BooreEtAl2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Boore et al.
-    (2014) NGA West 2 GMPE
-    """
-    # See similar comment above
-    REQUIRES_DISTANCES = set(("rjb", "rrup"))
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class BooreEtAl2014NSHMPMean(BooreEtAl2014):
-    """
-    Implements the Boore et al (2014) GMPE for application to the
-    weighted mean case
-    """
-    # See similar comment above
-    REQUIRES_DISTANCES = set(("rjb", "rrup"))
-    get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
-
-
-class CampbellBozorgnia2014NSHMPUpper(CampbellBozorgnia2014):
-    """
-    Implements the positive NSHMP adjustment factor for the Campbell and
-    Bozorgnia (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class CampbellBozorgnia2014NSHMPLower(CampbellBozorgnia2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Campbell and
-    Bozorgnia (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class CampbellBozorgnia2014NSHMPMean(CampbellBozorgnia2014):
-    """
-    Implements the Campbell & Bozorgnia (2014) GMPE for application to the
-    weighted mean case
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
-
-
-class ChiouYoungs2014NSHMPUpper(ChiouYoungs2014):
-    """
-    Implements the positive NSHMP adjustment factor for the Chiou & Youngs
-    (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class ChiouYoungs2014NSHMPLower(ChiouYoungs2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Chiou & Youngs
-    (2014) NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class ChiouYoungs2014NSHMPMean(ChiouYoungs2014):
-    """
-    Implements the Chiou & Youngs (2014) GMPE for application to the
-    weighted mean case
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
-
-
-class Idriss2014NSHMPUpper(Idriss2014):
-    """
-    Implements the positive NSHMP adjustment factor for the Idriss (2014)
-    NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class Idriss2014NSHMPLower(Idriss2014):
-    """
-    Implements the negative NSHMP adjustment factor for the Idriss (2014)
-    NGA West 2 GMPE
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-
-
-class Idriss2014NSHMPMean(Idriss2014):
-    """
-    Implements the Idriss (2014) GMPE for application to the
-    weighted mean case
-    """
-    get_mean_and_stddevs = get_mean_and_stddevs
-    get_poes = get_weighted_poes
+# populate gsim_aliases
+# for instance "AbrahamsonEtAl2014NSHMPMean" is associated to the TOML string
+# [NSHMP2014]
+# gmpe_name = "AbrahamsonEtAl2014"
+# sgn = 0
+SUFFIX = {0: 'Mean', -1: 'Lower', 1: 'Upper'}
+for name in ('Idriss2014', 'ChiouYoungs2014', 'CampbellBozorgnia2014',
+             'BooreEtAl2014', 'AbrahamsonEtAl2014'):
+    for sgn in (1, -1, 0):
+        a = name + 'NSHMP' + SUFFIX[sgn]
+        base.gsim_aliases[a] = f'[NSHMP2014]\ngmpe_name="{name}"\nsgn={sgn}'

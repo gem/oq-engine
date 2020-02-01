@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,17 +81,19 @@ class GriddedSurface(BaseSurface):
 
     def get_surface_boundaries(self):
         """
-        :returns: (min_max lons, min_max lats)
+        :returns: (lons, lats) for the 5 points of the bounding box
         """
-        min_lon, min_lat, max_lon, max_lat = self.get_bounding_box()
-        return [[min_lon, max_lon]], [[min_lat, max_lat]]
+        # FIXME: implement real boundaries, not bounding box
+        xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
+        return xs, ys
 
     def get_surface_boundaries_3d(self):
         """
-        :returns: (min_max lons, min_max lats)
+        :returns: (lons, lats, depths) for the 5 points of the bounding box
         """
-        min_lon, min_lat, max_lon, max_lat = self.get_bounding_box()
-        return [[min_lon, max_lon]], [[min_lat, max_lat]], [[0, 0]]
+        # FIXME: implement real boundaries, not bounding box
+        xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
+        return xs, ys, (0, 0, 0, 0, 0)
 
     def get_rx_distance(self, mesh):
         """

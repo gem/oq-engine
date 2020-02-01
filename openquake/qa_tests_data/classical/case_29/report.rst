@@ -2,32 +2,33 @@ NNParametric
 ============
 
 ============== ===================
-checksum32     34,932,175         
-date           2019-07-30T15:04:34
-engine_version 3.7.0-git3b3dff46da
+checksum32     1_135_602_540      
+date           2020-01-16T05:31:13
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 19, num_rlzs = 1
 
 Parameters
 ----------
-=============================== =================================
-calculation_mode                'preclassical'                   
-number_of_logic_tree_samples    0                                
-maximum_distance                {'default': [(5, 500), (6, 500)]}
-investigation_time              1.0                              
-ses_per_logic_tree_path         1                                
-truncation_level                2.0                              
-rupture_mesh_spacing            2.0                              
-complex_fault_mesh_spacing      2.0                              
-width_of_mfd_bin                0.1                              
-area_source_discretization      5.0                              
-ground_motion_correlation_model None                             
-minimum_intensity               {}                               
-random_seed                     23                               
-master_seed                     0                                
-ses_seed                        42                               
-=============================== =================================
+=============================== ==================
+calculation_mode                'preclassical'    
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 500.0}
+investigation_time              1.0               
+ses_per_logic_tree_path         1                 
+truncation_level                2.0               
+rupture_mesh_spacing            2.0               
+complex_fault_mesh_spacing      2.0               
+width_of_mfd_bin                0.1               
+area_source_discretization      5.0               
+pointsource_distance            None              
+ground_motion_correlation_model None              
+minimum_intensity               {}                
+random_seed                     23                
+master_seed                     0                 
+ses_seed                        42                
+=============================== ==================
 
 Input files
 -----------
@@ -62,54 +63,55 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 1            1           
-================ ====== ==================== ============ ============
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      1.00000   1            1.00000     
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ======= =====
-source_id grp_id code num_ruptures calc_time num_sites weight  speed
-========= ====== ==== ============ ========= ========= ======= =====
-test      0      N    1            0.00207   1.00000   1.00000 482  
-========= ====== ==== ============ ========= ========= ======= =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+test      0      N    1            0.00253   1.00000   1.00000     
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-N    0.00207   1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+N    0.00253  
+==== =========
 
 Information about the tasks
 ---------------------------
-================== ========= ====== ========= ========= =======
-operation-duration mean      stddev min       max       outputs
-preclassical       0.00246   NaN    0.00246   0.00246   1      
-read_source_models 9.754E-04 NaN    9.754E-04 9.754E-04 1      
-================== ========= ====== ========= ========= =======
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+SourceReader       0.00220 NaN    0.00220 0.00220 1      
+preclassical       0.00372 NaN    0.00372 0.00372 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ===================================================== ========
-task               sent                                                  received
-preclassical       srcs=1.82 KB params=647 B srcfilter=234 B gsims=161 B 342 B   
-read_source_models converter=314 B fnames=100 B                          2.28 KB 
-================== ===================================================== ========
+============ ========================================= ========
+task         sent                                      received
+SourceReader                                           3.06 KB 
+preclassical srcs=1.83 KB params=793 B srcfilter=223 B 366 B   
+============ ========================================= ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_15554               time_sec  memory_mb counts
-======================== ========= ========= ======
-total preclassical       0.00246   0.0       1     
-store source_info        0.00238   0.0       1     
-managing sources         0.00101   0.0       1     
-total read_source_models 9.754E-04 0.0       1     
-aggregate curves         2.229E-04 0.0       1     
-======================== ========= ========= ======
+=========================== ========= ========= ======
+calc_43305                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+composite source model      0.01083   0.0       1     
+total preclassical          0.00372   0.0       1     
+total SourceReader          0.00220   0.0       1     
+store source_info           0.00220   0.0       1     
+splitting/filtering sources 3.455E-04 0.0       1     
+aggregate curves            1.469E-04 0.0       1     
+=========================== ========= ========= ======

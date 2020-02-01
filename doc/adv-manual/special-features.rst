@@ -56,7 +56,7 @@ another and to SA(1.0) with still another one. The user may want to
 give an higher weight to the IMTs were the GMPE has a small
 uncertainty and a lower weight to the IMTs with a large
 uncertainty. Moreover the GMPE could not be applicable for some
-period, and in that case the user cab assign to it a zero weight, to
+period, and in that case the user can assign to it a zero weight, to
 ignore it.  This is useful when you have a logic tree with multiple
 GMPEs per branchset, some of which are applicable for some IMTs and
 not for others.  Here is an example:

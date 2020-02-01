@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -216,6 +216,13 @@ class RSD2080(IMT):
 
 
 class MMI(IMT):
+    """
+    Modified Mercalli intensity, a Roman numeral describing the severity
+    of an earthquake in terms of its effects on the earth's surface
+    and on humans and their structures.
+    """
+
+class JMA(IMT):
     """
     Modified Mercalli intensity, a Roman numeral describing the severity
     of an earthquake in terms of its effects on the earth's surface

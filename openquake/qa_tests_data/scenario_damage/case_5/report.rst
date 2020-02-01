@@ -2,9 +2,9 @@ Calculation of the ground motion fields for a scenario
 ======================================================
 
 ============== ===================
-checksum32     4,182,813,640      
-date           2019-07-30T15:03:47
-engine_version 3.7.0-git3b3dff46da
+checksum32     4_182_813_640      
+date           2020-01-16T05:30:50
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -22,6 +22,7 @@ rupture_mesh_spacing            15.0
 complex_fault_mesh_spacing      15.0              
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     3                 
@@ -54,14 +55,6 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Exposure model
 --------------
 =========== =
@@ -78,10 +71,20 @@ UFB      1.00000 NaN    1   1   1         1
 *ALL*    1.00000 0.0    1   1   7         7         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ================ ======== ========= ======
-calc_15454       time_sec memory_mb counts
+calc_43231       time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00208  0.0       1     
+reading exposure 0.00186  0.0       1     
 ================ ======== ========= ======

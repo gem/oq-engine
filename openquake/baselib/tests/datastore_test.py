@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,6 +35,7 @@ class DataStoreTestCase(unittest.TestCase):
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
         self.assertEqual(len(self.dstore), 0)
+        # performance_data, task_info, task_sent
         self.dstore['/key1'] = value1 = numpy.array(['a', 'b'], dtype=bytes)
         self.dstore['/key2'] = numpy.array([1, 2])
         self.assertEqual(list(self.dstore), ['key1', 'key2'])
@@ -85,3 +86,14 @@ class DataStoreTestCase(unittest.TestCase):
             read(42, datadir=tmp)
         self.assertIn('permission denied', str(ctx.exception).lower())
         os.remove(fname)
+
+    def test_store_retrieve_files(self):
+        fnames = []
+        for cwd, dirs, files in os.walk(os.path.dirname(__file__)):
+            for f in files:
+                if f.endswith('.py'):
+                    fnames.append(os.path.join(cwd, f))
+        self.dstore.store_files(fnames)
+        for name, data in self.dstore.retrieve_files():
+            print(name)
+        print(self.dstore.get_file('input/' + name))

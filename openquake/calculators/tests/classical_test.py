@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,8 @@ from openquake.qa_tests_data.classical import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_34, case_35, case_36, case_37, case_38, case_39)
+    case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
+    case_42, case_43, case_44, case_45)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -60,6 +61,11 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertIn('sent', info)
             self.assertIn('received', info)
 
+            slow = view('task:classical_split_filter:-1', self.calc.datastore)
+            self.assertIn('taskno', slow)
+            self.assertIn('duration', slow)
+            self.assertIn('sources', slow)
+
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
 
@@ -73,7 +79,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_1.__file__, 'job.ini', minimum_magnitude='4.5')
-        self.assertEqual(str(ctx.exception), 'All sources were filtered away!')
+        self.assertEqual(str(ctx.exception), 'All sources were discarded!?')
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -124,6 +130,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_6.__file__)
 
     def test_case_7(self):
+        # this is a case with duplicated sources
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
@@ -200,22 +207,26 @@ class ClassicalTestCase(CalculatorTestCase):
                           '0.145', '0.203', '0.284'))
 
     def test_case_14(self):
-        # test classical
-        self.assert_curves_ok([
-            'hazard_curve-rlz-000_PGA.csv', 'hazard_curve-rlz-001_PGA.csv'
-        ], case_14.__file__)
+        # test classical with 2 gsims and 1 sample
+        self.assert_curves_ok(['hazard_curve-rlz-000_PGA.csv'],
+                              case_14.__file__)
+
+        # test sampling use the right number of gsims by looking at
+        # the poes datasets which have shape (N, L, G)
+        G = 1  # and not 2
+        self.calc.datastore['poes/grp-00'].array.shape[-1] == G
 
         # test preclassical and OQ_SAMPLE_SOURCES
         with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
             self.run_calc(
                 case_14.__file__, 'job.ini', calculation_mode='preclassical')
-        rpt = view('ruptures_per_trt', self.calc.datastore)
+        rpt = view('ruptures_per_grp', self.calc.datastore)
         self.assertEqual(rpt, """\
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-simple_fault.xml 0      Active Shallow Crust 447          447         
-================ ====== ==================== ============ ============""")
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.33557   447          447         
+====== ========= ============ ============""")
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
@@ -334,12 +345,12 @@ hazard_uhs-std.csv
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     def test_case_19(self):
-        # this test is a lot faster without parallelism (from 89s to 25s)
+        # test for AvgGMPE
         self.assert_curves_ok([
             'hazard_curve-mean_PGA.csv',
             'hazard_curve-mean_SA(0.1).csv',
             'hazard_curve-mean_SA(0.15).csv',
-        ], case_19.__file__, delta=1E-5, concurrent_tasks='0')
+        ], case_19.__file__, delta=1E-5)
 
     def test_case_20(self):  # Source geometry enumeration
         self.assert_curves_ok([
@@ -402,12 +413,17 @@ hazard_uhs-std.csv
         self.assertEqual(checksum, 3211843635)
 
     def test_case_24(self):  # UHS
+        # this is a case with rjb and an hypocenter distribution
         self.assert_curves_ok([
             'hazard_curve-PGA.csv', 'hazard_curve-PGV.csv',
             'hazard_curve-SA(0.025).csv', 'hazard_curve-SA(0.05).csv',
             'hazard_curve-SA(0.1).csv', 'hazard_curve-SA(0.2).csv',
             'hazard_curve-SA(0.5).csv', 'hazard_curve-SA(1.0).csv',
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
+        # test that the number of ruptures is 1/3 of the the total
+        # due to the collapsing of the hypocenters (rjb is depth-independent)
+        self.assertEqual(len(self.calc.datastore['rup/rrup_']), 260)
+        self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -425,7 +441,7 @@ hazard_uhs-std.csv
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.05).csv',
             'hazard_curve-mean-SA(0.1).csv', 'hazard_curve-mean-SA(0.2).csv',
             'hazard_curve-mean-SA(0.5)', 'hazard_curve-mean-SA(1.0).csv',
-            'hazard_curve-mean-SA(2.0).csv'], case_28.__file__)
+            'hazard_curve-mean-SA(2.0).csv'], case_28.__file__, delta=1E-6)
 
     def test_case_29(self):  # non parametric source
         # check the high IMLs are zeros: this is a test for
@@ -449,19 +465,14 @@ hazard_uhs-std.csv
                  ('lat_', 3202), ('lon_', 3202), ('mag', 3202),
                  ('occurrence_rate', 3202), ('probs_occur', 3202),
                  ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
-                 ('rx_', 3202), ('sid_', 3202), ('srcidx', 3202),
+                 ('rx_', 3202), ('sid_', 3202),
                  ('weight', 3202), ('ztor', 3202)])
 
-            # check best_rlz on 5 sites
-            best_rlz = self.calc.datastore['best_rlz'][()]
-            numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
-
     def test_case_30_sampling(self):
-        # IMT-dependent weights with sampling are not implemented
-        with self.assertRaises(NotImplementedError):
-            self.assert_curves_ok(
-                ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-                case_30.__file__, number_of_logic_tree_samples='10')
+        # IMT-dependent weights with sampling by cheating
+        self.assert_curves_ok(
+            ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
+            case_30.__file__, number_of_logic_tree_samples='10')
 
     def test_case_31(self):
         # source specific logic tree
@@ -493,8 +504,22 @@ hazard_uhs-std.csv
         self.assertEqual(self.calc.R, 9)  # there are 9 realizations
 
     def test_case_37(self):
-        # check gsims
+        # test with amplification function == 1
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_37.__file__)
+        hc_id = str(self.calc.datastore.calc_id)
+        # test with amplification function == 2
+        self.run_calc(case_37.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      amplification_csv='amplification2.csv')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ampl_curve-PGA.csv', fname)
+
+        # test with amplification function == 2 and no levels
+        self.run_calc(case_37.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      amplification_csv='amplification2bis.csv')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
 
     def test_case_38(self):
         # BC Hydro GMPEs with epistemic adjustments
@@ -510,3 +535,39 @@ hazard_uhs-std.csv
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
             'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
             'hazard_map-mean.csv'], case_39.__file__, delta=1E-5)
+
+    def test_case_40(self):
+        # NGA East
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGV.csv', 'hazard_map-mean.csv'],
+                              case_40.__file__, delta=1E-6)
+
+    def test_case_41(self):
+        # SERA Site Amplification Models including EC8 Site Classes and Geology
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "hazard_curve-mean-SA(1.0).csv"],
+                              case_41.__file__)
+
+    def test_case_42(self):
+        # split/filter a long complex fault source with maxdist=1000 km
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "hazard_map-mean-PGA.csv"], case_42.__file__)
+
+    def test_case_43(self):
+        # this is a test for pointsource_distance
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "hazard_map-mean-PGA.csv"], case_43.__file__)
+        self.assertEqual(self.calc.numrups, 227)  # effective #ruptures
+
+    def test_case_44(self):
+        # this is a test for shift_hypo. We computed independently the results
+        # using the same input and a simpler calculator implemented in a
+        # jupyter notebook
+        self.assert_curves_ok(["hc-shift-hypo-PGA.csv"], case_44.__file__,
+                              shift_hypo='true')
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_44.__file__,
+                              shift_hypo='false')
+
+    def test_case_45(self):
+        # this is a test for MMI
+        self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)

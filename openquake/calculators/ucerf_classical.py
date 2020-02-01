@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ import operator
 import numpy as np
 from openquake.baselib import parallel, general
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.commonlib.source_model_factory import random_filtered_sources
+from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import base
 from openquake.calculators.classical import (
     ClassicalCalculator, classical_split_filter)
@@ -52,33 +52,36 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         oq = self.oqparam
         acc = self.acc0()
         self.nsites = []  # used in agg_dicts
+        self.maxdists = []
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
-                     filter_distance=oq.filter_distance, maxweight=1E10,
-                     task_duration=1000)
+                     filter_distance=oq.filter_distance,
+                     max_weight=oq.max_weight,
+                     max_sites_disagg=oq.max_sites_disagg)
         self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
-        [gsims] = sorted(self.csm.info.gsim_lt.values.values())
+        [gsims] = self.csm.info.get_gsims_by_trt().values()
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
+        srcfilter = self.src_filter()
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
             [src] = grp
             srcs = list(src)
             if sample:
-                srcs = random_filtered_sources(srcs, self.src_filter, 1)
+                srcs = random_filtered_sources(srcs, srcfilter, 1)
             acc = parallel.Starmap.apply(
                 classical_split_filter,
-                (srcs, self.src_filter, gsims, param, monitor),
+                (srcs, srcfilter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
-                hdf5path=self.datastore.filename
+                h5=self.datastore.hdf5
             ).reduce(self.agg_dicts, acc)
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
-            srcs = ucerf.get_background_sources(self.src_filter, sample)
+            srcs = ucerf.get_background_sources(srcfilter, sample)
             acc = parallel.Starmap.apply(
-                classical, (srcs, self.src_filter, gsims, param, monitor),
+                classical, (srcs, srcfilter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
-                hdf5path=self.datastore.filename
+                h5=self.datastore.hdf5
             ).reduce(self.agg_dicts, acc)
         self.store_rlz_info(acc.eff_ruptures)
         self.store_source_info(self.calc_times)

@@ -1,4 +1,4 @@
-id,taxonomy,lon,lat,annual_loss_orig,annual_loss_retro,bcr
+asset_id,taxonomy,lon,lat,annual_loss_orig,annual_loss_retro,bcr
 "a395","Adobe",81.21382,28.71117,6.63727E+04,3.48103E+03,5.22129E+00
 "a7180","Wood",81.36382,29.98617,1.57292E+02,1.40845E+01,3.56674E-02
 "a4351","Stone-Masonry",81.51382,28.18617,1.40097E+06,1.61748E+05,4.97810E+00

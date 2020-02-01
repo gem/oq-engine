@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2019 GEM Foundation
+# Copyright (c) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,6 +40,8 @@ def std_curve(values, weights=None):
     return res
 
 
+# NB: for equal weights and sorted values the quantile is computed a
+# numpy.interp(q, [1/N, 2/N, ..., N/N], values)
 def quantile_curve(quantile, curves, weights=None):
     """
     Compute the weighted quantile aggregate of a set of curves.
@@ -65,11 +67,9 @@ def quantile_curve(quantile, curves, weights=None):
     for idx, _ in numpy.ndenumerate(result):
         data = numpy.array([a[idx] for a in curves])
         sorted_idxs = numpy.argsort(data)
-        sorted_weights = weights[sorted_idxs]
-        sorted_data = data[sorted_idxs]
-        cum_weights = numpy.cumsum(sorted_weights)
+        cum_weights = numpy.cumsum(weights[sorted_idxs])
         # get the quantile from the interpolated CDF
-        result[idx] = numpy.interp(quantile, cum_weights, sorted_data)
+        result[idx] = numpy.interp(quantile, cum_weights, data[sorted_idxs])
     return result
 
 
@@ -219,3 +219,4 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
             dstore[name][...] = compute_stats2(arrayNR, statfuncs, weights)
         else:
             dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
+            dstore.set_attrs(name, stats=statnames)

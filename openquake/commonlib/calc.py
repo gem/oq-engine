@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,9 +19,7 @@ import warnings
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import calc, probability_map
 
 TWO16 = 2 ** 16
@@ -232,49 +230,6 @@ def make_uhs(hmap, info):
     return uhs
 
 
-class RuptureData(object):
-    """
-    Container for information about the ruptures of a given
-    tectonic region type.
-    """
-    def __init__(self, trt, gsims):
-        self.trt = trt
-        self.cmaker = ContextMaker(trt, gsims)
-        self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
-                             set('mag strike dip rake hypo_depth'.split()))
-        self.dt = numpy.dtype([
-            ('rup_id', U32), ('srcidx', U32), ('multiplicity', U16),
-            ('occurrence_rate', F64),
-            ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
-            ('strike', F32), ('dip', F32), ('rake', F32),
-            ('boundary', hdf5.vstr)] + [(param, F32) for param in self.params])
-
-    def to_array(self, ebruptures):
-        """
-        Convert a list of ebruptures into an array of dtype RuptureRata.dt
-        """
-        data = []
-        for ebr in ebruptures:
-            rup = ebr.rupture
-            self.cmaker.add_rup_params(rup)
-            ruptparams = tuple(getattr(rup, param) for param in self.params)
-            point = rup.surface.get_middle_point()
-            mlons, mlats, mdeps = rup.surface.get_surface_boundaries_3d()
-            bounds = ','.join('((%s))' % ','.join(
-                '%.5f %.5f %.3f' % coords for coords in zip(lons, lats, deps))
-                              for lons, lats, deps in zip(mlons, mlats, mdeps))
-            try:
-                rate = ebr.rupture.occurrence_rate
-            except AttributeError:  # for nonparametric sources
-                rate = numpy.nan
-            data.append(
-                (ebr.serial, ebr.srcidx, ebr.n_occ, rate,
-                 rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
-                 rup.surface.get_dip(), rup.rake,
-                 'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
-        return numpy.array(data, self.dt)
-
-
 class RuptureSerializer(object):
     """
     Serialize event based ruptures on an HDF5 files. Populate the datasets
@@ -296,10 +251,8 @@ class RuptureSerializer(object):
         offset = len(self.datastore['rupgeoms'])
         rup_array.array['gidx1'] += offset
         rup_array.array['gidx2'] += offset
-        previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
-        self.datastore.extend(
-            'ruptures', rup_array, nbytes=previous + rup_array.nbytes)
-        self.datastore.extend('rupgeoms', rup_array.geom)
+        hdf5.extend(self.datastore['ruptures'], rup_array)
+        hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         # TODO: PMFs for nonparametric ruptures are not stored
         self.datastore.flush()
 

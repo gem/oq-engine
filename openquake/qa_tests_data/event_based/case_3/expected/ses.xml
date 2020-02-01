@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <ruptureCollection
+    investigationTime="2.0"
+    >
+        <ruptureGroup
+        id="0"
+        tectonicRegion="active shallow crust"
+        >
+            <singlePlaneRupture
+            id="1066"
+            multiplicity="8"
+            >
+                <stochasticEventSets>
+                    <SES
+                    id="2"
+                    >
+                        0 1 2 3 4 5 6
+                    </SES>
+                    <SES
+                    id="1"
+                    >
+                        7
+                    </SES>
+                </stochasticEventSets>
+                <magnitude>
+                    4.0000000e+00
+                </magnitude>
+                <strike>
+                    0.0000000e+00
+                </strike>
+                <dip>
+                    9.0000000e+01
+                </dip>
+                <rake>
+                    0.0000000e+00
+                </rake>
+                <hypocenter depth="4.0000000E+00" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <planarSurface>
+                    <topLeft depth="3.5000000" lat="-0.0044966" lon="0.0000000"/>
+                    <topRight depth="3.5000000" lat="0.0044966" lon="0.0000000"/>
+                    <bottomLeft depth="4.5000000" lat="-0.0044966" lon="0.0000000"/>
+                    <bottomRight depth="4.5000000" lat="0.0044966" lon="0.0000000"/>
+                </planarSurface>
+            </singlePlaneRupture>
+        </ruptureGroup>
+    </ruptureCollection>
+</nrml>

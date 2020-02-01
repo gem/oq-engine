@@ -37,7 +37,8 @@ xmlns:gml="http://www.opengis.net/gml"
                     <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
-                    <hypoDepth depth="1.0000000E+01" probability="1.0000000E+00"/>
+                    <hypoDepth depth="1.0000000E+01" probability=".5"/>
+                    <hypoDepth depth="1.2000000E+01" probability=".5"/>
                 </hypoDepthDist>
             </pointSource>
         </sourceGroup>
@@ -78,7 +79,8 @@ xmlns:gml="http://www.opengis.net/gml"
                     <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
-                    <hypoDepth depth="1.0000000E+01" probability="1.0000000E+00"/>
+                    <hypoDepth depth="1.0000000E+01" probability=".5"/>
+                    <hypoDepth depth="1.2000000E+01" probability=".5"/>
                 </hypoDepthDist>
             </areaSource>
         </sourceGroup>

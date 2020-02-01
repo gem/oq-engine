@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,12 +26,38 @@ import numpy
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
 
-perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
-                       ('memory_mb', float), ('counts', int)])
+# NB: one can use vstr fields in extensible datasets, but then reading
+# them on-the-fly in SWMR mode will fail with an OSError:
+# Can't read data (address of object past end of allocation)
+# this is why below I am using '<S50' byte strings
+perf_dt = numpy.dtype([('operation', '<S50'), ('time_sec', float),
+                       ('memory_mb', float), ('counts', int),
+                       ('task_no', numpy.int16)])
 task_info_dt = numpy.dtype(
-    [('taskno', numpy.uint32), ('weight', numpy.float32),
-     ('duration', numpy.float32), ('received', numpy.int64),
-     ('mem_gb', numpy.float32)])
+    [('taskname', '<S50'), ('task_no', numpy.uint32),
+     ('weight', numpy.float32), ('duration', numpy.float32),
+     ('received', numpy.int64), ('mem_gb', numpy.float32)])
+
+
+def init_performance(hdf5file, swmr=False):
+    """
+    :param hdf5file: file name of hdf5.File instance
+    """
+    fname = isinstance(hdf5file, str)
+    h5 = hdf5.File(hdf5file) if fname else hdf5file
+    if 'performance_data' not in h5:
+        hdf5.create(h5, 'performance_data', perf_dt)
+    if 'task_info' not in h5:
+        hdf5.create(h5, 'task_info', task_info_dt)
+    if 'task_sent' not in h5:
+        h5['task_sent'] = '{}'
+    if swmr:
+        try:
+            h5.swmr_mode = True
+        except ValueError as exc:
+            raise ValueError('%s: %s' % (hdf5file, exc))
+    if fname:
+        h5.close()
 
 
 def _pairs(items):
@@ -83,10 +109,12 @@ class Monitor(object):
     authkey = None
     calc_id = None
 
-    def __init__(self, operation='', measuremem=False, inner_loop=False):
+    def __init__(self, operation='', measuremem=False, inner_loop=False,
+                 h5=None):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
+        self.h5 = h5
         self.mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()
@@ -94,6 +122,7 @@ class Monitor(object):
         self.counts = 0
         self.address = None
         self.username = getpass.getuser()
+        self.task_no = -1  # overridden in parallel
 
     @property
     def dt(self):
@@ -126,7 +155,8 @@ class Monitor(object):
         if self.counts:
             time_sec = self.duration
             memory_mb = self.mem / 1024. / 1024. if self.measuremem else 0
-            data.append((self.operation, time_sec, memory_mb, self.counts))
+            data.append((self.operation, time_sec, memory_mb, self.counts,
+                         self.task_no))
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
@@ -144,28 +174,23 @@ class Monitor(object):
         self._stop_time = time.time()
         self.duration += self._stop_time - self._start_time
         self.counts += 1
-        self.on_exit()
+        if self.h5:
+            self.flush(self.h5)
 
-    def on_exit(self):
-        "To be overridden in subclasses"
-        if hasattr(self, 'hdf5path'):
-            self.flush(self.hdf5path)
-
-    def save_task_info(self, hdf5path, res, argnames, sent, mem_gb=0):
+    def save_task_info(self, h5, res, name, mem_gb=0):
         """
         Called by parallel.IterResult.
 
-        :param hdf5path: where to save the info
+        :param h5: where to save the info
         :param res: a :class:`Result` object
-        :param argnames: names of the task arguments
-        :param sent: number of bytes sent
+        :param name: name of the task function
         :param mem_gb: memory consumption at the saving time (optional)
         """
-        name = self.operation[6:]  # strip 'total '
-        t = (self.task_no, self.weight, self.duration, len(res.pik), mem_gb)
+        t = (name, self.task_no, self.weight, self.duration, len(res.pik),
+             mem_gb)
         data = numpy.array([t], task_info_dt)
-        hdf5.extend3(hdf5path, 'task_info/' + name, data,
-                     argnames=argnames, sent=sent)
+        hdf5.extend(h5['task_info'], data)
+        h5['task_info'].flush()  # notify the reader
 
     def reset(self):
         """
@@ -175,7 +200,7 @@ class Monitor(object):
         self.mem = 0
         self.counts = 0
 
-    def flush(self, hdf5path):
+    def flush(self, h5):
         """
         Save the measurements on the performance file
         """
@@ -189,11 +214,8 @@ class Monitor(object):
             data = numpy.concatenate(lst)
         if len(data) == 0:  # no information
             return
-        elif not os.path.exists(hdf5path):
-            with hdf5.File(hdf5path, 'w') as h5:
-                hdf5.create(h5, 'performance_data', perf_dt)
-                hdf5.create(h5, 'task_info', task_info_dt)
-        hdf5.extend3(hdf5path, 'performance_data', data)
+        hdf5.extend(h5['performance_data'], data)
+        h5['performance_data'].flush()  # notify the reader
         self.reset()
 
     # TODO: rename this as spawn; see what will break
@@ -227,25 +249,3 @@ class Monitor(object):
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg
-
-
-def dump(temppath, perspath):
-    """
-    Dump the performance info into a persistent file,
-    then remove the temporary file.
-
-    :param temppath: the temporary file
-    :param perspath: the persistent file
-    """
-    with hdf5.File(temppath, 'r') as h, hdf5.File(perspath, 'r+') as h5:
-        if 'performance_data' not in h5:
-            hdf5.create(h5, 'performance_data', perf_dt)
-        hdf5.extend(h5['performance_data'], h['performance_data'][()])
-        for name, dset in h['task_info'].items():
-            fullname = 'task_info/' + name
-            if fullname not in h5:
-                hdf5.create(h5, fullname, task_info_dt)
-            hdf5.extend(h5[fullname], dset[()])
-            for k, v in dset.attrs.items():
-                h5[fullname].attrs[k] = v
-    os.remove(temppath)

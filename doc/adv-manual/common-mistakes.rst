@@ -77,52 +77,69 @@ pointsource_distance
 
 PointSources (and MultiPointSources and AreaSources,
 which are split into PointSources and therefore are effectively
-the same thing) have an hypocenter distribution and
-a nodal plane distribution, which are used to model the uncertainties on
-the hypocenter location and on the orientation of the underlying ruptures.
-Since PointSources produce rectangular surfaces, thery are really
-not pointwise for the engine.
+the same thing) are not pointwise for the engine: they actually generate
+ruptures with rectangular surfaces, where size
+is determined by the magnitude scaling relationship. The geometry and
+position of such rectangles depends on the hypocenter distribution and
+the nodal plane distribution of the point source, which are used to model
+the uncertainties on the hypocenter location and on the orientation of the
+underlying ruptures.
+
 Is the effect of the hypocenter/nodal planes distributions relevant?
-It depends on the calculation, but if you are interested in points that
+Not always: in particular, if you are interested in points that
 are far from the rupture the effect is minimal. So if you have a nodal
 plane distribution with 20 planes and a hypocenter distribution with 5
 hypocenters, the engine will consider 20 x 5 ruptures and perform 100
 times more calculations than needed, since at large distance the hazard
 will be more or less the same for each rupture.
 
-To avoid this performance problem it is a good practice to set the
-``pointsource_distance`` parameter. For instance, setting
-
-``pointsource_distance = 50``
-
-means: for the points that are distant more than 50 km from the ruptures
-ignore the hypocenter and nodal plane distributions and consider only the
-first rupture in the distribution. This will give you a substantial speedup
-if your model is dominated by PointSources and there are several
-nodal planes/hypocenters in the distribution. In some situations it also
+To avoid this performance problem there is a ``pointsource_distance``
+parameter: you can set it in the ``job.ini`` as a dictionary (tectonic
+region type -> distance in km) or as a scalar (in that case it is
+converted into a dictionary ``{"default": distance}`` and the same
+distance is used for all TRTs).  For sites that are more distant than
+the `pointsource_distance` from the point source, the engine ignores
+the hypocenter and nodal plane distributions and consider only the
+first rupture in the distribution, by rescaling its occurrent rate to
+also take into account the effect of the other ruptures. For closer
+points, all the ruptures are considered.  This approximation
+(we call it *rupture collapsing* because it essentially reduces the
+number of ruptures) can give a substantial speedup if the model is
+dominated by PointSources and there are several nodal
+planes/hypocenters in the distribution. In some situations it also
 makes sense to set
 
 ``pointsource_distance = 0``
 
-to completely remove the nodal plane/hypocenter distributions. For instance
-the Indonesia model has 20 nodal planes for each point sources; however such
-model uses the so-called `equivalent distance approximation`_ which considers
-the point sources to be really pointwise. In this case the contribution to
-the hazard is totally independent from the nodal plane and by using
-
-``pointsource_distance = 0``
-
-one can get *exactly* the same numbers and run the model in 1 hour instead
-of 20 hours. Actually, starting from engine 3.3 the engine is smart enough to
-recognize the cases where the equivalent distance approximation is used and
-automatically set ``pointsource_distance = 0``.
+to completely remove the nodal plane/hypocenter distributions. For
+instance the Indonesia model has 20 nodal planes for each point
+sources; however such model uses the so-called `equivalent distance
+approximation`_ which considers the point sources to be really
+pointwise. In this case the contribution to the hazard is totally
+independent from the nodal plane and by using ``pointsource_distance =
+0`` one can get *exactly* the same numbers and run the model in 1 hour
+instead of 20 hours. Actually, starting from engine 3.3 the engine is
+smart enough to recognize the cases where the equivalent distance
+approximation is used and automatically set ``pointsource_distance =
+0``.
 
 Even if you not using the equivalent distance approximation, the
 effect of the nodal plane/hypocenter distribution can be negligible: I
-have seen case when setting setting ``pointsource_distance = 0``
-changed the result only by 0.1% and gained an order of magnitude of
-speedup. You have to check on a case by case basis.
+have seen cases when setting setting ``pointsource_distance = 0``
+changed the result in the hazard maps only by 0.1% and gained an order of
+magnitude of speedup. You have to check on a case by case basis.
 
+NB: since engine 3.8 the ``pointsource_distance`` approximation has been
+extended to take into account the fact that small magnitudes will have
+a smaller collapse distance. For instance, if you
+set  ``pointsource_distance=100``, the engine will collapse the ruptures
+over 100 km for the maximum magnitude, but for lower magnitudes the
+engine will consider a (much) shorter collapse distance and will collapse
+a lot more ruptures. This is possible because given a tectonic region type
+the engine knows all the GMPEs associated to that tectonic region and can
+compute an upper limit for the maximum intensity generated by a rupture at any
+distance. Then it can invert the curve and given the magnitude and the
+maximum intensity can determine the collapse distance for that magnitude.
 
 concurrent_tasks parameter
 ---------------------------
@@ -141,11 +158,11 @@ concurrent_tasks:
    computing hazard statistics with lots of sites and realizations, since
    by increasing this parameter the tasks will contain less sites.
 
-Notice that if the number of ``concurrent_tasks`` is too big
-the performance will get worse and the data transfer will increase: at
-a certain point the calculation will fail because rabbitmq will run out
-of memory. I have seen this to happen when generating tens of thousands of
-tasks. Again, it is best not to touch this parameter unless you know what
-you are doing.
+Notice that if the number of ``concurrent_tasks`` is too big the
+performance will get worse and the data transfer will increase: at a
+certain point the calculation will run out of memory. I have seen this
+to happen when generating tens of thousands of tasks. Again, it is
+best not to touch this parameter unless you know what you are doing.
 
 .. _equivalent distance approximation: equivalent_distance_approximation.rst
+.. _rupture radius: https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/source/point.py

@@ -1,0 +1,12 @@
+#,,,,,,,,,"generated_by='OpenQuake engine 3.8.0-gitd3d826bf69', start_date='2019-11-26T09:53:20', checksum=2532316333, investigation_time=None, risk_investigation_time=None"
+Material,Municipio,Provincia,Region,asset_id,taxonomy,lon,lat,structural~mean,structural~stddev
+"Masonry with reinforcement","SAN JUAN","SAN JUAN","REGIÓN EL VALLE","asset_8638","MR_LWAL-DNO_H1",-71.32667,18.96847,2.52634E+02,1.37347E+03
+"Wood","LAGUNA SALADA","VALVERDE","REGIÓN CIBAO NOROESTE","asset_4704","W-WS_LPB-DNO_H1",-71.08445,19.68303,3.06245E+04,1.51162E+05
+"Concrete","ESPERANZA","VALVERDE","REGIÓN CIBAO NOROESTE","asset_4550","CR_LFINF-DUH_H4",-70.94568,19.58565,6.48971E+03,2.40987E+04
+"Masonry with reinforcement","MOCA","ESPAILLAT","REGIÓN CIBAO NORTE","asset_126","MR_LWAL-DNO_H2",-70.45895,19.42917,5.36250E+05,1.19980E+06
+"Masonry with reinforcement","JAMAO AL NORTE","ESPAILLAT","REGIÓN CIBAO NORTE","asset_400","MR_LWAL-DNO_H3",-70.45030,19.60864,2.67315E+04,5.57331E+04
+"Masonry with reinforcement","PIEDRA BLANCA","MONSEÑOR NOUEL","REGIÓN CIBAO SUR","asset_2658","MR_LWAL-DNO_H3",-70.37647,18.84797,1.31348E+04,3.93170E+04
+"Concrete","PERALVILLO","MONTE PLATA","REGIÓN HIGUAMO","asset_10208","CR_LFINF-DUH_H2",-70.05637,18.85025,7.07105E+03,3.23010E+04
+"Unreinforced Masonry","VILLA RIVA","DUARTE","REGIÓN CIBAO NORDESTE","asset_3062","MUR_LWAL-DNO_H1",-69.86303,19.10217,1.26680E+04,5.56916E+04
+"Masonry with reinforcement","SABANÍ GRANDE DE BOY?","MONTE PLATA","REGIÓN HIGUAMO","asset_10106","MCF_LWAL-DNO_H3",-69.81302,19.04741,5.56342E+02,2.83725E+03
+"Masonry with reinforcement","SAMANÁ","SAMANÁ","REGIÓN CIBAO NORDESTE","asset_3678","MCF_LWAL-DNO_H3",-69.42757,19.29617,3.31000E+03,1.63461E+04

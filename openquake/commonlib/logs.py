@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,6 +19,7 @@
 Set up some system-wide loggers
 """
 import os.path
+import socket
 import logging
 from datetime import datetime
 from contextlib import contextmanager
@@ -42,9 +43,9 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
+    host = socket.gethostbyname(config.dbserver.host)
     sock = zeromq.Socket(
-        'tcp://%s:%s' % (config.dbserver.listen, DBSERVER_PORT),
-        zeromq.zmq.REQ, 'connect')
+        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
     with sock:
         res = sock.send((action,) + args)
         if isinstance(res, parallel.Result):
@@ -177,5 +178,6 @@ def init(calc_id='nojob', level=logging.INFO):
         assert isinstance(calc_id, int), calc_id
     fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
     for handler in logging.root.handlers:
-        handler.setFormatter(logging.Formatter(fmt))
+        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(f)
     return calc_id

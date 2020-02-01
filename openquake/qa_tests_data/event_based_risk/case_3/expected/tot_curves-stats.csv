@@ -1,0 +1,3 @@
+#,,,,,"generated_by='OpenQuake engine 3.8.0-git284f018798', start_date='2019-12-15T05:13:40', checksum=1753463320, kind='tot_curves-stats', risk_investigation_time=5.0"
+return_period,stat,loss_type,loss_value,loss_ratio,annual_frequency_of_exceedence
+5,mean,structural,7.65351E+02,1.35620E-05,2.00000E-01

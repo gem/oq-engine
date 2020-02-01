@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -82,3 +82,6 @@ class NodalPlane(object):
         """
         if not (rake == 'undefined' or -180 < rake <= 180):
             raise ValueError('rake %g is out of range (-180, 180]' % rake)
+
+    def __hash__(self):
+        return hash(tuple(self))

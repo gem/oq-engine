@@ -7,8 +7,8 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 ### Linux
 
 - Ubuntu 18.04 LTS (Bionic)
-- RedHat Enterprise Linux 7 / CentOS 7 / Scientific Linux 7
-- Fedora 28/29/30
+- RedHat Enterprise Linux 8 / CentOS 8 / Scientific Linux 8
+- Fedora 29/30/31
 
 This guide may work also on other Linux releases/distributions.
 
@@ -18,6 +18,7 @@ This guide may work also on other Linux releases/distributions.
 - macOS 10.12 (Sierra)
 - macOS 10.13 (High Sierra)
 - macOS 10.14 (Mojave)
+- macOS 10.15 (Catalina)
 
 See also the [FAQ about SSL certificate validation on macOS](../faq.md#ertificate-verification-on-macOS).
 
@@ -33,19 +34,10 @@ Some software prerequisites are needed to build the development environment. Pyt
 sudo apt install git python3.6 python3.6-venv python3-pip
 ```
 
-### RedHat and clones
-
-On RedHat and its clones (CentOS/SL) Python 3.6 isn't available in the standard repositories, but it can be installed via [RedHat Software Collections](https://access.redhat.com/documentation/en-US/Red_Hat_Developer_Toolset/1/html-single/Software_Collections_Guide/).
+### RedHat 8 and clones
 
 ```bash
-## RedHat
-sudo yum install git scl-utils scl-utils-build
-
-## CentOS/SL
-sudo yum install git centos-release-scl
-
-sudo yum install rh-python36
-scl enable rh-python36 bash
+sudo dnf install python3
 ```
 
 ### Fedora
@@ -69,7 +61,7 @@ If Xcode is already installed on your machine, then there is no need to install 
 
 #### Python
 
-You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.9.pkg
+You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.6.8/python-3.6.8-macosx10.9.pkg
 
 #### Encoding
 
@@ -104,11 +96,16 @@ pip install -U pip setuptools
 ```
 
 ### Download the OpenQuake source code
+Considering that the complete repository is quite large given its long history, we recommend shallow cloning the repository to download only the latest revision.
 
 ```bash
 mkdir src && cd src
-git clone https://github.com/gem/oq-engine.git
+git clone https://github.com/gem/oq-engine.git --depth=1
 ```
+
+In case you needed the source code with the full history of the repository, you
+can convert the shallow clone into a full repository with the command
+`git fetch --unshallow`.
 
 ### Install OpenQuake
 
@@ -141,7 +138,8 @@ You can pull all the latest changes to the source code running
 
 ```bash
 cd oq-engine
-git pull
+oq dbserver stop
+git pull && pip install -e .
 cd ..
 ```
 
@@ -213,15 +211,15 @@ silx view calc_NNN.hdf5
 
 ### Notes ###
 
-*<a name="note1">[1]</a>: extra features, like celery and pam support can be installed running:*
+*<a name="note1">[1]</a>: extra features, like celery and cluster support can be installed running:*
 
 ```bash
 # oq-engine with celery support
 pip install -e oq-engine/[dev,celery]
-# oq-engine with pam support
-pip install -e oq-engine/[dev,pam]
+# oq-engine with cluster support
+pip install -e oq-engine/[dev,cluster]
 # oq-engine with support for both
-pip install -e oq-engine/[dev,celery,pam]
+pip install -e oq-engine/[dev,celery,cluster]
 # oq-engine with GDAL
 pip install -e oq-engine/[platform]
 ```

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,27 +27,13 @@ openquake.hazardlib.gsim.nshmp_2014
 import unittest
 import numpy as np
 from openquake.hazardlib.gsim.nshmp_2014 import (
-    AbrahamsonEtAl2014,
-    AbrahamsonEtAl2014NSHMPUpper,
-    AbrahamsonEtAl2014NSHMPLower,
-    AbrahamsonEtAl2014NSHMPMean,
-    BooreEtAl2014NSHMPUpper,
-    BooreEtAl2014NSHMPLower,
-    BooreEtAl2014NSHMPMean,
-    BooreEtAl2014,
-    CampbellBozorgnia2014NSHMPUpper,
-    CampbellBozorgnia2014NSHMPLower,
-    CampbellBozorgnia2014NSHMPMean,
-    CampbellBozorgnia2014,
-    ChiouYoungs2014NSHMPUpper,
-    ChiouYoungs2014NSHMPLower,
-    ChiouYoungs2014NSHMPMean,
-    ChiouYoungs2014,
-    Idriss2014NSHMPUpper,
-    Idriss2014NSHMPLower,
-    Idriss2014NSHMPMean,
-    Idriss2014,
-    nga_west2_epistemic_adjustment)
+    NSHMP2014, nga_west2_epistemic_adjustment)
+from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
+    CampbellBozorgnia2014
+from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
+from openquake.hazardlib.gsim.idriss_2014 import Idriss2014
 from openquake.hazardlib.geo import Point, Line, SimpleFaultSurface
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
@@ -90,116 +76,63 @@ class AdjustmentFactorTestCase(unittest.TestCase):
             np.array([0.40, 0.36, 0.33]))
 
 
-class ASK14NSHMPUpperTestCase(BaseGSIMTestCase):
+class NSHMP2014TestCase(BaseGSIMTestCase):
     """
     Implements the test case for the positive ('upper') epistemic adjustment
     of the Abrahamson et al. (2014) NGA West 2 GMPE - as adopted for the
     2014 US NSHMP
     """
-    GSIM_CLASS = AbrahamsonEtAl2014NSHMPUpper
+    GSIM_CLASS = NSHMP2014
 
-    # File for the mean results
-    MEAN_FILE = "NSHMP2014/ASK14_NSHMP_UPPER_MEAN.csv"
+    def test_AbrahamsonEtAl2014Upper(self):
+        self.check('NSHMP2014/ASK14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='AbrahamsonEtAl2014', sgn=1)
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
+    def test_AbrahamsonEtAl2014Lower(self):
+        self.check('NSHMP2014/ASK14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='AbrahamsonEtAl2014', sgn=-1)
 
+    def test_BooreEtAl2014Upper(self):
+        self.check('NSHMP2014/BSSA14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=2.0,
+                   gmpe_name='BooreEtAl2014', sgn=1)
 
-class ASK14NSHMPLowerTestCase(ASK14NSHMPUpperTestCase):
-    """
-    Implements the test case for the negative ('lower') epistemic adjustment
-    of the Abrahamson et al. (2014) NGA West 2 GMPE - as adopted for the
-    2014 US NSHMP
-    """
-    GSIM_CLASS = AbrahamsonEtAl2014NSHMPLower
-    MEAN_FILE = "NSHMP2014/ASK14_NSHMP_LOWER_MEAN.csv"
+    def test_BooreEtAl2014Lower(self):
+        self.check('NSHMP2014/BSSA14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=2.0,
+                   gmpe_name='BooreEtAl2014', sgn=-1)
 
+    def test_CampbellBozorgnia2014Upper(self):
+        self.check('NSHMP2014/CB14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='CampbellBozorgnia2014', sgn=1)
 
-class BSSA14NSHMPUpperTestCase(ASK14NSHMPUpperTestCase):
-    """
-    Implements the test case for the positive ('upper') epistemic adjustment
-    of the Boore et al. (2014) NGA West 2 GMPE - as adopted for the
-    2014 US NSHMP
-    """
-    GSIM_CLASS = BooreEtAl2014NSHMPUpper
-    MEAN_FILE = "NSHMP2014/BSSA14_NSHMP_UPPER_MEAN.csv"
+    def test_CampbellBozorgnia2014Lower(self):
+        self.check('NSHMP2014/CB14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='CampbellBozorgnia2014', sgn=-1)
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=2.0)
+    def test_ChiouYoungs2014NSHMPUpper(self):
+        self.check('NSHMP2014/CY14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='ChiouYoungs2014', sgn=1)
 
+    def test_ChiouYoungs2014NSHMPLower(self):
+        self.check('NSHMP2014/CY14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='ChiouYoungs2014', sgn=-1)
 
-class BSSA14NSHMPLowerTestCase(ASK14NSHMPUpperTestCase):
-    """
-    Implements the test case for the negative ('lower') epistemic adjustment
-    of the Boore et al. (2014) NGA West 2 GMPE - as adopted for the
-    2014 US NSHMP
-    """
-    GSIM_CLASS = BooreEtAl2014NSHMPLower
-    MEAN_FILE = "NSHMP2014/BSSA14_NSHMP_LOWER_MEAN.csv"
+    def test_Idriss2014NSHMPUpper(self):
+        self.check('NSHMP2014/IDRISS14_NSHMP_UPPER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='Idriss2014', sgn=1)
 
-    def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=2.0)
-
-
-class CB14NSHMPUpperTestCase(ASK14NSHMPUpperTestCase):
-    """
-    Implements the test case for the positive ('upper') epistemic adjustment
-    of the Campbell & Bozorgnia (2014) NGA West 2 GMPE - as adopted for the
-    2014 US NSHMP
-    """
-    GSIM_CLASS = CampbellBozorgnia2014NSHMPUpper
-    MEAN_FILE = "NSHMP2014/CB14_NSHMP_UPPER_MEAN.csv"
-
-
-class CB14NSHMPLowerTestCase(ASK14NSHMPUpperTestCase):
-    """
-    Implements the test case for the negative ('lower') epistemic adjustment
-    of the Campbell & Bozorgnia (2014) NGA West 2 GMPE - as adopted for the
-    2014 US NSHMP
-    """
-    GSIM_CLASS = CampbellBozorgnia2014NSHMPLower
-    MEAN_FILE = "NSHMP2014/CB14_NSHMP_LOWER_MEAN.csv"
-
-
-class CY14NSHMPUpperTestCase(ASK14NSHMPUpperTestCase):
-    """
-    Implements the test case for the positive ('upper') epistemic adjustment
-    of the Chiou & Youngs (2014) NGA West 2 GMPE - as adopted for the
-    2014 US NSHMP
-    """
-    GSIM_CLASS = ChiouYoungs2014NSHMPUpper
-    MEAN_FILE = "NSHMP2014/CY14_NSHMP_UPPER_MEAN.csv"
-
-
-class CY14NSHMPLowerTestCase(ASK14NSHMPUpperTestCase):
-    """
-    Implements the test case for the negative ('lower') epistemic adjustment
-    of the Chiou & Youngs (2014) NGA West 2 GMPE - as adopted for the
-    2014 US NSHMP
-    """
-    GSIM_CLASS = ChiouYoungs2014NSHMPLower
-    MEAN_FILE = "NSHMP2014/CY14_NSHMP_LOWER_MEAN.csv"
-
-
-class IDRISS14NSHMPUpperTestCase(ASK14NSHMPUpperTestCase):
-    """
-    Implements the test case for the positive ('upper') epistemic adjustment
-    of the Idriss (2014) NGA West 2 GMPE - as adopted for the 2014 US NSHMP
-    """
-    GSIM_CLASS = Idriss2014NSHMPUpper
-    MEAN_FILE = "NSHMP2014/IDRISS14_NSHMP_UPPER_MEAN.csv"
-
-
-class IDRISS14NSHMPLowerTestCase(ASK14NSHMPUpperTestCase):
-    """
-    Implements the test case for the negative ('lower') epistemic adjustment
-    of the Idriss (2014) NGA West 2 GMPE - as adopted for the 2014 US NSHMP
-    """
-    GSIM_CLASS = Idriss2014NSHMPLower
-    MEAN_FILE = "NSHMP2014/IDRISS14_NSHMP_LOWER_MEAN.csv"
+    def test_Idriss2014NSHMPLower(self):
+        self.check('NSHMP2014/IDRISS14_NSHMP_LOWER_MEAN.csv',
+                   max_discrep_percentage=MEAN_DISCREP,
+                   gmpe_name='Idriss2014', sgn=-1)
 
 
 class GeneralEquivalenceTestCase(unittest.TestCase):
@@ -209,7 +142,7 @@ class GeneralEquivalenceTestCase(unittest.TestCase):
     we can either run each GMPE separately in the logic tree and take the
     weighted mean curve, or we can apply the weighting in-place inside the
     GMPE (thus running the GMPE only once). This tests verifies the near
-    equivalance of the two methods
+    equivalence of the two methods
     """
     def setUp(self):
         """
@@ -251,26 +184,31 @@ class GeneralEquivalenceTestCase(unittest.TestCase):
                 90.0)]
         # We will check all the GMPEs
         self.gsim_set = {
-            "ASK": [AbrahamsonEtAl2014NSHMPMean(),
-                    (0.185, AbrahamsonEtAl2014NSHMPLower()),
-                    (0.63, AbrahamsonEtAl2014()),
-                    (0.185, AbrahamsonEtAl2014NSHMPUpper())],
-            "BSSA": [BooreEtAl2014NSHMPMean(),
-                     (0.185, BooreEtAl2014NSHMPLower()),
-                     (0.63, BooreEtAl2014()),
-                     (0.185, BooreEtAl2014NSHMPUpper())],
-            "CB": [CampbellBozorgnia2014NSHMPMean(),
-                   (0.185, CampbellBozorgnia2014NSHMPLower()),
-                   (0.63, CampbellBozorgnia2014()),
-                   (0.185, CampbellBozorgnia2014NSHMPUpper())],
-            "CY": [ChiouYoungs2014NSHMPMean(),
-                   (0.185, ChiouYoungs2014NSHMPLower()),
-                   (0.63, ChiouYoungs2014()),
-                   (0.185, ChiouYoungs2014NSHMPUpper())],
-            "ID": [Idriss2014NSHMPMean(),
-                   (0.185, Idriss2014NSHMPLower()),
-                   (0.63, Idriss2014()),
-                   (0.185, Idriss2014NSHMPUpper())]}
+            "ASK": [
+                NSHMP2014(gmpe_name='AbrahamsonEtAl2014', sgn=0),
+                (0.185, NSHMP2014(gmpe_name='AbrahamsonEtAl2014', sgn=-1)),
+                (0.63, AbrahamsonEtAl2014()),
+                (0.185, NSHMP2014(gmpe_name='AbrahamsonEtAl2014', sgn=1))],
+            "BSSA": [
+                NSHMP2014(gmpe_name='BooreEtAl2014', sgn=0),
+                (0.185, NSHMP2014(gmpe_name='BooreEtAl2014', sgn=-1)),
+                (0.63, BooreEtAl2014()),
+                (0.185, NSHMP2014(gmpe_name='BooreEtAl2014', sgn=1))],
+            "CB": [
+                NSHMP2014(gmpe_name='CampbellBozorgnia2014', sgn=0),
+                (0.185, NSHMP2014(gmpe_name='CampbellBozorgnia2014', sgn=-1)),
+                (0.63, CampbellBozorgnia2014()),
+                (0.185, NSHMP2014(gmpe_name='CampbellBozorgnia2014', sgn=1))],
+            "CY": [
+                NSHMP2014(gmpe_name='ChiouYoungs2014', sgn=0),
+                (0.185, NSHMP2014(gmpe_name='ChiouYoungs2014', sgn=-1)),
+                (0.63, ChiouYoungs2014()),
+                (0.185, NSHMP2014(gmpe_name='ChiouYoungs2014', sgn=1))],
+            "ID": [
+                NSHMP2014(gmpe_name='Idriss2014', sgn=0),
+                (0.185, NSHMP2014(gmpe_name='Idriss2014', sgn=-1)),
+                (0.63, Idriss2014()),
+                (0.185, NSHMP2014(gmpe_name='Idriss2014', sgn=1))]}
 
     def _verify_curves(self, gsim_name, truncation_level, ndp=3):
         """
@@ -291,21 +229,18 @@ class GeneralEquivalenceTestCase(unittest.TestCase):
         curves = {"PGA": np.zeros_like(wmean_curve["PGA"])}
         for iloc in range(1, 4):
             gsim_i = {
-                "Active Shallow Crust": self.gsim_set[gsim_name][iloc][1]
-                }
+                "Active Shallow Crust": self.gsim_set[gsim_name][iloc][1]}
             wgt = self.gsim_set[gsim_name][iloc][0]
             curves["PGA"] += (
                 wgt * calc_hazard_curves(self.sources,
                                          self.sites,
                                          self.imtls,
                                          gsim_i,
-                                         truncation_level)["PGA"]
-                )
+                                         truncation_level)["PGA"])
         # Ignore cases where values are equal to zero
         idx = wmean_curve["PGA"] > 0.0
         np.testing.assert_array_almost_equal(
-            np.log(wmean_curve["PGA"][idx]), np.log(curves["PGA"][idx]), ndp
-            )
+            np.log(wmean_curve["PGA"][idx]), np.log(curves["PGA"][idx]), ndp)
 
     def test_nshmp_wus_curves_no_truncation(self):
         # Test the case without truncation

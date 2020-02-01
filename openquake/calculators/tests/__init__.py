@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,11 +28,14 @@ import sys
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib import datastore, general
-from openquake.commonlib import readinput, oqvalidation
+from openquake.calculators.export import export
+from openquake.baselib import datastore, general, parallel
+from openquake.commonlib import readinput, oqvalidation, writers
 
 
 NOT_DARWIN = sys.platform != 'darwin'
+OUTPUTS = os.path.join(os.path.dirname(__file__), 'outputs')
+OQ_CALC_OUTPUTS = os.environ.get('OQ_CALC_OUTPUTS')
 
 
 class DifferentFiles(Exception):
@@ -79,6 +82,19 @@ def open8(fname, mode='r'):
     return orig_open(fname, mode, encoding='utf-8')
 
 
+collect_csv = {}  # outputname -> lines
+orig_write_csv = writers.write_csv
+
+
+def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
+              renamedict=None):
+    fname = orig_write_csv(dest, data, sep, fmt, header, comment, renamedict)
+    lines = open(fname).readlines()[:3]
+    name = re.sub(r'[\d\.]+', '.', strip_calc_id(fname))
+    collect_csv[name] = lines
+    return fname
+
+
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
     edir = None  # will be set to a temporary directory
@@ -86,7 +102,10 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         builtins.open = check_open
+        export.sanity_check = True
         cls.duration = general.AccumDict()
+        if OQ_CALC_OUTPUTS:
+            writers.write_csv = write_csv
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -114,6 +133,7 @@ class CalculatorTestCase(unittest.TestCase):
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
             result = self.calc.run(export_dir=self.edir)
+        self.calc.datastore.close()
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
@@ -167,7 +187,7 @@ class CalculatorTestCase(unittest.TestCase):
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
         expected_lines = [line for line in open8(expected)
-                          if not line.startswith('#')]
+                          if not line.startswith('#,')]
         comments = []
         actual_lines = []
         for line in open8(actual).readlines()[:lastline]:
@@ -198,7 +218,11 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Make sure the content of the exported file is the expected one
         """
-        with open8(os.path.join(self.calc.oqparam.export_dir, fname)) as got:
+        if not os.path.isabs(fname):
+            fname = os.path.join(self.calc.oqparam.export_dir, fname)
+        if self.OVERWRITE_EXPECTED:
+            open8(fname, 'w').write(expected_content)
+        with open8(fname) as got:
             self.assertEqual(expected_content, got.read())
 
     def assertEventsByRlz(self, events_by_rlz):
@@ -206,7 +230,7 @@ class CalculatorTestCase(unittest.TestCase):
         Check the distribution of the events by realization index
         """
         n_events = numpy.zeros(self.calc.R, int)
-        dic = general.group_array(self.calc.datastore['events'][()], 'rlz')
+        dic = general.group_array(self.calc.datastore['events'][()], 'rlz_id')
         for rlzi, events in dic.items():
             n_events[rlzi] = len(events)
         numpy.testing.assert_equal(n_events, events_by_rlz)
@@ -226,5 +250,14 @@ class CalculatorTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        parallel.Starmap.shutdown()
         print('durations =', cls.duration)
         builtins.open = orig_open
+        export.sanity_check = False
+        if OQ_CALC_OUTPUTS:
+            if not os.path.exists(OUTPUTS):
+                os.mkdir(OUTPUTS)
+            for name, lines in collect_csv.items():
+                fname = os.path.join(OUTPUTS, name)
+                with open(fname, 'w') as f:
+                    f.write(''.join(lines))

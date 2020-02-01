@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -66,6 +66,7 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
 
     #: No sites parameters are required. Mean value is computed for
     #: 'firm rock'.
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
     REQUIRES_SITES_PARAMETERS = set(())
 
     #: Required rupture parameters are magnitude, rake and dip (eq. 1 and

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,6 +41,11 @@ EARTH_RADIUS = geodetic.EARTH_RADIUS
 spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
+BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
+
+
+class BBoxError(ValueError):
+    """Bounding box too large"""
 
 
 def angular_distance(km, lat, lat2=None):
@@ -128,8 +133,8 @@ class _GeographicObjects(object):
         if not dic:
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
-        return (sitecol.filtered(dic),
-                numpy.array([dic[sid] for sid in sorted(dic)]),
+        sids = sorted(dic)
+        return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
     def assoc2(self, assets_by_site, assoc_dist, mode, asset_refs):
@@ -190,7 +195,7 @@ def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
     :returns: (filtered site collection, filtered objects)
     """
     if isinstance(objects, numpy.ndarray) or hasattr(objects, 'lons'):
-        # objects is a geo array with lon, lat fields or a mesh-like instance
+        # objects is a geo array with lon, lat fields; used for ShakeMaps
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
         return _GeographicObjects(sitecol).assoc2(
@@ -316,7 +321,12 @@ def get_bounding_box(obj, maxdist):
             lons %= 360
         bbox = lons.min(), lats.min(), lons.max(), lats.max()
     a1 = min(maxdist * KM_TO_DEGREES, 90)
-    a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
+    a2 = angular_distance(maxdist, bbox[1], bbox[3])
+    delta = bbox[2] - bbox[0] + 2 * a2
+    if delta > 180:
+        raise BBoxError('The maximum distance %d is too large, the bounding '
+                        'box is larger than half the globe: %d degrees' %
+                        (maxdist, delta))
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 
@@ -620,3 +630,55 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
+
+
+def bbox2poly(bbox):
+    """
+    :param bbox: a geographic bounding box West-East-North-South
+    :returns: a list of pairs corrisponding to the bbox polygon
+    """
+    x1, x2, y2, y1 = bbox  # west, east, north, south
+    return (x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)
+
+
+# geohash code adapted from Leonard Norrgard's implementation
+# https://github.com/vinsci/geohash/blob/master/Geohash/geohash.py
+# see also https://en.wikipedia.org/wiki/Geohash
+# length 5 = 2.4 km resolution, length 4 = 20 km, length 3 = 78 km
+# it may turn useful in the future (with SiteCollection.geohash)
+def geohash(lon, lat, length):
+    """
+    Encode a position given in lon, lat into a geohash of the given lenght
+
+    >>> geohash(lon=10, lat=45, length=5)
+    b'spzpg'
+    """
+    lat_interval, lon_interval = (-90.0, 90.0), (-180.0, 180.0)
+    chars = b''
+    bits = [16, 8, 4, 2, 1]
+    bit = 0
+    ch = 0
+    even = True
+    while len(chars) < length:
+        if even:
+            mid = (lon_interval[0] + lon_interval[1]) / 2
+            if lon > mid:
+                ch |= bits[bit]
+                lon_interval = (mid, lon_interval[1])
+            else:
+                lon_interval = (lon_interval[0], mid)
+        else:
+            mid = (lat_interval[0] + lat_interval[1]) / 2
+            if lat > mid:
+                ch |= bits[bit]
+                lat_interval = (mid, lat_interval[1])
+            else:
+                lat_interval = (lat_interval[0], mid)
+        even = not even
+        if bit < 4:
+            bit += 1
+        else:
+            chars += BASE32[ch]
+            bit = 0
+            ch = 0
+    return chars

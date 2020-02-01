@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,6 +34,7 @@ from scipy import interpolate, stats, random
 from openquake.baselib.general import CallableDict, cached_property
 from openquake.hazardlib.stats import compute_stats2
 
+F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
 
@@ -76,7 +77,7 @@ def fine_graining(points, steps):
 
 
 class VulnerabilityFunction(object):
-    dtype = numpy.dtype([('iml', F32), ('loss_ratio', F32), ('cov', F32)])
+    dtype = numpy.dtype([('iml', F64), ('loss_ratio', F64), ('cov', F64)])
     seed = None  # to be overridden
 
     def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
@@ -137,12 +138,8 @@ class VulnerabilityFunction(object):
 
         self.distribution_name = distribution
 
-        # to be set in .init(), called also by __setstate__
-        (self.stddevs, self._mlr_i1d, self._covs_i1d,
-         self.distribution) = None, None, None, None
-        self.init()
-
     def init(self):
+        # called by CompositeRiskModel and by __setstate__
         self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
@@ -155,6 +152,7 @@ class VulnerabilityFunction(object):
             self.distribution = DegenerateDistribution()
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
+        assert self.seed is not None, self
         numpy.random.seed(self.seed)  # set by CompositeRiskModel.init
 
     def interpolate(self, gmvs):
@@ -269,7 +267,7 @@ class VulnerabilityFunction(object):
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.mean_loss_ratios,
-                self.covs, self.distribution_name)
+                self.covs, self.distribution_name, self.seed)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -278,6 +276,7 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = state[3]
         self.covs = state[4]
         self.distribution_name = state[5]
+        self.seed = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
@@ -634,20 +633,6 @@ class FragilityFunctionList(list):
     def __repr__(self):
         kvs = ['%s=%s' % item for item in vars(self).items()]
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
-
-
-class ConsequenceFunction(object):
-    def __init__(self, id, dist, params):
-        self.id = id
-        self.dist = dist
-        self.params = numpy.array(params)
-
-    def __toh5__(self):
-        return self.params, dict(id=self.id, dist=self.dist)
-
-    def __fromh5__(self, params, attrs):
-        self.params = params
-        vars(self).update(attrs)
 
 
 class ConsequenceModel(dict):
@@ -1378,7 +1363,11 @@ class LossCurvesMapsBuilder(object):
         self.weights = weights
         self.num_events = num_events
         self.eff_time = eff_time
-        self.poes = 1. - numpy.exp(- risk_investigation_time / return_periods)
+        if return_periods.sum() == 0:
+            self.poes = 1
+        else:
+            self.poes = 1. - numpy.exp(
+                - risk_investigation_time / return_periods)
 
     def pair(self, array, stats):
         """
@@ -1415,21 +1404,6 @@ class LossCurvesMapsBuilder(object):
                 array[:, r, l] = lbp
         return self.pair(array, stats)
 
-    def build_pair(self, losses, stats):
-        """
-        :param losses: a list of lists with R elements
-        :returns: two arrays of shape (P, R) and (P, S) respectively
-        """
-        P, R = len(self.return_periods), len(self.weights)
-        assert len(losses) == R, len(losses)
-        array = numpy.zeros((P, R), F32)
-        for r, ls in enumerate(losses):
-            ne = self.num_events.get(r, 0)
-            if ne:
-                array[:, r] = losses_by_period(
-                    ls, self.return_periods, ne, self.eff_time)
-        return self.pair(array, stats)
-
     # used in event_based_risk
     def build_curve(self, asset_value, loss_ratios, rlzi):
         return asset_value * losses_by_period(
@@ -1437,60 +1411,50 @@ class LossCurvesMapsBuilder(object):
             self.num_events[rlzi], self.eff_time)
 
     # used in event_based_risk
-    def build_maps(self, losses, clp, stats=()):
+    def build_maps(self, curves, clp, stats=()):
         """
-        :param losses: an array of shape (A, R, P)
+        :param curves: a composite array of shape (A, R, P)
         :param clp: a list of C conditional loss poes
         :param stats: list of pairs [(statname, statfunc), ...]
         :returns: an array of loss_maps of shape (A, R, C, LI)
         """
-        shp = losses.shape[:2] + (len(clp), len(losses.dtype))  # (A, R, C, LI)
+        shp = curves.shape[:2] + (len(clp), len(curves.dtype))  # (A, R, C, LI)
         array = numpy.zeros(shp, F32)
-        for lti, lt in enumerate(losses.dtype.names):
-            for a, losses_ in enumerate(losses[lt]):
-                for r, ls in enumerate(losses_):
+        for lti, lt in enumerate(curves.dtype.names):
+            for a, curves_ in enumerate(curves[lt]):
+                for r, ls in enumerate(curves_):
                     for c, poe in enumerate(clp):
                         clratio = conditional_loss_ratio(ls, self.poes, poe)
                         array[a, r, c, lti] = clratio
         return self.pair(array, stats)
 
     # used in ebrisk
-    def build_loss_maps(self, losses, clp, stats=()):
-        """
-        :param losses: an array of shape R, E
-        :param clp: a list of C conditional loss poes
-        :param stats: list of pairs [(statname, statfunc), ...]
-        :returns: two arrays of shape (C, R) and (C, S)
-        """
-        array = numpy.zeros((len(clp), len(losses)), F32)
-        for r, ls in enumerate(losses):
-            if len(ls) < 2:
-                continue
-            for c, poe in enumerate(clp):
-                array[c, r] = conditional_loss_ratio(ls, self.poes, poe)
-        return self.pair(array, stats)
-
-    # used in ebrisk
-    def build_curves_maps(self, loss_arrays, rlzi):
+    def build_curves(self, loss_arrays, rlzi):
         if len(loss_arrays) == 0:
-            return (), ()
+            return ()
         shp = loss_arrays[0].shape  # (L, T...)
         P = len(self.return_periods)
         curves = numpy.zeros((P,) + shp, F32)
-        C = len(self.conditional_loss_poes)
-        maps = numpy.zeros((C,) + shp, F32)
         num_events = self.num_events[rlzi]
         acc = collections.defaultdict(list)
         for loss_array in loss_arrays:
             for idx, loss in numpy.ndenumerate(loss_array):
                 acc[idx].append(loss)
         for idx, losses in acc.items():
-            curves[(slice(None),) + idx] = lbp = losses_by_period(
+            curves[(slice(None),) + idx] = losses_by_period(
                 losses, self.return_periods, num_events, self.eff_time)
-            for p, poe in enumerate(self.conditional_loss_poes):
-                maps[(p,) + idx] = conditional_loss_ratio(
-                    lbp, self.poes, poe)
-        return curves, maps
+        return curves
+
+    def gen_curves_by_rlz(self, losses_by_event, ses_ratio):
+        """
+        :param losses_by_event: a dataframe
+        :param ses_ratio: ses ratio
+        :yield: triples (rlzi, curves, losses)
+        """
+        for rlzi, losses_df in losses_by_event.groupby('rlzi'):
+            losses = numpy.array(losses_df)
+            yield (rlzi, self.build_curves(losses, rlzi),
+                   losses.sum(axis=0) * ses_ratio)
 
 
 class LossesByAsset(object):
@@ -1501,28 +1465,8 @@ class LossesByAsset(object):
     :param policy_name: the name of the policy field (can be empty)
     :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
     """
-    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
-        self.A = len(assetcol)
-        self.policy_name = policy_name
-        self.policy_dict = policy_dict
-        self.loss_names = loss_names
-
-    def compute(self, asset, losses_by_lt):
-        """
-        :param asset: an asset record
-        :param losses_by_lt: a dictionary loss_type -> losses (of size E)
-        :yields: pairs (loss_idx, losses)
-        """
-        idx = 0
-        for lt, losses in losses_by_lt.items():
-            yield idx, losses
-            idx += 1
-            if lt in self.policy_dict:
-                val = asset['value-' + lt]
-                ded, lim = self.policy_dict[lt][asset[self.policy_name]]
-                ins_losses = insured_losses(losses, ded * val, lim * val)
-                yield idx, ins_losses
-                idx += 1
+    alt = None  # set by the ebrisk calculator
+    losses_by_E = None  # set by the ebrisk calculator
 
     @cached_property
     def losses_by_A(self):
@@ -1530,3 +1474,68 @@ class LossesByAsset(object):
         :returns: an array of shape (A, L)
         """
         return numpy.zeros((self.A, len(self.loss_names)), F32)
+
+    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
+        self.A = len(assetcol)
+        self.policy_name = policy_name
+        self.policy_dict = policy_dict
+        self.loss_names = loss_names
+        self.lni = {ln: i for i, ln in enumerate(loss_names)}
+
+    def gen_losses(self, out):
+        """
+        :yields: pairs (loss_name_index, losses array of shape (A, E))
+        """
+        for lt in out.loss_types:
+            lratios = out[lt]  # shape (A, E)
+            losses = numpy.zeros_like(lratios)
+            avalues = (out.assets['occupants_None'] if lt == 'occupants'
+                       else out.assets['value-' + lt])
+            for a, avalue in enumerate(avalues):
+                losses[a] = avalue * lratios[a]
+            yield self.lni[lt], losses  # shape (A, E)
+            if lt in self.policy_dict:
+                ins_losses = numpy.zeros_like(lratios)
+                for a, asset in enumerate(out.assets):
+                    ded, lim = self.policy_dict[lt][asset[self.policy_name]]
+                    ins_losses[a] = insured_losses(
+                        losses[a], ded * avalues[a], lim * avalues[a])
+                yield self.lni[lt + '_ins'], ins_losses
+
+    def aggregate(self, out, eidx, minimum_loss, tagidxs, ws):
+        """
+        Populate .losses_by_A, .losses_by_E and .alt
+        """
+        numlosses = numpy.zeros(2, int)
+        for lni, losses in self.gen_losses(out):
+            if ws is not None:
+                aids = out.assets['ordinal']
+                self.losses_by_A[aids, lni] += losses @ ws
+            self.losses_by_E[eidx, lni] += losses.sum(axis=0)
+            if tagidxs is not None:
+                for a, asset in enumerate(out.assets):
+                    idx = ','.join(map(str, tagidxs[a]))
+                    kept = 0
+                    for loss, eid in zip(losses[a], out.eids):
+                        if loss >= minimum_loss[lni]:
+                            self.alt[idx][eid][lni] += loss
+                            kept += 1
+                    numlosses += numpy.array([kept, len(losses[a])])
+        return numlosses
+
+
+# ####################### Consequences ##################################### #
+
+consequence = CallableDict()
+
+
+@consequence.add('losses')
+def economic_losses(coeffs, asset, dmgdist, loss_type):
+    """
+    :param coeffs: coefficients per damage state
+    :param asset: asset record
+    :param dmgdist: an array of probabilies of shape (E, D - 1)
+    :param loss_type: loss type string
+    :returns: array of economic losses of length E
+    """
+    return dmgdist @ coeffs * asset['value-' + loss_type]

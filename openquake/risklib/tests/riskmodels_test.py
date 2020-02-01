@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -323,6 +323,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 </nrml>""")
         vfs = {('structural', 'vulnerability'):
                nrml.to_python(vuln_model)['PGA', 'RC/A']}
+        vfs['structural', 'vulnerability'].seed = 42
+        vfs['structural', 'vulnerability'].init()
         rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
                                   ignore_covs=False)
         assets = [0, 1]

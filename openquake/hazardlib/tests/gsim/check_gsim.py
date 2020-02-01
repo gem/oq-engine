@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Check GMPE/IPE class versus data file in CSV format by calculating standard
+Check GSIM class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
 """
 import csv
@@ -30,7 +30,7 @@ import copy
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
                                           DistancesContext)
 from openquake.hazardlib.imt import registry
@@ -50,8 +50,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     Test GSIM against the data file and return test result.
 
     :param gsim_cls:
-        A subclass of either :class:`~openquake.hazardlib.gsim.base.GMPE`
-        or :class:`~openquake.hazardlib.gsim.base.IPE` to test.
+        A subclass of :class:`~openquake.hazardlib.gsim.base.GMPE` to test.
     :param datafile:
         A file object containing test data in csv format.
     :param max_discrep_percentage:
@@ -72,7 +71,6 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         gsim = copy.deepcopy(gsim_cls)
     else:
         gsim = gsim_cls()
-    gsim.init()
     errors = 0
     linenum = 1
     discrepancies = []
@@ -87,7 +85,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
             mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
                                                       imt, stddev_types)
             if result_type == 'MEAN':
-                if isinstance(gsim, IPE):
+                if str(imt) == 'MMI':
                     # For IPEs it is the values, not the logarithms returned
                     result = mean
                 else:
@@ -246,6 +244,7 @@ def _parse_csv_line(headers, values, req_site_params):
     stddev_types = result_type = damping = None
 
     for param, value in zip(headers, values):
+
         if param == 'result_type':
             value = value.upper()
             if value.endswith('_STDDEV'):
@@ -293,12 +292,16 @@ def _parse_csv_line(headers, values, req_site_params):
         else:
             # value is the expected result (of result_type type)
             value = float(value)
+
             if param == 'arias':  # ugly legacy corner case
                 param = 'ia'
-            try:    # The title of the column should be IMT(args)
-                imt = from_string(param.upper())
-            except KeyError:  # Then it is just a period for SA
-                imt = registry['SA'](float(param), damping)
+            if param == 'avgsa':
+                imt = from_string('AvgSA')
+            else:
+                try:    # The title of the column should be IMT(args)
+                    imt = from_string(param.upper())
+                except KeyError:  # Then it is just a period for SA
+                    imt = registry['SA'](float(param), damping)
 
             expected_results[imt] = numpy.array([value])
 

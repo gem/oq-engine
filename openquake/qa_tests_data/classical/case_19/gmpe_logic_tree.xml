@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+<!-- 1.0 Logic Tree for Active Shallow Crust -->
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1" applyToTectonicRegionType="Active Shallow Crust">
+
+                <logicTreeBranch branchID="b1"> <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b2"> <uncertaintyModel>CauzziFaccioli2008</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b3"> <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+                    <uncertaintyWeight>0.20</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b4"> <uncertaintyModel>ZhaoEtAl2006Asc</uncertaintyModel>
+                    <uncertaintyWeight>0.10</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+<!-- 2.0 Logic Tree for Stable Shallow Crust -->
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2" applyToTectonicRegionType="Stable Shallow Crust">
+
+              <logicTreeBranch branchID="b2">
+                <uncertaintyModel>
+                  [AvgGMPE]
+                  b1.AkkarBommer2010.weight=0.20
+                  b2.CauzziFaccioli2008.weight=0.20
+                  b3.ChiouYoungs2008.weight=0.20
+                  b4.ToroEtAl2002SHARE.weight=0.20
+                  b5.Campbell2003SHARE.weight=0.20
+                </uncertaintyModel>
+                <uncertaintyWeight>1</uncertaintyWeight>
+              </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+<!-- 3.0 Logic Tree for Shield -->
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3" applyToTectonicRegionType="Shield">
+
+                <logicTreeBranch branchID="b31"> <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
+                    <uncertaintyWeight>0.50</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b32"> <uncertaintyModel>Campbell2003SHARE</uncertaintyModel>
+                    <uncertaintyWeight>0.50</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+<!-- 4.0 Logic Tree for Subduction Interface -->
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4" applyToTectonicRegionType="Subduction Interface">
+
+                <logicTreeBranch branchID="b41"> <uncertaintyModel>AtkinsonBoore2003SInter</uncertaintyModel>
+                   <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b42"> <uncertaintyModel>LinLee2008SInter</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b43"> <uncertaintyModel>YoungsEtAl1997SInter</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b44"> <uncertaintyModel>ZhaoEtAl2006SInter</uncertaintyModel>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
+                    
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+<!-- 5.0 Logic Tree for Subduction Inslab -->
+        <logicTreeBranchingLevel branchingLevelID="bl5">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs5" applyToTectonicRegionType="Subduction Inslab">
+
+                <logicTreeBranch branchID="b51"> <uncertaintyModel>AtkinsonBoore2003SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b52"> <uncertaintyModel>LinLee2008SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b53"> <uncertaintyModel>YoungsEtAl1997SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b54"> <uncertaintyModel>ZhaoEtAl2006SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
+
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+<!-- 6.0 Logic Tree for Volcanic -->
+        <logicTreeBranchingLevel branchingLevelID="bl6">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs6" applyToTectonicRegionType="Volcanic">
+                <logicTreeBranch branchID="b61"> <uncertaintyModel>FaccioliEtAl2010</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+<!-- 7.0 Logic Tree for Vrancea -->
+        <logicTreeBranchingLevel branchingLevelID="bl7">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs7" applyToTectonicRegionType="Subduction Deep">
+
+                <logicTreeBranch branchID="b71"> <uncertaintyModel>LinLee2008SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.60</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b72"> <uncertaintyModel>YoungsEtAl1997SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.40</uncertaintyWeight>
+                </logicTreeBranch>
+                
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+    </logicTree>
+</nrml>

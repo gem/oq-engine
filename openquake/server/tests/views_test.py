@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,6 +29,7 @@ import time
 import unittest
 import numpy
 import zlib
+import gzip
 import tempfile
 import string
 import random
@@ -139,8 +140,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertGreater(len(results), 0)
         for res in results:
             for etype in res['outtypes']:  # test all export types
-                if etype == 'xml' and res['type'] == 'gmf_data':
-                    continue  # do not export GMFs in XML for event based
                 text = self.get_text(
                     'result/%s' % res['id'], export_type=etype)
                 print('downloading result/%s' % res['id'], res['type'], etype)
@@ -201,6 +200,27 @@ class EngineServerTestCase(unittest.TestCase):
         got = loadnpz(self.c.get(extract_url))
         self.assertGreater(len(got['magnitudes']), 1)
         self.assertGreater(len(got['mean_frequency']), 1)
+
+        # check rupture_info
+        extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        boundaries = gzip.decompress(got['boundaries']).split(b'\n')
+        self.assertEqual(len(boundaries), 33)
+
+        # check num_events
+        extract_url = '/v1/calc/%s/extract/num_events' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(got['num_events'], 34)
+
+        # check gmf_data
+        extract_url = '/v1/calc/%s/extract/gmf_data?event_id=28' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(len(got['rlz-000']), 3)
+
+        # check gmf_data with no data
+        extract_url = '/v1/calc/%s/extract/gmf_data?event_id=0' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(len(got['rlz-000']), 0)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
@@ -267,6 +287,16 @@ class EngineServerTestCase(unittest.TestCase):
     def test_available_gsims(self):
         resp = self.c.get('/v1/available_gsims')
         self.assertIn(b'ChiouYoungs2014PEER', resp.content)
+
+    def test_ini_defaults(self):
+        resp = self.c.get('/v1/ini_defaults')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_validate_zip(self):
+        with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
+            resp = self.post('validate_zip', dict(archive=a))
+        err = json.loads(resp.content.decode('utf8'))['error_msg']
+        self.assertIn('Could not convert insuranceLimit->positivefloat', err)
 
     # tests for nrml validation
 

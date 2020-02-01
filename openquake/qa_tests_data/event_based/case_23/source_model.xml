@@ -1,0 +1,843 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="South East Asia GSHAP model"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaSource
+            id="224"
+            name="Source 8.CH.244"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.9590000E+01 2.5310000E+01 8.9570000E+01 2.5690000E+01 9.3690000E+01 2.5710000E+01 9.3200000E+01 2.5300000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.6922000E+00" bValue="7.5220000E-01" maxMag="7.8000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="2.7300000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="225"
+            name="Source 8.CH.246"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    9.0800000E+01 2.5090000E+01 9.0760000E+01 2.4690000E+01 8.8990000E+01 2.4810000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.4950000E+00" bValue="7.5220000E-01" maxMag="7.6000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.8100000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="226"
+            name="Source 8.CH.249"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.8410000E+01 2.8220000E+01 8.8570000E+01 2.9040000E+01 9.1610000E+01 2.8730000E+01 9.1410000E+01 2.7910000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.5701000E+00" bValue="7.5220000E-01" maxMag="6.8000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.2100000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="227"
+            name="Source 8.CH.250"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.7970000E+01 2.9440000E+01 8.8640000E+01 2.9400000E+01 8.8030000E+01 2.6670000E+01 8.7320000E+01 2.6710000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.5980000E+00" bValue="7.5220000E-01" maxMag="6.8000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.2100000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="228"
+            name="Source 8.CH.251"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.7940000E+01 2.9330000E+01 8.7770000E+01 2.8670000E+01 8.5440000E+01 2.8960000E+01 8.5520000E+01 2.9640000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.5504000E+00" bValue="7.5220000E-01" maxMag="6.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.0000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="229"
+            name="Source 8.CH.252"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.4960000E+01 2.8490000E+01 8.7600000E+01 2.7850000E+01 8.7470000E+01 2.7300000E+01 8.4650000E+01 2.7970000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.8968000E+00" bValue="7.5220000E-01" maxMag="8.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="2.7400000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="230"
+            name="Source 8.CH.253"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.4610000E+01 2.7980000E+01 8.7460000E+01 2.7300000E+01 8.7260000E+01 2.6400000E+01 8.6460000E+01 2.6410000E+01 8.4340000E+01 2.6930000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.7530000E+00" bValue="7.5220000E-01" maxMag="8.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="2.3000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="231"
+            name="Source 8.CH.254"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.4630000E+01 2.7980000E+01 8.4340000E+01 2.6950000E+01 8.1850000E+01 2.7740000E+01 8.2760000E+01 2.8670000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.6774000E+00" bValue="7.5220000E-01" maxMag="8.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="2.7300000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="232"
+            name="Source 8.CH.255"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.3150000E+01 2.9130000E+01 8.4970000E+01 2.8490000E+01 8.4650000E+01 2.7980000E+01 8.2740000E+01 2.8690000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.6381000E+00" bValue="7.5220000E-01" maxMag="7.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.7400000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="233"
+            name="Source 8.CH.256"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.4350000E+01 2.9520000E+01 8.3940000E+01 2.9090000E+01 8.2430000E+01 2.9830000E+01 8.2910000E+01 3.0210000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.4795000E+00" bValue="7.5220000E-01" maxMag="6.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="8.1000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="234"
+            name="Source 8.CH.257"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.1250000E+01 3.0370000E+01 8.3150000E+01 2.9130000E+01 8.2740000E+01 2.8690000E+01 8.0730000E+01 2.9880000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.8008000E+00" bValue="7.5220000E-01" maxMag="7.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.3000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="235"
+            name="Source 8.CH.258"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    7.9680000E+01 3.0510000E+01 8.2740000E+01 2.8670000E+01 8.1830000E+01 2.7740000E+01 7.8640000E+01 2.9530000E+01 7.9680000E+01 3.0520000E+01 7.9670000E+01 3.0510000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.0098000E+00" bValue="7.5220000E-01" maxMag="8.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="3.3300000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="236"
+            name="Source 8.CH.259"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    7.6610000E+01 3.2570000E+01 7.9680000E+01 3.0520000E+01 7.8650000E+01 2.9520000E+01 7.5440000E+01 3.1840000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.7776000E+00" bValue="7.5220000E-01" maxMag="8.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="8.7000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="238"
+            name="Source 8.CH.261"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.0070000E+01 3.1980000E+01 8.1480000E+01 3.0880000E+01 8.0770000E+01 3.0200000E+01 7.9340000E+01 3.1240000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.6298000E+00" bValue="7.5220000E-01" maxMag="7.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.6000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="239"
+            name="Source 8.CH.262"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.2780000E+01 3.2090000E+01 8.2840000E+01 3.0530000E+01 8.2040000E+01 3.0790000E+01 8.2010000E+01 3.2350000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.9259000E+00" bValue="9.7520000E-01" maxMag="7.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="3.8000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="240"
+            name="Source 8.CH.263"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.3120000E+01 3.1990000E+01 8.3880000E+01 3.1730000E+01 8.3760000E+01 3.0140000E+01 8.3090000E+01 3.0300000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.9283000E+00" bValue="9.7520000E-01" maxMag="7.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.0500000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="243"
+            name="Source 8.CH.267"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.9810000E+01 3.1560000E+01 8.8380000E+01 2.9410000E+01 8.7400000E+01 2.9480000E+01 8.8900000E+01 3.1630000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.4385000E+00" bValue="9.7520000E-01" maxMag="7.3000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.3300000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="272"
+            name="Source 8.CH.300"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    7.8810000E+01 2.7860000E+01 7.7880000E+01 2.7230000E+01 7.6490000E+01 2.8650000E+01 7.7400000E+01 2.9360000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.5244000E+00" bValue="1.0700000E+00" maxMag="7.4000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.7600000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="279"
+            name="Source 8.CH.404"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.2660000E+01 2.6380000E+01 8.3180000E+01 2.6340000E+01 8.3230000E+01 2.5100000E+01 8.2760000E+01 2.5080000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.6029000E+00" bValue="1.0700000E+00" maxMag="5.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.3000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="280"
+            name="Source 8.CH.405"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.6090000E+01 2.5260000E+01 8.6360000E+01 2.5600000E+01 8.7360000E+01 2.4990000E+01 8.7080000E+01 2.4680000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.7634000E+00" bValue="1.0700000E+00" maxMag="6.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="3.7000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="374"
+            name="Source 8.CH.248"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    9.1160000E+01 2.6950000E+01 8.8090000E+01 2.6890000E+01 8.8260000E+01 2.7720000E+01 9.1380000E+01 2.7720000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.6054000E+00" bValue="7.5220000E-01" maxMag="7.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.2000000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="376"
+            name="Source 8.CH.265"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.5520000E+01 3.1930000E+01 8.5060000E+01 2.9860000E+01 8.4030000E+01 3.0060000E+01 8.4550000E+01 3.2030000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.3697000E+00" bValue="9.7520000E-01" maxMag="7.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="4.1000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="386"
+            name="Source 8.CH.245"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    8.7940000E+01 2.5760000E+01 8.7960000E+01 2.6280000E+01 8.9590000E+01 2.6200000E+01 8.9590000E+01 2.5690000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.3948000E+00" bValue="7.5220000E-01" maxMag="6.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="1.9100000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="1.5000000E+01" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

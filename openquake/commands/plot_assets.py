@@ -1,7 +1,8 @@
+
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,7 +38,7 @@ def plot_assets(calc_id=-1, site_model=False):
         region = None
     sitecol = dstore['sitecol']
     try:
-        assetcol = dstore['assetcol'].value
+        assetcol = dstore['assetcol'][()]
     except AttributeError:
         assetcol = dstore['assetcol'].array
     fig = p.figure()
@@ -51,14 +52,19 @@ def plot_assets(calc_id=-1, site_model=False):
         sm_lons, sm_lats = sm['lon'], sm['lat']
         if len(sm_lons) > 1 and cross_idl(*sm_lons):
             sm_lons %= 360
-        p.scatter(sm_lons, sm_lats, marker='.', color='orange')
-    p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
-              color='gray')
-    p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')
-    p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black')
+        p.scatter(sm_lons, sm_lats, marker='.', color='orange',
+                  label='site model')
+    # p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
+    #           color='gray', label='grid')
+    p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green',
+              label='assets')
+    p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black',
+              label='sites')
     if 'discarded' in dstore:
-        disc = numpy.unique(dstore['discarded'].value[['lon', 'lat']])
-        p.scatter(disc['lon'], disc['lat'], marker='x', color='red')
+        disc = numpy.unique(dstore['discarded']['lon', 'lat'])
+        p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
+                  label='discarded')
+    ax.legend()
     p.show()
 
 

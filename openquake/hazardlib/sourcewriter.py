@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -266,7 +266,7 @@ def build_nodal_plane_dist(npd):
             "nodalPlane", {"dip": npd.dip, "probability": prob,
                            "strike": npd.strike, "rake": npd.rake})
         npds.append(nodal_plane)
-    sourceconverter.check_dupl(dist)
+    sourceconverter.fix_dupl(dist)
     return Node("nodalPlaneDist", nodes=npds)
 
 
@@ -285,7 +285,7 @@ def build_hypo_depth_dist(hdd):
     for (prob, depth) in hdd.data:
         dist.append((prob, depth))
         hdds.append(Node("hypoDepth", {"depth": depth, "probability": prob}))
-    sourceconverter.check_dupl(dist)
+    sourceconverter.fix_dupl(dist)
     return Node("hypoDepthDist", nodes=hdds)
 
 

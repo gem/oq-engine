@@ -1,0 +1,15 @@
+============= ============= =====
+return_period kind          value
+30            mean          NaN  
+30            quantile-0.25 NaN  
+60            mean          219  
+60            quantile-0.25 207  
+120           mean          768  
+120           quantile-0.25 667  
+240           mean          1_114
+240           quantile-0.25 1_047
+480           mean          1_416
+480           quantile-0.25 1_140
+960           mean          3_602
+960           quantile-0.25 2_856
+============= ============= =====

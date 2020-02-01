@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,13 +25,14 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
 from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.gsim import akkar_bommer_2010
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
+from openquake.hazardlib.gsim.akkar_bommer_2010 import AkkarBommer2010
+from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
@@ -159,7 +160,7 @@ def example_calc(apply):
                            PMF([(1.0, 10.0)]))]
     imtls = {'PGA': [0.01, 0.1, 0.2, 0.5, 0.8],
              'SA(0.5)': [0.01, 0.1, 0.2, 0.5, 0.8]}
-    gsims = {'Active Shallow Crust': akkar_bommer_2010.AkkarBommer2010()}
+    gsims = {'Active Shallow Crust': AkkarBommer2010()}
     return calc_hazard_curves(sources, sitecol, imtls, gsims, apply=apply,
                               filter_distance='rrup')
 
@@ -171,3 +172,30 @@ class HazardCurvesParallelTestCase(unittest.TestCase):
         for name in curves_par.dtype.names:
             numpy.testing.assert_almost_equal(
                 curves_seq[name], curves_par[name])
+
+    @classmethod
+    def tearDown(cls):
+        Starmap.shutdown()
+
+
+class AvgGMPETestCase(unittest.TestCase):
+    def test(self):
+        sitecol = SiteCollection([Site(Point(30.0, 30.0), 760., 1.0, 1.0)])
+        mfd = TruncatedGRMFD(4.5, 8.0, 0.1, 4.0, 1.0)
+        sources = [PointSource('001', 'Point1', 'Active Shallow Crust',
+                               mfd, 1.0, WC1994(), 1.0, PoissonTOM(50.0),
+                               0.0, 30.0, Point(30.0, 30.5),
+                               PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
+                               PMF([(1.0, 10.0)]))]
+        imtls = {'PGA': [0.01, 0.1, 0.2, 0.5, 0.8]}
+        hc1 = calc_hazard_curves(sources, sitecol, imtls, {
+            'Active Shallow Crust': AkkarBommer2010()})['PGA']
+        hc2 = calc_hazard_curves(sources, sitecol, imtls, {
+            'Active Shallow Crust': SadighEtAl1997()})['PGA']
+        hc = .6 * hc1 + .4 * hc2
+        ag = AvgGMPE(b1=dict(AkkarBommer2010={'weight': .6}),
+                     b2=dict(SadighEtAl1997={'weight': .4}))
+        hcm = calc_hazard_curves(sources, sitecol, imtls, {
+            'Active Shallow Crust': ag})['PGA']
+        # the AvgGMPE is not producing real means!!
+        numpy.testing.assert_almost_equal(hc, hcm, decimal=3)

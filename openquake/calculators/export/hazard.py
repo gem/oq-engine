@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,32 +18,26 @@
 
 import re
 import os
+import sys
 import operator
 import collections
-
 import numpy
 
-from openquake.baselib.general import group_array, deprecated
+from openquake.baselib.general import (
+    group_array, deprecated, AccumDict, DictArray)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import gen_rupture_getters
-from openquake.commonlib import writers, hazard_writers, calc, util, source
+from openquake.commonlib import writers, hazard_writers, calc, util
 
 F32 = numpy.float32
 F64 = numpy.float64
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
-TWO32 = 2 ** 32
-
-GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
-GMF_WARNING = '''\
-There are a lot of ground motion fields; the export will be slow.
-Consider canceling the operation and accessing directly %s.'''
 
 # with compression you can save 60% of space by losing only 10% of saving time
 savez = numpy.savez_compressed
@@ -55,6 +49,7 @@ def add_quotes(values):
 
 
 @export.add(('ruptures', 'xml'))
+@deprecated(msg='This exporter will disappear in the future')
 def export_ruptures_xml(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -63,12 +58,11 @@ def export_ruptures_xml(ekey, dstore):
     fmt = ekey[-1]
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
-    ruptures_by_grp = {}
+    ruptures_by_grp = AccumDict(accum=[])
     for rgetter in gen_rupture_getters(dstore):
         ebrs = [ebr.export(rgetter.rlzs_by_gsim, num_ses)
                 for ebr in rgetter.get_ruptures()]
-        if ebrs:
-            ruptures_by_grp[rgetter.grp_id] = ebrs
+        ruptures_by_grp[rgetter.grp_id].extend(ebrs)
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
@@ -85,23 +79,15 @@ def export_ruptures_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('rupid multiplicity mag centroid_lon centroid_lat '
-              'centroid_depth trt strike dip rake boundary').split()
-    rows = []
-    for rgetter in gen_rupture_getters(dstore):
-        rups = rgetter.get_ruptures()
-        rup_data = calc.RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
-        for r in rup_data.to_array(rups):
-            rows.append(
-                (r['rup_id'], r['multiplicity'], r['mag'],
-                 r['lon'], r['lat'], r['depth'],
-                 rgetter.trt, r['strike'], r['dip'], r['rake'],
-                 r['boundary']))
-    rows.sort()  # by rupture serial
+    arr = extract(dstore, 'rupture_info')
+    if export.sanity_check:
+        bad = view('bad_ruptures', dstore)
+        if bad.count('\n') > 3:  # nonempty rst_table
+            print(bad, file=sys.stderr)
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-    writers.write_csv(dest, rows, header=header, sep='\t', comment=comment)
+    writers.write_csv(dest, arr, comment=comment)
     return [dest]
 
 
@@ -231,9 +217,14 @@ def export_hcurves_csv(ekey, dstore):
                                  hmap.flatten().view(hmap_dt), comment))
         elif key == 'hcurves':
             hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
+            if 'amplification' in oq.inputs:
+                imtls = DictArray(
+                    {imt: oq.soil_intensities for imt in oq.imtls})
+            else:
+                imtls = oq.imtls
             fnames.extend(
                 export_hcurves_by_imt_csv(
-                    ekey, kind, fname, sitecol, hcurves, oq.imtls, comment))
+                    ekey, kind, fname, sitecol, hcurves, imtls, comment))
     return sorted(fnames)
 
 
@@ -396,9 +387,6 @@ def export_hazard_npz(ekey, dstore):
     return [fname]
 
 
-Event = collections.namedtuple('Event', ['eid', 'ses_idx', 'indices', 'gmfa'])
-
-
 @export.add(('gmf_data', 'csv'))
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
@@ -417,7 +405,8 @@ def export_gmf_data_csv(ekey, dstore):
         writers.write_csv(f, sites)
         fname = dstore.build_fname('gmf', 'data', 'csv')
         gmfa.sort(order=['eid', 'sid'])
-        writers.write_csv(fname, _expand_gmv(gmfa, imts))
+        writers.write_csv(fname, _expand_gmv(gmfa, imts),
+                          renamedict={'sid': 'site_id', 'eid': 'event_id'})
         if 'sigma_epsilon' in dstore['gmf_data']:
             sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
             sig_eps = dstore['gmf_data/sigma_epsilon'][()]
@@ -430,6 +419,7 @@ def export_gmf_data_csv(ekey, dstore):
         else:
             return [fname, f]
     # old format for single eid
+    # TODO: is this still used?
     gmfa = gmfa[gmfa['eid'] == eid]
     eid2rlz = dict(dstore['events'])
     rlzi = eid2rlz[eid]
@@ -528,8 +518,10 @@ def export_disagg_csv(ekey, dstore):
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     for key in group:
         attrs = group[key].attrs
-        iml = attrs['iml']
         rlz = rlzs[attrs['rlzi']]
+        if not key.startswith('rlz-%d-' % rlz.ordinal):
+            continue
+        iml = attrs['iml']
         try:
             poe = attrs['poe']
         except Exception:  # no poes_disagg were given
@@ -560,9 +552,9 @@ def export_disagg_csv(ekey, dstore):
                    if value is not None and key not in skip_keys}
             com.update(poe='%.7f' % poe, iml='%.7e' % iml, rlz=rlz.ordinal)
             fname = dstore.export_path(key + '_%s.csv' % label)
-            values = extract(dstore,
-                             'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d' %
-                             (label, imt, site_id, poe_id))
+            values = extract(
+                dstore, 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&rlz=%d' %
+                (label, imt, site_id, poe_id, rlz.ordinal))
             writers.write_csv(fname, values, header=header, comment=com,
                               fmt='%.5E')
             fnames.append(fname)
@@ -597,14 +589,9 @@ def export_realizations(ekey, dstore):
 
 @export.add(('events', 'csv'))
 def export_events(ekey, dstore):
-    ev = dstore['events'][()]
-    events = numpy.zeros(
-        len(ev), [('event_id', U64), ('rup_id', U32), ('rlz_id', U16)])
-    events['event_id'] = ev['id']
-    events['rup_id'] = ev['id'] // TWO32
-    events['rlz_id'] = ev['rlz']
+    events = dstore['events'][()]
     path = dstore.export_path('events.csv')
-    writers.write_csv(path, events, fmt='%s')
+    writers.write_csv(path, events, fmt='%s', renamedict=dict(id='event_id'))
     return [path]
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -127,7 +127,7 @@ class Socket(object):
                 if self.zsocket.poll(self.timeout):
                     yield self.zsocket.recv_pyobj()
                 elif self.socket_type == zmq.PULL:
-                    logging.debug('Timeout in %s:%d', self, self.port)
+                    logging.debug('Waiting on %s:%d', self, self.port)
             except zmq.ZMQError:
                 # sending SIGTERM raises ZMQError
                 break
@@ -140,7 +140,11 @@ class Socket(object):
         :param obj:
             the Python object to send
         """
-        self.zsocket.send_pyobj(obj)
+        try:
+            self.zsocket.send_pyobj(obj)
+        except Exception as exc:
+            # usual for objects bigger than 4 GB
+            raise exc.__class__('%s: %r' % (exc, obj))
         self.num_sent += 1
         if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj()

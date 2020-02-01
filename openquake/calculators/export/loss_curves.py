@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,28 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import numpy
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import countby
 from openquake.commonlib import writers
-from openquake.risklib import scientific
-
-
-def get_loss_builder(dstore, return_periods=None, loss_dt=None):
-    """
-    :param dstore: datastore for an event based risk calculation
-    :returns: a LossCurvesMapsBuilder instance
-    """
-    oq = dstore['oqparam']
-    weights = dstore['weights'][()]
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = countby(dstore['events'][()], 'rlz')
-    periods = return_periods or oq.return_periods or scientific.return_periods(
-        eff_time, max(num_events.values()))
-    return scientific.LossCurvesMapsBuilder(
-        oq.conditional_loss_poes, numpy.array(periods),
-        loss_dt or oq.loss_dt(), weights, num_events,
-        eff_time, oq.risk_investigation_time)
+from openquake.calculators.post_risk import get_loss_builder
 
 
 class LossCurveExporter(object):
@@ -113,7 +94,8 @@ class LossCurveExporter(object):
         ebr = hasattr(self, 'builder')
         for key in sorted(curves_dict):
             recs = curves_dict[key]
-            data = [['asset', 'loss_type', 'loss', 'period' if ebr else 'poe']]
+            data = [['asset_id', 'loss_type', 'loss',
+                     'period' if ebr else 'poe']]
             for li, loss_type in enumerate(self.loss_types):
                 if ebr:  # event_based_risk
                     array = recs[:, :, li]  # shape (A, P, LI)
@@ -132,7 +114,8 @@ class LossCurveExporter(object):
             com = dict(
                 kind=key,
                 risk_investigation_time=self.oq.risk_investigation_time)
-            writer.save(data, dest, comment=com)
+            writer.save(data, dest, comment=com,
+                        renamedict=dict(id='asset_id'))
         return writer.getsaved()
 
     def export(self, export_type, what):

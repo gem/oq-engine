@@ -20,6 +20,7 @@ Python packages can also be specified to run only a subset of tests. Some exampl
 $ pytest -vs openquake/hazardlib
 
 # Calculators
+$ oq dbserver start
 $ pytest -vs openquake/calculators
 
 # Engine server

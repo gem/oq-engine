@@ -38,16 +38,11 @@ quite efficiently.
 A single rupture can produce multiple seismic events during the
 investigation time. In the engine a rupture is uniquely identified by
 a rupture ID, a.k.a. `serial`, which is a 32 bit positive integer.
-Starting from engine 3.3, seismic events are uniquely identified by an
-event ID, a.k.a. `eid`, which is a 64 bit positive integer. The relation
-between event ID and rupture ID is given by the following formula:
-
-   `rupture_ID = event_ID // 2 ** 32`
-
-where `//` is the integer division. For instance the event ID 
-7374458847232 is associated to the rupture ID 1717. Given an event ID
-it is possible to ascertain the realization it belongs to, by looking
-inside the `events` table in the datastore. The properties of the
+Starting from engine 3.7, seismic events are uniquely identified by an
+event ID, which is a 32 bit positive integer. The relation
+between event ID and rupture ID is given encoded in the `events` table
+in the datastore, which also contains the realization associated to the
+event. The properties of the
 rupture generating the events can be ascertained by looking inside the
 `ruptures` table. In particular ther `srcidx` contains the index of the
 source that generated the rupture. The `srcidx` can be used to extract

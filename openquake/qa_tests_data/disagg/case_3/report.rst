@@ -2,9 +2,9 @@ test for POE_TOO_BIG
 ====================
 
 ============== ===================
-checksum32     3,490,620,350      
-date           2019-07-30T15:03:56
-engine_version 3.7.0-git3b3dff46da
+checksum32     3_490_620_350      
+date           2020-01-16T05:30:45
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 1, num_levels = 200, num_rlzs = 6
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      5.0                                                                                                                                                           
 width_of_mfd_bin                0.1                                                                                                                                                           
 area_source_discretization      15.0                                                                                                                                                          
+pointsource_distance            None                                                                                                                                                          
 ground_motion_correlation_model None                                                                                                                                                          
 minimum_intensity               {}                                                                                                                                                            
 random_seed                     23                                                                                                                                                            
@@ -64,65 +65,61 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=18, rlzs=6)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============================= ====== ==================== ============ ============
-source_model                  grp_id trt                  eff_ruptures tot_ruptures
-============================= ====== ==================== ============ ============
-source_model_test_complex.xml 0      Active Shallow Crust 2,308        2,308       
-source_model_test_point.xml   1      Active Shallow Crust 624          624         
-============================= ====== ==================== ============ ============
-
-============= =====
-#TRT models   2    
-#eff_ruptures 2,932
-#tot_ruptures 2,932
-============= =====
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.01603   2_308        2_308       
+1      0.00641   624          624         
+====== ========= ============ ============
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =======
-source_id grp_id code num_ruptures calc_time num_sites weight speed  
-========= ====== ==== ============ ========= ========= ====== =======
-f1        0      C    2,308        0.00494   2.00000   2,464  498,854
-p2        1      P    156          0.00220   1.00000   156    70,782 
-p3        1      P    156          1.926E-04 1.00000   156    809,791
-p1        1      P    156          1.662E-04 1.00000   156    938,754
-========= ====== ==== ============ ========= ========= ====== =======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+f1        0      C    2_308        0.08848   0.01603   2_308       
+p1        1      P    156          0.00261   0.00641   156         
+p2        1      P    156          2.799E-04 0.00641   156         
+p3        1      P    156          2.413E-04 0.00641   156         
+p4        1      P    156          2.286E-04 0.00641   156         
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-C    0.00494   1     
-P    0.00256   4     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+C    0.08848  
+P    0.00336  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-preclassical       0.00288 0.00105 0.00182 0.00393 3      
-read_source_models 0.04238 0.05704 0.00205 0.08271 2      
+SourceReader       0.06006 0.07547 0.00669 0.11343 2      
+preclassical       2.37030 3.34546 0.00471 4.73590 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ========================================================== ========
-task               sent                                                       received
-preclassical       params=6.8 KB srcs=6.31 KB gsims=1.41 KB srcfilter=1.07 KB 1.09 KB 
-read_source_models converter=628 B fnames=216 B                               6.27 KB 
-================== ========================================================== ========
+============ =========================================== ========
+task         sent                                        received
+SourceReader apply_unc=2.43 KB ltmodel=406 B fname=224 B 8.1 KB  
+preclassical srcs=5.48 KB params=5.1 KB gsims=960 B      865 B   
+============ =========================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_15502               time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 0.08476   0.0       2     
-total preclassical       0.00863   0.54297   3     
-store source_info        0.00209   0.0       1     
-managing sources         0.00130   0.0       1     
-aggregate curves         4.241E-04 0.0       3     
-======================== ========= ========= ======
+=========================== ========= ========= ======
+calc_43228                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+total preclassical          4.74060   2.74609   2     
+splitting/filtering sources 4.64479   2.92578   2     
+composite source model      0.13495   0.0       1     
+total SourceReader          0.12012   0.25781   2     
+store source_info           0.00231   0.0       1     
+aggregate curves            4.227E-04 0.0       2     
+=========================== ========= ========= ======

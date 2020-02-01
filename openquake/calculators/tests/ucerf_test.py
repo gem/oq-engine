@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import unittest
+
 from openquake.baselib.general import gettemp
 from openquake.calculators.export import export
 from openquake.calculators.views import view
@@ -36,14 +36,11 @@ class UcerfTestCase(CalculatorTestCase):
                                 3, 3, 3, 3])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        # check that we get the expected number of ruptures
-        with open(fname) as f:
-            self.assertEqual(len(f.readlines()), 72)
-        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20,
-                              delta=1E-5)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-5)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
+        self.calc.datastore.close()  # avoid https://ci.openquake.org/job/macos/job/master_macos_engine/label=catalina,python=python3.7/5388/consoleFull
         self.run_calc(ucerf.__file__, 'job.ini',
                       calculation_mode='event_based',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
@@ -102,35 +99,3 @@ class UcerfTestCase(CalculatorTestCase):
         fname = out['hcurves', 'csv'][0]
         self.assertEqualFiles('expected/hazard_curve-sampling.csv', fname,
                               delta=1E-6)
-
-    def test_event_based_risk(self):
-        # the fast calculator ucerf_risk
-        raise unittest.SkipTest('ucerf_risk has been removed')
-        self.run_calc(ucerf.__file__, 'job_ebr.ini')
-
-        fname = gettemp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
-
-        # check the mean losses_by_period
-        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
-
-    def test_event_based_risk_sampling(self):
-        # the fast calculator ucerf_risk
-        raise unittest.SkipTest('ucerf_risk has been removed')
-        self.run_calc(ucerf.__file__, 'job_ebr.ini',
-                      number_of_logic_tree_samples='2')
-
-        # check the right number of events was stored
-        self.assertEqual(len(self.calc.datastore['events']), 79)
-
-        fname = gettemp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles(
-            'expected/portfolio_loss2.txt', fname, delta=1E-5)
-
-        # check the mean losses_by_period
-        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_period2-mean.csv', fname)
-
-        # make sure this runs
-        view('fullreport', self.calc.datastore)

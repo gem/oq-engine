@@ -100,13 +100,21 @@ the calculators.
 
 By default, OpenQuake will export only the statistical results, i.e. mean
 curves and quantiles. If the user requires the complete results for all
-realizations, there is a specific command for that, `oq extract hazard/all`.
+realizations, there is a flag to specify, please see the FAQ \href{https://github.com/gem/oq-engine/blob/master/doc/faq-hazard.md}{https://github.com/gem/oq-engine/blob/master/doc/faq-hazard.md}.
 Beware that if the logic tree contains a large number of end branches the
 process of exporting the results from each end branch can add a significant
 amount of time - possibly longer than the computation time - and result in a
 large volume of disk spaced being used. In this case it is best to postprocess
 the data programmatically. Please contact us and we will be happy to give
 directions on how to do that in Python.
+
+NB: in the literature there are different algorithms for the computation
+of the quantiles. The OpenQuake engine uses an algorithm based on interpolation
+which is implemented here:
+
+\href{https://github.com/gem/oq-engine/tree/master/openquake/hazardlib/stats.py}{https://github.com/gem/oq-engine/tree/master/openquake/hazardlib/stats.py}
+
+In particular, the median is computed as the q=0.5 quantile.
 
 \subsection{Outputs from Classical PSHA}
 \label{subsec:output_classical_psha}

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,20 +27,21 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def get_assets_by_taxo(assets, epspath=None):
+def get_assets_by_taxo(assets, tempname=None):
     """
     :param assets: an array of assets
-    :param epspath: hdf5 file where the epsilons are (or None)
+    :param tempname: hdf5 file where the epsilons are (or None)
     :returns: assets_by_taxo with attributes eps and idxs
     """
     assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
+    assets_by_taxo.assets = assets
     assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
         a['ordinal'] for a in assets_by_taxo.values()]))
     assets_by_taxo.eps = {}
-    if epspath is None:  # no epsilons
+    if tempname is None:  # no epsilons
         return assets_by_taxo
     # otherwise read the epsilons and group them by taxonomy
-    with hdf5.File(epspath, 'r') as h5:
+    with hdf5.File(tempname, 'r') as h5:
         dset = h5['epsilon_matrix']
         for taxo, assets in assets_by_taxo.items():
             lst = [dset[aid] for aid in assets['ordinal']]
@@ -53,6 +54,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
     :param haz: an array or a dictionary of hazard on that site
     :param rlzi: if given, a realization index
+    :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
     if hasattr(haz, 'array'):  # classical
         eids = []
@@ -75,7 +77,8 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         data = []
     else:
         raise ValueError('Unexpected haz=%s' % haz)
-    dic = dict(eids=eids)
+    dic = dict(eids=eids, assets=assets_by_taxo.assets,
+               loss_types=crmodel.loss_types)
     if rlzi is not None:
         dic['rlzi'] = rlzi
     for l, lt in enumerate(crmodel.loss_types):
@@ -95,8 +98,8 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
                 else:  # hcurves
                     dat = data[rm.imti[lt]]
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
-            res = arrays[0] if len(arrays) == 1 else numpy.sum(
-                a * w for a, w in zip(arrays, weights))
+            res = arrays[0] if len(arrays) == 1 else numpy.average(
+                arrays, weights=weights, axis=0)
             ls.append(res)
         arr = numpy.concatenate(ls)
         dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
@@ -123,7 +126,7 @@ class RiskInput(object):
             aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
 
-    def gen_outputs(self, cr_model, monitor, epspath=None, haz=None):
+    def gen_outputs(self, cr_model, monitor, tempname=None, haz=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
@@ -135,8 +138,7 @@ class RiskInput(object):
         hazard_getter = self.hazard_getter
         [sid] = hazard_getter.sids
         if haz is None:
-            with monitor('getting hazard'):
-                haz = hazard_getter.get_hazard()
+            haz = hazard_getter.get_hazard()
         if isinstance(haz, dict):
             items = haz.items()
         else:  # list of length R
@@ -146,7 +148,7 @@ class RiskInput(object):
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
-            assets_by_taxo = get_assets_by_taxo(self.assets, epspath)
+            assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
             for rlzi, haz_by_rlzi in items:
                 out = get_output(cr_model, assets_by_taxo, haz_by_rlzi, rlzi)
                 yield out
@@ -186,8 +188,7 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     if oq.ignore_covs or not crmodel.covs or 'LN' not in crmodel.distributions:
         return
     A = len(assetcol)
-    hdf5path = dstore.hdf5cache()
-    logging.info('Storing the epsilon matrix in %s', hdf5path)
+    logging.info('Storing the epsilon matrix in %s', dstore.tempname)
     if oq.calculation_mode == 'scenario_risk':
         eps = make_eps(assetcol.array, E, oq.master_seed, oq.asset_correlation)
     else:  # event based
@@ -200,9 +201,10 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
             for i, seed in enumerate(seeds):
                 numpy.random.seed(seed)
                 eps[:, i] = numpy.random.normal(size=A)
-    with hdf5.File(hdf5path) as cache:
+    with hdf5.File(dstore.tempname, 'w') as cache:
+        cache['sitecol'] = dstore['sitecol']
         cache['epsilon_matrix'] = eps
-    return hdf5path
+    return dstore.tempname
 
 
 def str2rsi(key):

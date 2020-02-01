@@ -1,0 +1,11 @@
+============= ============= ====== ======== =====
+return_period kind          policy taxonomy value
+30            mean          A      RC       NaN  
+30            quantile-0.25 A      RC       NaN  
+240           mean          A      RC       93   
+240           quantile-0.25 A      RC       88   
+480           mean          A      RC       189  
+480           quantile-0.25 A      RC       165  
+960           mean          A      RC       217  
+960           quantile-0.25 A      RC       205  
+============= ============= ====== ======== =====

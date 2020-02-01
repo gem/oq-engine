@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,7 @@ import itertools
 from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
+import toml
 import numpy
 import h5py
 from openquake.baselib import InvalidFile
@@ -105,26 +106,6 @@ def extend(dset, array, **attrs):
     for key, val in attrs.items():
         dset.attrs[key] = val
     return newlength
-
-
-def extend3(filename, key, array, **attrs):
-    """
-    Extend an HDF5 file dataset with the given array
-    """
-    with h5py.File(filename) as h5:
-        try:
-            dset = h5[key]
-        except KeyError:
-            if array.dtype.name == 'object':  # vlen array
-                shape = (None,) + preshape(array[0])
-            else:
-                shape = (None,) + array.shape[1:]
-            dset = create(h5, key, array.dtype, shape)
-        length = extend(dset, array)
-        for key, val in attrs.items():
-            dset.attrs[key] = val
-        h5.flush()
-    return length
 
 
 class LiteralAttrs(object):
@@ -277,6 +258,14 @@ class File(h5py.File):
     3
     >>> f.close()
     """
+    def __init__(self, name, mode=None, driver=None, libver='latest',
+                 userblock_size=None, swmr=True, rdcc_nslots=None,
+                 rdcc_nbytes=None, rdcc_w0=None, track_order=None,
+                 **kwds):
+        super().__init__(name, mode, driver, libver,
+                         userblock_size, swmr, rdcc_nslots,
+                         rdcc_nbytes, rdcc_w0, track_order, **kwds)
+
     @classmethod
     def temporary(cls):
         """
@@ -303,16 +292,9 @@ class File(h5py.File):
         except KeyError:
             vdt = h5py.special_dtype(vlen=data[0].dtype)
             dset = create(self, key, vdt, shape, fillvalue=None)
-        nbytes = dset.attrs.get('nbytes', 0)
-        totlen = dset.attrs.get('totlen', 0)
-        for i, val in enumerate(data):
-            nbytes += val.nbytes
-            totlen += len(val)
         length = len(dset)
         dset.resize((length + len(data),) + shape[1:])
         dset[length:length + len(data)] = data
-        dset.attrs['nbytes'] = nbytes
-        dset.attrs['totlen'] = totlen
 
     def save_attrs(self, path, attrs, **kw):
         items = list(attrs.items()) + list(kw.items())
@@ -348,14 +330,25 @@ class File(h5py.File):
         elif (isinstance(obj, numpy.ndarray) and obj.shape and
               len(obj) and isinstance(obj[0], str)):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
+        elif (isinstance(obj, numpy.ndarray) and not obj.shape and
+              obj.dtype.name.startswith('bytes')):
+            self._set(path, numpy.void(bytes(obj)))
         elif isinstance(obj, list) and len(obj) and isinstance(
                 obj[0], numpy.ndarray):
             self.save_vlen(path, obj)
+        elif isinstance(obj, bytes):
+            self._set(path, numpy.void(obj))
         else:
-            super().__setitem__(path, obj)
+            self._set(path, obj)
         if pyclass:
             self.flush()  # make sure it is fully saved
             self.save_attrs(path, attrs, __pyclass__=pyclass)
+
+    def _set(self, path, obj):
+        try:
+            super().__setitem__(path, obj)
+        except Exception as exc:
+            raise exc.__class__('Could not set %s=%r' % (path, obj))
 
     def __getitem__(self, path):
         h5obj = super().__getitem__(path)
@@ -380,17 +373,6 @@ class File(h5py.File):
     def __getstate__(self):
         # make the file pickleable
         return {'_id': 0}
-
-    def set_nbytes(self, key, nbytes=None):
-        """
-        Set the `nbytes` attribute on the HDF5 object identified by `key`.
-        """
-        obj = super().__getitem__(key)
-        if nbytes is not None:  # size set from outside
-            obj.attrs['nbytes'] = nbytes
-        else:  # recursively determine the size of the datagroup
-            obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
-        return nbytes
 
     def getitem(self, name):
         """
@@ -418,16 +400,21 @@ class ArrayWrapper(object):
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
     """
     @classmethod
-    def from_(cls, obj):
+    def from_(cls, obj, extra='value'):
         if isinstance(obj, cls):  # it is already an ArrayWrapper
             return obj
         elif inspect.isgenerator(obj):
             array, attrs = (), dict(obj)
         elif hasattr(obj, '__toh5__'):
             return obj
+        elif hasattr(obj, 'attrs'):  # is a dataset
+            array, attrs = obj[()], dict(obj.attrs)
+            shape_descr = attrs.get('shape_descr', [])
+            for descr in map(decode, shape_descr):
+                attrs[descr] = list(attrs[descr])
         else:  # assume obj is an array
             array, attrs = obj, {}
-        return cls(array, attrs)
+        return cls(array, attrs, (extra,))
 
     def __init__(self, array, attrs, extra=('value',)):
         vars(self).update(attrs)
@@ -460,6 +447,12 @@ class ArrayWrapper(object):
         self.__init__(array, attrs)
 
     def __repr__(self):
+        if hasattr(self, 'shape_descr'):
+            assert len(self.shape) == len(self.shape_descr), (
+                self.shape_descr, self.shape)
+            lst = ['%s=%d' % (descr, size)
+                   for descr, size in zip(self.shape_descr, self.shape)]
+            return '<%s(%s)>' % (self.__class__.__name__, ', '.join(lst))
         return '<%s%s>' % (self.__class__.__name__, self.shape)
 
     @property
@@ -471,6 +464,16 @@ class ArrayWrapper(object):
     def shape(self):
         """shape of the underlying array"""
         return self.array.shape if hasattr(self, 'array') else ()
+
+    def toml(self):
+        """
+        :returns: a TOML string representation of the ArrayWrapper
+        """
+        if self.shape:
+            return toml.dumps(self.array)
+        dic = {k: v for k, v in vars(self).items()
+               if not k.startswith('_')}
+        return toml.dumps(dic)
 
     def save(self, path, **extra):
         """
@@ -488,6 +491,17 @@ class ArrayWrapper(object):
             for k, v in extra.items():
                 f.attrs[k] = maybe_encode(v)
 
+    def sum_all(self, *tags):
+        """
+        Reduce the underlying array by summing on the given dimensions
+        """
+        tag2idx = {tag: i for i, tag in enumerate(self.shape_descr)}
+        array = self.array.sum(axis=tuple(tag2idx[tag] for tag in tags))
+        attrs = vars(self).copy()
+        attrs['shape_descr'] = [tag for tag in self.shape_descr
+                                if tag not in tags]
+        return self.__class__(array, attrs)
+
     def to_table(self):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
@@ -496,18 +510,23 @@ class ArrayWrapper(object):
         length D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
-        >>> dic = dict(tagnames=['taxonomy', 'occupancy'],
-        ...            taxonomy=['?', 'RC', 'WOOD'],
-        ...            occupancy=['?', 'RES', 'IND', 'COM'])
+        >>> dic = dict(shape_descr=['taxonomy', 'occupancy'],
+        ...            taxonomy=['RC', 'WOOD'],
+        ...            occupancy=['RES', 'IND', 'COM'])
         >>> arr = numpy.zeros((2, 3))
         >>> arr[0, 0] = 2000
         >>> arr[0, 1] = 5000
         >>> arr[1, 0] = 500
-        >>> pprint(ArrayWrapper(arr, dic).to_table())
+        >>> aw = ArrayWrapper(arr, dic)
+        >>> pprint(aw.to_table())
         [('taxonomy', 'occupancy', 'value'),
          ('RC', 'RES', 2000.0),
          ('RC', 'IND', 5000.0),
          ('WOOD', 'RES', 500.0)]
+        >>> pprint(aw.sum_all('taxonomy').to_table())
+        [('occupancy', 'value'), ('RES', 2500.0), ('IND', 5000.0)]
+        >>> pprint(aw.sum_all('occupancy').to_table())
+        [('taxonomy', 'value'), ('RC', 7000.0), ('WOOD', 500.0)]
         """
         shape = self.shape
         tup = len(self._extra) > 1
@@ -516,18 +535,17 @@ class ArrayWrapper(object):
                 raise ValueError(
                     'There are %d extra-fields but %d dimensions in %s' %
                     (len(self._extra), shape[-1], self))
-        tagnames = decode_array(self.tagnames)
-        # the tagnames are bytestrings so they must be decoded
-        fields = tuple(tagnames) + self._extra
+        shape_descr = tuple(decode(d) for d in self.shape_descr)
+        fields = shape_descr + self._extra
         out = []
         tags = []
         idxs = []
-        for i, tagname in enumerate(tagnames):
-            values = getattr(self, tagname)[1:]
+        for i, tagname in enumerate(shape_descr):
+            values = getattr(self, tagname)
             if len(values) != shape[i]:
                 raise ValueError(
-                    'The tag %s[%d] with %d values is inconsistent with %s'
-                    % (tagname, i, len(values), self))
+                    'The tag %s with %d values is inconsistent with %s'
+                    % (tagname, len(values), self))
             tags.append(decode_array(values))
             idxs.append(range(len(values)))
         for idx, values in zip(itertools.product(*idxs),
@@ -619,6 +637,8 @@ def parse_comment(comment):
     [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
     """
     names, vals = [], []
+    if comment.startswith('"'):
+        comment = comment[1:-1]
     pieces = comment.split('=')
     for i, piece in enumerate(pieces):
         if i == 0:  # first line
@@ -643,7 +663,7 @@ def build_dt(dtypedict, names):
             dt = dtypedict[name]
         except KeyError:
             dt = dtypedict[None]
-        lst.append((name, dt))
+        lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 
 
@@ -663,13 +683,15 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
         while True:
             first = next(f)
             if first.startswith('#'):
-                attrs = dict(parse_comment(first[1:]))
+                attrs = dict(parse_comment(first.strip('#,\n')))
                 continue
             break
         header = first.strip().split(sep)
         try:
             rows = [tuple(row) for row in csv.reader(f)]
             arr = numpy.array(rows, build_dt(dtypedict, header))
+        except KeyError:
+            raise KeyError('Missing None -> default in dtypedict')
         except Exception as exc:
             raise InvalidFile('%s: %s' % (fname, exc))
     if renamedict:

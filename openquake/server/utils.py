@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,13 @@ from openquake.engine import __version__ as oqversion
 if settings.LOCKDOWN:
     django.setup()
     from django.contrib.auth.models import User
+
+
+def is_superuser(request):
+    if settings.LOCKDOWN and hasattr(request, 'user'):
+        if request.user.is_superuser:
+            return True
+    return False
 
 
 def get_user(request):
@@ -70,10 +77,10 @@ def get_acl_on(request):
     Returns `True` if ACL should be honorated, returns otherwise `False`.
     """
     acl_on = settings.ACL_ON
-    if settings.LOCKDOWN and hasattr(request, 'user'):
+    if is_superuser(request):
         # ACL is always disabled for superusers
-        if request.user.is_superuser:
-            acl_on = False
+        acl_on = False
+
     return acl_on
 
 

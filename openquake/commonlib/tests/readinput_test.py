@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.risklib import asset
 from openquake.risklib.riskmodels import ValidationError
 from openquake.commonlib import readinput
-from openquake.qa_tests_data.classical import case_1, case_2, case_21
+from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_caracas
 
@@ -342,8 +342,8 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn("Could not convert number->compose"
-                      "(positivefloat,nonzero): '0' is zero, line 17",
+        self.assertIn("Could not convert number->asset_number: "
+                      "got 0 < 1, line 17",
                       str(ctx.exception))
 
     def test_invalid_asset_id(self):
@@ -427,19 +427,6 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
 
 
 class GetCompositeSourceModelTestCase(unittest.TestCase):
-    # test the case in_memory=False, used when running `oq info job.ini`
-
-    def test_nrml04(self):
-        oq = readinput.get_oqparam('job.ini', case_1)
-        csm = readinput.get_composite_source_model(oq, in_memory=False)
-        srcs = csm.get_sources()  # a single PointSource
-        self.assertEqual(len(srcs), 1)
-
-    def test_nrml05(self):
-        oq = readinput.get_oqparam('job.ini', case_2)
-        csm = readinput.get_composite_source_model(oq, in_memory=False)
-        srcs = csm.get_sources()  # two PointSources
-        self.assertEqual(len(srcs), 2)
 
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
@@ -452,18 +439,20 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         fname = oq.inputs['reqv'].pop('active shallow crust')
         oq.inputs['reqv']['act shallow crust'] = fname
         with self.assertRaises(ValueError) as ctx:
-            readinput.get_composite_source_model(oq, in_memory=False)
+            readinput.get_composite_source_model(oq)
         self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
 
     def test_applyToSources(self):
         oq = readinput.get_oqparam('job.ini', case_21)
         with mock.patch('logging.info') as info:
-            readinput.get_composite_source_model(oq)
+            with mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
+                readinput.get_composite_source_model(oq)
         self.assertEqual(
             info.call_args[0],
             ('Applied %d changes to the composite source model', 81))
 
     def test_extra_large_source(self):
+        raise unittest.SkipTest('Removed check on MAX_EXTENT')
         oq = readinput.get_oqparam('job.ini', case_21)
         with mock.patch('logging.error') as error, datastore.hdf5new() as h5:
             with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):
@@ -505,7 +494,13 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
 
+    def test_site_amplification(self):
+        oq = readinput.get_oqparam('job.ini', case_16)
+        oq.inputs['amplification'] = os.path.join(
+            oq.base_path, 'amplification.csv')
+        with self.assertRaises(InvalidFile):
+            readinput.get_amplification(oq)
+
     def test_site_model_sites(self):
-        # you cannot set them at the same time
-        with self.assertRaises(ValueError):
-            readinput.get_oqparam('job.ini', case_16, sites='0 0')
+        # you can set them at the same time
+        readinput.get_oqparam('job.ini', case_16, sites='0 0')

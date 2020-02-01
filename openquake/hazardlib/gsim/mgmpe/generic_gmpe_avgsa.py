@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,8 +20,8 @@ Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 """
 
 import abc
-import copy
 import numpy as np
+from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import AvgSA, SA
@@ -59,27 +59,27 @@ class GenericGmpeAvgSA(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([AvgSA])
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
-    DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, avg_periods, corr_func='none'):
+    def __init__(self, gmpe_name, avg_periods, corr_func='none', **kwargs):
 
         super().__init__(gmpe_name=gmpe_name)
-        self.gmpe = registry[gmpe_name]()
+        self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
         self.avg_periods = avg_periods
         self.tnum = len(self.avg_periods)
 
         correlation_function_handles = {
-            'baker_jayaram': BakerJayaramCorrelationModel(),
-            'akkar': AkkarCorrelationModel(),
-            'none': DummyCorrelationModel()
+            'baker_jayaram': BakerJayaramCorrelationModel,
+            'akkar': AkkarCorrelationModel,
+            'none': DummyCorrelationModel
         }
 
         # Check for existing correlation function
         if corr_func not in correlation_function_handles:
             raise ValueError('Not a valid correlation function')
         else:
-            self.corr_func = correlation_function_handles[corr_func]
+            self.corr_func = \
+                correlation_function_handles[corr_func](avg_periods)
 
         # Check if this GMPE has the necessary requirements
         # TO-DO
@@ -95,6 +95,10 @@ class GenericGmpeAvgSA(GMPE):
             if key.startswith('DEFINED_'):
                 if not key.endswith('FOR_INTENSITY_MEASURE_TYPES'):
                     setattr(self, key, getattr(self.gmpe, key))
+        # Ensure that it is always recogised that the AvgSA GMPE is defined
+        # only for total standard deviation even if the called GMPE is
+        # defined for inter- and intra-event standard deviations too
+        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
@@ -112,7 +116,7 @@ class GenericGmpeAvgSA(GMPE):
             # compute mean and standard deviation
             mean, stddvs = self.gmpe.get_mean_and_stddevs(sites, rup, dists,
                                                           imt_local,
-                                                          stds_types)
+                                                          [const.StdDev.TOTAL])
             mean_list.append(mean)
             stddvs_list.append(stddvs[0])  # Support only for total!
 
@@ -122,9 +126,8 @@ class GenericGmpeAvgSA(GMPE):
         for i1 in range(self.tnum):
             mean_avgsa += mean_list[i1]
             for i2 in range(self.tnum):
-                rho = self.corr_func.get_correlation(self.avg_periods[i1],
-                                                     self.avg_periods[i2])
-                stddvs_avgsa += rho * stddvs_list[i1] * stddvs_list[i2]
+                rho = self.corr_func(i1, i2)
+                stddvs_avgsa += (rho * stddvs_list[i1] * stddvs_list[i2])
 
         mean_avgsa /= self.tnum
         stddvs_avgsa = np.sqrt(stddvs_avgsa)/self.tnum
@@ -136,21 +139,15 @@ class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
     """
     Base class for correlation models used in spectral period averaging.
     """
+    def __init__(self, avg_periods):
+        self.avg_periods = avg_periods
+        self.build_correlation_matrix()
 
-    def get_correlation(self, t1, t2):
-        """
-        Computes the correlation coefficient for the specified periods.
-
-        :param float t1:
-            First period of interest.
-
-        :param float t2:
-            Second period of interest.
-
-        :return float rho:
-            The predicted correlation coefficient.
-        """
+    def build_correlation_matrix(self):
         pass
+
+    def __call__(self, i, j):
+        return self.rho[i, j]
 
 
 class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
@@ -161,6 +158,16 @@ class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
     Baker, J.W. and Jayaram, N., 2007, Correlation of spectral acceleration
     values from NGA ground motion models, Earthquake Spectra.
     """
+    def build_correlation_matrix(self):
+        """
+        Constucts the correlation matrix period-by-period from the
+        correlation functions
+        """
+        self.rho = np.eye(len(self.avg_periods))
+        for i, t1 in enumerate(self.avg_periods):
+            for j, t2 in enumerate(self.avg_periods[i:]):
+                self.rho[i, i + j] = self.get_correlation(t1, t2)
+        self.rho += (self.rho.T - np.eye(len(self.avg_periods)))
 
     def get_correlation(self, t1, t2):
         """
@@ -216,6 +223,21 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
     horizontal spectral amplitude ratios for the broader Europe region,
     Bull Earthquake Eng, 12, pp. 517-547.
     """
+    def build_correlation_matrix(self):
+        """
+        Constructs the correlation matrix by two-step linear interpolation
+        from the correlation table
+        """
+        irho = np.array(act.coeff_table)
+        iper = np.array(act.periods)
+        if np.any(self.avg_periods < iper[0]) or\
+                np.any(self.avg_periods > iper[-1]):
+            raise ValueError("'avg_periods' contains values outside of the "
+                             "range supported by the Akkar et al. (2014) "
+                             "correlation model")
+        ipl1 = interp1d(iper, irho, axis=1)
+        ipl2 = interp1d(iper, ipl1(self.avg_periods), axis=0)
+        self.rho = ipl2(self.avg_periods)
 
     def get_correlation(self, t1, t2):
         """
@@ -230,20 +252,38 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
         :return float:
             The predicted correlation coefficient.
         """
+        periods = np.array(act.periods)
+        rho = np.array(act.coeff_table)
+        if t1 < periods[0] or t1 > periods[-1]:
+            raise ValueError("t1 %.3f is out of valid period range (%.3f to "
+                             "%.3f" % (t1, periods[0], periods[-1]))
 
-        if t1 not in act.periods:
-            raise ValueError('t1 not a valid period')
-
-        if t2 not in act.periods:
-            raise ValueError('t2 not a valid period')
-
-        return act.coeff_table[act.periods.index(t1)][act.periods.index(t2)]
+        if t2 < periods[0] or t2 > periods[-1]:
+            raise ValueError("t1 %.3f is out of valid period range (%.3f to "
+                             "%.3f" % (t2, periods[0], periods[-1]))
+        iloc1 = np.searchsorted(periods, t1)
+        iloc2 = np.searchsorted(periods, t2)
+        if iloc1:
+            rho1 = rho[iloc1 - 1, :] + (t1 - periods[iloc1 - 1]) *\
+                ((periods[iloc1] - periods[iloc1 - 1]) /
+                 (rho[iloc1, :] - rho[iloc1 - 1, :]))
+        else:
+            rho1 = rho[0, :]
+        if iloc2:
+            rho2 = rho1[iloc2 - 1] + (t2 - periods[iloc2 - 1]) *\
+                ((periods[iloc2] - periods[iloc2 - 1]) /
+                 (rho1[iloc2] - rho1[iloc2 - 1]))
+        else:
+            rho2 = rho1[0]
+        return rho2
 
 
 class DummyCorrelationModel(BaseAvgSACorrelationModel):
     """
     Dummy function returning just 1 (used as default function handle)
     """
+    def build_correlation_matrix(self):
+        self.rho = np.ones([len(self.avg_periods), len(self.avg_periods)])
 
     def get_correlation(self, t1, t2):
         """

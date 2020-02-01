@@ -2,6 +2,8 @@ import os
 import sys
 import time
 import signal
+import shutil
+import tempfile
 import subprocess
 import multiprocessing
 from openquake.baselib import zeromq as z, general, parallel, config
@@ -52,18 +54,19 @@ class WorkerMaster(object):
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, master_host, ctrl_port, host_cores,
+    def __init__(self, master_host, ctrl_port, host_cores=None,
                  remote_python=None, receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
         self.master_host = master_host
         self.ctrl_port = int(ctrl_port)
-        self.host_cores = [hc.split() for hc in host_cores.split(',')]
+        self.host_cores = ([hc.split() for hc in host_cores.split(',')]
+                           if host_cores else [])
         self.remote_python = remote_python or sys.executable
         self.task_server_url = 'tcp://%s:%d' % (
             master_host, self.ctrl_port + 1)
-        self.pids = []
+        self.popens = []
 
-    def wait_pools(self, seconds):
+    def wait(self, seconds=30):
         """
         Wait until all workerpools start
         """
@@ -108,8 +111,7 @@ class WorkerMaster(object):
             args += ['-m', 'openquake.baselib.workerpool',
                      ctrl_url, self.task_server_url, cores]
             starting.append(' '.join(args))
-            po = subprocess.Popen(args)
-            self.pids.append(po.pid)
+            self.popens.append(subprocess.Popen(args))
         return 'starting %s' % starting
 
     def stop(self):
@@ -125,6 +127,14 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('stop')
                 stopped.append(host)
+        for popen in self.popens:
+            popen.terminate()
+            # since we are not consuming any output from the spawned process
+            # we must call wait() after terminate() to have Popen()
+            # fully deallocate the process file descriptors, otherwise
+            # zombies will arise
+            popen.wait()
+        self.popens = []
         return 'stopped %s' % stopped
 
     def kill(self):
@@ -140,7 +150,22 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('kill')
                 killed.append(host)
+        for popen in self.popens:
+            popen.kill()
+        self.popens = []
         return 'killed %s' % killed
+
+    def inspect(self):
+        executing = []
+        for host, _ in self.host_cores:
+            if self.status(host)[0][1] == 'not-running':
+                print('%s not running' % host)
+                continue
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
+                tasks = sock.send('get_executing')
+                executing.append((host, tasks))
+        return executing
 
     def restart(self):
         """
@@ -149,6 +174,20 @@ class WorkerMaster(object):
         self.stop()
         self.start()
         return 'restarted'
+
+
+def worker(sock, executing):
+    """
+    :param sock: a zeromq.Socket of kind PULL
+    :param executing: a path inside /tmp/calc_XXX
+    """
+    setproctitle('oq-zworker')
+    with sock:
+        for cmd, args, taskno, mon in sock:
+            fname = os.path.join(executing, str(taskno))
+            open(fname, 'w').close()
+            parallel.safely_call(cmd, args, taskno, mon)
+            os.remove(fname)
 
 
 class WorkerPool(object):
@@ -165,16 +204,8 @@ class WorkerPool(object):
         self.task_server_url = task_server_url
         self.num_workers = (multiprocessing.cpu_count()
                             if num_workers == '-1' else int(num_workers))
+        self.executing = tempfile.mkdtemp()
         self.pid = os.getpid()
-
-    def worker(self, sock):
-        """
-        :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
-        """
-        setproctitle('oq-zworker')
-        with sock:
-            for cmd, args, taskno, mon in sock:
-                parallel.safely_call(cmd, args, taskno, mon)
 
     def start(self):
         """
@@ -185,7 +216,8 @@ class WorkerPool(object):
         self.workers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.task_server_url, z.zmq.PULL, 'connect')
-            proc = multiprocessing.Process(target=self.worker, args=(sock,))
+            proc = multiprocessing.Process(
+                target=worker, args=(sock, self.executing))
             proc.start()
             sock.pid = proc.pid
             self.workers.append(sock)
@@ -201,6 +233,9 @@ class WorkerPool(object):
                     ctrlsock.send(self.pid)
                 elif cmd == 'get_num_workers':
                     ctrlsock.send(self.num_workers)
+                elif cmd == 'get_executing':
+                    ctrlsock.send(' '.join(sorted(os.listdir(self.executing))))
+        shutil.rmtree(self.executing)
 
     def stop(self):
         """

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,8 +34,7 @@ aac = numpy.testing.assert_allclose
 
 
 def tot_loss(dstore):
-    dset = dstore['asset_loss_table']
-    return {name: dset[name].sum() for name in dset.dtype.names}
+    return dstore['loss_data/data']['loss'].sum(axis=0)
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -177,15 +176,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         tot10 = tot_loss(self.calc.datastore)
         self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='20')
         tot20 = tot_loss(self.calc.datastore)
-        for name in tot10:
-            aac(tot10[name], tot20[name])
+        aac(tot10, tot20, atol=.0001)  # must be around 230.0107
 
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
-        aac(agglosses.array, [1159817.1])
+        aac(agglosses.array, [1159325.6])
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
@@ -208,3 +206,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
         [fname] = export(('agglosses', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
+
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)

@@ -2,9 +2,9 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============== ===================
-checksum32     1,442,023,754      
-date           2019-07-30T15:04:41
-engine_version 3.7.0-git3b3dff46da
+checksum32     1_955_755_541      
+date           2020-01-16T05:31:07
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
 num_sites = 281, num_levels = 50, num_rlzs = 1
@@ -15,13 +15,14 @@ Parameters
 calculation_mode                'ebrisk'          
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
-investigation_time              50.0              
+investigation_time              5.0               
 ses_per_logic_tree_path         2                 
 truncation_level                4.0               
 rupture_mesh_spacing            10.0              
 complex_fault_mesh_spacing      10.0              
 width_of_mfd_bin                0.2               
 area_source_discretization      None              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     1024              
@@ -66,20 +67,14 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=2, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 1            2,348       
-source_model.xml 1      Subduction Interface 1            3,345       
-================ ====== ==================== ============ ============
-
-============= =====
-#TRT models   2    
-#eff_ruptures 2    
-#tot_ruptures 5,693
-============= =====
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      140       2_348        2.00000     
+1      140       3_345        2.00000     
+====== ========= ============ ============
 
 Exposure model
 --------------
@@ -101,52 +96,53 @@ PCR-RCSM-5 1.00000 0.0     1   1   2         2
 MR-SLSB-1  1.00000 0.0     1   1   5         5         
 A-SPSB-1   1.25000 0.46291 1   2   8         10        
 PCR-SLSB-1 1.00000 0.0     1   1   3         3         
-*ALL*      0.27803 0.84109 0   10  1,971     548       
+*ALL*      0.27803 0.84109 0   10  1_971     548       
 ========== ======= ======= === === ========= ==========
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ======= =======
-source_id grp_id code num_ruptures calc_time num_sites weight  speed  
-========= ====== ==== ============ ========= ========= ======= =======
-D         1      C    3,345        3.81998   281       2.00000 0.52356
-F         0      C    2,348        2.32166   281       2.00000 0.86145
-========= ====== ==== ============ ========= ========= ======= =======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+D         1      C    3_345        3.80148   140       2.00000     
+F         0      C    2_348        2.41395   140       2.00000     
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-C    6.14163   2     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+C    6.21543  
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.17199 NaN     0.17199 0.17199 1      
-sample_ruptures    3.08281 1.06675 2.32851 3.83712 2      
+SourceReader       0.18040 NaN     0.18040 0.18040 1      
+sample_ruptures    3.11469 0.98225 2.42013 3.80925 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================= ========
-task               sent                                          received
-read_source_models converter=378 B fnames=111 B                  2.25 KB 
-sample_ruptures    param=9.34 KB sources=2.41 KB srcfilter=440 B 44.87 KB
-================== ============================================= ========
+=============== ============================================= ========
+task            sent                                          received
+SourceReader                                                  3.3 KB  
+sample_ruptures param=9.27 KB sources=2.42 KB srcfilter=446 B 6.24 KB 
+=============== ============================================= ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_15574               time_sec memory_mb counts
+calc_43294               time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    6.16563  2.02344   2     
-EventBasedCalculator.run 4.43109  2.30859   1     
-total read_source_models 0.17199  0.0       1     
-reading exposure         0.04366  0.0       1     
-saving events            0.02225  0.0       1     
-saving ruptures          0.00637  0.0       2     
-store source_info        0.00208  0.0       1     
+total sample_ruptures    6.22937  3.99219   2     
+EventBasedCalculator.run 4.43518  1.02734   1     
+composite source model   0.19032  0.0       1     
+total SourceReader       0.18040  0.0       1     
+reading exposure         0.04500  0.0       1     
+saving events            0.01105  0.25391   1     
+saving ruptures          0.00653  0.0       2     
+store source_info        0.00239  0.0       1     
 ======================== ======== ========= ======

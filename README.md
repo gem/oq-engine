@@ -31,9 +31,9 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 3.6** 'Pak Topo'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.6#openquake-engine.
+Current stable version is the **OpenQuake Engine 3.8** 'Sekiya'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.8#openquake-engine.
 
-* [What's new](https://github.com/gem/oq-engine/blob/engine-3.6/doc/whats-new.md)
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.8/doc/whats-new.md)
 
 ## Documentation (master tree)
 
@@ -79,11 +79,8 @@ Current stable version is the **OpenQuake Engine 3.6** 'Pak Topo'. The documenta
 #### Windows
 
 * [Installing on Windows](https://github.com/gem/oq-engine/blob/master/doc/installing/windows.md)
+* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development-windows.md)
 * [Starting the software](https://github.com/gem/oq-engine/blob/master/doc/running/windows.md)
-
-#### VirtualBox
-
-* [Download OVA appliance](https://downloads.openquake.org/ova/stable/)
 
 #### Cloud
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,6 @@ from openquake.calculators import base
 from openquake.calculators.extract import extract
 
 U16 = numpy.uint16
-U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -51,10 +50,10 @@ def get_dmg_csq(crm, assets_by_site, gmf):
                 [rm], [w] = crm.get_rmodels_weights(taxonomy)
                 fracs = rm.scenario_damage(loss_type, assets, [gmv])
                 for asset, frac in zip(assets, fracs):
-                    dmg = asset['number'] * frac[0, :D]
-                    csq = asset['value-' + loss_type] * frac[0, D]
+                    dmg = asset['number'] * frac  # shape (1, D)
+                    csq = crm.compute_csq(asset, frac, loss_type)
                     out[asset['ordinal'], l, 0, :D] = dmg
-                    out[asset['ordinal'], l, 0, D] = csq
+                    out[asset['ordinal'], l, 0, D] = csq['losses']
     return out
 
 
@@ -139,8 +138,15 @@ def wkt2peril(fname, name, sitecol):
     Converts a WKT file into a peril array of length N
     """
     with open(fname) as f:
-        next(f)  # skip header
-        geom = shapely.wkt.loads(f.read()[1:-1])  # strip quotes
+        header = next(f)  # skip header
+        if header != 'geom\n':
+            raise ValueError('%s has header %r, should be geom instead' %
+                             (fname, header))
+        wkt = f.read()
+        if not wkt.startswith('"'):
+            raise ValueError('The geometry must be quoted in %s : "%s..."' %
+                             (fname, wkt.split('(')[0]))
+        geom = shapely.wkt.loads(wkt.strip('"'))  # strip quotes
     peril = numpy.zeros(len(sitecol), float)
     for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
         peril[sid] = shapely.geometry.Point(lon, lat).within(geom)
@@ -161,11 +167,11 @@ class MultiRiskCalculator(base.RiskCalculator):
         and create the `hazard` dataset.
         """
         oq = self.oqparam
-        fnames = oq.inputs['multi_peril']
-        dt = [(haz, float) for haz in oq.multi_peril]
+        perils, fnames = zip(*oq.inputs['multi_peril'].items())
+        dt = [(haz, float) for haz in perils]
         N = len(self.sitecol)
         self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
-        for name, fname in zip(oq.multi_peril, fnames):
+        for name, fname in zip(perils, fnames):
             tofloat = (valid.positivefloat if name == 'ASH'
                        else valid.probability)
             with open(fname) as f:
@@ -183,14 +189,15 @@ class MultiRiskCalculator(base.RiskCalculator):
     def execute(self):
         dstates = self.crmodel.damage_states
         ltypes = self.crmodel.loss_types
-        P = len(self.oqparam.multi_peril) + 1
+        theperils = self.oqparam.inputs['multi_peril']
+        P = len(theperils) + 1
         L = len(ltypes)
         D = len(dstates)
         A = len(self.assetcol)
         ampl = self.oqparam.ash_wet_amplification_factor
         dmg_csq = numpy.zeros((A, P, L, 1, D + 1), F32)
         perils = []
-        if 'ASH' in self.oqparam.multi_peril:
+        if 'ASH' in theperils:
             assets = self.assetcol.assets_by_site()
             gmf = self.datastore['multi_peril']['ASH']
             dmg_csq[:, 0] = get_dmg_csq(self.crmodel, assets, gmf)
@@ -199,7 +206,7 @@ class MultiRiskCalculator(base.RiskCalculator):
             perils.append('ASH_WET')
         hazard = self.datastore['multi_peril']
         binary_perils = []
-        for peril in self.oqparam.multi_peril:
+        for peril in theperils:
             if peril != 'ASH':
                 binary_perils.append(peril)
         self.datastore['asset_risk'] = arr = build_asset_risk(

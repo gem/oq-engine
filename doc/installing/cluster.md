@@ -1,9 +1,10 @@
-# Running the OpenQuake Engine on multiple nodes (cluster configuration)
+# Running the OpenQuake Engine on multiple nodes (cluster/zmq)
+
+This configuration is supported only by Linux.
 
 ## Overall architecture
-The nodes must all be able to communicate with the OpenQuake Engine *DbServer* and a *RabbitMQ* server.
-Both services run on a single "master" node. It is not necessary and not recommended to run *RabbitMQ* on a worker node and *Celery* on master node.
-
+The nodes must all be able to communicate with the OpenQuake Engine *DbServer*.
+Both services run on a single "master" node.
 Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](../faq.md#mpi-support) for more information.
 
 ## Initial install
@@ -13,20 +14,18 @@ Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](
 Have read [Installing on RedHat and derivatives](rhel.md) or [Installing on Ubuntu](ubuntu.md) (depending on the operating system been used).
 
 ### Master node
-The `python3-oq-engine-master` package must be installed on the **master** node. It provides extra functionalities like _RabbitMQ_.
+The `python3-oq-engine-master` package must be installed on the **master** node.
 
 On **RHEL/CentOS** [EPEL](https://fedoraproject.org/wiki/EPEL) repository *must be configured and enabled* in the system.
 
 ### Worker nodes
-On **worker** nodes  `python3-oq-engine-worker` must be installed **instead**; it adds _celery_ support on top of the standard `python3-oq-engine` package.
+On **worker** nodes  `python3-oq-engine-worker` must be installed **instead**.
 
 ## OpenQuake Engine 'master' node configuration File
 
-Note: you have to **restart every celery node** after a configuration change.
+### Enable zmq distribution
 
-### Enable Celery
-
-In all the nodes, the following file should be modified to enable *multi node* and *Celery* support:
+In all the nodes, the following file should be modified to enable *multi node* and *zmq* support:
 
 `/etc/openquake/openquake.cfg:`
 
@@ -36,22 +35,13 @@ In all the nodes, the following file should be modified to enable *multi node* a
 multi_node = true
 
 # enable celery only if you have a cluster
-oq_distribute = celery
+oq_distribute = zmq
 ```
 
 ## OpenQuake Engine 'worker' node configuration File
-On all worker nodes, the `/etc/openquake/openquake.cfg` file should be also modified to set the *DbServer* and *RabbitMQ* daemons IP address:
+On all worker nodes, the `/etc/openquake/openquake.cfg` file should be also modified to set the *DbServer* daemon IP address as well as the workers addresses and number of cores available:
 
 ```ini
-[amqp]
-# RabbitMQ server address
-host = w.x.y.z
-port = 5672
-user = openquake
-password = openquake
-vhost = openquake
-celery_queue = celery
-
 [dbserver]
 multi_user = true
 file = /var/lib/openquake/db.sqlite3
@@ -64,98 +54,60 @@ host = w.x.y.z
 port = 1907
 receiver_ports = 1912-1920
 authkey = somethingstronger
+
+[zworkers]
+host_cores = 192.168.2.1 -1, 192.168.2.2 -1, 192.168.2.3 -1, 192.168.2.4 -1, 192.168.2.5 -1
+ctrl_port = 1909
 ```
 
-A full [sample configuration](../../openquake/engine/openquake.cfg.cluster-sample) is provided as reference.
+Notice that the -1 in `192.168.2.1 -1` means that all the cores in
+the worker with IP `192.168.2.1` will be used. You can use a number
+between 0 and the maximum number of available core to limit the
+resource usage. The engine will automatically start and stop zmq
+processes on the worker nodes at each new calculation, so there is
+nothing else to do.
+
+NB: when using the zmq mechanism you should not touch the parameter `serialize_jobs`
+and keep it at its default value of `true`.
+
 
 ### Configuring daemons
 
 The required daemons are:
 
 #### Master node
-- RabbitMQ
 - OpenQuake Engine DbServer
 - OpenQuake Engine WebUI (optional)
 
+### Monitoring zmq
 
-##### RabbitMQ
-
-A _user_ and _vhost_ are automatically added to the RabbitMQ configuration during the installation on `python3-oq-engine`.
-
-You can verify that the `openquake` user and vhost exist running:
-
-```bash
-# Check the user
-sudo rabbitmqctl list_users | grep openquake 
-
-# Check the vhost
-sudo rabbitmqctl list_vhosts | grep openquake 
-```
-
-If, for any reason, the `openquake` user and vhost are missing they can be set up running:
-
-```bash
-# Add the user
-sudo rabbitmqctl add_user openquake openquake
-
-# Add the vhost
-sudo rabbitmqctl add_vhost openquake
-sudo rabbitmqctl set_permissions -p openquake openquake ".*" ".*" ".*"
-```
-
-For more information please refer to https://www.rabbitmq.com/man/rabbitmqctl.1.man.html.
-
-
-#### Worker nodes
-- Celery
-
-*celery* must run all of the worker nodes. It can be started with
-
-```bash
-sudo service openquake-celery start
-```
-
-The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu](ubuntu.md#configure-the-system-services) or [RedHat](rhel.md#configure-the-system-services) to see how to enable or disable services.
-
-
-### Monitoring Celery
-
-`oq celery status` can be used to check the status of the worker nodes, the task distribution and the cluster occupation. An output like this is produced:
+`oq workers inspect` can be used to check the status of the worker nodes and the task distribution. An output like this is produced:
 
 ```
-==========
-Host: celery@marley
-Status: Online
-Worker processes: 64
-Active tasks: 0
-==========
-Host: celery@mercury
-Status: Online
-Worker processes: 64
-Active tasks: 0
-==========
-Host: celery@dylan
-Status: Online
-Worker processes: 64
-Active tasks: 0
-==========
-Host: celery@cobain
-Status: Online
-Worker processes: 64
-Active tasks: 0
-==========
-
-Total workers:       256
-Active tasks:        0
-Cluster utilization: 0.00%
+$ oq1 workers inspect
+[('192.168.2.1',
+  '101 105 109 113 117 121 126 130 135 140 143 147 151 155 159 163 167 17 19 '
+  '20 22 25 27 29 30 33 35 38 43 44 50 54 58 61 65 69 73 76 81 85 89 93 97'),
+ ('192.168.2.2',
+  '102 106 110 115 118 123 127 131 133 137 141 145 149 153 158 162 166 18 21 '
+  '23 24 26 28 31 32 36 39 41 45 47 53 57 62 66 70 74 78 82 86 90 94 98'),
+ ('192.168.2.3',
+  '100 104 108 112 116 120 124 128 132 136 139 144 148 152 156 160 164 168 34 '
+  '37 40 42 46 48 51 55 59 64 68 72 77 80 84 88 92 96'),
+ ('192.168.2.4', '0 1 10 11 12 13 14 15 16 2 3 4 5 6 7 8 9'),
+ ('192.168.2.5',
+  '103 107 111 114 119 122 125 129 134 138 142 146 150 154 157 161 165 49 52 '
+  '56 60 63 67 71 75 79 83 87 91 95 99')]
 ```
 
+For each worker in the cluster you can see its IP and the task which are
+currently running, identified by an incremental number.
 
 ## Shared filesystem
 
 OpenQuake 2.4 introduced the concept of _shared directory_ (aka _shared_dir_). This _shared directory_ allows the workers to read directly from the master's filesystem, thus increasing scalability and performance; starting with OpenQuake 3.3 this feature is **mandatory** on a multi-node deployment.
 
-The _shared directory_ must be exported from the master node to the workers via a _POSIX_ compliant filesystem (like **NFS**). The export may be (and _should_ be) exported and/or mounted as **read-only** by the workers.
+The _shared directory_ must be exported from the master node to the workers via a _POSIX_ compliant filesystem (**NFSv4** is recommended). The export may be (and _should_ be) exported and/or mounted as **read-only** by the workers.
 
 As soon as the shared export is in place, the `shared_dir` config parameter in `openquake.cfg` must be configured to point to the path of the exported dir on the _master_ node and to where the export is mounted on each _worker_ node.
 
@@ -190,16 +142,15 @@ shared_dir = /home
 ## Network and security considerations
 
 The worker nodes should be isolated from the external network using either a dedicated internal network or a firewall.
-Additionally, access to the RabbitMQ, and DbServer ports should be limited (again by internal LAN or firewall) so that external traffic is excluded.
+Additionally, access to the DbServer ports should be limited (again by internal LAN or firewall) so that external traffic is excluded.
 
 The following ports must be open on the **master node**:
 
-* 5672 for RabbitMQ
 * 1907 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
 * 1912-1920 for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
 
-The **worker nodes** must be able to connect to the master on port 5672, and port 1907.
+The **worker nodes** must be able to connect to the master on port 1907.
 
 
 ## Storage requirements

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -36,16 +36,16 @@ def reset(yes):
     if not ok:
         return
 
-    status = dbserver.get_status()
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if not os.path.isfile(dbpath):
         sys.exit('%s does not exist' % dbpath)
-    elif status == 'running':
+    else:
+        dbserver.ensure_on()  # start the dbserver in a subprocess
         user = getpass.getuser()
         for calc_id in logs.dbcmd('get_calc_ids', user):
             purge_one(calc_id, user, force=True)
-        purge_all(user)  # calculations in oqdata not in the db
         if os.access(dbpath, os.W_OK):   # single user mode
+            purge_all(user)  # calculations in oqdata not in the db
             # stop the dbserver first
             pid = logs.dbcmd('getpid')
             os.kill(pid, signal.SIGTERM)
@@ -55,8 +55,6 @@ def reset(yes):
             # remove the database
             os.remove(dbpath)
             print('Removed %s' % dbpath)
-    else:
-        sys.exit('The dbserver is not running')
 
 
 reset.flg('yes', 'confirmation')

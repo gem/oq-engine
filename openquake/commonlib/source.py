@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import copy
-import math
-import logging
 import operator
 import collections
 import numpy
@@ -26,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, AccumDict
-from openquake.hazardlib import source, sourceconverter
+from openquake.hazardlib import source, sourceconverter, contexts
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
 
@@ -258,12 +256,26 @@ class CompositionInfo(object):
 
     def get_source_model(self, src_group_id):
         """
-        Return the source model for the given src_group_id
+        :returns: the source model for the given src_group_id
         """
         for smodel in self.source_models:
             for src_group in smodel.src_groups:
                 if src_group.id == src_group_id:
                     return smodel
+
+    def get_gsims_by_trt(self):
+        """
+        :returns: a dictionary trt -> sorted gsims
+        """
+        if self.num_samples:
+            gsims_by_trt = AccumDict(accum=set())
+            for sm in self.source_models:
+                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+                for t, trt in enumerate(self.gsim_lt.values):
+                    gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
+        else:
+            gsims_by_trt = self.gsim_lt.values
+        return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
 
     def get_grp_ids(self, sm_id):
         """
@@ -287,13 +299,6 @@ class CompositionInfo(object):
             for src_group in smodel.src_groups:
                 dic[src_group.id] = getattr(src_group, name)
         return dic
-
-    def _get_rlzs(self, smodel, all_rlzs, seed):
-        if self.num_samples:
-            rlzs = logictree.sample(all_rlzs, smodel.samples, seed)
-        else:  # full enumeration
-            rlzs = logictree.get_effective_rlzs(all_rlzs)
-        return rlzs
 
     def __repr__(self):
         info_by_model = {}
@@ -394,15 +399,6 @@ class CompositeSourceModel(collections.abc.Sequence):
         new.info.update_eff_ruptures(new.get_num_ruptures())
         return new
 
-    def get_weight(self, trt_sources, weight=operator.attrgetter('weight')):
-        """
-        :param weight: source weight function
-        :returns: total weight of the source model
-        """
-        # NB: I am looking at .trt_sources to count the weight coming
-        # from duplicated sources correctly
-        return sum(weight(s) for trt, sources in trt_sources for s in sources)
-
     @property
     def src_groups(self):
         """
@@ -439,21 +435,21 @@ class CompositeSourceModel(collections.abc.Sequence):
     def get_trt_sources(self, optimize_dupl=False):
         """
         :param optimize_dupl: if True change src_group_id to a list
-        :returns: a list of pairs [(trt, group of sources)]
+        :returns: a list of triples [(trt, group of sources, atomic flag)]
         """
         atomic = []
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
                 if grp and grp.atomic:
-                    atomic.append((grp.trt, grp))
+                    atomic.append((grp.trt, grp, True))
                 elif grp:
                     acc[grp.trt].extend(grp)
         if not acc:
             return atomic
-        elif not hasattr(grp.sources[0], 'checksum') or not optimize_dupl:
+        elif not optimize_dupl:
             # for UCERF or for event_based
-            return atomic + list(acc.items())
+            return atomic + [kv + (False,) for kv in acc.items()]
         # extract a single source from multiple sources with the same ID
         dic = {}
         key = operator.attrgetter('source_id', 'checksum')
@@ -466,7 +462,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 if len(srcs) > 1 and not isinstance(src.src_group_id, list):
                     src.src_group_id = [s.src_group_id for s in srcs]
                 dic[trt].append(src)
-        return atomic + list(dic.items())
+        return atomic + [kv + (False,) for kv in dic.items()]
 
     def get_num_ruptures(self):
         """
@@ -486,16 +482,6 @@ class CompositeSourceModel(collections.abc.Sequence):
             nr = src.num_ruptures
             src.serial = serial
             serial += nr
-
-    def get_maxweight(self, trt_sources, weight, concurrent_tasks,
-                      minweight=MINWEIGHT):
-        """
-        Return an appropriate maxweight for use in the block_splitter
-        """
-        totweight = self.get_weight(trt_sources, weight)
-        ct = concurrent_tasks or 1
-        mw = math.ceil(totweight / ct)
-        return max(mw, minweight)
 
     def get_floating_spinning_factors(self):
         """

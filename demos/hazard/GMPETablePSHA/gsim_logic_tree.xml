@@ -6,7 +6,7 @@
                           applyToTectonicRegionType="Stable Shallow Crust">
         <logicTreeBranch branchID="b11">
           
-          <uncertaintyModel gmpe_table="gmpe.hdf5">
+          <uncertaintyModel gmpe_table="../GMPETablePSHA/gmpe.hdf5">
             GMPETable
           </uncertaintyModel>
           <uncertaintyWeight>1.0</uncertaintyWeight>

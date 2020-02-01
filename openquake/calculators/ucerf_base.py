@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -172,7 +172,6 @@ class UCERFSource(BaseSeismicSource):
     code = b'U'
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
-    RUPTURE_WEIGHT = 1  # not very heavy
 
     def __init__(
             self, source_file, investigation_time, start_date, min_mag,
@@ -356,7 +355,7 @@ class UCERFSource(BaseSeismicSource):
 
         return rupture
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         Yield ruptures for the current set of indices
         """

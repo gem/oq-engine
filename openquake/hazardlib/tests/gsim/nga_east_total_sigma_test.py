@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,202 +15,43 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-"""
-
-"""
 import os
-import numpy as np
-from openquake.hazardlib.gsim.nga_east import \
-    DarraghEtAl2015NGAEast1CCSPTotalSigma
+import itertools
+from openquake.hazardlib.gsim import nga_east as ne
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
-
-
-class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
-    """
-    Modification of BaseGSIMTestCase to allow for the GSIM_CLASS attibute to
-    be defined as an instantiated GSIM class
-    """
-    def check(self, filename, max_discrep_percentage):
-        filename = os.path.join(self.BASE_DATA_PATH, filename)
-        errors, stats, sctx, rctx, dctx = check_gsim(
-            self.GSIM_CLASS, open(filename), max_discrep_percentage)
-        s_att = self.get_context_attributes(sctx)
-        r_att = self.get_context_attributes(rctx)
-        d_att = self.get_context_attributes(dctx)
-        self.assertEqual(self.GSIM_CLASS.REQUIRES_SITES_PARAMETERS, s_att)
-        self.assertEqual(self.GSIM_CLASS.REQUIRES_RUPTURE_PARAMETERS, r_att)
-        self.assertEqual(self.GSIM_CLASS.REQUIRES_DISTANCES, d_att)
-        if errors:
-            raise AssertionError(stats)
-        print()
-        print(stats)
-
-
-# Required the definition of a specific GMPE, doesn't matter which
-def DUMMY_GSIM(**kw):
-    gsim = DarraghEtAl2015NGAEast1CCSPTotalSigma(**kw)
-    gsim.init()
-    return gsim
-
 
 # Maximum discrepancy is increased to 2 % to account for misprints and
 # rounding errors in the tables used for the target values
 MAX_DISC = 2.0
 
 
-class NGAEastTotalSigmaGlobalErgodicLowTestCase(BaseNGAEastGSIMTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="global",
-                            phi_s2ss_model="cena", sigma_quantile=0.05)
-
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/GLOBAL_ERGODIC_LOW.csv"
-
-    def test_total_stddev(self):
-        self.check(self.TOTAL_STDDEV_FILE,
-                   max_discrep_percentage=MAX_DISC)
-
-
-class NGAEastTotalSigmaGlobalErgodicCentralTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="global",
-                            phi_s2ss_model="cena", sigma_quantile=0.50)
-    TOTAL_STDDEV_FILE = \
-        "nga_east_total_sigma_tables/GLOBAL_ERGODIC_CENTRAL.csv"
+def maketest(phi_model, phi_s2ss_model, sigma_quantile, csvname):
+    # choosing DARRAGH_1CCSP, but anything would work
+    def test(self):
+        self.check(csvname, max_discrep_percentage=MAX_DISC,
+                   gmpe_table="NGAEast_DARRAGH_1CCSP.hdf5",
+                   phi_model=phi_model,
+                   phi_s2ss_model=phi_s2ss_model,
+                   sigma_quantile=sigma_quantile)
+        test.__name__ = csvname
+    return test
 
 
-class NGAEastTotalSigmaGlobalErgodicHighTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="global",
-                            phi_s2ss_model="cena", sigma_quantile=0.95)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/GLOBAL_ERGODIC_HIGH.csv"
+class NGAEastTotalSigmaTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ne.NGAEastGMPETotalSigma
 
 
-# CENA Constant-phi Ergodic Model
-
-
-class NGAEastTotalSigmaCENAFixedErgodicLowTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena_constant",
-                            phi_s2ss_model="cena", sigma_quantile=0.05)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/"\
-        "CENA_CONSTANT_ERGODIC_LOW.csv"
-
-
-class NGAEastTotalSigmaCENAFixedErgodicCentralTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena_constant",
-                            phi_s2ss_model="cena", sigma_quantile=0.50)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/"\
-        "CENA_CONSTANT_ERGODIC_CENTRAL.csv"
-
-
-class NGAEastTotalSigmaCENAFixedErgodicHighTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena_constant",
-                            phi_s2ss_model="cena", sigma_quantile=0.95)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/"\
-        "CENA_CONSTANT_ERGODIC_HIGH.csv"
-
-
-# CENA Model
-
-
-class NGAEastTotalSigmaCENAErgodicLowTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena",
-                            phi_s2ss_model="cena", sigma_quantile=0.05)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/CENA_ERGODIC_LOW.csv"
-
-
-class NGAEastTotalSigmaCENAErgodicCentralTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena",
-                            phi_s2ss_model="cena", sigma_quantile=0.50)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/CENA_ERGODIC_CENTRAL.csv"
-
-
-class NGAEastTotalSigmaCENAErgodicHighTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena",
-                            phi_s2ss_model="cena", sigma_quantile=0.95)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/CENA_ERGODIC_HIGH.csv"
-
-
-# Global Non-ergodic Model
-
-
-class NGAEastTotalSigmaGlobalNonErgodicLowTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="global",
-                            phi_s2ss_model=None, sigma_quantile=0.05)
-
-    TOTAL_STDDEV_FILE = \
-        "nga_east_total_sigma_tables/GLOBAL_NON_ERGODIC_LOW.csv"
-
-
-class NGAEastTotalSigmaGlobalNonErgodicCentralTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="global",
-                            phi_s2ss_model=None, sigma_quantile=0.50)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/"\
-        "GLOBAL_NON_ERGODIC_CENTRAL.csv"
-
-
-class NGAEastTotalSigmaGlobalNonErgodicHighTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="global",
-                            phi_s2ss_model=None, sigma_quantile=0.95)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/"\
-        "GLOBAL_NON_ERGODIC_HIGH.csv"
-
-
-# CENA Constant-Phi Non-ergodic Model
-
-
-class NGAEastTotalSigmaCENAFixedNonErgodicLowTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena_constant",
-                            phi_s2ss_model=None, sigma_quantile=0.05)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/"\
-        "CENA_CONSTANT_NON_ERGODIC_LOW.csv"
-
-
-class NGAEastTotalSigmaCENAFixedNonErgodicCentralTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena_constant",
-                            phi_s2ss_model=None, sigma_quantile=0.50)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/"\
-        "CENA_CONSTANT_NON_ERGODIC_CENTRAL.csv"
-
-
-class NGAEastTotalSigmaCENAFixedNonErgodicHighTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena_constant",
-                            phi_s2ss_model=None, sigma_quantile=0.95)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/"\
-        "CENA_CONSTANT_NON_ERGODIC_HIGH.csv"
-
-
-# CENA Non-ergodic Model
-
-
-class NGAEastTotalSigmaCENANonErgodicLowTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena",
-                            phi_s2ss_model=None, sigma_quantile=0.05)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/CENA_NON_ERGODIC_LOW.csv"
-
-
-class NGAEastTotalSigmaCENANonErgodicCentralTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena",
-                            phi_s2ss_model=None, sigma_quantile=0.50)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/"\
-        "CENA_NON_ERGODIC_CENTRAL.csv"
-
-
-class NGAEastTotalSigmaCENANonErgodicHighTestCase(
-        NGAEastTotalSigmaGlobalErgodicLowTestCase):
-    GSIM_CLASS = DUMMY_GSIM(tau_model="global", phi_model="cena",
-                            phi_s2ss_model=None, sigma_quantile=0.95)
-    TOTAL_STDDEV_FILE = "nga_east_total_sigma_tables/CENA_NON_ERGODIC_HIGH.csv"
+# add tests dynamically
+phi_models = ["global", "cena_constant", "cena"]
+phi_s2ss_models = ["cena", None]
+quantiles = [.05, .50, .95]
+SUFFIX = {.05: "LOW", .50: "CENTRAL", .95: "HIGH"}
+for phi_model, phi_s2ss_model, quantile in itertools.product(
+        phi_models, phi_s2ss_models, quantiles):
+    # there are 3 x 2 x 3 = 18 tests
+    prefix = phi_model.upper()
+    infix = "ERGODIC" if phi_s2ss_model else "NON_ERGODIC"
+    suffix = SUFFIX[quantile]
+    csvname = f"nga_east_total_sigma_tables/{prefix}_{infix}_{suffix}.csv"
+    args = (phi_model, phi_s2ss_model, quantile, csvname)
+    setattr(NGAEastTotalSigmaTestCase, 'test_' + csvname, maketest(*args))

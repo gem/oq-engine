@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,7 +42,8 @@ def oq():
     args = set(sys.argv[1:])
     if 'engine' not in args and 'dbserver' not in args:
         # oq engine and oq dbserver define their own log levels
-        logging.basicConfig(level=logging.INFO)
+        level = logging.DEBUG if 'debug' in args else logging.INFO
+        logging.basicConfig(level=level)
     modnames = ['openquake.commands.%s' % mod[:-3]
                 for mod in os.listdir(commands.__path__[0])
                 if mod.endswith('.py') and not mod.startswith('_')]

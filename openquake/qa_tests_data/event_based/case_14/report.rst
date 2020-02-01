@@ -2,12 +2,12 @@ Hazard South Africa
 ===================
 
 ============== ===================
-checksum32     3,741,932,100      
-date           2019-07-30T15:03:52
-engine_version 3.7.0-git3b3dff46da
+checksum32     2_508_160_232      
+date           2020-01-16T05:31:00
+engine_version 3.8.0-git83c45f7244
 ============== ===================
 
-num_sites = 18, num_levels = 1, num_rlzs = ?
+num_sites = 10, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
@@ -22,6 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      10.0              
 width_of_mfd_bin                0.1               
 area_source_discretization      20.0              
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     113               
@@ -40,39 +41,57 @@ site_model              `Site_model_South_Africa.xml <Site_model_South_Africa.xm
 source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_                                    
 ======================= ============================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      NaN       480          0.0         
+1      NaN       12_690       0.0         
+2      NaN       23_199       0.0         
+3      NaN       84           0.0         
+4      NaN       8            0.0         
+5      NaN       320          0.0         
+6      NaN       6_345        0.0         
+7      NaN       12_654       0.0         
+8      NaN       168          0.0         
+9      NaN       52           0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-A    0.0       10    
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+A    0.0      
+==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.06271 0.06789 0.00352 0.17662 10     
+SourceReader       0.10793 0.12022 0.00956 0.32824 10     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== =============================== ========
-task               sent                            received
-read_source_models converter=3.07 KB fnames=1020 B 26.2 KB 
-================== =============================== ========
+============ ================================================ ========
+task         sent                                             received
+SourceReader apply_unc=40.83 KB ltmodel=3.29 KB fname=1.04 KB 34.36 KB
+============ ================================================ ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_15484               time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.62714  0.0       10    
-======================== ======== ========= ======
+====================== ======== ========= ======
+calc_43272             time_sec memory_mb counts
+====================== ======== ========= ======
+total SourceReader     1.07928  0.07812   10    
+composite source model 0.35848  1.02734   1     
+====================== ======== ========= ======

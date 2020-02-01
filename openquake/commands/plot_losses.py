@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,7 +42,7 @@ def make_figure(losses_by_rlzi, loss_types, nbins):
             ax = fig.add_subplot(R, L, rlzi * L + lti + 1)
             ax.set_xlabel('%s, loss_type=%s' % (rlz, lt))
             ax.hist(ls, nbins, rwidth=.9)
-            ax.set_title('loss=%.5e$\pm$%.5e' % (ls.mean(), ls.std(ddof=1)))
+            ax.set_title(r'loss=%.5e$\pm$%.5e' % (ls.mean(), ls.std(ddof=1)))
     return plt
 
 

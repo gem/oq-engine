@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,9 +31,7 @@ class RuptureCollectionSource(ParametricSeismicSource):
     # the mosaic test for Canada is sensitive to such _slots_
     _slots_ = ['source_id', 'name', 'tectonic_region_type', 'num_ruptures',
                'min_mag', 'mfd']
-
     MODIFICATIONS = set()
-    RUPTURE_WEIGHT = 4.0  # the same as ComplexFaultSources
 
     def __init__(self, source_id, name, tectonic_region_type, mfd, ruptures):
         self.source_id = source_id
@@ -46,7 +44,7 @@ class RuptureCollectionSource(ParametricSeismicSource):
     def count_ruptures(self):
         return self.num_ruptures
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         return iter(self.ruptures)
 
     def get_bounding_box(self, maxdist):
@@ -54,7 +52,9 @@ class RuptureCollectionSource(ParametricSeismicSource):
         Bounding box containing all the hypocenters, enlarged by the
         maximum distance
         """
-        locations = [rup.hypocenter for rup in self.ruptures]
+        locations = []
+        for rup in self.ruptures:
+            locations.extend(rup.surface.mesh)
         return get_bounding_box(locations, maxdist)
 
 

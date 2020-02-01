@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,10 +19,10 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import sap, config, datastore
+from openquake.baselib import sap, config, datastore, parallel
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
-from openquake.commonlib import logs, readinput
+from openquake.commonlib import logs, readinput, oqvalidation
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
@@ -67,9 +67,10 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         job_ini = os.path.abspath(job_ini)
         oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
         kw['username'] = username
-        eng.run_calc(job_id, oqparam, exports, **kw)
+        eng.run_calc(job_id, oqparam, exports)
         for line in logs.dbcmd('list_outputs', job_id, False):
             safeprint(line)
+    parallel.Starmap.shutdown()
     return job_id
 
 
@@ -103,7 +104,8 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
-def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
+def smart_run(job_ini, oqparam, log_level, log_file, exports,
+              reuse_hazard, **params):
     """
     Run calculations by storing their hazard checksum and reusing previous
     calculations if requested.
@@ -114,7 +116,7 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
     reuse = reuse_hazard and job and os.path.exists(job.ds_calc_dir + '.hdf5')
     # recompute the hazard and store the checksum
     if not reuse:
-        hc_id = run_job(job_ini, log_level, log_file, exports)
+        hc_id = run_job(job_ini, log_level, log_file, exports, **params)
         if job is None:
             logs.dbcmd('add_checksum', hc_id, haz_checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
@@ -123,7 +125,7 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
         hc_id = job.id
         logging.info('Reusing job #%d', job.id)
         run_job(job_ini, log_level, log_file,
-                exports, hazard_calculation_id=hc_id)
+                exports, hazard_calculation_id=hc_id, **params)
 
 
 @sap.Script  # do not use sap.script, other oq engine will break
@@ -133,7 +135,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
            export_output, export_outputs, exports='',
-           log_level='info', reuse_hazard=False):
+           log_level='info', reuse_hazard=False, param=''):
     """
     Run a calculation using the traditional command line API
     """
@@ -193,6 +195,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     else:
         hc_id = None
     if run:
+        params = oqvalidation.OqParam.check(
+            dict(p.split('=', 1) for p in param.split(','))) if param else {}
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
@@ -202,12 +206,12 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             # not using logs.handle that logs on the db
             oq = readinput.get_oqparam(job_inis[0])
             smart_run(job_inis[0], oq, log_level, log_file,
-                      exports, reuse_hazard)
+                      exports, reuse_hazard, **params)
             return
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
             job_id = run_job(job_ini, log_level, log_file,
-                             exports, hazard_calculation_id=hc_id)
+                             exports, hazard_calculation_id=hc_id, **params)
             if not hc_id:  # use the first calculation as base for the others
                 hc_id = job_id
     # hazard
@@ -309,3 +313,6 @@ engine.opt('exports', 'Comma-separated string specifing the export formats, '
 engine.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
 engine.flg('reuse_hazard', 'Reuse the event based hazard if available')
+engine._add('param', '--param', '-p',
+            help='Override parameters specified with the syntax '
+            'NAME1=VALUE1,NAME2=VALUE2,...')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_5, case_master)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_master)
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -84,16 +84,18 @@ class DisaggregationTestCase(CalculatorTestCase):
         # this is a case with disagg_outputs = Mag and 4 realizations
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.assert_curves_ok([
-            'rlz-0-SA(0.1)-sid-0.xml',
-            'rlz-0-SA(0.1)-sid-1.xml'], case_2.__file__)
+        self.assert_curves_ok(
+            ['rlz-0-SA(0.1)-sid-0.xml',
+             'rlz-0-SA(0.1)-sid-1.xml',
+             'rlz-1-SA(0.1)-sid-0.xml',
+             'rlz-1-SA(0.1)-sid-1.xml',
+             'rlz-2-SA(0.1)-sid-1.xml',
+             'rlz-3-SA(0.1)-sid-1.xml'],
+            case_2.__file__)
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 2)  # number of CSV files
-
-        fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 2)  # 2 sid x 1 key x 1 poe x 1 imt
+        self.assertEqual(len(fnames), 6)  # number of CSV files
         for fname in fnames:
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
@@ -126,6 +128,13 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_5(self):
         # this exercise gridded nonparametric sources
         self.run_calc(case_5.__file__, 'job.ini')
+        fnames = export(('disagg', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+    def test_case_6(self):
+        # test with international date line
+        self.run_calc(case_6.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)

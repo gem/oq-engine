@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,9 +33,8 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import imt as imt_module
 
 
-BASE_DATA_PATH = os.path.join(os.path.dirname(__file__),
-                              "data",
-                              "gsimtables")
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "gsimtables")
+GMPE_TABLE = os.path.join(BASE_DATA_PATH, "Wcrust_rjb_med.hdf5")
 
 
 def midpoint(low, high, point=0.5):
@@ -390,7 +389,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Verify that the data is loaded successfully
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         np.testing.assert_array_almost_equal(gsim.distances,
                                              self.hdf5["Distances"][:])
         np.testing.assert_array_almost_equal(gsim.m_w,
@@ -412,23 +410,12 @@ class GSIMTableGoodTestCase(unittest.TestCase):
                 gsim.stddevs["Total"][iml],
                 self.hdf5["Total/" + iml][:])
 
-    def test_instantiation_without_file(self):
-        """
-        Tests the case when the GMPE table file is missing
-        """
-        with self.assertRaises(ValueError) as err:
-            GMPETable(gmpe_table=None).init()
-        self.assertEqual(str(err.exception),
-                         "You forgot to set GMPETable.GMPE_TABLE!")
-        GMPETable(gmpe_table='/do/not/exists/table.hdf5')  # no error here
-
     def test_retreival_tables_good_no_interp(self):
         """
         Tests the retreival of the IML tables for 'good' conditions without
         applying magnitude interpolations
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         # PGA
         np.testing.assert_array_almost_equal(
             gsim._return_tables(6.0, imt_module.PGA(), "IMLs"),
@@ -456,7 +443,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         magnitude interpolations
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         expected_table_pgv = np.array([midpoint(20., 40.),
                                        midpoint(10., 20.),
                                        midpoint(5., 10.)])
@@ -477,7 +463,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         outside the supported range
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         with self.assertRaises(ValueError) as ve:
             gsim._return_tables(4.5, imt_module.PGA(), "IMLs")
         self.assertEqual(
@@ -490,7 +475,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         outside the supported range
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         with self.assertRaises(ValueError) as ve:
             gsim._return_tables(6.0, imt_module.SA(2.5), "IMLs")
         self.assertEqual(
@@ -502,7 +486,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests the full execution of the GMPE tables for valid data
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -540,7 +523,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         amplification
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -570,7 +552,6 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         type
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -608,7 +589,6 @@ class GSIMTableTestCaseMultiStdDev(unittest.TestCase):
         deviation, as well as an IMT that is not recognised by OpenQuake
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         expected_stddev_set = set((const.StdDev.TOTAL,
                                    const.StdDev.INTER_EVENT,
                                    const.StdDev.INTRA_EVENT))
@@ -633,7 +613,6 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         Tests instantiation of class
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         expected_rupture_set = set(("mag", "rake"))
         self.assertSetEqual(gsim.REQUIRES_RUPTURE_PARAMETERS,
                             expected_rupture_set)
@@ -646,7 +625,6 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         Tests the full execution of the GMPE tables for valid data
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         rctx.rake = 90.0
@@ -701,7 +679,6 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         Tests instantiation without amplification
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         self.assertIsNone(gsim.amplification)
         self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set(()))
         self.assertSetEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, set(("mag",)))
@@ -711,7 +688,6 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         Tests mean and standard deviations without amplification
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -751,15 +727,10 @@ class GSIMTableQATestCase(BaseGSIMTestCase):
     MEAN_FILE = "gsimtables/Wcrust_rjb_med_MEAN.csv"
     STD_TOTAL_FILE = "gsimtables/Wcrust_rjb_med_TOTAL.csv"
 
-    def setUp(self):
-        self.GSIM_CLASS.GMPE_TABLE = os.path.join(BASE_DATA_PATH,
-                                                  "Wcrust_rjb_med.hdf5")
-
     def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.7)
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.7,
+                   gmpe_table=GMPE_TABLE)
 
     def test_std_total(self):
-        self.check(self.STD_TOTAL_FILE, max_discrep_percentage=0.7)
-
-    def tearDown(self):
-        self.GSIM_CLASS.GMPE_TABLE = None
+        self.check(self.STD_TOTAL_FILE, max_discrep_percentage=0.7,
+                   gmpe_table=GMPE_TABLE)

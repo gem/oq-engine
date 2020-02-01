@@ -24,32 +24,47 @@ from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SSlabLow, AbrahamsonEtAl2015SSlabHigh)
 
 
-def get_sigma_statistical(mag):
-    """
-    Based on interpretation of the sigma_mu suggested for the GMPE in the
-    Hanford Site PSHA Project, alongside observation of trends in sigma_mu
-    for other models. The sigma_mu is determine by interpolation of this
-    multi-segment linear model dependent only on magnitude (not distance or
-    period)
+# Total epistemic uncertainty factors from Abrahamson et al. (2018)
+BCHYDRO_SIGMA_MU = CoeffsTable(sa_damping=5, table="""
+    imt     SIGMA_MU_SINTER    SIGMA_MU_SSLAB
+    pga                 0.3              0.50
+    0.010               0.3              0.50
+    0.020               0.3              0.50
+    0.030               0.3              0.50
+    0.050               0.3              0.50
+    0.075               0.3              0.50
+    0.100               0.3              0.50
+    0.150               0.3              0.50
+    0.200               0.3              0.50
+    0.250               0.3              0.46
+    0.300               0.3              0.42
+    0.400               0.3              0.38
+    0.500               0.3              0.34
+    0.600               0.3              0.30
+    0.750               0.3              0.30
+    1.000               0.3              0.30
+    1.500               0.3              0.30
+    2.000               0.3              0.30
+    2.500               0.3              0.30
+    3.000               0.3              0.30
+    4.000               0.3              0.30
+    5.000               0.3              0.30
+    6.000               0.3              0.30
+    7.500               0.3              0.30
+    10.00               0.3              0.30
+    """)
 
-    <= 5.5 = 0.15
-       6.5 = 0.1
-       7.5 = 0.1
-       8.0 = 0.15
-    >= 9.0 = 0.3
+
+def get_stress_factor(imt, slab=False):
     """
-    if mag <= 5.5:
-        return 0.15
-    elif (mag > 5.5) and (mag <= 6.5):
-        return 0.15 - 0.05 * (mag - 5.5)
-    elif (mag > 6.5) and (mag <= 7.5):
-        return 0.1
-    elif (mag > 7.5) and (mag <= 8.0):
-        return 0.1 + (mag - 7.5) * (0.05 / 0.5)
-    elif (mag > 8.0) and (mag <= 9.0):
-        return 0.15 + (mag - 8.0) * 0.15
+    Returns the stress adjustment factor for the BC Hydro GMPE according to
+    Abrahamson et al. (2018)
+    """
+    if slab:
+        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SSLAB"]
     else:
-        return 0.3
+        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SINTER"]
+    return sigma_mu / 1.65
 
 
 class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
@@ -70,7 +85,8 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -82,7 +98,7 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=False)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -133,7 +149,8 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -145,7 +162,7 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=False)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -197,7 +214,8 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -209,7 +227,7 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=False)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -268,7 +286,8 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -280,7 +299,7 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=True)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -332,7 +351,8 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -344,7 +364,7 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=True)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -396,7 +416,8 @@ class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
+        super().__init__(theta6_adjustment=theta6_adjustment,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
@@ -408,7 +429,7 @@ class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=True)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import psutil
+import getpass
 import operator
 from datetime import datetime
 
@@ -98,7 +99,7 @@ def create_job(db, datadir):
     """
     calc_id = get_calc_id(db, datadir) + 1
     job = dict(id=calc_id, is_running=1, description='just created',
-               user_name='openquake', calculation_mode='to be set',
+               user_name=getpass.getuser(), calculation_mode='to be set',
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     return db('INSERT INTO job (?S) VALUES (?X)',
               job.keys(), job.values()).lastrowid
@@ -263,21 +264,22 @@ DISPLAY_NAME = {
     'events': 'Events',
     'damages-rlzs': 'Asset Damage Distribution',
     'damages-stats': 'Asset Damage Statistics',
-    'dmg_by_event': 'Aggregate Event Damages',
-    'avg_losses': 'Average Asset Losses',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
     'loss_curves-rlzs': 'Asset Loss Curves',
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
-    'agg_maps-rlzs': 'Aggregate Loss Maps',
-    'agg_maps-stats': 'Aggregate Loss Maps Statistics',
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
-    'agg_losses-rlzs': 'Aggregate Asset Losses',
+    'agg_losses-rlzs': 'Aggregate Losses',
+    'agg_losses-stats': 'Aggregate Losses Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
+    'tot_losses-rlzs': 'Total Losses',
+    'tot_losses-stats': 'Total Losses Statistics',
+    'tot_curves-rlzs': 'Total Loss Curves',
+    'tot_curves-stats': 'Total Loss Curves Statistics',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'ruptures': 'Earthquake Ruptures',
@@ -341,7 +343,8 @@ def del_calc(db, job_id, user, force=False):
     """
     job_id = int(job_id)
     dependent = db(
-        'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
+        "SELECT id FROM job WHERE hazard_calculation_id=?x "
+        "AND status != 'deleted'", job_id)
     if not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
@@ -353,25 +356,17 @@ def del_calc(db, job_id, user, force=False):
         return {"error": 'Cannot delete calculation %d:'
                 ' ID does not exist' % job_id}
 
-    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND user_name=?x",
-                 job_id, user).rowcount
+    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND "
+                 "user_name=?x", job_id, user).rowcount
     if not deleted:
         return {"error": 'Cannot delete calculation %d: it belongs to '
                 '%s and you are %s' % (job_id, owner, user)}
 
-    # try to delete datastore and associated file
-    # path has typically the form /home/user/oqdata/calc_XXX
     fname = path + ".hdf5"
-    cache = fname.replace('calc_', 'cache_')
-    if os.path.exists(cache):
-        fnames = [fname, cache]
-    else:
-        fnames = [fname]
-    for fname in fnames:
-        try:
-            os.remove(fname)
-        except OSError as exc:  # permission error
-            return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    try:
+        os.remove(fname)
+    except OSError as exc:  # permission error
+        return {"error": 'Could not remove %s: %s' % (fname, exc)}
     return {"success": fname}
 
 
@@ -420,22 +415,6 @@ def get_output(db, output_id):
     out = db('SELECT output.*, ds_calc_dir FROM output, job '
              'WHERE oq_job_id=job.id AND output.id=?x', output_id, one=True)
     return out.ds_key, out.oq_job_id, os.path.dirname(out.ds_calc_dir)
-
-
-def save_performance(db, job_id, records):
-    """
-    Save in the database the performance information about the given job.
-
-    :param db: a :class:`openquake.server.dbapi.Db` instance
-    :param job_id: a job ID
-    :param records: a list of performance records
-    """
-    # NB: rec['counts'] is a numpy.uint64 which is not automatically converted
-    # into an int in Ubuntu 12.04, so we convert it manually below
-    rows = [(job_id, rec['operation'], rec['time_sec'], rec['memory_mb'],
-             int(rec['counts'])) for rec in records]
-    db.insert('performance',
-              'job_id operation time_sec memory_mb counts'.split(), rows)
 
 
 # used in make_report
@@ -794,17 +773,3 @@ def get_job_from_checksum(db, checksum):
     if not jobs:
         return
     return jobs[0]
-
-
-def start_zworkers(db, master):
-    """
-    Start the zmq workers
-    """
-    master.start()
-
-
-def stop_zworkers(db, master):
-    """
-    Stop the zmq workers
-    """
-    master.stop()

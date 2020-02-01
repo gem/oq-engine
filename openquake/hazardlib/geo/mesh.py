@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -68,10 +68,9 @@ class Mesh(object):
     efficient way of keeping those collections in memory.
 
     :param lons:
-        A numpy array of longitude values of points. Array may be
-        of arbitrary shape.
+        A numpy array of longitudes. Can be 1D or 2D.
     :param lats:
-        Numpy array of latitude values. The array must be of the same
+        Numpy array of latitudes. The array must be of the same
         shape as ``lons``.
     :param depths:
         Either ``None``, which means that all points the mesh consists
@@ -101,8 +100,8 @@ class Mesh(object):
             return numpy.zeros(self.shape)
 
     def __init__(self, lons, lats, depths=None):
-        assert ((lons.shape == lats.shape) and
-                (depths is None or depths.shape == lats.shape)
+        assert ((lons.shape == lats.shape) and len(lons.shape) in (1, 2)
+                and (depths is None or depths.shape == lats.shape)
                 ), (lons.shape, lats.shape)
         assert lons.size > 0
         if depths is None:

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,7 +18,6 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
-import math
 import numpy
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import Point
@@ -41,7 +40,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
                'src_group_id', 'num_ruptures', 'id', 'min_mag']
-    RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
@@ -57,7 +55,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        return self.num_ruptures * math.sqrt(self.nsites)
+        if hasattr(self, 'nodal_plane_distribution'):  # point source
+            rescale = len(self.nodal_plane_distribution.data) * len(
+                self.hypocenter_distribution.data)
+            nr = self.num_ruptures / rescale
+        else:
+            nr = self.num_ruptures
+        return nr * (self.nsites + 100) / 100
 
     @property
     def nsites(self):
@@ -90,7 +94,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.id = None  # set by the engine
 
     @abc.abstractmethod
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         Get a generator object that yields probabilistic ruptures the source
         consists of.
@@ -106,23 +110,37 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
         tom = getattr(self, 'temporal_occurrence_model', None)
-        serials = numpy.arange(self.serial, self.serial + self.num_ruptures)
+        rupids = numpy.arange(self.serial, self.serial + self.num_ruptures)
         if tom:  # time-independent source
-            yield from self.sample_ruptures_poissonian(serials, eff_num_ses)
+            yield from self.sample_ruptures_poissonian(rupids, eff_num_ses)
         else:  # time-dependent source
             mutex_weight = getattr(self, 'mutex_weight', 1)
-            for rup, serial in zip(self.iter_ruptures(), serials):
-                numpy.random.seed(serial)
+            for rup, rup_id in zip(self.iter_ruptures(), rupids):
+                numpy.random.seed(rup_id)
                 occurs = rup.sample_number_of_occurrences(eff_num_ses)
                 if mutex_weight < 1:
                     # consider only the occurrencies below the mutex_weight
                     occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
                 num_occ = occurs.sum()
                 if num_occ:
-                    rup.serial = serial  # used as seed
+                    rup.rup_id = rup_id  # used as seed
                     yield rup, num_occ
 
-    def sample_ruptures_poissonian(self, serials, eff_num_ses):
+    def get_mags(self):
+        """
+        :returns: the magnitudes of the ruptures contained in the source
+        """
+        mags = set()
+        if hasattr(self, 'get_annual_occurrence_rates'):
+            for mag, rate in self.get_annual_occurrence_rates():
+                mags.add(mag)
+        else:  # nonparametric
+            for rup, pmf in self.data:
+                if rup.mag >= self.min_mag:
+                    mags.add(rup.mag)
+        return sorted(mags)
+
+    def sample_ruptures_poissonian(self, rupids, eff_num_ses):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples
         :yields: pairs (rupture, num_occurrences[num_samples])
@@ -133,9 +151,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
             numpy.random.seed(self.serial)
             occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
-            for rup, serial, num_occ in zip(ruptures, serials, occurs):
+            for rup, rup_id, num_occ in zip(ruptures, rupids, occurs):
                 if num_occ:
-                    rup.serial = serial  # used as seed
+                    rup.rup_id = rup_id  # used as seed
                     yield rup, num_occ
             return
         # else (multi)point sources and area sources
@@ -154,17 +172,17 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
         numpy.random.seed(self.serial)
         occurs = numpy.random.poisson(eff_rates)
-        for num_occ, args, rate, ser in zip(occurs, rup_args, rates, serials):
+        for num_occ, args, rate, ser in zip(occurs, rup_args, rates, rupids):
             if num_occ:
                 mag_occ_rate, np_prob, hc_prob, mag, np, hc_depth, src = args
                 hc = Point(latitude=src.location.latitude,
                            longitude=src.location.longitude,
                            depth=hc_depth)
-                surface = src._get_rupture_surface(mag, np, hc)
+                surface, _ = src._get_rupture_surface(mag, np, hc)
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)
-                rup.serial = ser  # used as seed
+                rup.rup_id = ser  # used as seed
                 yield rup, num_occ
 
     @abc.abstractmethod
@@ -323,7 +341,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         # indexes, one for magnitude and one setting the position
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
-                if hasattr(self, 'serial'):
-                    rup.serial = self.serial
+                if hasattr(self, 'rup_id'):
+                    rup.rup_id = self.rup_id
                 rup.idx = idx
                 return rup

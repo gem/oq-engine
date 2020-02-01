@@ -1,4 +1,5 @@
-id,taxonomy,lon,lat,occupants~mean,occupants~stddev
+#,,,,,"generated_by='OpenQuake engine 3.8.0-gitc8d8cd129f', start_date='2019-11-21T14:15:02', checksum=3380558429, investigation_time=None, risk_investigation_time=None"
+asset_id,taxonomy,lon,lat,occupants~mean,occupants~stddev
 "a1","RM",81.29850,29.10980,3.99799E-01,1.43202E-01
 "a2","RC",83.08230,27.90060,9.89484E-01,2.16583E-01
 "a3","W",85.74770,27.90150,1.05557E+00,5.29655E-01

@@ -1,4 +1,5 @@
-id,taxonomy,lon,lat,contents~mean,contents~stddev,nonstructural~mean,nonstructural~stddev,structural~mean,structural~stddev
+#,,,,,,,,,"generated_by='OpenQuake engine 3.8.0-gitc8d8cd129f', start_date='2019-11-21T14:14:55', checksum=1751099255, investigation_time=None, risk_investigation_time=None"
+asset_id,taxonomy,lon,lat,contents~mean,contents~stddev,nonstructural~mean,nonstructural~stddev,structural~mean,structural~stddev
 "a3","tax1",-122.57000,38.11300,3.13018E+02,2.04098E+02,2.78853E+02,1.73490E+02,4.12981E+00,9.99594E+00
 "a2","tax2",-122.11400,38.11300,4.49670E+02,3.86893E+02,1.49545E+03,1.03688E+03,1.02641E+02,1.23478E+02
 "a5","tax1",-122.00000,37.91000,1.57124E+03,5.51672E+02,1.69543E+03,7.70127E+02,3.88034E+02,3.77658E+02

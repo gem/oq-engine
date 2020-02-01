@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,12 +22,12 @@ Module exports :class:'AllenEtAl2012',
 """
 import numpy as np
 
-from openquake.hazardlib.gsim.base import IPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
 
 
-class AllenEtAl2012(IPE):
+class AllenEtAl2012(GMPE):
     """
     Implements the Intensity Prediction Equation of Allen, Wald and Worden
     (2012) for Modified Mercalli Intensity in Active Crustal Regions
@@ -110,7 +110,7 @@ class AllenEtAl2012(IPE):
 
 class AllenEtAl2012Rhypo(AllenEtAl2012):
     """
-    Version of the Allen, Wald and Worden (2012) IPE for hypocentral distance
+    Version of the Allen, Wald and Worden (2012) GSIM for hypocentral distance
     """
     #: Required distance measure is hypocentral distance
     REQUIRES_DISTANCES = set(('rhypo',))

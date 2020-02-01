@@ -37,13 +37,21 @@ will not run out of disk space, most likely you will run out of
 memory; even if you have enough memory to complete the hazard
 parte of the calculation, most likely the risk part will fail: 750 GB
 of GMFs are just too much for the current capabilities of the engine
-(I am writing around the time of version 3.3). You will have to reduce
-the calculation someway.
+You will have to reduce the calculation someway. The easiest way is
+to play with the parameters ``minimum_magnitude`` and ``minimum_intensity``:
 
-The most common techniques to reduce a risk calculation involves
-splitting the exposure in carefully chosen regions, aggregating the
-assets in such a way to reduce the number of hazard sites, and using
-the right hazard model for the task at hand.
+- ``minimum_magnitude`` is a scalar or a dictionary keyed by tectonic region:
+  it allows to discard ruptures with a magnitude below the given threshould;
+- ``minimum_intensity`` is a scalar or a dictionary keyed by the intensity
+  measure type; it allows to discard GMFs below the given threshould.
+
+Playing with such parameters can reduce your computation a lot when
+there are several small ruptures or GMFs, which is the usual
+situation. However, sometimes you need to reduce the calculation even
+more.  In such a case, you should consider techniques like splitting
+the exposure in carefully chosen regions, aggregating the assets in
+such a way to reduce the number of hazard sites, and using the right
+hazard model for the task at hand.
 
 Collapsing of branches
 ----------------------
@@ -300,3 +308,52 @@ you the mean and quantile loss curves in a format like the following one::
     2.00000E-03,500,structural,2.99670E+06,1.14103E-01
     1.00000E-03,1000,nonstructural,6.92401E+06,6.48308E-05
     1.00000E-03,1000,structural,1.15148E+07,4.38439E-01
+
+The asset loss table
+--------------------------------------------------
+
+When performing an event based risk (or ebrisk) calculation the engine
+keeps in memory a table with the losses for each asset and each event,
+for each loss type. It is impossible to fully store such table,
+because it is extremely large; for instance, for 1 million assets, 1
+million events, 2 loss types and 4 bytes per loss ~8 TB of disk space
+would be required. It is true that many events will produce zero losses
+because of the `maximum_distance` and `minimum_intensity` parameters,
+but still the asset loss table is prohibitively large and for many years
+could not be stored. In engine 3.8 we made a breakthrough: we decided to
+store a partial asset loss table, obtained by discarding small losses,
+by leveraging on the fact that loss curves for long enough return periods
+are dominated by extreme events, i.e. there is no point in saving all
+the small losses.
+
+To that aim, since version 3.8 the engine honors a parameter called
+``minimum_loss_fraction``, with a default value of 0.05,
+which determine how many losses are discarded when storing the
+asset loss table. The rule is simple: losses below
+
+ ``mean_value_per_asset * minimum_loss_fraction``
+
+are discarded. The mean value per asset is simply the total value of the
+portfolio divided by the number of assets (notice that there a value for each
+loss type, ``mean_value_per_asset`` is a vector). By default losses below 5% of
+the mean value are discarded and in an ideal world with this value
+
+1. the vast majority of the losses would be discarded, thus making the
+   asset loss table storable;
+2. the loss curves would still be nearly identical to the ones without
+   discarding any loss, except for small return periods.
+
+It is the job of the user to verify if 1 and 2 are true in the real world.
+He can assess that by playing with the ``minimum_loss_fraction`` in a small
+calculation, finding a good value for it, and then extending to the large
+calculation. Clearly it is a matter of compromise: by sacrificing precision
+it is possible to reduce enourmously the size of the stored asset loss table
+and to make an impossible calculation possible.
+
+NB: the asset loss table is interesting only when computing the aggregate
+loss curves by tag: if there are no tags the total loss curve can be
+computed from the event loss table (i.e.  the asset loss table
+aggregated by asset *without discarding anything*) which is always
+stored. Thanks to that it is always possible to compare the total loss curve
+with the approximated loss curve, to assess the goodness
+of the approximation.
