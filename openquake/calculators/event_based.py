@@ -278,7 +278,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
         num_ = dict(events=self.E, imts=len(self.oqparam.imtls))
-        n = len(self.sitecol) if hasattr(self, 'sitecol') else 0
+        n = len(getattr(self, 'sitecol', ()) or ())
         num_['sites'] = n
         if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
             if n > oq.max_sites_per_gmf:
