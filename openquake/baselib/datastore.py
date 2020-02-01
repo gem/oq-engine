@@ -153,7 +153,7 @@ def dset2df(dset, index):
             dt = values[0].dtype
         except AttributeError:  # for instance a string has no dtype
             dt = type(values[0])
-        dtlist.append((field[:-1], dt))
+        dtlist.append((field, dt))
         tags.append(values)
         idxs.append(range(len(values)))
     dtlist.append(('value', dset.dtype))
