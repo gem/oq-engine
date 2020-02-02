@@ -447,6 +447,7 @@ class GmfGetter(object):
             start = stop
         times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
                             time_dt)
+        times.sort(order='rup_id')
         res = dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
