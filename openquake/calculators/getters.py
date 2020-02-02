@@ -516,8 +516,8 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
         blocks = list(general.split_in_blocks(
             proxies, len(rups) / len(rup_array) * ct,
             operator.attrgetter('weight')))
-        logging.info('Group %d: prefiltered %d ruptures and generated %d '
-                     'task(s)', grp_id, len(rups), len(blocks))
+        logging.info('Group %d: %d ruptures, %d task(s)',
+                     grp_id, len(rups), len(blocks))
         for block in blocks:
             rgetter = RuptureGetter(
                 block, dstore.filename, grp_id,
