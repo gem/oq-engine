@@ -512,13 +512,15 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        logging.info('Group %d: prefiltering %d ruptures', grp_id, len(rups))
-        proxies_ = list(_gen(rups, srcfilter, trt))
-        for proxies in general.split_in_blocks(
-                proxies_, len(rups) / len(rup_array) * ct,
-                operator.attrgetter('weight')):
+        proxies = list(_gen(rups, srcfilter, trt))
+        blocks = list(general.split_in_blocks(
+            proxies, len(rups) / len(rup_array) * ct,
+            operator.attrgetter('weight')))
+        logging.info('Group %d: prefiltered %d ruptures and generated %d '
+                     'task(s)', grp_id, len(rups), len(blocks))
+        for block in blocks:
             rgetter = RuptureGetter(
-                proxies, dstore.filename, grp_id,
+                block, dstore.filename, grp_id,
                 trt, samples[grp_id], rlzs_by_gsim[grp_id])
             yield rgetter
 

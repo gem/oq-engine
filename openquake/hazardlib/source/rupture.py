@@ -768,7 +768,8 @@ class RuptureProxy(object):
 
     @property
     def weight(self):
-        return self['n_occ'] * (1 if self.sids is None else len(self.sids))
+        return self['n_occ'] * (
+            100 if self.sids is None else max(len(self.sids), 100))
 
     def __getitem__(self, name):
         return self.rec[name]
