@@ -467,7 +467,7 @@ def group_by_rlz(data, rlzs):
 
 
 # called together with RuptureGetter.get_eid_rlz
-def gen_rgetters(dstore):
+def gen_rgetters(dstore, slc=slice(None)):
     """
     :yields: unfiltered RuptureGetters
     """
@@ -475,7 +475,7 @@ def gen_rgetters(dstore):
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
-    rup_array = dstore['ruptures']
+    rup_array = dstore['ruptures'][slc]
     ct = dstore['oqparam'].concurrent_tasks or 1
     nr = len(dstore['ruptures'])
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
@@ -489,7 +489,7 @@ def gen_rgetters(dstore):
             yield rgetter
 
 
-def gen_rupture_getters(dstore, slc=slice(None), srcfilter=None):
+def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     """
     :yields: RuptureGetters
     """
