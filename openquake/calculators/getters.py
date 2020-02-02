@@ -505,8 +505,8 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    ct = dstore['oqparam'].concurrent_tasks
-    maxweight = len(dstore['ruptures']) / (ct or 1)
+    ct = dstore['oqparam'].concurrent_tasks or 1
+    maxweight = len(dstore['ruptures']) / ct
     nr = 0
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
@@ -514,6 +514,7 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
+        logging.info('Group %d: prefiltering %d ruptures', grp_id, len(arr))
         for proxies in general.block_splitter(
                 _gen(arr, srcfilter, trt), maxweight,
                 operator.attrgetter('weight')):
