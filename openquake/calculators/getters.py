@@ -499,7 +499,7 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     """
     :yields: filtered RuptureGetters
     """
-    e0s = dstore['eslices'][:, 0]
+    e0s = dstore['ruptures']['e0']
     csm_info = dstore['csm_info']
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
