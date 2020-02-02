@@ -33,7 +33,8 @@ from openquake.baselib import parallel
 from openquake.commonlib import source, calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, gen_rupture_getters, sig_eps_dt, time_dt)
+    GmfGetter, RuptureGetter, gen_rgetters, gen_rupture_getters,
+    sig_eps_dt, time_dt)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 
@@ -237,7 +238,7 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = gen_rupture_getters(self.datastore)
+        rgetters = gen_rgetters(self.datastore)
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
         logging.info('Building assocs event_id -> rlz_id for {:_d} events'
@@ -350,8 +351,8 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
         iterargs = ((rgetter, srcfilter, self.param)
-                    for rgetter in gen_rupture_getters(self.datastore,
-                                                       srcfilter=srcfilter))
+                    for rgetter in gen_rupture_getters(
+                            self.datastore, srcfilter))
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores

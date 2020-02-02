@@ -447,6 +447,7 @@ class GmfGetter(object):
             start = stop
         times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
                             time_dt)
+        times.sort(order='rup_id')
         res = dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
@@ -465,33 +466,47 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), srcfilter=None):
+def gen_rgetters(dstore, slc=slice(None)):
     """
-    :yields: RuptureGetters
+    :yields: unfiltered RuptureGetters
     """
-    try:
-        e0s = dstore['eslices'][:, 0]
-    except KeyError:
-        e0s = None
     csm_info = dstore['csm_info']
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    ct = dstore['oqparam'].concurrent_tasks
-    maxweight = len(dstore['ruptures']) / (ct or 1)
+    ct = dstore['oqparam'].concurrent_tasks or 1
+    nr = len(dstore['ruptures'])
+    for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
+        if not rlzs_by_gsim[grp_id]:  # the model has no sources
+            continue
+        for block in general.split_in_blocks(arr, len(arr) / nr * ct):
+            rgetter = RuptureGetter(
+                [RuptureProxy(rec) for rec in block], dstore.filename, grp_id,
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id],
+                e0=numpy.zeros(len(block), U32))
+            yield rgetter
 
-    def gen(arr):
-        if srcfilter:
-            for rec in arr:
-                sids = srcfilter.close_sids(rec, trt)
-                if len(sids):
-                    yield RuptureProxy(rec, sids)
-        else:
-            yield from map(RuptureProxy, arr)
 
-    light_rgetters = []
-    ntasks = 0
+def _gen(arr, srcfilter, trt):
+    for rec in arr:
+        sids = srcfilter.close_sids(rec, trt)
+        if len(sids):
+            yield RuptureProxy(rec, sids)
+
+
+def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
+    """
+    :yields: filtered RuptureGetters
+    """
+    e0s = dstore['eslices'][:, 0]
+    csm_info = dstore['csm_info']
+    trt_by_grp = csm_info.grp_by("trt")
+    samples = csm_info.get_samples_by_grp()
+    rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
+    rup_array = dstore['ruptures'][slc]
+    ct = dstore['oqparam'].concurrent_tasks or 1
+    maxweight = len(dstore['ruptures']) / ct
     nr = 0
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
@@ -499,24 +514,16 @@ def gen_rupture_getters(dstore, slc=slice(None), srcfilter=None):
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
+        logging.info('Group %d: prefiltering %d ruptures', grp_id, len(arr))
         for proxies in general.block_splitter(
-                gen(arr), maxweight, operator.attrgetter('weight')):
-            if e0s is None:
-                e0 = numpy.zeros(len(proxies), U32)
-            else:
-                e0 = e0s[nr: nr + len(proxies)]
+                _gen(arr, srcfilter, trt), maxweight,
+                operator.attrgetter('weight')):
             rgetter = RuptureGetter(
                 proxies, dstore.filename, grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
-            if rgetter.weight < maxweight / 2:
-                light_rgetters.append(rgetter)
-            else:
-                yield rgetter
+                trt, samples[grp_id], rlzs_by_gsim[grp_id],
+                e0=e0s[nr: nr + len(proxies)])
             nr += len(proxies)
-            ntasks += 1
-    nheavy = ntasks - len(light_rgetters)
-    logging.info('There are %d/%d heavy tasks', nheavy, ntasks)
-    yield from light_rgetters  # IMPORTANT: send the small tasks later
+            yield rgetter
 
 
 # this is never called directly; gen_rupture_getters is used instead
