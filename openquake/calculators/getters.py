@@ -505,7 +505,7 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     rup_array = dstore['ruptures'][slc]
     ct = dstore['oqparam'].concurrent_tasks or 1
     items = list(general.group_array(rup_array, 'grp_id').items())
-    items.sort(key=lambda grp, rups: len(rups))  # first the small groups
+    items.sort(key=lambda it: len(it[1]))  # first the small groups
     for grp_id, rups in items:
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
