@@ -483,8 +483,7 @@ def gen_rgetters(dstore, slc=slice(None)):
         for block in general.split_in_blocks(arr, len(arr) / nr * ct):
             rgetter = RuptureGetter(
                 [RuptureProxy(rec) for rec in block], dstore.filename, grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id],
-                e0=numpy.zeros(len(block), U32))
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
             yield rgetter
 
 
@@ -499,7 +498,6 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     """
     :yields: filtered RuptureGetters
     """
-    e0s = dstore['eslices'][:, 0]
     csm_info = dstore['csm_info']
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
@@ -520,8 +518,7 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
                 operator.attrgetter('weight')):
             rgetter = RuptureGetter(
                 proxies, dstore.filename, grp_id,
-                trt, samples[grp_id], rlzs_by_gsim[grp_id],
-                e0=e0s[nr: nr + len(proxies)])
+                trt, samples[grp_id], rlzs_by_gsim[grp_id])
             nr += len(proxies)
             yield rgetter
 
@@ -543,7 +540,7 @@ class RuptureGetter(object):
         dictionary gsim -> rlzs for the group
     """
     def __init__(self, proxies, filename, grp_id, trt, samples,
-                 rlzs_by_gsim, e0=None):
+                 rlzs_by_gsim):
         self.proxies = proxies
         self.weight = sum(proxy.weight for proxy in proxies)
         self.filename = filename
@@ -551,7 +548,6 @@ class RuptureGetter(object):
         self.trt = trt
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.e0 = e0
         n_occ = sum(int(proxy['n_occ']) for proxy in proxies)
         self.num_events = n_occ if samples > 1 else n_occ * sum(
             len(rlzs) for rlzs in rlzs_by_gsim.values())
@@ -565,12 +561,12 @@ class RuptureGetter(object):
         :returns: a composite array with the associations eid->rlz
         """
         eid_rlz = []
-        for e0, rup in zip(self.e0, self.proxies):
+        for rup in self.proxies:
             ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['srcidx'],
                             self.grp_id, rup['n_occ'], self.samples)
             for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
-                    eid_rlz.append((eid + e0, rup['id'], rlz_id))
+                    eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
         return numpy.array(eid_rlz, events_dt)
 
     def get_rupdict(self):
@@ -607,13 +603,12 @@ class RuptureGetter(object):
         ebrs = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            for e0, proxy in zip(self.e0, self.proxies):
+            for proxy in self.proxies:
                 if proxy['mag'] < min_mag:
                     continue
                 geom = rupgeoms[proxy['gidx1']:proxy['gidx2']].reshape(
                     proxy['sx'], proxy['sy'])
                 ebr = proxy.to_ebr(geom, self.trt, self.samples)
-                ebr.e0 = 0 if self.e0 is None else e0
                 ebrs.append(ebr)
         return ebrs
 

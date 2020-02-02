@@ -265,7 +265,8 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore['events'] = events
         eindices = get_indices(events['rup_id'])
         arr = numpy.array(list(eindices.values()))[:, 0, :]
-        self.datastore['eslices'] = arr  # shape (U, 2)
+        self.datastore['ruptures']['e0'] = arr[:, 0]
+        self.datastore['ruptures']['e1'] = arr[:, 1]
 
     def check_overflow(self):
         """

@@ -780,4 +780,5 @@ class RuptureProxy(object):
                         self.rec['n_occ'], samples)
         ebr.sids = self.sids
         ebr.id = self.rec['id']
+        ebr.e0 = self.rec['e0']
         return ebr
