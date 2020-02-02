@@ -487,11 +487,11 @@ def gen_rgetters(dstore, slc=slice(None)):
             yield rgetter
 
 
-def _gen(arr, srcfilter, trt):
+def _gen(arr, srcfilter, trt, samples):
     for rec in arr:
         sids = srcfilter.close_sids(rec, trt)
         if len(sids):
-            yield RuptureProxy(rec, sids)
+            yield RuptureProxy(rec, sids, samples)
 
 
 def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
@@ -501,23 +501,24 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     csm_info = dstore['csm_info']
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
-    R = csm_info.get_num_rlzs()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     ct = dstore['oqparam'].concurrent_tasks or 1
     items = list(general.group_array(rup_array, 'grp_id').items())
-    items.sort(key=lambda it: len(it[1]), reverse=True)  # first the big groups
-    for grp_id, rups in items:
+    items.sort(key=lambda it: len(it[1]))
+    maxweight = None
+    while items:
+        grp_id, rups = items.pop()  # from the largest group
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        proxies = list(_gen(rups, srcfilter, trt))
-        frac = samples[grp_id] / R
-        hint = max(len(proxies) / 2000, len(rups) / len(rup_array) * ct)
-        blocks = list(general.split_in_blocks(
-            proxies, frac * hint, operator.attrgetter('weight')))
+        proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
+        if not maxweight:
+            maxweight = sum(p.weight for p in proxies) / ct
+        blocks = list(general.block_splitter(
+            proxies, maxweight, operator.attrgetter('weight')))
         logging.info('Group %d: %d ruptures -> %d task(s)',
                      grp_id, len(rups), len(blocks))
         for block in blocks:
