@@ -501,6 +501,7 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     csm_info = dstore['csm_info']
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
+    R = sum(samples.values())
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     ct = dstore['oqparam'].concurrent_tasks or 1
@@ -513,9 +514,10 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
             continue
         trt = trt_by_grp[grp_id]
         proxies = list(_gen(rups, srcfilter, trt))
+        frac = samples[grp_id] / R
         hint = max(len(proxies) / 2000, len(rups) / len(rup_array) * ct)
         blocks = list(general.split_in_blocks(
-            proxies, hint, operator.attrgetter('weight')))
+            proxies, frac * hint, operator.attrgetter('weight')))
         logging.info('Group %d: %d ruptures -> %d task(s)',
                      grp_id, len(rups), len(blocks))
         for block in blocks:
