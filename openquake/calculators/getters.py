@@ -466,14 +466,34 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
+# called together with RuptureGetter.get_eid_rlz
+def gen_rgetters(dstore):
+    """
+    :yields: unfiltered RuptureGetters
+    """
+    csm_info = dstore['csm_info']
+    trt_by_grp = csm_info.grp_by("trt")
+    samples = csm_info.get_samples_by_grp()
+    rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
+    rup_array = dstore['ruptures']
+    ct = dstore['oqparam'].concurrent_tasks or 1
+    nr = len(dstore['ruptures'])
+    for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
+        if not rlzs_by_gsim[grp_id]:  # the model has no sources
+            continue
+        for block in general.split_in_blocks(arr, len(arr) / nr * ct):
+            e0 = numpy.zeros(len(block), U32)
+            rgetter = RuptureGetter(
+                [RuptureProxy(rec) for rec in block], dstore.filename, grp_id,
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
+            yield rgetter
+
+
 def gen_rupture_getters(dstore, slc=slice(None), srcfilter=None):
     """
     :yields: RuptureGetters
     """
-    try:
-        e0s = dstore['eslices'][:, 0]
-    except KeyError:
-        e0s = None
+    e0s = dstore['eslices'][:, 0]
     csm_info = dstore['csm_info']
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
@@ -502,10 +522,7 @@ def gen_rupture_getters(dstore, slc=slice(None), srcfilter=None):
         trt = trt_by_grp[grp_id]
         for proxies in general.block_splitter(
                 gen(arr), maxweight, operator.attrgetter('weight')):
-            if e0s is None:
-                e0 = numpy.zeros(len(proxies), U32)
-            else:
-                e0 = e0s[nr: nr + len(proxies)]
+            e0 = e0s[nr: nr + len(proxies)]
             rgetter = RuptureGetter(
                 proxies, dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
