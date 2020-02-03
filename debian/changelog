@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Enhanced oq compare to accept a file with the control sites
+  * Reduced the slow tasks issue in event_based/ebrisk with many sites
+  * Enhanced `oq compare` to accept a file with the control sites
   * Improved the error message for duplicate sites
   * Speedup of the ebrisk calculator
   * Extended the `minimum_intensity` feature to the classical calculator

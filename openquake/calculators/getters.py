@@ -487,11 +487,11 @@ def gen_rgetters(dstore, slc=slice(None)):
             yield rgetter
 
 
-def _gen(arr, srcfilter, trt):
+def _gen(arr, srcfilter, trt, samples):
     for rec in arr:
         sids = srcfilter.close_sids(rec, trt)
         if len(sids):
-            yield RuptureProxy(rec, sids)
+            yield RuptureProxy(rec, sids, samples)
 
 
 def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
@@ -504,22 +504,27 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     ct = dstore['oqparam'].concurrent_tasks or 1
-    maxweight = len(dstore['ruptures']) / ct
-    nr = 0
-    for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
+    items = list(general.group_array(rup_array, 'grp_id').items())
+    items.sort(key=lambda it: len(it[1]))
+    maxweight = None
+    while items:
+        grp_id, rups = items.pop()  # from the largest group
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        logging.info('Group %d: prefiltering %d ruptures', grp_id, len(arr))
-        for proxies in general.block_splitter(
-                _gen(arr, srcfilter, trt), maxweight,
-                operator.attrgetter('weight')):
+        proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
+        if not maxweight:
+            maxweight = sum(p.weight for p in proxies) / ct
+        blocks = list(general.block_splitter(
+            proxies, maxweight, operator.attrgetter('weight')))
+        logging.info('Group %d: %d ruptures -> %d task(s)',
+                     grp_id, len(rups), len(blocks))
+        for block in blocks:
             rgetter = RuptureGetter(
-                proxies, dstore.filename, grp_id,
+                block, dstore.filename, grp_id,
                 trt, samples[grp_id], rlzs_by_gsim[grp_id])
-            nr += len(proxies)
             yield rgetter
 
 
