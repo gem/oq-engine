@@ -8,8 +8,8 @@
       </costTypes>
     </conversions>
     <occupancyPeriods></occupancyPeriods>
-    <tagNames></tagNames>
-    <assets>exposure.csv</assets>
+    <tagNames>ID</tagNames>
+    <assets>exposure2.csv</assets>
   </exposureModel>
 </nrml>
 

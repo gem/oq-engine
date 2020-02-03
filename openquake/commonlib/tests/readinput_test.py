@@ -439,7 +439,7 @@ Missing: {'lon'}''', str(ctx.exception))
         with self.assertRaises(InvalidFile) as ctx:
             asset.Exposure.read([fname])
         self.assertIn('''\
-Found case-duplicated fields [['id', 'id']] in ''', str(ctx.exception))
+Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
 
 
 class GetCompositeSourceModelTestCase(unittest.TestCase):
