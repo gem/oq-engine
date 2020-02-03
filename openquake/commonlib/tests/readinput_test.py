@@ -425,7 +425,7 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
             readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
         self.assertIn("is missing", str(ctx.exception))
 
-    def test_case_Lon_instead_of_lon(self):
+    def test_Lon_instead_of_lon(self):
         fname = os.path.join(DATADIR, 'exposure.xml')
         with self.assertRaises(InvalidFile) as ctx:
             asset.Exposure.read([fname])
@@ -433,6 +433,13 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
 Expected: ['id', 'lat', 'lon', 'number', 'structural', 'taxonomy']
 Got: ['Lon', 'id', 'lat', 'number', 'structural', 'taxonomy']
 Missing: {'lon'}''', str(ctx.exception))
+
+    def test_case_similar(self):
+        fname = os.path.join(DATADIR, 'exposure2.xml')
+        with self.assertRaises(InvalidFile) as ctx:
+            asset.Exposure.read([fname])
+        self.assertIn('''\
+Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
 
 
 class GetCompositeSourceModelTestCase(unittest.TestCase):
