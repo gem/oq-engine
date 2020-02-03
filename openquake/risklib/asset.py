@@ -36,12 +36,12 @@ def get_case_similar(names):
     :returns: list of case similar names, possibly empty
 
     >>> get_case_similar(['id', 'ID', 'lon', 'lat', 'Lon'])
-    [['id', 'ID'], ['lon', 'Lon']]
+    [['ID', 'id'], ['Lon', 'lon']]
     """
     dic = general.AccumDict(accum=[])
     for name in names:
         dic[name.lower()].append(name)
-    return [names for names in dic.values() if len(names) > 1]
+    return [sorted(names) for names in dic.values() if len(names) > 1]
 
 
 class CostCalculator(object):
