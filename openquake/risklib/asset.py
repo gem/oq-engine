@@ -860,14 +860,16 @@ class Exposure(object):
             with open(fname, encoding='utf-8') as f:
                 fields = next(csv.reader(f))
                 header = set(fields)
+                missing = expected_header - header - {'exposure', 'country'}
                 if len(header) < len(fields):
                     raise InvalidFile(
                         '%s: The header %s contains a duplicated field' %
                         (fname, header))
-                elif expected_header - header - {'exposure', 'country'}:
-                    raise InvalidFile(
-                        'Unexpected header in %s\nExpected: %s\nGot: %s' %
-                        (fname, sorted(expected_header), sorted(header)))
+                elif missing:
+                    msg = ('Unexpected header in %s\nExpected: %s\nGot: %s\n'
+                           'Missing: %s')
+                    raise InvalidFile(msg % (fname, sorted(expected_header),
+                                             sorted(header), missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
                 'retrofitted': float, None: object}
         rename = {}
