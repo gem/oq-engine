@@ -87,7 +87,7 @@ class OqParam(valid.ParamSet):
         siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
-    minimum_loss_fraction = valid.Param(valid.positivefloat, 0.05)
+    minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)

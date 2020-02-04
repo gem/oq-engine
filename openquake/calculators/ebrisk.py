@@ -23,6 +23,8 @@ import numpy
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.baselib.python3compat import zip
+from openquake.hazardlib import InvalidFile
+from openquake.hazardlib.calc.filters import getdefault
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import LossesByAsset
 from openquake.risklib.riskinput import (
@@ -56,7 +58,6 @@ def calc_risk(gmfs, param, monitor):
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        exposed_values = dstore['exposed_values/agg'][()]
     with monitor('getting crmodel'):
         crmodel = riskmodels.CompositeRiskModel.read(dstore)
         events = dstore['events'][list(eids)]
@@ -76,9 +77,8 @@ def calc_risk(gmfs, param, monitor):
     aggby = param['aggregate_by']
 
     minimum_loss = []
-    fraction = param['minimum_loss_fraction'] / len(assets_df)
     for lt, lti in crmodel.lti.items():
-        val = exposed_values[lti] * fraction
+        val = param['minimum_asset_loss'][lt]
         minimum_loss.append(val)
         if lt in lba.policy_dict:  # same order as in lba.compute
             minimum_loss.append(val)
@@ -187,17 +187,23 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['ebrisk_maxsize'] = oq.ebrisk_maxsize
-        self.param['minimum_loss_fraction'] = oq.minimum_loss_fraction
-
         self.A = A = len(self.assetcol)
         self.L = L = len(lba.loss_names)
+        mal = {lt: getdefault(oq.minimum_asset_loss, lt)
+               for lt in oq.loss_names}
+        logging.info('minimum_asset_loss=%s', mal)
+        if oq.aggregate_by and self.E * A > oq.max_potential_gmfs and any(
+                val == 0 for val in mal.values()):
+            raise InvalidFile('%s: the calculation is too big to run without '
+                              'minimum_asset_loss' % oq.inputs['job_ini'])
+        self.param['minimum_asset_loss'] = mal
+
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
         for idxs, attrs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
             idx = ','.join(map(str, idxs))
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
                                        attrs=attrs)
         self.param.pop('oqparam', None)  # unneeded
-        A = len(self.assetcol)
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
         elt_nbytes = 4 * self.E * L
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
