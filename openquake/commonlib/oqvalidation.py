@@ -22,7 +22,7 @@ import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
@@ -475,7 +475,7 @@ class OqParam(valid.ParamSet):
         """
         # NB: different loss types may have different IMLs for the same IMT
         # in that case we merge the IMLs
-        imtls = {}
+        imtls = AccumDict(accum=[])
         for taxonomy, risk_functions in risk_models.items():
             for (lt, kind), rf in risk_functions.items():
                 if not hasattr(rf, 'imt') or kind.endswith('_retrofitted'):
@@ -483,25 +483,22 @@ class OqParam(valid.ParamSet):
                     continue
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT
-                imls = list(rf.imls)
-                if imt in imtls and imtls[imt] != imls:
-                    logging.debug(
-                        'Different levels for IMT %s: got %s, expected %s',
-                        imt, imls, imtls[imt])
-                    imtls[imt] = sorted(set(imls + imtls[imt]))
-                else:
-                    imtls[imt] = imls
-        self.risk_imtls = imtls
+                imtls[imt].extend(rf.imls)
+        suggested = ['intensity_measure_types_and_levels = {']
+        for imt, imls in imtls.items():
+            suggested.append('  %r: logscale(%s, %s, 20),' %
+                             (imt, min(imls), max(imls)))
+        suggested[-1] += '}'
+        self.risk_imtls = {imt: list(valid.logscale(min(imls), max(imls), 20))
+                           for imt, imls in imtls.items()}
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
         if (self.calculation_mode.startswith('classical')
                 and not getattr(self, 'hazard_imtls', [])):
-            logging.warning(
-                'You MUST provide the intensity measure levels explicitly in '
-                'the job.ini, otherwise this calculation will break in future '
-                'versions of the engine')
-            for imt in imtls:
-                logging.warning('Using implicitly %s=%s', imt, imtls[imt])
+            raise InvalidFile(
+                '%s: %s' % (self.inputs['job_ini'], 'You must provide the '
+                            'intensity measure levels explicitly. Suggestion:'
+                            '\n%s' % '\n'.join(suggested)))
 
     def hmap_dt(self):  # used for CSV export
         """
