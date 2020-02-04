@@ -484,7 +484,7 @@ class OqParam(valid.ParamSet):
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT
                 imtls[imt].extend(rf.imls)
-        suggested = ['intensity_measure_types_and_levels = {']
+        suggested = ['\nintensity_measure_types_and_levels = {']
         self.risk_imtls = {}
         for imt, imls in imtls.items():
             imls = [iml for iml in imls if iml]  # strip zeros
@@ -495,12 +495,13 @@ class OqParam(valid.ParamSet):
         suggested[-1] += '}'
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
-        if (self.calculation_mode.startswith('classical')
-                and not getattr(self, 'hazard_imtls', [])):
-            raise InvalidFile(
-                '%s: %s' % (self.inputs['job_ini'], 'You must provide the '
-                            'intensity measure levels explicitly. Suggestion:'
-                            '  %s' % '\n'.join(suggested)))
+        if not getattr(self, 'hazard_imtls', []):
+            if (self.calculation_mode.startswith('classical') or
+                    self.hazard_curves_from_gmfs):
+                raise InvalidFile('%s: %s' % (
+                    self.inputs['job_ini'], 'You must provide the '
+                    'intensity measure levels explicitly. Suggestion:' +
+                    '\n  '.join(suggested)))
 
     def hmap_dt(self):  # used for CSV export
         """
