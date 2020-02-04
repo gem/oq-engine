@@ -29,11 +29,21 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def ddd_slow(fractions, n, seed):
+def floats_in(numbers):
+    """
+    :param numbers: an array of numbers
+    :returns: True if there is at least one non-uint32 number
+    """
+    return ((numbers < 1).any() or (numbers > 65535).any() or
+            (U32(numbers) != numbers).any())
+
+
+def bin_ddd(fractions, n, seed):
     """
     Converting fractions into discrete damage distributions using bincount
     and numpy.random.choice
     """
+    n = int(n)
     D = fractions.shape[1]  # shape (E, D)
     ddd = numpy.zeros(fractions.shape, U16)
     numpy.random.seed(seed)
@@ -43,7 +53,7 @@ def ddd_slow(fractions, n, seed):
     return ddd
 
 
-def ddd_fast(fractions, n, seed=None):
+def avg_ddd(fractions, n, seed=None):
     """
     Converting fractions into uint16 discrete damage distributions
     """
@@ -86,7 +96,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
     # algorithm used to compute the discrete damage distributions
-    make_ddd = ddd_fast if param['ddd_fast'] else ddd_slow
+    make_ddd = avg_ddd if param['avg_ddd'] else bin_ddd
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
@@ -102,8 +112,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                 for l, loss_type in enumerate(crmodel.loss_types):
                     for asset, fractions in zip(ri.assets, out[loss_type]):
                         aid = asset['ordinal']
-                        n = int(asset['number'])
-                        ddds = make_ddd(fractions, n, seed + aid)
+                        ddds = make_ddd(fractions, asset['number'], seed + aid)
                         for e, ddd in enumerate(ddds):
                             eid = out.eids[e]
                             if ddd[1:].any():
@@ -138,7 +147,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        self.param['ddd_fast'] = self.oqparam.ddd_fast
+        float_algo = floats_in(self.assetcol['number'])
+        if float_algo:
+            logging.warning('The exposure contains non-integer asset numbers:'
+                            'using average damage distributions')
+        self.param['avg_ddd'] = self.oqparam.avg_ddd or float_algo
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         self.param['master_seed'] = self.oqparam.master_seed
         A = len(self.assetcol)

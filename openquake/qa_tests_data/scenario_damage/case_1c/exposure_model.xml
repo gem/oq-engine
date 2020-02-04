@@ -10,7 +10,7 @@
 			</costTypes>
 		</conversions>
 		<assets>
-			<asset id="a1" number="1" taxonomy="Wood" >
+			<asset id="a1" number="0.15" taxonomy="Wood" >
 				<location lon="-122.000" lat="38.113" />
 				<costs>
 					<cost type="structural" value="10000" />
