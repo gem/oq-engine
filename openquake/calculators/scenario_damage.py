@@ -57,7 +57,7 @@ def avg_ddd(fractions, n, seed=None):
     """
     Converting fractions into uint16 discrete damage distributions
     """
-    ddd = U16(fractions * n)
+    ddd = U16(numpy.round(fractions * n))
     # fix the no-damage discrete damage distributions by making sure
     # that the total sum is n: nodamage = n - sum(others)
     ddd[:, 0] = n - ddd[:, 1:].sum(axis=1)
@@ -149,7 +149,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         super().pre_execute()
         float_algo = floats_in(self.assetcol['number'])
         if float_algo:
-            logging.warning('The exposure contains non-integer asset numbers:'
+            logging.warning('The exposure contains non-integer asset numbers: '
                             'using average damage distributions')
         self.param['avg_ddd'] = self.oqparam.avg_ddd or float_algo
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
@@ -187,6 +187,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         D = len(dstates)
         A = len(self.assetcol)
         indices = self.datastore['dd_data/indices'][()]
+        if not len(self.datastore['dd_data/data']):
+            logging.warning('There is no damage at all!')
         events_per_asset = (indices[:, 1] - indices[:, 0]).mean()
         logging.info('Found ~%d dmg distributions per asset', events_per_asset)
 
