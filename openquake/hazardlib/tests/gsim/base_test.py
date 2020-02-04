@@ -25,13 +25,13 @@ from copy import deepcopy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
-    GMPE, IPE, CoeffsTable, SitesContext, RuptureContext,
+    GMPE, CoeffsTable, SitesContext, RuptureContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, to_distribution_values
 
 aac = numpy.testing.assert_allclose
 
@@ -41,7 +41,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
     DEFAULT_COMPONENT = const.IMC.GMRotI50
 
     def setUp(self):
-        class FakeGSIM(IPE):
+        class FakeGSIM(GMPE):
             DEFINED_FOR_TECTONIC_REGION_TYPE = None
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
@@ -78,36 +78,6 @@ class TGMPE(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = None
     REQUIRES_DISTANCES = None
     get_mean_and_stddevs = None
-
-
-class TIPE(IPE):
-    DEFINED_FOR_TECTONIC_REGION_TYPE = None
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
-    REQUIRES_SITES_PARAMETERS = None
-    REQUIRES_RUPTURE_PARAMETERS = None
-    REQUIRES_DISTANCES = None
-    get_mean_and_stddevs = None
-
-
-class ToIMTUnitsToDistributionTestCase(unittest.TestCase):
-    def test_gmpe(self):
-        gmpe = TGMPE()
-        lin_intensity = [0.001, 0.1, 0.7, 1.4]
-        log_intensity = [-6.90775528, -2.30258509, -0.35667494, 0.33647224]
-        numpy.testing.assert_allclose(
-            gmpe.to_distribution_values(lin_intensity), log_intensity)
-        numpy.testing.assert_allclose(gmpe.to_imt_unit_values(log_intensity),
-                                      lin_intensity)
-
-    def test_ipe(self):
-        ipe = TIPE()
-        intensity = [0.001, 0.1, 0.7, 1.4]
-        numpy.testing.assert_equal(ipe.to_distribution_values(intensity),
-                                   intensity)
-        numpy.testing.assert_equal(ipe.to_imt_unit_values(intensity),
-                                   intensity)
 
 
 class MakeContextsTestCase(_FakeGSIMTestCase):
@@ -263,7 +233,6 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                           'get_rx_distance': 1, 'get_strike': 1})
 
 
-
 class ContextTestCase(unittest.TestCase):
     def test_equality(self):
         sctx1 = SitesContext()
@@ -343,20 +312,6 @@ class GsimInstantiationTestCase(unittest.TestCase):
         self.assertEqual(
             warning_msg, 'MyGMPE is not independently verified - '
             'the user is liable for their application')
-
-
-class GsimOrderingTestCase(unittest.TestCase):
-    def test_ordering_and_equality(self):
-        a = TGMPE()
-        b = TIPE()
-        self.assertLess(a, b)  # 'TGMPE' < 'TIPE'
-        self.assertGreater(b, a)
-        self.assertNotEqual(a, b)
-        a1 = TGMPE()
-        b1 = TIPE()
-        self.assertEqual(a, a1)
-        self.assertEqual(b, b1)
-        self.assertNotEqual(a, b1)
 
 
 class CoeffsTableTestCase(unittest.TestCase):

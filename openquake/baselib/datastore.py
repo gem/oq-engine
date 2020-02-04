@@ -137,7 +137,7 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-def dset2df(dset):
+def dset2df(dset, index):
     """
     Converts an HDF5 dataset with an attribute shape_descr into a Pandas
     dataframe.
@@ -149,14 +149,18 @@ def dset2df(dset):
     dtlist = []
     for i, field in enumerate(shape_descr):
         values = dset.attrs[field]
-        dtlist.append((field[:-1], values[0].dtype))
+        try:
+            dt = values[0].dtype
+        except AttributeError:  # for instance a string has no dtype
+            dt = type(values[0])
+        dtlist.append((field, dt))
         tags.append(values)
         idxs.append(range(len(values)))
     dtlist.append(('value', dset.dtype))
     for idx, values in zip(itertools.product(*idxs),
                            itertools.product(*tags)):
         out.append(values + (dset[idx],))
-    return pandas.DataFrame(numpy.array(out, dtlist))
+    return pandas.DataFrame.from_records(numpy.array(out, dtlist), index)
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -181,6 +185,10 @@ class DataStore(collections.abc.MutableMapping):
     and a dictionary and populating the object.
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
+
+    class EmptyDataset(ValueError):
+        """Raised when reading an empty dataset"""
+
     def __init__(self, calc_id=None, datadir=None, params=(), mode=None):
         datadir = datadir or get_datadir()
         if isinstance(calc_id, str):  # passed a real path
@@ -427,9 +435,17 @@ class DataStore(collections.abc.MutableMapping):
         :param index: if given, name of the "primary key" field
         :returns: pandas DataFrame associated to the dataset
         """
-        dset = self.getitem(key)
+        try:
+            dset = self.getitem(key)
+        except KeyError:
+            if self.parent:
+                dset = self.parent.getitem(key)
+            else:
+                raise
+        if len(dset) == 0:
+            raise self.EmptyDataset('Dataset %s is empty' % key)
         if 'shape_descr' in dset.attrs:
-            return dset2df(dset)
+            return dset2df(dset, index)
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]

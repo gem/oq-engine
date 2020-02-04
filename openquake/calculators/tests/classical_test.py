@@ -32,7 +32,7 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42, case_43, case_44)
+    case_42, case_43, case_44, case_45)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -557,6 +557,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
+        self.assertEqual(self.calc.numrups, 227)  # effective #ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
@@ -566,3 +567,7 @@ hazard_uhs-std.csv
                               shift_hypo='true')
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_44.__file__,
                               shift_hypo='false')
+
+    def test_case_45(self):
+        # this is a test for MMI
+        self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)

@@ -87,7 +87,7 @@ class OqParam(valid.ParamSet):
         siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
-    minimum_loss_fraction = valid.Param(valid.positivefloat, 0.05)
+    minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -158,10 +158,9 @@ class OqParam(valid.ParamSet):
     num_cores = valid.Param(valid.positiveint, None)
     num_epsilon_bins = valid.Param(valid.positiveint)
     num_rlzs_disagg = valid.Param(valid.positiveint, 1)
-    oversubmit = valid.Param(valid.boolean, False)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.floatdict, None)
+    pointsource_distance = valid.Param(valid.floatdict, {'default': {}})
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -199,7 +198,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_by_magnitude = valid.Param(valid.boolean, False)
-    ebrisk_maxsize = valid.Param(valid.positiveint, 5E7)  # used in ebrisk
+    ebrisk_maxsize = valid.Param(valid.positivefloat, 5E7)  # used in ebrisk
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)

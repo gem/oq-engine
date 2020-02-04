@@ -41,7 +41,7 @@ from openquake.baselib import (
     parallel, general, config, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
-from openquake.calculators import base, views, export
+from openquake.calculators import base, export
 from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
@@ -122,11 +122,10 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)
-
 else:
 
     def set_concurrent_tasks_default(calc):
-        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
+        pass
 
 
 def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
@@ -344,13 +343,10 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
                  hazard_calculation_id=hazard_calculation_id, **kw)
         logs.LOG.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
-        duration = time.time() - t0
-        records = views.performance_view(calc.datastore, add_calc_id=False)
-        logs.dbcmd('save_performance', job_id, records)
-        calc.datastore.close()
         logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                      job_id, duration)
+                      job_id, time.time() - t0)
         logs.dbcmd('finish', job_id, 'complete')
+        calc.datastore.close()
     except BaseException as exc:
         if isinstance(exc, MasterKilled):
             msg = 'aborted'

@@ -800,7 +800,7 @@ class HazardCalculator(BaseCalculator):
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
 
-        # save a composite array with fields (grp_id, gsim_id, rlzs)
+        # save vlen-arrays of rlz indices, one per group
         if rlzs_by_grp:
             self.datastore['rlzs_by_grp'] = rlzs_by_grp
 

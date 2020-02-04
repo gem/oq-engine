@@ -176,7 +176,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         tot10 = tot_loss(self.calc.datastore)
         self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='20')
         tot20 = tot_loss(self.calc.datastore)
-        aac(tot10, tot20)
+        aac(tot10, tot20, atol=.0001)  # must be around 230.0107
 
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are

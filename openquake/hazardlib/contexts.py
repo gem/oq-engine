@@ -150,8 +150,9 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        psd = param.get('pointsource_distance') or {'default': {}}
-        self.pointsource_distance = getdefault(psd, trt)
+        psd = param.get('pointsource_distance', {'default': {}})
+        self.pointsource_distance = getdefault(psd, trt) or {}
+        # NB: self.pointsource_distance is a dict mag -> pdist, possibly empty
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
@@ -174,31 +175,29 @@ class ContextMaker(object):
             # avoid RuntimeWarning: divide by zero encountered in log
             warnings.simplefilter("ignore")
             for imt, imls in self.imtls.items():
-                self.loglevels[imt] = numpy.log(imls)
+                if imt != 'MMI':
+                    self.loglevels[imt] = numpy.log(imls)
 
-    def filter(self, sites, rupture, mdist=None):
+    def filter(self, sites, rup):
         """
         Filter the site collection with respect to the rupture.
 
         :param sites:
             Instance of :class:`openquake.hazardlib.site.SiteCollection`.
-        :param rupture:
+        :param rup:
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
-        :param mdist:
-           if not None, use it as maximum distance
         :returns:
             (filtered sites, distance context)
         """
-        distances = get_distances(rupture, sites, self.filter_distance)
-        mdist = mdist or self.maximum_distance(
-            rupture.tectonic_region_type)  # TODO: add rupture.mag here
+        distances = get_distances(rup, sites, self.filter_distance)
+        mdist = self.maximum_distance(rup.tectonic_region_type, rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
         else:
             raise FarAwayRupture(
-                '%d: %d km' % (rupture.rup_id, distances.min()))
+                '%d: %d km' % (rup.rup_id, distances.min()))
         return sites, DistancesContext([(self.filter_distance, distances)])
 
     def add_rup_params(self, rupture):
@@ -229,7 +228,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture, mdist=None):
+    def make_contexts(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -241,9 +240,6 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
-        :param mdist:
-            Maximum distance for the rupture magnitude (if None use the max)
-
         :returns:
             Tuple of two items: sites and distances context.
 
@@ -251,7 +247,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        sites, dctx = self.filter(sites, rupture, mdist)
+        sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -266,20 +262,20 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def make_ctxs(self, ruptures, sites, mdist=None):
+    def make_ctxs(self, ruptures, sites):
         """
         :returns: a list of triples (rctx, sctx, dctx)
         """
         ctxs = []
         for rup in ruptures:
             try:
-                sctx, dctx = self.make_contexts(sites, rup, mdist)
+                sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             ctxs.append((rup, sctx, dctx))
         return ctxs
 
-    def make_gmv(self, onesite, mags, dists):
+    def max_intensity(self, onesite, mags, dists):
         """
         :param onesite: a SiteCollection instance with a single site
         :param mags: a sequence of magnitudes
@@ -298,16 +294,14 @@ class ContextMaker(object):
             rup.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             dctx = DistancesContext(
                 (dst, numpy.array([dist])) for dst in self.REQUIRES_DISTANCES)
-            max_imt = self.imts[-1]
             means = []
             for gsim in self.gsims:
                 try:
-                    mean = base.get_mean_std(  # shape (2, N, M, G) -> 1
-                        onesite, rup, dctx, [max_imt], [gsim])[0, 0, 0, 0]
+                    mean = base.get_mean_std(  # shape (2, N, M, G) -> M
+                        onesite, rup, dctx, self.imts, [gsim])[0, 0, :, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
-                else:
-                    means.append(mean)
+                means.append(mean.max())
             if means:
                 gmv[m, d] = numpy.exp(max(means))
         return gmv
@@ -423,9 +417,9 @@ class PmapMaker(object):
         totrups, numrups, nsites = 0, 0, 0
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
-        for rups, sites, mdist in self._gen_rups_sites(src, sites):
+        for rups, sites in self._gen_rups_sites(src, sites):
             with self.ctx_mon:
-                ctxs = self.cmaker.make_ctxs(rups, sites, mdist)
+                ctxs = self.cmaker.make_ctxs(rups, sites)
                 if ctxs:
                     totrups += len(ctxs)
                     ctxs = self.collapse(ctxs)
@@ -486,31 +480,29 @@ class PmapMaker(object):
 
     def _gen_rups_sites(self, src, sites):
         loc = getattr(src, 'location', None)
-        triples = ((rups, sites, None) for mag, rups in self.mag_rups)
+        rupsites = ((rups, sites) for mag, rups in self.mag_rups)
         if loc:
             # implements pointsource_distance: finite site effects
             # are ignored for sites over that distance, if any
             simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
             if simple or not self.pointsource_distance:
-                yield from triples  # there is nothing to collapse
+                yield from rupsites  # there is nothing to collapse
             else:
                 weights, depths = zip(*src.hypocenter_distribution.data)
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
                 loc.depth = numpy.average(depths, weights=weights)
-                trt = src.tectonic_region_type
                 for mag, rups in self.mag_rups:
-                    mdist = self.maximum_distance(trt)  # FIXME: mag-dep
                     pdist = self.pointsource_distance.get('%.3f' % mag)
-                    close, far = sites.split(loc, min(pdist, mdist))
+                    close, far = sites.split(loc, pdist)
                     if close is None:  # all is far
-                        yield _collapse(rups), far, mdist
+                        yield _collapse(rups), far
                     elif far is None:  # all is close
-                        yield rups, close, mdist
+                        yield rups, close
                     else:  # some sites are far, some are close
-                        yield _collapse(rups), far, mdist
-                        yield rups, close, mdist
+                        yield _collapse(rups), far
+                        yield rups, close
         else:  # no point source or site-specific analysis
-            yield from triples
+            yield from rupsites
 
 
 class BaseContext(metaclass=abc.ABCMeta):
@@ -679,8 +671,7 @@ class RuptureContext(BaseContext):
 
 class Effect(object):
     """
-    Compute the effect of a rupture of a given magnitude and distance,
-    as a float in the range [0, 1] (0=no effect, 1=maximum effect).
+    Compute the effect of a rupture of a given magnitude and distance.
 
     :param effect_by_mag: a dictionary magstring -> intensities
     :param dists: array of distances, one per each intensity
@@ -690,17 +681,14 @@ class Effect(object):
         self.effect_by_mag = effect_by_mag
         self.dists = dists
         self.nbins = len(dists)
-        effectmax = effect_by_mag[max(effect_by_mag)]
-        # intensity at the maximum magnitude and distance
-        self.zero_value = effectmax[-1]
-        if collapse_dist is not None:
-            # intensity at the maximum magnitude and collapse distance
-            idx = numpy.searchsorted(dists, collapse_dist)
-            if idx == self.nbins:
-                idx -= 1
-            self.collapse_value = effectmax[idx]
-        else:
-            self.collapse_value = None
+
+    def collapse_value(self, collapse_dist):
+        """
+        :returns: intensity at the maximum magnitude and collapse distance
+        """
+        effectmax = self.effect_by_mag[max(self.effect_by_mag)]
+        idx = numpy.searchsorted(self.dists, collapse_dist)
+        return effectmax[idx-1 if idx == self.nbins else idx]
 
     def __call__(self, mag, dist):
         di = numpy.searchsorted(self.dists, dist)
@@ -710,21 +698,19 @@ class Effect(object):
         return eff
 
     # this is useful to compute the collapse_distance and minimum_distance
-    def dist_by_mag(self, intensity=None):
+    def dist_by_mag(self, intensity=0):
         """
         :returns: a dict magstring -> distance
         """
-        if intensity is None:
-            intensity = self.zero_value
-        dic = {}  # magnitude -> distance
+        dst = {}  # magnitude -> distance
         for mag, intensities in self.effect_by_mag.items():
             if intensity < intensities.min():
-                dic[mag] = self.dists[-1]
+                dst[mag] = self.dists[-1]  # largest distance
             elif intensity > intensities.max():
-                dic[mag] = self.dists[0]
+                dst[mag] = self.dists[0]  # smallest distance
             else:
-                dic[mag] = interp1d(intensities, self.dists)(intensity)
-        return dic
+                dst[mag] = interp1d(intensities, self.dists)(intensity)
+        return dst
 
 
 # used in calculators/classical.py
@@ -741,7 +727,7 @@ def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
     for t, trt in enumerate(trts):
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.make_gmv(
+        gmv[:, :, t] = cmaker.max_intensity(
             onesite, [float(mag) for mag in mags], dist_bins)
     return dict(zip(mags, gmv))
 

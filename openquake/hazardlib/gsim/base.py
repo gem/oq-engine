@@ -138,10 +138,7 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
         function of that truncated Gaussian applied to IMLs.
 
     :returns:
-        A dictionary of the same structure as parameter ``imts`` (see
-        above). Instead of lists of IMLs values of the dictionaries
-        have 2d numpy arrays of corresponding PoEs, first dimension
-        represents sites and the second represents IMLs.
+        array of PoEs of shape (N, L, G)
 
     :raises ValueError:
         If truncation level is not ``None`` and neither non-negative
@@ -226,7 +223,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     at a site given an earthquake rupture.
 
     This class is not intended to be subclassed directly, instead
-    the actual GSIMs should subclass either :class:`GMPE` or :class:`IPE`.
+    the actual GSIMs should subclass :class:`GMPE`
 
     Subclasses of both must implement :meth:`get_mean_and_stddevs`
     and all the class attributes with names starting from ``DEFINED_FOR``
@@ -401,29 +398,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         compute interim steps).
         """
 
-    @abc.abstractmethod
-    def to_distribution_values(self, values):
-        """
-        Convert a list or array of values in units of IMT to a numpy array
-        of values of intensity measure distribution (like taking the natural
-        logarithm for :class:`GMPE`).
-
-        This method is implemented by both :class:`GMPE` and :class:`IPE`
-        so there is no need to override it in actual GSIM implementations.
-        """
-
-    @abc.abstractmethod
-    def to_imt_unit_values(self, values):
-        """
-        Convert a list or array of values of intensity measure distribution
-        (like ones returned from :meth:`get_mean_and_stddevs`) to values
-        in units of IMT. This is the opposite operation
-        to :meth:`to_distribution_values`.
-
-        This method is implemented by both :class:`GMPE` and :class:`IPE`
-        so there is no need to override it in actual GSIM implementations.
-        """
-
     def _check_imt(self, imt):
         """
         Make sure that ``imt`` is valid and is supported by this GSIM.
@@ -518,6 +492,17 @@ def _truncnorm_sf(truncation_level, values):
     return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
 
 
+def to_distribution_values(vals, imt):
+    """
+    :returns: the logarithm of the values unless the IMT is MMI
+    """
+    if str(imt) == 'MMI':
+        return vals
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return numpy.log(vals)
+
+
 class GMPE(GroundShakingIntensityModel):
     """
     Ground-Motion Prediction Equation is a subclass of generic
@@ -528,21 +513,6 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def to_distribution_values(self, values):
-        """
-        Returns numpy array of natural logarithms of ``values``.
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            # avoid RuntimeWarning: divide by zero encountered in log
-            return numpy.log(values)
-
-    def to_imt_unit_values(self, values):
-        """
-        Returns numpy array of exponents of ``values``.
-        """
-        return numpy.exp(values)
-
     def open(self, fname_or_file):
         """
         :param fname_or_file: filename or filelike object
@@ -565,26 +535,6 @@ class GMPE(GroundShakingIntensityModel):
                 pass
             else:
                 setattr(self, key, val)
-
-
-class IPE(GroundShakingIntensityModel):
-    """
-    Intensity Prediction Equation is a subclass of generic
-    :class:`GroundShakingIntensityModel` which is suitable for
-    intensity measures that are normally distributed. In particular,
-    for :class:`~openquake.hazardlib.imt.MMI`.
-    """
-    def to_distribution_values(self, values):
-        """
-        Returns numpy array of ``values`` without any conversion.
-        """
-        return numpy.array(values, dtype=float)
-
-    def to_imt_unit_values(self, values):
-        """
-        Returns numpy array of ``values`` without any conversion.
-        """
-        return numpy.array(values, dtype=float)
 
 
 class CoeffsTable(object):

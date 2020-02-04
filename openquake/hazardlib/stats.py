@@ -40,6 +40,8 @@ def std_curve(values, weights=None):
     return res
 
 
+# NB: for equal weights and sorted values the quantile is computed a
+# numpy.interp(q, [1/N, 2/N, ..., N/N], values)
 def quantile_curve(quantile, curves, weights=None):
     """
     Compute the weighted quantile aggregate of a set of curves.

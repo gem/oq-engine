@@ -491,7 +491,7 @@ def extract_sources(dstore, what):
     Use it as /extract/sources?sm_id=0
     """
     qdict = parse(what)
-    sm_id = int(qdict['sm_id'][0])
+    sm_id = int(qdict.get('sm_id', ['0'])[0])
     arr = dstore['source_info']['sm_id', 'source_id', 'eff_ruptures', 'wkt']
     if sm_id not in numpy.unique(arr['sm_id']):
         raise ValueError('There is no source model #%d' % sm_id)
@@ -1006,7 +1006,7 @@ def extract_rupture(dstore, rup_id):
     http://127.0.0.1:8800/v1/calc/30/extract/rupture/1066
     """
     ridx = list(dstore['ruptures']['id']).index(int(rup_id))
-    [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
     [ebr] = getter.get_ruptures()
     return ArrayWrapper((), ebr.rupture.todict())
 
@@ -1020,7 +1020,7 @@ def extract_event_info(dstore, eidx):
     """
     event = dstore['events'][int(eidx)]
     ridx = event['rup_id']
-    [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz_id']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
@@ -1205,7 +1205,7 @@ def extract_rupture_info(dstore, what):
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    for rgetter in getters.gen_rupture_getters(dstore):
+    for rgetter in getters.gen_rgetters(dstore):
         rups = rgetter.get_ruptures(min_mag)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r, rup in zip(rup_data.to_array(rups), rups):
