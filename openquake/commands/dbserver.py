@@ -43,8 +43,7 @@ def dbserver(cmd, dbhostport=None, loglevel='INFO', foreground=False):
             print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            dbs.run_server(os.path.expanduser(config.dbserver.file),
-                           dbhostport, loglevel, foreground)
+            dbs.run_server(dbhostport, loglevel, foreground)
         else:
             print('dbserver already running')
 
