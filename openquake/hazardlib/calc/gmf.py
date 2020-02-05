@@ -88,6 +88,9 @@ class GmfComputer(object):
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
+
+    :param amplifier:
+        None or an instance of Amplifier
     """
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an higher level containing a
@@ -97,7 +100,8 @@ class GmfComputer(object):
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sitecol, imts, cmaker,
-                 truncation_level=None, correlation_model=None):
+                 truncation_level=None, correlation_model=None,
+                 amplifier=None):
         if len(sitecol) == 0:
             raise ValueError('No sites')
         elif len(imts) == 0:
@@ -109,6 +113,7 @@ class GmfComputer(object):
         self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
+        self.amplifier = amplifier
         # `rupture` can be an EBRupture instance
         if hasattr(rupture, 'srcidx'):
             self.srcidx = rupture.srcidx  # the source the rupture comes from
@@ -214,6 +219,8 @@ class GmfComputer(object):
             mean = to_imt_unit_values(mean, imt)
             mean.shape += (1, )
             mean = mean.repeat(num_events, axis=1)
+            if self.amplifier:
+                self.amplifier.amplify_gmvs(mean, self.sctx.ampcode, imt)
             return (mean,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
@@ -268,6 +275,8 @@ class GmfComputer(object):
             gmf = to_imt_unit_values(
                 mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
+        if self.amplifier:
+            self.amplifier.amplify_gmvs(gmf, self.sctx.ampcode, imt)
         return gmf, stdi, epsilons
 
 

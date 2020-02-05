@@ -131,7 +131,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     mon_haz = monitor('getting hazard', measuremem=False)
     gmfs = []
     gmf_info = []
-    gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
+    gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
+                           param['amplifier'])
     nbytes = 0
     for c in gg.gen_computers(mon_rup):
         with mon_haz:

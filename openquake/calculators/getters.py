@@ -330,12 +330,13 @@ class GmfGetter(object):
     An hazard getter with methods .get_gmfdata and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rupgetter, srcfilter, oqparam):
+    def __init__(self, rupgetter, srcfilter, oqparam, amplifier=None):
         self.rlzs_by_gsim = rupgetter.rlzs_by_gsim
         self.rupgetter = rupgetter
         self.srcfilter = srcfilter
         self.sitecol = srcfilter.sitecol.complete
         self.oqparam = oqparam
+        self.amplifier = amplifier
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
@@ -363,7 +364,8 @@ class GmfGetter(object):
                 try:
                     computer = calc.gmf.GmfComputer(
                         ebr, sitecol, self.oqparam.imtls, self.cmaker,
-                        self.oqparam.truncation_level, self.correl_model)
+                        self.oqparam.truncation_level, self.correl_model,
+                        self.amplifier)
                 except FarAwayRupture:
                     continue
                 # due to numeric errors ruptures within the maximum_distance

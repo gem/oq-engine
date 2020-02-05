@@ -77,7 +77,7 @@ class ScenarioCalculator(base.HazardCalculator):
         rupser.close()
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
-            oq.correl_model)
+            oq.correl_model, self.amplifier)
         M32 = (numpy.float32, len(self.oqparam.imtls))
         self.sig_eps_dt = [('eid', numpy.uint64), ('sig', M32), ('eps', M32)]
 

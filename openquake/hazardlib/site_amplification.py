@@ -172,22 +172,20 @@ class Amplifier(object):
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
 
-    def amplify_gmvs(self, ampl_code, imt, gmvs):
+    def amplify_gmvs(self, ampl_code, gmvs, imt):
         """
         :param ampl_code: 2-letter code for the amplification function
-        :param imt: intensity measure type string
         :param gmvs: ground motion values on the given site
+        :param imt: intensity measure type string
         """
         alphas = self.alpha[ampl_code, self.imtdict[imt]]
         if len(self.imls):
             return numpy.interp(gmvs, self.midlevels, alphas) * gmvs
         return alphas[0] * gmvs  # the alphas are all equal
 
-    def amplify_gmfs(self, ampl_codes, imts, gmfdata):
+    def amplify_gmfs(self, ampcodes, gmvs, imt):
         """
-        Amplify in-place the composite array gmfdata
+        Amplify in-place the gmvs array of shape (N, E)
         """
-        for sid, data in group_array(gmfdata).items():
-            for m, imt in enumerate(imts):
-                data['gmv'][:, m] = self.amplify_gmfs(
-                    ampl_codes[sid], imt, data['gmv'][:, m])
+        for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs)):
+            gmvs[i] = self.amplify_gmvs(ampcode, arr, imt)
