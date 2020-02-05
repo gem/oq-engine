@@ -20,6 +20,7 @@ import getpass
 import requests
 import logging
 import django
+import numpy
 
 from time import sleep
 from django.conf import settings
@@ -130,5 +131,23 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
 
     if not success:
         logging.warning('Unable to connect to %s within %s retries'
-                     % (url, max_retries))
+                        % (url, max_retries))
     return success
+
+
+def fix_array_dtype(arr):
+    """
+    Modifies a numpy array if its type is 'object', changing its content into
+    bytes (and therefore modifying its dtype). This is useful in order to
+    prevent the array from being pickled.
+    It returns the unmodified object if it is not a numpy array.
+    """
+    if not isinstance(arr, numpy.ndarray):
+        return arr
+    if arr.dtype == numpy.dtype('O'):
+        try:
+            return numpy.array([s.encode('utf-8') for s in arr])
+        except AttributeError:
+            for i, val in numpy.ndenumerate(arr):
+                arr[i] = arr[i].encode('utf8')
+    return arr

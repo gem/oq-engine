@@ -154,24 +154,6 @@ def extract_(dstore, dspath):
         return obj
 
 
-def fix_array_dtype(arr):
-    """
-    Modifies a numpy array if its type is 'object', changing its content into
-    bytes (and therefore modifying its dtype). This is useful in order to
-    prevent the array from being pickled.
-    It returns the unmodified object if it is not a numpy array.
-    """
-    if not isinstance(arr, numpy.ndarray):
-        return arr
-    if arr.dtype == numpy.dtype('O'):
-        try:
-            return numpy.array([s.encode('utf-8') for s in arr])
-        except AttributeError:
-            for i, val in numpy.ndenumerate(arr):
-                arr[i] = arr[i].encode('utf8')
-    return arr
-
-
 class Extract(dict):
     """
     A callable dictionary of functions with a single instance called
@@ -255,7 +237,6 @@ def extract_exposure_metadata(dstore, what):
     names = [name for name in dstore['assetcol/array'].dtype.names
              if name.startswith(('value-', 'number', 'occupants_'))
              and not name.endswith('_None')]
-    dic = {k: fix_array_dtype(v) for k, v in dic.items()}
     return ArrayWrapper(numpy.array(names), dic)
 
 
@@ -1006,9 +987,7 @@ def crm_attrs(dstore, what):
         the attributes of the risk model, i.e. limit_states, loss_types,
         min_iml and covs, needed by the risk exporters.
     """
-    dic = dstore.get_attrs('risk_model')
-    dic = {k: fix_array_dtype(v) for k, v in dic.items()}
-    return ArrayWrapper((), dic)
+    return ArrayWrapper((), dstore.get_attrs('risk_model'))
 
 
 def _get(dstore, name):
