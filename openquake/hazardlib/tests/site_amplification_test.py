@@ -23,16 +23,9 @@ from openquake.baselib.general import gettemp
 from openquake.hazardlib.site_amplification import Amplifier
 
 trivial_ampl_func = '''\
-#,,,,,,,"vs30_ref=760, imls=[.001, .01, .05, .1, .2, .5, 1., 1.21]"
-ampcode,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
-A,0,1,1,1,1,1
-A,1,1,1,1,1,1
-A,2,1,1,1,1,1
-A,3,1,1,1,1,1
-A,4,1,1,1,1,1
-A,5,1,1,1,1,1
-A,6,1,1,1,1,1
-A,7,1,1,1,1,1
+#,,,,,,"vs30_ref=760"
+ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
+A,1,1,1,1,1
 '''
 
 simple_ampl_func = '''\
@@ -49,9 +42,9 @@ A,7,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
 '''
 
 double_ampl_func = '''\
-#,,,,,,,"vs30_ref=760, imls=[0]"
-ampcode,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
-A,0,2,2,2,2,2
+#,,,,,,,"vs30_ref=760"
+ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
+A,2,2,2,2,2
 '''
 
 
@@ -131,3 +124,7 @@ class AmplifierTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
                    0.69, 0.09, 0.09], atol=1E-6)
+
+        # amplify GMFs
+        gmvs = a.amplify_gmvs(b'A', 'SA(0.5)', numpy.array([.1, .2, .3]))
+        numpy.testing.assert_allclose(gmvs, [.2, .4, .6])

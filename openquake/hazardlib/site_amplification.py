@@ -88,7 +88,10 @@ class Amplifier(object):
         self.amplevels = levels if amplevels is None else amplevels
         self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
         self.vs30_ref = ampl_funcs.vs30_ref
-        imls = ampl_funcs.imls
+        try:
+            self.imls = imls = ampl_funcs.imls
+        except AttributeError:
+            self.imls = imls = ()
         cols = (ampl_funcs.dtype.names[2:] if 'level' in ampl_funcs.dtype.names
                 else ampl_funcs.dtype.names[1:])
         imts = [from_string(imt) for imt in cols
@@ -168,3 +171,14 @@ class Amplifier(object):
                 lst.append(new)
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
+
+    def amplify_gmvs(self, ampl_code, imt, gmvs):
+        """
+        :param ampl_code: 2-letter code for the amplification function
+        :param imt: intensity measure type string
+        :param gmvs: ground motion values on the given site
+        """
+        alphas = self.alpha[ampl_code, self.imtdict[imt]]
+        if len(self.imls):
+            return numpy.interp(self.amplevels, gmvs, alphas) * gmvs
+        return alphas[0] * gmvs  # the alphas are all equal
