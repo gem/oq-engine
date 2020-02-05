@@ -12,7 +12,7 @@ There are listed here, in order of precedence.
    `region_grid_spacing` parameters
 4. If the `region` parameter is
    missing but `region_grid_spacing` is specified and there is an exposure,
-   a grid is implicitely generated from the convex hull of the exposure
+   a grid is implicitly generated from the convex hull of the exposure
 5. Otherwise the sites can be inferred from the site model, if any.
 6. If the user is running a `classical_risk` or
    `classical_damage` calculation starting from a set of hazard curves
@@ -52,7 +52,7 @@ for instance Chile has million of assets in different locations but
 the site model file we use is defined only on a few thousand sites. With
 the precedence we have now the site model wins and the engine can
 perform a calculation with a few thousand sites, which is
-feasibile. If the exposure had the precedence, then the site
+feasible. If the exposure had the precedence, then the site
 collection would contain million of sites and the calculation would
 immediately run out of memory or die for some other reason.
 
