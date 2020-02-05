@@ -180,5 +180,5 @@ class Amplifier(object):
         """
         alphas = self.alpha[ampl_code, self.imtdict[imt]]
         if len(self.imls):
-            return numpy.interp(self.amplevels, gmvs, alphas) * gmvs
+            return numpy.interp(gmvs, self.midlevels, alphas) * gmvs
         return alphas[0] * gmvs  # the alphas are all equal
