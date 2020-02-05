@@ -662,12 +662,15 @@ def get_amplification(oqparam):
     """
     fname = oqparam.inputs['amplification']
     aw = hdf5.read_csv(fname, {'ampcode': 'S2', 'level': U8, None: F64})
-    levels = numpy.arange(len(aw.imls))
-    for records in group_array(aw, 'ampcode').values():
-        if (records['level'] != levels).any():
-            raise InvalidFile('%s: levels for %s %s instead of %s' %
-                              (fname, records['ampcode'][0],
-                               records['level'], levels))
+    aw.imls = ()
+    if 'level' in aw.dtype.names:
+        for records in group_array(aw, 'ampcode').values():
+            if len(aw.imls) == 0:
+                aw.imls = records['level']
+            elif (records['level'] != aw.imls).any():
+                raise InvalidFile('%s: levels for %s %s instead of %s' %
+                                  (fname, records['ampcode'][0],
+                                   records['level'], aw.imls))
     return aw
 
 

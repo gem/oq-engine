@@ -89,11 +89,14 @@ class Amplifier(object):
         self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
         self.vs30_ref = ampl_funcs.vs30_ref
         imls = ampl_funcs.imls
-        imts = [from_string(imt) for imt in ampl_funcs.dtype.names[2:]
+        cols = (ampl_funcs.dtype.names[2:] if 'level' in ampl_funcs.dtype.names
+                else ampl_funcs.dtype.names[1:])
+        imts = [from_string(imt) for imt in cols
                 if not imt.startswith('sigma_')]
         m_indices = digitize(
             'period', self.periods, [imt.period for imt in imts])
-        if len(imls) == 1:  # one level means same values for all levels
+        if len(imls) == 0:  # no levels means same values for all levels
+            imls = self.amplevels
             l_indices = [0] * len(self.midlevels)
         else:
             l_indices = digitize('level', self.midlevels, imls)
