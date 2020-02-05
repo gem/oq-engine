@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Changed some copy.deepcopy calls into copy.copy in hazardlib
+
   [Michele Simionato]
   * Removed implicit intensity_measure_types_and_levels
   * Added a check to forbid case-similar headers in the exposures
