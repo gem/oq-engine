@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Modified the exporters in order to allow using
+    `numpy.load(allow_pickle=False)` in the QGIS IRMT plugin
+
   [Michele Simionato]
   * Added a check to forbid case-similar headers in the exposures
   * Improved the error message in case of CSV exposures with wrong headers
