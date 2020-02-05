@@ -122,6 +122,7 @@ site_param_dt = {
     'z1pt4': numpy.float64,
     'backarc': numpy.bool,
     'xvf': numpy.float64,
+    'backarc_distance': numpy.float64,
 
     # Parameters for site amplification
     'ampcode': (numpy.string_, 2),
