@@ -182,3 +182,12 @@ class Amplifier(object):
         if len(self.imls):
             return numpy.interp(gmvs, self.midlevels, alphas) * gmvs
         return alphas[0] * gmvs  # the alphas are all equal
+
+    def amplify_gmfs(self, ampl_codes, imts, gmfdata):
+        """
+        Amplify in-place the composite array gmfdata
+        """
+        for sid, data in group_array(gmfdata).items():
+            for m, imt in enumerate(imts):
+                data['gmv'][:, m] = self.amplify_gmfs(
+                    ampl_codes[sid], imt, data['gmv'][:, m])
