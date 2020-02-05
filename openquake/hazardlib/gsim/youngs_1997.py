@@ -213,7 +213,7 @@ class YoungsEtAl1997SInterNSHMP2008(YoungsEtAl1997SInter):
         hypocentral depth set to 20 km
         """
         # create new context to avoid changing the original one
-        new_rup = copy.deepcopy(rup)
+        new_rup = copy.copy(rup)
         new_rup.hypo_depth = 20.
 
         mean, stddevs = super().get_mean_and_stddevs(
