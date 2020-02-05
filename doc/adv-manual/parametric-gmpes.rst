@@ -37,10 +37,10 @@ a lot more readable than JSON and XML and simpler than YAML: moreover,
 it is perfect for serializing into text literal Python objects like
 dictionaries and lists. The serialization feature is essential for the
 engine since the GMPEs are read from the GMPE logic tree file which is a
-text file, a because the GMPEs are saved into the datastore as a text,
+text file, and because the GMPEs are saved into the datastore as a text,
 in the dataset ``csm_info/gsim_lt/branches``.
 
-The examples below will make it clear how it works.
+The examples below will clarify how it works.
 
 GMPETable
 ---------
@@ -193,7 +193,7 @@ NB: writing
 
 would work but it is discouraged. It is best to keep the ``**kwargs``
 signature so that the call to ``super().__init__(**kwargs)`` will
-work out of the box even in future subclasses of `GMPEWithTextFile`
+work out-of-the-box even in future subclasses of `GMPEWithTextFile`
 with different parameters (in case somebody decided to develop
 such subclasses; this is defensive programming).
 

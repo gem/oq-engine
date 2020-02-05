@@ -180,8 +180,7 @@ def ensure_on():
             waiting_seconds -= 1
 
 
-def run_server(dbpath=os.path.expanduser(config.dbserver.file),
-               dbhostport=None, loglevel='WARN', foreground=False):
+def run_server(dbhostport=None, loglevel='WARN', foreground=False):
     """
     Run the DbServer on the given database file and port. If not given,
     use the settings in openquake.cfg.
@@ -196,7 +195,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
         addr = (config.dbserver.listen, DBSERVER_PORT)
 
     # create the db directory if needed
-    dirname = os.path.dirname(dbpath)
+    dirname = os.path.dirname(os.path.expanduser(config.dbserver.file))
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
