@@ -135,7 +135,7 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
     return success
 
 
-def fix_array_dtype(arr):
+def array_of_strings_to_bytes(arr):
     """
     Modifies a numpy array if its type is 'object', changing its content into
     bytes (and therefore modifying its dtype). This is useful in order to
@@ -145,9 +145,6 @@ def fix_array_dtype(arr):
     if not isinstance(arr, numpy.ndarray):
         return arr
     if arr.dtype == numpy.dtype('O'):
-        try:
-            return numpy.array([s.encode('utf-8') for s in arr])
-        except AttributeError:
-            for i, val in numpy.ndenumerate(arr):
-                arr[i] = arr[i].encode('utf8')
+        for i, val in numpy.ndenumerate(arr):
+            arr[i] = arr[i].encode('utf8')
     return arr
