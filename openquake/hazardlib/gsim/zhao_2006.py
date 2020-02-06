@@ -427,7 +427,7 @@ class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
         Call super class method with hypocentral depth fixed at 20 km
         """
         # create new rupture context to avoid changing the original one
-        new_rup = copy.deepcopy(rup)
+        new_rup = copy.copy(rup)
         new_rup.hypo_depth = 20.
 
         mean, stddevs = super().get_mean_and_stddevs(
@@ -655,7 +655,6 @@ class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
         """
         Using a minimum distance of 5km for the calculation.
         """
-
         dists_mod = copy.deepcopy(dists)
         dists_mod.rrup[dists.rrup <= 5.] = 5.
 
