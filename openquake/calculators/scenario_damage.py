@@ -55,7 +55,7 @@ def bin_ddd(fractions, n, seed):
 
 def avg_ddd(fractions, n, seed=None):
     """
-    Converting fractions into uint16 discrete damage distributions
+    Converting fractions into uint16 discrete damage distributions using round
     """
     ddd = U16(numpy.round(fractions * n))
     # fix the no-damage discrete damage distributions by making sure
@@ -151,6 +151,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if float_algo:
             logging.warning('The exposure contains non-integer asset numbers: '
                             'using average damage distributions')
+        bad = self.assetcol['number'] > 65535
+        for rec in self.assetcol[bad]:
+            aref = self.assetcol.tagcol.id[rec['id']]
+            logging.error('The asset %s has number=%s > 65536: this will '
+                          'become an error in the future', aref, rec['number'])
         self.param['avg_ddd'] = self.oqparam.avg_ddd or float_algo
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         self.param['master_seed'] = self.oqparam.master_seed

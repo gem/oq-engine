@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Introduced the flag `avg_ddd` to support the old algorithm in
+    scenario_damage calculations; it is automatically used for exposures
+    with fractional asset numbers
+
   [Paolo Tormene]
   * Changed some copy.deepcopy calls into copy.copy in hazardlib
 
