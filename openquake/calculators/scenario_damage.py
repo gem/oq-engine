@@ -159,7 +159,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         float_algo = floats_in(self.assetcol['number'])
         if float_algo:
             logging.warning('The exposure contains non-integer asset numbers: '
-                            'using average damage distributions')
+                            'using floating point damage distributions')
         bad = self.assetcol['number'] > 65535
         for ass in self.assetcol[bad]:
             aref = self.assetcol.tagcol.id[ass['id']]
