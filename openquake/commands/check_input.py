@@ -34,7 +34,7 @@ def check_input(job_ini_or_zip_or_nrmls):
                 if node.tag.endswith('exposureModel'):
                     err = Exposure.check(job_ini_or_zip_or_nrml)
                     if err:
-                        logging.error(err)
+                        logging.warning(err)
                 else:
                     logging.info('Checked %s', job_ini_or_zip_or_nrml)
             except Exception as exc:
