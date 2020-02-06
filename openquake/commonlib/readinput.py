@@ -399,7 +399,7 @@ def get_site_model(oqparam):
         req_site_params.add('ampcode')
     arrays = []
     dtypedic = {None: float, 'vs30measured': numpy.uint8,
-                'ampcode': (numpy.string_, 2)}
+                'ampcode': site.ampcode_dt}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
             sm = hdf5.read_csv(fname, dtypedic).array

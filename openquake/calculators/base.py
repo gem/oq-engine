@@ -31,7 +31,7 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, init_performance
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, site
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
@@ -362,7 +362,7 @@ def check_amplification(dstore):
     missing = codes - codeset
     if missing:
         raise ValueError('The site collection contains references to missing '
-                         'amplification functions:' + ' '.join(missing))
+                         'amplification functions: %s' % b', '.join(missing))
 
 
 class HazardCalculator(BaseCalculator):
@@ -657,7 +657,7 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol = dstore['sitecol'].complete
                 if ('amplification' in oq.inputs and
                         'ampcode' not in haz_sitecol.array.dtype.names):
-                    haz_sitecol.add_col('ampcode', (numpy.string_, 2))
+                    haz_sitecol.add_col('ampcode', site.ampcode_dt)
         else:
             haz_sitecol = readinput.get_site_collection(oq)
             if hasattr(self, 'rup'):
