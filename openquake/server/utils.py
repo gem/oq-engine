@@ -142,9 +142,8 @@ def array_of_strings_to_bytes(arr):
     prevent the array from being pickled.
     It returns the unmodified object if it is not a numpy array.
     """
-    if not isinstance(arr, numpy.ndarray):
+    if not isinstance(arr, numpy.ndarray) or arr.dtype != numpy.dtype('O'):
         return arr
-    if arr.dtype == numpy.dtype('O'):
-        for i, val in numpy.ndenumerate(arr):
-            arr[i] = arr[i].encode('utf8')
+    for i, val in numpy.ndenumerate(arr):
+        arr[i] = arr[i].encode('utf8')
     return arr
