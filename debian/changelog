@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Introduced the flag `approx_ddd` to support the old algorithm in
+    scenario_damage calculations; it is automatically used for exposures
+    with fractional asset numbers
+
   [Paolo Tormene]
   * Modified the exporters in order to allow using
     `numpy.load(allow_pickle=False)` in the QGIS IRMT plugin
