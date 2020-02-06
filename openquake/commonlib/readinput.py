@@ -661,7 +661,8 @@ def get_amplification(oqparam):
     :returns: a composite array (amplification, param, imt0, imt1, ...)
     """
     fname = oqparam.inputs['amplification']
-    aw = hdf5.read_csv(fname, {'ampcode': 'S2', 'level': U8, None: F64})
+    aw = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, 'level': U8,
+                               None: F64})
     aw.imls = ()
     if 'level' in aw.dtype.names:
         for records in group_array(aw, 'ampcode').values():

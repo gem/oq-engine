@@ -50,7 +50,9 @@ def check_same_levels(imtls):
         if not imt.startswith(('PGA', 'SA')):
             raise ValueError('Site amplification works only with '
                              'PGA and SA, got %s' % imt)
-        if len(imtls[imt]) != len(imls) or any(
+        if numpy.isnan(imtls[imt]).all():
+            continue
+        elif len(imtls[imt]) != len(imls) or any(
                 l1 != l2 for l1, l2 in zip(imtls[imt], imls)):
             raise ValueError('Site amplification works only if the '
                              'levels are the same across all IMTs')
@@ -369,7 +371,9 @@ class OqParam(valid.ParamSet):
                              'time: which one do you want?')
 
         # check for amplification
-        if 'amplification' in self.inputs and self.imtls:
+        if ('amplification' in self.inputs and self.imtls and
+                self.calculation_mode in ['classical', 'classical_risk',
+                                          'disaggregation']):
             check_same_levels(self.imtls)
 
     def check_gsims(self, gsims):
@@ -486,14 +490,14 @@ class OqParam(valid.ParamSet):
                 from_string(imt)  # make sure it is a valid IMT
                 imtls[imt].extend(rf.imls)
         suggested = ['\nintensity_measure_types_and_levels = {']
-        self.risk_imtls = {}
+        risk_imtls = {}
         for imt, imls in imtls.items():
             imls = [iml for iml in imls if iml]  # strip zeros
-            self.risk_imtls[imt] = list(
-                valid.logscale(min(imls), max(imls), 20))
+            risk_imtls[imt] = list(valid.logscale(min(imls), max(imls), 20))
             suggested.append('  %r: logscale(%s, %s, 20),' %
                              (imt, min(imls), max(imls)))
         suggested[-1] += '}'
+        self.risk_imtls = {imt: None for imt in risk_imtls}
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
         if not getattr(self, 'hazard_imtls', []):

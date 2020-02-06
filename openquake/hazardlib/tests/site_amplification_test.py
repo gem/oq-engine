@@ -20,6 +20,7 @@ import unittest
 import numpy
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import gettemp
+from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
 
 trivial_ampl_func = '''\
@@ -66,7 +67,7 @@ class AmplifierTestCase(unittest.TestCase):
         # is lost and this is the reason why the first poe in 0.985
         # instead of 0.989
         fname = gettemp(trivial_ampl_func)
-        aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
+        aw = read_csv(fname, {'ampcode': ampcode_dt, 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
         a.check(self.vs30, 0)
@@ -88,7 +89,7 @@ class AmplifierTestCase(unittest.TestCase):
 
     def test_simple(self):
         fname = gettemp(simple_ampl_func)
-        aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
+        aw = read_csv(fname, {'ampcode': ampcode_dt, 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
         a.check(self.vs30, 1)
@@ -112,7 +113,7 @@ class AmplifierTestCase(unittest.TestCase):
 
     def test_double(self):
         fname = gettemp(double_ampl_func)
-        aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
+        aw = read_csv(fname, {'ampcode': ampcode_dt, 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()

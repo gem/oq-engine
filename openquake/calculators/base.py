@@ -362,7 +362,8 @@ def check_amplification(dstore):
     missing = codes - codeset
     if missing:
         raise ValueError('The site collection contains references to missing '
-                         'amplification functions: %s' % b', '.join(missing))
+                         'amplification functions: %s' % b' '.join(missing).
+                         decode('utf8'))
 
 
 class HazardCalculator(BaseCalculator):

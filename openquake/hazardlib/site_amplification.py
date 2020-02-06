@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from itertools import cycle
 import numpy
 from scipy.stats import norm
 from openquake.baselib.general import group_array
@@ -98,9 +99,8 @@ class Amplifier(object):
                 if not imt.startswith('sigma_')]
         m_indices = digitize(
             'period', self.periods, [imt.period for imt in imts])
-        if len(imls) == 0:  # no levels means same values for all levels
-            imls = self.amplevels
-            l_indices = [0] * len(self.midlevels)
+        if len(imls) <= 1:  # 1 level means same values for all levels
+            l_indices = [0]
         else:
             l_indices = digitize('level', self.midlevels, imls)
         L = len(l_indices)
@@ -152,7 +152,8 @@ class Amplifier(object):
         ampl_poes = numpy.zeros((A, G))
         for g in range(G):
             p_occ = -numpy.diff(poes[:, g])
-            for mid, p, a, s in zip(self.midlevels, p_occ, alphas, sigmas):
+            for mid, p, a, s in zip(
+                    self.midlevels, p_occ, cycle(alphas), cycle(sigmas)):
                 ampl_poes[:, g] += (1-norm_cdf(self.amplevels/mid, a, s)) * p
         return ampl_poes
 
@@ -181,7 +182,7 @@ class Amplifier(object):
         alphas = self.alpha[ampl_code, self.imtdict[imt]]
         if len(self.imls):
             return numpy.interp(gmvs, self.midlevels, alphas) * gmvs
-        return alphas[0] * gmvs  # the alphas are all equal
+        return alphas[0] * gmvs  # there is a single alpha
 
     def amplify_gmfs(self, ampcodes, gmvs, imt):
         """
