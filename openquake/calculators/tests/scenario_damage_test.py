@@ -80,10 +80,16 @@ RM       4_000
 
     def test_case_1c(self):
         # this is a case with more hazard sites than exposure sites
+        # it is also a case with asset numbers > 65535 and < 1
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
+        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        # check dmg_by_asset
         total = extract(self.calc.datastore, 'agg_damages/structural')
         aac(total, [[37312.8, 30846.1, 4869.6, 1271.5, 5700.7]], atol=.1)
+
         # check extract gmf_data works with a filtered site collection
         gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
         self.assertEqual(gmf_data['rlz-000'].shape, (2,))  # 2 assets

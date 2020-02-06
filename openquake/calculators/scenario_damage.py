@@ -78,7 +78,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         dictionary of extra parameters
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
-                      'd_event': damage array of shape R, L, E, D,
+                      'd_event': dict eid -> array of shape (L, D)
                       + optional consequences}
 
     `d_asset` and `d_tag` are related to the damage distributions.
@@ -88,8 +88,8 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     consequences = crmodel.get_consequences()
     haz_mon = monitor('getting hazard', measuremem=False)
     rsk_mon = monitor('aggregating risk', measuremem=False)
-    acc = AccumDict(accum=numpy.zeros((L, D), U32))
-    res = {'d_event': acc}
+    d_event = AccumDict(accum=numpy.zeros((L, D), U32))
+    res = {'d_event': d_event}
     for name in consequences:
         res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
         # using F64 here is necessary: with F32 the non-commutativity
@@ -117,7 +117,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                             eid = out.eids[e]
                             if ddd[1:].any():
                                 ddic[aid, eid][l] = ddd[1:]
-                                acc[eid][l] += ddd
+                                d_event[eid][l] += ddd
                         if make_ddd is avg_ddd:
                             ms = mean_std(fractions * asset['number'])
                         else:
@@ -139,6 +139,11 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     yield res
 
 
+BIGNUMBER = '''The asset %s has number=%s > 65535:
+this will become an error in the future. It is accepted at the moment,
+but your dmg_by_event table may be wrong: please double check it.'''
+
+
 @base.calculators.add('scenario_damage')
 class ScenarioDamageCalculator(base.RiskCalculator):
     """
@@ -158,8 +163,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         bad = self.assetcol['number'] > 65535
         for ass in self.assetcol[bad]:
             aref = self.assetcol.tagcol.id[ass['id']]
-            logging.error('The asset %s has number=%s > 65535: this will '
-                          'become an error in the future', aref, ass['number'])
+            logging.error(BIGNUMBER, aref, ass['number'])
         self.param['avg_ddd'] = self.oqparam.avg_ddd or float_algo
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         self.param['master_seed'] = self.oqparam.master_seed
