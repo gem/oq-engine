@@ -20,19 +20,13 @@ import unittest
 import numpy
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import gettemp
+from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
 
 trivial_ampl_func = '''\
-#,,,,,,,"vs30_ref=760, imls=[.001, .01, .05, .1, .2, .5, 1., 1.21]"
-ampcode,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
-A,0,1,1,1,1,1
-A,1,1,1,1,1,1
-A,2,1,1,1,1,1
-A,3,1,1,1,1,1
-A,4,1,1,1,1,1
-A,5,1,1,1,1,1
-A,6,1,1,1,1,1
-A,7,1,1,1,1,1
+#,,,,,,"vs30_ref=760"
+ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
+A,1,1,1,1,1
 '''
 
 simple_ampl_func = '''\
@@ -49,9 +43,9 @@ A,7,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
 '''
 
 double_ampl_func = '''\
-#,,,,,,,"vs30_ref=760, imls=[0]"
-ampcode,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
-A,0,2,2,2,2,2
+#,,,,,,,"vs30_ref=760"
+ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
+A,2,2,2,2,2
 '''
 
 
@@ -73,7 +67,7 @@ class AmplifierTestCase(unittest.TestCase):
         # is lost and this is the reason why the first poe in 0.985
         # instead of 0.989
         fname = gettemp(trivial_ampl_func)
-        aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
+        aw = read_csv(fname, {'ampcode': ampcode_dt, 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
         a.check(self.vs30, 0)
@@ -95,7 +89,7 @@ class AmplifierTestCase(unittest.TestCase):
 
     def test_simple(self):
         fname = gettemp(simple_ampl_func)
-        aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
+        aw = read_csv(fname, {'ampcode': ampcode_dt, 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
         a.check(self.vs30, 1)
@@ -112,9 +106,14 @@ class AmplifierTestCase(unittest.TestCase):
             poes, [0.985002, 0.979996, 0.969991, 0.940012,
                    0.889958, 0.79, 0.690037], atol=1E-6)
 
+        # amplify GMFs
+        gmvs = a.amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
+        numpy.testing.assert_allclose(gmvs, [0.00505, 0.010233, 0.01575],
+                                      atol=1E-5)
+
     def test_double(self):
         fname = gettemp(double_ampl_func)
-        aw = read_csv(fname, {'ampcode': 'S2', 'level': numpy.uint8,
+        aw = read_csv(fname, {'ampcode': ampcode_dt, 'level': numpy.uint8,
                               None: numpy.float64})
         a = Amplifier(self.imtls, aw)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
@@ -131,3 +130,7 @@ class AmplifierTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
                    0.69, 0.09, 0.09], atol=1E-6)
+
+        # amplify GMFs
+        gmvs = a.amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
+        numpy.testing.assert_allclose(gmvs, [.2, .4, .6])

@@ -31,7 +31,8 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, init_performance
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, site
+from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
@@ -361,7 +362,8 @@ def check_amplification(dstore):
     missing = codes - codeset
     if missing:
         raise ValueError('The site collection contains references to missing '
-                         'amplification functions:' + ' '.join(missing))
+                         'amplification functions: %s' % b' '.join(missing).
+                         decode('utf8'))
 
 
 class HazardCalculator(BaseCalculator):
@@ -656,7 +658,7 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol = dstore['sitecol'].complete
                 if ('amplification' in oq.inputs and
                         'ampcode' not in haz_sitecol.array.dtype.names):
-                    haz_sitecol.add_col('ampcode', (numpy.string_, 2))
+                    haz_sitecol.add_col('ampcode', site.ampcode_dt)
         else:
             haz_sitecol = readinput.get_site_collection(oq)
             if hasattr(self, 'rup'):
@@ -753,10 +755,15 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading %s', oq.inputs['amplification'])
             self.datastore['amplification'] = readinput.get_amplification(oq)
             check_amplification(self.datastore)
+            self.amplifier = Amplifier(
+                oq.imtls, self.datastore['amplification'], oq.soil_intensities)
+            self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
+        else:
+            self.amplifier = None
 
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
-                          avg_losses=oq.avg_losses)
+                          avg_losses=oq.avg_losses, amplifier=self.amplifier)
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):

@@ -399,7 +399,7 @@ def get_site_model(oqparam):
         req_site_params.add('ampcode')
     arrays = []
     dtypedic = {None: float, 'vs30measured': numpy.uint8,
-                'ampcode': (numpy.string_, 2)}
+                'ampcode': site.ampcode_dt}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
             sm = hdf5.read_csv(fname, dtypedic).array
@@ -661,13 +661,17 @@ def get_amplification(oqparam):
     :returns: a composite array (amplification, param, imt0, imt1, ...)
     """
     fname = oqparam.inputs['amplification']
-    aw = hdf5.read_csv(fname, {'ampcode': 'S2', 'level': U8, None: F64})
-    levels = numpy.arange(len(aw.imls))
-    for records in group_array(aw, 'ampcode').values():
-        if (records['level'] != levels).any():
-            raise InvalidFile('%s: levels for %s %s instead of %s' %
-                              (fname, records['ampcode'][0],
-                               records['level'], levels))
+    aw = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, 'level': U8,
+                               None: F64})
+    aw.imls = ()
+    if 'level' in aw.dtype.names:
+        for records in group_array(aw, 'ampcode').values():
+            if len(aw.imls) == 0:
+                aw.imls = records['level']
+            elif (records['level'] != aw.imls).any():
+                raise InvalidFile('%s: levels for %s %s instead of %s' %
+                                  (fname, records['ampcode'][0],
+                                   records['level'], aw.imls))
     return aw
 
 

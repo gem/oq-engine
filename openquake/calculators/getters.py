@@ -266,18 +266,6 @@ class GmfDataGetter(collections.abc.Mapping):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
-        if 'amplification' in self.dstore:
-            sitecol = self.dstore['sitecol']
-            arr = self.dstore['amplification']
-            dic = general.group_array(arr, 'ampcode')
-            imts = self.dstore['gmf_data/imts'][()].split()
-            self.amplification = numpy.zeros((len(sitecol), len(imts)))
-            for m, imt in enumerate(imts):
-                for sid, ampl in enumerate(sitecol.ampcode):
-                    [f] = dic[ampl][imt]
-                    self.amplification[sid, m] = f
-        else:
-            self.amplification = ()
         try:
             self.imts = self.dstore['gmf_data/imts'][()].split()
         except KeyError:  # engine < 3.3
@@ -308,11 +296,7 @@ class GmfDataGetter(collections.abc.Mapping):
         data = [dset[start:stop] for start, stop in idxs]
         if len(data) == 0:  # site ID with no data
             return {}
-        arr = numpy.concatenate(data)
-        if len(self.amplification):
-            for m, ampl in enumerate(self.amplification[sid]):
-                arr['gmv'][:, m] *= ampl
-        return group_by_rlz(arr, self.rlzs)
+        return group_by_rlz(numpy.concatenate(data), self.rlzs)
 
     def __iter__(self):
         return iter(self.sids)
@@ -330,12 +314,13 @@ class GmfGetter(object):
     An hazard getter with methods .get_gmfdata and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rupgetter, srcfilter, oqparam):
+    def __init__(self, rupgetter, srcfilter, oqparam, amplifier=None):
         self.rlzs_by_gsim = rupgetter.rlzs_by_gsim
         self.rupgetter = rupgetter
         self.srcfilter = srcfilter
         self.sitecol = srcfilter.sitecol.complete
         self.oqparam = oqparam
+        self.amplifier = amplifier
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
@@ -363,7 +348,8 @@ class GmfGetter(object):
                 try:
                     computer = calc.gmf.GmfComputer(
                         ebr, sitecol, self.oqparam.imtls, self.cmaker,
-                        self.oqparam.truncation_level, self.correl_model)
+                        self.oqparam.truncation_level, self.correl_model,
+                        self.amplifier)
                 except FarAwayRupture:
                     continue
                 # due to numeric errors ruptures within the maximum_distance

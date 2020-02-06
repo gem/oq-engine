@@ -64,7 +64,7 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     Compute GMFs and optionally hazard curves
     """
     oq = param['oqparam']
-    getter = GmfGetter(rupgetter, srcfilter, oq)
+    getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'])
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
 
 
