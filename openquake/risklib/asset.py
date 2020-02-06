@@ -757,6 +757,16 @@ class Exposure(object):
               'cost_calculator', 'tagcol']
 
     @staticmethod
+    def check(fname):
+        exp = Exposure.read([fname])
+        err = []
+        for asset, aref in zip(exp.assets, exp.asset_refs):
+            if asset.number > 65535:
+                err.append('Asset %s has number %s > 65535' %
+                           (aref, asset.number))
+        return '\n'.join(err)
+
+    @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
              tagcol=None, by_country=False):
