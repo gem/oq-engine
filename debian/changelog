@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Introduced the flag `avg_ddd` to support the old algorithm in
+  * Introduced the flag `approx_ddd` to support the old algorithm in
     scenario_damage calculations; it is automatically used for exposures
     with fractional asset numbers
 
