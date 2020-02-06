@@ -30,7 +30,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
-from openquake.calculators.getters import gen_rupture_getters
+from openquake.calculators.getters import gen_rgetters
 from openquake.commonlib import writers, hazard_writers, calc, util
 
 F32 = numpy.float32
@@ -59,7 +59,7 @@ def export_ruptures_xml(ekey, dstore):
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
     ruptures_by_grp = AccumDict(accum=[])
-    for rgetter in gen_rupture_getters(dstore):
+    for rgetter in gen_rgetters(dstore):
         ebrs = [ebr.export(rgetter.rlzs_by_gsim, num_ses)
                 for ebr in rgetter.get_ruptures()]
         ruptures_by_grp[rgetter.grp_id].extend(ebrs)

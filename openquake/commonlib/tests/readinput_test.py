@@ -342,9 +342,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn("Could not convert number->asset_number: "
-                      "got 0 < 1, line 17",
-                      str(ctx.exception))
+        self.assertIn("'0.0' is zero, line 17", str(ctx.exception))
 
     def test_invalid_asset_id(self):
         oqparam = mock.Mock()
@@ -424,6 +422,22 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
         self.assertIn("is missing", str(ctx.exception))
+
+    def test_Lon_instead_of_lon(self):
+        fname = os.path.join(DATADIR, 'exposure.xml')
+        with self.assertRaises(InvalidFile) as ctx:
+            asset.Exposure.read([fname])
+        self.assertIn('''\
+Expected: ['id', 'lat', 'lon', 'number', 'structural', 'taxonomy']
+Got: ['Lon', 'id', 'lat', 'number', 'structural', 'taxonomy']
+Missing: {'lon'}''', str(ctx.exception))
+
+    def test_case_similar(self):
+        fname = os.path.join(DATADIR, 'exposure2.xml')
+        with self.assertRaises(InvalidFile) as ctx:
+            asset.Exposure.read([fname])
+        self.assertIn('''\
+Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
 
 
 class GetCompositeSourceModelTestCase(unittest.TestCase):

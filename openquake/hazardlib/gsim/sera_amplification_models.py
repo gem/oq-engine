@@ -23,7 +23,7 @@ Implements SERA site amplification models class: `PitilakisEtAl2018`,
                                                  `SandikkayaDinsever2018`
 """
 import numpy as np
-from copy import deepcopy
+import copy
 from scipy.constants import g
 # from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import (GMPE, CoeffsTable, registry)
@@ -132,7 +132,7 @@ class PitilakisEtAl2018(GMPE):
             self.gmpe = registry[gmpe_name](**kwargs)
         else:
             # An instantiated class is passed as an argument
-            self.gmpe = deepcopy(gmpe_name)
+            self.gmpe = copy.deepcopy(gmpe_name)
         if reference_velocity:
             self.rock_vs30 = reference_velocity
         else:
@@ -150,7 +150,7 @@ class PitilakisEtAl2018(GMPE):
         input GMPE once more in order to return the standard deviations for the
         required IMT.
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
         pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
@@ -303,7 +303,7 @@ class Eurocode8Amplification(PitilakisEtAl2018):
         desired site class, with the standard deviations taken from the
         original GMPE at the desired IMT
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
         pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
@@ -409,7 +409,7 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
         Returns the mean and standard deviations following the approach
         in :class:`Eurocode8Amplification`
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
         pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
@@ -508,7 +508,7 @@ class SandikkayaDinsever2018(GMPE):
             self.gmpe = registry[gmpe_name](**kwargs)
         else:
             # An instantiated class is passed as an argument
-            self.gmpe = deepcopy(gmpe_name)
+            self.gmpe = copy.deepcopy(gmpe_name)
         # Define the reference velocity - set to 760. by default
         self.rock_vs30 = reference_velocity if reference_velocity else\
             self.DEFINED_FOR_REFERENCE_VELOCITY
@@ -517,8 +517,8 @@ class SandikkayaDinsever2018(GMPE):
                     frozenset(getattr(self, name) | getattr(self.gmpe, name)))
         stddev_check = (const.StdDev.INTER_EVENT in
                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES) and\
-                        (const.StdDev.INTRA_EVENT in
-                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
+                       (const.StdDev.INTRA_EVENT in
+                        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
         if not stddev_check:
             raise ValueError("Input GMPE %s not defined for inter- and intra-"
                              "event standard deviation" % str(self.gmpe))
@@ -548,7 +548,7 @@ class SandikkayaDinsever2018(GMPE):
         """
         Returns the mean and standard deviations
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         mean, stddevs = self.gmpe.get_mean_and_stddevs(
             sctx_r, rctx, dctx, imt, [const.StdDev.INTER_EVENT,

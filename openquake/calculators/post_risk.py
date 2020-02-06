@@ -118,7 +118,7 @@ class PostRiskCalculator(base.RiskCalculator):
         loss_types = oq.loss_names
         aggby = {'aggregate_by': aggregate_by}
         for tagname in aggregate_by:
-            aggby[tagname] = getattr(self.tagcol, tagname)[1:]
+            aggby[tagname] = encode(getattr(self.tagcol, tagname)[1:])
         units = self.datastore['cost_calculator'].get_units(loss_types)
         shp = self.get_shape(self.L, self.R, aggregate_by=aggregate_by)
         # shape L, R, T...

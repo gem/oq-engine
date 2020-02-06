@@ -117,9 +117,8 @@ You can enable it in the engine by adding a ``[reqv]`` section to the
 job.ini, like in our example in
 openquake/qa_tests_data/classical/case_2/job.ini::
 
-  [reqv]
-  active shallow crust = lookup_asc.hdf5
-  stable shallow crust = lookup_sta.hdf5
+reqv_hdf5 = {'active shallow crust': 'lookup_asc.hdf5',
+             'stable shallow crust': 'lookup_sta.hdf5'}
 
 For each tectonic region type to which the approximation should be applied,
 the user must provide a lookup table in .hdf5 format containing arrays
@@ -134,7 +133,7 @@ Depending on the tectonic region type and rupture magnitude, the
 engine converts the epicentral distance ``repi` into an equivalent
 distance by looking at the lookup table and use it to determine the
 ``rjb`` and ``rrup`` distances, instead of the regular routines. This
-means that within this approximation ruptures are treated as really
+means that within this approximation ruptures are treated as
 pointwise and not rectangular as the engine usually does.
 
 Notice that the equivalent epicenter distance approximation only

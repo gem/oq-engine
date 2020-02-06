@@ -142,7 +142,6 @@ import os
 import re
 import ast
 import sys
-import gzip
 import time
 import socket
 import signal

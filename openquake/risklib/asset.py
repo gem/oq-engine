@@ -30,6 +30,20 @@ from openquake.hazardlib import valid, nrml, geo, InvalidFile
 from openquake.risklib import countries
 
 
+def get_case_similar(names):
+    """
+    :param names: a list of strings
+    :returns: list of case similar names, possibly empty
+
+    >>> get_case_similar(['id', 'ID', 'lon', 'lat', 'Lon'])
+    [['ID', 'id'], ['Lon', 'lon']]
+    """
+    dic = general.AccumDict(accum=[])
+    for name in names:
+        dic[name.lower()].append(name)
+    return [sorted(names) for names in dic.values() if len(names) > 1]
+
+
 class CostCalculator(object):
     """
     Return the value of an asset for the given loss type depending
@@ -743,6 +757,16 @@ class Exposure(object):
               'cost_calculator', 'tagcol']
 
     @staticmethod
+    def check(fname):
+        exp = Exposure.read([fname])
+        err = []
+        for asset, aref in zip(exp.assets, exp.asset_refs):
+            if asset.number > 65535:
+                err.append('Asset %s has number %s > 65535' %
+                           (aref, asset.number))
+        return '\n'.join(err)
+
+    @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
              tagcol=None, by_country=False):
@@ -849,6 +873,10 @@ class Exposure(object):
         for op in self.occupancy_periods.split():
             fields.append(occupants + op)
         fields.extend(self.tagcol.tagnames)
+        wrong = get_case_similar(set(fields))
+        if wrong:
+            raise InvalidFile('Found case-duplicated fields %s in %s' %
+                              (wrong, self.datafiles))
         return sorted(set(fields))
 
     def _read_csv(self):
@@ -860,14 +888,16 @@ class Exposure(object):
             with open(fname, encoding='utf-8') as f:
                 fields = next(csv.reader(f))
                 header = set(fields)
+                missing = expected_header - header - {'exposure', 'country'}
                 if len(header) < len(fields):
                     raise InvalidFile(
                         '%s: The header %s contains a duplicated field' %
                         (fname, header))
-                elif expected_header - header - {'exposure', 'country'}:
-                    raise InvalidFile(
-                        'Unexpected header in %s\nExpected: %s\nGot: %s' %
-                        (fname, sorted(expected_header), sorted(header)))
+                elif missing:
+                    msg = ('Unexpected header in %s\nExpected: %s\nGot: %s\n'
+                           'Missing: %s')
+                    raise InvalidFile(msg % (fname, sorted(expected_header),
+                                             sorted(header), missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
                 'retrofitted': float, None: object}
         rename = {}

@@ -143,7 +143,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # extract agg_curves with tags
         self.run_calc(case_1.__file__, 'job_eb.ini',
-                      minimum_loss_fraction='0',
                       aggregate_by='policy,taxonomy')
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
@@ -301,8 +300,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master_eb(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
-                      concurrent_tasks='4', aggregate_by='id',
-                      minimum_loss_fraction='0.01')
+                      concurrent_tasks='4', aggregate_by='id')
 
         # tot_losses-rlzs has shape (L=5, R=9)
         # tot_losses-stats has shape (L=5, S=4)
@@ -422,9 +420,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_asset_loss_table(self):
         # this is a case with L=1, R=1, T1=2, P=3
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv',
-                            minimum_loss_fraction='0.01')
+                            minimum_asset_loss='100')
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
+
+        curves = self.calc.datastore.read_df('agg_curves-rlzs',
+                                             ['NAME_1', 'return_periods'])
+        self.assertEqual(len(curves), 6)  # 2 names x 3 periods
 
         # regenerate loss curves and maps
         out = self.run_calc(
