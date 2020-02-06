@@ -53,7 +53,7 @@ def bin_ddd(fractions, n, seed):
     return ddd
 
 
-def avg_ddd(fractions, n, seed=None):
+def approx_ddd(fractions, n, seed=None):
     """
     Converting fractions into uint16 discrete damage distributions using round
     """
@@ -96,7 +96,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
     # algorithm used to compute the discrete damage distributions
-    make_ddd = avg_ddd if param['avg_ddd'] else bin_ddd
+    make_ddd = approx_ddd if param['approx_ddd'] else bin_ddd
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
@@ -118,7 +118,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                             if ddd[1:].any():
                                 ddic[aid, eid][l] = ddd[1:]
                                 d_event[eid][l] += ddd
-                        if make_ddd is avg_ddd:
+                        if make_ddd is approx_ddd:
                             ms = mean_std(fractions * asset['number'])
                         else:
                             ms = mean_std(ddds)
@@ -164,7 +164,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for ass in self.assetcol[bad]:
             aref = self.assetcol.tagcol.id[ass['id']]
             logging.error(BIGNUMBER, aref, ass['number'])
-        self.param['avg_ddd'] = self.oqparam.avg_ddd or float_algo
+        self.param['approx_ddd'] = self.oqparam.approx_ddd or float_algo
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         self.param['master_seed'] = self.oqparam.master_seed
         A = len(self.assetcol)

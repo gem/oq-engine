@@ -111,7 +111,7 @@ class OqParam(valid.ParamSet):
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
     discard_assets = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
-    avg_ddd = valid.Param(valid.boolean, False)
+    approx_ddd = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
