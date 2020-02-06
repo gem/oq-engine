@@ -118,8 +118,12 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                             if ddd[1:].any():
                                 ddic[aid, eid][l] = ddd[1:]
                                 acc[eid][l] += ddd
-                        result['d_asset'].append(
-                            (l, r, asset['ordinal'], mean_std(ddds)))
+                        if make_ddd is avg_ddd:
+                            ms = mean_std(fractions * asset['number'])
+                        else:
+                            ms = mean_std(ddds)
+                        result['d_asset'].append((l, r, asset['ordinal'], ms))
+                        # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
                             result[name + '_by_asset'].append(
@@ -152,10 +156,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             logging.warning('The exposure contains non-integer asset numbers: '
                             'using average damage distributions')
         bad = self.assetcol['number'] > 65535
-        for rec in self.assetcol[bad]:
-            aref = self.assetcol.tagcol.id[rec['id']]
-            logging.error('The asset %s has number=%s > 65536: this will '
-                          'become an error in the future', aref, rec['number'])
+        for ass in self.assetcol[bad]:
+            aref = self.assetcol.tagcol.id[ass['id']]
+            logging.error('The asset %s has number=%s > 65535: this will '
+                          'become an error in the future', aref, ass['number'])
         self.param['avg_ddd'] = self.oqparam.avg_ddd or float_algo
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         self.param['master_seed'] = self.oqparam.master_seed

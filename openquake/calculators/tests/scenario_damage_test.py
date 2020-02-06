@@ -72,8 +72,7 @@ RM       4_000
         # test agg_damages, 1 realization x 3 damage states
         [dmg] = extract(self.calc.datastore, 'agg_damages/structural?'
                         'taxonomy=RC&CRESTA=01.1')
-        #numpy.testing.assert_almost_equal(
-        #    [1498.0121, 472.96616, 29.021801], dmg, decimal=4)
+        aac([1528., 444., 28.], dmg, atol=1E-4)
         # test no intersection
         dmg = extract(self.calc.datastore, 'agg_damages/structural?'
                       'taxonomy=RM&CRESTA=01.1')
@@ -84,8 +83,7 @@ RM       4_000
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
         total = extract(self.calc.datastore, 'agg_damages/structural')
-        aac(total, [[17651.5, 30846.1,  4869.6,  1271.5,  5700.7]],
-            atol=.1)
+        aac(total, [[37312.8, 30846.1, 4869.6, 1271.5, 5700.7]], atol=.1)
         # check extract gmf_data works with a filtered site collection
         gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
         self.assertEqual(gmf_data['rlz-000'].shape, (2,))  # 2 assets
