@@ -14,8 +14,8 @@ predates frameworks like dask_ or ray_) which however is quite easy to
 use and mostly compatible with Python multiprocessing or concurrent.futures.
 The concurrency architecture is the standard Single Writer Multiple Reader
 (SWMR), used at the HDF5 level: only one process can write data while multiple
-processes can read it. The engine run seemlessly on a single machine or a
-cluster, using as much cores as possible.
+processes can read it. The engine runs seamlessly on a single machine or a
+cluster, using as many cores as possible.
 
 In the past the engine had a database-centric architecture and was
 more class-oriented than numpy-oriented: some remnants of such dark
@@ -62,10 +62,10 @@ The OpenQuake Engine suite is composed of several components:
 - since v3.8 the engine does not depend anymore from celery and rabbitmq,
   but can still use such tools until they will be deprecated
 
-This is the full stack of internal libraries used by the engine: each of those
+This is the full stack of internal libraries used by the engine. Each of these
 is a Python package containing several modules or event
 subpackages. The stack is a dependency tower where the higher levels
-depend on the lower levels but not viceversa:
+depend on the lower levels but not vice versa:
 
 - level 9: commands (commands for oq script)
 - level 8: server (database and Web UI)
@@ -93,7 +93,7 @@ than complicating the current calculators.
 The results of a computation are automatically saved in the datastore
 and can be exported in a portable format, such as CSV (or XML, for
 legacy reasons). You can assume that the datastore of version X of
-the engine *will not work* with version X + 1: on the contrary, the
+the engine *will not work* with version X + 1. On the contrary, the
 exported files will likely be same across different versions. It is
 important to export all of the outputs you are interested in before
 doing an upgrade, otherwise you would be forced to downgrade in order
@@ -112,8 +112,8 @@ Design principles
 
 The main design principle has been *simplicity*: everything has to be
 as simple as possible (but not simplest). The goal has been to keep
-the engine simple enough that a single person can understand it, can
-debug it and can extend it without tremendous efforts. All the rest
+the engine simple enough that a single person can understand it,
+debug it, and extend it without tremendous effort. All the rest
 comes from simplicity: transparency, ability to inspect and debug, modularity,
 adaptability of the code, etc. Even efficiency: in the last three
 years most of the performance improvements came from free, just from
@@ -123,7 +123,7 @@ several things in the engine that are more complex than they should:
 we are working on that.
 
 After simplicity the second design goal has been *performance*: the
-engine is a number chrunching application after all, and we need to run
+engine is a number crunching application after all, and we need to run
 massively parallel calculations taking days or weeks of
 runtime. Efficiency in terms of computation time and memory
 requirements is of paramount importance, since it makes the difference

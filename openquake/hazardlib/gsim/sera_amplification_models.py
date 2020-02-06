@@ -23,12 +23,11 @@ Implements SERA site amplification models class: `PitilakisEtAl2018`,
                                                  `SandikkayaDinsever2018`
 """
 import numpy as np
-from copy import deepcopy
+import copy
 from scipy.constants import g
 # from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import (GMPE, CoeffsTable, registry)
 from openquake.hazardlib.imt import PGA, SA, from_string
-from openquake.hazardlib.gsim.kotha_2019 import KothaEtAl2019SERA
 from openquake.hazardlib import const
 
 
@@ -37,27 +36,27 @@ imls = [0., 0.25, 0.5, 0.75, 1., 1.25]
 
 # Short period amplification factors defined by Pitilakis et al., (2018)
 FS = {
-"A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-"B1": [1.3, 1.3, 1.2, 1.2, 1.2, 1.2],
-"B2": [1.4, 1.3, 1.3, 1.2, 1.1, 1.1],
-"C1": [1.7, 1.6, 1.4, 1.3, 1.3, 1.2],
-"C2": [1.6, 1.5, 1.3, 1.2, 1.1, 1.0],
-"C3": [1.8, 1.6, 1.4, 1.2, 1.1, 1.0],
-"D":  [2.2, 1.9, 1.6, 1.4, 1.2, 1.0],
-"E":  [1.7, 1.6, 1.6, 1.5, 1.5, 1.5]
+    "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    "B1": [1.3, 1.3, 1.2, 1.2, 1.2, 1.2],
+    "B2": [1.4, 1.3, 1.3, 1.2, 1.1, 1.1],
+    "C1": [1.7, 1.6, 1.4, 1.3, 1.3, 1.2],
+    "C2": [1.6, 1.5, 1.3, 1.2, 1.1, 1.0],
+    "C3": [1.8, 1.6, 1.4, 1.2, 1.1, 1.0],
+    "D":  [2.2, 1.9, 1.6, 1.4, 1.2, 1.0],
+    "E":  [1.7, 1.6, 1.6, 1.5, 1.5, 1.5]
 }
 
 
 # Long period amplification factors defined by Pitilakis et al., (2018)
 F1 = {
-"A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-"B1": [1.4, 1.4, 1.4, 1.4, 1.3, 1.3],
-"B2": [1.6, 1.5, 1.5, 1.5, 1.4, 1.3],
-"C1": [1.7, 1.6, 1.5, 1.5, 1.4, 1.3],
-"C2": [2.1, 2.0, 1.9, 1.8, 1.8, 1.7],
-"C3": [3.2, 3.0, 2.7, 2.5, 2.4, 2.3],
-"D":  [4.1, 3.8, 3.3, 3.0, 2.8, 2.7],
-"E":  [1.3, 1.3, 1.2, 1.2, 1.2, 1.2]
+    "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    "B1": [1.4, 1.4, 1.4, 1.4, 1.3, 1.3],
+    "B2": [1.6, 1.5, 1.5, 1.5, 1.4, 1.3],
+    "C1": [1.7, 1.6, 1.5, 1.5, 1.4, 1.3],
+    "C2": [2.1, 2.0, 1.9, 1.8, 1.8, 1.7],
+    "C3": [3.2, 3.0, 2.7, 2.5, 2.4, 2.3],
+    "D":  [4.1, 3.8, 3.3, 3.0, 2.8, 2.7],
+    "E":  [1.3, 1.3, 1.2, 1.2, 1.2, 1.2]
 }
 
 
@@ -133,7 +132,7 @@ class PitilakisEtAl2018(GMPE):
             self.gmpe = registry[gmpe_name](**kwargs)
         else:
             # An instantiated class is passed as an argument
-            self.gmpe = deepcopy(gmpe_name)
+            self.gmpe = copy.deepcopy(gmpe_name)
         if reference_velocity:
             self.rock_vs30 = reference_velocity
         else:
@@ -151,7 +150,7 @@ class PitilakisEtAl2018(GMPE):
         input GMPE once more in order to return the standard deviations for the
         required IMT.
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
         pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
@@ -304,7 +303,7 @@ class Eurocode8Amplification(PitilakisEtAl2018):
         desired site class, with the standard deviations taken from the
         original GMPE at the desired IMT
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
         pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
@@ -410,7 +409,7 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
         Returns the mean and standard deviations following the approach
         in :class:`Eurocode8Amplification`
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
         pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
@@ -509,7 +508,7 @@ class SandikkayaDinsever2018(GMPE):
             self.gmpe = registry[gmpe_name](**kwargs)
         else:
             # An instantiated class is passed as an argument
-            self.gmpe = deepcopy(gmpe_name)
+            self.gmpe = copy.deepcopy(gmpe_name)
         # Define the reference velocity - set to 760. by default
         self.rock_vs30 = reference_velocity if reference_velocity else\
             self.DEFINED_FOR_REFERENCE_VELOCITY
@@ -518,7 +517,7 @@ class SandikkayaDinsever2018(GMPE):
                     frozenset(getattr(self, name) | getattr(self.gmpe, name)))
         stddev_check = (const.StdDev.INTER_EVENT in
                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES) and\
-                        (const.StdDev.INTRA_EVENT in
+                       (const.StdDev.INTRA_EVENT in
                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
         if not stddev_check:
             raise ValueError("Input GMPE %s not defined for inter- and intra-"
@@ -545,12 +544,11 @@ class SandikkayaDinsever2018(GMPE):
         else:
             self.region = region
 
-
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         Returns the mean and standard deviations
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         mean, stddevs = self.gmpe.get_mean_and_stddevs(
             sctx_r, rctx, dctx, imt, [const.StdDev.INTER_EVENT,
