@@ -27,9 +27,7 @@ first.
 
 Before starting, it may be useful to have an idea of the architecture
 of the engine and its internal components, like the DbServer and the
-WebUI. For that you should read the architecture_ document.
-
-.. _architecture: architecture.rst
+WebUI. For that you should read the :ref:`architecture` document.
 
 There are also external tools which are able to interact with the engine,
 like the QGIS plugin to run calculations and visualize the outputs and the

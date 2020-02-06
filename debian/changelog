@@ -5,6 +5,8 @@
     with fractional asset numbers
 
   [Paolo Tormene]
+  * Modified the server views in order to allow using
+    `numpy.load(allow_pickle=False)` in the QGIS IRMT plugin
   * Changed some copy.deepcopy calls into copy.copy in hazardlib
 
   [Michele Simionato]

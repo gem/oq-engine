@@ -20,6 +20,7 @@ import getpass
 import requests
 import logging
 import django
+import numpy
 
 from time import sleep
 from django.conf import settings
@@ -123,12 +124,36 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
         try:
             response = requests.head(url, allow_redirects=True).status_code
             success = True
-        except:
+        except Exception:
             sleep(1)
 
         retry += 1
 
     if not success:
         logging.warning('Unable to connect to %s within %s retries'
-                     % (url, max_retries))
+                        % (url, max_retries))
     return success
+
+
+def array_of_strings_to_bytes(arr, key):
+    """
+    :param arr: array or array-like object
+    :param key: string associated to the error (appear in the error message)
+
+    If `arr` is a numpy array with dtype object containing strings, convert
+    it into a numpy array containing bytes, unless it has more than 2
+    dimensions or contains non-strings (these are errors). Return `arr`
+    unchanged in the other cases.
+    """
+    if not isinstance(arr, numpy.ndarray) or arr.dtype != numpy.dtype('O'):
+        return arr
+    if arr.ndim == 1:
+        return numpy.array([s.encode('utf8') for s in arr])
+    elif arr.ndim == 2:
+        return numpy.array([[col.encode('utf8') for col in row]
+                            for row in arr])
+    else:
+        raise NotImplementedError('The array for %s has shape %s' %
+                                  (key, arr.shape))
+
+    return arr

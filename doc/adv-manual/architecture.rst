@@ -1,3 +1,6 @@
+.. _architecture:
+
+
 Architecture of the OpenQuake engine
 =========================================
 
