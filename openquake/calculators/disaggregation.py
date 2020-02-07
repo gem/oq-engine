@@ -304,6 +304,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         for grp_id, trt in csm_info.trt_by_grp.items():
+            logging.info('Sending rup_data for group #%d', grp_id)
             trti = trt_num[trt]
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             cmaker = ContextMaker(
