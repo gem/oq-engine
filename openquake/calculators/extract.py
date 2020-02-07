@@ -1318,7 +1318,7 @@ class WebExtractor(Extractor):
         resp = self.sess.get(url)
         if resp.status_code != 200:
             raise WebAPIError(resp.text)
-        npz = numpy.load(io.BytesIO(resp.content), allow_pickle=True)
+        npz = numpy.load(io.BytesIO(resp.content))
         attrs = {k: npz[k] for k in npz if k != 'array'}
         try:
             arr = npz['array']
