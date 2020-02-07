@@ -138,7 +138,10 @@ class RlzsAssoc(object):
                 rlzs_by_gsim = self.get_rlzs_by_gsim(sg.trt, sm.ordinal)
                 if not rlzs_by_gsim:
                     continue
-                dic['grp-%02d' % sg.id] = list(rlzs_by_gsim.values())
+                rows = list(rlzs_by_gsim.values())
+                if len(set(map(len, rows))) == 1:  # all the same length
+                    rows = numpy.array(rows)  # convert rows into 2D array
+                dic['grp-%02d' % sg.id] = rows
         return dic
 
     def _init(self):
