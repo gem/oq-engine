@@ -160,6 +160,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
     def execute(self):
         """Performs the disaggregation"""
+        self.datastore.swmr_on()
         return self.full_disaggregation()
 
     def get_curve(self, sid, rlzs):
