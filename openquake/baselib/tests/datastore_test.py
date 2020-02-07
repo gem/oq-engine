@@ -96,4 +96,4 @@ class DataStoreTestCase(unittest.TestCase):
         self.dstore.store_files(fnames)
         for name, data in self.dstore.retrieve_files():
             print(name)
-        print(self.dstore.get_file('input/' + name))
+        print(self.dstore.get_file(name))

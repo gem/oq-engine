@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: fixed `oq export input -e zip` that was flattening the tree
+    structure of the input files in the exported zip archive
   * Implemented GMFs amplification
   * Introduced the flag `approx_ddd` to support the old algorithm in
     scenario_damage calculations; it is automatically used for exposures
