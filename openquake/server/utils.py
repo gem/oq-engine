@@ -145,6 +145,8 @@ def array_of_strings_to_bytes(arr, key):
     dimensions or contains non-strings (these are errors). Return `arr`
     unchanged in the other cases.
     """
+    if arr is None:
+        return ()
     if not isinstance(arr, numpy.ndarray) or arr.dtype != numpy.dtype('O'):
         return arr
     if arr.ndim == 1:
