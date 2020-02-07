@@ -427,6 +427,12 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
+                ns = len(csm.get_sources())
+                if ns > 1000:
+                    j = oq.inputs['job_ini']
+                    raise InvalidFile(
+                        '%s: disagg_by_src can be set only if there are <=1000'
+                        ' sources, but %d were found in the model' % (j, ns))
                 self.csm_info = csm.info
                 self.datastore['source_model_lt'] = csm.source_model_lt
                 res = views.view('dupl_sources', self.datastore)

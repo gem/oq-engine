@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a limit of 1000 sources when disagg_by_src=true
   * Fixed random HDF5 bug in disaggregation calculations
   * Internal: fixed `oq export input -e zip` that was flattening the tree
     structure of the input files in the exported zip archive
