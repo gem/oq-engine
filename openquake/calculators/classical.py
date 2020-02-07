@@ -496,9 +496,13 @@ class ClassicalCalculator(base.HazardCalculator):
              N, hstats, oq.individual_curves, oq.max_sites_disagg,
              self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
-        self.datastore.swmr_on()
+        if N <= oq.max_sites_disagg:  # few sites
+            dist = 'no'
+        else:
+            dist = None  # parallelize as usual
+            self.datastore.swmr_on()
         parallel.Starmap(
-            build_hazard, allargs, h5=self.datastore.hdf5
+            build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
 
 
