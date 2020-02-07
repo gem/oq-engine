@@ -120,7 +120,7 @@ class KothaEtAl2020(GMPE):
         self.ergodic = ergodic
         if self.sigma_mu_epsilon:
             # Connect to hdf5 and load tables into memory
-            self.retreive_sigma_mu_data()
+            self.retrieve_sigma_mu_data()
         else:
             # No adjustments, so skip this step
             self.mags = None
@@ -130,7 +130,7 @@ class KothaEtAl2020(GMPE):
             self.pgv = None
             self.periods = None
 
-    def retreive_sigma_mu_data(self):
+    def retrieve_sigma_mu_data(self):
         """
         For the general form of the GMPE this retrieves the sigma mu
         values from the hdf5 file using the "general" model, i.e. sigma mu
