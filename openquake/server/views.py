@@ -737,8 +737,6 @@ def extract(request, calc_id, what):
                 elif isinstance(val, dict):
                     # this is hack: we are losing the values
                     a[key] = list(val)
-                elif val is None:
-                    a[key] = []
                 else:
                     a[key] = utils.array_of_strings_to_bytes(val, key)
             numpy.savez_compressed(fname, **a)
