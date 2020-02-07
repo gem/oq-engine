@@ -60,6 +60,14 @@ class OpenQuake(object):
         finally:
             ex.close()
 
+    def ex(self, calc_id, what):
+        """Extract data from a local engine server"""
+        ex = WebExtractor(calc_id, 'http://localhost:8800', '', '')
+        try:
+            return ex.get(what)
+        finally:
+            ex.close()
+
 
 @sap.script
 def shell(script=None, args=()):
