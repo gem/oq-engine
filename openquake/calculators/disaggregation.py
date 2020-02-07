@@ -91,15 +91,13 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
         iml4, dict(imts=[from_string(imt) for imt in imtls], rlzs=rlzs))
 
 
-def compute_disagg(dstore, slc, sitecol, oq, cmaker, iml4, trti, bin_edges,
+def compute_disagg(rupdata, sitecol, oq, cmaker, iml4, trti, bin_edges,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param dstore:
-        a :class:`openquake.baselib.datastore.DataStore` instance
-    :param slc:
-        a slice of ruptures
+    :param rupdata
+        a dictionary of data corresponding to a slice of ruptures
     :param sitecol:
         a SiteCollection instance with the disaggregation sites
     :param oq:
@@ -117,8 +115,6 @@ def compute_disagg(dstore, slc, sitecol, oq, cmaker, iml4, trti, bin_edges,
     :returns:
         a dictionary sid -> 8D-array
     """
-    dstore.open('r')
-    rupdata = {k: dstore['rup/' + k][slc] for k in dstore['rup']}
     # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
@@ -304,9 +300,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         indices_by_grp = get_indices(gid)  # grp_id -> [(start, stop),...]
         blocksize = len(gid) // (oq.concurrent_tasks or 1) + 1
         # NB: removing the blocksize causes slow disaggregation tasks
-        allargs = []
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
+        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         for grp_id, trt in csm_info.trt_by_grp.items():
             trti = trt_num[trt]
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
@@ -317,11 +313,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
             for start, stop in indices_by_grp[grp_id]:
                 for slc in gen_slices(start, stop, blocksize):
-                    allargs.append((dstore, slc, self.sitecol, oq, cmaker,
-                                    self.iml4, trti, self.bin_edges))
-        results = parallel.Starmap(
-            compute_disagg, allargs, h5=self.datastore.hdf5
-        ).reduce(self.agg_result, AccumDict(accum={}))
+                    rupdata = {k: dstore['rup/' + k][slc]
+                               for k in self.datastore['rup']}
+                    smap.submit((rupdata, self.sitecol, oq, cmaker,
+                                 self.iml4, trti, self.bin_edges))
+        results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 8D array
 
     def agg_result(self, acc, result):
