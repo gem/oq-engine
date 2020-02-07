@@ -21,6 +21,10 @@ from functools import partial
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib import nrml
+from openquake.baselib.datastore import read
+from openquake.hazardlib.geo.geodetic import geodetic_distance
+from openquake.commonlib import readinput, calc
+from openquake.calculators.extract import extract, WebExtractor
 
 
 class OpenQuake(object):
@@ -29,10 +33,6 @@ class OpenQuake(object):
     engine utilities for work in the interactive interpreter.
     """
     def __init__(self):
-        from openquake.baselib.datastore import read
-        from openquake.hazardlib.geo.geodetic import geodetic_distance
-        from openquake.commonlib import readinput, calc
-        from openquake.calculators.extract import extract
         try:
             from matplotlib import pyplot
             self.plt = pyplot
@@ -50,7 +50,15 @@ class OpenQuake(object):
         self.get_exposure = readinput.get_exposure
         self.make_hmap = calc.make_hmap
         self.geodetic_distance = geodetic_distance
-        # TODO: more utilities when be added when deemed useful
+        # TODO: more utilities will be added when deemed useful
+
+    def webex(self, calc_id, what):
+        """Extract data from a remote calculation"""
+        ex = WebExtractor(calc_id)
+        try:
+            return ex.get(what)
+        finally:
+            ex.close()
 
 
 @sap.script
