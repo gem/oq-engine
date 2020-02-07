@@ -511,9 +511,13 @@ class SitecolAssetcolTestCase(unittest.TestCase):
     def test_site_amplification(self):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.inputs['amplification'] = os.path.join(
-            oq.base_path, 'amplification.csv')
-        with self.assertRaises(InvalidFile):
+            oq.base_path, 'invalid_amplification.csv')
+        with self.assertRaises(InvalidFile) as ctx:
             readinput.get_amplification(oq)
+        self.assertIn(
+            "levels for b'F' [1.0e-03 1.0e-02 5.0e-02 1.0e-01 2.0e-01 1.6e+00]"
+            " instead of [1.0e-03 1.0e-02 5.0e-02 1.0e-01 2.0e-01 5.0e-01"
+            " 1.6e+00]", str(ctx.exception))
 
     def test_site_model_sites(self):
         # you can set them at the same time

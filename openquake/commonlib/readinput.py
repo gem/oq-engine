@@ -667,7 +667,8 @@ def get_amplification(oqparam):
         for records in group_array(aw, 'ampcode').values():
             if len(imls) == 0:
                 imls = records['level']
-            elif (records['level'] != imls).any():
+            elif len(records['level']) != len(imls) or (
+                    records['level'] != imls).any():
                 raise InvalidFile('%s: levels for %s %s instead of %s' %
                                   (fname, records['ampcode'][0],
                                    records['level'], imls))
