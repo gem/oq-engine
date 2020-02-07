@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed random HDF5 bug in disaggregation calculations
   * Internal: fixed `oq export input -e zip` that was flattening the tree
     structure of the input files in the exported zip archive
   * Implemented GMFs amplification
