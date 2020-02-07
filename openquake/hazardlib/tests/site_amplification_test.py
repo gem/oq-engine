@@ -30,16 +30,16 @@ A,1,1,1,1,1
 '''
 
 simple_ampl_func = '''\
-#,,,,,,,"vs30_ref=760, imls=[.001, .01, .05, .1, .2, .5, 1., 1.21]"
+#,,,,,,,"vs30_ref=760"
 ampcode,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5),sigma_PGA,sigma_SA(0.3),sigma_SA(0.6),sigma_SA(1.0),sigma_SA(1.5)
-A,0,1.01,1,1,1.1,1.1,.1,.1,.1,.1,.1
-A,1,1.05,1,1,1.1,1.1,.1,.1,.1,.1,.1
-A,2,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
-A,3,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
-A,4,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
-A,5,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
-A,6,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
-A,7,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
+A,.001,1.01,1,1,1.1,1.1,.1,.1,.1,.1,.1
+A,.01,1.05,1,1,1.1,1.1,.1,.1,.1,.1,.1
+A,.05,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
+A,.1,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
+A,.2,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
+A,.5,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
+A,1.,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
+A,1.21,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
 '''
 
 double_ampl_func = '''\
@@ -67,8 +67,7 @@ class AmplifierTestCase(unittest.TestCase):
         # is lost and this is the reason why the first poe in 0.985
         # instead of 0.989
         fname = gettemp(trivial_ampl_func)
-        aw = read_csv(fname, {'ampcode': ampcode_dt, 'level': numpy.uint8,
-                              None: numpy.float64})
+        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
         a.check(self.vs30, 0)
         numpy.testing.assert_allclose(
@@ -89,18 +88,19 @@ class AmplifierTestCase(unittest.TestCase):
 
     def test_simple(self):
         fname = gettemp(simple_ampl_func)
-        aw = read_csv(fname, {'ampcode': ampcode_dt, 'level': numpy.uint8,
-                              None: numpy.float64})
+        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
         a = Amplifier(self.imtls, aw, self.soil_levels)
-        a.check(self.vs30, 1)
+        a.check(self.vs30, vs30_tolerance=1)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
             poes, [0.985002, 0.979997, 0.970004, 0.940069, 0.889961,
                    0.79, 0.690037], atol=1E-6)
+
         poes = a.amplify_one(b'A', 'SA(0.2)', self.hcurve[2]).flatten()
         numpy.testing.assert_allclose(
             poes, [0.985002, 0.979997, 0.970004, 0.940069, 0.889961,
                    0.79, 0.690037], atol=1E-6)
+
         poes = a.amplify_one(b'A', 'SA(0.5)', self.hcurve[3]).flatten()
         numpy.testing.assert_allclose(
             poes, [0.985002, 0.979996, 0.969991, 0.940012,
@@ -113,8 +113,7 @@ class AmplifierTestCase(unittest.TestCase):
 
     def test_double(self):
         fname = gettemp(double_ampl_func)
-        aw = read_csv(fname, {'ampcode': ampcode_dt, 'level': numpy.uint8,
-                              None: numpy.float64})
+        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
         a = Amplifier(self.imtls, aw)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(

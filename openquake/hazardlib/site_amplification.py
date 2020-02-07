@@ -89,11 +89,10 @@ class Amplifier(object):
         self.amplevels = levels if amplevels is None else amplevels
         self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
         self.vs30_ref = ampl_funcs.vs30_ref
-        try:
-            self.imls = imls = ampl_funcs.imls
-        except AttributeError:
-            self.imls = imls = ()
-        cols = (ampl_funcs.dtype.names[2:] if 'level' in ampl_funcs.dtype.names
+        has_levels = 'level' in ampl_funcs.dtype.names
+        self.imls = imls = (numpy.array(sorted(set(ampl_funcs['level'])))
+                            if has_levels else ())
+        cols = (ampl_funcs.dtype.names[2:] if has_levels
                 else ampl_funcs.dtype.names[1:])
         imts = [from_string(imt) for imt in cols
                 if not imt.startswith('sigma_')]

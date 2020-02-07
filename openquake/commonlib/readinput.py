@@ -661,17 +661,17 @@ def get_amplification(oqparam):
     :returns: a composite array (amplification, param, imt0, imt1, ...)
     """
     fname = oqparam.inputs['amplification']
-    aw = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, 'level': U8,
-                               None: F64})
-    aw.imls = ()
+    aw = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64})
+    imls = ()
     if 'level' in aw.dtype.names:
         for records in group_array(aw, 'ampcode').values():
-            if len(aw.imls) == 0:
-                aw.imls = records['level']
-            elif (records['level'] != aw.imls).any():
+            if len(imls) == 0:
+                imls = numpy.sort(records['level'])
+            elif len(records['level']) != len(imls) or (
+                    records['level'] != imls).any():
                 raise InvalidFile('%s: levels for %s %s instead of %s' %
                                   (fname, records['ampcode'][0],
-                                   records['level'], aw.imls))
+                                   records['level'], imls))
     return aw
 
 
