@@ -428,7 +428,7 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
                 ns = len(csm.get_sources())
-                if ns > 1000:
+                if oq.disagg_by_src and ns > 1000:
                     j = oq.inputs['job_ini']
                     raise InvalidFile(
                         '%s: disagg_by_src can be set only if there are <=1000'
