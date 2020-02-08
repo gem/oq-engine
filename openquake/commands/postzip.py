@@ -21,6 +21,7 @@ import json
 import logging
 import requests
 from openquake.baselib import sap, config
+from openquake.calculators.extract import WebAPIError
 
 
 @sap.Script
