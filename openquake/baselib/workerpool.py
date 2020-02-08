@@ -6,6 +6,7 @@ import shutil
 import tempfile
 import subprocess
 import multiprocessing
+import psutil
 from openquake.baselib import zeromq as z, general, parallel, config
 try:
     from setproctitle import setproctitle
@@ -202,8 +203,13 @@ class WorkerPool(object):
     def __init__(self, ctrl_url, task_server_url, num_workers='-1'):
         self.ctrl_url = ctrl_url
         self.task_server_url = task_server_url
-        self.num_workers = (multiprocessing.cpu_count()
-                            if num_workers == '-1' else int(num_workers))
+        if num_workers == '-1':
+            try:
+                self.num_workers = len(psutil.Process().cpu_affinity())
+            except AttributeError:  # missing cpu_affinity on macOS
+                self.num_workers = psutil.cpu_count()
+        else:
+            self.num_workers = int(num_workers)
         self.executing = tempfile.mkdtemp()
         self.pid = os.getpid()
 
