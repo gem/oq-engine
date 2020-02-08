@@ -539,10 +539,13 @@ def calc_run(request):
 # run calcs on the WebServer machine
 RUNCALC = '''\
 import os, sys, pickle
+from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.engine import engine
-os.environ['OQ_DISTRIBUTE'] = 'processpool'
 if __name__ == '__main__':
+    if config.distribution.serialize_jobs:
+        # assume the zmq workerpools are not available
+        os.environ['OQ_DISTRIBUTE'] = 'processpool'
     oqparam = pickle.loads(%(pik)r)
     logs.init(%(job_id)s)
     with logs.handle(%(job_id)s):
