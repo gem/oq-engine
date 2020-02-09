@@ -197,7 +197,7 @@ class WorkerPool(object):
     def __init__(self, ctrl_url, num_workers='-1'):
         self.ctrl_url = ctrl_url
         self.task_server_url = 'tcp://%s:%s' % (
-            config.dbserver.listen, int(config.zworkers.ctrl_port) + 1)
+            config.dbserver.host, int(config.zworkers.ctrl_port) + 1)
         if num_workers == '-1':
             try:
                 self.num_workers = len(psutil.Process().cpu_affinity())
