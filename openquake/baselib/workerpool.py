@@ -192,19 +192,19 @@ class WorkerPool(object):
     tasks to perform from the task_server_url.
 
     :param ctrl_url: zmq address of the control socket
-    :param num_workers: a string with the number of workers (or '-1')
+    :param num_workers: the number of workers (or -1)
     """
-    def __init__(self, ctrl_url, num_workers='-1'):
+    def __init__(self, ctrl_url, num_workers=-1):
         self.ctrl_url = ctrl_url
         self.task_server_url = 'tcp://%s:%s' % (
             config.dbserver.host, int(config.zworkers.ctrl_port) + 1)
-        if num_workers == '-1':
+        if num_workers == -1:
             try:
                 self.num_workers = len(psutil.Process().cpu_affinity())
             except AttributeError:  # missing cpu_affinity on macOS
                 self.num_workers = psutil.cpu_count()
         else:
-            self.num_workers = int(num_workers)
+            self.num_workers = num_workers
         self.executing = tempfile.mkdtemp()
         self.pid = os.getpid()
 
@@ -258,7 +258,7 @@ class WorkerPool(object):
 
 
 @sap.Script
-def main(worker_url='tcp://0.0.0.0:1909', num_workers='-1'):
+def main(worker_url='tcp://0.0.0.0:1909', num_workers=-1):
     # start a workerpool without a streamer
     WorkerPool(worker_url, num_workers).start()
 
