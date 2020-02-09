@@ -33,8 +33,7 @@ def workers(cmd):
             getpass.getuser() != 'openquake'):
         sys.exit('oq workers only works in single user mode')
 
-    master = workerpool.WorkerMaster(config.dbserver.host,
-                                     **config.zworkers)
+    master = workerpool.WorkerMaster(**config.zworkers)
     pprint(getattr(master, cmd)())
 
 
