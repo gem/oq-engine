@@ -56,7 +56,7 @@ class WorkerMaster(object):
     def __init__(self, ctrl_port, host_cores=None,
                  remote_python=None, receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
-        self.master_host = config.dbserver.listen
+        self.master_host = config.dbserver.host
         self.ctrl_port = int(ctrl_port)
         self.host_cores = ([hc.split() for hc in host_cores.split(',')]
                            if host_cores else [])
