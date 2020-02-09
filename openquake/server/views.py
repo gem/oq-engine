@@ -314,7 +314,8 @@ def validate_zip(request):
         return HttpResponseBadRequest('Missing archive file')
     job_zip = archive.temporary_file_path()
     try:
-        base.calculators(readinput.get_oqparam(job_zip)).read_inputs()
+        oq = readinput.get_oqparam(job_zip)
+        base.calculators(oq, calc_id=None).read_inputs()
     except Exception as exc:
         return _make_response(str(exc), None, valid=False)
     else:
