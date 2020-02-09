@@ -20,13 +20,13 @@ class TimeoutError(RuntimeError):
 
 
 def _streamer():
-    # streamer for zmq workers
+    # streamer for zmq workers running on the master node
     port = int(config.zworkers.ctrl_port)
     task_input_url = 'tcp://127.0.0.1:%d' % (port + 2)
-    task_server_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
+    task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
     try:
         z.zmq.proxy(z.bind(task_input_url, z.zmq.PULL),
-                    z.bind(task_server_url, z.zmq.PUSH))
+                    z.bind(task_output_url, z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ContextTerminated):
         pass  # killed cleanly by SIGINT/SIGTERM
 
