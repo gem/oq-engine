@@ -7,7 +7,7 @@ import tempfile
 import subprocess
 import multiprocessing
 import psutil
-from openquake.baselib import zeromq as z, general, parallel, config
+from openquake.baselib import zeromq as z, general, parallel, config, sap
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -212,7 +212,9 @@ class WorkerPool(object):
         """
         Start worker processes and a control loop
         """
-        setproctitle('oq-zworkerpool %s' % self.ctrl_url[6:])  # strip tcp://
+        title = 'oq-zworkerpool %s' % self.ctrl_url[6:]  # strip tcp://
+        print('Starting ' + title, file=sys.stderr)
+        setproctitle(title)
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
@@ -255,8 +257,14 @@ class WorkerPool(object):
         return 'WorkerPool %s killed' % self.ctrl_url
 
 
-if __name__ == '__main__':
+@sap.Script
+def main(worker_url='tcp://0.0.0.0:1909', num_workers='-1'):
     # start a workerpool without a streamer
-    worker_url, num_workers = sys.argv[1:]
-    # in Dockerfile.worker: tcp://0.0.0.0:1909 -1
     WorkerPool(worker_url, num_workers).start()
+
+
+main.arg('worker_url', 'ZMQ address (tcp:///w.x.y.z:port) of the worker')
+main.arg('num_workers', 'number of cores to use', type=int)
+
+if __name__ == '__main__':
+    main.callfunc()
