@@ -40,8 +40,8 @@ def check_input(job_ini_or_zip_or_nrmls):
             except Exception as exc:
                 sys.exit(exc)
         else:
-            base.calculators(readinput.get_oqparam(
-                job_ini_or_zip_or_nrml)).read_inputs()
+            oq = readinput.get_oqparam(job_ini_or_zip_or_nrml)
+            base.calculators(oq, calc_id=None).read_inputs()
 
 
 check_input.arg('job_ini_or_zip_or_nrmls', 'Check the input', nargs='+')
