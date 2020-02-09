@@ -20,13 +20,13 @@ class TimeoutError(RuntimeError):
 
 
 def _streamer():
-    # streamer for zmq workers
+    # streamer for zmq workers running on the master node
     port = int(config.zworkers.ctrl_port)
     task_input_url = 'tcp://127.0.0.1:%d' % (port + 2)
-    task_server_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
+    task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
     try:
         z.zmq.proxy(z.bind(task_input_url, z.zmq.PULL),
-                    z.bind(task_server_url, z.zmq.PUSH))
+                    z.bind(task_output_url, z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ContextTerminated):
         pass  # killed cleanly by SIGINT/SIGTERM
 
@@ -61,8 +61,6 @@ class WorkerMaster(object):
         self.host_cores = ([hc.split() for hc in host_cores.split(',')]
                            if host_cores else [])
         self.remote_python = remote_python or sys.executable
-        self.task_server_url = 'tcp://%s:%d' % (
-            self.master_host, self.ctrl_port + 1)
         self.popens = []
 
     def wait(self, seconds=30):
@@ -107,8 +105,7 @@ class WorkerMaster(object):
                 args = [sys.executable]
             else:
                 args = ['ssh', host, self.remote_python]
-            args += ['-m', 'openquake.baselib.workerpool',
-                     ctrl_url, self.task_server_url, cores]
+            args += ['-m', 'openquake.baselib.workerpool', ctrl_url, cores]
             starting.append(' '.join(args))
             self.popens.append(subprocess.Popen(args))
         return 'starting %s' % starting
@@ -195,12 +192,12 @@ class WorkerPool(object):
     tasks to perform from the task_server_url.
 
     :param ctrl_url: zmq address of the control socket
-    :param task_server_url: zmq address of the task streamer
     :param num_workers: a string with the number of workers (or '-1')
     """
-    def __init__(self, ctrl_url, task_server_url, num_workers='-1'):
+    def __init__(self, ctrl_url, num_workers='-1'):
         self.ctrl_url = ctrl_url
-        self.task_server_url = task_server_url
+        self.task_server_url = 'tcp://%s:%s' % (
+            config.dbserver.host, int(config.zworkers.ctrl_port) + 1)
         if num_workers == '-1':
             try:
                 self.num_workers = len(psutil.Process().cpu_affinity())
@@ -260,6 +257,6 @@ class WorkerPool(object):
 
 if __name__ == '__main__':
     # start a workerpool without a streamer
-    worker_url, master_url, num_workers = sys.argv[1:]
-    # in Dockerfile.worker: tcp://0.0.0.0:1909 tcp://master:1910 -1
-    WorkerPool(worker_url, master_url, num_workers).start()
+    worker_url, num_workers = sys.argv[1:]
+    # in Dockerfile.worker: tcp://0.0.0.0:1909 -1
+    WorkerPool(worker_url, num_workers).start()
