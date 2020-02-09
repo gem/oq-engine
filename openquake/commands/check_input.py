@@ -19,7 +19,7 @@ import sys
 import logging
 from openquake.baselib import sap
 from openquake.risklib.asset import Exposure
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logs
 from openquake.calculators import base
 from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # this is necessary
@@ -41,7 +41,7 @@ def check_input(job_ini_or_zip_or_nrmls):
                 sys.exit(exc)
         else:
             oq = readinput.get_oqparam(job_ini_or_zip_or_nrml)
-            base.calculators(oq, calc_id=None).read_inputs()
+            base.calculators(oq, logs.init()).read_inputs()
 
 
 check_input.arg('job_ini_or_zip_or_nrmls', 'Check the input', nargs='+')
