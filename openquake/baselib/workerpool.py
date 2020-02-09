@@ -19,11 +19,11 @@ class TimeoutError(RuntimeError):
     pass
 
 
-def _streamer(host):
+def _streamer():
     # streamer for zmq workers
     port = int(config.zworkers.ctrl_port)
     task_input_url = 'tcp://127.0.0.1:%d' % (port + 2)
-    task_server_url = 'tcp://%s:%s' % (host, port + 1)
+    task_server_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
     try:
         z.zmq.proxy(z.bind(task_input_url, z.zmq.PULL),
                     z.bind(task_server_url, z.zmq.PUSH))
@@ -36,9 +36,8 @@ def check_status(**kw):
     :returns: a non-empty error string if the streamer or worker pools are down
     """
     c = config.zworkers.copy()
-    c['master_host'] = config.dbserver.listen
     c.update(kw)
-    hostport = c['master_host'], int(c['ctrl_port']) + 1
+    hostport = config.dbserver.listen, int(c['ctrl_port']) + 1
     errors = []
     if not general.socket_ready(hostport):
         errors.append('The task streamer on %s:%s is down' % hostport)
@@ -50,21 +49,20 @@ def check_status(**kw):
 
 class WorkerMaster(object):
     """
-    :param master_host: hostname or IP of the master node
     :param ctrl_port: port on which the worker pools listen
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, master_host, ctrl_port, host_cores=None,
+    def __init__(self, ctrl_port, host_cores=None,
                  remote_python=None, receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
-        self.master_host = master_host
+        self.master_host = config.dbserver.host
         self.ctrl_port = int(ctrl_port)
         self.host_cores = ([hc.split() for hc in host_cores.split(',')]
                            if host_cores else [])
         self.remote_python = remote_python or sys.executable
         self.task_server_url = 'tcp://%s:%d' % (
-            master_host, self.ctrl_port + 1)
+            self.master_host, self.ctrl_port + 1)
         self.popens = []
 
     def wait(self, seconds=30):
@@ -262,5 +260,6 @@ class WorkerPool(object):
 
 if __name__ == '__main__':
     # start a workerpool without a streamer
-    ctrl_url, task_server_url, num_workers = sys.argv[1:]
-    WorkerPool(ctrl_url, task_server_url, num_workers).start()
+    worker_url, master_url, num_workers = sys.argv[1:]
+    # in Dockerfile.worker: tcp://0.0.0.0:1909 tcp://master:1910 -1
+    WorkerPool(worker_url, master_url, num_workers).start()
