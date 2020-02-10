@@ -15,6 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
+"""
+As the GMPE is constructed directly from an OpenQuake implementation according
+to the author's coefficient set and verified against the expected values from
+the author's equivalent R implementation
+"""
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.kotha_2020 import (KothaEtAl2020SERA,
                                                  KothaEtAl2020Site,

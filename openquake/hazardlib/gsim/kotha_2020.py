@@ -428,8 +428,9 @@ class KothaEtAl2020SERA(KothaEtAl2020):
 
     def get_stddevs(self, C, stddev_shape, stddev_types, sites):
         """
-        Returns the standard deviations, with different site standard
-        deviation for inferred vs. observed vs30 sites.
+        Returns the standard deviations, adopting different site-to-site
+        standard deviations depending on whether the site has a measured
+        or and inferred vs30. Relevant only in the ergodic case.
         """
         stddevs = []
         tau = C["tau_event"]
