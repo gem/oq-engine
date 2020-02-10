@@ -398,6 +398,9 @@ def array_of_vstr(lst):
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
+
+    :param array: an array (or the empty tuple)
+    :param attrs: metadata of the array (or dictionary of arrays)
     """
     @classmethod
     def from_(cls, obj, extra='value'):
