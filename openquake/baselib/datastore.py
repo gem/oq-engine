@@ -420,7 +420,8 @@ class DataStore(collections.abc.MutableMapping):
             if hasattr(v, 'items'):
                 yield from self.retrieve_files(prefix + '/' + k)
             else:
-                yield k, gzip.decompress(bytes(numpy.asarray(v[()])))
+                yield prefix + '/' + k, gzip.decompress(
+                    bytes(numpy.asarray(v[()])))
 
     def get_file(self, key):
         """

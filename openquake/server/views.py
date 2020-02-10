@@ -314,7 +314,8 @@ def validate_zip(request):
         return HttpResponseBadRequest('Missing archive file')
     job_zip = archive.temporary_file_path()
     try:
-        base.calculators(readinput.get_oqparam(job_zip)).read_inputs()
+        oq = readinput.get_oqparam(job_zip)
+        base.calculators(oq, calc_id=None).read_inputs()
     except Exception as exc:
         return _make_response(str(exc), None, valid=False)
     else:
@@ -536,11 +537,16 @@ def calc_run(request):
                         status=status)
 
 
+# run calcs on the WebServer machine
 RUNCALC = '''\
 import os, sys, pickle
+from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.engine import engine
 if __name__ == '__main__':
+    if config.distribution.serialize_jobs:
+        # assume the zmq workerpools are not available
+        os.environ['OQ_DISTRIBUTE'] = 'processpool'
     oqparam = pickle.loads(%(pik)r)
     logs.init(%(job_id)s)
     with logs.handle(%(job_id)s):
@@ -738,7 +744,7 @@ def extract(request, calc_id, what):
                     # this is hack: we are losing the values
                     a[key] = list(val)
                 else:
-                    a[key] = val
+                    a[key] = utils.array_of_strings_to_bytes(val, key)
             numpy.savez_compressed(fname, **a)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))

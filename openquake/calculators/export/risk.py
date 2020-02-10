@@ -331,7 +331,7 @@ def export_damages_csv(ekey, dstore):
         for tag, values in zip(tags, value[:, :, lti].T):
             fname = dstore.build_fname('damages-%s' % lt, tag, ekey[1])
             writer.save(compose_arrays(assets, values), fname,
-                    renamedict=dict(id='asset_id'))
+                        renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 

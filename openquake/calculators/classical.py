@@ -32,7 +32,6 @@ from openquake.hazardlib.contexts import (
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.site_amplification import Amplifier
 from openquake.commonlib import calc, util, logs
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
@@ -492,19 +491,18 @@ class ClassicalCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        if 'amplification' in oq.inputs:
-            amplifier = Amplifier(oq.imtls, self.datastore['amplification'],
-                                  oq.soil_intensities)
-            amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
-        else:
-            amplifier = None
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
-             N, hstats, oq.individual_curves, oq.max_sites_disagg, amplifier)
+             N, hstats, oq.individual_curves, oq.max_sites_disagg,
+             self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
-        self.datastore.swmr_on()
+        if N <= oq.max_sites_disagg:  # few sites
+            dist = 'no'
+        else:
+            dist = None  # parallelize as usual
+            self.datastore.swmr_on()
         parallel.Starmap(
-            build_hazard, allargs, h5=self.datastore.hdf5
+            build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
 
 

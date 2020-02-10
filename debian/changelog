@@ -1,9 +1,17 @@
   [Michele Simionato]
+  * Added a command `oq postzip` to send small calculations to the WebUI
+  * Added a limit of 1000 sources when disagg_by_src=true
+  * Fixed random HDF5 bug in disaggregation calculations
+  * Internal: fixed `oq export input -e zip` that was flattening the tree
+    structure of the input files in the exported zip archive
+  * Implemented GMFs amplification
   * Introduced the flag `approx_ddd` to support the old algorithm in
     scenario_damage calculations; it is automatically used for exposures
     with fractional asset numbers
 
   [Paolo Tormene]
+  * Modified the server views in order to allow using
+    `numpy.load(allow_pickle=False)` in the QGIS IRMT plugin
   * Changed some copy.deepcopy calls into copy.copy in hazardlib
 
   [Michele Simionato]

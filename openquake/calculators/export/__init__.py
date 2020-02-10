@@ -69,7 +69,7 @@ export.from_db = False  # overridden when exporting from db
 @export.add(('input', 'zip'))
 def export_input_zip(ekey, dstore):
     """
-    Export the data in the `input_zip` dataset as a .zip file
+    Export the data in the `input` datagroup as a .zip file
     """
     dest = dstore.export_path('input.zip')
     with zipfile.ZipFile(

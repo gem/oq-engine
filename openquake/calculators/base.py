@@ -31,7 +31,8 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, init_performance
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, site
+from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
@@ -55,6 +56,16 @@ TWO32 = 2 ** 32
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
+
+
+def get_calc(job_ini, calc_id):
+    """
+    Factory function returning a Calculator instance
+
+    :param job_ini: path to job.ini file
+    :param calc_id: calculation ID
+    """
+    return calculators(readinput.get_oqparam(job_ini), calc_id)
 
 
 # this is used for the minimum_intensity dictionaries
@@ -150,7 +161,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     from_engine = False  # set by engine.run_calc
     is_stochastic = False  # True for scenario and event based calculators
 
-    def __init__(self, oqparam, calc_id=None):
+    def __init__(self, oqparam, calc_id):
         self.datastore = datastore.DataStore(calc_id)
         init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
@@ -361,7 +372,8 @@ def check_amplification(dstore):
     missing = codes - codeset
     if missing:
         raise ValueError('The site collection contains references to missing '
-                         'amplification functions:' + ' '.join(missing))
+                         'amplification functions: %s' % b' '.join(missing).
+                         decode('utf8'))
 
 
 class HazardCalculator(BaseCalculator):
@@ -425,6 +437,12 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
+                ns = len(csm.get_sources())
+                if oq.disagg_by_src and ns > 1000:
+                    j = oq.inputs['job_ini']
+                    raise InvalidFile(
+                        '%s: disagg_by_src can be set only if there are <=1000'
+                        ' sources, but %d were found in the model' % (j, ns))
                 self.csm_info = csm.info
                 self.datastore['source_model_lt'] = csm.source_model_lt
                 res = views.view('dupl_sources', self.datastore)
@@ -656,7 +674,7 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol = dstore['sitecol'].complete
                 if ('amplification' in oq.inputs and
                         'ampcode' not in haz_sitecol.array.dtype.names):
-                    haz_sitecol.add_col('ampcode', (numpy.string_, 2))
+                    haz_sitecol.add_col('ampcode', site.ampcode_dt)
         else:
             haz_sitecol = readinput.get_site_collection(oq)
             if hasattr(self, 'rup'):
@@ -753,10 +771,15 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading %s', oq.inputs['amplification'])
             self.datastore['amplification'] = readinput.get_amplification(oq)
             check_amplification(self.datastore)
+            self.amplifier = Amplifier(
+                oq.imtls, self.datastore['amplification'], oq.soil_intensities)
+            self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
+        else:
+            self.amplifier = None
 
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
-                          avg_losses=oq.avg_losses)
+                          avg_losses=oq.avg_losses, amplifier=self.amplifier)
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):

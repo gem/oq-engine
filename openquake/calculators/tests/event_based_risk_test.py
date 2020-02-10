@@ -353,7 +353,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertGreater(sitecol.vs30.sum(), 0)
         self.assertEqual(len(assetcol), 548)
 
-        # event_based_risk with amplification
+        # ebrisk with amplification
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_miriam.__file__, 'job3.ini',
                       hazard_calculation_id=hc_id)

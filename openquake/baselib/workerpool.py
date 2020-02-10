@@ -6,6 +6,7 @@ import shutil
 import tempfile
 import subprocess
 import multiprocessing
+import psutil
 from openquake.baselib import zeromq as z, general, parallel, config
 try:
     from setproctitle import setproctitle
@@ -18,14 +19,14 @@ class TimeoutError(RuntimeError):
     pass
 
 
-def _streamer(host):
-    # streamer for zmq workers
+def _streamer():
+    # streamer for zmq workers running on the master node
     port = int(config.zworkers.ctrl_port)
     task_input_url = 'tcp://127.0.0.1:%d' % (port + 2)
-    task_server_url = 'tcp://%s:%s' % (host, port + 1)
+    task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
     try:
         z.zmq.proxy(z.bind(task_input_url, z.zmq.PULL),
-                    z.bind(task_server_url, z.zmq.PUSH))
+                    z.bind(task_output_url, z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ContextTerminated):
         pass  # killed cleanly by SIGINT/SIGTERM
 
@@ -35,9 +36,8 @@ def check_status(**kw):
     :returns: a non-empty error string if the streamer or worker pools are down
     """
     c = config.zworkers.copy()
-    c['master_host'] = config.dbserver.listen
     c.update(kw)
-    hostport = c['master_host'], int(c['ctrl_port']) + 1
+    hostport = config.dbserver.listen, int(c['ctrl_port']) + 1
     errors = []
     if not general.socket_ready(hostport):
         errors.append('The task streamer on %s:%s is down' % hostport)
@@ -49,21 +49,18 @@ def check_status(**kw):
 
 class WorkerMaster(object):
     """
-    :param master_host: hostname or IP of the master node
     :param ctrl_port: port on which the worker pools listen
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, master_host, ctrl_port, host_cores=None,
+    def __init__(self, ctrl_port, host_cores=None,
                  remote_python=None, receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
-        self.master_host = master_host
+        self.master_host = config.dbserver.host
         self.ctrl_port = int(ctrl_port)
         self.host_cores = ([hc.split() for hc in host_cores.split(',')]
                            if host_cores else [])
         self.remote_python = remote_python or sys.executable
-        self.task_server_url = 'tcp://%s:%d' % (
-            master_host, self.ctrl_port + 1)
         self.popens = []
 
     def wait(self, seconds=30):
@@ -108,8 +105,7 @@ class WorkerMaster(object):
                 args = [sys.executable]
             else:
                 args = ['ssh', host, self.remote_python]
-            args += ['-m', 'openquake.baselib.workerpool',
-                     ctrl_url, self.task_server_url, cores]
+            args += ['-m', 'openquake.baselib.workerpool', ctrl_url, cores]
             starting.append(' '.join(args))
             self.popens.append(subprocess.Popen(args))
         return 'starting %s' % starting
@@ -196,14 +192,19 @@ class WorkerPool(object):
     tasks to perform from the task_server_url.
 
     :param ctrl_url: zmq address of the control socket
-    :param task_server_url: zmq address of the task streamer
     :param num_workers: a string with the number of workers (or '-1')
     """
-    def __init__(self, ctrl_url, task_server_url, num_workers='-1'):
+    def __init__(self, ctrl_url, num_workers='-1'):
         self.ctrl_url = ctrl_url
-        self.task_server_url = task_server_url
-        self.num_workers = (multiprocessing.cpu_count()
-                            if num_workers == '-1' else int(num_workers))
+        self.task_server_url = 'tcp://%s:%s' % (
+            config.dbserver.host, int(config.zworkers.ctrl_port) + 1)
+        if num_workers == '-1':
+            try:
+                self.num_workers = len(psutil.Process().cpu_affinity())
+            except AttributeError:  # missing cpu_affinity on macOS
+                self.num_workers = psutil.cpu_count()
+        else:
+            self.num_workers = int(num_workers)
         self.executing = tempfile.mkdtemp()
         self.pid = os.getpid()
 
@@ -256,5 +257,6 @@ class WorkerPool(object):
 
 if __name__ == '__main__':
     # start a workerpool without a streamer
-    ctrl_url, task_server_url, num_workers = sys.argv[1:]
-    WorkerPool(ctrl_url, task_server_url, num_workers).start()
+    worker_url, num_workers = sys.argv[1:]
+    # in Dockerfile.worker: tcp://0.0.0.0:1909 -1
+    WorkerPool(worker_url, num_workers).start()
