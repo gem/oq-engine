@@ -7,7 +7,7 @@ import tempfile
 import subprocess
 import multiprocessing
 import psutil
-from openquake.baselib import zeromq as z, general, parallel, config
+from openquake.baselib import zeromq as z, general, parallel, config, sap
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -192,19 +192,19 @@ class WorkerPool(object):
     tasks to perform from the task_server_url.
 
     :param ctrl_url: zmq address of the control socket
-    :param num_workers: a string with the number of workers (or '-1')
+    :param num_workers: the number of workers (or -1)
     """
-    def __init__(self, ctrl_url, num_workers='-1'):
+    def __init__(self, ctrl_url, num_workers=-1):
         self.ctrl_url = ctrl_url
         self.task_server_url = 'tcp://%s:%s' % (
             config.dbserver.host, int(config.zworkers.ctrl_port) + 1)
-        if num_workers == '-1':
+        if num_workers == -1:
             try:
                 self.num_workers = len(psutil.Process().cpu_affinity())
             except AttributeError:  # missing cpu_affinity on macOS
                 self.num_workers = psutil.cpu_count()
         else:
-            self.num_workers = int(num_workers)
+            self.num_workers = num_workers
         self.executing = tempfile.mkdtemp()
         self.pid = os.getpid()
 
@@ -212,7 +212,9 @@ class WorkerPool(object):
         """
         Start worker processes and a control loop
         """
-        setproctitle('oq-zworkerpool %s' % self.ctrl_url[6:])  # strip tcp://
+        title = 'oq-zworkerpool %s' % self.ctrl_url[6:]  # strip tcp://
+        print('Starting ' + title, file=sys.stderr)
+        setproctitle(title)
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
@@ -255,8 +257,14 @@ class WorkerPool(object):
         return 'WorkerPool %s killed' % self.ctrl_url
 
 
-if __name__ == '__main__':
+@sap.Script
+def main(worker_url='tcp://0.0.0.0:1909', num_workers=-1):
     # start a workerpool without a streamer
-    worker_url, num_workers = sys.argv[1:]
-    # in Dockerfile.worker: tcp://0.0.0.0:1909 -1
     WorkerPool(worker_url, num_workers).start()
+
+
+main.arg('worker_url', 'ZMQ address (tcp:///w.x.y.z:port) of the worker')
+main.arg('num_workers', 'number of cores to use', type=int)
+
+if __name__ == '__main__':
+    main.callfunc()
