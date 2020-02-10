@@ -31,9 +31,6 @@ In all the nodes, the following file should be modified to enable *multi node* a
 
 ```
 [distribution]
-# set multi_node = true if are on a cluster
-multi_node = true
-
 # enable celery only if you have a cluster
 oq_distribute = zmq
 ```
