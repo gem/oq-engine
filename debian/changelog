@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Fixed the get_duplicates check in the SiteCollection
+  * Fixed random HDF5 bug in disaggregation calculations
+  * Fixed memory issue in nrcan15_site_term.p
+  * Fixed get_duplicates check in the SiteCollection
   * Fixed bug in case of MMI (log(imls) -> imls)
 
 python3-oq-engine (3.8.0-1~xenial01) xenial; urgency=low
