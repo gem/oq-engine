@@ -34,7 +34,7 @@ def floats_in(numbers):
     :param numbers: an array of numbers
     :returns: True if there is at least one non-uint32 number
     """
-    return (numbers < 1).any() or (U32(numbers) != numbers).any()
+    return (U32(numbers) != numbers).any()
 
 
 def bin_ddd(fractions, n, seed):
