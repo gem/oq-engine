@@ -34,8 +34,7 @@ def floats_in(numbers):
     :param numbers: an array of numbers
     :returns: True if there is at least one non-uint32 number
     """
-    return ((numbers < 1).any() or (numbers > 65535).any() or
-            (U32(numbers) != numbers).any())
+    return (numbers < 1).any() or (U32(numbers) != numbers).any()
 
 
 def bin_ddd(fractions, n, seed):
@@ -45,7 +44,7 @@ def bin_ddd(fractions, n, seed):
     """
     n = int(n)
     D = fractions.shape[1]  # shape (E, D)
-    ddd = numpy.zeros(fractions.shape, U16)
+    ddd = numpy.zeros(fractions.shape, U32)
     numpy.random.seed(seed)
     for e, frac in enumerate(fractions):
         ddd[e] = numpy.bincount(
@@ -57,7 +56,7 @@ def approx_ddd(fractions, n, seed=None):
     """
     Converting fractions into uint16 discrete damage distributions using round
     """
-    ddd = U16(numpy.round(fractions * n))
+    ddd = U32(numpy.round(fractions * n))
     # fix the no-damage discrete damage distributions by making sure
     # that the total sum is n: nodamage = n - sum(others)
     ddd[:, 0] = n - ddd[:, 1:].sum(axis=1)
@@ -139,11 +138,6 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     yield res
 
 
-BIGNUMBER = '''The asset %s has number=%s > 65535:
-this will become an error in the future. It is accepted at the moment,
-but your dmg_by_event table may be wrong: please double check it.'''
-
-
 @base.calculators.add('scenario_damage')
 class ScenarioDamageCalculator(base.RiskCalculator):
     """
@@ -160,10 +154,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if float_algo:
             logging.warning('The exposure contains non-integer asset numbers: '
                             'using floating point damage distributions')
-        bad = self.assetcol['number'] > 65535
+        bad = self.assetcol['number'] > 2**32 - 1
         for ass in self.assetcol[bad]:
             aref = self.assetcol.tagcol.id[ass['id']]
-            logging.error(BIGNUMBER, aref, ass['number'])
+            logging.error("The asset %s has number=%s > 2^32-1!",
+                          aref, ass['number'])
         self.param['approx_ddd'] = self.oqparam.approx_ddd or float_algo
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         self.param['master_seed'] = self.oqparam.master_seed
