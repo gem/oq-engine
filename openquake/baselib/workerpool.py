@@ -104,7 +104,8 @@ class WorkerMaster(object):
                 args = [sys.executable]
             else:
                 args = ['ssh', host, self.remote_python]
-            args += ['-m', 'openquake.baselib.workerpool', ctrl_url, cores]
+            args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
+                     '-n', cores]
             starting.append(' '.join(args))
             self.popens.append(subprocess.Popen(args))
         return 'starting %s' % starting
@@ -257,13 +258,13 @@ class WorkerPool(object):
 
 
 @sap.Script
-def main(worker_url='tcp://0.0.0.0:1909', num_workers=-1):
+def workerpool(worker_url='tcp://0.0.0.0:1909', num_workers=-1):
     # start a workerpool without a streamer
     WorkerPool(worker_url, num_workers).start()
 
 
-main.arg('worker_url', 'ZMQ address (tcp:///w.x.y.z:port) of the worker')
-main.arg('num_workers', 'number of cores to use', type=int)
+workerpool.arg('worker_url', 'ZMQ address (tcp:///w.x.y.z:port) of the worker')
+workerpool.opt('num_workers', 'number of cores to use', type=int)
 
 if __name__ == '__main__':
-    main.callfunc()
+    workerpool.callfunc()
