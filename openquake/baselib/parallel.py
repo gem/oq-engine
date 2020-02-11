@@ -400,6 +400,7 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 
 
 dummy_mon = Monitor()
+dummy_mon.version = __version__
 dummy_mon.backurl = None
 
 
