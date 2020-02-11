@@ -73,16 +73,16 @@ if OQ_DISTRIBUTE == 'zmq':
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
             with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                 if not general.socket_ready(url):
-                    logs.LOG.warn('%s is not running', host)
+                    logging.warning('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
         if num_workers == 0:
             num_workers = os.cpu_count()
-            logs.LOG.warn('Missing host_cores, no idea about how many cores '
-                          'are available, using %d', num_workers)
+            logging.warning('Missing host_cores, no idea about how many cores '
+                            'are available, using %d', num_workers)
         parallel.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
-        logs.LOG.warn('Using %d zmq workers', num_workers)
+        logging.warning('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control  # noqa: E402
@@ -94,13 +94,13 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         """
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
-            logs.LOG.critical("No live compute nodes, aborting calculation")
+            logging.critical("No live compute nodes, aborting calculation")
             logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         parallel.CT = ncores * 2
         OqParam.concurrent_tasks.default = ncores * 2
-        logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
+        logging.warning('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
     def celery_cleanup(terminate):
         """
@@ -114,14 +114,14 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         # tasks associated with the current job.
         tasks = parallel.Starmap.running_tasks
         if tasks:
-            logs.LOG.warn('Revoking %d tasks', len(tasks))
+            logging.warning('Revoking %d tasks', len(tasks))
         else:  # this is normal when OQ_DISTRIBUTE=no
-            logs.LOG.debug('No task to revoke')
+            logging.debug('No task to revoke')
         while tasks:
             task = tasks.pop()
             tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
-            logs.LOG.debug('Revoked task %s', tid)
+            logging.debug('Revoked task %s', tid)
 else:
 
     def set_concurrent_tasks_default(calc):
@@ -190,7 +190,7 @@ class MasterKilled(KeyboardInterrupt):
 
 
 def inhibitSigInt(signum, _stack):
-    logs.LOG.warn('Killing job, please wait')
+    logging.warning('Killing job, please wait')
 
 
 def manage_signals(signum, _stack):
@@ -290,7 +290,8 @@ def poll_queue(job_id, pid, poll_time):
                                {'status': 'failed', 'is_running': 0})
             elif any(job.id < job_id for job in jobs):
                 if first_time:
-                    logs.LOG.warn('Waiting for jobs %s', [j.id for j in jobs])
+                    logging.warning(
+                        'Waiting for jobs %s', [j.id for j in jobs])
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': pid})
                     first_time = False
@@ -321,7 +322,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     logging.info('Using engine version %s', __version__)
     msg = check_obsolete_version(oqparam.calculation_mode)
     if msg:
-        logs.LOG.warn(msg)
+        logging.warning(msg)
     calc.from_engine = True
     tb = 'None\n'
     try:
@@ -332,8 +333,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         return
     try:
         if OQ_DISTRIBUTE.endswith('pool'):
-            logs.LOG.warning('Using %d cores on %s',
-                             parallel.CT // 2, platform.node())
+            logging.warning('Using %d cores on %s',
+                            parallel.CT // 2, platform.node())
         if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
             logs.dbcmd('zmq_start')  # start the zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
@@ -341,10 +342,10 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         t0 = time.time()
         calc.run(exports=exports,
                  hazard_calculation_id=hazard_calculation_id, **kw)
-        logs.LOG.info('Exposing the outputs to the database')
+        logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
-        logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                      job_id, time.time() - t0)
+        logging.info('Calculation %d finished correctly in %d seconds',
+                     job_id, time.time() - t0)
         logs.dbcmd('finish', job_id, 'complete')
         calc.datastore.close()
     except BaseException as exc:
@@ -354,7 +355,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             msg = 'failed'
         tb = traceback.format_exc()
         try:
-            logs.LOG.critical(tb)
+            logging.critical(tb)
             logs.dbcmd('finish', job_id, msg)
         except BaseException:  # an OperationalError may always happen
             sys.stderr.write(tb)
@@ -371,7 +372,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         except BaseException:
             # log the finalization error only if there is no real error
             if tb == 'None\n':
-                logs.LOG.error('finalizing', exc_info=True)
+                logging.error('finalizing', exc_info=True)
     return calc
 
 
