@@ -30,7 +30,7 @@ from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
-U16 = numpy.uint16
+U32 = numpy.uint32
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
 
@@ -318,9 +318,8 @@ class SourceFilter(object):
         :param trt:
            tectonic region type string
         :returns:
-           the site indices close to the given record, by considering as
-           maximum radius the distance from the hypocenter (ignoring the depth)
-           plus the half diagonal of the bounding box
+           the site indices within the maximum_distance of the hypocenter,
+           plus the maximum size of the bounding box
         """
         if self.sitecol is None:
             return []
@@ -333,7 +332,7 @@ class SourceFilter(object):
         dlat = rec['maxlat'] - rec['minlat']
         delta = max(dlon, dlat) / KM_TO_DEGREES
         maxradius = self.integration_distance(trt) + delta
-        sids = U16(self.kdt.query_ball_point(xyz, maxradius, eps=.001))
+        sids = U32(self.kdt.query_ball_point(xyz, maxradius, eps=.001))
         sids.sort()
         return sids
 
