@@ -73,16 +73,16 @@ if OQ_DISTRIBUTE == 'zmq':
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
             with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                 if not general.socket_ready(url):
-                    logging.warn('%s is not running', host)
+                    logging.warning('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
         if num_workers == 0:
             num_workers = os.cpu_count()
-            logging.warn('Missing host_cores, no idea about how many cores '
-                          'are available, using %d', num_workers)
+            logging.warning('Missing host_cores, no idea about how many cores '
+                            'are available, using %d', num_workers)
         parallel.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
-        logging.warn('Using %d zmq workers', num_workers)
+        logging.warning('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control  # noqa: E402
@@ -100,7 +100,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         parallel.CT = ncores * 2
         OqParam.concurrent_tasks.default = ncores * 2
-        logging.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
+        logging.warning('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
     def celery_cleanup(terminate):
         """
@@ -114,7 +114,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         # tasks associated with the current job.
         tasks = parallel.Starmap.running_tasks
         if tasks:
-            logging.warn('Revoking %d tasks', len(tasks))
+            logging.warning('Revoking %d tasks', len(tasks))
         else:  # this is normal when OQ_DISTRIBUTE=no
             logging.debug('No task to revoke')
         while tasks:
@@ -190,7 +190,7 @@ class MasterKilled(KeyboardInterrupt):
 
 
 def inhibitSigInt(signum, _stack):
-    logging.warn('Killing job, please wait')
+    logging.warning('Killing job, please wait')
 
 
 def manage_signals(signum, _stack):
@@ -290,7 +290,8 @@ def poll_queue(job_id, pid, poll_time):
                                {'status': 'failed', 'is_running': 0})
             elif any(job.id < job_id for job in jobs):
                 if first_time:
-                    logging.warn('Waiting for jobs %s', [j.id for j in jobs])
+                    logging.warning(
+                        'Waiting for jobs %s', [j.id for j in jobs])
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': pid})
                     first_time = False
@@ -321,7 +322,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     logging.info('Using engine version %s', __version__)
     msg = check_obsolete_version(oqparam.calculation_mode)
     if msg:
-        logging.warn(msg)
+        logging.warning(msg)
     calc.from_engine = True
     tb = 'None\n'
     try:
