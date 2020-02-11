@@ -274,6 +274,7 @@ def make_figure_sources(extractors, what):
     [ex] = extractors
     info = ex.get(what)
     wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
+    srcs = gzip.decompress(info.src_gz).decode('utf8').split(';')
     fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
@@ -283,7 +284,7 @@ def make_figure_sources(extractors, what):
     pp = PolygonPlotter(ax)
     n = 0
     tot = 0
-    for rec, wkt in zip(info, wkts):
+    for rec, srcid, wkt in zip(info, srcs, wkts):
         if not wkt.startswith('POINT'):
             if rec['eff_ruptures']:  # not filtered out
                 alpha = .3
