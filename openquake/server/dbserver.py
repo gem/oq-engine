@@ -97,10 +97,9 @@ class DbServer(object):
                         sys.executable, self.frontend, self.pid)
         if ZMQ:
             # start task_in->task_server streamer thread
-            c = config.zworkers
             threading.Thread(target=w._streamer, daemon=True).start()
             logging.warning('Task streamer started on port %d',
-                            int(c.ctrl_port) + 1)
+                            int(config.zworkers.ctrl_port) + 1)
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
