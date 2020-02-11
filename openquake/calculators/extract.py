@@ -491,10 +491,13 @@ def extract_sources(dstore, what):
     """
     qdict = parse(what)
     sm_id = int(qdict.get('sm_id', ['0'])[0])
-    arr = dstore['source_info']['sm_id', 'source_id', 'eff_ruptures', 'wkt']
+    info = dstore['source_info'][()]
+    info = info[info['sm_id'] == sm_id]
+    arr = info[['sm_id', 'source_id', 'eff_ruptures']]
+    wkt_gz = gzip.compress(';'.join(info['wkt']).encode('utf8'))
     if sm_id not in numpy.unique(arr['sm_id']):
         raise ValueError('There is no source model #%d' % sm_id)
-    return ArrayWrapper(get_array(arr, sm_id=sm_id), {'sm_id': sm_id})
+    return ArrayWrapper(arr, {'sm_id': sm_id, 'wkt_gz': wkt_gz})
 
 
 @extract.add('task_info')
