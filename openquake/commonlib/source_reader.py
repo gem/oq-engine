@@ -30,16 +30,16 @@ from openquake.hazardlib import nrml, sourceconverter, calc
 
 TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
-    ('sm_id', numpy.uint16),           # 0
-    ('grp_id', numpy.uint16),          # 1
-    ('source_id', hdf5.vstr),          # 2
-    ('code', (numpy.string_, 1)),      # 3
-    ('num_ruptures', numpy.uint32),    # 4
-    ('calc_time', numpy.float32),      # 5
-    ('num_sites', numpy.float32),      # 6
-    ('eff_ruptures', numpy.float32),   # 7
-    ('checksum', numpy.uint32),        # 8
-    ('wkt', hdf5.vstr),                # 9
+    ('sm_id', numpy.uint16),            # 0
+    ('grp_id', numpy.uint16),           # 1
+    ('source_id', (numpy.string_, 9)),  # 2
+    ('code', (numpy.string_, 1)),       # 3
+    ('num_ruptures', numpy.uint32),     # 4
+    ('calc_time', numpy.float32),       # 5
+    ('num_sites', numpy.float32),       # 6
+    ('eff_ruptures', numpy.float32),    # 7
+    ('checksum', numpy.uint32),         # 8
+    ('wkt', hdf5.vstr),                 # 9
 ])
 
 
