@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Added a check on the engine version between master and workers
+
+  [Paolo Tormene]
+  * Removed the `multi_node` flag, that is not used anymore
+
+  [Michele Simionato]
   * Added a command `oq postzip` to send small calculations to the WebUI
   * Added a limit of 1000 sources when disagg_by_src=true
   * Fixed random HDF5 bug in disaggregation calculations
@@ -10,7 +16,6 @@
     with fractional asset numbers
 
   [Paolo Tormene]
-  * Removed the `multi_node` flag, that is not used anymore
   * Modified the server views in order to allow using
     `numpy.load(allow_pickle=False)` in the QGIS IRMT plugin
   * Changed some copy.deepcopy calls into copy.copy in hazardlib
