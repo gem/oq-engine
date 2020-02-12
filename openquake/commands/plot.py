@@ -500,7 +500,8 @@ def make_figure_tot_curves(extractors, what):
 
 
 @sap.script
-def plot(what='examples', calc_id=-1, other_id=None, webapi=False):
+def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
+         local=False):
     """
     Generic plotter for local and remote calculations.
     """
@@ -521,7 +522,11 @@ def plot(what='examples', calc_id=-1, other_id=None, webapi=False):
         what += '&site_id=0'
     if prefix == 'disagg' and 'poe=' not in rest:
         what += '&poe_id=0'
-    if webapi:
+    if local:
+        xs = [WebExtractor(calc_id, 'http://localhost:8800', '')]
+        if other_id:
+            xs.append(WebExtractor(other_id), 'http://localhost:8800', '')
+    elif webapi:
         xs = [WebExtractor(calc_id)]
         if other_id:
             xs.append(WebExtractor(other_id))
@@ -538,3 +543,4 @@ plot.arg('what', 'what to extract')
 plot.arg('calc_id', 'computation ID', type=int)
 plot.arg('other_id', 'ID of another computation', type=int)
 plot.flg('webapi', 'if given, pass through the WebAPI')
+plot.flg('local', 'if passed, use the local WebAPI')
