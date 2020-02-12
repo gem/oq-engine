@@ -1,4 +1,4 @@
-event_id,rlz_id,sig_PGA,eps_PGA
+event_id,rlz_id,sig_inter_PGA,eps_inter_PGA
 0,0,2.929506E-01,1.021841E+00
 1,0,3.336481E-01,1.102556E+00
 2,0,3.136589E-01,1.182088E+00
