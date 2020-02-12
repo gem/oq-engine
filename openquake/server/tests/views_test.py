@@ -222,6 +222,12 @@ class EngineServerTestCase(unittest.TestCase):
         got = loadnpz(self.c.get(extract_url))
         self.assertEqual(len(got['rlz-000']), 0)
 
+        # check extract_sources
+        extract_url = '/v1/calc/%s/extract/sources?sm_id=0' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(list(got), ['sm_id', 'wkt_gz', 'src_gz', 'array'])
+        self.assertGreater(len(got['array']), 0)
+
     def test_classical(self):
         job_id = self.postzip('classical.zip')
         self.wait()

@@ -28,7 +28,7 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
-from openquake.baselib import config, hdf5
+from openquake.baselib import config, hdf5, general
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
@@ -497,8 +497,10 @@ def extract_sources(dstore, what):
         raise ValueError('There is no source model #%d' % sm_id)
     wkt_gz = gzip.compress(';'.join(info['wkt']).encode('utf8'))
     src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
-    arr = info[['grp_id', 'code', 'num_ruptures', 'calc_time', 'num_sites',
-                'eff_ruptures']]
+    oknames = [n for n in info.dtype.names if n not in ('source_id', 'wkt')]
+    arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
+    for n in oknames:
+        arr[n] = info[n]
     return ArrayWrapper(
         arr, {'sm_id': sm_id, 'wkt_gz': wkt_gz, 'src_gz': src_gz})
 
@@ -1323,6 +1325,7 @@ class WebExtractor(Extractor):
         resp = self.sess.get(url)
         if resp.status_code != 200:
             raise WebAPIError(resp.text)
+        logging.info('Read %s of data' % general.humansize(len(resp.content)))
         npz = numpy.load(io.BytesIO(resp.content))
         attrs = {k: npz[k] for k in npz if k != 'array'}
         try:
