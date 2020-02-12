@@ -25,4 +25,4 @@ ADD ./zmq/openquake.cfg /etc/openquake/openquake.cfg
 
 STOPSIGNAL SIGTERM
 ENTRYPOINT ["/opt/openquake/bin/python3", "-m", "openquake.baselib.workerpool"]
-CMD ["tcp://0.0.0.0:1909", "tcp://master:1910", "-1"]
+

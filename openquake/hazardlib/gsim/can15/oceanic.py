@@ -42,7 +42,7 @@ class OceanicCan15Mid(WesternCan15Mid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
-        rupl = copy.deepcopy(rup)
+        rupl = copy.copy(rup)
         rupl.mag -= 0.5
         # distances
         distsl = copy.copy(dists)
@@ -62,7 +62,7 @@ class OceanicCan15Low(WesternCan15Mid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
-        rupl = copy.deepcopy(rup)
+        rupl = copy.copy(rup)
         rupl.mag -= 0.5
         # distances
         distsl = copy.copy(dists)
@@ -88,7 +88,7 @@ class OceanicCan15Upp(WesternCan15Mid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
-        rupl = copy.deepcopy(rup)
+        rupl = copy.copy(rup)
         rupl.mag -= 0.5
         # distances
         distsl = copy.copy(dists)

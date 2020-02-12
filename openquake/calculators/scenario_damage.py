@@ -29,14 +29,38 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def integral_damages(fractions, n, seed):
+def floats_in(numbers):
+    """
+    :param numbers: an array of numbers
+    :returns: True if there is at least one non-uint32 number
+    """
+    return (U32(numbers) != numbers).any()
+
+
+def bin_ddd(fractions, n, seed):
+    """
+    Converting fractions into discrete damage distributions using bincount
+    and numpy.random.choice
+    """
+    n = int(n)
     D = fractions.shape[1]  # shape (E, D)
-    idmg = numpy.zeros(fractions.shape, U16)
+    ddd = numpy.zeros(fractions.shape, U32)
     numpy.random.seed(seed)
     for e, frac in enumerate(fractions):
-        idmg[e] = numpy.bincount(
+        ddd[e] = numpy.bincount(
             numpy.random.choice(D, n, p=frac/frac.sum()), minlength=D)
-    return idmg
+    return ddd
+
+
+def approx_ddd(fractions, n, seed=None):
+    """
+    Converting fractions into uint16 discrete damage distributions using round
+    """
+    ddd = U32(numpy.round(fractions * n))
+    # fix the no-damage discrete damage distributions by making sure
+    # that the total sum is n: nodamage = n - sum(others)
+    ddd[:, 0] = n - ddd[:, 1:].sum(axis=1)
+    return ddd
 
 
 def scenario_damage(riskinputs, crmodel, param, monitor):
@@ -53,7 +77,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         dictionary of extra parameters
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
-                      'd_event': damage array of shape R, L, E, D,
+                      'd_event': dict eid -> array of shape (L, D)
                       + optional consequences}
 
     `d_asset` and `d_tag` are related to the damage distributions.
@@ -63,13 +87,15 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     consequences = crmodel.get_consequences()
     haz_mon = monitor('getting hazard', measuremem=False)
     rsk_mon = monitor('aggregating risk', measuremem=False)
-    acc = AccumDict(accum=numpy.zeros((L, D), U32))
-    res = {'d_event': acc}
+    d_event = AccumDict(accum=numpy.zeros((L, D), U32))
+    res = {'d_event': d_event}
     for name in consequences:
         res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
         # using F64 here is necessary: with F32 the non-commutativity
         # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
+    # algorithm used to compute the discrete damage distributions
+    make_ddd = approx_ddd if param['approx_ddd'] else bin_ddd
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
@@ -85,15 +111,18 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                 for l, loss_type in enumerate(crmodel.loss_types):
                     for asset, fractions in zip(ri.assets, out[loss_type]):
                         aid = asset['ordinal']
-                        n = int(asset['number'])
-                        idmgs = integral_damages(fractions, n, seed + aid)
-                        for e, idmg in enumerate(idmgs):
+                        ddds = make_ddd(fractions, asset['number'], seed + aid)
+                        for e, ddd in enumerate(ddds):
                             eid = out.eids[e]
-                            if idmg[1:].any():
-                                ddic[aid, eid][l] = idmg[1:]
-                                acc[eid][l] += idmg
-                        result['d_asset'].append(
-                            (l, r, asset['ordinal'], mean_std(idmgs)))
+                            if ddd[1:].any():
+                                ddic[aid, eid][l] = ddd[1:]
+                                d_event[eid][l] += ddd
+                        if make_ddd is approx_ddd:
+                            ms = mean_std(fractions * asset['number'])
+                        else:
+                            ms = mean_std(ddds)
+                        result['d_asset'].append((l, r, asset['ordinal'], ms))
+                        # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
                             result[name + '_by_asset'].append(
@@ -121,9 +150,18 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        self.param['master_seed'] = self.oqparam.master_seed
-        self.param['collapse_threshold'] = self.oqparam.collapse_threshold
+        float_algo = floats_in(self.assetcol['number'])
+        if float_algo:
+            logging.warning('The exposure contains non-integer asset numbers: '
+                            'using floating point damage distributions')
+        bad = self.assetcol['number'] > 2**32 - 1
+        for ass in self.assetcol[bad]:
+            aref = self.assetcol.tagcol.id[ass['id']]
+            logging.error("The asset %s has number=%s > 2^32-1!",
+                          aref, ass['number'])
+        self.param['approx_ddd'] = self.oqparam.approx_ddd or float_algo
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
+        self.param['master_seed'] = self.oqparam.master_seed
         A = len(self.assetcol)
         self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
         self.datastore.create_dset('dd_data/indices', U32, (A, 2))
@@ -157,6 +195,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         D = len(dstates)
         A = len(self.assetcol)
         indices = self.datastore['dd_data/indices'][()]
+        if not len(self.datastore['dd_data/data']):
+            logging.warning('There is no damage at all!')
         events_per_asset = (indices[:, 1] - indices[:, 0]).mean()
         logging.info('Found ~%d dmg distributions per asset', events_per_asset)
 

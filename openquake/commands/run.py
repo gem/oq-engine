@@ -130,7 +130,6 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     print('See the output with silx view %s' % calc.datastore.filename)
     calc_path, _ = os.path.splitext(calc.datastore.filename)  # used below
-    parallel.Starmap.shutdown()
     return calc
 
 
@@ -155,9 +154,12 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
         prof.dump_stats(pstat)
         print('Saved profiling info in %s' % pstat)
         print(get_pstats(pstat, slowest))
-    else:
+        return
+    try:
         return _run(job_ini, concurrent_tasks, pdb, loglevel,
                     hc, exports, params)
+    finally:
+        parallel.Starmap.shutdown()
 
 
 run.arg('job_ini', 'calculation configuration file '

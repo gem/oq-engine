@@ -354,7 +354,7 @@ class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
         """
         # fix hypocentral depth to 20 km. Create new rupture context to avoid
         # changing the original one
-        new_rup = copy.deepcopy(rup)
+        new_rup = copy.copy(rup)
         new_rup.hypo_depth = 20.
 
         mean, stddevs = super().get_mean_and_stddevs(

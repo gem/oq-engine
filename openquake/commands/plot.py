@@ -273,6 +273,8 @@ def make_figure_sources(extractors, what):
     import matplotlib.pyplot as plt
     [ex] = extractors
     info = ex.get(what)
+    wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
+    srcs = gzip.decompress(info.src_gz).decode('utf8').split(';')
     fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
@@ -282,14 +284,14 @@ def make_figure_sources(extractors, what):
     pp = PolygonPlotter(ax)
     n = 0
     tot = 0
-    for rec in info:
-        if not rec['wkt'].startswith('POINT'):
+    for rec, srcid, wkt in zip(info, srcs, wkts):
+        if not wkt.startswith('POINT'):
             if rec['eff_ruptures']:  # not filtered out
                 alpha = .3
                 n += 1
             else:
                 alpha = .1
-            pp.add(shapely.wkt.loads(rec['wkt']), alpha=alpha)
+            pp.add(shapely.wkt.loads(wkt), alpha=alpha)
             tot += 1
     pp.set_lim(sitecol)
     ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))

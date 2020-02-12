@@ -161,7 +161,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config, hdf5, workerpool
+from openquake.baselib import config, hdf5, workerpool, __version__
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
@@ -364,6 +364,11 @@ class Result(object):
         :returns: a new Result instance
         """
         try:
+            if mon.version != __version__:
+                raise RuntimeError(
+                    'The master is at version %s while the worker %s is at '
+                    'version %s' % (mon.version, socket.gethostname(),
+                                    __version__))
             with mon:
                 val = func(*args)
         except StopIteration:
@@ -395,6 +400,7 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 
 
 dummy_mon = Monitor()
+dummy_mon.version = __version__
 dummy_mon.backurl = None
 
 
@@ -418,7 +424,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
-
     mon = mon.new(operation='total ' + func.__name__, measuremem=True)
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
@@ -744,6 +749,7 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
+            monitor.version = __version__
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
         if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
             self.task_no += 1

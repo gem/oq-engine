@@ -63,14 +63,16 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         Extra parameters like hazard_calculation_id and calculation_mode
     """
     job_id = logs.init('job', getattr(logging, log_level.upper()))
-    with logs.handle(job_id, log_level, log_file):
-        job_ini = os.path.abspath(job_ini)
-        oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
-        kw['username'] = username
-        eng.run_calc(job_id, oqparam, exports)
-        for line in logs.dbcmd('list_outputs', job_id, False):
-            safeprint(line)
-    parallel.Starmap.shutdown()
+    try:
+        with logs.handle(job_id, log_level, log_file):
+            job_ini = os.path.abspath(job_ini)
+            oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
+            kw['username'] = username
+            eng.run_calc(job_id, oqparam, exports)
+            for line in logs.dbcmd('list_outputs', job_id, False):
+                safeprint(line)
+    finally:
+        parallel.Starmap.shutdown()
     return job_id
 
 
@@ -146,7 +148,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
                     soft_mem_limit=int, hard_mem_limit=int, port=int,
-                    multi_user=valid.boolean, multi_node=valid.boolean,
+                    multi_user=valid.boolean,
                     serialize_jobs=valid.boolean, strict=valid.boolean,
                     code=exec)
 

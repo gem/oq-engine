@@ -28,6 +28,7 @@ from openquake.hazardlib.geo.utils import (
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
+ampcode_dt = (numpy.string_, 4)
 
 
 class Site(object):
@@ -125,7 +126,7 @@ site_param_dt = {
     'backarc_distance': numpy.float64,
 
     # Parameters for site amplification
-    'ampcode': (numpy.string_, 2),
+    'ampcode': ampcode_dt,
     'ec8': (numpy.string_, 1),
     'ec8_p18': (numpy.string_, 2),
     'h800': numpy.float64,

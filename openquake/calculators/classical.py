@@ -27,12 +27,10 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import mfd
-from openquake.hazardlib.contexts import (
-    ContextMaker, Effect, get_effect_by_mag)
-from openquake.hazardlib.calc.filters import split_sources, getdefault
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.site_amplification import Amplifier
 from openquake.commonlib import calc, util, logs
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
@@ -275,43 +273,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
-                     for trt in gsims_by_trt}
-        # computing the effect make sense only if all IMTs have the same
-        # unity of measure; for simplicity we will consider only PGA and SA
-        self.effect = {}
-        imts_with_period = [imt for imt in oq.imtls
-                            if imt == 'PGA' or imt.startswith('SA')]
-        imts_ok = len(imts_with_period) == len(oq.imtls)
-        if len(self.sitecol) >= oq.max_sites_disagg and imts_ok:
-            logging.info('Computing effect of the ruptures')
-            mon = self.monitor('rupture effect')
-            effect = parallel.Starmap.apply(
-                get_effect_by_mag,
-                (mags, self.sitecol.one(), gsims_by_trt,
-                 oq.maximum_distance, oq.imtls, mon)).reduce()
-            self.datastore['effect_by_mag_dst_trt'] = effect
-            self.datastore.set_attrs('effect_by_mag_dst_trt', **dist_bins)
-            self.effect.update({
-                trt: Effect({mag: effect[mag][:, t] for mag in effect},
-                            dist_bins[trt])
-                for t, trt in enumerate(gsims_by_trt)})
-            minint = oq.minimum_intensity.get('default', 0)
-            for trt, eff in self.effect.items():
-                if minint:
-                    oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
-                # replace pointsource_distance with a dict trt -> mag -> dst
-                if oq.pointsource_distance['default']:
-                    oq.pointsource_distance[trt] = eff.dist_by_mag(
-                        eff.collapse_value(oq.pointsource_distance['default']))
-        elif oq.pointsource_distance['default']:
-            # replace pointsource_distance with a dict trt -> mag -> dst
-            for trt in gsims_by_trt:
-                try:
-                    dst = getdefault(oq.pointsource_distance, trt)
-                except TypeError:  # 'NoneType' object is not subscriptable
-                    dst = getdefault(oq.maximum_distance, trt)
-                oq.pointsource_distance[trt] = {mag: dst for mag in mags}
+        if 'source_mags' in self.datastore:
+            mags = self.datastore['source_mags'][()]
+            self.datastore['effect_by_mag_dst_trt'] = calc.get_effect(
+                mags, self.sitecol, gsims_by_trt, oq)
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)
@@ -384,7 +349,6 @@ class ClassicalCalculator(base.HazardCalculator):
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
         for trt, sources, atomic in trt_sources:
-            param['effect'] = self.effect.get(trt)
             gsims = gsims_by_trt[trt]
             if atomic:
                 # do not split atomic groups
@@ -492,19 +456,18 @@ class ClassicalCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        if 'amplification' in oq.inputs:
-            amplifier = Amplifier(oq.imtls, self.datastore['amplification'],
-                                  oq.soil_intensities)
-            amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
-        else:
-            amplifier = None
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
-             N, hstats, oq.individual_curves, oq.max_sites_disagg, amplifier)
+             N, hstats, oq.individual_curves, oq.max_sites_disagg,
+             self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
-        self.datastore.swmr_on()
+        if N <= oq.max_sites_disagg:  # few sites
+            dist = 'no'
+        else:
+            dist = None  # parallelize as usual
+            self.datastore.swmr_on()
         parallel.Starmap(
-            build_hazard, allargs, h5=self.datastore.hdf5
+            build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
 
 

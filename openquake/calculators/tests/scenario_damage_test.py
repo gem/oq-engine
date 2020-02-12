@@ -30,7 +30,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.export import export
 from openquake.calculators.views import view
 
-aae = numpy.testing.assert_almost_equal
+aac = numpy.testing.assert_allclose
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
@@ -54,7 +54,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             data_by_eid = fast_agg3(data, 'eid', ['dd'], number[data['aid']])
             dmg_by_event = self.calc.datastore['dmg_by_event'][()]
             for rec1, rec2 in zip(data_by_eid, dmg_by_event):
-                aae(rec1['dd'], rec2['dmg'][:, 1:], decimal=1)
+                aac(rec1['dd'], rec2['dmg'][:, 1:], atol=.1)
 
     def test_case_1(self):
         # test with a single event and a missing tag
@@ -72,8 +72,7 @@ RM       4_000
         # test agg_damages, 1 realization x 3 damage states
         [dmg] = extract(self.calc.datastore, 'agg_damages/structural?'
                         'taxonomy=RC&CRESTA=01.1')
-        #numpy.testing.assert_almost_equal(
-        #    [1498.0121, 472.96616, 29.021801], dmg, decimal=4)
+        aac([1528., 444., 28.], dmg, atol=1E-4)
         # test no intersection
         dmg = extract(self.calc.datastore, 'agg_damages/structural?'
                       'taxonomy=RM&CRESTA=01.1')
@@ -81,15 +80,19 @@ RM       4_000
 
     def test_case_1c(self):
         # this is a case with more hazard sites than exposure sites
+        # it is also a case with asset numbers > 65535 and < 1
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
+        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        # check dmg_by_asset
         total = extract(self.calc.datastore, 'agg_damages/structural')
-        #aae([[0.4906653, 0.3249882, 0.0708492, 0.0211334, 0.092364]],
-        #    total)  # shape (R, D) = (1, 5)
+        aac(total, [[37312.8, 30846.1, 4869.6, 1271.5, 5700.7]], atol=.1)
 
         # check extract gmf_data works with a filtered site collection
         gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
-        self.assertEqual(gmf_data['rlz-000'].shape, (1,))
+        self.assertEqual(gmf_data['rlz-000'].shape, (2,))  # 2 assets
 
     def test_case_2(self):
         self.assert_ok(case_2, 'job_risk.ini')

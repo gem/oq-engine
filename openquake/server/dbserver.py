@@ -52,13 +52,12 @@ class DbServer(object):
     """
     def __init__(self, db, address, num_workers=5):
         self.db = db
-        self.master_host = address[0]
         self.frontend = 'tcp://%s:%s' % address
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
         if ZMQ:
-            self.zmaster = w.WorkerMaster(address[0], **config.zworkers)
+            self.zmaster = w.WorkerMaster(**config.zworkers)
         else:
             self.zmaster = None
 
@@ -98,12 +97,9 @@ class DbServer(object):
                         sys.executable, self.frontend, self.pid)
         if ZMQ:
             # start task_in->task_server streamer thread
-            c = config.zworkers
-            threading.Thread(
-                target=w._streamer, args=(self.master_host,), daemon=True
-            ).start()
+            threading.Thread(target=w._streamer, daemon=True).start()
             logging.warning('Task streamer started on port %d',
-                            int(c.ctrl_port) + 1)
+                            int(config.zworkers.ctrl_port) + 1)
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),

@@ -342,9 +342,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn("Could not convert number->asset_number: "
-                      "got 0 < 1, line 17",
-                      str(ctx.exception))
+        self.assertIn("'0.0' is zero, line 17", str(ctx.exception))
 
     def test_invalid_asset_id(self):
         oqparam = mock.Mock()
@@ -513,9 +511,13 @@ class SitecolAssetcolTestCase(unittest.TestCase):
     def test_site_amplification(self):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.inputs['amplification'] = os.path.join(
-            oq.base_path, 'amplification.csv')
-        with self.assertRaises(InvalidFile):
+            oq.base_path, 'invalid_amplification.csv')
+        with self.assertRaises(InvalidFile) as ctx:
             readinput.get_amplification(oq)
+        self.assertIn(
+            "levels for b'F' [1.0e-03 1.0e-02 5.0e-02 1.0e-01 2.0e-01 1.6e+00]"
+            " instead of [1.0e-03 1.0e-02 5.0e-02 1.0e-01 2.0e-01 5.0e-01"
+            " 1.6e+00]", str(ctx.exception))
 
     def test_site_model_sites(self):
         # you can set them at the same time

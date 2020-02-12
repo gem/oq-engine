@@ -586,10 +586,10 @@ kotha_2016
     :undoc-members:
     :show-inheritance:
 
-kotha_2019
+kotha_2020
 ------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.kotha_2019
+.. automodule:: openquake.hazardlib.gsim.kotha_2020
     :members:
     :undoc-members:
     :show-inheritance:

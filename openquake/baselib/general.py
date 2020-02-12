@@ -452,6 +452,10 @@ def run_in_process(code, *args):
         print(exc.cmd[-1], file=sys.stderr)
         raise
     if out:
+        out = out.rstrip(b'\x1b[?1034h')
+        # this is absurd, but it happens: just importing a module can
+        # produce escape sequences in stdout, see for instance
+        # https://bugs.python.org/issue19884
         return eval(out, {}, {})
 
 

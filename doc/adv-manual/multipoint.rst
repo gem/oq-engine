@@ -136,6 +136,6 @@ above.
 
 Notice that writing `bin_width=2.0` or `min_mag=4.5` would be an error: the
 parameters must be vector objects; if their length is 1 they are
-threated as homogeneous vectors of size `size`. If their length is different
+treated as homogeneous vectors of size `size`. If their length is different
 from 1 it must be equal to `size`, otherwise you will get an error at
 instantiation time.

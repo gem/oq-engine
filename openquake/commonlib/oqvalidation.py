@@ -22,7 +22,7 @@ import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
@@ -50,7 +50,9 @@ def check_same_levels(imtls):
         if not imt.startswith(('PGA', 'SA')):
             raise ValueError('Site amplification works only with '
                              'PGA and SA, got %s' % imt)
-        if len(imtls[imt]) != len(imls) or any(
+        if numpy.isnan(imtls[imt]).all():
+            continue
+        elif len(imtls[imt]) != len(imls) or any(
                 l1 != l2 for l1, l2 in zip(imtls[imt], imls)):
             raise ValueError('Site amplification works only if the '
                              'levels are the same across all IMTs')
@@ -111,6 +113,7 @@ class OqParam(valid.ParamSet):
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
     discard_assets = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
+    approx_ddd = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
@@ -368,7 +371,9 @@ class OqParam(valid.ParamSet):
                              'time: which one do you want?')
 
         # check for amplification
-        if 'amplification' in self.inputs and self.imtls:
+        if ('amplification' in self.inputs and self.imtls and
+                self.calculation_mode in ['classical', 'classical_risk',
+                                          'disaggregation']):
             check_same_levels(self.imtls)
 
     def check_gsims(self, gsims):
@@ -475,7 +480,7 @@ class OqParam(valid.ParamSet):
         """
         # NB: different loss types may have different IMLs for the same IMT
         # in that case we merge the IMLs
-        imtls = {}
+        imtls = AccumDict(accum=[])
         for taxonomy, risk_functions in risk_models.items():
             for (lt, kind), rf in risk_functions.items():
                 if not hasattr(rf, 'imt') or kind.endswith('_retrofitted'):
@@ -483,25 +488,25 @@ class OqParam(valid.ParamSet):
                     continue
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT
-                imls = list(rf.imls)
-                if imt in imtls and imtls[imt] != imls:
-                    logging.debug(
-                        'Different levels for IMT %s: got %s, expected %s',
-                        imt, imls, imtls[imt])
-                    imtls[imt] = sorted(set(imls + imtls[imt]))
-                else:
-                    imtls[imt] = imls
-        self.risk_imtls = imtls
+                imtls[imt].extend(rf.imls)
+        suggested = ['\nintensity_measure_types_and_levels = {']
+        risk_imtls = {}
+        for imt, imls in imtls.items():
+            imls = [iml for iml in imls if iml]  # strip zeros
+            risk_imtls[imt] = list(valid.logscale(min(imls), max(imls), 20))
+            suggested.append('  %r: logscale(%s, %s, 20),' %
+                             (imt, min(imls), max(imls)))
+        suggested[-1] += '}'
+        self.risk_imtls = {imt: None for imt in risk_imtls}
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
-        if (self.calculation_mode.startswith('classical')
-                and not getattr(self, 'hazard_imtls', [])):
-            logging.warning(
-                'You MUST provide the intensity measure levels explicitly in '
-                'the job.ini, otherwise this calculation will break in future '
-                'versions of the engine')
-            for imt in imtls:
-                logging.warning('Using implicitly %s=%s', imt, imtls[imt])
+        if not getattr(self, 'hazard_imtls', []):
+            if (self.calculation_mode.startswith('classical') or
+                    self.hazard_curves_from_gmfs):
+                raise InvalidFile('%s: %s' % (
+                    self.inputs['job_ini'], 'You must provide the '
+                    'intensity measure levels explicitly. Suggestion:' +
+                    '\n  '.join(suggested)))
 
     def hmap_dt(self):  # used for CSV export
         """

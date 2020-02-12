@@ -30,7 +30,7 @@ from h5py._hl.group import Group
 import numpy
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import group_array, get_array, println
+from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
@@ -464,13 +464,12 @@ def extract_effect(dstore, what):
     """
     Extracts the effect of ruptures. Use it as /extract/effect
     """
-    what = what or 'effect'
-    grp = dstore[what]
+    grp = dstore['effect_by_mag_dst_trt']
     dist_bins = dict(grp.attrs)
     ndists = len(dist_bins[next(iter(dist_bins))])
     arr = numpy.zeros((len(grp), ndists, len(dist_bins)))
     for i, mag in enumerate(grp):
-        arr[i] = dstore[what + '/' + mag][()]
+        arr[i] = dstore['effect_by_mag_dst_trt/' + mag][()]
     return ArrayWrapper(arr, dict(dist_bins=dist_bins, ndists=ndists,
                                   mags=[float(mag) for mag in grp]))
 
@@ -492,10 +491,16 @@ def extract_sources(dstore, what):
     """
     qdict = parse(what)
     sm_id = int(qdict.get('sm_id', ['0'])[0])
-    arr = dstore['source_info']['sm_id', 'source_id', 'eff_ruptures', 'wkt']
-    if sm_id not in numpy.unique(arr['sm_id']):
+    info = dstore['source_info'][()]
+    info = info[info['sm_id'] == sm_id]
+    if len(info) == 0:
         raise ValueError('There is no source model #%d' % sm_id)
-    return ArrayWrapper(get_array(arr, sm_id=sm_id), {'sm_id': sm_id})
+    wkt_gz = gzip.compress(';'.join(info['wkt']).encode('utf8'))
+    src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
+    arr = info[['grp_id', 'code', 'num_ruptures', 'calc_time', 'num_sites',
+                'eff_ruptures']]
+    return ArrayWrapper(
+        arr, {'sm_id': sm_id, 'wkt_gz': wkt_gz, 'src_gz': src_gz})
 
 
 @extract.add('task_info')
@@ -1318,7 +1323,7 @@ class WebExtractor(Extractor):
         resp = self.sess.get(url)
         if resp.status_code != 200:
             raise WebAPIError(resp.text)
-        npz = numpy.load(io.BytesIO(resp.content), allow_pickle=True)
+        npz = numpy.load(io.BytesIO(resp.content))
         attrs = {k: npz[k] for k in npz if k != 'array'}
         try:
             arr = npz['array']

@@ -16,9 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import warnings
+import logging
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, performance, parallel
+from openquake.hazardlib.contexts import Effect, get_effect_by_mag
+from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib import calc, probability_map
 
@@ -267,3 +270,50 @@ class RuptureSerializer(object):
         attr = {'code_%d' % code: ' '.join(
             cls.__name__ for cls in code2cls[code]) for code in codes}
         self.datastore.set_attrs('ruptures', **attr)
+
+
+def get_effect(mags, sitecol, gsims_by_trt, oq):
+    """
+    :returns: an ArrayWrapper effect_by_mag_dst_trt
+    Also updates oq.maximum_distance.magdist and oq.pointsource_distance
+    """
+    dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
+                 for trt in gsims_by_trt}
+    # computing the effect make sense only if all IMTs have the same
+    # unity of measure; for simplicity we will consider only PGA and SA
+    effect = {}
+    imts_with_period = [imt for imt in oq.imtls
+                        if imt == 'PGA' or imt.startswith('SA')]
+    imts_ok = len(imts_with_period) == len(oq.imtls)
+    aw = hdf5.ArrayWrapper((), dist_bins)
+    if sitecol is None:
+        return aw
+    if len(sitecol) >= oq.max_sites_disagg and imts_ok:
+        logging.info('Computing effect of the ruptures')
+        mon = performance.Monitor('rupture effect')
+        eff_by_mag = parallel.Starmap.apply(
+            get_effect_by_mag,
+            (mags, sitecol.one(), gsims_by_trt,
+             oq.maximum_distance, oq.imtls, mon)).reduce()
+        aw.array = eff_by_mag
+        effect.update({
+            trt: Effect({mag: eff_by_mag[mag][:, t] for mag in eff_by_mag},
+                        dist_bins[trt])
+            for t, trt in enumerate(gsims_by_trt)})
+        minint = oq.minimum_intensity.get('default', 0)
+        for trt, eff in effect.items():
+            if minint:
+                oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
+            # replace pointsource_distance with a dict trt -> mag -> dst
+            if oq.pointsource_distance['default']:
+                oq.pointsource_distance[trt] = eff.dist_by_mag(
+                    eff.collapse_value(oq.pointsource_distance['default']))
+    elif oq.pointsource_distance['default']:
+        # replace pointsource_distance with a dict trt -> mag -> dst
+        for trt in gsims_by_trt:
+            try:
+                dst = getdefault(oq.pointsource_distance, trt)
+            except TypeError:  # 'NoneType' object is not subscriptable
+                dst = getdefault(oq.maximum_distance, trt)
+            oq.pointsource_distance[trt] = {mag: dst for mag in mags}
+    return aw

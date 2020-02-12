@@ -398,6 +398,9 @@ def array_of_vstr(lst):
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
+
+    :param array: an array (or the empty tuple)
+    :param attrs: metadata of the array (or dictionary of arrays)
     """
     @classmethod
     def from_(cls, obj, extra='value'):
@@ -491,17 +494,6 @@ class ArrayWrapper(object):
             for k, v in extra.items():
                 f.attrs[k] = maybe_encode(v)
 
-    def sum_all(self, *tags):
-        """
-        Reduce the underlying array by summing on the given dimensions
-        """
-        tag2idx = {tag: i for i, tag in enumerate(self.shape_descr)}
-        array = self.array.sum(axis=tuple(tag2idx[tag] for tag in tags))
-        attrs = vars(self).copy()
-        attrs['shape_descr'] = [tag for tag in self.shape_descr
-                                if tag not in tags]
-        return self.__class__(array, attrs)
-
     def to_table(self):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
@@ -523,10 +515,6 @@ class ArrayWrapper(object):
          ('RC', 'RES', 2000.0),
          ('RC', 'IND', 5000.0),
          ('WOOD', 'RES', 500.0)]
-        >>> pprint(aw.sum_all('taxonomy').to_table())
-        [('occupancy', 'value'), ('RES', 2500.0), ('IND', 5000.0)]
-        >>> pprint(aw.sum_all('occupancy').to_table())
-        [('taxonomy', 'value'), ('RC', 7000.0), ('WOOD', 500.0)]
         """
         shape = self.shape
         tup = len(self._extra) > 1

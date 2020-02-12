@@ -41,7 +41,7 @@ from openquake.baselib.general import (groupby, group_array, duplicated,
                                        add_defaults)
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
-from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
