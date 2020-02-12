@@ -10,6 +10,8 @@ https://help.github.com/articles/fork-a-repo
 - Implement the new GMPE using as an example of a GMPE already in the oq-engine whose functional form is similar to the new GMPE.
 https://github.com/gem/oq-engine/tree/master/openquake/hazardlib/gsim
 
+- Acceleration should be returned in units of g, and standard deviation values in natural logarithm. If this is not consistent with the original GMPE, then a conversion needs to be made.
+
 - Create verification tables following the examples that you find here:
 https://github.com/gem/oq-engine/tree/master/openquake/hazardlib/tests/gsim/data
 Usually we create verification tables using an independent code provided by the original authors of the new GMPE. If this is not possible - if available - we use an independent implementation available within code accessible on the web. If verification tables are missing this must be clearly stated as in this example https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/raghukanth_iyengar_2007.py#L119
