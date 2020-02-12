@@ -147,18 +147,6 @@ def handle(job_id, log_level='info', log_file=None):
             logging.root.removeHandler(handler)
 
 
-def get_last_calc_id(username=None):
-    """
-    :param username: if given, restrict to it
-    :returns: the last calculation in the database or the datastore
-    """
-    if config.dbserver.multi_user:
-        job = dbcmd('get_job', -1, username)  # can be None
-        return getattr(job, 'id', 0)
-    else:  # single user
-        return datastore.get_last_calc_id()
-
-
 def init(calc_id='nojob', level=logging.INFO):
     """
     1. initialize the root logger (if not already initialized)
