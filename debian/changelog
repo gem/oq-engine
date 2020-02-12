@@ -1,8 +1,12 @@
+python3-oq-engine (3.8.1-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Fixed random HDF5 bug in disaggregation calculations
   * Fixed memory issue in nrcan15_site_term.p
   * Fixed get_duplicates check in the SiteCollection
   * Fixed bug in case of MMI (log(imls) -> imls)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 12 Feb 2020 10:23:22 +0000
 
 python3-oq-engine (3.8.0-1~xenial01) xenial; urgency=low
 
