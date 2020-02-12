@@ -28,7 +28,7 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
-from openquake.baselib import config, hdf5
+from openquake.baselib import config, hdf5, general
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
@@ -1325,6 +1325,7 @@ class WebExtractor(Extractor):
         resp = self.sess.get(url)
         if resp.status_code != 200:
             raise WebAPIError(resp.text)
+        logging.info('Read %s of data' % general.humansize(len(resp.content)))
         npz = numpy.load(io.BytesIO(resp.content))
         attrs = {k: npz[k] for k in npz if k != 'array'}
         try:
