@@ -11,7 +11,6 @@
   [Michele Simionato]
   * Added a command `oq postzip` to send small calculations to the WebUI
   * Added a limit of 1000 sources when disagg_by_src=true
-  * Fixed random HDF5 bug in disaggregation calculations
   * Internal: fixed `oq export input -e zip` that was flattening the tree
     structure of the input files in the exported zip archive
   * Implemented GMFs amplification
@@ -45,6 +44,16 @@
   * Changed the scenario damage calculator to use discrete damage distributions
   * Forced the "number" attribute in the exposure must be an integer in the
     range 1..65535, extrema included
+
+python3-oq-engine (3.8.1-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed random HDF5 bug in disaggregation calculations
+  * Fixed memory issue in nrcan15_site_term.p
+  * Fixed get_duplicates check in the SiteCollection
+  * Fixed bug in case of MMI (log(imls) -> imls)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 12 Feb 2020 10:23:22 +0000
 
 python3-oq-engine (3.8.0-1~xenial01) xenial; urgency=low
 
