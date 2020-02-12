@@ -497,8 +497,10 @@ def extract_sources(dstore, what):
         raise ValueError('There is no source model #%d' % sm_id)
     wkt_gz = gzip.compress(';'.join(info['wkt']).encode('utf8'))
     src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
-    arr = info[['grp_id', 'code', 'num_ruptures', 'calc_time', 'num_sites',
-                'eff_ruptures']]
+    oknames = [n for n in info.dtype.names if n not in ('source_id', 'wkt')]
+    arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
+    for n in oknames:
+        arr[n] = info[n]
     return ArrayWrapper(
         arr, {'sm_id': sm_id, 'wkt_gz': wkt_gz, 'src_gz': src_gz})
 
