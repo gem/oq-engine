@@ -667,25 +667,20 @@ class SourceModelLogicTree(object):
         of every branching level only those branches that are listed in it
         can have child branchsets (if there is one on the next level).
         """
-        new_open_ends = set()
         [branchset_node] = _bsnodes(self.filename, branchinglevel_node)
         attrs = branchset_node.attrib.copy()
         self.bsetdict[attrs.pop('branchSetID')] = attrs
-        branchset = self.parse_branchset(branchset_node, depth, 0, validate)
+        branchset = self.parse_branchset(branchset_node, depth, validate)
         self.parse_branches(branchset_node, branchset, validate)
         if self.root_branchset is None:  # not set yet
             self.num_paths = 1
             self.root_branchset = branchset
         else:
             self.apply_branchset(branchset_node, branchset)
-
-        for branch in branchset.branches:
-            new_open_ends.add(branch)
+        self.open_ends = set(branch for branch in branchset.branches)
         self.num_paths *= len(branchset.branches)
-        self.open_ends.clear()
-        self.open_ends.update(new_open_ends)
 
-    def parse_branchset(self, branchset_node, depth, number, validate):
+    def parse_branchset(self, branchset_node, depth, validate):
         """
         Create :class:`BranchSet` object using data in ``branchset_node``.
 
@@ -693,8 +688,6 @@ class SourceModelLogicTree(object):
             ``etree.Element`` object with tag "logicTreeBranchSet".
         :param depth:
             The sequential number of branchset's branching level, based on 0.
-        :param number:
-            Index number of this branchset inside branching level, based on 0.
         :param validate:
             Whether or not filters defined in branchset and the branchset
             itself should be validated.
@@ -711,7 +704,7 @@ class SourceModelLogicTree(object):
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
         branchset = BranchSet(uncertainty_type, filters)
         if validate:
-            self.validate_branchset(branchset_node, depth, number, branchset)
+            self.validate_branchset(branchset_node, depth, branchset)
         return branchset
 
     def parse_branches(self, branchset_node, branchset, validate):
@@ -1112,7 +1105,7 @@ class SourceModelLogicTree(object):
                     "source with id '%s' is not defined in source "
                     "models" % source_id)
 
-    def validate_branchset(self, branchset_node, depth, number, branchset):
+    def validate_branchset(self, branchset_node, depth, branchset):
         """
         See superclass' method for description and signature specification.
 
