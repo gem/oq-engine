@@ -32,7 +32,7 @@ If memory is not not a issue, enabling HyperThreading may still be a bad
 idea: depending on the hardware and the software (in particular the patches
 for Spectre/Meltdown) it may slow down your system. The only way to assess
 the effect of HyperThreading is to run a (big) calculation with HyperThreading
-on and HyperThreading off and then compare the runtimes.
+and one without, and then compare the runtimes.
 
 ******
 
