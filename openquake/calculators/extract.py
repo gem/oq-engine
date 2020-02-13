@@ -28,6 +28,7 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
+import pandas
 from openquake.baselib import config, hdf5, general
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
@@ -501,8 +502,13 @@ def extract_sources(dstore, what):
     """
     qdict = parse(what)
     sm_id = int(qdict.get('sm_id', ['0'])[0])
+    limit = int(qdict.get('limit', ['100'])[0])
     info = dstore['source_info'][()]
     info = info[info['sm_id'] == sm_id]
+    arrays = []
+    for code, rows in general.group_array(info, 'code').items():
+        arrays.append(rows[:limit])
+    info = numpy.concatenate(arrays)
     if len(info) == 0:
         raise ValueError('There is no source model #%d' % sm_id)
     wkt_gz = gzip.compress(';'.join(info['wkt']).encode('utf8'))
