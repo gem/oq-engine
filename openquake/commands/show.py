@@ -68,8 +68,8 @@ def show(what='contents', calc_id=-1, extra=()):
         print(view(what, ds))
     elif what.split('/', 1)[0] in extract:
         obj = extract(ds, what, *extra)
-        if hasattr(obj, 'array'):
-            print(obj.array)
+        if hasattr(obj, 'dtype') and obj.dtype.names:
+            print(write_csv(io.BytesIO(), obj).decode('utf8'))
         else:
             print(obj)
     elif what in ds:
