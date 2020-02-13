@@ -507,8 +507,11 @@ def extract_sources(dstore, what):
     sm_id = int(qdict.get('sm_id', ['0'])[0])
     limit = int(qdict.get('limit', ['100'])[0])
     source_id = qdict.get('source_id', [None])[0]
+    code = qdict.get('code', [None])[0]
     if source_id is not None:
         source_id = str(source_id)
+    if code is not None:
+        code = str(code).encode('utf8')
     info = dstore['source_info'][()]
     info = info[info['sm_id'] == sm_id]
     arrays = []
@@ -517,6 +520,11 @@ def extract_sources(dstore, what):
         info = info[info['source_id'] == source_id]
     if len(info) == 0:
         raise NotFound('There is no source with id %s' % source_id)
+    if code is not None:
+        logging.info('Extracting source with code: %s', code)
+        info = info[info['code'] == code]
+    if len(info) == 0:
+        raise NotFound('There is no source with code %s' % code)
     for code, rows in general.group_array(info, 'code').items():
         if limit < len(rows):
             logging.info('Code %s: extracting %d sources out of %s',

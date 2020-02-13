@@ -269,6 +269,7 @@ def make_figure_sources(extractors, what):
     """
     $ oq plot sources?sm_id=0?limit=100
     $ oq plot sources?sm_id=0?source_id=1
+    $ oq plot sources?sm_id=0?code=A
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
