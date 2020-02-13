@@ -668,26 +668,20 @@ class SourceModelLogicTree(object):
         can have child branchsets (if there is one on the next level).
         """
         new_open_ends = set()
-        for number, branchset_node in enumerate(
-                _bsnodes(self.filename, branchinglevel_node)):
-            attrs = branchset_node.attrib.copy()
-            self.bsetdict[attrs.pop('branchSetID')] = attrs
-            branchset = self.parse_branchset(branchset_node, depth, number,
-                                             validate)
-            self.parse_branches(branchset_node, branchset, validate)
-            if self.root_branchset is None:  # not set yet
-                self.num_paths = 1
-                self.root_branchset = branchset
-            else:
-                self.apply_branchset(branchset_node, branchset)
+        [branchset_node] = _bsnodes(self.filename, branchinglevel_node)
+        attrs = branchset_node.attrib.copy()
+        self.bsetdict[attrs.pop('branchSetID')] = attrs
+        branchset = self.parse_branchset(branchset_node, depth, 0, validate)
+        self.parse_branches(branchset_node, branchset, validate)
+        if self.root_branchset is None:  # not set yet
+            self.num_paths = 1
+            self.root_branchset = branchset
+        else:
+            self.apply_branchset(branchset_node, branchset)
 
-            for branch in branchset.branches:
-                new_open_ends.add(branch)
-
-            self.num_paths *= len(branchset.branches)
-        if number > 0:
-            raise InvalidLogicTree('there is a branching level with multiple'
-                                   ' branchsets in %s' % self.filename)
+        for branch in branchset.branches:
+            new_open_ends.add(branch)
+        self.num_paths *= len(branchset.branches)
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
