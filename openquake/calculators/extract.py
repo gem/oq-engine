@@ -506,20 +506,20 @@ def extract_sources(dstore, what):
     qdict = parse(what)
     sm_id = int(qdict.get('sm_id', ['0'])[0])
     limit = int(qdict.get('limit', ['100'])[0])
-    source_id = qdict.get('source_id', [None])[0]
-    if source_id is not None:
-        source_id = str(source_id)
+    source_ids = qdict.get('source_id', None)
+    if source_ids is not None:
+        source_ids = [str(source_id) for source_id in source_ids]
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
     info = dstore['source_info'][()]
     info = info[info['sm_id'] == sm_id]
     arrays = []
-    if source_id is not None:
-        logging.info('Extracting source with id: %s', source_id)
-        info = info[info['source_id'] == source_id]
+    if source_ids is not None:
+        logging.info('Extracting sources with ids: %s', source_ids)
+        info = info[numpy.isin(info['source_id'], source_ids)]
         if len(info) == 0:
-            raise NotFound('There is no source with id %s' % source_id)
+            raise NotFound('There is no source with id %s' % source_ids)
     if codes is not None:
         logging.info('Extracting sources with codes: %s', codes)
         info = info[numpy.isin(info['code'], codes)]
