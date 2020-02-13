@@ -511,7 +511,7 @@ def extract_sources(dstore, what):
     if source_id is not None:
         source_id = str(source_id)
     if code is not None:
-        code = str(code).encode('utf8')
+        code = code.encode('utf8')
     info = dstore['source_info'][()]
     info = info[info['sm_id'] == sm_id]
     arrays = []
