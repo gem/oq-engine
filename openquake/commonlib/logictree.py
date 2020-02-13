@@ -162,7 +162,8 @@ class LogicTreeError(Exception):
     def __init__(self, node, filename, message):
         self.filename = filename
         self.message = message
-        self.lineno = getattr(node, 'lineno', '?')
+        self.lineno = node if isinstance(node, int) else getattr(
+            node, 'lineno', '?')
 
     def __str__(self):
         return "filename '%s', line %s: %s" % (
@@ -676,8 +677,14 @@ class SourceModelLogicTree(object):
             self.num_paths = 1
             self.root_branchset = branchset
         else:
-            self.apply_branchset(branchset_node, branchset)
-        self.open_ends = set(branch for branch in branchset.branches)
+            apply_to_branches = branchset_node.attrib.get('applyToBranches')
+            if apply_to_branches:
+                self.apply_branchset(apply_to_branches, branchset_node.lineno,
+                                     branchset)
+            else:
+                for branch in self.open_ends:
+                    branch.child_branchset = branchset
+        self.open_ends = set(branchset.branches)
         self.num_paths *= len(branchset.branches)
 
     def parse_branchset(self, branchset_node, depth, validate):
@@ -1134,7 +1141,7 @@ class SourceModelLogicTree(object):
                     'uncertainty of type "gmpeModel" is not allowed '
                     'in source model logic tree')
 
-    def apply_branchset(self, branchset_node, branchset):
+    def apply_branchset(self, apply_to_branches, lineno, branchset):
         """
         See superclass' method for description and signature specification.
 
@@ -1146,23 +1153,17 @@ class SourceModelLogicTree(object):
         Checks that branchset tries to be applied only to branches on previous
         branching level which do not have a child branchset yet.
         """
-        apply_to_branches = branchset_node.attrib.get('applyToBranches')
-        if apply_to_branches:
-            apply_to_branches = apply_to_branches.split()
-            for branch_id in apply_to_branches:
-                if branch_id not in self.branches:
-                    raise LogicTreeError(
-                        branchset_node, self.filename,
-                        "branch '%s' is not yet defined" % branch_id)
-                branch = self.branches[branch_id]
-                if branch.child_branchset is not None:
-                    raise LogicTreeError(
-                        branchset_node, self.filename,
-                        "branch '%s' already has child branchset" % branch_id)
-                branch.child_branchset = branchset
-        else:
-            for branch in self.open_ends:
-                branch.child_branchset = branchset
+        for branch_id in apply_to_branches.split():
+            if branch_id not in self.branches:
+                raise LogicTreeError(
+                    lineno, self.filename,
+                    "branch '%s' is not yet defined" % branch_id)
+            branch = self.branches[branch_id]
+            if branch.child_branchset is not None:
+                raise LogicTreeError(
+                    lineno, self.filename,
+                    "branch '%s' already has child branchset" % branch_id)
+            branch.child_branchset = branchset
 
     def _get_source_model(self, source_model_file):
         return open(os.path.join(self.basepath, source_model_file),
