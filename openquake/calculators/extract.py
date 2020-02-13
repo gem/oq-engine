@@ -28,7 +28,6 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
-import pandas
 from openquake.baselib import config, hdf5, general
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
@@ -45,6 +44,10 @@ TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
 memoized = lru_cache(100)
+
+
+class NotFound(Exception):
+    pass
 
 
 def lit_eval(string):
@@ -503,10 +506,21 @@ def extract_sources(dstore, what):
     qdict = parse(what)
     sm_id = int(qdict.get('sm_id', ['0'])[0])
     limit = int(qdict.get('limit', ['100'])[0])
+    source_id = qdict.get('source_id', [None])[0]
+    if source_id is not None:
+        source_id = str(source_id)
     info = dstore['source_info'][()]
     info = info[info['sm_id'] == sm_id]
     arrays = []
+    if source_id is not None:
+        logging.info('Extracting source with id: %s', source_id)
+        info = info[info['source_id'] == source_id]
+    if len(info) == 0:
+        raise NotFound('There is no source with id %s' % source_id)
     for code, rows in general.group_array(info, 'code').items():
+        if limit < len(rows):
+            logging.info('Code %s: extracting %d sources out of %s',
+                         code, limit, len(rows))
         arrays.append(rows[:limit])
     info = numpy.concatenate(arrays)
     if len(info) == 0:
