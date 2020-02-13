@@ -67,7 +67,11 @@ def show(what='contents', calc_id=-1, extra=()):
     if view.keyfunc(what) in view:
         print(view(what, ds))
     elif what.split('/', 1)[0] in extract:
-        print(extract(ds, what, *extra))
+        obj = extract(ds, what, *extra)
+        if hasattr(obj, 'dtype') and obj.dtype.names:
+            print(write_csv(io.BytesIO(), obj).decode('utf8'))
+        else:
+            print(obj)
     elif what in ds:
         obj = ds.getitem(what)
         if hasattr(obj, 'items'):  # is a group of datasets

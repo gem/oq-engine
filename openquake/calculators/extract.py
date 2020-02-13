@@ -386,6 +386,16 @@ def extract_hcurves(dstore, what):
     yield from params.items()
 
 
+@extract.add('sitecol')
+def extract_sitecol(dstore, what):
+    """
+    Extracts the site collection array (not the complete object, otherwise it
+    would need to be pickled).
+    Use it as /extract/sitecol
+    """
+    return dstore['sitecol'].array
+
+
 @extract.add('hmaps')
 def extract_hmaps(dstore, what):
     """
