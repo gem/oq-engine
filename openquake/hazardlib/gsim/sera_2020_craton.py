@@ -129,16 +129,15 @@ class SERA2020Craton(GMPE):
         Instantiates the class with additional terms controlling both the
         epistemic uncertainty in the median and the preferred aleatory
         uncertainty model ('global', 'cena_constant', 'cena'), and the quantile
-        of the epistemic uncertainty model (float in the range 0 to 1).
+        of the epistemic uncertainty model (float in the range 0 to 1, or None)
         """
         super().__init__(**kwargs)
         self.epsilon = kwargs.get("epsilon", 0.0)
         self.tau_model = kwargs.get("tau_model", "global")
         self.phi_model = kwargs.get("phi_model", "global")
         self.ergodic = kwargs.get("ergodic", True)
-        self.tau_quantile = kwargs.get("tau_quantile", 0.5)
-        self.phi_ss_quantile = kwargs.get("phi_ss_quantile", 0.5)
-        self.phi_s2ss_quantile = kwargs.get("phi_s2ss_quantile", None)
+        self.tau_quantile = kwargs.get("tau_quantile", None)
+        self.phi_ss_quantile = kwargs.get("phi_ss_quantile", None)
         self.site_epsilon = kwargs.get("site_epsilon", 0.0)
         self.TAU = None
         self.PHI_SS = None
