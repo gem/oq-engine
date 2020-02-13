@@ -501,7 +501,9 @@ def extract_rups_by_mag_dist(dstore, what):
 def extract_sources(dstore, what):
     """
     Extract information about a source model.
-    Use it as /extract/sources?sm_id=0
+    Use it as /extract/sources?sm_id=0&limit=10
+    or /extract/sources?sm_id=0&source_id=1&source_id=2
+    or /extract/sources?sm_id=0&code=A&code=B
     """
     qdict = parse(what)
     sm_id = int(qdict.get('sm_id', ['0'])[0])
