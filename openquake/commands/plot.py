@@ -287,6 +287,9 @@ def make_figure_sources(extractors, what):
     n = 0
     tot = 0
     for rec, srcid, wkt in zip(info, srcs, wkts):
+        if not wkt:
+            logging.warning('No geometries for source id %s', srcid)
+            continue
         if rec['eff_ruptures']:  # not filtered out
             alpha = .3
             n += 1
