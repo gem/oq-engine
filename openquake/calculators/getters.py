@@ -62,9 +62,9 @@ def sig_eps_dt(imts):
     """
     lst = [('eid', U32), ('rlz_id', U16)]
     for imt in imts:
-        lst.append(('sig_' + imt, F32))
+        lst.append(('sig_inter_' + imt, F32))
     for imt in imts:
-        lst.append(('eps_' + imt, F32))
+        lst.append(('eps_inter_' + imt, F32))
     return numpy.dtype(lst)
 
 
