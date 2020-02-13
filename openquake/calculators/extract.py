@@ -507,24 +507,24 @@ def extract_sources(dstore, what):
     sm_id = int(qdict.get('sm_id', ['0'])[0])
     limit = int(qdict.get('limit', ['100'])[0])
     source_id = qdict.get('source_id', [None])[0]
-    code = qdict.get('code', [None])[0]
     if source_id is not None:
         source_id = str(source_id)
-    if code is not None:
-        code = code.encode('utf8')
+    codes = qdict.get('code', None)
+    if codes is not None:
+        codes = [code.encode('utf8') for code in codes]
     info = dstore['source_info'][()]
     info = info[info['sm_id'] == sm_id]
     arrays = []
     if source_id is not None:
         logging.info('Extracting source with id: %s', source_id)
         info = info[info['source_id'] == source_id]
-    if len(info) == 0:
-        raise NotFound('There is no source with id %s' % source_id)
-    if code is not None:
-        logging.info('Extracting source with code: %s', code)
-        info = info[info['code'] == code]
-    if len(info) == 0:
-        raise NotFound('There is no source with code %s' % code)
+        if len(info) == 0:
+            raise NotFound('There is no source with id %s' % source_id)
+    if codes is not None:
+        logging.info('Extracting sources with codes: %s', codes)
+        info = info[numpy.isin(info['code'], codes)]
+        if len(info) == 0:
+            raise NotFound('There is no source with code in %s' % codes)
     for code, rows in general.group_array(info, 'code').items():
         if limit < len(rows):
             logging.info('Code %s: extracting %d sources out of %s',
