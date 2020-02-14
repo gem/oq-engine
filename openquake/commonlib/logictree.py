@@ -337,8 +337,7 @@ class BranchSet(object):
         for branch in self.branches:
             path = [prefix_path, branch]
             if branch.bset is not None:
-                for subpath in branch.bset._enumerate_paths(path):
-                    yield subpath
+                yield from branch.bset._enumerate_paths(path)
             else:
                 yield path
 
@@ -1101,16 +1100,14 @@ class SourceModelLogicTree(object):
                 raise LogicTreeError(
                     branchset_node, self.filename, "applyToBranch must be "
                     "specified together with applyToSources")
-            cnt = 0
-            for source_id in filters['applyToSources'].split():
-                for source_ids in self.source_ids.values():
-                    if source_id in source_ids:
-                        cnt += 1
+            cnt = sum(source_id in source_ids
+                      for source_id in filters['applyToSources'].split()
+                      for source_ids in self.source_ids.values())
             if cnt == 0:
                 raise LogicTreeError(
                     branchset_node, self.filename,
-                    "source with id '%s' is not defined in source "
-                    "models" % source_id)
+                    "source %s not defined in source "
+                    "models" % filters['applyToSources'].split())
 
     def validate_branchset(self, branchset_node, depth, branchset):
         """

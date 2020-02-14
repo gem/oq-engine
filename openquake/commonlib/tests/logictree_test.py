@@ -877,7 +877,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 13)
-        error = "source with id 'bzzz' is not defined in source models"
+        error = "source ['bzzz'] not defined in source models"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
