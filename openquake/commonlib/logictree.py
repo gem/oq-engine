@@ -1527,55 +1527,55 @@ class GsimLogicTree(object):
         branches = []
         branchsetids = set()
         basedir = os.path.dirname(self.filename)
-        for branching_level in self._ltnode:
-            for branchset in _bsnodes(self.filename, branching_level):
-                if branchset['uncertaintyType'] != 'gmpeModel':
-                    raise InvalidLogicTree(
-                        '%s: only uncertainties of type "gmpeModel" '
-                        'are allowed in gmpe logic tree' % self.filename)
-                bsid = branchset['branchSetID']
-                if bsid in branchsetids:
-                    raise InvalidLogicTree(
-                        '%s: Duplicated branchSetID %s' %
-                        (self.filename, bsid))
-                else:
-                    branchsetids.add(bsid)
-                trt = branchset.get('applyToTectonicRegionType')
-                if trt:  # missing in logictree_test.py
-                    self.bs_id_by_trt[trt] = bsid
-                    trts.append(trt)
+        for node in self._ltnode:
+            [branchset] = _bsnodes(self.filename, node)
+            if branchset['uncertaintyType'] != 'gmpeModel':
+                raise InvalidLogicTree(
+                    '%s: only uncertainties of type "gmpeModel" '
+                    'are allowed in gmpe logic tree' % self.filename)
+            bsid = branchset['branchSetID']
+            if bsid in branchsetids:
+                raise InvalidLogicTree(
+                    '%s: Duplicated branchSetID %s' %
+                    (self.filename, bsid))
+            else:
+                branchsetids.add(bsid)
+            trt = branchset.get('applyToTectonicRegionType')
+            if trt:  # missing in logictree_test.py
                 self.bs_id_by_trt[trt] = bsid
-                # NB: '*' is used in scenario calculations to disable filtering
-                effective = (tectonic_region_types == ['*'] or
-                             trt in tectonic_region_types)
-                weights = []
-                branch_ids = []
-                for branch in branchset:
-                    weight = ImtWeight(branch, self.filename)
-                    weights.append(weight)
-                    branch_id = branch['branchID']
-                    branch_ids.append(branch_id)
-                    try:
-                        gsim = valid.gsim(branch.uncertaintyModel, basedir)
-                    except Exception as exc:
-                        raise ValueError(
-                            "%s in file %s" % (exc, self.filename)) from exc
-                    if gsim in self.values[trt]:
-                        raise InvalidLogicTree('%s: duplicated gsim %s' %
-                                               (self.filename, gsim))
-                    if len(weight.dic) > 1:
-                        gsim.weight = weight
-                    self.values[trt].append(gsim)
-                    bt = BranchTuple(
-                        branchset['applyToTectonicRegionType'],
-                        branch_id, gsim, weight, effective)
-                    branches.append(bt)
-                tot = sum(weights)
-                assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
-                if duplicated(branch_ids):
-                    raise InvalidLogicTree(
-                        'There where duplicated branchIDs in %s' %
-                        self.filename)
+                trts.append(trt)
+            self.bs_id_by_trt[trt] = bsid
+            # NB: '*' is used in scenario calculations to disable filtering
+            effective = (tectonic_region_types == ['*'] or
+                         trt in tectonic_region_types)
+            weights = []
+            branch_ids = []
+            for branch in branchset:
+                weight = ImtWeight(branch, self.filename)
+                weights.append(weight)
+                branch_id = branch['branchID']
+                branch_ids.append(branch_id)
+                try:
+                    gsim = valid.gsim(branch.uncertaintyModel, basedir)
+                except Exception as exc:
+                    raise ValueError(
+                        "%s in file %s" % (exc, self.filename)) from exc
+                if gsim in self.values[trt]:
+                    raise InvalidLogicTree('%s: duplicated gsim %s' %
+                                           (self.filename, gsim))
+                if len(weight.dic) > 1:
+                    gsim.weight = weight
+                self.values[trt].append(gsim)
+                bt = BranchTuple(
+                    branchset['applyToTectonicRegionType'],
+                    branch_id, gsim, weight, effective)
+                branches.append(bt)
+            tot = sum(weights)
+            assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
+            if duplicated(branch_ids):
+                raise InvalidLogicTree(
+                    'There where duplicated branchIDs in %s' %
+                    self.filename)
         if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
                 '%s: Found duplicated applyToTectonicRegionType=%s' %
