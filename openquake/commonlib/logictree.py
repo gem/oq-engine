@@ -612,7 +612,7 @@ class SourceModelLogicTree(object):
         self.num_samples = num_samples
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
-        self.open_ends = set()
+        self.previous_branches = set()
         self.tectonic_region_types = set()
         self.source_types = set()
         self.root_branchset = None
@@ -679,12 +679,12 @@ class SourceModelLogicTree(object):
         else:
             apply_to_branches = branchset_node.attrib.get('applyToBranches')
             if apply_to_branches:
-                self.apply_branchset(apply_to_branches, branchset_node.lineno,
-                                     branchset)
+                self.apply_branchset(
+                    apply_to_branches, branchset_node.lineno, branchset)
             else:
-                for branch in self.open_ends:
+                for branch in self.previous_branches:
                     branch.child_branchset = branchset
-        self.open_ends = set(branchset.branches)
+        self.previous_branches = set(branchset.branches)
         self.num_paths *= len(branchset.branches)
 
     def parse_branchset(self, branchset_node, depth, validate):
