@@ -6,13 +6,9 @@
 
             <logicTreeBranchSet uncertaintyType="sourceModel"
                                 branchSetID="bs1">
-                                
+
                 <logicTreeBranch branchID="b1">
                   <uncertaintyModel>
-                  slab/7.05.nrml
-                  slab/7.15.nrml
-                  slab/7.25.nrml
-                  slab/7.35.nrml
                   slab/7.45.nrml
                 </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
