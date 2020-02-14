@@ -1527,8 +1527,8 @@ class GsimLogicTree(object):
         branches = []
         branchsetids = set()
         basedir = os.path.dirname(self.filename)
-        for node in self._ltnode:
-            [branchset] = _bsnodes(self.filename, node)
+        for blnode in self._ltnode:
+            [branchset] = _bsnodes(self.filename, blnode)
             if branchset['uncertaintyType'] != 'gmpeModel':
                 raise InvalidLogicTree(
                     '%s: only uncertainties of type "gmpeModel" '
