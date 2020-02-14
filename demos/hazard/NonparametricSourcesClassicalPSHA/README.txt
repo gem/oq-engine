@@ -9,7 +9,7 @@ interest (see below). From each curve set we interpolate hazard maps at 10% and
 2% probabilities of exceedance. Finally, we also extract Uniform Hazard Spectra
 (UHS) for the same probabilities from the PGA and SA hazard maps.
 
-Expected runtime: 
+Expected runtime: ~10 seconds
 Number of sites: 168
 Number of logic tree realizations: 3
 GMPEs: MontalvaEtAl2017SSlab AbrahamsonEtAl2015SSlab ZhaoEtAl2006SSlabNSHMP2014
