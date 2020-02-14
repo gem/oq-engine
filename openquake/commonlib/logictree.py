@@ -612,7 +612,7 @@ class SourceModelLogicTree(object):
         self.num_samples = num_samples
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
-        self.previous_branches = set()
+        self.previous_branches = []
         self.tectonic_region_types = set()
         self.source_types = set()
         self.root_branchset = None
