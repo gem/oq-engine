@@ -1100,14 +1100,14 @@ class SourceModelLogicTree(object):
                 raise LogicTreeError(
                     branchset_node, self.filename, "applyToBranch must be "
                     "specified together with applyToSources")
-            cnt = sum(source_id in source_ids
-                      for source_id in filters['applyToSources'].split()
-                      for source_ids in self.source_ids.values())
-            if cnt == 0:
-                raise LogicTreeError(
-                    branchset_node, self.filename,
-                    "source %s not defined in source "
-                    "models" % filters['applyToSources'].split())
+            for source_id in filters['applyToSources'].split():
+                cnt = sum(source_id in source_ids
+                          for source_ids in self.source_ids.values())
+                if cnt == 0:
+                    raise LogicTreeError(
+                        branchset_node, self.filename,
+                        "source with id '%s' is not defined in source "
+                        "models" % source_id)
 
     def validate_branchset(self, branchset_node, depth, branchset):
         """
