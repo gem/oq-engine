@@ -218,11 +218,11 @@ class Branch(object):
         self.branch_id = branch_id
         self.weight = weight
         self.value = value
-        self.child_branchset = None
+        self.bset = None
 
     def __repr__(self):
-        if self.child_branchset:
-            return '%s%s' % (self.branch_id, self.child_branchset)
+        if self.bset:
+            return '%s%s' % (self.branch_id, self.bset)
         else:
             return '%s' % self.branch_id
 
@@ -336,8 +336,8 @@ class BranchSet(object):
         """
         for branch in self.branches:
             path = [prefix_path, branch]
-            if branch.child_branchset is not None:
-                for subpath in branch.child_branchset._enumerate_paths(path):
+            if branch.bset is not None:
+                for subpath in branch.bset._enumerate_paths(path):
                     yield subpath
             else:
                 yield path
@@ -683,8 +683,8 @@ class SourceModelLogicTree(object):
                     apply_to_branches, branchset_node.lineno, branchset)
             else:
                 for branch in self.previous_branches:
-                    branch.child_branchset = branchset
-        self.previous_branches = set(branchset.branches)
+                    branch.bset = branchset
+        self.previous_branches = branchset.branches
         self.num_paths *= len(branchset.branches)
 
     def parse_branchset(self, branchset_node, depth, validate):
@@ -788,7 +788,7 @@ class SourceModelLogicTree(object):
         while branchset is not None:
             [branch] = sample(branchset.branches, 1, seed)
             branch_ids.append(branch.branch_id)
-            branchset = branch.child_branchset
+            branchset = branch.bset
         modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
         return modelname, branch_ids
 
@@ -1159,11 +1159,11 @@ class SourceModelLogicTree(object):
                     lineno, self.filename,
                     "branch '%s' is not yet defined" % branch_id)
             branch = self.branches[branch_id]
-            if branch.child_branchset is not None:
+            if branch.bset is not None:
                 raise LogicTreeError(
                     lineno, self.filename,
                     "branch '%s' already has child branchset" % branch_id)
-            branch.child_branchset = branchset
+            branch.bset = branchset
 
     def _get_source_model(self, source_model_file):
         return open(os.path.join(self.basepath, source_model_file),
@@ -1204,7 +1204,7 @@ class SourceModelLogicTree(object):
             branch = branchset.get_branch_by_id(branch_ids.pop(-1))
             if not branchset.uncertainty_type == 'sourceModel':
                 branchsets_and_uncertainties.append((branchset, branch.value))
-            branchset = branch.child_branchset
+            branchset = branch.bset
 
         if not branchsets_and_uncertainties:
             return source_group  # nothing changed
@@ -1238,7 +1238,7 @@ class SourceModelLogicTree(object):
         return dic, {}
 
     def __fromh5__(self, dic, attrs):
-        # TODO: this is not complete the child_branchset must be built too
+        # TODO: this is not complete the bset must be built too
         self.bsetdict = toml.loads(dic['branchsets'][()])
         self.branches = {}
         self.root_branchset = BranchSet('sourceModel', {})
@@ -1250,7 +1250,7 @@ class SourceModelLogicTree(object):
             apply_to_branches = dic.get('applyToBranches')
             if apply_to_branches:
                 for br_id in apply_to_branches.split():
-                    br.child_branchset = self.branches[br_id]
+                    br.bset = self.branches[br_id]
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))

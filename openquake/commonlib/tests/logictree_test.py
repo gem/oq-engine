@@ -1057,16 +1057,16 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
 
 class SourceModelLogicTreeTestCase(unittest.TestCase):
     def assert_branch_equal(self, branch, branch_id, weight_str, value,
-                            child_branchset_args=None):
+                            bset_args=None):
         self.assertEqual(type(branch), logictree.Branch)
         self.assertEqual(branch.branch_id, branch_id)
         self.assertEqual(branch.weight, float(weight_str))
         self.assertEqual(branch.value, value)
-        if child_branchset_args is None:
-            self.assertEqual(branch.child_branchset, None)
+        if bset_args is None:
+            self.assertEqual(branch.bset, None)
         else:
-            self.assert_branchset_equal(branch.child_branchset,
-                                        *child_branchset_args)
+            self.assert_branchset_equal(branch.bset,
+                                        *bset_args)
 
     def assert_branchset_equal(self, branchset, uncertainty_type, filters,
                                branches_args):
@@ -1247,7 +1247,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
              ]
             )
         sb1, sb2, sb3 = lt.root_branchset.branches
-        self.assertTrue(sb1.child_branchset is sb3.child_branchset)
+        self.assertTrue(sb1.bset is sb3.bset)
         self.assertEqual(
             str(lt),
             '<_TestableSourceModelLogicTree[sb1[b2], sb2[b3], sb3[b2]]>')
@@ -1334,11 +1334,11 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
         bs0.branches = [b00, b01, b02]
         bs1 = logictree.BranchSet(None, None)
         bs1.branches = [b10]
-        b0.child_branchset = bs0
-        b1.child_branchset = bs1
+        b0.bset = bs0
+        b1.bset = bs1
         bs10 = logictree.BranchSet(None, None)
         bs10.branches = [b100, b101]
-        b10.child_branchset = bs10
+        b10.bset = bs10
 
         def ae(got, expected):
             self.assertAlmostEqual(got[0], expected[0])  # weight
