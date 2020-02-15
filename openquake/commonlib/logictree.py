@@ -138,7 +138,7 @@ def get_effective_rlzs(rlzs):
     and yield the first representative of each group.
     """
     effective = []
-    for uid, group in groupby(rlzs, operator.attrgetter('pid')).items():
+    for group in groupby(rlzs, operator.attrgetter('pid')).values():
         rlz = group[0]
         if all(path == '@' for path in rlz.lt_path):  # empty realization
             continue
