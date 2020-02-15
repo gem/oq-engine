@@ -240,7 +240,7 @@ class CompositionInfo(object):
         """
         :returns: an array of realizations
         """
-        tups = [(r.ordinal, r.uid, r.weight['weight'])
+        tups = [(r.ordinal, r.pid, r.weight['weight'])
                 for r in self.get_rlzs_assoc().realizations]
         return numpy.array(tups, rlz_dt)
 

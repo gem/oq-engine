@@ -129,16 +129,16 @@ class LtSourceModel(object):
 
 
 Realization = namedtuple('Realization', 'value weight ordinal lt_path')
-Realization.uid = property(lambda self: '_'.join(self.lt_path))  # unique ID
+Realization.pid = property(lambda self: '_'.join(self.lt_path))  # unique ID
 
 
 def get_effective_rlzs(rlzs):
     """
-    Group together realizations with the same unique identifier (uid)
+    Group together realizations with the same path
     and yield the first representative of each group.
     """
     effective = []
-    for uid, group in groupby(rlzs, operator.attrgetter('uid')).items():
+    for uid, group in groupby(rlzs, operator.attrgetter('pid')).items():
         rlz = group[0]
         if all(path == '@' for path in rlz.lt_path):  # empty realization
             continue

@@ -43,7 +43,7 @@ class LtRealization(object):
         self.weight = weight
 
     def __repr__(self):
-        return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
+        return '<%d,%s,w=%s>' % (self.ordinal, self.pid, self.weight)
 
     @property
     def gsim_lt_path(self):
@@ -52,7 +52,7 @@ class LtRealization(object):
     @property
     def uid(self):
         """An unique identifier for effective realizations"""
-        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.uid
+        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.pid
 
     def __lt__(self, other):
         return self.ordinal < other.ordinal

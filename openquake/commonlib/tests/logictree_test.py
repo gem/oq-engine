@@ -2172,7 +2172,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(as_model_lt.get_num_paths(), 40)
         self.assertEqual(fs_bg_model_lt.get_num_paths(), 20)
         self.assertEqual(len(list(as_model_lt)), 5 * 4 * 2 * 1)
-        effective_rlzs = set(rlz.uid for rlz in fs_bg_model_lt)
+        effective_rlzs = set(rlz.pid for rlz in fs_bg_model_lt)
         self.assertEqual(len(effective_rlzs), 5 * 4)
 
     def test_sampling(self):
