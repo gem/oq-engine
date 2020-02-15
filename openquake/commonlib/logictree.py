@@ -649,15 +649,12 @@ class SourceModelLogicTree(object):
 
     def parse_branchset(self, branchset_node, depth, validate):
         """
-        Parse one branching level.
-
         :param branchset_ node:
             ``etree.Element`` object with tag "logicTreeBranchSet".
         :param depth:
             The sequential number of this branching level, based on 0.
         :param validate:
-            Whether or not the branching level, its branchsets and their
-            branches should be validated.
+            Whether or not the branchset and its branches should be validated.
 
         Enumerates children branchsets and call :meth:`parse_branchset`,
         :meth:`validate_branchset`, :meth:`parse_branches` and finally
@@ -665,7 +662,7 @@ class SourceModelLogicTree(object):
 
         Keeps track of "open ends" -- the set of branches that don't have
         any child branchset on this step of execution. After processing
-        of every branching level only those branches that are listed in it
+        of every branchset only those branches that are listed in it
         can have child branchsets (if there is one on the next level).
         """
         attrs = branchset_node.attrib.copy()
@@ -676,6 +673,7 @@ class SourceModelLogicTree(object):
                        if filtername in branchset_node.attrib)
         if validate:
             self.validate_filters(branchset_node, uncertainty_type, filters)
+
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
         branchset = BranchSet(uncertainty_type, filters)
         if validate:
@@ -761,7 +759,7 @@ class SourceModelLogicTree(object):
 
     def sample_path(self, seed):
         """
-        Return the model name and a list of branch ids.
+        Return a list of branch ids.
 
         :param seed: the seed used for the sampling
         """
@@ -771,8 +769,7 @@ class SourceModelLogicTree(object):
             [branch] = sample(branchset.branches, 1, seed)
             branch_ids.append(branch.branch_id)
             branchset = branch.bset
-        modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
-        return modelname, branch_ids
+        return branch_ids
 
     def __iter__(self):
         """
@@ -784,9 +781,10 @@ class SourceModelLogicTree(object):
             # random sampling of the logic tree
             weight = 1. / self.num_samples
             for i in range(self.num_samples):
-                name, sm_lt_path = self.sample_path(self.seed + i)
-                yield Realization(name, weight, tuple(sm_lt_path), None,
-                                  tuple(sm_lt_path))
+                smlt_path = self.sample_path(self.seed + i)
+                name = self.root_branchset.get_branch_by_id(smlt_path[0]).value
+                yield Realization(name, weight, tuple(smlt_path), None,
+                                  tuple(smlt_path))
         else:  # full enumeration
             ordinal = 0
             for weight, smlt_path in self.root_branchset.enumerate_paths():
