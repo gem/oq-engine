@@ -50,7 +50,7 @@ class LtRealization(object):
         return self.gsim_rlz.lt_path
 
     @property
-    def uid(self):
+    def pid(self):
         """An unique identifier for effective realizations"""
         return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.pid
 
