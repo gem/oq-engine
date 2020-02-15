@@ -128,7 +128,7 @@ class LtSourceModel(object):
             '_'.join(self.path), self.weight, samples)
 
 
-Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
+Realization = namedtuple('Realization', 'value weight ordinal lt_uid')
 Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
 
 
@@ -144,7 +144,7 @@ def get_effective_rlzs(rlzs):
             continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
-                        rlz.lt_path, rlz.ordinal, rlz.lt_uid))
+                        rlz.ordinal, rlz.lt_uid))
     return effective
 
 
@@ -516,9 +516,9 @@ class FakeSmlt(object):
         if self.num_samples:  # many realizations of equal weight
             weight = 1. / self.num_samples
             for i in range(self.num_samples):
-                yield Realization(name, weight, smlt_path, None, smlt_path)
+                yield Realization(name, weight, None, smlt_path)
         else:  # there is a single realization
-            yield Realization(name, 1.0, smlt_path, 0, smlt_path)
+            yield Realization(name, 1.0, 0, smlt_path)
 
 
 Info = collections.namedtuple('Info', 'smpaths, applytosources')
@@ -749,7 +749,7 @@ class SourceModelLogicTree(object):
         """
         samples_by_lt_path = self.samples_by_lt_path()
         for i, rlz in enumerate(get_effective_rlzs(self)):
-            smpath = rlz.lt_path
+            smpath = rlz.lt_uid
             num_samples = samples_by_lt_path[smpath]
             num_gsim_paths = (num_samples if self.num_samples
                               else gsim_lt.get_num_paths())
@@ -784,15 +784,14 @@ class SourceModelLogicTree(object):
                 smlt_path = self.sample_path(self.seed + i)
                 name = smlt_path[0].value
                 smlt_path_ids = [branch.branch_id for branch in smlt_path]
-                yield Realization(name, weight, tuple(smlt_path_ids), None,
-                                  tuple(smlt_path_ids))
+                yield Realization(name, weight, None, tuple(smlt_path_ids))
         else:  # full enumeration
             ordinal = 0
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield Realization(name, weight, tuple(smlt_branch_ids),
-                                  ordinal, tuple(smlt_branch_ids))
+                yield Realization(name, weight, ordinal,
+                                  tuple(smlt_branch_ids))
                 ordinal += 1
 
     def parse_uncertainty_value(self, node, branchset):
@@ -1204,7 +1203,7 @@ class SourceModelLogicTree(object):
         """
         Returns a dictionary lt_path -> how many times that path was sampled
         """
-        return collections.Counter(rlz.lt_path for rlz in self)
+        return collections.Counter(rlz.lt_uid for rlz in self)
 
     def __toh5__(self):
         tbl = []
@@ -1595,8 +1594,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            rlz = Realization(tuple(value), weight, tuple(lt_path),
-                              i, tuple(lt_uid))
+            rlz = Realization(tuple(value), weight, i, tuple(lt_uid))
             rlzs.append(rlz)
         return rlzs
 
@@ -1619,8 +1617,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            yield Realization(tuple(value), weight, tuple(lt_path),
-                              i, tuple(lt_uid))
+            yield Realization(tuple(value), weight, i, tuple(lt_uid))
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %
