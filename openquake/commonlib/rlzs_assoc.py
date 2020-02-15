@@ -27,8 +27,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 weight = operator.attrgetter('weight')
-rlz_dt = numpy.dtype([
-    ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
 
 
 class LtRealization(object):
