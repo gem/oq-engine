@@ -47,7 +47,7 @@ class LtRealization(object):
 
     @property
     def gsim_lt_path(self):
-        return self.gsim_rlz.lt_uid
+        return self.gsim_rlz.lt_path
 
     @property
     def uid(self):

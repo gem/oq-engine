@@ -128,8 +128,8 @@ class LtSourceModel(object):
             '_'.join(self.path), self.weight, samples)
 
 
-Realization = namedtuple('Realization', 'value weight ordinal lt_uid')
-Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
+Realization = namedtuple('Realization', 'value weight ordinal lt_path')
+Realization.uid = property(lambda self: '_'.join(self.lt_path))  # unique ID
 
 
 def get_effective_rlzs(rlzs):
@@ -140,11 +140,11 @@ def get_effective_rlzs(rlzs):
     effective = []
     for uid, group in groupby(rlzs, operator.attrgetter('uid')).items():
         rlz = group[0]
-        if all(path == '@' for path in rlz.lt_uid):  # empty realization
+        if all(path == '@' for path in rlz.lt_path):  # empty realization
             continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
-                        rlz.ordinal, rlz.lt_uid))
+                        rlz.ordinal, rlz.lt_path))
     return effective
 
 
@@ -749,7 +749,7 @@ class SourceModelLogicTree(object):
         """
         samples_by_lt_path = self.samples_by_lt_path()
         for i, rlz in enumerate(get_effective_rlzs(self)):
-            smpath = rlz.lt_uid
+            smpath = rlz.lt_path
             num_samples = samples_by_lt_path[smpath]
             num_gsim_paths = (num_samples if self.num_samples
                               else gsim_lt.get_num_paths())
@@ -1203,7 +1203,7 @@ class SourceModelLogicTree(object):
         """
         Returns a dictionary lt_path -> how many times that path was sampled
         """
-        return collections.Counter(rlz.lt_uid for rlz in self)
+        return collections.Counter(rlz.lt_path for rlz in self)
 
     def __toh5__(self):
         tbl = []

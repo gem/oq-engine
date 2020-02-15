@@ -2203,7 +2203,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         gsim_rlzs = list(self.parse_valid(xml, ['Volcanic']))
         for seed in range(1000):
             [rlz] = logictree.sample(gsim_rlzs, 1, seed)
-            counter[rlz.lt_uid] += 1
+            counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 413, ('b2',): 587})
 
