@@ -639,19 +639,20 @@ class SourceModelLogicTree(object):
         self.info = collect_info(self.filename)
         self.source_ids = collections.defaultdict(list)
         t0 = time.time()
-        for depth, branchinglevel_node in enumerate(tree_node.nodes):
-            self.parse_branchinglevel(branchinglevel_node, depth, validate)
+        for depth, blnode in enumerate(tree_node.nodes):
+            [bsnode] = _bsnodes(self.filename, blnode)
+            self.parse_branchset(bsnode, depth, validate)
         dt = time.time() - t0
         if validate:
             bname = os.path.basename(self.filename)
             logging.info('Validated %s in %.2f seconds', bname, dt)
 
-    def parse_branchinglevel(self, branchinglevel_node, depth, validate):
+    def parse_branchset(self, branchset_node, depth, validate):
         """
         Parse one branching level.
 
-        :param branchinglevel_node:
-            ``etree.Element`` object with tag "logicTreeBranchingLevel".
+        :param branchset_ node:
+            ``etree.Element`` object with tag "logicTreeBranchSet".
         :param depth:
             The sequential number of this branching level, based on 0.
         :param validate:
@@ -667,10 +668,19 @@ class SourceModelLogicTree(object):
         of every branching level only those branches that are listed in it
         can have child branchsets (if there is one on the next level).
         """
-        [branchset_node] = _bsnodes(self.filename, branchinglevel_node)
         attrs = branchset_node.attrib.copy()
         self.bsetdict[attrs.pop('branchSetID')] = attrs
-        branchset = self.parse_branchset(branchset_node, depth, validate)
+        uncertainty_type = branchset_node.attrib.get('uncertaintyType')
+        filters = dict((filtername, branchset_node.attrib.get(filtername))
+                       for filtername in self.FILTERS
+                       if filtername in branchset_node.attrib)
+        if validate:
+            self.validate_filters(branchset_node, uncertainty_type, filters)
+        filters = self.parse_filters(branchset_node, uncertainty_type, filters)
+        branchset = BranchSet(uncertainty_type, filters)
+        if validate:
+            self.validate_branchset(branchset_node, depth, branchset)
+
         self.parse_branches(branchset_node, branchset, validate)
         if self.root_branchset is None:  # not set yet
             self.num_paths = 1
@@ -685,33 +695,6 @@ class SourceModelLogicTree(object):
                     branch.bset = branchset
         self.previous_branches = branchset.branches
         self.num_paths *= len(branchset.branches)
-
-    def parse_branchset(self, branchset_node, depth, validate):
-        """
-        Create :class:`BranchSet` object using data in ``branchset_node``.
-
-        :param branchset_node:
-            ``etree.Element`` object with tag "logicTreeBranchSet".
-        :param depth:
-            The sequential number of branchset's branching level, based on 0.
-        :param validate:
-            Whether or not filters defined in branchset and the branchset
-            itself should be validated.
-        :returns:
-            An instance of :class:`BranchSet` with filters applied but with
-            no branches (they're attached in :meth:`parse_branches`).
-        """
-        uncertainty_type = branchset_node.attrib.get('uncertaintyType')
-        filters = dict((filtername, branchset_node.attrib.get(filtername))
-                       for filtername in self.FILTERS
-                       if filtername in branchset_node.attrib)
-        if validate:
-            self.validate_filters(branchset_node, uncertainty_type, filters)
-        filters = self.parse_filters(branchset_node, uncertainty_type, filters)
-        branchset = BranchSet(uncertainty_type, filters)
-        if validate:
-            self.validate_branchset(branchset_node, depth, branchset)
-        return branchset
 
     def parse_branches(self, branchset_node, branchset, validate):
         """
