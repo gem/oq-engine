@@ -2172,7 +2172,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(as_model_lt.get_num_paths(), 40)
         self.assertEqual(fs_bg_model_lt.get_num_paths(), 20)
         self.assertEqual(len(list(as_model_lt)), 5 * 4 * 2 * 1)
-        effective_rlzs = set(rlz.uid for rlz in fs_bg_model_lt)
+        effective_rlzs = set(rlz.pid for rlz in fs_bg_model_lt)
         self.assertEqual(len(effective_rlzs), 5 * 4)
 
     def test_sampling(self):
@@ -2218,7 +2218,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.seed = oqparam.random_seed
 
     def test_sample_source_model(self):
-        [(sm_name, weight, branch_ids, _, _)] = self.source_model_lt
+        [(sm_name, weight, _, branch_ids)] = self.source_model_lt
         self.assertEqual(sm_name, 'example-source-model.xml')
         self.assertEqual(('b1', 'b4', 'b7'), branch_ids)
 
@@ -2233,7 +2233,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
             self.source_model_lt.num_samples = orig_samples
 
     def test_sample_gmpe(self):
-        [(value, weight, branch_ids, _, _)] = logictree.sample(
+        [(value, weight, _, branch_ids)] = logictree.sample(
             list(self.gmpe_lt), 1, self.seed)
         self.assertEqual(value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(weight['default'], 0.5)

@@ -27,8 +27,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 weight = operator.attrgetter('weight')
-rlz_dt = numpy.dtype([
-    ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
 
 
 class LtRealization(object):
@@ -43,16 +41,16 @@ class LtRealization(object):
         self.weight = weight
 
     def __repr__(self):
-        return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
+        return '<%d,%s,w=%s>' % (self.ordinal, self.pid, self.weight)
 
     @property
     def gsim_lt_path(self):
         return self.gsim_rlz.lt_path
 
     @property
-    def uid(self):
+    def pid(self):
         """An unique identifier for effective realizations"""
-        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.uid
+        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.pid
 
     def __lt__(self, other):
         return self.ordinal < other.ordinal

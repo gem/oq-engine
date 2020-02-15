@@ -128,23 +128,23 @@ class LtSourceModel(object):
             '_'.join(self.path), self.weight, samples)
 
 
-Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
-Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
+Realization = namedtuple('Realization', 'value weight ordinal lt_path')
+Realization.pid = property(lambda self: '_'.join(self.lt_path))  # path ID
 
 
 def get_effective_rlzs(rlzs):
     """
-    Group together realizations with the same unique identifier (uid)
+    Group together realizations with the same path
     and yield the first representative of each group.
     """
     effective = []
-    for uid, group in groupby(rlzs, operator.attrgetter('uid')).items():
+    for group in groupby(rlzs, operator.attrgetter('pid')).values():
         rlz = group[0]
-        if all(path == '@' for path in rlz.lt_uid):  # empty realization
+        if all(path == '@' for path in rlz.lt_path):  # empty realization
             continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
-                        rlz.lt_path, rlz.ordinal, rlz.lt_uid))
+                        rlz.ordinal, rlz.lt_path))
     return effective
 
 
@@ -516,9 +516,9 @@ class FakeSmlt(object):
         if self.num_samples:  # many realizations of equal weight
             weight = 1. / self.num_samples
             for i in range(self.num_samples):
-                yield Realization(name, weight, smlt_path, None, smlt_path)
+                yield Realization(name, weight, None, smlt_path)
         else:  # there is a single realization
-            yield Realization(name, 1.0, smlt_path, 0, smlt_path)
+            yield Realization(name, 1.0, 0, smlt_path)
 
 
 Info = collections.namedtuple('Info', 'smpaths, applytosources')
@@ -639,24 +639,22 @@ class SourceModelLogicTree(object):
         self.info = collect_info(self.filename)
         self.source_ids = collections.defaultdict(list)
         t0 = time.time()
-        for depth, branchinglevel_node in enumerate(tree_node.nodes):
-            self.parse_branchinglevel(branchinglevel_node, depth, validate)
+        for depth, blnode in enumerate(tree_node.nodes):
+            [bsnode] = _bsnodes(self.filename, blnode)
+            self.parse_branchset(bsnode, depth, validate)
         dt = time.time() - t0
         if validate:
             bname = os.path.basename(self.filename)
             logging.info('Validated %s in %.2f seconds', bname, dt)
 
-    def parse_branchinglevel(self, branchinglevel_node, depth, validate):
+    def parse_branchset(self, branchset_node, depth, validate):
         """
-        Parse one branching level.
-
-        :param branchinglevel_node:
-            ``etree.Element`` object with tag "logicTreeBranchingLevel".
+        :param branchset_ node:
+            ``etree.Element`` object with tag "logicTreeBranchSet".
         :param depth:
             The sequential number of this branching level, based on 0.
         :param validate:
-            Whether or not the branching level, its branchsets and their
-            branches should be validated.
+            Whether or not the branchset and its branches should be validated.
 
         Enumerates children branchsets and call :meth:`parse_branchset`,
         :meth:`validate_branchset`, :meth:`parse_branches` and finally
@@ -664,13 +662,23 @@ class SourceModelLogicTree(object):
 
         Keeps track of "open ends" -- the set of branches that don't have
         any child branchset on this step of execution. After processing
-        of every branching level only those branches that are listed in it
+        of every branchset only those branches that are listed in it
         can have child branchsets (if there is one on the next level).
         """
-        [branchset_node] = _bsnodes(self.filename, branchinglevel_node)
         attrs = branchset_node.attrib.copy()
         self.bsetdict[attrs.pop('branchSetID')] = attrs
-        branchset = self.parse_branchset(branchset_node, depth, validate)
+        uncertainty_type = branchset_node.attrib.get('uncertaintyType')
+        filters = dict((filtername, branchset_node.attrib.get(filtername))
+                       for filtername in self.FILTERS
+                       if filtername in branchset_node.attrib)
+        if validate:
+            self.validate_filters(branchset_node, uncertainty_type, filters)
+
+        filters = self.parse_filters(branchset_node, uncertainty_type, filters)
+        branchset = BranchSet(uncertainty_type, filters)
+        if validate:
+            self.validate_branchset(branchset_node, depth, branchset)
+
         self.parse_branches(branchset_node, branchset, validate)
         if self.root_branchset is None:  # not set yet
             self.num_paths = 1
@@ -685,33 +693,6 @@ class SourceModelLogicTree(object):
                     branch.bset = branchset
         self.previous_branches = branchset.branches
         self.num_paths *= len(branchset.branches)
-
-    def parse_branchset(self, branchset_node, depth, validate):
-        """
-        Create :class:`BranchSet` object using data in ``branchset_node``.
-
-        :param branchset_node:
-            ``etree.Element`` object with tag "logicTreeBranchSet".
-        :param depth:
-            The sequential number of branchset's branching level, based on 0.
-        :param validate:
-            Whether or not filters defined in branchset and the branchset
-            itself should be validated.
-        :returns:
-            An instance of :class:`BranchSet` with filters applied but with
-            no branches (they're attached in :meth:`parse_branches`).
-        """
-        uncertainty_type = branchset_node.attrib.get('uncertaintyType')
-        filters = dict((filtername, branchset_node.attrib.get(filtername))
-                       for filtername in self.FILTERS
-                       if filtername in branchset_node.attrib)
-        if validate:
-            self.validate_filters(branchset_node, uncertainty_type, filters)
-        filters = self.parse_filters(branchset_node, uncertainty_type, filters)
-        branchset = BranchSet(uncertainty_type, filters)
-        if validate:
-            self.validate_branchset(branchset_node, depth, branchset)
-        return branchset
 
     def parse_branches(self, branchset_node, branchset, validate):
         """
@@ -778,18 +759,17 @@ class SourceModelLogicTree(object):
 
     def sample_path(self, seed):
         """
-        Return the model name and a list of branch ids.
+        Return a list of branches.
 
         :param seed: the seed used for the sampling
         """
         branchset = self.root_branchset
-        branch_ids = []
+        branches = []
         while branchset is not None:
             [branch] = sample(branchset.branches, 1, seed)
-            branch_ids.append(branch.branch_id)
+            branches.append(branch)
             branchset = branch.bset
-        modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
-        return modelname, branch_ids
+        return branches
 
     def __iter__(self):
         """
@@ -801,16 +781,17 @@ class SourceModelLogicTree(object):
             # random sampling of the logic tree
             weight = 1. / self.num_samples
             for i in range(self.num_samples):
-                name, sm_lt_path = self.sample_path(self.seed + i)
-                yield Realization(name, weight, tuple(sm_lt_path), None,
-                                  tuple(sm_lt_path))
+                smlt_path = self.sample_path(self.seed + i)
+                name = smlt_path[0].value
+                smlt_path_ids = [branch.branch_id for branch in smlt_path]
+                yield Realization(name, weight, None, tuple(smlt_path_ids))
         else:  # full enumeration
             ordinal = 0
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield Realization(name, weight, tuple(smlt_branch_ids),
-                                  ordinal, tuple(smlt_branch_ids))
+                yield Realization(name, weight, ordinal,
+                                  tuple(smlt_branch_ids))
                 ordinal += 1
 
     def parse_uncertainty_value(self, node, branchset):
@@ -1613,8 +1594,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            rlz = Realization(tuple(value), weight, tuple(lt_path),
-                              i, tuple(lt_uid))
+            rlz = Realization(tuple(value), weight, i, tuple(lt_uid))
             rlzs.append(rlz)
         return rlzs
 
@@ -1637,8 +1617,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            yield Realization(tuple(value), weight, tuple(lt_path),
-                              i, tuple(lt_uid))
+            yield Realization(tuple(value), weight, i, tuple(lt_uid))
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %
