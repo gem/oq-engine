@@ -129,7 +129,7 @@ class LtSourceModel(object):
 
 
 Realization = namedtuple('Realization', 'value weight ordinal lt_path')
-Realization.pid = property(lambda self: '_'.join(self.lt_path))  # unique ID
+Realization.pid = property(lambda self: '_'.join(self.lt_path))  # path ID
 
 
 def get_effective_rlzs(rlzs):
