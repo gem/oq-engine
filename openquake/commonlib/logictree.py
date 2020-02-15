@@ -759,17 +759,17 @@ class SourceModelLogicTree(object):
 
     def sample_path(self, seed):
         """
-        Return a list of branch ids.
+        Return a list of branches.
 
         :param seed: the seed used for the sampling
         """
         branchset = self.root_branchset
-        branch_ids = []
+        branches = []
         while branchset is not None:
             [branch] = sample(branchset.branches, 1, seed)
-            branch_ids.append(branch.branch_id)
+            branches.append(branch)
             branchset = branch.bset
-        return branch_ids
+        return branches
 
     def __iter__(self):
         """
@@ -782,9 +782,10 @@ class SourceModelLogicTree(object):
             weight = 1. / self.num_samples
             for i in range(self.num_samples):
                 smlt_path = self.sample_path(self.seed + i)
-                name = self.root_branchset.get_branch_by_id(smlt_path[0]).value
-                yield Realization(name, weight, tuple(smlt_path), None,
-                                  tuple(smlt_path))
+                name = smlt_path[0].value
+                smlt_path_ids = [branch.branch_id for branch in smlt_path]
+                yield Realization(name, weight, tuple(smlt_path_ids), None,
+                                  tuple(smlt_path_ids))
         else:  # full enumeration
             ordinal = 0
             for weight, smlt_path in self.root_branchset.enumerate_paths():
