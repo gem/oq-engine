@@ -364,5 +364,22 @@ class SourceFilter(object):
                 src.indices = indices
                 yield src
 
+    def within_bbox(self, srcs):
+        """
+        :returns: the site IDs withing the bounding box of the sources
+        """
+        min_lons = []
+        min_lats = []
+        max_lons = []
+        max_lats = []
+        for src in srcs:
+            box = self.integration_distance.get_affected_box(src)
+            min_lons.append(box[0])
+            min_lats.append(box[1])
+            max_lons.append(box[2])
+            max_lats.append(box[3])
+        return self.sitecol.within_bbox((min(min_lons), min(min_lats),
+                                         max(max_lons), max(max_lats)))
+
 
 nofilter = SourceFilter(None, {})
