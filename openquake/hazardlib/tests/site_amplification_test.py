@@ -18,6 +18,7 @@
 
 import unittest
 import numpy
+from openquake.baselib import InvalidFile
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import gettemp
 from openquake.hazardlib.site import ampcode_dt
@@ -46,6 +47,12 @@ double_ampl_func = '''\
 #,,,,,,,"vs30_ref=760"
 ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
 A,2,2,2,2,2
+'''
+
+long_ampl_code = '''\
+#,,,,,,,"vs30_ref=760"
+ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
+long_code,2,2,2,2,2
 '''
 
 
@@ -133,3 +140,10 @@ class AmplifierTestCase(unittest.TestCase):
         # amplify GMFs
         gmvs = a.amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
         numpy.testing.assert_allclose(gmvs, [.2, .4, .6])
+
+    def test_long_code(self):
+        fname = gettemp(long_ampl_code)
+        with self.assertRaises(InvalidFile) as ctx:
+            read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
+        self.assertIn("line 3: ampcode='long_code' has length 9 > 4",
+                      str(ctx.exception))
