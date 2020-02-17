@@ -662,6 +662,7 @@ def get_amplification(oqparam):
     """
     fname = oqparam.inputs['amplification']
     aw = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64})
+    aw.fname = fname
     imls = ()
     if 'level' in aw.dtype.names:
         for records in group_array(aw, 'ampcode').values():

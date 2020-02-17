@@ -55,6 +55,13 @@ ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
 long_code,2,2,2,2,2
 '''
 
+dupl_ampl_func = '''\
+#,,,,,,,"vs30_ref=760"
+ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
+A,2,2,2,2,2
+A,1,2,2,2,2
+'''
+
 
 class AmplifierTestCase(unittest.TestCase):
     vs30 = numpy.array([760])
@@ -147,3 +154,9 @@ class AmplifierTestCase(unittest.TestCase):
             read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
         self.assertIn("line 3: ampcode='long_code' has length 9 > 4",
                       str(ctx.exception))
+
+    def test_dupl(self):
+        fname = gettemp(dupl_ampl_func)
+        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
+        with self.assertRaises(ValueError):
+            Amplifier(self.imtls, aw)
