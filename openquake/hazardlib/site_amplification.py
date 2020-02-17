@@ -72,6 +72,15 @@ def digitize(name, values, edges):
     return numpy.digitize(values, edges) - 1
 
 
+def check_unique(array, kfields, fname):
+    for k, rows in group_array(array, *kfields).items():
+        if len(rows) > 1:
+            msg = 'Found duplicates %s' % rows[kfields]
+            if fname:
+                msg = '%s: %s' % (fname, msg)
+            raise ValueError(msg)
+
+
 class Amplifier(object):
     """
     :param imtls: intensity measure types and levels DictArray M x I
@@ -84,14 +93,19 @@ class Amplifier(object):
     :attr sigma: dict code, imt-> I-1 amplification sigmas
     """
     def __init__(self, imtls, ampl_funcs, amplevels=None):
+        fname = getattr(ampl_funcs, 'fname', None)
         self.imtls = imtls
         self.periods, levels = check_same_levels(imtls)
         self.amplevels = levels if amplevels is None else amplevels
         self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
         self.vs30_ref = ampl_funcs.vs30_ref
         has_levels = 'level' in ampl_funcs.dtype.names
-        self.imls = imls = (numpy.array(sorted(set(ampl_funcs['level'])))
-                            if has_levels else ())
+        if has_levels:
+            self.imls = imls = numpy.array(sorted(set(ampl_funcs['level'])))
+            check_unique(ampl_funcs.array, ['ampcode', 'level'], fname)
+        else:
+            self.imls = imls = ()
+            check_unique(ampl_funcs.array, ['ampcode'], fname)
         cols = (ampl_funcs.dtype.names[2:] if has_levels
                 else ampl_funcs.dtype.names[1:])
         imts = [from_string(imt) for imt in cols
