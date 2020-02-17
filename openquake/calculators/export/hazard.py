@@ -244,7 +244,7 @@ def get_metadata(realizations, kind):
     if kind.startswith('rlz-'):
         rlz = realizations[int(kind[4:])]
         metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
-        metadata['gsimlt_path'] = rlz.gsim_rlz.uid
+        metadata['gsimlt_path'] = rlz.gsim_rlz.pid
     elif kind.startswith('quantile-'):
         metadata['statistics'] = 'quantile'
         metadata['quantile_value'] = float(kind[9:])
@@ -308,7 +308,7 @@ def export_hcurves_xml(ekey, dstore):
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
-            gsimlt_path = rlz.gsim_rlz.uid
+            gsimlt_path = rlz.gsim_rlz.pid
         else:
             smlt_path = ''
             gsimlt_path = ''
@@ -348,7 +348,7 @@ def export_hmaps_xml(ekey, dstore):
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
-            gsimlt_path = rlz.gsim_rlz.uid
+            gsimlt_path = rlz.gsim_rlz.pid
         else:
             smlt_path = ''
             gsimlt_path = ''
@@ -456,7 +456,7 @@ def _expand_gmv(array, imts):
 def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
     # lon, lat, gmv_imt1, ..., gmv_imtN
     smlt_path = '_'.join(rlz.sm_lt_path)
-    gsimlt_path = rlz.gsim_rlz.uid
+    gsimlt_path = rlz.gsim_rlz.pid
     comment = ('smlt_path=%s, gsimlt_path=%s, investigation_time=%s' %
                (smlt_path, gsimlt_path, investigation_time))
     rows = [['lon', 'lat'] + imts]
@@ -492,7 +492,7 @@ def export_disagg_xml(ekey, dstore):
         writer = writercls(
             fname, investigation_time=oq.investigation_time,
             imt=imt.name, smlt_path='_'.join(rlz.sm_lt_path),
-            gsimlt_path=rlz.gsim_rlz.uid, lon=lon, lat=lat,
+            gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
             sa_period=getattr(imt, 'period', None) or None,
             sa_damping=getattr(imt, 'damping', None),
             mag_bin_edges=attrs['mag_bin_edges'],
@@ -533,7 +533,7 @@ def export_disagg_csv(ekey, dstore):
         # Loads "disaggMatrices" nodes
         if hasattr(rlz, 'sm_lt_path'):
             metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
-            metadata['gsimlt_path'] = rlz.gsim_rlz.uid
+            metadata['gsimlt_path'] = rlz.gsim_rlz.pid
         metadata['imt'] = imt.name
         metadata['investigation_time'] = oq.investigation_time
         metadata['lon'] = lon

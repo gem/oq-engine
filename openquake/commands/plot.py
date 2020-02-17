@@ -267,7 +267,9 @@ class PolygonPlotter():
 
 def make_figure_sources(extractors, what):
     """
-    $ oq plot sources?sm_id=0
+    $ oq plot sources?sm_id=0&limit=100
+    $ oq plot sources?sm_id=0source_id=1&source_id=2
+    $ oq plot sources?sm_id=0code=A&code=B
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -285,14 +287,16 @@ def make_figure_sources(extractors, what):
     n = 0
     tot = 0
     for rec, srcid, wkt in zip(info, srcs, wkts):
-        if not wkt.startswith('POINT'):
-            if rec['eff_ruptures']:  # not filtered out
-                alpha = .3
-                n += 1
-            else:
-                alpha = .1
-            pp.add(shapely.wkt.loads(wkt), alpha=alpha)
-            tot += 1
+        if not wkt:
+            logging.warning('No geometries for source id %s', srcid)
+            continue
+        if rec['eff_ruptures']:  # not filtered out
+            alpha = .3
+            n += 1
+        else:
+            alpha = .1
+        pp.add(shapely.wkt.loads(wkt), alpha=alpha)
+        tot += 1
     pp.set_lim(sitecol)
     ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
     return plt

@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Added Classical PSHA Non-parametric sources Demo
+
   [Robin Gee]
   * Change the header of the exported sigma_epsilon_XX.csv file to indicate 
   that values correspond to inter event sigma

@@ -46,6 +46,10 @@ CHUNKSIZE = 4*1024**2  # 4 MB
 memoized = lru_cache(100)
 
 
+class NotFound(Exception):
+    pass
+
+
 def lit_eval(string):
     """
     `ast.literal_eval` the string if possible, otherwise returns it unchanged
@@ -497,12 +501,38 @@ def extract_rups_by_mag_dist(dstore, what):
 def extract_sources(dstore, what):
     """
     Extract information about a source model.
-    Use it as /extract/sources?sm_id=0
+    Use it as /extract/sources?sm_id=0&limit=10
+    or /extract/sources?sm_id=0&source_id=1&source_id=2
+    or /extract/sources?sm_id=0&code=A&code=B
     """
     qdict = parse(what)
     sm_id = int(qdict.get('sm_id', ['0'])[0])
+    limit = int(qdict.get('limit', ['100'])[0])
+    source_ids = qdict.get('source_id', None)
+    if source_ids is not None:
+        source_ids = [str(source_id) for source_id in source_ids]
+    codes = qdict.get('code', None)
+    if codes is not None:
+        codes = [code.encode('utf8') for code in codes]
     info = dstore['source_info'][()]
     info = info[info['sm_id'] == sm_id]
+    arrays = []
+    if source_ids is not None:
+        logging.info('Extracting sources with ids: %s', source_ids)
+        info = info[numpy.isin(info['source_id'], source_ids)]
+        if len(info) == 0:
+            raise NotFound('There is no source with id %s' % source_ids)
+    if codes is not None:
+        logging.info('Extracting sources with codes: %s', codes)
+        info = info[numpy.isin(info['code'], codes)]
+        if len(info) == 0:
+            raise NotFound('There is no source with code in %s' % codes)
+    for code, rows in general.group_array(info, 'code').items():
+        if limit < len(rows):
+            logging.info('Code %s: extracting %d sources out of %s',
+                         code, limit, len(rows))
+        arrays.append(rows[:limit])
+    info = numpy.concatenate(arrays)
     if len(info) == 0:
         raise ValueError('There is no source model #%d' % sm_id)
     wkt_gz = gzip.compress(';'.join(info['wkt']).encode('utf8'))
