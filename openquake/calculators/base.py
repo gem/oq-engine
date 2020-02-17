@@ -437,6 +437,7 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
+                logging.info('Checking the sources bounding box')
                 srcs = csm.get_sources()
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')

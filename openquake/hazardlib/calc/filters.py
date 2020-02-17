@@ -378,8 +378,12 @@ class SourceFilter(object):
             min_lats.append(box[1])
             max_lons.append(box[2])
             max_lats.append(box[3])
-        return self.sitecol.within_bbox((min(min_lons), min(min_lats),
-                                         max(max_lons), max(max_lats)))
+        min_lons = numpy.array(min_lons)
+        max_lons = numpy.array(max_lons)
+        min_lons[min_lons < -90] = min_lons[min_lons < -90] + 360
+        max_lons[max_lons < -90] = max_lons[max_lons < -90] + 360
+        bbox = (min_lons.min(), min(min_lats), max_lons.max(), max(max_lats))
+        return self.sitecol.within_bbox(bbox)
 
 
 nofilter = SourceFilter(None, {})
