@@ -81,7 +81,7 @@ The required daemons are:
 `oq workers inspect` can be used to check the status of the worker nodes and the task distribution. An output like this is produced:
 
 ```
-$ oq1 workers inspect
+$ oq workers inspect
 [('192.168.2.1',
   '101 105 109 113 117 121 126 130 135 140 143 147 151 155 159 163 167 17 19 '
   '20 22 25 27 29 30 33 35 38 43 44 50 54 58 61 65 69 73 76 81 85 89 93 97'),
