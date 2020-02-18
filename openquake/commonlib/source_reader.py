@@ -190,7 +190,6 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
             ltm.src_groups = [sg]
             src = sg[0].new(ltm.ordinal, ltm.names)  # one source
             src.src_group_id = grp_id
-            src.id = idx
             idx += 1
             src.samples = ltm.samples
             sg.sources = [src]
@@ -244,7 +243,6 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                 grp.id = grp_id
                 for src in grp:
                     src.src_group_id = grp_id
-                    src.id = idx
                     idx += 1
                 ltm.src_groups.append(grp)
                 grp_id += 1
