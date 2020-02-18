@@ -460,7 +460,7 @@ class SiteCollection(object):
         """
         min_lon, min_lat, max_lon, max_lat = bbox
         lons, lats = self.array['lon'], self.array['lat']
-        if cross_idl(lons.min(), lons.max()) or cross_idl(min_lon, max_lon):
+        if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
             lons = lons % 360
             min_lon, max_lon = min_lon % 360, max_lon % 360
         mask = (min_lon < lons) * (lons < max_lon) * \
