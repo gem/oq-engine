@@ -192,8 +192,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
             src.src_group_id = grp_id
             src.id = idx
             idx += 1
-            if oq.number_of_logic_tree_samples:
-                src.samples = ltm.samples
+            src.samples = ltm.samples
             sg.sources = [src]
             data = [((grp_id, grp_id, src.source_id, src.code,
                       0, 0, -1, src.num_ruptures, 0, ''))]
