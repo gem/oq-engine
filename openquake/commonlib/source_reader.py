@@ -180,8 +180,6 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id)
-    if h5:
-        sources = hdf5.create(h5, 'source_info', source_info_dt)
     lt_models = list(source_model_lt.gen_source_models(gsim_lt))
     if oq.calculation_mode.startswith('ucerf'):
         idx = 0
@@ -199,7 +197,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
             sg.sources = [src]
             data = [((grp_id, grp_id, src.source_id, src.code,
                       0, 0, -1, src.num_ruptures, 0, ''))]
-            hdf5.extend(sources, numpy.array(data, source_info_dt))
+            sg.info = numpy.array(data, source_info_dt)
         return lt_models
 
     logging.info('Reading the source model(s) in parallel')
@@ -268,12 +266,6 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                             " please fix applyToSources in %s or the "
                             "source model" % (
                                 srcid, source_model_lt.filename))
-
-        if h5:
-            sources = h5['source_info']
-            for sg in ltm.src_groups:
-                sg.info['grp_id'] = sg.id
-                hdf5.extend(sources, sg.info)
 
     if h5:
         h5['source_mags'] = numpy.array(sorted(mags))
