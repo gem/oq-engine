@@ -366,7 +366,8 @@ class SourceFilter(object):
 
     def within_bbox(self, srcs):
         """
-        :returns: the site IDs withing the bounding box of the sources
+        :param srcs: a list of source objects
+        :returns: the site IDs within the enlarged bounding box of the sources
         """
         if self.sitecol is None:  # for test_case_1_ruptures
             return [0]
