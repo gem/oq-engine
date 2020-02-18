@@ -370,7 +370,7 @@ class SourceFilter(object):
         """
         if self.sitecol is None:  # for test_case_1_ruptures
             return [0]
-        lons = list(self.sitecol.lons)
+        lons = []
         lats = []
         for src in srcs:
             box = self.integration_distance.get_affected_box(src)
@@ -378,7 +378,7 @@ class SourceFilter(object):
             lats.append(box[1])
             lons.append(box[2])
             lats.append(box[3])
-        if cross_idl(*lons):
+        if cross_idl(*(list(self.sitecol.lons) + lons)):
             lons = numpy.array(lons) % 360
         else:
             lons = numpy.array(lons)
