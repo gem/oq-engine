@@ -636,17 +636,17 @@ def get_composite_source_model(oqparam, h5=None):
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     ltmodels = get_ltmodels(oqparam, gsim_lt, source_model_lt, h5)
-    if h5:
-        info = hdf5.create(h5, 'source_info', source_info_dt)
-        for ltm in ltmodels:
-            for sg in ltm.src_groups:
-                sg.info['grp_id'] = sg.id
-                hdf5.extend(info, sg.info)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, ltmodels)
     if oqparam.is_event_based():
         # initialize the rupture rup_id numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
+        if h5:
+            info = hdf5.create(h5, 'source_info', source_info_dt)
+            for ltm in ltmodels:
+                for sg in ltm.src_groups:
+                    sg.info['grp_id'] = sg.id
+                    hdf5.extend(info, sg.info)
 
     if oqparam.disagg_by_src:
         csm = csm.grp_by_src()  # one group per source

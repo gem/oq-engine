@@ -452,11 +452,11 @@ class HazardCalculator(BaseCalculator):
                         (j, len(srcs)))
                 self.csm_info = csm.info
                 self.datastore['source_model_lt'] = csm.source_model_lt
-                res = views.view('dupl_sources', self.datastore)
-                logging.info(f'The composite source model has {res.val:_d} '
-                             'ruptures')
-            if res:
-                logging.info(res)
+                #res = views.view('dupl_sources', self.datastore)
+                #logging.info(f'The composite source model has {res.val:_d} '
+                #             'ruptures')
+            #if res:
+            #    logging.info(res)
         self.init()  # do this at the end of pre-execute
 
         if not oq.hazard_calculation_id:
