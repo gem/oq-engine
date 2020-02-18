@@ -84,5 +84,5 @@ class UcerfClassicalCalculator(ClassicalCalculator):
                 h5=self.datastore.hdf5
             ).reduce(self.agg_dicts, acc)
         self.store_rlz_info(acc.eff_ruptures)
-        self.store_source_info(self.calc_times)
+        #self.store_source_info(self.calc_times)
         return acc  # {grp_id: pmap}
