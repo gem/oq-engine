@@ -61,13 +61,13 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertIn('sent', info)
             self.assertIn('received', info)
 
-            #slow = view('task:classical_split_filter:-1', self.calc.datastore)
-            #self.assertIn('taskno', slow)
-            #self.assertIn('duration', slow)
-            #self.assertIn('sources', slow)
+            slow = view('task:classical_split_filter:-1', self.calc.datastore)
+            self.assertIn('taskno', slow)
+            self.assertIn('duration', slow)
+            self.assertIn('sources', slow)
 
         # there is a single source
-        #self.assertEqual(len(self.calc.datastore['source_info']), 1)
+        self.assertEqual(len(self.calc.datastore['source_info']), 1)
 
         # check npz export
         export(('hcurves', 'npz'), self.calc.datastore)
@@ -220,7 +220,6 @@ class ClassicalTestCase(CalculatorTestCase):
         with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
             self.run_calc(
                 case_14.__file__, 'job.ini', calculation_mode='preclassical')
-        '''
         rpt = view('ruptures_per_grp', self.calc.datastore)
         self.assertEqual(rpt, """\
 ====== ========= ============ ============
@@ -228,7 +227,6 @@ grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
 0      0.33557   447          447         
 ====== ========= ============ ============""")
-        '''
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources

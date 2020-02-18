@@ -173,6 +173,7 @@ class UCERFSource(BaseSeismicSource):
     code = b'U'
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
+    checksum = 0
 
     def __init__(
             self, source_file, investigation_time, start_date, min_mag,
@@ -232,6 +233,9 @@ class UCERFSource(BaseSeismicSource):
         with h5py.File(self.source_file, "r") as hdf5:
             self.orig._rake = hdf5[self.idx_set["rake"]][()]
             return self.orig._rake
+
+    def wkt(self):
+        return ''
 
     def count_ruptures(self):
         """
