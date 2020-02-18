@@ -642,11 +642,10 @@ def get_composite_source_model(oqparam, h5=None):
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
         if h5:
-            info = hdf5.create(h5, 'source_info', source_info_dt)
+            info = hdf5.create(h5, 'source_info', [('source_id', hdf5.vstr)])
             for ltm in ltmodels:
                 for sg in ltm.src_groups:
-                    sg.info['grp_id'] = sg.id
-                    hdf5.extend(info, sg.info)
+                    hdf5.extend(info, sg.info[['source_id']])
 
     if oqparam.disagg_by_src:
         csm = csm.grp_by_src()  # one group per source
