@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Raised a clear error message if the enlarged bounding box of the sources
-    does not contain any site
+    does not contain any site or if it is larger than half the globe
 
   [Kendra Johnson]
   * Correction to catalogue plotting tool in hmtk to include the last bins
