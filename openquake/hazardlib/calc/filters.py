@@ -27,7 +27,7 @@ from scipy.spatial import cKDTree, distance
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
@@ -368,19 +368,19 @@ class SourceFilter(object):
         """
         :returns: the site IDs withing the bounding box of the sources
         """
-        min_lons = []
-        min_lats = []
-        max_lons = []
-        max_lats = []
+        lons = list(self.sitecol.lons)
+        lats = []
         for src in srcs:
             box = self.integration_distance.get_affected_box(src)
-            min_lons.append(box[0])
-            min_lats.append(box[1])
-            max_lons.append(box[2])
-            max_lats.append(box[3])
-        min_lons = numpy.array(min_lons) % 360
-        max_lons = numpy.array(max_lons) % 360
-        bbox = (min_lons.min(), min(min_lats), max_lons.max(), max(max_lats))
+            lons.append(box[0])
+            lats.append(box[1])
+            lons.append(box[2])
+            lats.append(box[3])
+        if cross_idl(*lons):
+            lons = numpy.array(lons) % 360
+        else:
+            lons = numpy.array(lons)
+        bbox = (lons.min(), min(lats), lons.max(), max(lats))
         return self.sitecol.within_bbox(bbox)
 
 
