@@ -7,7 +7,8 @@ import tempfile
 import subprocess
 import multiprocessing
 import psutil
-from openquake.baselib import zeromq as z, general, parallel, config, sap
+from openquake.baselib import (
+    zeromq as z, general, parallel, config, sap, InvalidFile)
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -59,6 +60,10 @@ class WorkerMaster(object):
         self.ctrl_port = int(ctrl_port)
         self.host_cores = ([hc.split() for hc in host_cores.split(',')]
                            if host_cores else [])
+        for host, cores in self.host_cores:
+            if int(cores) < -1:
+                raise InvalidFile('openquake.cfg: found %s %s' %
+                                  (host, cores))
         self.remote_python = remote_python or sys.executable
         self.popens = []
 
