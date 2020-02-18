@@ -7,19 +7,19 @@
             <logicTreeBranchSet uncertaintyType="sourceModel"
                                 branchSetID="bs1">
 
-                <logicTreeBranch branchID="b0">
+                <logicTreeBranch branchID="b1">
                         <uncertaintyModel>
                                 ./ssm/nwHswRneHseH_0.xml
                         </uncertaintyModel>
                         <uncertaintyWeight>0.24</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch branchID="b1">
+                <logicTreeBranch branchID="b2">
                         <uncertaintyModel>
                                 ./ssm/nwHswRneHseR_1_area.xml
                         </uncertaintyModel>
                         <uncertaintyWeight>0.12</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch branchID="b2">
+                <logicTreeBranch branchID="b3">
                         <uncertaintyModel>
                                 ./ssm/nwHswRneHseY_2.xml
                         </uncertaintyModel>
