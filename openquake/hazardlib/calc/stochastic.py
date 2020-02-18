@@ -207,9 +207,9 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     # Create event based ruptures
     for src_key in rup_data:
         for rup_key in rup_data[src_key]:
-            dat = rup_data[src_key][rup_key]
+            rup, srcidx, grp_id = rup_data[src_key][rup_key]
             cnt = rup_counter[src_key][rup_key]
-            ebr = EBRupture(dat[0], dat[1], dat[2], cnt, samples)
+            ebr = EBRupture(rup, srcidx, grp_id, cnt, samples)
             eb_ruptures.append(ebr)
 
     return eb_ruptures, calc_times
