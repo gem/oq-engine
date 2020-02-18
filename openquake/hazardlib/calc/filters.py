@@ -383,6 +383,10 @@ class SourceFilter(object):
         else:
             lons = numpy.array(lons)
         bbox = (lons.min(), min(lats), lons.max(), max(lats))
+        if bbox[2] - bbox[0] > 180:
+            raise BBoxError(
+                'The bounding box of the sources is larger than half '
+                'the globe: %d degrees' % (bbox[2] - bbox[0]))
         return self.sitecol.within_bbox(bbox)
 
 
