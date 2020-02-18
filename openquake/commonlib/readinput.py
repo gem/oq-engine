@@ -25,6 +25,7 @@ import zipfile
 import logging
 import tempfile
 import functools
+import operator
 import configparser
 import collections
 import numpy
@@ -32,7 +33,7 @@ import requests
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates)
+    random_filter, groupby, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -637,15 +638,23 @@ def get_composite_source_model(oqparam, h5=None):
         logging.info('There is a logic tree on each source')
     ltmodels = get_ltmodels(oqparam, gsim_lt, source_model_lt, h5)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, ltmodels)
+    key = operator.attrgetter('source_id', 'checksum')
+    srcidx = 0
+    if h5:
+        info = hdf5.create(h5, 'source_info', source_info_dt)
+    data = []
+    for k, srcs in groupby(csm.get_sources(), key).items():
+        for src in srcs:
+            src.id = srcidx
+        data.append((0, src.src_group_ids[0], src.source_id, src.code,
+                     src.num_ruptures, 0, 0, 0, src.checksum, src.wkt()))
+        srcidx += 1
+    if h5:
+        hdf5.extend(info, numpy.array(data, source_info_dt))
     if oqparam.is_event_based():
         # initialize the rupture rup_id numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
-        if h5:
-            info = hdf5.create(h5, 'source_info', [('source_id', hdf5.vstr)])
-            for ltm in ltmodels:
-                for sg in ltm.src_groups:
-                    hdf5.extend(info, sg.info[['source_id']])
 
     if oqparam.disagg_by_src:
         csm = csm.grp_by_src()  # one group per source
