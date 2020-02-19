@@ -90,11 +90,12 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, loglevel,
 
 
 # run with processpool unless OQ_DISTRIBUTE is set to something else
-def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
+def _run(job_inis, concurrent_tasks, calc_id, pdb, loglevel, hc, exports,
+         params):
     global calc_path
     assert len(job_inis) in (1, 2), job_inis
     # set the logs first of all
-    calc_id = logs.init(level=getattr(logging, loglevel.upper()))
+    calc_id = logs.init(calc_id, getattr(logging, loglevel.upper()))
     # disable gzip_input
     base.BaseCalculator.gzip_inputs = lambda self: None
     with performance.Monitor('total runtime', measuremem=True) as monitor:
@@ -135,7 +136,7 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
 
 @sap.script
 def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
-        exports='', loglevel='info', pdb=None):
+        exports='', loglevel='info', calc_id='nojob', pdb=None):
     """
     Run a calculation bypassing the database layer
     """
@@ -156,7 +157,7 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
         print(get_pstats(pstat, slowest))
         return
     try:
-        return _run(job_ini, concurrent_tasks, pdb, loglevel,
+        return _run(job_ini, concurrent_tasks, calc_id, pdb, loglevel,
                     hc, exports, params)
     finally:
         parallel.Starmap.shutdown()
@@ -173,4 +174,5 @@ run.opt('exports', 'export formats as a comma-separated string',
         type=valid.export_formats)
 run.opt('loglevel', 'logging level',
         choices='debug info warn error critical'.split())
+run.opt('calc_id', 'calculation ID (if "nojob" infer it)', type=int)
 run.flg('pdb', 'enable post mortem debugging', '-d')
