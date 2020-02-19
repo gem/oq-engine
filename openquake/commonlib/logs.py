@@ -161,6 +161,7 @@ def init(calc_id='nojob', level=logging.INFO):
     elif calc_id == 'nojob':  # produce a calc_id without creating a job
         calc_id = datastore.get_last_calc_id() + 1
     else:
+        calc_id = int(calc_id)
         path = os.path.join(datastore.get_datadir(), 'calc_%d.hdf5' % calc_id)
         if os.path.exists(path):
             raise OSError('%s already exists' % path)

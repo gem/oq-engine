@@ -174,5 +174,5 @@ run.opt('exports', 'export formats as a comma-separated string',
         type=valid.export_formats)
 run.opt('loglevel', 'logging level',
         choices='debug info warn error critical'.split())
-run.opt('calc_id', 'calculation ID (if "nojob" infer it)', type=int)
+run.opt('calc_id', 'calculation ID (if "nojob" infer it)')
 run.flg('pdb', 'enable post mortem debugging', '-d')
