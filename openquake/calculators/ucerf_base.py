@@ -174,6 +174,7 @@ class UCERFSource(BaseSeismicSource):
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
     checksum = 0
+    _wkt = ''
 
     def __init__(
             self, source_file, investigation_time, start_date, min_mag,

@@ -76,13 +76,6 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     return job_id
 
 
-def run_tile(job_ini, sites_slice):
-    """
-    Used in tiling calculations
-    """
-    return run_job(job_ini, sites_slice=(sites_slice.start, sites_slice.stop))
-
-
 def del_calculation(job_id, confirmed=False):
     """
     Delete a calculation and all associated outputs.

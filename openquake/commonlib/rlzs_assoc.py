@@ -181,11 +181,11 @@ class RlzsAssoc(object):
         return self.realizations[int(mo.group(1))]
 
     def _add_realizations(self, offset, lt_model, all_trts, gsim_rlzs):
-        idx = numpy.arange(offset, offset + len(gsim_rlzs))
+        rlzis = numpy.arange(offset, offset + len(gsim_rlzs))
         rlzs = []
-        for i, gsim_rlz in enumerate(gsim_rlzs):
+        for r, gsim_rlz in zip(rlzis, gsim_rlzs):
             weight = lt_model.weight * gsim_rlz.weight
-            rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
+            rlz = LtRealization(r, lt_model.path, gsim_rlz, weight)
             self.gsim_by_trt.append(dict(zip(all_trts, gsim_rlz.value)))
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
