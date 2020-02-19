@@ -98,7 +98,7 @@ class SourceReader(object):
             self.srcfilter = calc.filters.SourceFilter(
                 h5['sitecol'], h5['oqparam'].maximum_distance)
 
-    def makesm(self, fname, sm, apply_uncertainties):
+    def makesm(self, fname, sm, apply_uncertainties, ltpath):
         """
         :param fname:
             the full pathname of a source model file
@@ -115,7 +115,7 @@ class SourceReader(object):
             [], sm.name, sm.investigation_time, sm.start_time)
         newsm.changes = 0
         for group in sm:
-            newgroup = apply_uncertainties(group)
+            newgroup = apply_uncertainties(ltpath, group)
             newsm.src_groups.append(newgroup)
             # the attribute .changed is set by logictree.apply_uncertainties
             if hasattr(newgroup, 'changed') and newgroup.changed.any():
@@ -131,7 +131,7 @@ class SourceReader(object):
         mags = set()
         src_groups = []
         [sm] = nrml.read_source_models([fname], self.converter, monitor)
-        newsm = self.makesm(fname, sm, apply_unc)
+        newsm = self.makesm(fname, sm, apply_unc, ltmodel.path)
         fname_hits[fname] += 1
         for sg in newsm:
             # sample a source for each group
@@ -202,11 +202,10 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     allargs = []
     fileno = 0
     for ltm in lt_models:
-        apply_unc = functools.partial(
-            source_model_lt.apply_uncertainties, ltm.path)
         for name in ltm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            allargs.append((ltm, apply_unc, fname, fileno))
+            allargs.append((ltm, source_model_lt.apply_uncertainties, fname,
+                            fileno))
             fileno += 1
     smap = parallel.Starmap(
         SourceReader(converter, smlt_dir, h5),
