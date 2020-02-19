@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug when reading rupture.txt files
   * Internal: added an option `--calc-id` to `oq run`
   * Added a check against negative number of cores in openquake.cfg
   * Raised a clear error message if the enlarged bounding box of the sources
