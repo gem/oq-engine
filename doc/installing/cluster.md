@@ -64,11 +64,13 @@ Notice that the -1 in `192.168.2.1 -1` means that all the cores in
 the worker with IP `192.168.2.1` will be used. You can use a number
 between 0 and the maximum number of available core to limit the
 resource usage. The engine will automatically start and stop zmq
-processes on the worker nodes at each new calculation, so there is
-nothing else to do.
+processes on the worker nodes at each new calculation, *provided the
+user openquake has ssh access to the workers*.
 
-NB: when using the zmq mechanism you should not touch the parameter `serialize_jobs`
-and keep it at its default value of `true`.
+This means that you have to generate and copy the ssh keys properly.
+
+NB: when using the zmq mechanism you should not touch the parameter
+`serialize_jobs` and keep it at its default value of `true`.
 
 
 ### Configuring daemons
