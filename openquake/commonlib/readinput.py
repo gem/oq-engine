@@ -647,7 +647,7 @@ def get_composite_source_model(oqparam, h5=None):
         for src in srcs:
             src.id = srcidx
         data.append((0, src.src_group_ids[0], src.source_id, src.code,
-                     src.num_ruptures, 0, 0, 0, src.checksum, src.wkt()))
+                     src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
         srcidx += 1
     if h5:
         hdf5.extend(info, numpy.array(data, source_info_dt))
