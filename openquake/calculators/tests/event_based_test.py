@@ -331,10 +331,10 @@ class EventBasedTestCase(CalculatorTestCase):
         # testing extracting ruptures
         rup0 = extract(self.calc.datastore, 'rupture/0').toml()
         self.assertGot(  # planar rupture
-            rup0, os.path.join(self.testdir, 'expected/rupture_0.toml'))
+            rup0, os.path.join(self.testdir, 'expected/rupture_0.txt'))
         rup1 = extract(self.calc.datastore, 'rupture/1').toml()
         self.assertGot(  # gridded rupture
-            rup1, os.path.join(self.testdir, 'expected/rupture_1.toml'))
+            rup1, os.path.join(self.testdir, 'expected/rupture_1.txt'))
 
         # test running scenario from event based
         self.run_calc(case_15.__file__, 'scenario.ini')

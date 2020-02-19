@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug when reading rupture.txt files
   * Added a check against negative number of cores in openquake.cfg
   * Raised a clear error message if the enlarged bounding box of the sources
     does not contain any site or if it is larger than half the globe

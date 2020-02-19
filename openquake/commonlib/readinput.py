@@ -571,7 +571,7 @@ def get_rupture(oqparam):
         conv = sourceconverter.RuptureConverter(
             oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
         rup = conv.convert_node(rup_node)
-    elif rup_model.endswith('.toml'):
+    elif rup_model.endswith('.txt'):
         rup = rupture.from_toml(open(rup_model).read())
     else:
         raise ValueError('Unrecognized ruptures model %s' % rup_model)
