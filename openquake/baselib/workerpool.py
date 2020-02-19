@@ -3,6 +3,7 @@ import sys
 import time
 import signal
 import shutil
+import logging
 import tempfile
 import subprocess
 import multiprocessing
@@ -54,7 +55,7 @@ class WorkerMaster(object):
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, ctrl_port, host_cores=None,
+    def __init__(self, ctrl_port=config.zworkers.ctrl_port, host_cores=None,
                  remote_python=None, receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
         self.ctrl_port = int(ctrl_port)
@@ -108,6 +109,9 @@ class WorkerMaster(object):
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
+                logging.warning(
+                    'Starting zmq workers on %s: if it hangs, check the ssh '
+                    'keys', host)
                 args = ['ssh', host, self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
                      '-n', cores]

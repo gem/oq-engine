@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: started the zmq workers when the DbServer starts
   * Fixed a bug when reading rupture.txt files
   * Internal: added an option `--calc-id` to `oq run`
   * Added a check against negative number of cores in openquake.cfg
