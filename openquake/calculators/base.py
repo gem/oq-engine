@@ -40,7 +40,7 @@ from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, source, calc, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
-from openquake.calculators import getters, views
+from openquake.calculators import getters
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
