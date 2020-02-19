@@ -64,8 +64,6 @@ resource usage. The engine will automatically start and stop zmq
 processes on the worker nodes at each new calculation, *provided the
 user openquake has ssh access to the workers*.
 
-This means that you have to generate and copy the ssh keys properly.
-
 NB: when using the zmq mechanism you should not touch the parameter
 `serialize_jobs` and keep it at its default value of `true`.
 
@@ -146,11 +144,15 @@ Additionally, access to the DbServer ports should be limited (again by internal 
 The following ports must be open on the **master node**:
 
 * 1907 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
+* 1911 for the ZeroMQ streamer
 * 1912-1920 for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
 
 The **worker nodes** must be able to connect to the master on port 1907.
-
+Moreover the master must be able to access the workers via ssh.
+This means that you have to generate and copy the ssh keys properly, and
+the first time you must connect to the workers manually. Then the engine
+will be able to start and stop zworker processes at each new calculation.
 
 ## Storage requirements
 
