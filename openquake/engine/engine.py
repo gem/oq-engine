@@ -411,6 +411,14 @@ def check_obsolete_version(calculation_mode='WebUI'):
         current = version_triple(__version__)
         latest = version_triple(tag_name)
     except Exception:  # page not available or wrong version tag
+        # NOTE: for unauthenticated requests, the rate limit allows for up
+        # to 60 requests per hour. Therefore, sometimes the api returns the
+        # following message:
+        # b'{"message":"API rate limit exceeded for aaa.aaa.aaa.aaa. (But'
+        # ' here\'s the good news: Authenticated requests get a higher rate'
+        # ' limit. Check out the documentation for more details.)",'
+        # ' "documentation_url":'
+        # ' "https://developer.github.com/v3/#rate-limiting"}'
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '
