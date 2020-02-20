@@ -49,7 +49,7 @@ class AllenHayesInterfaceLinear(BaseMSRSigma, BaseASRSigma):
         Standard deviation for Allen and Hayes 2017. Magnitude and rake
         are ignored.
         """
-        return 10**0.255
+        return 0.255
 
     def get_median_mag(self, area, rake):
         """
@@ -95,7 +95,7 @@ class AllenHayesInterfaceBilinear(BaseMSRSigma, BaseASRSigma):
         Standard deviation for Allen and Hayes 2017. Magnitude and rake
         are ignored.
         """
-        return 10**0.256
+        return 0.256
 
     def get_median_mag(self, area, rake):
         """
@@ -140,7 +140,7 @@ class AllenHayesIntraslab(BaseMSRSigma, BaseASRSigma):
         """
         Standard deviation for Strasser et al 2010. Magnitude is ignored.
         """
-        return 10**0.19
+        return 0.19
 
     def get_median_mag(self, area, rake):
         """
