@@ -17,22 +17,23 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import toml
 from openquake.baselib import sap
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.logictree import SourceModelLogicTree
 
 
 @sap.script
-def ltcsv(fname):
+def ltcsv(fname, out=None):
     """
     Convert logic tree source model file from XML into CSV
     """
     smlt = SourceModelLogicTree(fname)
-    dic, _ = smlt.__toh5__()
-    out = write_csv(fname[:-4] + '.csv', dic['branches'],
-                    comment=toml.loads(dic['branchsets']))
+    array, _attrs = smlt.__toh5__()
+    if out is None:
+        out = fname[:-4] + '.csv'
+    write_csv(out, array)
     logging.info('Saved %s', out)
 
 
-ltcsv.arg('fname', 'path to the source model logic tree')
+ltcsv.arg('fname', 'path to the XML source model logic tree')
+ltcsv.arg('out', 'path to the CSV source model logic tree')
