@@ -25,7 +25,7 @@ import logging
 import zlib
 import numpy
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import nrml, sourceconverter, calc
 
 TWO16 = 2 ** 16  # 65,536
@@ -211,14 +211,30 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     return _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5)
 
 
+def add_groups(groups):
+    lst = []
+    acc = {}  # trt -> SourceGroup
+    for grp in groups:
+        if grp.atomic:
+            lst.append(grp)
+        else:
+            try:
+                g = acc[grp.trt]
+            except KeyError:
+                g = acc[grp.trt] = sourceconverter.SourceGroup(grp.trt)
+            g.sources.extend(grp.sources)
+    lst.extend(acc.values())
+    return lst
+
+
 def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     mags = set()
     changes = 0
     fname_hits = collections.Counter()
-    groups = [[] for _ in lt_models]  # src_groups for each ordinal
+    groups = [[] for _ in lt_models]  # [src_groups] for each ordinal
     for dic in sorted(smap, key=operator.itemgetter('ordinal')):
         ltm = lt_models[dic['ordinal']]
-        groups[ltm.ordinal].append(dic['src_groups'])
+        groups[ltm.ordinal].extend(dic['src_groups'])
         fname_hits += dic['fname_hits']
         changes += dic['changes']
         mags.update(dic['mags'])
@@ -233,17 +249,16 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     # global checks
     grp_id = 0
     for ltm in lt_models:
-        for grps in groups[ltm.ordinal]:
-            for grp in grps:
-                grp.id = grp_id
-                for src in grp:
-                    src.src_group_id = grp_id
-                ltm.src_groups.append(grp)
-                grp_id += 1
-                if grp_id >= TWO16:
-                    # the limit is only for event based calculations
-                    raise ValueError('There is a limit of %d src groups!' %
-                                     TWO16)
+        for grp in add_groups(groups[ltm.ordinal]):
+            grp.id = grp_id
+            for src in grp:
+                src.src_group_id = grp_id
+            ltm.src_groups.append(grp)
+            grp_id += 1
+            if grp_id >= TWO16:
+                # the limit is only for event based calculations
+                raise ValueError('There is a limit of %d src groups!' %
+                                 TWO16)
         # check applyToSources
         source_ids = set(src.source_id for grp in ltm.src_groups
                          for src in grp)
