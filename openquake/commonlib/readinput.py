@@ -211,7 +211,7 @@ def get_params(job_inis, **kw):
         raise IOError('File not found: %s' % not_found[0])
 
     cp = configparser.ConfigParser()
-    cp.read(job_inis)
+    cp.read(job_inis, encoding='utf8')
 
     # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_inis[0])
