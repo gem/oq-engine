@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Fixed an encoding issue in reading ini files and configuration files on Windows
+
   [Kendra Johnson]
   * Correction to catalogue plotting tool in hmtk to include the last bins in density plots
 
