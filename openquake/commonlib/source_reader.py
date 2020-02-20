@@ -25,7 +25,7 @@ import logging
 import zlib
 import numpy
 
-from openquake.baselib import hdf5, parallel, general
+from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, calc
 
 TWO16 = 2 ** 16  # 65,536
@@ -211,7 +211,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     return _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5)
 
 
-def add_groups(groups):
+def merge_groups(groups):
     lst = []
     acc = {}  # trt -> SourceGroup
     for grp in groups:
@@ -232,7 +232,7 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     changes = 0
     fname_hits = collections.Counter()
     groups = [[] for _ in lt_models]  # [src_groups] for each ordinal
-    for dic in sorted(smap, key=operator.itemgetter('ordinal')):
+    for dic in sorted(smap, key=operator.itemgetter('fileno')):
         ltm = lt_models[dic['ordinal']]
         groups[ltm.ordinal].extend(dic['src_groups'])
         fname_hits += dic['fname_hits']
@@ -249,7 +249,7 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     # global checks
     grp_id = 0
     for ltm in lt_models:
-        for grp in add_groups(groups[ltm.ordinal]):
+        for grp in merge_groups(groups[ltm.ordinal]):
             grp.id = grp_id
             for src in grp:
                 src.src_group_id = grp_id
