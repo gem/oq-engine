@@ -424,7 +424,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
                OQ_API)
         if data:
             msg += '\n' + data.decode('utf8')
-        logging.warning(msg, exc_info=True)
+        logging.warning(msg)
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '
