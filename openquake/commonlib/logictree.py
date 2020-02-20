@@ -1210,7 +1210,8 @@ class SourceModelLogicTree(object):
         for brid, br in self.branches.items():
             dic = self.bsetdict[br.bs_id].copy()
             utype = dic.pop('uncertaintyType')
-            filt = toml.dumps(dic).strip().replace('"', "'")
+            filt = '"%s"' % toml.dumps(dic).strip().replace('"', "'").replace(
+                '\n', '\\n')
             tbl.append((br.bs_id, brid, filt, utype, br.value, br.weight))
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
               ('filter', hdf5.vstr), ('utype', hdf5.vstr),
