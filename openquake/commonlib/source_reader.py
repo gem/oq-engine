@@ -222,8 +222,8 @@ def merge_groups(groups):
                 g = acc[grp.trt]
             except KeyError:
                 g = acc[grp.trt] = sourceconverter.SourceGroup(grp.trt)
+                lst.append(g)
             g.sources.extend(grp.sources)
-    lst.extend(acc.values())
     return lst
 
 
