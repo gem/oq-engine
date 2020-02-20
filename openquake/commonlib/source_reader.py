@@ -138,7 +138,6 @@ class SourceReader(object):
             if os.environ.get('OQ_SAMPLE_SOURCES'):
                 sg.sources = random_filtered_sources(
                     sg.sources, self.srcfilter, sg.id)
-            sg.info = numpy.zeros(len(sg), source_info_dt)
             for i, src in enumerate(sg):
                 if hasattr(src, 'data'):  # nonparametric
                     srcmags = ['%.3f' % item[0].mag for item in src.data]
@@ -150,9 +149,7 @@ class SourceReader(object):
                        if k != 'id' and k != 'src_group_id'}
                 src.checksum = zlib.adler32(
                     pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
-                sg.info[i] = (ltmodel.ordinal, 0, src.source_id,
-                              src.code, src.num_ruptures, 0, 0, 0,
-                              src.checksum, src.wkt())
+                src._wkt = src.wkt()
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=newsm.changes,
                     src_groups=src_groups, mags=mags,
@@ -180,8 +177,6 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id)
-    if h5:
-        sources = hdf5.create(h5, 'source_info', source_info_dt)
     lt_models = list(source_model_lt.gen_source_models(gsim_lt))
     if oq.calculation_mode.startswith('ucerf'):
         idx = 0
@@ -192,14 +187,12 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
             ltm.src_groups = [sg]
             src = sg[0].new(ltm.ordinal, ltm.names)  # one source
             src.src_group_id = grp_id
-            src.id = idx
             idx += 1
-            if oq.number_of_logic_tree_samples:
-                src.samples = ltm.samples
+            src.samples = ltm.samples
             sg.sources = [src]
             data = [((grp_id, grp_id, src.source_id, src.code,
                       0, 0, -1, src.num_ruptures, 0, ''))]
-            hdf5.extend(sources, numpy.array(data, source_info_dt))
+            sg.info = numpy.array(data, source_info_dt)
         return lt_models
 
     logging.info('Reading the source model(s) in parallel')
@@ -247,7 +240,6 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                 grp.id = grp_id
                 for src in grp:
                     src.src_group_id = grp_id
-                    src.id = idx
                     idx += 1
                 ltm.src_groups.append(grp)
                 grp_id += 1
@@ -268,12 +260,6 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                             " please fix applyToSources in %s or the "
                             "source model" % (
                                 srcid, source_model_lt.filename))
-
-        if h5:
-            sources = h5['source_info']
-            for sg in ltm.src_groups:
-                sg.info['grp_id'] = sg.id
-                hdf5.extend(sources, sg.info)
 
     if h5:
         h5['source_mags'] = numpy.array(sorted(mags))

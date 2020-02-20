@@ -1,20 +1,29 @@
   [Paolo Tormene]
   * Fixed an encoding issue in reading ini files and configuration files on Windows
 
+  [Michele Simionato]
+  * Internal: started the zmq workers when the DbServer starts
+  * Fixed a bug when reading rupture.txt files
+  * Internal: added an option `--calc-id` to `oq run`
+  * Added a check against negative number of cores in openquake.cfg
+  * Raised a clear error message if the enlarged bounding box of the sources
+    does not contain any site or if it is larger than half the globe
+
   [Kendra Johnson]
-  * Correction to catalogue plotting tool in hmtk to include the last bins in density plots
+  * Correction to catalogue plotting tool in hmtk to include the last bins
+    in density plots
 
   [Paolo Tormene]
   * Added Classical PSHA Non-parametric sources Demo
 
   [Robin Gee]
-  * Change the header of the exported sigma_epsilon_XX.csv file to indicate 
+  * Change the header of the exported sigma_epsilon_XX.csv file to indicate
   that values correspond to inter event sigma
 
   [Graeme Weatherill]
   * Enhances SERA adaptation of the Abrahamson et al. (2015) `BC Hydro` GMPE to
     add in a configurable smoothed tapering term on the forearc/backarc scaling
-  
+
   [Michele Simionato]
   * Added a check on the engine version between master and workers
 
@@ -34,7 +43,7 @@
   [Paolo Tormene]
   * Modified the server views in order to allow using
     `numpy.load(allow_pickle=False)` in the QGIS IRMT plugin
-  * Changed some copy.deepcopy calls into copy.copy in hazardlib
+  * Internal: changed some copy.deepcopy calls into copy.copy in hazardlib
 
   [Michele Simionato]
   * Removed implicit intensity_measure_types_and_levels
@@ -83,11 +92,12 @@ python3-oq-engine (3.8.0-1~xenial01) xenial; urgency=low
   * Internal: reduced the 22 NBCC2015_AA13 classes to a single class
 
   [Graeme Weatherill]
-  * Adds complete suite of GMPEs for the Central and Eastern US, as adopted
+  * Added complete suite of GMPEs for the Central and Eastern US, as adopted
     within the 2018 US National Seismic Hazard Map
-  * Implements NGA East site amplification model within NGA East Base class
+  * Implemented NGA East site amplification model within NGA East Base class
 
-  * Implemented site amplification by convolution
+  [Michele Simionato]
+  * Implemented hazard curves amplification by convolution
   * Improved the error message if the `event_id` does not start from zero in
     the gmfs.csv files
   * Changed the rupture exporter to export LINESTRINGs instead of degenerate

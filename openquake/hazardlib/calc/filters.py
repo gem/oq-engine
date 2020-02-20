@@ -27,7 +27,7 @@ from scipy.spatial import cKDTree, distance
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
@@ -363,6 +363,32 @@ class SourceFilter(object):
             if len(indices):
                 src.indices = indices
                 yield src
+
+    def within_bbox(self, srcs):
+        """
+        :param srcs: a list of source objects
+        :returns: the site IDs within the enlarged bounding box of the sources
+        """
+        if self.sitecol is None:  # for test_case_1_ruptures
+            return [0]
+        lons = []
+        lats = []
+        for src in srcs:
+            box = self.integration_distance.get_affected_box(src)
+            lons.append(box[0])
+            lats.append(box[1])
+            lons.append(box[2])
+            lats.append(box[3])
+        if cross_idl(*(list(self.sitecol.lons) + lons)):
+            lons = numpy.array(lons) % 360
+        else:
+            lons = numpy.array(lons)
+        bbox = (lons.min(), min(lats), lons.max(), max(lats))
+        if bbox[2] - bbox[0] > 180:
+            raise BBoxError(
+                'The bounding box of the sources is larger than half '
+                'the globe: %d degrees' % (bbox[2] - bbox[0]))
+        return self.sitecol.within_bbox(bbox)
 
 
 nofilter = SourceFilter(None, {})

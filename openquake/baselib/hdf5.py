@@ -655,6 +655,24 @@ def build_dt(dtypedict, names):
     return numpy.dtype(lst)
 
 
+def _read_csv(fileobj, compositedt):
+    itemsize = [0] * len(compositedt)
+    for i, name in enumerate(compositedt.names):
+        if compositedt[name].kind == 'S':  # limit of the length of byte-fields
+            itemsize[i] = compositedt[name].itemsize
+    rows = []
+    for lineno, row in enumerate(csv.reader(fileobj), 3):
+        cols = []
+        for i, col in enumerate(row):
+            if itemsize[i] and len(col) > itemsize[i]:
+                raise ValueError(
+                    'line %d: %s=%r has length %d > %d' %
+                    (lineno, compositedt.names[i], col, len(col), itemsize[i]))
+            cols.append(col)
+        rows.append(tuple(cols))
+    return numpy.array(rows, compositedt)
+
+
 # NB: it would be nice to use numpy.loadtxt(
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
@@ -676,8 +694,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
             break
         header = first.strip().split(sep)
         try:
-            rows = [tuple(row) for row in csv.reader(f)]
-            arr = numpy.array(rows, build_dt(dtypedict, header))
+            arr = _read_csv(f, build_dt(dtypedict, header))
         except KeyError:
             raise KeyError('Missing None -> default in dtypedict')
         except Exception as exc:

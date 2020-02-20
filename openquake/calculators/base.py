@@ -40,7 +40,7 @@ from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, source, calc, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
-from openquake.calculators import getters, views
+from openquake.calculators import getters
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -437,19 +437,21 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                ns = len(csm.get_sources())
-                if oq.disagg_by_src and ns > 1000:
+                logging.info('Checking the sources bounding box')
+                srcs = csm.get_sources()
+                if not srcs:
+                    raise RuntimeError('All sources were discarded!?')
+                sids = self.src_filter().within_bbox(srcs)
+                if len(sids) == 0:
+                    raise RuntimeError('All sources were discarded!?')
+                if oq.disagg_by_src and len(srcs) > 1000:
                     j = oq.inputs['job_ini']
                     raise InvalidFile(
                         '%s: disagg_by_src can be set only if there are <=1000'
-                        ' sources, but %d were found in the model' % (j, ns))
+                        ' sources, but %d were found in the model' %
+                        (j, len(srcs)))
                 self.csm_info = csm.info
                 self.datastore['source_model_lt'] = csm.source_model_lt
-                res = views.view('dupl_sources', self.datastore)
-                logging.info(f'The composite source model has {res.val:_d} '
-                             'ruptures')
-            if res:
-                logging.info(res)
         self.init()  # do this at the end of pre-execute
 
         if not oq.hazard_calculation_id:

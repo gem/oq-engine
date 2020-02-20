@@ -668,30 +668,6 @@ def view_global_hcurves(token, dstore):
     return rst_table(res)
 
 
-@view.add('dupl_sources_time')
-def view_dupl_sources_time(token, dstore):
-    """
-    Display the time spent computing duplicated sources
-    """
-    info = dstore['source_info']
-    items = sorted(group_array(info[()], 'source_id').items())
-    tbl = []
-    tot_time = 0
-    for source_id, records in items:
-        if len(records) > 1:  # dupl
-            calc_time = records['calc_time'].sum()
-            tot_time += calc_time
-            tbl.append((source_id, calc_time, len(records)))
-    if tbl:
-        tot = info['calc_time'].sum() + info['split_time'].sum()
-        percent = tot_time / tot * 100
-        m = '\nTotal time in duplicated sources: %d/%d (%d%%)' % (
-            tot_time, tot, percent)
-        return rst_table(tbl, ['source_id', 'calc_time', 'num_dupl']) + m
-    else:
-        return 'There are no duplicated sources'
-
-
 @view.add('global_poes')
 def view_global_poes(token, dstore):
     """
@@ -827,40 +803,6 @@ def view_bad_ruptures(token, dstore):
 
 Source = collections.namedtuple(
     'Source', 'source_id code num_ruptures checksum')
-
-
-class String(str):
-    # a string with a value, used in show dupl_sources
-    def __new__(cls, msg, val):
-        self = str.__new__(cls, msg)
-        self.val = val
-        return self
-
-
-@view.add('dupl_sources')
-def view_dupl_sources(token, dstore):
-    """
-    Show the sources with the same ID and the truly duplicated sources
-    """
-    array = dstore['source_info']['source_id', 'checksum', 'num_ruptures']
-    dic = group_array(array, 'source_id', 'checksum')
-    dupl = []
-    uniq = []
-    muls = []
-    nr = 0
-    for (source_id, checksum), group in dic.items():
-        mul = len(group)
-        nr += group[0]['num_ruptures']
-        if mul > 1:  # duplicate
-            muls.append(mul)
-            dupl.append(source_id)
-        else:
-            uniq.append(source_id)
-    if not dupl:
-        return String('', nr)
-    u, d, m = len(uniq), len(dupl), sum(muls) / len(dupl)
-    return String('Found %d unique sources and %d duplicate sources with'
-                  ' multiplicity %.1f: %s' % (u, d, m, numpy.array(dupl)), nr)
 
 
 @view.add('extreme_groups')

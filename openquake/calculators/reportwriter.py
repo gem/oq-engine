@@ -41,7 +41,6 @@ class ReportWriter(object):
         'params': 'Parameters',
         'inputs': 'Input files',
         'csm_info': 'Composite source model',
-        'dupl_sources': 'Duplicated sources',
         'required_params_per_trt':
         'Required parameters per tectonic region type',
         'ruptures_per_grp': 'Number of ruptures per source group',
@@ -105,7 +104,6 @@ class ReportWriter(object):
         if 'source_info' in ds:
             self.add('slow_sources')
             self.add('times_by_source_class')
-            self.add('dupl_sources')
         if 'task_info' in ds:
             self.add('task_info')
             tasks = set(ds['task_info']['taskname'])

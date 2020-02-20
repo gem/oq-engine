@@ -61,11 +61,11 @@ Notice that the -1 in `192.168.2.1 -1` means that all the cores in
 the worker with IP `192.168.2.1` will be used. You can use a number
 between 0 and the maximum number of available core to limit the
 resource usage. The engine will automatically start and stop zmq
-processes on the worker nodes at each new calculation, so there is
-nothing else to do.
+processes on the worker nodes at each new calculation, *provided the
+user openquake has ssh access to the workers*.
 
-NB: when using the zmq mechanism you should not touch the parameter `serialize_jobs`
-and keep it at its default value of `true`.
+NB: when using the zmq mechanism you should not touch the parameter
+`serialize_jobs` and keep it at its default value of `true`.
 
 
 ### Configuring daemons
@@ -81,7 +81,7 @@ The required daemons are:
 `oq workers inspect` can be used to check the status of the worker nodes and the task distribution. An output like this is produced:
 
 ```
-$ oq1 workers inspect
+$ oq workers inspect
 [('192.168.2.1',
   '101 105 109 113 117 121 126 130 135 140 143 147 151 155 159 163 167 17 19 '
   '20 22 25 27 29 30 33 35 38 43 44 50 54 58 61 65 69 73 76 81 85 89 93 97'),
@@ -144,11 +144,15 @@ Additionally, access to the DbServer ports should be limited (again by internal 
 The following ports must be open on the **master node**:
 
 * 1907 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
+* 1911 for the ZeroMQ streamer
 * 1912-1920 for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
 
 The **worker nodes** must be able to connect to the master on port 1907.
-
+Moreover the master must be able to access the workers via ssh.
+This means that you have to generate and copy the ssh keys properly, and
+the first time you must connect to the workers manually. Then the engine
+will be able to start and stop zworker processes at each new calculation.
 
 ## Storage requirements
 
@@ -157,10 +161,9 @@ Storage requirements depend a lot on the type of calculations you want to run. O
 On the master node you will also need space for:
 - the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
 - the OpenQuake database (located under `/var/lib/openquake`): it contains only logs and metadata, the expected size is tens of megabyte
-- *RabbitMQ* mnesia dir (usually located under `/var/lib/rabbitmq`)
 - the temporary folder (`/tmp`). A different temporary folder can be customized via the `openquake.cfg`
 
-On large installations we strongly suggest to create separate partition for `/home`, *RabbitMQ* (`/var/lib/rabbitmq`) and `/tmp` (or any custom temporary folder set in the `openquake.cfg`.
+On large installations we strongly suggest to create separate partition for `/home` and `/tmp` (or any custom temporary folder set in the `openquake.cfg`.
 
 
 ## Swap partitions
