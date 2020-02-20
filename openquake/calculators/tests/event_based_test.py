@@ -444,8 +444,10 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_25(self):
         # logic tree common + extra
         self.run_calc(case_25.__file__, 'job.ini')
-        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-PGA.csv', fname)
+        mean, f0, f1 = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
+        self.assertEqualFiles('expected/hazard_curve-rlz-000-PGA.csv', f0)
+        self.assertEqualFiles('expected/hazard_curve-rlz-001-PGA.csv', f1)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
