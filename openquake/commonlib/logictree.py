@@ -1208,12 +1208,15 @@ class SourceModelLogicTree(object):
     def __toh5__(self):
         tbl = []
         for brid, br in self.branches.items():
-            tbl.append((br.bs_id, brid, br.value, br.weight))
+            dic = self.bsetdict[br.bs_id].copy()
+            utype = dic.pop('uncertaintyType')
+            filt = '"%s"' % toml.dumps(dic).strip().replace('"', "'").replace(
+                '\n', '\\n')
+            tbl.append((br.bs_id, brid, filt, utype, br.value, br.weight))
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
-              ('uncertainty', hdf5.vstr), ('weight', float)]
-        dic = dict(branches=numpy.array(tbl, dt),
-                   branchsets=toml.dumps(self.bsetdict))
-        return dic, {}
+              ('filter', hdf5.vstr), ('utype', hdf5.vstr),
+              ('uvalue', hdf5.vstr), ('weight', float)]
+        return numpy.array(tbl, dt), {}
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is not complete the bset must be built too
@@ -1223,7 +1226,8 @@ class SourceModelLogicTree(object):
         for rec in dic['branches']:
             bs = rec['branchset']
             dic = self.bsetdict[bs]
-            br = Branch(bs, rec['branch'], rec['weight'], rec['uncertainty'])
+            dic['uncertaintyType'] = rec['utype']
+            br = Branch(bs, rec['branch'], rec['weight'], rec['uvalue'])
             self.branches[br.branch_id] = br
             apply_to_branches = dic.get('applyToBranches')
             if apply_to_branches:
