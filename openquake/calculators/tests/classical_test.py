@@ -295,6 +295,9 @@ hazard_uhs-std.csv
         self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
         numpy.testing.assert_equal(ra.by_grp()['grp-00'], [[0, 1]])
 
+        # check deserialization of source_model_lt
+        # smlt = self.calc.datastore['source_model_lt']
+
     def test_case_16(self):   # sampling
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',

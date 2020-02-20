@@ -38,7 +38,7 @@ import toml
 import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.general import (groupby, group_array, duplicated,
-                                       add_defaults)
+                                       add_defaults, AccumDict)
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -1216,23 +1216,21 @@ class SourceModelLogicTree(object):
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
               ('filter', hdf5.vstr), ('utype', hdf5.vstr),
               ('uvalue', hdf5.vstr), ('weight', float)]
-        return numpy.array(tbl, dt), {}
+        return numpy.array(tbl, dt), dict(num_samples=self.num_samples,
+                                          seed=self.seed)
 
-    def __fromh5__(self, dic, attrs):
-        # TODO: this is not complete the bset must be built too
-        self.bsetdict = toml.loads(dic['branchsets'][()])
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        self.bsetdict = AccumDict(accum={})
         self.branches = {}
         self.root_branchset = BranchSet('sourceModel', {})
-        for rec in dic['branches']:
+        for rec in array:
             bs = rec['branchset']
             dic = self.bsetdict[bs]
             dic['uncertaintyType'] = rec['utype']
+            dic.update(toml.loads(rec['filter'][1:-1].replace('\\n', '\n')))
             br = Branch(bs, rec['branch'], rec['weight'], rec['uvalue'])
             self.branches[br.branch_id] = br
-            apply_to_branches = dic.get('applyToBranches')
-            if apply_to_branches:
-                for br_id in apply_to_branches.split():
-                    br.bset = self.branches[br_id]
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
