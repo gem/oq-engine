@@ -1,15 +1,15 @@
-#,,,"bs1={'uncertaintyType': 'sourceModel'}, bs21={'uncertaintyType': 'abGRAbsolute', 'applyToSources': '1'}, bs31={'uncertaintyType': 'abGRAbsolute', 'applyToSources': '2'}, bs41={'uncertaintyType': 'maxMagGRAbsolute', 'applyToSources': '1'}, bs51={'uncertaintyType': 'maxMagGRAbsolute', 'applyToSources': '2'}"
-branchset,branch,uncertainty,weight
-bs1,b11,source_model.xml,1.000000E+00
-bs21,b21,4.600000E+00 1.100000E+00,3.330000E-01
-bs21,b22,4.500000E+00 1.000000E+00,3.330000E-01
-bs21,b23,4.400000E+00 9.000000E-01,3.340000E-01
-bs31,b31,3.300000E+00 1.000000E+00,3.330000E-01
-bs31,b32,3.200000E+00 9.000000E-01,3.330000E-01
-bs31,b33,3.100000E+00 8.000000E-01,3.340000E-01
-bs41,b41,7.000000E+00,3.330000E-01
-bs41,b42,7.300000E+00,3.330000E-01
-bs41,b43,7.600000E+00,3.340000E-01
-bs51,b51,7.500000E+00,3.330000E-01
-bs51,b52,7.800000E+00,3.330000E-01
-bs51,b53,8.000000E+00,3.340000E-01
+#,,,,"bs1={'uncertaintyType': 'sourceModel'}, bs21={'uncertaintyType': 'abGRAbsolute', 'applyToSources': '1'}, bs31={'uncertaintyType': 'abGRAbsolute', 'applyToSources': '2'}, bs41={'uncertaintyType': 'maxMagGRAbsolute', 'applyToSources': '1'}, bs51={'uncertaintyType': 'maxMagGRAbsolute', 'applyToSources': '2'}"
+branchset,branch,type,uncertainty,weight
+bs1,b11,sourceModel,source_model.xml,1.000000E+00
+bs21,b21,abGRAbsolute,4.600000E+00 1.100000E+00,3.330000E-01
+bs21,b22,abGRAbsolute,4.500000E+00 1.000000E+00,3.330000E-01
+bs21,b23,abGRAbsolute,4.400000E+00 9.000000E-01,3.340000E-01
+bs31,b31,abGRAbsolute,3.300000E+00 1.000000E+00,3.330000E-01
+bs31,b32,abGRAbsolute,3.200000E+00 9.000000E-01,3.330000E-01
+bs31,b33,abGRAbsolute,3.100000E+00 8.000000E-01,3.340000E-01
+bs41,b41,maxMagGRAbsolute,7.000000E+00,3.330000E-01
+bs41,b42,maxMagGRAbsolute,7.300000E+00,3.330000E-01
+bs41,b43,maxMagGRAbsolute,7.600000E+00,3.340000E-01
+bs51,b51,maxMagGRAbsolute,7.500000E+00,3.330000E-01
+bs51,b52,maxMagGRAbsolute,7.800000E+00,3.330000E-01
+bs51,b53,maxMagGRAbsolute,8.000000E+00,3.340000E-01

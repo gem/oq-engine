@@ -1208,11 +1208,15 @@ class SourceModelLogicTree(object):
     def __toh5__(self):
         tbl = []
         for brid, br in self.branches.items():
-            tbl.append((br.bs_id, brid, br.value, br.weight))
+            utype = self.bsetdict[br.bs_id]['uncertaintyType']
+            tbl.append((br.bs_id, brid, utype, br.value, br.weight))
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
-              ('uncertainty', hdf5.vstr), ('weight', float)]
+              ('type', hdf5.vstr), ('uncertainty', hdf5.vstr),
+              ('weight', float)]
+        bsetdict = {k: v for k, v in self.bsetdict.items()
+                    if k != 'uncertaintyType'}
         dic = dict(branches=numpy.array(tbl, dt),
-                   branchsets=toml.dumps(self.bsetdict))
+                   branchsets=toml.dumps(bsetdict))
         return dic, {}
 
     def __fromh5__(self, dic, attrs):
