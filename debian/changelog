@@ -1,5 +1,5 @@
   [Paolo Tormene]
-  * Fixed an encoding issue in reading ini files and configuration files on Windows
+  * Fixed an encoding issue in reading configuration files on Windows
 
   [Michele Simionato]
   * Internal: started the zmq workers when the DbServer starts
