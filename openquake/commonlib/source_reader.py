@@ -19,7 +19,7 @@ import copy
 import random
 import os.path
 import pickle
-import functools
+import operator
 import collections
 import logging
 import zlib
@@ -215,10 +215,10 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     mags = set()
     changes = 0
     fname_hits = collections.Counter()
-    groups = [[] for _ in lt_models]  # (fileno, src_groups)
-    for dic in smap:
+    groups = [[] for _ in lt_models]  # src_groups for each ordinal
+    for dic in sorted(smap, key=operator.itemgetter('ordinal')):
         ltm = lt_models[dic['ordinal']]
-        groups[ltm.ordinal].append((dic['fileno'], dic['src_groups']))
+        groups[ltm.ordinal].append(dic['src_groups'])
         fname_hits += dic['fname_hits']
         changes += dic['changes']
         mags.update(dic['mags'])
@@ -233,7 +233,7 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     # global checks
     grp_id = 0
     for ltm in lt_models:
-        for fileno, grps in sorted(groups[ltm.ordinal]):
+        for grps in groups[ltm.ordinal]:
             for grp in grps:
                 grp.id = grp_id
                 for src in grp:
