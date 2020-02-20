@@ -19,7 +19,7 @@ import copy
 import random
 import os.path
 import pickle
-import functools
+import operator
 import collections
 import logging
 import zlib
@@ -98,7 +98,7 @@ class SourceReader(object):
             self.srcfilter = calc.filters.SourceFilter(
                 h5['sitecol'], h5['oqparam'].maximum_distance)
 
-    def makesm(self, fname, sm, apply_uncertainties):
+    def makesm(self, fname, sm, apply_uncertainties, ltpath):
         """
         :param fname:
             the full pathname of a source model file
@@ -115,7 +115,7 @@ class SourceReader(object):
             [], sm.name, sm.investigation_time, sm.start_time)
         newsm.changes = 0
         for group in sm:
-            newgroup = apply_uncertainties(group)
+            newgroup = apply_uncertainties(ltpath, group)
             newsm.src_groups.append(newgroup)
             # the attribute .changed is set by logictree.apply_uncertainties
             if hasattr(newgroup, 'changed') and newgroup.changed.any():
@@ -131,7 +131,7 @@ class SourceReader(object):
         mags = set()
         src_groups = []
         [sm] = nrml.read_source_models([fname], self.converter, monitor)
-        newsm = self.makesm(fname, sm, apply_unc)
+        newsm = self.makesm(fname, sm, apply_unc, ltmodel.path)
         fname_hits[fname] += 1
         for sg in newsm:
             # sample a source for each group
@@ -199,11 +199,10 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     allargs = []
     fileno = 0
     for ltm in lt_models:
-        apply_unc = functools.partial(
-            source_model_lt.apply_uncertainties, ltm.path)
         for name in ltm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            allargs.append((ltm, apply_unc, fname, fileno))
+            allargs.append((ltm, source_model_lt.apply_uncertainties, fname,
+                            fileno))
             fileno += 1
     smap = parallel.Starmap(
         SourceReader(converter, smlt_dir, h5),
@@ -212,14 +211,37 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     return _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5)
 
 
+def merge_groups(groups):
+    """
+    :param groups:
+        a list of :class:`openquake.hazardlib.sourceconverter.SourceGroup`s
+    :returns:
+        a reduced list of SourceGroups where groups with the same TRT are
+        merged together (unless they are atomic)
+    """
+    lst = []
+    acc = {}  # trt -> SourceGroup
+    for grp in groups:
+        if grp.atomic:
+            lst.append(grp)
+        else:
+            try:
+                g = acc[grp.trt]
+            except KeyError:
+                g = acc[grp.trt] = sourceconverter.SourceGroup(grp.trt)
+                lst.append(g)
+            g.sources.extend(grp.sources)
+    return lst
+
+
 def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     mags = set()
     changes = 0
     fname_hits = collections.Counter()
-    groups = [[] for _ in lt_models]  # (fileno, src_groups)
-    for dic in smap:
+    groups = [[] for _ in lt_models]  # [src_groups] for each ordinal
+    for dic in sorted(smap, key=operator.itemgetter('fileno')):
         ltm = lt_models[dic['ordinal']]
-        groups[ltm.ordinal].append((dic['fileno'], dic['src_groups']))
+        groups[ltm.ordinal].extend(dic['src_groups'])
         fname_hits += dic['fname_hits']
         changes += dic['changes']
         mags.update(dic['mags'])
@@ -232,21 +254,18 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                         "inconsistent with the ones in %r" %
                         (ltm, src_group.trt, gsim_file))
     # global checks
-    idx = 0
     grp_id = 0
     for ltm in lt_models:
-        for fileno, grps in sorted(groups[ltm.ordinal]):
-            for grp in grps:
-                grp.id = grp_id
-                for src in grp:
-                    src.src_group_id = grp_id
-                    idx += 1
-                ltm.src_groups.append(grp)
-                grp_id += 1
-                if grp_id >= TWO16:
-                    # the limit is only for event based calculations
-                    raise ValueError('There is a limit of %d src groups!' %
-                                     TWO16)
+        for grp in merge_groups(groups[ltm.ordinal]):
+            grp.id = grp_id
+            for src in grp:
+                src.src_group_id = grp_id
+            ltm.src_groups.append(grp)
+            grp_id += 1
+            if grp_id >= TWO16:
+                # the limit is only for event based calculations
+                raise ValueError('There is a limit of %d src groups!' %
+                                 TWO16)
         # check applyToSources
         source_ids = set(src.source_id for grp in ltm.src_groups
                          for src in grp)
