@@ -100,7 +100,7 @@ class DbServer(object):
             threading.Thread(target=w._streamer, daemon=True).start()
             logging.warning('Task streamer started on port %d',
                             int(config.zworkers.ctrl_port) + 1)
-            self.zmaster.start()
+            # self.zmaster.start()  # DOES NOT WORK!
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
