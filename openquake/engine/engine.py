@@ -420,7 +420,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         # ' "documentation_url":'
         # ' "https://developer.github.com/v3/#rate-limiting"}'
         msg = ('An error occurred while calling %s/engine/latest to check'
-               'if the installed version of the engine is up to date.' %
+               ' if the installed version of the engine is up to date.' %
                OQ_API)
         if data:
             msg += '\n' + data.decode('utf8')
