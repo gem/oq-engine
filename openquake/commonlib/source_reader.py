@@ -212,6 +212,13 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
 
 
 def merge_groups(groups):
+    """
+    :param groups:
+        a list of :class:`openquake.hazardlib.sourceconverter.SourceGroup`s
+    :returns:
+        a reduced list of SourceGroups where groups with the same TRT are
+        merged together (unless they are atomic)
+    """
     lst = []
     acc = {}  # trt -> SourceGroup
     for grp in groups:
