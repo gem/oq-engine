@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Fixed an encoding issue in reading configuration files on Windows
+
   [Michele Simionato]
   * Internal: started the zmq workers when the DbServer starts
   * Fixed a bug when reading rupture.txt files

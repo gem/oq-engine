@@ -81,7 +81,9 @@ def read(*paths, **validators):
     """
     paths = config.paths + list(paths)
     parser = configparser.ConfigParser()
-    found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
+    found = parser.read(
+        [os.path.normpath(os.path.expanduser(p)) for p in paths],
+        encoding='utf8')
     if not found:
         raise IOError('No configuration file found in %s' % str(paths))
     config.found = found
