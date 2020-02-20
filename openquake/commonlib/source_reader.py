@@ -138,7 +138,6 @@ class SourceReader(object):
             if os.environ.get('OQ_SAMPLE_SOURCES'):
                 sg.sources = random_filtered_sources(
                     sg.sources, self.srcfilter, sg.id)
-            sg.info = numpy.zeros(len(sg), source_info_dt)
             for i, src in enumerate(sg):
                 if hasattr(src, 'data'):  # nonparametric
                     srcmags = ['%.3f' % item[0].mag for item in src.data]
@@ -150,9 +149,7 @@ class SourceReader(object):
                        if k != 'id' and k != 'src_group_id'}
                 src.checksum = zlib.adler32(
                     pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
-                sg.info[i] = (ltmodel.ordinal, 0, src.source_id,
-                              src.code, src.num_ruptures, 0, 0, 0,
-                              src.checksum, src.wkt())
+                src._wkt = src.wkt()
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=newsm.changes,
                     src_groups=src_groups, mags=mags,
