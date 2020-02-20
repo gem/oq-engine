@@ -231,7 +231,6 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                         "inconsistent with the ones in %r" %
                         (ltm, src_group.trt, gsim_file))
     # global checks
-    idx = 0
     grp_id = 0
     for ltm in lt_models:
         for fileno, grps in sorted(groups[ltm.ordinal]):
@@ -239,7 +238,6 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                 grp.id = grp_id
                 for src in grp:
                     src.src_group_id = grp_id
-                    idx += 1
                 ltm.src_groups.append(grp)
                 grp_id += 1
                 if grp_id >= TWO16:
