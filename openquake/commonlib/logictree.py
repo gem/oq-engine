@@ -240,6 +240,14 @@ GEOMETRY_UNCERTAINTY_TYPES = ['simpleFaultDipRelative',
                               'characteristicFaultGeometryAbsolute']
 
 
+def tomldict(ddic):
+    out = {}
+    for key, dic in ddic.items():
+        out[key] = toml.dumps({k: v.strip() for k, v in dic.items()
+                               if k != 'uncertaintyType'}).strip()
+    return out
+
+
 class BranchSet(object):
     """
     Branchset object, represents a ``<logicTreeBranchSet />`` element.
@@ -1060,8 +1068,8 @@ class SourceModelLogicTree(object):
                     "with only one source id" % uncertainty_type)
         if uncertainty_type in ('simpleFaultDipRelative',
                                 'simpleFaultDipAbsolute'):
-            if not filters or (not ('applyToSources' in filters.keys()) and not
-                               ('applyToSourceType' in filters.keys())):
+            if not filters or (not ('applyToSources' in filters) and not
+                               ('applyToSourceType' in filters)):
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     "uncertainty of type '%s' must define either"
@@ -1210,15 +1218,11 @@ class SourceModelLogicTree(object):
         for brid, br in self.branches.items():
             dic = self.bsetdict[br.bs_id].copy()
             utype = dic.pop('uncertaintyType')
-            filt = '"%s"' % toml.dumps(dic).strip().replace('"', "'").replace(
-                '\n', '\\n')
-            tbl.append((br.bs_id, brid, filt, utype, br.value, br.weight))
+            tbl.append((br.bs_id, brid, utype, br.value, br.weight))
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
-              ('filter', hdf5.vstr), ('utype', hdf5.vstr),
-              ('uvalue', hdf5.vstr), ('weight', float)]
-        return numpy.array(tbl, dt), dict(num_samples=self.num_samples,
-                                          seed=self.seed,
-                                          filename=self.filename)
+              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
+        return numpy.array(tbl, dt), tomldict(self.bsetdict)
+
 
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)

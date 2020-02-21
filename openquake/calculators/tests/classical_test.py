@@ -32,7 +32,7 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42, case_43, case_44, case_45)
+    case_42, case_43, case_44, case_45, case_46)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -575,3 +575,7 @@ hazard_uhs-std.csv
     def test_case_45(self):
         # this is a test for MMI
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
+
+    def test_case_46(self):
+        # SMLT with applyToBranches
+        self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__)
