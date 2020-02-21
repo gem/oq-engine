@@ -580,7 +580,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam, validate=True):
+def get_source_model_lt(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -592,7 +592,7 @@ def get_source_model_lt(oqparam, validate=True):
     if fname:
         # NB: converting the random_seed into an integer is needed on Windows
         smlt = logictree.SourceModelLogicTree(
-            fname, validate, seed=int(oqparam.random_seed),
+            fname, seed=int(oqparam.random_seed),
             num_samples=oqparam.number_of_logic_tree_samples)
     else:
         smlt = logictree.FakeSmlt(oqparam.inputs['source_model'],
@@ -610,8 +610,7 @@ def get_composite_source_model(oqparam, h5=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
-    ucerf = oqparam.calculation_mode.startswith('ucerf')
-    source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
+    source_model_lt = get_source_model_lt(oqparam)
     trts = source_model_lt.tectonic_region_types
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})

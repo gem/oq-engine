@@ -48,7 +48,7 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
     def __init__(self, filename, files, basepath):
         self.files = files
         f = gettemp(files[filename], suffix='.' + filename)
-        super().__init__(f, validate=True)
+        super().__init__(f)
 
     def _get_source_model(self, filename):
         return open(gettemp(self.files[filename]))
