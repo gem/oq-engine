@@ -296,8 +296,8 @@ hazard_uhs-std.csv
         numpy.testing.assert_equal(ra.by_grp()['grp-00'], [[0, 1]])
 
         # check deserialization of source_model_lt
-        smlt = self.calc.datastore['source_model_lt']
-        print(list(smlt))
+        #smlt = self.calc.datastore['source_model_lt']
+        #print(list(smlt))
 
     def test_case_16(self):   # sampling
         self.assert_curves_ok(
