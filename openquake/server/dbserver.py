@@ -28,6 +28,7 @@ from openquake.baselib import config, zeromq as z, workerpool as w
 from openquake.baselib.general import socket_ready, detach_process
 from openquake.baselib.parallel import safely_call
 from openquake.commonlib import logs
+from openquake.engine import __version__
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
@@ -100,7 +101,9 @@ class DbServer(object):
             threading.Thread(target=w._streamer, daemon=True).start()
             logging.warning('Task streamer started on port %d',
                             int(config.zworkers.ctrl_port) + 1)
-            # self.zmaster.start()  # DOES NOT WORK!
+            if 'git' not in __version__:
+                # in production installations start the zworkers
+                self.zmaster.start()
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
