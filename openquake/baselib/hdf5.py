@@ -621,23 +621,13 @@ def parse_comment(comment):
     `investigation_time=50.0, imt="PGA", ...`
     and returns it as pairs of strings:
 
-    >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
-    [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
+    >>> parse_comment('''path=['b1'], time=50.0, imt="PGA"''')
+    [('path', ['b1']), ('time', 50.0), ('imt', 'PGA')]
     """
-    names, vals = [], []
-    if comment.startswith('"'):
+    if comment[0] == '"' and comment[-1] == '"':
         comment = comment[1:-1]
-    pieces = comment.split('=')
-    for i, piece in enumerate(pieces):
-        if i == 0:  # first line
-            names.append(piece.strip())
-        elif i == len(pieces) - 1:  # last line
-            vals.append(ast.literal_eval(piece))
-        else:
-            val, name = piece.rsplit(',', 1)
-            vals.append(ast.literal_eval(val))
-            names.append(name.strip())
-    return list(zip(names, vals))
+    dic = toml.loads('{%s}' % comment.replace('""', '"'))
+    return list(dic.items())
 
 
 def build_dt(dtypedict, names):
