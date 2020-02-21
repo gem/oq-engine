@@ -410,7 +410,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
         latest = version_triple(tag_name)
-    except Exception:  # page not available or wrong version tag
+    except KeyError:  # 'tag_name' not found
         # NOTE: for unauthenticated requests, the rate limit allows for up
         # to 60 requests per hour. Therefore, sometimes the api returns the
         # following message:
@@ -420,11 +420,15 @@ def check_obsolete_version(calculation_mode='WebUI'):
         # ' "documentation_url":'
         # ' "https://developer.github.com/v3/#rate-limiting"}'
         msg = ('An error occurred while calling %s/engine/latest to check'
+               ' if the installed version of the engine is up to date.\n'
+               '%s' % (OQ_API, data.decode('utf8')))
+        logging.warning(msg)
+        return
+    except Exception:  # page not available or wrong version tag
+        msg = ('An error occurred while calling %s/engine/latest to check'
                ' if the installed version of the engine is up to date.' %
                OQ_API)
-        if data:
-            msg += '\n' + data.decode('utf8')
-        logging.warning(msg)
+        logging.warning(msg, exc_info=True)
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '
