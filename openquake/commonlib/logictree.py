@@ -240,11 +240,11 @@ GEOMETRY_UNCERTAINTY_TYPES = ['simpleFaultDipRelative',
                               'characteristicFaultGeometryAbsolute']
 
 
-def normalize(ddic):
+def tomldict(ddic):
     out = {}
     for key, dic in ddic.items():
         out[key] = toml.dumps({k: v.strip() for k, v in dic.items()
-                               if k != 'uncertaintyType'})
+                               if k != 'uncertaintyType'}).strip()
     return out
 
 
@@ -1221,7 +1221,7 @@ class SourceModelLogicTree(object):
             tbl.append((br.bs_id, brid, utype, br.value, br.weight))
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
               ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
-        return numpy.array(tbl, dt), normalize(self.bsetdict)
+        return numpy.array(tbl, dt), tomldict(self.bsetdict)
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is not complete the bset must be built too

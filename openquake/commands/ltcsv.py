@@ -28,10 +28,10 @@ def ltcsv(fname, out=None):
     Convert logic tree source model file from XML into CSV
     """
     smlt = SourceModelLogicTree(fname)
-    array, _attrs = smlt.__toh5__()
+    array, attrs = smlt.__toh5__()
     if out is None:
         out = fname[:-4] + '.csv'
-    write_csv(out, array)
+    write_csv(out, array, comment=attrs)
     logging.info('Saved %s', out)
 
 
