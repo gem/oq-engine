@@ -1217,20 +1217,37 @@ class SourceModelLogicTree(object):
               ('filter', hdf5.vstr), ('utype', hdf5.vstr),
               ('uvalue', hdf5.vstr), ('weight', float)]
         return numpy.array(tbl, dt), dict(num_samples=self.num_samples,
-                                          seed=self.seed)
+                                          seed=self.seed,
+                                          filename=self.filename)
 
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
         self.bsetdict = AccumDict(accum={})
         self.branches = {}
-        self.root_branchset = BranchSet('sourceModel', {})
-        for rec in array:
+        self.root_branchset = prev_bset = BranchSet('sourceModel', {})
+        prev_bs = None
+        branches = []
+        for lineno, rec in enumerate(array, 2):
             bs = rec['branchset']
             dic = self.bsetdict[bs]
             dic['uncertaintyType'] = rec['utype']
             dic.update(toml.loads(rec['filter'][1:-1].replace('\\n', '\n')))
             br = Branch(bs, rec['branch'], rec['weight'], rec['uvalue'])
+            branches.append(br)
             self.branches[br.branch_id] = br
+            if bs != prev_bs:
+                bset = BranchSet(dic['uncertaintyType'], {})
+                bset.branches.extend(branches)
+                atb = dic.get('applyToBranches', '').split()
+                if atb:
+                    for brid in atb:
+                        self.branches[brid].bset = bset
+                elif prev_bset:
+                    for branch in prev_bset.branches:
+                        branch.bset = bset
+                prev_bs = bs
+                prev_bset = bset
+                branches.clear()
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
