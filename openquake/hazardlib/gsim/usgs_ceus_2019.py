@@ -20,6 +20,7 @@ Module exports :class:`NGAEastUSGSGMPE`
 """
 import os
 import numpy as np
+from scipy.interpolate import interp1d
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
@@ -151,16 +152,23 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
     subdirectory fixed to the path of the present file. The GMPE table option
     is therefore no longer needed
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,
+                                                const.StdDev.INTER_EVENT,
+                                                const.StdDev.INTRA_EVENT))
     gmpe_table = ""
     PATH = os.path.join(os.path.dirname(__file__), "usgs_nga_east_tables")
 
     def __init__(self, **kwargs):
-        if 'sigma_model' not in kwargs:
-            kwargs['sigma_model'] = "EPRI"
-        self.sigma_model = kwargs['sigma_model']
-        if kwargs['sigma_model'] not in ("EPRI", "PANEL"):
+        self.sigma_model = kwargs.get("sigma_model", "COLLAPSED")
+        self.epistemic_site = kwargs.get("epistemic_site", True)
+        if self.sigma_model not in ("EPRI", "PANEL", "COLLAPSED"):
             raise ValueError("USGS CEUS Sigma Model %s not supported"
-                             % kwargs['sigma_model'])
+                             % self.sigma_model)
+        if self.sigma_model == "COLLAPSED":
+            # In the case of the collapsed model only the total standard
+            # deviation can be defined
+            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES =\
+                set((const.StdDev.TOTAL,))
         super().__init__(**kwargs)
 
     def _setup_standard_deviations(self, fle):
@@ -182,37 +190,102 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         if not str(imt) == "PGA":
             # Calculate the ground motion at required spectral period for
             # the reference rock
-            mean = self.get_hard_rock_mean(rctx, dctx, imt, stddev_types)
+            imean = self.get_hard_rock_mean(rctx, dctx, imt, stddev_types)
         else:
             # Avoid re-calculating PGA if that was already done!
-            mean = np.copy(pga_r)
+            imean = np.copy(pga_r)
 
-        mean += self.get_site_amplification(imt, np.exp(pga_r), sctx)
+        # Get the coefficients for the IMT
+        C_LIN = self.LINEAR_COEFFS[imt]
+        C_F760 = self.F760[imt]
+        C_NL = self.NONLINEAR_COEFFS[imt]
+
+        site_amp = self.get_site_amplification(imt, np.exp(pga_r), sctx)
+
+        # Get collapsed amplification model for -sigma, 0, +sigma with weights
+        # of 0.185, 0.63, 0.185 respectively
+        if self.epistemic_site:
+            f_rk = np.log((np.exp(pga_r) + C_NL["f3"]) / C_NL["f3"])
+            site_amp_sigma = self.get_site_amplification_sigma(
+                sctx, f_rk, C_LIN, C_F760, C_NL)
+            mean = np.log(
+                0.185 * (np.exp(imean + (site_amp - site_amp_sigma))) +
+                0.63 * (np.exp(imean + site_amp)) +
+                0.185 * (np.exp(imean + (site_amp + site_amp_sigma))))
+        else:
+            mean = imean + site_amp
+
         # Get standard deviation model
         nsites = getattr(dctx, self.distance_type).shape
         stddevs = self.get_stddevs(rctx.mag, sctx.vs30, imt,
                                    stddev_types, nsites)
         return mean, stddevs
 
+    def _get_mean(self, data, dctx, dists):
+        """
+        Returns the mean intensity measure level from the tables applying
+        log-log interpolation of the IML with distance (contrast with the
+        linear interpolation applied in usual GMPE tables)
+        :param data:
+            The intensity measure level vector for the given magnitude and IMT
+        :param key:
+            The distance type
+        :param distances:
+            The distance vector for the given magnitude and IMT
+        """
+        # For values outside of the interpolation range use -999. to ensure
+        # value is identifiable and outside of potential real values
+        # For extremely short distance (rrup = 0) use an arbitrarily small
+        # distance measure (1.0E-5 used by US NSHMP code)
+        dists[dists < 1.0E-5] = 1.0E-5
+        interpolator_mean = interp1d(np.log10(dists), np.log(data),
+                                     bounds_error=False,
+                                     fill_value=-999.)
+        mean = np.exp(interpolator_mean(np.log10(getattr(dctx,
+                                                         self.distance_type))))
+        # For those distances less than or equal to the shortest distance
+        # extrapolate the shortest distance value
+        mean[getattr(dctx, self.distance_type) <= dists[0]] = data[0]
+        # For those distances significantly greater than the furthest distance
+        # set to 1E-20.
+        mean[getattr(dctx, self.distance_type) > (dists[-1] + 1.0E-3)] = 1E-20
+        # If any distance is between the final distance and a margin of 0.001
+        # km then assign to smallest distance
+        mean[mean < -1.] = data[-1]
+        return mean
+
     def get_stddevs(self, mag, vs30, imt, stddev_types, num_sites):
         """
-        Returns the standard deviations for either the ergodic or
-        non-ergodic models
+        Returns the standard deviations according to the choice of aleatory
+        uncertainty model. Note that for compatibility with the US NSHMP
+        code a weighted sum of the two aleatory uncertainty models is used,
+        with the EPRI model assigned a weight of 0.8 and the PANEL model 0.2.
         """
-        if self.sigma_model == "EPRI":
+        if self.sigma_model in ("EPRI", "COLLAPSED"):
             # EPRI recommended aleatory uncertainty model
-            tau, phi = get_epri_tau_phi(imt, mag)
-            tau += np.zeros(num_sites)
-            phi += np.zeros(num_sites)
-        else:
+            tau_epri, phi_epri = get_epri_tau_phi(imt, mag)
+            tau_epri += np.zeros(num_sites)
+            phi_epri += np.zeros(num_sites)
+        if self.sigma_model in ("PANEL", "COLLAPSED"):
             # Panel recommended model
-            tau, phi0 = get_panel_tau_phi(imt, mag)
-            tau += np.zeros(num_sites)
-            phi0 += np.zeros(num_sites)
+            tau_panel, phi0_panel = get_panel_tau_phi(imt, mag)
+            tau_panel += np.zeros(num_sites)
             phis2s = get_stewart_2019_phis2s(imt, vs30)
-            phi = np.sqrt(phi0 ** 2. + phis2s ** 2.)
+            phi_panel = np.sqrt(phi0_panel ** 2. + phis2s ** 2.)
 
-        sigma = np.sqrt(tau ** 2. + phi ** 2.)
+        if self.sigma_model == "EPRI":
+            tau = tau_epri
+            phi = phi_epri
+            sigma = np.sqrt(tau ** 2. + phi ** 2.)
+        elif self.sigma_model == "PANEL":
+            tau = tau_panel
+            phi = phi_panel
+            sigma = np.sqrt(tau ** 2. + phi ** 2.)
+        else:
+            # Get the weighted sum of the two models
+            sigma_epri = np.sqrt(tau_epri ** 2. + phi_epri ** 2.)
+            sigma_panel = np.sqrt(tau_panel ** 2. + phi_panel ** 2.)
+            sigma = 0.8 * sigma_epri + 0.2 * sigma_panel
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES

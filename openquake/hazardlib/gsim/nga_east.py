@@ -557,20 +557,28 @@ class NGAEastGMPE(GMPETable):
         # If an epistemic uncertainty is required then retrieve the epistemic
         # sigma of both models and multiply by the input epsilon
         if self.site_epsilon:
-            # In the case of the linear model sigma_f760 and sigma_fv are
-            # assumed independent and the resulting sigma_flin is the root
-            # sum of squares (SRSS)
-            f760_stddev = self._get_f760(C_F760, sites.vs30,
-                                         self.CONSTANTS, is_stddev=True)
-            f_lin_stddev = np.sqrt(
-                f760_stddev ** 2. +
-                self.get_linear_stddev(C_LIN, sites.vs30, self.CONSTANTS) ** 2)
-            # Likewise, the epistemic uncertainty on the linear and nonlinear
-            # model are assumed independent and the SRSS is taken
-            f_nl_stddev = self.get_nonlinear_stddev(C_NL, sites.vs30) * f_rk
-            site_epistemic = np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
+            site_epistemic = self.get_site_amplification_sigma(sites, f_rk,
+                                                               C_LIN, C_F760,
+                                                               C_NL)
             ampl += (self.site_epsilon * site_epistemic)
         return ampl
+
+    def get_site_amplification_sigma(self, sites, f_rk, C_LIN, C_F760, C_NL):
+        """
+        Returns the epistemic uncertainty on the site amplification factor
+        """
+        # In the case of the linear model sigma_f760 and sigma_fv are
+        # assumed independent and the resulting sigma_flin is the root
+        # sum of squares (SRSS)
+        f760_stddev = self._get_f760(C_F760, sites.vs30,
+                                     self.CONSTANTS, is_stddev=True)
+        f_lin_stddev = np.sqrt(
+            f760_stddev ** 2. +
+            self.get_linear_stddev(C_LIN, sites.vs30, self.CONSTANTS) ** 2)
+        # Likewise, the epistemic uncertainty on the linear and nonlinear
+        # model are assumed independent and the SRSS is taken
+        f_nl_stddev = self.get_nonlinear_stddev(C_NL, sites.vs30) * f_rk
+        return np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
 
     @staticmethod
     def _get_f760(C_F760, vs30, CONSTANTS, is_stddev=False):
@@ -773,10 +781,10 @@ class NGAEastGMPE(GMPETable):
     10.00   0.05329   -0.00631   -0.01403    837.0   0.020
     """)
 
-    # Note that the coefficient values at 0.1 s were adopted from Table E1
-    # of the electronic supplement to Stewart et al. (2019) rather than the
-    # US NSHMP source code in order to reproduce Figure 5 of Petersen et al.
-    # (2019)
+    # Note that the coefficient values at 0.1 s have been smoothed with respect
+    # to those needed in order to reproduce Figure 5 of Petersen et al. (2019)
+    # The original f760i was 0.674 +/- 0.366, and the values below are taken
+    # from the US NSHMP software
     F760 = CoeffsTable(sa_damping=5, table="""\
     imt       f760i     f760g   f760is   f760gs
     pgv      0.3753     0.297    0.313    0.117
@@ -786,7 +794,7 @@ class NGAEastGMPE(GMPETable):
     0.030    0.2240     0.000    0.404    0.229
     0.050    0.3370     0.062    0.363    0.093
     0.075    0.4750     0.211    0.322    0.102
-    0.100    0.6740     0.338    0.366    0.088
+    0.100    0.5210     0.338    0.293    0.088
     0.150    0.5860     0.470    0.253    0.066
     0.200    0.4190     0.509    0.214    0.053
     0.250    0.3320     0.509    0.177    0.052

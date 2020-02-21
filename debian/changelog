@@ -21,6 +21,9 @@
   that values correspond to inter event sigma
 
   [Graeme Weatherill]
+  * Adds independent verification tables for the USGS CEUS models and revises
+    implementation for collapsed epistemic uncertainty on sigma and site
+    amplification
   * Enhances SERA adaptation of the Abrahamson et al. (2015) `BC Hydro` GMPE to
     add in a configurable smoothed tapering term on the forearc/backarc scaling
 
