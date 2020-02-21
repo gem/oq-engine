@@ -891,7 +891,7 @@ class SourceModelLogicTree(object):
         if branchset.uncertainty_type == 'sourceModel':
             try:
                 for fname in node.text.strip().split():
-                    if fname.endswith('.xml'):  # skipped for UCERF
+                    if fname.endswith(('.xml', '.nrml')):  # not for UCERF
                         self.collect_source_model_data(
                             branchnode['branchID'], fname)
             except Exception as exc:
