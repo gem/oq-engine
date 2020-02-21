@@ -1,5 +1,5 @@
 #,,,,,,"A='', B='applyToBranches = ""a2""', C='applyToBranches = ""b1 b2""'"
-no,bsid,brid,filter,utype,uvalue,weight
+no,bsid,brid,spec,utype,uvalue,weight
 0,A,a1,"",sourceModel,sm1.xml,5.000000E-01
 1,A,a2,"",sourceModel,sm2.xml,5.000000E-01
 0,B,b1,"applyToBranches = 'a2'",bGRRelative,+0.05,2.500000E-01
