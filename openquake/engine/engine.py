@@ -336,6 +336,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             logging.warning('Using %d cores on %s',
                             parallel.CT // 2, platform.node())
         if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('zmq_start')  # start the zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
         set_concurrent_tasks_default(calc)
