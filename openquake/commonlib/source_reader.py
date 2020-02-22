@@ -27,6 +27,7 @@ import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, calc
+from openquake.commonlib.logictree import get_effective_rlzs
 
 TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
@@ -82,6 +83,61 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
             'of %s, while the job.ini has %s' % (
                 fname, smodel.investigation_time, investigation_time))
     return np
+
+
+class LtSourceModel(object):
+    """
+    A container of SourceGroup instances with some additional attributes
+    describing the source model in the logic tree.
+    """
+    def __init__(self, names, weight, path, src_groups, num_gsim_paths,
+                 ordinal, samples):
+        self.names = ' '.join(names.split())  # replace newlines with spaces
+        self.weight = weight
+        self.path = path
+        self.src_groups = src_groups
+        self.num_gsim_paths = num_gsim_paths
+        self.ordinal = ordinal
+        self.samples = samples
+
+    @property
+    def name(self):
+        """
+        Compact representation for the names
+        """
+        names = self.names.split()
+        if len(names) == 1:
+            return names[0]
+        elif len(names) == 2:
+            return ' '.join(names)
+        else:
+            return ' '.join([names[0], '...', names[-1]])
+
+    @property
+    def num_sources(self):
+        """
+        Number of sources contained in the source model
+        """
+        return sum(len(sg) for sg in self.src_groups)
+
+    def get_skeleton(self):
+        """
+        Return an empty copy of the source model, i.e. without sources,
+        but with the proper attributes for each SourceGroup contained within.
+        """
+        src_groups = []
+        for grp in self.src_groups:
+            sg = copy.copy(grp)
+            sg.sources = []
+            src_groups.append(sg)
+        return self.__class__(self.names, self.weight, self.path, src_groups,
+                              self.num_gsim_paths, self.ordinal, self.samples)
+
+    def __repr__(self):
+        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
+        return '<%s #%d %s, path=%s, weight=%s%s>' % (
+            self.__class__.__name__, self.ordinal, self.names,
+            '_'.join(self.path), self.weight, samples)
 
 
 class SourceReader(object):
@@ -173,7 +229,14 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id)
-    lt_models = list(source_model_lt.gen_source_models(gsim_lt))
+    lt_models = []
+    for rlz in get_effective_rlzs(source_model_lt):
+        num_gsim_paths = (rlz.samples if source_model_lt.num_samples
+                          else gsim_lt.get_num_paths())
+        ltm = LtSourceModel(
+            rlz.value, rlz.weight / rlz.samples, rlz.lt_path, [],
+            num_gsim_paths, rlz.ordinal, rlz.samples)
+        lt_models.append(ltm)
     if oq.calculation_mode.startswith('ucerf'):
         idx = 0
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)

@@ -72,61 +72,6 @@ def unique(objects, key=None):
     return objects
 
 
-class LtSourceModel(object):
-    """
-    A container of SourceGroup instances with some additional attributes
-    describing the source model in the logic tree.
-    """
-    def __init__(self, names, weight, path, src_groups, num_gsim_paths,
-                 ordinal, samples):
-        self.names = ' '.join(names.split())  # replace newlines with spaces
-        self.weight = weight
-        self.path = path
-        self.src_groups = src_groups
-        self.num_gsim_paths = num_gsim_paths
-        self.ordinal = ordinal
-        self.samples = samples
-
-    @property
-    def name(self):
-        """
-        Compact representation for the names
-        """
-        names = self.names.split()
-        if len(names) == 1:
-            return names[0]
-        elif len(names) == 2:
-            return ' '.join(names)
-        else:
-            return ' '.join([names[0], '...', names[-1]])
-
-    @property
-    def num_sources(self):
-        """
-        Number of sources contained in the source model
-        """
-        return sum(len(sg) for sg in self.src_groups)
-
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = []
-        for grp in self.src_groups:
-            sg = copy.copy(grp)
-            sg.sources = []
-            src_groups.append(sg)
-        return self.__class__(self.names, self.weight, self.path, src_groups,
-                              self.num_gsim_paths, self.ordinal, self.samples)
-
-    def __repr__(self):
-        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
-        return '<%s #%d %s, path=%s, weight=%s%s>' % (
-            self.__class__.__name__, self.ordinal, self.names,
-            '_'.join(self.path), self.weight, samples)
-
-
 Realization = namedtuple('Realization', 'value weight ordinal lt_path samples')
 Realization.pid = property(lambda self: '_'.join(self.lt_path))  # path ID
 
@@ -707,17 +652,6 @@ class SourceModelLogicTree(object):
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
                 ' '.join(values))
-
-    def gen_source_models(self, gsim_lt):
-        """
-        Yield empty LtSourceModel instances (one per effective realization)
-        """
-        for rlz in get_effective_rlzs(self):
-            num_gsim_paths = (rlz.samples if self.num_samples
-                              else gsim_lt.get_num_paths())
-            yield LtSourceModel(
-                rlz.value, rlz.weight / rlz.samples, rlz.lt_path, [],
-                num_gsim_paths, rlz.ordinal, rlz.samples)
 
     def sample_path(self, seed):
         """

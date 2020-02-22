@@ -25,7 +25,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, AccumDict
 from openquake.hazardlib import source, sourceconverter
-from openquake.commonlib import logictree
+from openquake.commonlib import logictree, source_reader
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
 
 
@@ -93,7 +93,7 @@ class CompositionInfo(object):
         """
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('[FromFile]')
-        fakeSM = logictree.LtSourceModel(
+        fakeSM = source_reader.LtSourceModel(
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
@@ -215,7 +215,7 @@ class CompositionInfo(object):
                     tot_ruptures=get_field(data, 'totrup', 0))
                 for data in tdata]
             path = tuple(str(decode(rec['path'])).split('_'))
-            sm = logictree.LtSourceModel(
+            sm = source_reader.LtSourceModel(
                 rec['name'], rec['weight'], path, srcgroups,
                 rec['num_rlzs'], sm_id, rec['samples'])
             self.source_models.append(sm)
@@ -391,7 +391,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 sg.sources = sorted(sources_by_grp.get(sg.id, []),
                                     key=operator.attrgetter('id'))
                 src_groups.append(sg)
-            newsm = logictree.LtSourceModel(
+            newsm = source_reader.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
