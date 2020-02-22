@@ -1168,11 +1168,10 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, branch_ids, source_group):
+    def apply_uncertainties(self, ltpath, source_group):
         """
-        :param branch_ids:
-            List of string identifiers of branches, representing the path
-            through source model logic tree.
+        :param ltpath:
+            List of branch IDs
         :param source_group:
             A group of sources
         :return:
@@ -1180,10 +1179,9 @@ class SourceModelLogicTree(object):
         """
         branchset = self.root_branchset
         branchsets_and_uncertainties = []
-        branch_ids = list(branch_ids[::-1])
-
         while branchset is not None:
-            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
+            brid, ltpath = ltpath[0], ltpath[1:]
+            branch = branchset.get_branch_by_id(brid)
             if not branchset.uncertainty_type == 'sourceModel':
                 branchsets_and_uncertainties.append((branchset, branch.value))
             branchset = branch.bset
