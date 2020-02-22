@@ -511,7 +511,7 @@ class FakeSmlt(object):
             yield LtSourceModel(
                 rlz.value, rlz.weight, ('b1',), [], num_gsim_paths, i, 1)
 
-    def apply_uncertainties(self, branch_ids, sourcegroup):
+    def apply_uncertainties(self, ltpath, sourcegroup):
         """
         :returns: the sourcegroup unchanged
         """
@@ -1192,7 +1192,7 @@ class SourceModelLogicTree(object):
 
         sg = copy.deepcopy(source_group)
         sg.changes = 0
-        sg.applied_uncertainties = []
+        sg.applied_uncertainties = []  # used for debugging
         for branchset, value in branchsets_and_uncertainties:
             for s, source in enumerate(sg.sources):
                 changed = branchset.apply_uncertainty(value, source)
@@ -1219,7 +1219,6 @@ class SourceModelLogicTree(object):
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
               ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
         return numpy.array(tbl, dt), tomldict(self.bsetdict)
-
 
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
