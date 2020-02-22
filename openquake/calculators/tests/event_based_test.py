@@ -449,9 +449,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-rlz-000-PGA.csv', f0)
         self.assertEqualFiles('expected/hazard_curve-rlz-001-PGA.csv', f1)
 
-        # check number of groups, must be 2
+        # check number of groups
         n = len(self.calc.datastore['csm_info/sg_data'])
-        self.assertEqual(n, 2)
+        self.assertEqual(n, 3)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
