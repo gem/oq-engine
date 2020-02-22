@@ -117,13 +117,9 @@ class SourceReader(object):
         for group in sm:
             newgroup = apply_uncertainties(ltpath, group)
             newsm.src_groups.append(newgroup)
-            # the attribute .changed is set by logictree.apply_uncertainties
-            if hasattr(newgroup, 'changed') and newgroup.changed.any():
-                newsm.changes += newgroup.changed.sum()
-                for src, changed in zip(newgroup, newgroup.changed):
-                    # redoing count_ruptures can be slow
-                    if changed:
-                        src.num_ruptures = src.count_ruptures()
+            # the attribute .changes is set by logictree.apply_uncertainties
+            newsm.changes += newgroup.changes
+
         return newsm
 
     def __call__(self, ltmodel, apply_unc, fname, fileno, monitor):

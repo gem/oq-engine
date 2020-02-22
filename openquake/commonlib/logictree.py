@@ -1187,18 +1187,21 @@ class SourceModelLogicTree(object):
             branchset = branch.bset
 
         if not branchsets_and_uncertainties:
+            source_group.changes = 0
             return source_group  # nothing changed
 
         sg = copy.deepcopy(source_group)
+        sg.changes = 0
         sg.applied_uncertainties = []
-        sg.changed = numpy.zeros(len(sg.sources), int)
         for branchset, value in branchsets_and_uncertainties:
             for s, source in enumerate(sg.sources):
                 changed = branchset.apply_uncertainty(value, source)
                 if changed:
-                    sg.changed[s] += changed
+                    # redoing count_ruptures can be slow
+                    source.num_ruptures = source.count_ruptures()
                     sg.applied_uncertainties.append(
                         (branchset.uncertainty_type, value))
+                    sg.changes += 1
         return sg  # something changed
 
     def samples_by_lt_path(self):
