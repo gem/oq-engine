@@ -484,50 +484,6 @@ def _bsnodes(fname, branchinglevel):
                          branchinglevel)
 
 
-class FakeSmlt(object):
-    """
-    A replacement for the SourceModelLogicTree class, to be used when
-    there is a trivial source model logic tree. In practice, when
-    `source_model_logic_tree_file` is missing but there is a
-    `source_model_file` in the job.ini file.
-    """
-    def __init__(self, filename, seed=0, num_samples=0):
-        self.filename = filename
-        self.basepath = os.path.dirname(filename)
-        self.seed = seed
-        self.num_samples = num_samples
-        self.on_each_source = False
-        self.num_paths = 1
-        with open(self.filename, encoding='utf-8') as f:
-            xml = f.read()
-        self.tectonic_region_type = set(TRT_REGEX.findall(xml))
-
-    def gen_source_models(self, gsim_lt):
-        """
-        Yield the underlying LtSourceModel, multiple times if there is sampling
-        """
-        num_gsim_paths = 1 if self.num_samples else gsim_lt.get_num_paths()
-        for i, rlz in enumerate(self):
-            yield LtSourceModel(
-                rlz.value, rlz.weight, ('b1',), [], num_gsim_paths, i, 1)
-
-    def apply_uncertainties(self, ltpath, sourcegroup):
-        """
-        :returns: the sourcegroup unchanged
-        """
-        return sourcegroup
-
-    def __iter__(self):
-        name = os.path.basename(self.filename)
-        smlt_path = ('b1',)
-        if self.num_samples:  # many realizations of equal weight
-            weight = 1. / self.num_samples
-            for i in range(self.num_samples):
-                yield Realization(name, weight, None, smlt_path)
-        else:  # there is a single realization
-            yield Realization(name, 1.0, 0, smlt_path)
-
-
 Info = collections.namedtuple('Info', 'smpaths, applytosources')
 
 
