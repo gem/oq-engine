@@ -137,13 +137,15 @@ def get_effective_rlzs(rlzs):
     and yield the first representative of each group.
     """
     effective = []
+    ordinal = 0
     for group in groupby(rlzs, operator.attrgetter('pid')).values():
         rlz = group[0]
         if all(path == '@' for path in rlz.lt_path):  # empty realization
             continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
-                        rlz.ordinal, rlz.lt_path, len(group)))
+                        ordinal, rlz.lt_path, len(group)))
+        ordinal += 1
     return effective
 
 
@@ -710,13 +712,12 @@ class SourceModelLogicTree(object):
         """
         Yield empty LtSourceModel instances (one per effective realization)
         """
-        for i, rlz in enumerate(get_effective_rlzs(self)):
-            smpath = rlz.lt_path
+        for rlz in get_effective_rlzs(self):
             num_gsim_paths = (rlz.samples if self.num_samples
                               else gsim_lt.get_num_paths())
             yield LtSourceModel(
-                rlz.value, rlz.weight / rlz.samples, smpath, [],
-                num_gsim_paths, i, rlz.samples)
+                rlz.value, rlz.weight / rlz.samples, rlz.lt_path, [],
+                num_gsim_paths, rlz.ordinal, rlz.samples)
 
     def sample_path(self, seed):
         """
