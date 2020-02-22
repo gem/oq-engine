@@ -2247,18 +2247,6 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         self.gmpe_lt = readinput.get_gsim_lt(
             oqparam, ['Active Shallow Crust', 'Subduction Interface'])
 
-    def test_parse_source_model_logictree_path(self):
-        apply_un = self.source_model_lt.apply_uncertainties
-        sg = mock.Mock(sources=[mock.Mock()])
-        sg = apply_un(['b1', 'b5', 'b8'], sg)
-        self.assertEqual(sg.applied_uncertainties,
-                         [('maxMagGRRelative', -0.2),
-                          ('bGRRelative', -0.1)])
-        sg = apply_un(['b1', 'b3', 'b6'], sg)
-        self.assertEqual(sg.applied_uncertainties,
-                         [('maxMagGRRelative', 0.2),
-                          ('bGRRelative', 0.1)])
-
     def test_parse_invalid_smlt(self):
         smlt = os.path.join(DATADIR, 'source_model_logic_tree.xml')
         with self.assertRaises(Exception) as ctx:

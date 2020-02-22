@@ -588,16 +588,11 @@ def get_source_model_lt(oqparam, validate=True):
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
         instance
     """
-    fname = oqparam.inputs.get('source_model_logic_tree')
-    if fname:
-        # NB: converting the random_seed into an integer is needed on Windows
-        smlt = logictree.SourceModelLogicTree(
-            fname, validate, seed=int(oqparam.random_seed),
-            num_samples=oqparam.number_of_logic_tree_samples)
-    else:
-        smlt = logictree.FakeSmlt(oqparam.inputs['source_model'],
-                                  int(oqparam.random_seed),
-                                  oqparam.number_of_logic_tree_samples)
+    fname = oqparam.inputs['source_model_logic_tree']
+    # NB: converting the random_seed into an integer is needed on Windows
+    smlt = logictree.SourceModelLogicTree(
+        fname, validate, seed=int(oqparam.random_seed),
+        num_samples=oqparam.number_of_logic_tree_samples)
     return smlt
 
 

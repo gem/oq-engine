@@ -484,50 +484,6 @@ def _bsnodes(fname, branchinglevel):
                          branchinglevel)
 
 
-class FakeSmlt(object):
-    """
-    A replacement for the SourceModelLogicTree class, to be used when
-    there is a trivial source model logic tree. In practice, when
-    `source_model_logic_tree_file` is missing but there is a
-    `source_model_file` in the job.ini file.
-    """
-    def __init__(self, filename, seed=0, num_samples=0):
-        self.filename = filename
-        self.basepath = os.path.dirname(filename)
-        self.seed = seed
-        self.num_samples = num_samples
-        self.on_each_source = False
-        self.num_paths = 1
-        with open(self.filename, encoding='utf-8') as f:
-            xml = f.read()
-        self.tectonic_region_type = set(TRT_REGEX.findall(xml))
-
-    def gen_source_models(self, gsim_lt):
-        """
-        Yield the underlying LtSourceModel, multiple times if there is sampling
-        """
-        num_gsim_paths = 1 if self.num_samples else gsim_lt.get_num_paths()
-        for i, rlz in enumerate(self):
-            yield LtSourceModel(
-                rlz.value, rlz.weight, ('b1',), [], num_gsim_paths, i, 1)
-
-    def apply_uncertainties(self, branch_ids, sourcegroup):
-        """
-        :returns: the sourcegroup unchanged
-        """
-        return sourcegroup
-
-    def __iter__(self):
-        name = os.path.basename(self.filename)
-        smlt_path = ('b1',)
-        if self.num_samples:  # many realizations of equal weight
-            weight = 1. / self.num_samples
-            for i in range(self.num_samples):
-                yield Realization(name, weight, None, smlt_path)
-        else:  # there is a single realization
-            yield Realization(name, 1.0, 0, smlt_path)
-
-
 Info = collections.namedtuple('Info', 'smpaths, applytosources')
 
 
@@ -1168,11 +1124,10 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, branch_ids, source_group):
+    def apply_uncertainties(self, ltpath, source_group):
         """
-        :param branch_ids:
-            List of string identifiers of branches, representing the path
-            through source model logic tree.
+        :param ltpath:
+            List of branch IDs
         :param source_group:
             A group of sources
         :return:
@@ -1180,27 +1135,25 @@ class SourceModelLogicTree(object):
         """
         branchset = self.root_branchset
         branchsets_and_uncertainties = []
-        branch_ids = list(branch_ids[::-1])
-
         while branchset is not None:
-            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
-            if not branchset.uncertainty_type == 'sourceModel':
+            brid, ltpath = ltpath[0], ltpath[1:]
+            branch = branchset.get_branch_by_id(brid)
+            if branchset.uncertainty_type != 'sourceModel':
                 branchsets_and_uncertainties.append((branchset, branch.value))
             branchset = branch.bset
 
         if not branchsets_and_uncertainties:
+            source_group.changes = 0
             return source_group  # nothing changed
 
         sg = copy.deepcopy(source_group)
-        sg.applied_uncertainties = []
-        sg.changed = numpy.zeros(len(sg.sources), int)
-        for branchset, value in branchsets_and_uncertainties:
-            for s, source in enumerate(sg.sources):
-                changed = branchset.apply_uncertainty(value, source)
-                if changed:
-                    sg.changed[s] += changed
-                    sg.applied_uncertainties.append(
-                        (branchset.uncertainty_type, value))
+        sg.changes = 0
+        for source in sg:
+            changes = sum(branchset.apply_uncertainty(value, source)
+                          for branchset, value in branchsets_and_uncertainties)
+            if changes:  # redoing count_ruptures can be slow
+                source.num_ruptures = source.count_ruptures()
+                sg.changes += changes
         return sg  # something changed
 
     def samples_by_lt_path(self):
@@ -1218,7 +1171,6 @@ class SourceModelLogicTree(object):
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
               ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
         return numpy.array(tbl, dt), tomldict(self.bsetdict)
-
 
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)

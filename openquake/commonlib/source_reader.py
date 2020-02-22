@@ -117,21 +117,17 @@ class SourceReader(object):
         for group in sm:
             newgroup = apply_uncertainties(ltpath, group)
             newsm.src_groups.append(newgroup)
-            # the attribute .changed is set by logictree.apply_uncertainties
-            if hasattr(newgroup, 'changed') and newgroup.changed.any():
-                newsm.changes += newgroup.changed.sum()
-                for src, changed in zip(newgroup, newgroup.changed):
-                    # redoing count_ruptures can be slow
-                    if changed:
-                        src.num_ruptures = src.count_ruptures()
+            # the attribute .changes is set by logictree.apply_uncertainties
+            newsm.changes += newgroup.changes
+
         return newsm
 
-    def __call__(self, ltmodel, apply_unc, fname, fileno, monitor):
+    def __call__(self, rlz, apply_unc, fname, fileno, monitor):
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
         src_groups = []
         [sm] = nrml.read_source_models([fname], self.converter, monitor)
-        newsm = self.makesm(fname, sm, apply_unc, ltmodel.path)
+        newsm = self.makesm(fname, sm, apply_unc, rlz.path)
         fname_hits[fname] += 1
         for sg in newsm:
             # sample a source for each group
@@ -153,7 +149,7 @@ class SourceReader(object):
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=newsm.changes,
                     src_groups=src_groups, mags=mags,
-                    ordinal=ltmodel.ordinal, fileno=fileno)
+                    ordinal=rlz.ordinal, fileno=fileno)
 
 
 def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
