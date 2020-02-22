@@ -36,7 +36,8 @@ import operator
 from collections import namedtuple
 import toml
 import numpy
-from openquake.baselib import hdf5, node
+from openquake.baselib import hdf5
+from openquake.baselib.node import node_from_elem, Node as N, context
 from openquake.baselib.general import (groupby, group_array, duplicated,
                                        add_defaults, AccumDict)
 import openquake.hazardlib.source as ohs
@@ -46,8 +47,6 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
-
-from openquake.baselib.node import node_from_elem, Node as N, context
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -556,7 +555,7 @@ def collect_info(smlt):
                 applytosources[bset.get('applyToBranches')].extend(
                         bset['applyToSources'].split())
             for br in bset:
-                with node.context(smlt, br):
+                with context(smlt, br):
                     fnames = unique(br.uncertaintyModel.text.split())
                     paths[br['branchID']].update(get_paths(smlt, fnames))
     return Info({k: sorted(v) for k, v in paths.items()}, applytosources)
@@ -1171,9 +1170,6 @@ class SourceModelLogicTree(object):
 
     def apply_uncertainties(self, branch_ids, source_group):
         """
-        Parse the path through the source model logic tree and return
-        "apply uncertainties" function.
-
         :param branch_ids:
             List of string identifiers of branches, representing the path
             through source model logic tree.
