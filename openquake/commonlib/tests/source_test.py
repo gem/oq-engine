@@ -786,4 +786,4 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         new = object.__new__(CompositionInfo)
         new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(csm.info).
-                         replace('0.20000000000000004', '0.2'))
+                         replace('0.6000000000000001', '0.6'))
