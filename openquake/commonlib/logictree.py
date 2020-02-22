@@ -1182,7 +1182,7 @@ class SourceModelLogicTree(object):
         while branchset is not None:
             brid, ltpath = ltpath[0], ltpath[1:]
             branch = branchset.get_branch_by_id(brid)
-            if not branchset.uncertainty_type == 'sourceModel':
+            if branchset.uncertainty_type != 'sourceModel':
                 branchsets_and_uncertainties.append((branchset, branch.value))
             branchset = branch.bset
 
