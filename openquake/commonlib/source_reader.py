@@ -226,7 +226,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id)
-    rlzs = source_model_lt.get_rlzs()
+    rlzs = source_model_lt.get_eff_rlzs()
     lt_models = []
     for rlz in rlzs:
         ltm = LtSourceModel(

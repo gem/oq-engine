@@ -1097,7 +1097,7 @@ class SourceModelLogicTree(object):
                 sg.changes += changes
         return sg  # something changed
 
-    def get_rlzs(self):
+    def get_eff_rlzs(self):
         """
         :returns: an array of effective realization of dtype rlz_dt
         """
