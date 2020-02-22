@@ -46,7 +46,6 @@ source_model_dt = numpy.dtype([
     ('name', hdf5.vstr),
     ('weight', F32),
     ('path', hdf5.vstr),
-    ('num_rlzs', U32),
     ('samples', U32),
 ])
 
@@ -182,10 +181,8 @@ class CompositionInfo(object):
         sg_data = []
         sm_data = []
         for sm in self.source_models:
-            trts = set(sg.trt for sg in sm.src_groups)
-            num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
-                            num_gsim_paths, sm.samples))
+                            sm.samples))
             for src_group in sm.src_groups:
                 sg_data.append((src_group.id, src_group.name,
                                 trti[src_group.trt], src_group.eff_ruptures,
@@ -217,7 +214,7 @@ class CompositionInfo(object):
             path = tuple(str(decode(rec['path'])).split('_'))
             sm = source_reader.LtSourceModel(
                 rec['name'], rec['weight'], path, srcgroups,
-                rec['num_rlzs'], sm_id, rec['samples'])
+                sm_id, rec['samples'])
             self.source_models.append(sm)
         self.init()
 
@@ -352,7 +349,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         for sm in self.source_models:
             src_groups = []
             smodel = sm.__class__(sm.names, sm.weight, sm.path, src_groups,
-                                  sm.num_gsim_paths, sm.ordinal, sm.samples)
+                                  sm.ordinal, sm.samples)
             for sg in sm.src_groups:
                 for src in sg.sources:
                     src.src_group_id = grp_id
@@ -393,7 +390,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 src_groups.append(sg)
             newsm = source_reader.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
-                sm.num_gsim_paths, sm.ordinal, sm.samples)
+                sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         new.info.update_eff_ruptures(new.get_num_ruptures())

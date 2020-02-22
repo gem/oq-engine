@@ -90,13 +90,11 @@ class LtSourceModel(object):
     A container of SourceGroup instances with some additional attributes
     describing the source model in the logic tree.
     """
-    def __init__(self, names, weight, path, src_groups, num_gsim_paths,
-                 ordinal, samples):
+    def __init__(self, names, weight, path, src_groups, ordinal, samples):
         self.names = ' '.join(names.split())  # replace newlines with spaces
         self.weight = weight
         self.path = path
         self.src_groups = src_groups
-        self.num_gsim_paths = num_gsim_paths
         self.ordinal = ordinal
         self.samples = samples
 
@@ -131,7 +129,7 @@ class LtSourceModel(object):
             sg.sources = []
             src_groups.append(sg)
         return self.__class__(self.names, self.weight, self.path, src_groups,
-                              self.num_gsim_paths, self.ordinal, self.samples)
+                              self.ordinal, self.samples)
 
     def __repr__(self):
         samples = ', samples=%d' % self.samples if self.samples > 1 else ''
@@ -231,11 +229,9 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
         not spinning_off, oq.source_id)
     lt_models = []
     for rlz in get_effective_rlzs(source_model_lt):
-        num_gsim_paths = (rlz.samples if source_model_lt.num_samples
-                          else gsim_lt.get_num_paths())
         ltm = LtSourceModel(
             rlz.value, rlz.weight / rlz.samples, rlz.lt_path, [],
-            num_gsim_paths, rlz.ordinal, rlz.samples)
+            rlz.ordinal, rlz.samples)
         lt_models.append(ltm)
     if oq.calculation_mode.startswith('ucerf'):
         idx = 0
