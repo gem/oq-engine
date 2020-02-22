@@ -181,7 +181,7 @@ class SourceReader(object):
         mags = set()
         src_groups = []
         [sm] = nrml.read_source_models([fname], self.converter, monitor)
-        newsm = self.makesm(fname, sm, apply_unc, rlz.path)
+        newsm = self.makesm(fname, sm, apply_unc, rlz.lt_path)
         fname_hits[fname] += 1
         for sg in newsm:
             # sample a source for each group
@@ -227,8 +227,9 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id)
+    rlzs = get_effective_rlzs(source_model_lt)
     lt_models = []
-    for rlz in get_effective_rlzs(source_model_lt):
+    for rlz in rlzs:
         ltm = LtSourceModel(
             rlz.value, rlz.weight / rlz.samples, rlz.lt_path, [],
             rlz.ordinal, rlz.samples)
@@ -253,10 +254,10 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     logging.info('Reading the source model(s) in parallel')
     allargs = []
     fileno = 0
-    for ltm in lt_models:
-        for name in ltm.names.split():
+    for rlz in rlzs:
+        for name in rlz.value.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            allargs.append((ltm, source_model_lt.apply_uncertainties, fname,
+            allargs.append((rlz, source_model_lt.apply_uncertainties, fname,
                             fileno))
             fileno += 1
     smap = parallel.Starmap(
