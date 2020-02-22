@@ -267,6 +267,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     return _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5)
 
 
+# NB: using this breaks case_global_eb
 def merge_groups(groups):
     """
     :param groups:
@@ -312,7 +313,7 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     # global checks
     grp_id = 0
     for ltm in lt_models:
-        for grp in merge_groups(groups[ltm.ordinal]):
+        for grp in groups[ltm.ordinal]:
             grp.id = grp_id
             for src in grp:
                 src.src_group_id = grp_id
