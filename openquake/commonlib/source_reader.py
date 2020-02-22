@@ -27,7 +27,6 @@ import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, calc
-from openquake.commonlib.logictree import get_effective_rlzs
 
 TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
@@ -176,12 +175,12 @@ class SourceReader(object):
 
         return newsm
 
-    def __call__(self, rlz, apply_unc, fname, fileno, monitor):
+    def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
         src_groups = []
         [sm] = nrml.read_source_models([fname], self.converter, monitor)
-        newsm = self.makesm(fname, sm, apply_unc, rlz.lt_path)
+        newsm = self.makesm(fname, sm, apply_unc, path)
         fname_hits[fname] += 1
         for sg in newsm:
             # sample a source for each group
@@ -203,7 +202,7 @@ class SourceReader(object):
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=newsm.changes,
                     src_groups=src_groups, mags=mags,
-                    ordinal=rlz.ordinal, fileno=fileno)
+                    ordinal=ordinal, fileno=fileno)
 
 
 def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
@@ -227,11 +226,12 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id)
-    rlzs = get_effective_rlzs(source_model_lt)
+    rlzs = source_model_lt.get_rlzs()
     lt_models = []
     for rlz in rlzs:
         ltm = LtSourceModel(
-            rlz.value, rlz.weight, rlz.lt_path, [], rlz.ordinal, rlz.samples)
+            rlz['value'], rlz['weight'], rlz['lt_path'], [],
+            rlz['ordinal'], rlz['samples'])
         lt_models.append(ltm)
     if oq.calculation_mode.startswith('ucerf'):
         idx = 0
@@ -254,9 +254,10 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     allargs = []
     fileno = 0
     for rlz in rlzs:
-        for name in rlz.value.split():
+        for name in rlz['value'].split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            allargs.append((rlz, source_model_lt.apply_uncertainties, fname,
+            allargs.append((rlz['ordinal'], rlz['lt_path'],
+                            source_model_lt.apply_uncertainties, fname,
                             fileno))
             fileno += 1
     smap = parallel.Starmap(

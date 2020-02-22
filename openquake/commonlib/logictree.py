@@ -75,6 +75,14 @@ def unique(objects, key=None):
 Realization = namedtuple('Realization', 'value weight ordinal lt_path samples')
 Realization.pid = property(lambda self: '_'.join(self.lt_path))  # path ID
 
+rlz_dt = numpy.dtype([
+    ('ordinal', numpy.uint16),
+    ('lt_path', hdf5.vstr),
+    ('weight', numpy.float64),
+    ('value', hdf5.vstr),
+    ('samples', numpy.uint16),
+])
+
 
 def get_effective_rlzs(rlzs):
     """
@@ -1089,11 +1097,16 @@ class SourceModelLogicTree(object):
                 sg.changes += changes
         return sg  # something changed
 
-    def samples_by_lt_path(self):
+    def get_rlzs(self):
         """
-        Returns a dictionary lt_path -> how many times that path was sampled
+        :returns: an array of effective realization of dtype rlz_dt
         """
-        return collections.Counter(rlz.lt_path for rlz in self)
+        rlzs = get_effective_rlzs(self)
+        arr = numpy.zeros(len(rlzs), rlz_dt)
+        for rlz in rlzs:
+            arr[rlz.ordinal] = (rlz.ordinal, rlz.lt_path, rlz.weight,
+                                rlz.value, rlz.samples)
+        return arr
 
     def __toh5__(self):
         tbl = []
