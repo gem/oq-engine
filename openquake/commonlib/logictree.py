@@ -127,7 +127,8 @@ class LtSourceModel(object):
             '_'.join(self.path), self.weight, samples)
 
 
-Realization = namedtuple('Realization', 'value weight ordinal lt_path')
+Realization = namedtuple('Realization', 'value weight ordinal lt_path samples')
+Realization.__new__.__defaults__ = (1,)
 Realization.pid = property(lambda self: '_'.join(self.lt_path))  # path ID
 
 
@@ -143,7 +144,7 @@ def get_effective_rlzs(rlzs):
             continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
-                        rlz.ordinal, rlz.lt_path))
+                        rlz.ordinal, rlz.lt_path, len(group)))
     return effective
 
 
@@ -710,15 +711,13 @@ class SourceModelLogicTree(object):
         """
         Yield empty LtSourceModel instances (one per effective realization)
         """
-        samples_by_lt_path = self.samples_by_lt_path()
         for i, rlz in enumerate(get_effective_rlzs(self)):
             smpath = rlz.lt_path
-            num_samples = samples_by_lt_path[smpath]
-            num_gsim_paths = (num_samples if self.num_samples
+            num_gsim_paths = (rlz.samples if self.num_samples
                               else gsim_lt.get_num_paths())
             yield LtSourceModel(
-                rlz.value, rlz.weight / num_samples, smpath, [],
-                num_gsim_paths, i, num_samples)
+                rlz.value, rlz.weight / rlz.samples, smpath, [],
+                num_gsim_paths, i, rlz.samples)
 
     def sample_path(self, seed):
         """
