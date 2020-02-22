@@ -95,7 +95,7 @@ class CompositionInfo(object):
         fakeSM = source_reader.LtSourceModel(
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
-            gsim_lt.get_num_paths(), ordinal=0, samples=1)
+            ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
                    min_mag=0, max_mag=0)
 
