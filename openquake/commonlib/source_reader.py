@@ -231,8 +231,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     lt_models = []
     for rlz in rlzs:
         ltm = LtSourceModel(
-            rlz.value, rlz.weight / rlz.samples, rlz.lt_path, [],
-            rlz.ordinal, rlz.samples)
+            rlz.value, rlz.weight, rlz.lt_path, [], rlz.ordinal, rlz.samples)
         lt_models.append(ltm)
     if oq.calculation_mode.startswith('ucerf'):
         idx = 0
