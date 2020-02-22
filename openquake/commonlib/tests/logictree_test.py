@@ -2218,7 +2218,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.seed = oqparam.random_seed
 
     def test_sample_source_model(self):
-        [(sm_name, weight, _, branch_ids)] = self.source_model_lt
+        [(sm_name, weight, _, branch_ids, _)] = self.source_model_lt
         self.assertEqual(sm_name, 'example-source-model.xml')
         self.assertEqual(('b1', 'b4', 'b7'), branch_ids)
 
@@ -2233,7 +2233,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
             self.source_model_lt.num_samples = orig_samples
 
     def test_sample_gmpe(self):
-        [(value, weight, _, branch_ids)] = logictree.sample(
+        [(value, weight, _, branch_ids, _)] = logictree.sample(
             list(self.gmpe_lt), 1, self.seed)
         self.assertEqual(value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(weight['default'], 0.5)

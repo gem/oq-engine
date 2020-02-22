@@ -128,7 +128,6 @@ class LtSourceModel(object):
 
 
 Realization = namedtuple('Realization', 'value weight ordinal lt_path samples')
-Realization.__new__.__defaults__ = (1,)
 Realization.pid = property(lambda self: '_'.join(self.lt_path))  # path ID
 
 
@@ -746,14 +745,14 @@ class SourceModelLogicTree(object):
                 smlt_path = self.sample_path(self.seed + i)
                 name = smlt_path[0].value
                 smlt_path_ids = [branch.branch_id for branch in smlt_path]
-                yield Realization(name, weight, None, tuple(smlt_path_ids))
+                yield Realization(name, weight, None, tuple(smlt_path_ids), 1)
         else:  # full enumeration
             ordinal = 0
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
                 yield Realization(name, weight, ordinal,
-                                  tuple(smlt_branch_ids))
+                                  tuple(smlt_branch_ids), 1)
                 ordinal += 1
 
     def parse_uncertainty_value(self, node, branchset):
@@ -1564,7 +1563,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            rlz = Realization(tuple(value), weight, i, tuple(lt_uid))
+            rlz = Realization(tuple(value), weight, i, tuple(lt_uid), 1)
             rlzs.append(rlz)
         return rlzs
 
@@ -1587,7 +1586,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            yield Realization(tuple(value), weight, i, tuple(lt_uid))
+            yield Realization(tuple(value), weight, i, tuple(lt_uid), 1)
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %
