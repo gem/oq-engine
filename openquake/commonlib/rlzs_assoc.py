@@ -235,6 +235,7 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
     assoc = RlzsAssoc(cinfo)
     trtset = set(cinfo.gsim_lt.values)
     offset = 0
+    missing = set(trtset)
     for smodel in cinfo.source_models:
         # discard source models with non-acceptable lt_path
         if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
@@ -250,26 +251,26 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                 if sg.eff_ruptures:
                     if (trts and sg.trt in trts) or not trts:
                         trts_.add(sg.trt)
+            if not trts_:
+                continue
 
             # recompute the GSIM logic tree if needed
             if trts_ != {'*'} and trtset != trts_:
                 before = cinfo.gsim_lt.get_num_paths()
                 gsim_lt = cinfo.gsim_lt.reduce(trts_)
                 after = gsim_lt.get_num_paths()
-                if sm_lt_path and before > after:
-                    # print the warning only when saving the logic tree,
-                    # i.e. when called with sm_lt_path in store_rlz_info
-                    logging.warning(
-                        'Reducing the logic tree of %s from %d to %d '
-                        'realizations', smodel.name, before, after)
-                rlzs = get_effective_rlzs(gsim_lt)
-                all_trts = list(gsim_lt.values)
-            else:
-                rlzs = get_effective_rlzs(cinfo.gsim_lt)
-                all_trts = list(cinfo.gsim_lt.values)
+                if before > after:
+                    missing &= trtset - trts_
+
+            rlzs = get_effective_rlzs(cinfo.gsim_lt)
+            all_trts = list(cinfo.gsim_lt.values)
 
         assoc._add_realizations(offset, smodel, all_trts, rlzs)
         offset += len(rlzs)
+
+    if missing != trtset:
+        logging.warning(
+            'You should reduce the gsim logic tree by removing %s', missing)
 
     if assoc.realizations:
         assoc._init()

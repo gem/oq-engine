@@ -744,7 +744,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
         csm = readinput.get_composite_source_model(oqparam)
-        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
+        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
         # there are 2 distinct tectonic region types, so 18 src_groups
         self.assertEqual(sum(1 for tm in csm.src_groups), 18)
 
@@ -764,9 +764,8 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
                 return 1
         csm.info.update_eff_ruptures(count_ruptures)
         assoc = csm.info.get_rlzs_assoc()
-        expected_assoc = "<RlzsAssoc(size=9, rlzs=9)>"
+        expected_assoc = "<RlzsAssoc(size=9, rlzs=18)>"
         self.assertEqual(str(assoc), expected_assoc)
-        self.assertEqual(len(assoc.realizations), 9)
 
         # removing all src_groups
         csm.info.update_eff_ruptures(lambda t: 0)
