@@ -179,18 +179,11 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('store source_info'):
             self.store_source_info(calc_times)
         logging.info('Reordering the ruptures and storing the events')
-        attrs = self.datastore.getitem('ruptures').attrs
         sorted_ruptures = self.datastore.getitem('ruptures')[()]
         # order the ruptures by rup_id
         sorted_ruptures.sort(order='serial')
-        ngroups = len(self.csm.info.trt_by_grp)
-        grp_indices = numpy.zeros((ngroups, 2), U32)
-        grp_ids = sorted_ruptures['grp_id']
-        for grp_id, [startstop] in get_indices(grp_ids).items():
-            grp_indices[grp_id] = startstop
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore['ruptures']['id'] = numpy.arange(len(sorted_ruptures))
-        self.datastore.set_attrs('ruptures', grp_indices=grp_indices, **attrs)
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 

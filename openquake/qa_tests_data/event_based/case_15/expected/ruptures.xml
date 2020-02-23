@@ -11,7 +11,7 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Subduction Interface - North East Correction"
         >
             <singlePlaneRupture
-            id="43"
+            id="0"
             multiplicity="1"
             >
                 <stochasticEventSets>
@@ -41,13 +41,8 @@ xmlns:gml="http://www.opengis.net/gml"
                     <bottomRight depth="52.0030098" lat="43.3970070" lon="145.9039154"/>
                 </planarSurface>
             </singlePlaneRupture>
-        </ruptureGroup>
-        <ruptureGroup
-        id="1"
-        tectonicRegion="Subduction Interface - North East Correction"
-        >
             <griddedRupture
-            id="68"
+            id="1"
             multiplicity="1"
             >
                 <stochasticEventSets>
