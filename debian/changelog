@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Removed dynamic reduction of the gsim logic tree (i.e. now the
-    gsim logic tree is known upfront, before calculating the PoES)
+    logic tree is known upfront, before calculating the PoES)
 
   [Paolo Tormene]
   * Fixed an encoding issue in reading configuration files on Windows
