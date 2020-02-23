@@ -2160,9 +2160,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
                           'Volcanic': 1})
         self.assertEqual(fs_bg_model_lt.get_num_branches(),
                          {'Active Shallow Crust': 4,
-                          'Shield': 0,
-                          'Stable Shallow Crust': 5,
-                          'Volcanic': 0})
+                          'Stable Shallow Crust': 5})
         self.assertEqual(as_model_lt.get_num_paths(), 40)
         self.assertEqual(fs_bg_model_lt.get_num_paths(), 20)
         self.assertEqual(len(list(as_model_lt)), 5 * 4 * 2 * 1)
