@@ -1312,7 +1312,7 @@ class GsimLogicTree(object):
             (weight, float) for weight in sorted(weights)]
         branches = [(b.trt, b.id, b.gsim) +
                     tuple(b.weight[weight] for weight in sorted(weights))
-                    for b in self.branches]
+                    for b in self.branches if b.effective]
         dic = {'branches': numpy.array(branches, dt)}
         if hasattr(self, 'filename'):
             # missing in EventBasedRiskTestCase case_1f
