@@ -511,9 +511,6 @@ def get_gsim_lt(oqparam, trts=('*',)):
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             {StdDev.TOTAL}):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
-    trts = set(oqparam.minimum_magnitude) - {'default'}
-    expected_trts = set(gsim_lt.values)
-    assert trts <= expected_trts, (trts, expected_trts)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
         logging.error('IMT-dependent weights in the logic tree cannot work '
