@@ -290,10 +290,10 @@ hazard_uhs-std.csv
         numpy.testing.assert_equal(
             ra.by_grp()['grp-01'], ra0.by_grp()['grp-01'])
 
-        # reduction of the gsim logic tree
+        # not reducing the gsim logic tree
         ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
         self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
-        numpy.testing.assert_equal(ra.by_grp()['grp-00'], [[0, 1]])
+        numpy.testing.assert_equal(ra.by_grp()['grp-00'], [[0, 1], [2, 3]])
 
         # check deserialization of source_model_lt
         #smlt = self.calc.datastore['source_model_lt']

@@ -262,13 +262,11 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                     # print the warning only when saving the logic tree,
                     # i.e. when called with sm_lt_path in store_rlz_info
                     logging.warning(
-                        'Reducing the logic tree of %s from %d to %d '
+                        'Should reduce the logic tree of %s from %d to %d '
                         'realizations', smodel.name, before, after)
-                rlzs = get_effective_rlzs(gsim_lt)
-                all_trts = list(gsim_lt.values)
-            else:
-                rlzs = get_effective_rlzs(cinfo.gsim_lt)
-                all_trts = list(cinfo.gsim_lt.values)
+
+            rlzs = get_effective_rlzs(cinfo.gsim_lt)
+            all_trts = list(cinfo.gsim_lt.values)
 
         assoc._add_realizations(offset, smodel, all_trts, rlzs)
         offset += len(rlzs)
