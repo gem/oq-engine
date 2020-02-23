@@ -737,8 +737,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight['default'], 1.)
-        self.assertEqual(
-            str(assoc), "<RlzsAssoc(size=2, rlzs=1)>")
+        self.assertEqual(str(assoc), "<RlzsAssoc(size=1, rlzs=1)>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -778,7 +777,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         csm = readinput.get_composite_source_model(oq)
         csm.info.update_eff_ruptures(lambda tm: 1)
         assoc = csm.info.get_rlzs_assoc()
-        self.assertEqual(str(assoc), "<RlzsAssoc(size=2, rlzs=5)>")
+        self.assertEqual(str(assoc), "<RlzsAssoc(size=5, rlzs=5)>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()
