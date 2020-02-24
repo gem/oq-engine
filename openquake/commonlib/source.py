@@ -96,19 +96,15 @@ class CompositionInfo(object):
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             ordinal=0, samples=1)
-        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
-                   min_mag=0, max_mag=0)
+        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
     get_rlzs_assoc = get_rlzs_assoc
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models,
-                 min_mag, max_mag):
+    def __init__(self, gsim_lt, seed, num_samples, source_models):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
-        self.min_mag = min_mag
-        self.max_mag = max_mag
         self.init()
 
     def init(self):
@@ -194,8 +190,7 @@ class CompositionInfo(object):
             sg_data=numpy.array(sg_data, src_group_dt),
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=hdf5.array_of_vstr(sorted(trti)),
-                     min_mag=self.min_mag, max_mag=self.max_mag))
+                     trts=hdf5.array_of_vstr(sorted(trti))))
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
@@ -324,20 +319,10 @@ class CompositeSourceModel(collections.abc.Sequence):
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()
-        min_mags, max_mags = [], []
-        for sm in source_models:
-            for sg in sm.src_groups:
-                for src in sg:
-                    if hasattr(src, 'get_min_max_mag'):
-                        m1, m2 = src.get_min_max_mag()
-                        min_mags.append(m1)
-                        max_mags.append(m2)
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
-            [sm.get_skeleton() for sm in self.source_models],
-            min(min_mags) if min_mags else 0,
-            max(max_mags) if max_mags else 0)
+            [sm.get_skeleton() for sm in self.source_models])
 
     def grp_by_src(self):
         """
