@@ -1328,8 +1328,8 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
         num_events = len(losses)
     elif num_events < len(losses):
         raise ValueError(
-            'There are not enough events (%d) to compute the loss curve '
-            'from %d losses' % (num_events, len(losses)))
+            'There are not enough events (%d) to compute the loss curve'
+            % num_events)
     if eff_time is None:
         eff_time = return_periods[-1]
     losses = numpy.sort(losses)
@@ -1394,13 +1394,16 @@ class LossCurvesMapsBuilder(object):
         L = len(self.loss_dt.names)
         array = numpy.zeros((P, R, L), F32)
         for r in losses_by_event:
-            num_events = self.num_events[r]
+            num_events = self.num_events.get(r, 0)
             losses = losses_by_event[r]
             for l, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, l].flatten()  # flatten only in ucerf
                 # NB: do not use squeeze or the gmf_ebrisk tests will break
-                lbp = losses_by_period(
-                    ls, self.return_periods, num_events, self.eff_time)
+                try:
+                    lbp = losses_by_period(
+                        ls, self.return_periods, num_events, self.eff_time)
+                except ValueError as exc:
+                    raise exc.__class__('%s for %s, rlz=' % (exc, lt, r))
                 array[:, r, l] = lbp
         return self.pair(array, stats)
 
@@ -1408,7 +1411,7 @@ class LossCurvesMapsBuilder(object):
     def build_curve(self, asset_value, loss_ratios, rlzi):
         return asset_value * losses_by_period(
             loss_ratios, self.return_periods,
-            self.num_events[rlzi], self.eff_time)
+            self.num_events.get(rlzi, 0), self.eff_time)
 
     # used in event_based_risk
     def build_maps(self, curves, clp, stats=()):
@@ -1435,7 +1438,7 @@ class LossCurvesMapsBuilder(object):
         shp = loss_arrays[0].shape  # (L, T...)
         P = len(self.return_periods)
         curves = numpy.zeros((P,) + shp, F32)
-        num_events = self.num_events[rlzi]
+        num_events = self.num_events.get(rlzi, 0)
         acc = collections.defaultdict(list)
         for loss_array in loss_arrays:
             for idx, loss in numpy.ndenumerate(loss_array):
