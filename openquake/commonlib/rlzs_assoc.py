@@ -129,13 +129,14 @@ class RlzsAssoc(object):
         :returns: a dictionary grp -> rlzis
         """
         dic = {}  # grp -> rlzis
+        n = len(self.csm_info.source_models)
         for sm in self.csm_info.source_models:
             for trti, trt in enumerate(self.csm_info.gsim_lt.values):
                 rlzs_by_gsim = self.get_rlzs_by_gsim(trt, sm.ordinal)
                 rows = list(rlzs_by_gsim.values())
                 if len(set(map(len, rows))) == 1:  # all the same length
                     rows = numpy.array(rows)  # convert rows into 2D array
-                dic['grp-%02d' % trti] = rows
+                dic['grp-%02d' % (trti * n + sm.ordinal)] = rows
         return dic
 
     def _init(self):
