@@ -24,6 +24,7 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib.general import assert_close
+from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
@@ -766,10 +767,6 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         expected_assoc = "<RlzsAssoc(size=9, rlzs=18)>"
         self.assertEqual(str(assoc), expected_assoc)
 
-        # removing all src_groups
-        csm.info.update_eff_ruptures(lambda t: 0)
-        self.assertEqual(csm.info.get_rlzs_assoc().realizations, [])
-
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
         oq = readinput.get_oqparam(
@@ -785,3 +782,6 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(csm.info).
                          replace('0.6000000000000001', '0.6'))
+
+    def tearDown(self):
+        Starmap.shutdown()
