@@ -43,7 +43,7 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
-memoized = lru_cache(100)
+memoized = lru_cache()
 
 
 class NotFound(Exception):
