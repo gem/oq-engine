@@ -1116,6 +1116,14 @@ class SourceModelLogicTree(object):
         """
         return lambda gid, n=len(self.get_eff_rlzs()): divmod(gid, n)
 
+    def get_grp_id(self, trts):
+        """
+        :returns: a function trt, eri -> grp_id
+        """
+        trti = {trt: i for i, trt in enumerate(trts)}
+        return (lambda trt, eri, n=len(self.get_eff_rlzs()):
+                trti[trt] * n + int(eri))
+
     def __toh5__(self):
         tbl = []
         for brid, br in self.branches.items():

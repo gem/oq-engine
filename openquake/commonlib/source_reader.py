@@ -267,30 +267,6 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     return _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5)
 
 
-# NB: using this breaks case_global_eb
-def merge_groups(groups):
-    """
-    :param groups:
-        a list of :class:`openquake.hazardlib.sourceconverter.SourceGroup`s
-    :returns:
-        a reduced list of SourceGroups where groups with the same TRT are
-        merged together (unless they are atomic)
-    """
-    lst = []
-    acc = {}  # trt -> SourceGroup
-    for grp in groups:
-        if grp.atomic:
-            lst.append(grp)
-        else:
-            try:
-                g = acc[grp.trt]
-            except KeyError:
-                g = acc[grp.trt] = sourceconverter.SourceGroup(grp.trt)
-                lst.append(g)
-            g.sources.extend(grp.sources)
-    return lst
-
-
 def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     mags = set()
     changes = 0
@@ -311,11 +287,7 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                         "inconsistent with the ones in %r" %
                         (ltm, src_group.trt, gsim_file))
     # set src_group_ids
-    trti = {trt: i for i, trt in enumerate(gsim_lt.values)}
-
-    def get_grp_id(trt, eri):
-        return trti[trt] * len(lt_models) + int(eri)
-
+    get_grp_id = source_model_lt.get_grp_id(gsim_lt.values)
     for ltm in lt_models:
         for grp in groups[ltm.ordinal]:
             grp.id = grp_id = get_grp_id(grp.trt, ltm.ordinal)
