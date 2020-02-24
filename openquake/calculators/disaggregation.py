@@ -264,11 +264,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.trts = trts
 
         # build mag_edges
-        min_mag = csm_info.min_mag
-        max_mag = csm_info.max_mag
+        mags = [float(mag) for mag in self.datastore['source_mags']]
         mag_edges = oq.mag_bin_width * numpy.arange(
-            int(numpy.floor(min_mag / oq.mag_bin_width)),
-            int(numpy.ceil(max_mag / oq.mag_bin_width) + 1))
+            int(numpy.floor(min(mags) / oq.mag_bin_width)),
+            int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
 
         # build dist_edges
         maxdist = max(oq.maximum_distance(trt) for trt in trts)
@@ -279,7 +278,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
         # build lon_edges, lat_edges per sid
-        bbs = src_filter.get_bounding_boxes(mag=max_mag)
+        bbs = src_filter.get_bounding_boxes(mag=max(mags))
         lon_edges, lat_edges = {}, {}  # by sid
         for sid, bb in zip(self.sitecol.sids, bbs):
             lon_edges[sid], lat_edges[sid] = disagg.lon_lat_bins(
