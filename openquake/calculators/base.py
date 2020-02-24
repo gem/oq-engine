@@ -499,6 +499,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
+            self.datastore['rlzs_by_grp'] = self.rlzs_assoc.by_grp()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
             parent = util.read(oq.hazard_calculation_id)
