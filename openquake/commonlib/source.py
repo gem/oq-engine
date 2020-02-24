@@ -173,6 +173,12 @@ class CompositionInfo(object):
                           for src_group in sm.src_groups))
         return {trt: i for i, trt in enumerate(trts)}
 
+    def get_grp_ids(self, eri):
+        """
+        :returns: the groups IDs associated to the given eri
+        """
+        return numpy.arange(len(self.gsim_lt.values)) + eri
+
     def __toh5__(self):
         # save csm_info/sg_data, csm_info/sm_data in the datastore
         trti = self.trt2i()
@@ -267,12 +273,6 @@ class CompositionInfo(object):
         else:
             gsims_by_trt = self.gsim_lt.values
         return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
-
-    def get_grp_ids(self, sm_id):
-        """
-        :returns: a list of source group IDs for the given source model ID
-        """
-        return [sg.id for sg in self.source_models[sm_id].src_groups]
 
     def get_sm_by_grp(self):
         """
