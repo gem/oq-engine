@@ -25,6 +25,8 @@ import collections
 NP = collections.namedtuple('NP', 'strike dip rake')
 
 
+# NB: instantiating NodalPlane returns instances of NP, so it is a hack,
+# but it is the simplest solution that maintains backward compatibility
 class NodalPlane(object):
     """
     Nodal plane represents earthquake rupture orientation and propagation

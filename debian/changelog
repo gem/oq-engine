@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in case of duplicated nodal planes affecting the Italy model
   * Removed dynamic reduction of the gsim logic tree (i.e. now the
     logic tree is known upfront, before calculating the PoES)
 
