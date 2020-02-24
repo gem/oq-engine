@@ -764,12 +764,8 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
                 return 1
         csm.info.update_eff_ruptures(count_ruptures)
         assoc = csm.info.get_rlzs_assoc()
-        expected_assoc = "<RlzsAssoc(size=9, rlzs=18)>"
+        expected_assoc = "<RlzsAssoc(size=45, rlzs=18)>"
         self.assertEqual(str(assoc), expected_assoc)
-
-        # removing all src_groups
-        csm.info.update_eff_ruptures(lambda t: 0)
-        self.assertEqual(csm.info.get_rlzs_assoc().realizations, [])
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
