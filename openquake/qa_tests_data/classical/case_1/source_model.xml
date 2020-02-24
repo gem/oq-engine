@@ -38,9 +38,11 @@ xmlns:gml="http://www.opengis.net/gml"
           1
         </occurRates>
       </incrementalMFD>
-      <nodalPlaneDist>        
-        <nodalPlane dip="90" probability=".5" rake="0" strike="0"/>
-        <nodalPlane dip="90" probability=".5" rake="0" strike="0"/>
+      <nodalPlaneDist>
+        <nodalPlane strike="144" dip="87" rake="-179" probability="0.25"/>
+        <nodalPlane strike="144" dip="87" rake="-179" probability="0.25"/>
+        <nodalPlane strike="0" dip="90" rake="0" probability="0.25"/>
+        <nodalPlane strike="90" dip="90" rake="0" probability="0.25"/>
       </nodalPlaneDist>
       <hypoDepthDist>
         <hypoDepth depth="4" probability="1"/>

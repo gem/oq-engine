@@ -20,10 +20,11 @@
 Module :mod:`openquake.hazardlib.geo.nodalplane` implements
 :class:`NodalPlane`.
 """
-from openquake.baselib.slots import with_slots
+import collections
+
+NP = collections.namedtuple('NP', 'strike dip rake')
 
 
-@with_slots
 class NodalPlane(object):
     """
     Nodal plane represents earthquake rupture orientation and propagation
@@ -41,20 +42,12 @@ class NodalPlane(object):
     :raises ValueError:
         If any of parameters exceeds the definition range.
     """
-    _slots_ = ['strike', 'dip', 'rake']
 
-    def __init__(self, strike, dip, rake):
-        self.check_dip(dip)
-        self.check_rake(rake)
-        self.check_strike(strike)
-        self.strike = strike
-        self.dip = dip
-        self.rake = rake
-
-    def __iter__(self):
-        yield self.strike
-        yield self.dip
-        yield self.rake
+    def __new__(cls, strike, dip, rake):
+        cls.check_dip(dip)
+        cls.check_rake(rake)
+        cls.check_strike(strike)
+        return NP(strike, dip, rake)
 
     @classmethod
     def check_dip(cls, dip):
@@ -82,6 +75,3 @@ class NodalPlane(object):
         """
         if not (rake == 'undefined' or -180 < rake <= 180):
             raise ValueError('rake %g is out of range (-180, 180]' % rake)
-
-    def __hash__(self):
-        return hash(tuple(self))

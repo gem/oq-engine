@@ -64,10 +64,8 @@ def fix_dupl(dist, fname=None, lineno=None):
             logging.warning('There were repeated values %s in %s:%s',
                             got, fname, lineno)
             assert abs(sum(values.values()) - 1) < EPSILON  # sanity check
-            newdist = sorted([(p, v) for v, p in values.items()])
-            if isinstance(newdist[0][1], tuple):
-                newdist = [(p, geo.nodal_plane.NodalPlane(*v))
-                           for p, v in newdist]
+            newdist = [(p, geo.nodalplane.NodalPlane(*v))
+                       for p, v in sorted([(p, v) for v, p in values.items()])]
             # run hazardlib/tests/data/context/job.ini to check this;
             # you will get [(0.2, 6.0), (0.2, 8.0), (0.2, 10.0), (0.4, 2.0)]
             dist[:] = newdist
