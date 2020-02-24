@@ -134,6 +134,8 @@ class RlzsAssoc(object):
             for trti, trt in enumerate(self.csm_info.gsim_lt.values):
                 rlzs_by_gsim = self.get_rlzs_by_gsim(trt, sm.ordinal)
                 rows = list(rlzs_by_gsim.values())
+                if not rows:
+                    continue
                 if len(set(map(len, rows))) == 1:  # all the same length
                     rows = numpy.array(rows)  # convert rows into 2D array
                 dic['grp-%02d' % (trti * n + sm.ordinal)] = rows

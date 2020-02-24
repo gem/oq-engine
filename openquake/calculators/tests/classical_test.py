@@ -261,11 +261,12 @@ hazard_uhs-std.csv
         cinfo = self.calc.datastore['csm_info']
         ra0 = cinfo.get_rlzs_assoc()
         self.assertEqual(
-            sorted(ra0.by_grp()), ['grp-00', 'grp-01', 'grp-02', 'grp-03'])
+            sorted(ra0.by_grp()), ['grp-00', 'grp-01', 'grp-02', 'grp-03',
+                                   'grp-04', 'grp-05'])
 
         # reduction of the source model logic tree
         ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM2', 'a3b1'])
-        self.assertEqual(len(ra.by_grp()), 1)
+        self.assertEqual(len(ra.by_grp()), 2)
         numpy.testing.assert_equal(
             len(ra.by_grp()['grp-01']),
             len(ra0.by_grp()['grp-00']))
@@ -288,8 +289,9 @@ hazard_uhs-std.csv
 
         # not reducing the gsim logic tree
         ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
-        self.assertEqual(sorted(ra.by_grp()),
-                         ['grp-00', 'grp-01', 'grp-02', 'grp-03'])
+        self.assertEqual(
+            sorted(ra.by_grp()),
+            ['grp-00', 'grp-01', 'grp-02', 'grp-03', 'grp-04', 'grp-05'])
         numpy.testing.assert_equal(ra.by_grp()['grp-00'], [[0, 1], [2, 3]])
 
         # check deserialization of source_model_lt
