@@ -131,8 +131,6 @@ class RlzsAssoc(object):
         dic = {}  # grp -> rlzis
         for sm in self.csm_info.source_models:
             for sg in sm.src_groups:
-                if not sg.eff_ruptures:
-                    continue
                 rlzs_by_gsim = self.get_rlzs_by_gsim(sg.trt, sm.ordinal)
                 if not rlzs_by_gsim:
                     continue
@@ -245,8 +243,6 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                 if sg.eff_ruptures:
                     if (trts and sg.trt in trts) or not trts:
                         trts_.add(sg.trt)
-            if not trts_:
-                continue
 
             # recompute the GSIM logic tree if needed
             if trts_ != {'*'} and trtset != trts_:
