@@ -257,18 +257,6 @@ hazard_uhs-std.csv
         arr = numpy.load(fname)['all']
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
-        # here is the size of assoc_by_grp for a complex logic tree
-        # grp_id gsim_idx rlzis
-        # 00 {0, 1}
-        # 01 {2, 3}
-        # 10 {0, 2}
-        # 11 {1, 3}
-        # 20 {4}
-        # 21 {5}
-        # 30 {6}
-        # 31 {7}
-        # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
-
         # full source model logic tree
         cinfo = self.calc.datastore['csm_info']
         ra0 = cinfo.get_rlzs_assoc()
@@ -279,16 +267,24 @@ hazard_uhs-std.csv
         ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM2', 'a3b1'])
         self.assertEqual(len(ra.by_grp()), 1)
         numpy.testing.assert_equal(
-            len(ra.by_grp()['grp-02']),
-            len(ra0.by_grp()['grp-02']))
+            len(ra.by_grp()['grp-01']),
+            len(ra0.by_grp()['grp-00']))
 
         # more reduction of the source model logic tree
         ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM1'])
-        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
-        numpy.testing.assert_equal(
-            ra.by_grp()['grp-00'], ra0.by_grp()['grp-00'])
-        numpy.testing.assert_equal(
-            ra.by_grp()['grp-01'], ra0.by_grp()['grp-01'])
+        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-03'])
+        '''
+        ra0.by_grp() = {'grp-00': array([[0, 1], [2, 3]], dtype=uint32),
+                        'grp-03': array([[0, 2], [1, 3]], dtype=uint32),
+                        'grp-01': array([[4, 5], [6, 7]], dtype=uint32),
+                        'grp-02': array([[ 8,  9], [10, 11]], dtype=uint32)}
+        ra.by_grp() = {'grp-00': array([[0, 1], [2, 3]], dtype=uint32),
+                       'grp-03': array([[0, 2], [1, 3]], dtype=uint32)}
+        '''
+        dic0 = ra0.by_grp()
+        dic = ra.by_grp()
+        for grp in dic:
+            numpy.testing.assert_equal(dic[grp], dic0[grp])
 
         # not reducing the gsim logic tree
         ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])

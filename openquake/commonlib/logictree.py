@@ -30,6 +30,7 @@ import re
 import copy
 import time
 import logging
+import functools
 import itertools
 import collections
 import operator
@@ -1097,6 +1098,7 @@ class SourceModelLogicTree(object):
                 sg.changes += changes
         return sg  # something changed
 
+    @functools.lru_cache()
     def get_eff_rlzs(self):
         """
         :returns: an array of effective realization of dtype rlz_dt
@@ -1107,6 +1109,12 @@ class SourceModelLogicTree(object):
             arr[rlz.ordinal] = (rlz.ordinal, rlz.lt_path, rlz.weight,
                                 rlz.value, rlz.samples)
         return arr
+
+    def get_trti_eri(self):
+        """
+        :returns: a function grp_id -> (trti, eri)
+        """
+        return lambda gid, n=len(self.get_eff_rlzs()): divmod(gid, n)
 
     def __toh5__(self):
         tbl = []
@@ -1468,7 +1476,8 @@ class GsimLogicTree(object):
                 bt = BranchTuple(
                     branchset['applyToTectonicRegionType'],
                     branch_id, gsim, weight, effective)
-                branches.append(bt)
+                if effective:
+                    branches.append(bt)
             tot = sum(weights)
             assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
             if duplicated(branch_ids):

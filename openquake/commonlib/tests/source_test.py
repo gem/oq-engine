@@ -24,6 +24,7 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib.general import assert_close
+from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
@@ -737,8 +738,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight['default'], 1.)
-        self.assertEqual(
-            str(assoc), "<RlzsAssoc(size=2, rlzs=1)>")
+        self.assertEqual(str(assoc), "<RlzsAssoc(size=1, rlzs=1)>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -764,7 +764,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
                 return 1
         csm.info.update_eff_ruptures(count_ruptures)
         assoc = csm.info.get_rlzs_assoc()
-        expected_assoc = "<RlzsAssoc(size=45, rlzs=18)>"
+        expected_assoc = "<RlzsAssoc(size=9, rlzs=18)>"
         self.assertEqual(str(assoc), expected_assoc)
 
     def test_oversampling(self):
@@ -774,7 +774,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         csm = readinput.get_composite_source_model(oq)
         csm.info.update_eff_ruptures(lambda tm: 1)
         assoc = csm.info.get_rlzs_assoc()
-        self.assertEqual(str(assoc), "<RlzsAssoc(size=2, rlzs=5)>")
+        self.assertEqual(str(assoc), "<RlzsAssoc(size=5, rlzs=5)>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()
@@ -782,3 +782,6 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(csm.info).
                          replace('0.6000000000000001', '0.6'))
+
+    def tearDown(self):
+        Starmap.shutdown()

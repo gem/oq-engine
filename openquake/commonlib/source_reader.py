@@ -310,11 +310,15 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                         "Found in %r a tectonic region type %r "
                         "inconsistent with the ones in %r" %
                         (ltm, src_group.trt, gsim_file))
-    # global checks
-    grp_id = 0
+    # set src_group_ids
+    trti = {trt: i for i, trt in enumerate(gsim_lt.values)}
+
+    def get_grp_id(trt, eri):
+        return trti[trt] * len(lt_models) + int(eri)
+
     for ltm in lt_models:
         for grp in groups[ltm.ordinal]:
-            grp.id = grp_id
+            grp.id = grp_id = get_grp_id(grp.trt, ltm.ordinal)
             for src in grp:
                 src.src_group_id = grp_id
             ltm.src_groups.append(grp)

@@ -43,7 +43,7 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
-memoized = lru_cache(100)
+memoized = lru_cache()
 
 
 class NotFound(Exception):
@@ -943,9 +943,9 @@ def extract_mfd(dstore, what):
     qdic = parse(what)
     kind_mean = 'mean' in qdic.get('kind', [])
     kind_by_group = 'by_group' in qdic.get('kind', [])
-    weights = dstore['csm_info/sm_data']['weight']
-    sm_idx = dstore['csm_info/sg_data']['sm_id']
-    grp_weight = weights[sm_idx]
+    csm_info = dstore['csm_info']
+    weights = [sm.weight for sm in csm_info.source_models]
+    n = len(weights)
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     dic = {'duration': duration}
     dd = collections.defaultdict(float)
@@ -956,7 +956,7 @@ def extract_mfd(dstore, what):
     frequencies = numpy.zeros((len(mags), num_groups), float)
     for grp_id, mag, n_occ in rups:
         if kind_mean:
-            dd[mag] += n_occ * grp_weight[grp_id] / duration
+            dd[mag] += n_occ * weights[grp_id % n] / duration
         if kind_by_group:
             frequencies[magidx[mag], grp_id] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)

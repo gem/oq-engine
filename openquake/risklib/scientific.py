@@ -288,7 +288,7 @@ class VulnerabilityFunction(object):
         assert covs is None or all(x >= 0.0 for x in covs)
         assert distribution in ["LN", "BT"]
 
-    @lru_cache(100)
+    @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
@@ -303,7 +303,7 @@ class VulnerabilityFunction(object):
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
 
-    @lru_cache(100)
+    @lru_cache()
     def mean_imls(self):
         """
         Compute the mean IMLs (Intensity Measure Level)
@@ -434,7 +434,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.set_distribution(epsilons)
         return self.distribution.sample(self.loss_ratios, probs)
 
-    @lru_cache(100)
+    @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
