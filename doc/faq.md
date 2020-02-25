@@ -165,7 +165,7 @@ More information is available on [Running the OpenQuake Engine](running/unix.md)
 
 The default port for the DbServer (configured via the `openquake.cfg`
 configuration file) is `1908` (for a development installation) or `1907`
-(for an installation from packages).
+(for a package installation).
 
 ******
 
