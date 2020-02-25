@@ -77,11 +77,12 @@ Realization = namedtuple('Realization', 'value weight ordinal lt_path samples')
 Realization.pid = property(lambda self: '_'.join(self.lt_path))  # path ID
 
 rlz_dt = numpy.dtype([
-    ('ordinal', numpy.uint16),
+    ('ordinal', numpy.uint32),
     ('lt_path', hdf5.vstr),
     ('weight', numpy.float64),
     ('value', hdf5.vstr),
-    ('samples', numpy.uint16),
+    ('samples', numpy.uint32),
+    ('offset', numpy.uint32),
 ])
 
 
@@ -1105,9 +1106,11 @@ class SourceModelLogicTree(object):
         """
         rlzs = get_effective_rlzs(self)
         arr = numpy.zeros(len(rlzs), rlz_dt)
+        offset = 0
         for rlz in rlzs:
             arr[rlz.ordinal] = (rlz.ordinal, rlz.lt_path, rlz.weight,
-                                rlz.value, rlz.samples)
+                                rlz.value, rlz.samples, offset)
+            offset += rlz.samples
         return arr
 
     def get_trti_eri(self):

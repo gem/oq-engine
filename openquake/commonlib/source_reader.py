@@ -89,13 +89,15 @@ class LtSourceModel(object):
     A container of SourceGroup instances with some additional attributes
     describing the source model in the logic tree.
     """
-    def __init__(self, names, weight, path, src_groups, ordinal, samples):
+    def __init__(self, names, weight, path, src_groups, ordinal, samples,
+                 offset):
         self.names = ' '.join(names.split())  # replace newlines with spaces
         self.weight = weight
         self.path = path
         self.src_groups = src_groups
         self.ordinal = ordinal
         self.samples = samples
+        self.offset = offset
 
     @property
     def name(self):
@@ -128,7 +130,7 @@ class LtSourceModel(object):
             sg.sources = []
             src_groups.append(sg)
         return self.__class__(self.names, self.weight, self.path, src_groups,
-                              self.ordinal, self.samples)
+                              self.ordinal, self.samples, self.offset)
 
     def __repr__(self):
         samples = ', samples=%d' % self.samples if self.samples > 1 else ''
@@ -231,7 +233,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     for rlz in rlzs:
         ltm = LtSourceModel(
             rlz['value'], rlz['weight'], rlz['lt_path'], [],
-            rlz['ordinal'], rlz['samples'])
+            rlz['ordinal'], rlz['samples'], rlz['offset'])
         lt_models.append(ltm)
     if oq.calculation_mode.startswith('ucerf'):
         idx = 0

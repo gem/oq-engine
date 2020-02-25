@@ -457,14 +457,14 @@ def gen_rgetters(dstore, slc=slice(None)):
     :yields: unfiltered RuptureGetters
     """
     csm_info = dstore['csm_info']
-    trt_by_grp = csm_info.grp_by("trt")
+    trt_by_grp = csm_info.trt_by_grp
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     ct = dstore['oqparam'].concurrent_tasks or 1
     nr = len(dstore['ruptures'])
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
-        if not rlzs_by_gsim[grp_id]:  # the model has no sources
+        if not rlzs_by_gsim.get(grp_id, []):  # the model has no sources
             continue
         for block in general.split_in_blocks(arr, len(arr) / nr * ct):
             rgetter = RuptureGetter(
@@ -485,7 +485,7 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     :yields: filtered RuptureGetters
     """
     csm_info = dstore['csm_info']
-    trt_by_grp = csm_info.grp_by("trt")
+    trt_by_grp = csm_info.trt_by_grp
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]

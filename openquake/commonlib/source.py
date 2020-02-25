@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, group_array, AccumDict
+from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree, source_reader
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
@@ -47,6 +47,7 @@ source_model_dt = numpy.dtype([
     ('weight', F32),
     ('path', hdf5.vstr),
     ('samples', U32),
+    ('offset', U32),
 ])
 
 src_group_dt = numpy.dtype(
@@ -95,7 +96,7 @@ class CompositionInfo(object):
         fakeSM = source_reader.LtSourceModel(
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
-            ordinal=0, samples=1)
+            ordinal=0, samples=1, offset=0)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
     get_rlzs_assoc = get_rlzs_assoc
@@ -108,14 +109,12 @@ class CompositionInfo(object):
         self.init()
 
     def init(self):
-        self.trt_by_grp = self.grp_by("trt")
-        if self.num_samples:
-            self.seed_samples_by_grp = {}
-            seed = self.seed
-            for sm in self.source_models:
-                for grp in sm.src_groups:
-                    self.seed_samples_by_grp[grp.id] = seed, sm.samples
-                seed += sm.samples
+        self.trt_by_grp = {}
+        n = len(self.source_models)
+        trts = list(self.gsim_lt.values)
+        for smodel in self.source_models:
+            for grp_id in self.grp_ids(smodel.ordinal):
+                self.trt_by_grp[grp_id] = trts[grp_id // n]
 
     def get_info(self, sm_id):
         """
@@ -145,20 +144,30 @@ class CompositionInfo(object):
         else:
             return "complex" + num_gsims, num_paths
 
+    def grp_ids(self, eri):
+        """
+        :param eri: effective realization index
+        :returns: array of T group IDs, being T the number of TRTs
+        """
+        nt = len(self.gsim_lt.values)
+        ns = len(self.source_models)
+        return eri + numpy.arange(nt) * ns
+
     def get_samples_by_grp(self):
         """
         :returns: a dictionary src_group_id -> source_model.samples
         """
-        return {grp.id: sm.samples for sm in self.source_models
-                for grp in sm.src_groups}
+        return {grp_id: sm.samples for sm in self.source_models
+                for grp_id in self.grp_ids(sm.ordinal)}
 
     def get_rlzs_by_gsim_grp(self, sm_lt_path=None, trts=None):
         """
         :returns: a dictionary src_group_id -> gsim -> rlzs
         """
         self.rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
-        dic = {grp.id: self.rlzs_assoc.get_rlzs_by_gsim(grp.id)
-               for sm in self.source_models for grp in sm.src_groups}
+        dic = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+               for sm in self.source_models for grp_id in self.grp_ids(
+                       sm.ordinal)}
         return dic
 
     def __getnewargs__(self):
@@ -174,44 +183,29 @@ class CompositionInfo(object):
         return {trt: i for i, trt in enumerate(trts)}
 
     def __toh5__(self):
-        # save csm_info/sg_data, csm_info/sm_data in the datastore
+        # save csm_info/sm_data in the datastore
         trti = self.trt2i()
-        sg_data = []
         sm_data = []
         for sm in self.source_models:
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
-                            sm.samples))
-            for src_group in sm.src_groups:
-                sg_data.append((src_group.id, src_group.name,
-                                trti[src_group.trt], src_group.eff_ruptures,
-                                src_group.tot_ruptures, sm.ordinal))
+                            sm.samples, sm.offset))
         return (dict(
             gsim_lt=self.gsim_lt,
-            sg_data=numpy.array(sg_data, src_group_dt),
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(sorted(trti))))
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
-        sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
         self.gsim_lt = dic['gsim_lt']
         self.source_models = []
         for sm_id, rec in enumerate(sm_data):
-            tdata = sg_data[sm_id]
-            srcgroups = [
-                sourceconverter.SourceGroup(
-                    self.trts[data['trti']], id=data['grp_id'],
-                    name=get_field(data, 'name', ''),
-                    eff_ruptures=data['effrup'],
-                    tot_ruptures=get_field(data, 'totrup', 0))
-                for data in tdata]
             path = tuple(str(decode(rec['path'])).split('_'))
             sm = source_reader.LtSourceModel(
-                rec['name'], rec['weight'], path, srcgroups,
-                sm_id, rec['samples'])
+                rec['name'], rec['weight'], path, [],
+                sm_id, rec['samples'], rec['offset'])
             self.source_models.append(sm)
         self.init()
 
@@ -268,42 +262,22 @@ class CompositionInfo(object):
             gsims_by_trt = self.gsim_lt.values
         return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
 
-    def get_grp_ids(self, sm_id):
-        """
-        :returns: a list of source group IDs for the given source model ID
-        """
-        return [sg.id for sg in self.source_models[sm_id].src_groups]
-
     def get_sm_by_grp(self):
         """
         :returns: a dictionary grp_id -> sm_id
         """
-        return {grp.id: sm.ordinal for sm in self.source_models
-                for grp in sm.src_groups}
-
-    def grp_by(self, name):
-        """
-        :returns: a dictionary grp_id -> group attribute
-        """
-        dic = {}
-        for smodel in self.source_models:
-            for src_group in smodel.src_groups:
-                dic[src_group.id] = getattr(src_group, name)
-        return dic
+        return {grp_id: sm.ordinal for sm in self.source_models
+                for grp_id in self.grp_ids(sm.ordinal)}
 
     def __repr__(self):
         info_by_model = {}
         for sm in self.source_models:
             info_by_model[sm.path] = (
                 '_'.join(map(decode, sm.path)),
-                decode(sm.names),
-                [sg.id for sg in sm.src_groups],
-                sm.weight,
-                self.get_num_rlzs(sm))
-        summary = ['%s, %s, grp=%s, weight=%s: %d realization(s)' % ibm
+                decode(sm.names), sm.weight, self.get_num_rlzs(sm))
+        summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]
-        return '<%s\n%s>' % (
-            self.__class__.__name__, '\n'.join(summary))
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
 
 
 class CompositeSourceModel(collections.abc.Sequence):
@@ -329,18 +303,16 @@ class CompositeSourceModel(collections.abc.Sequence):
         :returns: a new CompositeSourceModel with one group per source
         """
         smodels = []
-        grp_id = 0
         for sm in self.source_models:
             src_groups = []
             smodel = sm.__class__(sm.names, sm.weight, sm.path, src_groups,
-                                  sm.ordinal, sm.samples)
+                                  sm.ordinal, sm.samples, sm.offset)
             for sg in sm.src_groups:
                 for src in sg.sources:
-                    src.src_group_id = grp_id
+                    src.src_group_id = sg.id
                     src_groups.append(
                         sourceconverter.SourceGroup(
-                            sg.trt, [src], name=src.source_id, id=grp_id))
-                    grp_id += 1
+                            sg.trt, [src], name=src.source_id, id=sg.id))
             smodels.append(smodel)
         return self.__class__(self.gsim_lt, self.source_model_lt, smodels)
 
@@ -374,7 +346,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 src_groups.append(sg)
             newsm = source_reader.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
-                sm.ordinal, sm.samples)
+                sm.ordinal, sm.samples, sm.offset)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         new.info.update_eff_ruptures(new.get_num_ruptures())

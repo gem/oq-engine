@@ -42,7 +42,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 MINWEIGHT = 1000
 weight = operator.attrgetter('weight')
-grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
+grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
@@ -411,9 +411,7 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        trt_by_grp = self.csm_info.grp_by("trt")
-        grp_name = {grp.id: grp.name for sm in self.csm_info.source_models
-                    for grp in sm.src_groups}
+        trt_by_grp = self.csm_info.trt_by_grp
         data = []
         with self.monitor('saving probability maps'):
             for grp_id, pmap in pmap_by_grp_id.items():
@@ -426,7 +424,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
-                    data.append((grp_id, grp_name[grp_id], extreme))
+                    data.append((grp_id, trt_by_grp[grp_id], extreme))
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
