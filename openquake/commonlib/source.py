@@ -281,14 +281,10 @@ class CompositionInfo(object):
         for sm in self.source_models:
             info_by_model[sm.path] = (
                 '_'.join(map(decode, sm.path)),
-                decode(sm.names),
-                [sg.id for sg in sm.src_groups],
-                sm.weight,
-                self.get_num_rlzs(sm))
-        summary = ['%s, %s, grp=%s, weight=%s: %d realization(s)' % ibm
+                decode(sm.names), sm.weight, self.get_num_rlzs(sm))
+        summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]
-        return '<%s\n%s>' % (
-            self.__class__.__name__, '\n'.join(summary))
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
 
 
 class CompositeSourceModel(collections.abc.Sequence):
