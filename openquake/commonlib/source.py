@@ -160,14 +160,30 @@ class CompositionInfo(object):
         return {grp_id: sm.samples for sm in self.source_models
                 for grp_id in self.grp_ids(sm.ordinal)}
 
-    def get_rlzs_by_gsim_grp(self, sm_lt_path=None, trts=None):
+    def get_rlzs_by_gsim(self, grp_id):
+        trti, eri = divmod(grp_id, len(self.source_models))
+        sm = self.source_models[eri]
+        if self.num_samples:
+            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+        elif hasattr(self, 'gsim_rlzs'):  # cache
+            gsim_rlzs = self.gsim_rlzs
+        else:
+            self.gsim_rlzs = gsim_rlzs = logictree.get_effective_rlzs(
+                self.gsim_lt)
+        rlzs_by_gsim = AccumDict(accum=[])
+        for i, gsim_rlz in enumerate(gsim_rlzs):
+            rlzs_by_gsim[gsim_rlz.value[trti]].append(sm.offset + i)
+        return {gsim: U32(rlzs) for gsim, rlzs in sorted(rlzs_by_gsim.items())}
+
+    def get_rlzs_by_gsim_grp(self):
         """
         :returns: a dictionary src_group_id -> gsim -> rlzs
         """
-        self.rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
-        dic = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-               for sm in self.source_models for grp_id in self.grp_ids(
-                       sm.ordinal)}
+        self.rlzs_assoc = self.get_rlzs_assoc()
+        dic = {}
+        for sm in self.source_models:
+            for grp_id in self.grp_ids(sm.ordinal):
+                dic[grp_id] = self.get_rlzs_by_gsim(grp_id)
         return dic
 
     def __getnewargs__(self):
