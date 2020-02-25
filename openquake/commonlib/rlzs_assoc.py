@@ -115,9 +115,9 @@ class RlzsAssoc(object):
         else:  # dictionary for the selected source model
             for rlz in self.rlzs_by_smodel[sm_id]:
                 gsim_by_trt = self.gsim_by_trt[rlz.ordinal]
-                try:  # if there is a single TRT
+                if trt == '*':  # for scenario with 1 gsim
                     [gsim] = gsim_by_trt.values()
-                except ValueError:  # there is more than 1 TRT
+                else:
                     gsim = gsim_by_trt[trt]
                 acc[gsim].append(rlz.ordinal)
         # EventBasedTestCase::test_case_10 is a case with num_rlzs=[25, 36, 39]
