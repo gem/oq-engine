@@ -109,8 +109,7 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
-        rlzs_by_grp = self.dstore['rlzs_by_grp']
-        self.rlzs_by_grp = {k: dset[()] for k, dset in rlzs_by_grp.items()}
+        self.rlzs_by_grp = self.dstore['csm_info'].get_rlzs_by_grp()
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}

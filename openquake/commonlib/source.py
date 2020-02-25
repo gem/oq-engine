@@ -161,6 +161,8 @@ class CompositionInfo(object):
                 for grp_id in self.grp_ids(sm.ordinal)}
 
     def get_rlzs_by_gsim(self, grp_id):
+        """
+        """
         trti, eri = divmod(grp_id, len(self.source_models))
         sm = self.source_models[eri]
         if self.num_samples:
@@ -179,12 +181,19 @@ class CompositionInfo(object):
         """
         :returns: a dictionary src_group_id -> gsim -> rlzs
         """
-        self.rlzs_assoc = self.get_rlzs_assoc()
         dic = {}
         for sm in self.source_models:
             for grp_id in self.grp_ids(sm.ordinal):
                 dic[grp_id] = self.get_rlzs_by_gsim(grp_id)
         return dic
+
+    def get_rlzs_by_grp(self):
+        dic = {}
+        for sm in self.source_models:
+            for grp_id in self.grp_ids(sm.ordinal):
+                grp = 'grp-%02d' % grp_id
+                dic[grp] = list(self.get_rlzs_by_gsim(grp_id).values())
+        return dic  # grp_id -> lists of rlzi
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
