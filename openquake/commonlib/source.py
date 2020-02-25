@@ -47,6 +47,8 @@ source_model_dt = numpy.dtype([
     ('weight', F32),
     ('path', hdf5.vstr),
     ('samples', U32),
+    ('seed', U32),
+    ('offset', U32),
 ])
 
 src_group_dt = numpy.dtype(
@@ -180,7 +182,7 @@ class CompositionInfo(object):
         sm_data = []
         for sm in self.source_models:
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
-                            sm.samples))
+                            sm.samples, sm.seed, sm.offset))
             for src_group in sm.src_groups:
                 sg_data.append((src_group.id, src_group.name,
                                 trti[src_group.trt], src_group.eff_ruptures,
@@ -211,7 +213,7 @@ class CompositionInfo(object):
             path = tuple(str(decode(rec['path'])).split('_'))
             sm = source_reader.LtSourceModel(
                 rec['name'], rec['weight'], path, srcgroups,
-                sm_id, rec['samples'])
+                sm_id, rec['samples'], rec['seed'], rec['offset'])
             self.source_models.append(sm)
         self.init()
 
