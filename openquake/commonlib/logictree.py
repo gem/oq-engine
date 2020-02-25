@@ -82,7 +82,6 @@ rlz_dt = numpy.dtype([
     ('weight', numpy.float64),
     ('value', hdf5.vstr),
     ('samples', numpy.uint32),
-    ('seed', numpy.uint32),
     ('offset', numpy.uint32),
 ])
 
@@ -1110,8 +1109,7 @@ class SourceModelLogicTree(object):
         offset = 0
         for rlz in rlzs:
             arr[rlz.ordinal] = (rlz.ordinal, rlz.lt_path, rlz.weight,
-                                rlz.value, rlz.samples,
-                                self.seed + rlz.ordinal, offset)
+                                rlz.value, rlz.samples, offset)
             offset += rlz.samples
         return arr
 
