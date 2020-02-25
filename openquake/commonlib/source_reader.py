@@ -236,7 +236,6 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
             rlz['ordinal'], rlz['samples'], rlz['offset'])
         lt_models.append(ltm)
     if oq.calculation_mode.startswith('ucerf'):
-        seed = source_model_lt.seed
         idx = 0
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         for grp_id, ltm in enumerate(lt_models):
@@ -249,7 +248,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
             src.samples = ltm.samples
             sg.sources = [src]
             data = [((grp_id, grp_id, src.source_id, src.code,
-                      0, 0, -1, src.num_ruptures, 0, '', seed + idx, idx))]
+                      0, 0, -1, src.num_ruptures, 0, ''))]
             sg.info = numpy.array(data, source_info_dt)
         return lt_models
 
