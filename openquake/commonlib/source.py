@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, group_array, AccumDict
+from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree, source_reader
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
@@ -47,7 +47,6 @@ source_model_dt = numpy.dtype([
     ('weight', F32),
     ('path', hdf5.vstr),
     ('samples', U32),
-    ('seed', U32),
     ('offset', U32),
 ])
 
@@ -97,7 +96,7 @@ class CompositionInfo(object):
         fakeSM = source_reader.LtSourceModel(
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
-            ordinal=0, samples=1)
+            ordinal=0, samples=1, offset=0)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
     get_rlzs_assoc = get_rlzs_assoc
@@ -147,6 +146,18 @@ class CompositionInfo(object):
         else:
             return "complex" + num_gsims, num_paths
 
+    def get_rg(self, grp_id):
+        trti, eri = divmod(grp_id, len(self.source_models))
+        sm = self.source_models[eri]
+        if self.num_samples:
+            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+        else:
+            gsim_rlzs = self.gsim_rlzs
+        rlz_by_gsim = {}
+        for i, gsim_rlz in enumerate(gsim_rlzs):
+            rlz_by_gsim[gsim_rlz.value[trti]] = self.offset + i
+        return rlz_by_gsim
+
     def get_samples_by_grp(self):
         """
         :returns: a dictionary src_group_id -> source_model.samples
@@ -181,7 +192,7 @@ class CompositionInfo(object):
         sm_data = []
         for sm in self.source_models:
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
-                            sm.samples, sm.seed, sm.offset))
+                            sm.samples, sm.offset))
         return (dict(
             gsim_lt=self.gsim_lt,
             sm_data=numpy.array(sm_data, source_model_dt)),
@@ -198,7 +209,7 @@ class CompositionInfo(object):
             path = tuple(str(decode(rec['path'])).split('_'))
             sm = source_reader.LtSourceModel(
                 rec['name'], rec['weight'], path, [],
-                sm_id, rec['samples'], rec['seed'], rec['offset'])
+                sm_id, rec['samples'], rec['offset'])
             self.source_models.append(sm)
         self.init()
 
@@ -361,7 +372,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 src_groups.append(sg)
             newsm = source_reader.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
-                sm.ordinal, sm.samples)
+                sm.ordinal, sm.samples, sm.offset)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         new.info.update_eff_ruptures(new.get_num_ruptures())
