@@ -139,21 +139,6 @@ class CompositionInfo(object):
         else:
             return "complex" + num_gsims, num_paths
 
-    def get_rlz_by_gsim(self, grp_id):
-        trti, eri = divmod(grp_id, len(self.source_models))
-        sm = self.source_models[eri]
-        if self.num_samples:
-            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
-        elif hasattr(self, 'gsim_rlzs'):  # cache
-            gsim_rlzs = self.gsim_rlzs
-        else:
-            self.gsim_rlzs = gsim_rlzs = logictree.get_effective_rlzs(
-                self.gsim_lt)
-        rlz_by_gsim = {}
-        for i, gsim_rlz in enumerate(gsim_rlzs):
-            rlz_by_gsim[gsim_rlz.value[trti]] = self.offset + i
-        return rlz_by_gsim
-
     def grp_ids(self, eri):
         nt = len(self.gsim_lt.values)
         ns = len(self.source_models)
