@@ -1106,11 +1106,9 @@ class SourceModelLogicTree(object):
         """
         rlzs = get_effective_rlzs(self)
         arr = numpy.zeros(len(rlzs), rlz_dt)
-        offset = 0
         for rlz in rlzs:
             arr[rlz.ordinal] = (rlz.ordinal, rlz.lt_path, rlz.weight,
-                                rlz.value, rlz.samples, offset)
-            offset += rlz.samples
+                                rlz.value, rlz.samples, 0)
         return arr
 
     def get_trti_eri(self):

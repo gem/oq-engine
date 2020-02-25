@@ -499,7 +499,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
-            self.datastore['rlzs_by_grp'] = self.rlzs_assoc.by_grp()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
             parent = util.read(oq.hazard_calculation_id)
@@ -805,9 +804,8 @@ class HazardCalculator(BaseCalculator):
                     assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info
 
-        R = len(self.rlzs_assoc.realizations)
+        R = self.R
         logging.info('There are %d realization(s)', R)
-        rlzs_by_grp = self.rlzs_assoc.by_grp()
 
         if self.oqparam.imtls:
             self.datastore['weights'] = arr = build_weights(
@@ -816,7 +814,6 @@ class HazardCalculator(BaseCalculator):
 
         if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
                 or R >= TWO32):
-            # rlzi is 16 bit integer in the GMFs and 32 bit in rlzs_by_grp
             raise ValueError(
                 'The logic tree has too many realizations (%d), use sampling '
                 'instead' % R)
@@ -824,10 +821,6 @@ class HazardCalculator(BaseCalculator):
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
-
-        # save vlen-arrays of rlz indices, one per group
-        if rlzs_by_grp:
-            self.datastore['rlzs_by_grp'] = rlzs_by_grp
 
     def store_source_info(self, calc_times):
         """

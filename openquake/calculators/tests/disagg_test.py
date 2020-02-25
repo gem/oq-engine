@@ -167,4 +167,4 @@ class DisaggregationTestCase(CalculatorTestCase):
                                        'poe-0.05-SA(0.25)-sid-1'])
         arr = dbs['poe-0.01-PGA-sid-0'][()]
         numpy.testing.assert_almost_equal(
-            arr, [0, 5.38093847e-05, 0, 9.94706034e-03])
+            arr, [0, 0, 5.38093847e-05, 9.94706034e-03])

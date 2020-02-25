@@ -26,7 +26,7 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree, source_reader
-from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
+from openquake.commonlib.rlzs_assoc import get_rlzs_assoc, LtRealization
 
 
 MINWEIGHT = source.MINWEIGHT
@@ -160,31 +160,73 @@ class CompositionInfo(object):
         return {grp_id: sm.samples for sm in self.source_models
                 for grp_id in self.grp_ids(sm.ordinal)}
 
-    def get_rlzs_by_gsim_grp(self, sm_lt_path=None, trts=None):
+    def get_rlzs(self, grp_id):
+        """
+        :returns: a list of LtRealization objects
+        """
+        rlzs = []
+        trti, eri = divmod(grp_id, len(self.source_models))
+        sm = self.source_models[eri]
+        if self.num_samples:
+            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+        elif hasattr(self, 'gsim_rlzs'):  # cache
+            gsim_rlzs = self.gsim_rlzs
+        else:
+            self.gsim_rlzs = gsim_rlzs = logictree.get_effective_rlzs(
+                self.gsim_lt)
+        for i, gsim_rlz in enumerate(gsim_rlzs):
+            weight = sm.weight * gsim_rlz.weight
+            rlz = LtRealization(sm.offset + i, sm.path, gsim_rlz, weight)
+            rlzs.append(rlz)
+        return rlzs
+
+    def get_realizations(self):
+        """
+        :returns: the complete list of LtRealizations
+        """
+        rlzs = []
+        for sm in self.source_models:
+            for grp_id in self.grp_ids(sm.ordinal):
+                rlzs.extend(self.get_rlzs(grp_id))
+        return rlzs
+
+    def get_rlzs_by_gsim(self, grp_id):
+        """
+        :returns: a dictionary gsim -> rlzs
+        """
+        trti = grp_id // len(self.source_models)
+        rlzs_by_gsim = AccumDict(accum=[])
+        for rlz in self.get_rlzs(grp_id):
+            rlzs_by_gsim[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+        return {gsim: U32(rlzs) for gsim, rlzs in sorted(rlzs_by_gsim.items())}
+
+    def get_rlzs_by_gsim_grp(self):
         """
         :returns: a dictionary src_group_id -> gsim -> rlzs
         """
-        self.rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
-        dic = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-               for sm in self.source_models for grp_id in self.grp_ids(
-                       sm.ordinal)}
+        dic = {}
+        for sm in self.source_models:
+            for grp_id in self.grp_ids(sm.ordinal):
+                dic[grp_id] = self.get_rlzs_by_gsim(grp_id)
         return dic
+
+    def get_rlzs_by_grp(self):
+        """
+        :returns: a dictionary src_group_id -> [rlzis, ...]
+        """
+        dic = {}
+        for sm in self.source_models:
+            for grp_id in self.grp_ids(sm.ordinal):
+                grp = 'grp-%02d' % grp_id
+                dic[grp] = list(self.get_rlzs_by_gsim(grp_id).values())
+        return dic  # grp_id -> lists of rlzi
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
         return self.seed, self.num_samples, self.source_models
 
-    def trt2i(self):
-        """
-        :returns: trt -> trti
-        """
-        trts = sorted(set(src_group.trt for sm in self.source_models
-                          for src_group in sm.src_groups))
-        return {trt: i for i, trt in enumerate(trts)}
-
     def __toh5__(self):
         # save csm_info/sm_data in the datastore
-        trti = self.trt2i()
         sm_data = []
         for sm in self.source_models:
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
@@ -193,7 +235,7 @@ class CompositionInfo(object):
             gsim_lt=self.gsim_lt,
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=hdf5.array_of_vstr(sorted(trti))))
+                     trts=hdf5.array_of_vstr(self.gsim_lt.values)))
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it

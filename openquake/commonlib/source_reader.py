@@ -229,11 +229,18 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id)
     rlzs = source_model_lt.get_eff_rlzs()
+    if not source_model_lt.num_samples:
+        num_gsim_rlzs = gsim_lt.get_num_paths()
     lt_models = []
+    offset = 0
     for rlz in rlzs:
         ltm = LtSourceModel(
             rlz['value'], rlz['weight'], rlz['lt_path'], [],
-            rlz['ordinal'], rlz['samples'], rlz['offset'])
+            rlz['ordinal'], rlz['samples'], offset)
+        if source_model_lt.num_samples:
+            offset += rlz['samples']
+        else:
+            offset += num_gsim_rlzs
         lt_models.append(ltm)
     if oq.calculation_mode.startswith('ucerf'):
         idx = 0
