@@ -103,11 +103,14 @@ class RlzsAssoc(object):
         :param sm_id: source model ordinal (or None)
         :returns: a dictionary gsim -> rlzs
         """
-        if isinstance(trt_or_grp_id, (int, U16, U32)):  # grp_id
+        try:
+            int(trt_or_grp_id)
+        except ValueError:
+            # assume TRT string
+            trt = trt_or_grp_id
+        else:  # assume integer
             trt = self.csm_info.trt_by_grp[trt_or_grp_id]
             sm_id = self.csm_info.get_sm_by_grp()[trt_or_grp_id]
-        else:  # assume TRT string
-            trt = trt_or_grp_id
         acc = collections.defaultdict(list)
         if sm_id is None:  # full dictionary
             for rlz, gsim_by_trt in zip(self.realizations, self.gsim_by_trt):
