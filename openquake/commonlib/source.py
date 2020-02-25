@@ -109,7 +109,7 @@ class CompositionInfo(object):
         self.init()
 
     def init(self):
-        self.trt_by_grp = self.grp_by("trt")
+        self.trt_by_grp = self.grp_by_trt()
         if self.num_samples:
             self.seed_samples_by_grp = {}
             seed = self.seed
@@ -161,20 +161,26 @@ class CompositionInfo(object):
             rlz_by_gsim[gsim_rlz.value[trti]] = self.offset + i
         return rlz_by_gsim
 
+    def grp_ids(self, eri):
+        nt = len(self.gsim_lt.values)
+        ns = len(self.source_models)
+        return eri + numpy.arange(nt) * ns
+
     def get_samples_by_grp(self):
         """
         :returns: a dictionary src_group_id -> source_model.samples
         """
-        return {grp.id: sm.samples for sm in self.source_models
-                for grp in sm.src_groups}
+        return {grp_id: sm.samples for sm in self.source_models
+                for grp_id in self.grp_ids(sm.ordinal)}
 
     def get_rlzs_by_gsim_grp(self, sm_lt_path=None, trts=None):
         """
         :returns: a dictionary src_group_id -> gsim -> rlzs
         """
         self.rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
-        dic = {grp.id: self.rlzs_assoc.get_rlzs_by_gsim(grp.id)
-               for sm in self.source_models for grp in sm.src_groups}
+        dic = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+               for sm in self.source_models for grp_id in self.grp_ids(
+                       self.grp_ids(sm.ordinal))}
         return dic
 
     def __getnewargs__(self):
@@ -279,17 +285,19 @@ class CompositionInfo(object):
         """
         :returns: a dictionary grp_id -> sm_id
         """
-        return {grp.id: sm.ordinal for sm in self.source_models
-                for grp in sm.src_groups}
+        return {grp_id: sm.ordinal for sm in self.source_models
+                for grp_id in self.grp_ids(sm.ordinal)}
 
-    def grp_by(self, name):
+    def grp_by_trt(self):
         """
-        :returns: a dictionary grp_id -> group attribute
+        :returns: a dictionary grp_id -> trt
         """
         dic = {}
+        n = len(self.source_models)
+        trts = list(self.gsim_lt.values)
         for smodel in self.source_models:
-            for src_group in smodel.src_groups:
-                dic[src_group.id] = getattr(src_group, name)
+            for grp_id in self.grp_ids(smodel.ordinal):
+                dic[grp_id] = trts[grp_id // n]
         return dic
 
     def __repr__(self):

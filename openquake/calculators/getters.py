@@ -457,7 +457,7 @@ def gen_rgetters(dstore, slc=slice(None)):
     :yields: unfiltered RuptureGetters
     """
     csm_info = dstore['csm_info']
-    trt_by_grp = csm_info.grp_by("trt")
+    trt_by_grp = csm_info.grp_by_trt()
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
@@ -485,7 +485,7 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     :yields: filtered RuptureGetters
     """
     csm_info = dstore['csm_info']
-    trt_by_grp = csm_info.grp_by("trt")
+    trt_by_grp = csm_info.grp_by_trt()
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]

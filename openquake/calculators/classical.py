@@ -411,7 +411,7 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        trt_by_grp = self.csm_info.grp_by("trt")
+        trt_by_grp = self.csm_info.grp_by_trt()
         grp_name = {grp.id: grp.name for sm in self.csm_info.source_models
                     for grp in sm.src_groups}
         data = []

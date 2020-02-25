@@ -130,14 +130,14 @@ class RlzsAssoc(object):
         """
         dic = {}  # grp -> rlzis
         for sm in self.csm_info.source_models:
-            for sg in sm.src_groups:
-                rlzs_by_gsim = self.get_rlzs_by_gsim(sg.trt, sm.ordinal)
+            for grp_id in self.csm_info.grp_ids(sm.ordinal):
+                rlzs_by_gsim = self.get_rlzs_by_gsim(grp_id)
                 if not rlzs_by_gsim:
                     continue
                 rows = list(rlzs_by_gsim.values())
                 if len(set(map(len, rows))) == 1:  # all the same length
                     rows = numpy.array(rows)  # convert rows into 2D array
-                dic['grp-%02d' % sg.id] = rows
+                dic['grp-%02d' % grp_id] = rows
         return dic
 
     def _init(self):
