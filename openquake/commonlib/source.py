@@ -140,6 +140,10 @@ class CompositionInfo(object):
             return "complex" + num_gsims, num_paths
 
     def grp_ids(self, eri):
+        """
+        :param eri: effective realization index
+        :returns: array of T group IDs, being T the number of TRTs
+        """
         nt = len(self.gsim_lt.values)
         ns = len(self.source_models)
         return eri + numpy.arange(nt) * ns
