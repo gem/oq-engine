@@ -162,6 +162,7 @@ class CompositionInfo(object):
 
     def get_rlzs_by_gsim(self, grp_id):
         """
+        :returns: a dictionary gsim -> rlzs
         """
         trti, eri = divmod(grp_id, len(self.source_models))
         sm = self.source_models[eri]
@@ -188,6 +189,9 @@ class CompositionInfo(object):
         return dic
 
     def get_rlzs_by_grp(self):
+        """
+        :returns: a dictionary src_group_id -> [rlzis, ...]
+        """
         dic = {}
         for sm in self.source_models:
             for grp_id in self.grp_ids(sm.ordinal):
