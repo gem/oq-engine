@@ -180,7 +180,10 @@ class CompositionInfo(object):
             rlzs.append(rlz)
         return rlzs
 
-    def realizations(self):
+    def get_realizations(self):
+        """
+        :returns: the complete list of LtRealizations
+        """
         rlzs = []
         for sm in self.source_models:
             for grp_id in self.grp_ids(sm.ordinal):
@@ -222,17 +225,8 @@ class CompositionInfo(object):
         # with this CompositionInfo instances will be unpickled correctly
         return self.seed, self.num_samples, self.source_models
 
-    def trt2i(self):
-        """
-        :returns: trt -> trti
-        """
-        trts = sorted(set(src_group.trt for sm in self.source_models
-                          for src_group in sm.src_groups))
-        return {trt: i for i, trt in enumerate(trts)}
-
     def __toh5__(self):
         # save csm_info/sm_data in the datastore
-        trti = self.trt2i()
         sm_data = []
         for sm in self.source_models:
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
@@ -241,7 +235,7 @@ class CompositionInfo(object):
             gsim_lt=self.gsim_lt,
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=hdf5.array_of_vstr(sorted(trti))))
+                     trts=hdf5.array_of_vstr(self.gsim_lt.values)))
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
