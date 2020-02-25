@@ -76,6 +76,42 @@ def get_field(data, field, default):
         return default
 
 
+class LtRealization(object):
+    """
+    Composite realization build on top of a source model realization and
+    a GSIM realization.
+    """
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+        self.ordinal = ordinal
+        self.sm_lt_path = tuple(sm_lt_path)
+        self.gsim_rlz = gsim_rlz
+        self.weight = weight
+
+    def __repr__(self):
+        return '<%d,%s,w=%s>' % (self.ordinal, self.pid, self.weight)
+
+    @property
+    def gsim_lt_path(self):
+        return self.gsim_rlz.lt_path
+
+    @property
+    def pid(self):
+        """An unique identifier for effective realizations"""
+        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.pid
+
+    def __lt__(self, other):
+        return self.ordinal < other.ordinal
+
+    def __eq__(self, other):
+        return repr(self) == repr(other)
+
+    def __ne__(self, other):
+        return repr(self) != repr(other)
+
+    def __hash__(self):
+        return hash(repr(self))
+
+
 class CompositionInfo(object):
     """
     An object to collect information about the composition of
@@ -160,10 +196,11 @@ class CompositionInfo(object):
         return {grp_id: sm.samples for sm in self.source_models
                 for grp_id in self.grp_ids(sm.ordinal)}
 
-    def get_rlzs_by_gsim(self, grp_id):
+    def get_rlzs(self, grp_id):
         """
-        :returns: a dictionary gsim -> rlzs
+        :returns: a list of LtRealization objects
         """
+        rlzs = []
         trti, eri = divmod(grp_id, len(self.source_models))
         sm = self.source_models[eri]
         if self.num_samples:
@@ -173,9 +210,27 @@ class CompositionInfo(object):
         else:
             self.gsim_rlzs = gsim_rlzs = logictree.get_effective_rlzs(
                 self.gsim_lt)
-        rlzs_by_gsim = AccumDict(accum=[])
         for i, gsim_rlz in enumerate(gsim_rlzs):
-            rlzs_by_gsim[gsim_rlz.value[trti]].append(sm.offset + i)
+            weight = sm.weight * gsim_rlz.weight
+            rlz = LtRealization(sm.offset + i, sm.path, gsim_rlz, weight)
+            rlzs.append(rlz)
+        return rlzs
+
+    def realizations(self):
+        rlzs = []
+        for sm in self.source_models:
+            for grp_id in self.grp_ids(sm.ordinal):
+                rlzs.extend(self.get_rlzs(grp_id))
+        return rlzs
+
+    def get_rlzs_by_gsim(self, grp_id):
+        """
+        :returns: a dictionary gsim -> rlzs
+        """
+        trti = grp_id // len(self.source_models)
+        rlzs_by_gsim = AccumDict(accum=[])
+        for rlz in self.get_rlzs(grp_id):
+            rlzs_by_gsim[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
         return {gsim: U32(rlzs) for gsim, rlzs in sorted(rlzs_by_gsim.items())}
 
     def get_rlzs_by_gsim_grp(self):
