@@ -110,13 +110,6 @@ class CompositionInfo(object):
 
     def init(self):
         self.trt_by_grp = self.grp_by_trt()
-        if self.num_samples:
-            self.seed_samples_by_grp = {}
-            seed = self.seed
-            for sm in self.source_models:
-                for grp in sm.src_groups:
-                    self.seed_samples_by_grp[grp.id] = seed, sm.samples
-                seed += sm.samples
 
     def get_info(self, sm_id):
         """
@@ -180,7 +173,7 @@ class CompositionInfo(object):
         self.rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
         dic = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
                for sm in self.source_models for grp_id in self.grp_ids(
-                       self.grp_ids(sm.ordinal))}
+                       sm.ordinal)}
         return dic
 
     def __getnewargs__(self):
@@ -275,12 +268,6 @@ class CompositionInfo(object):
             gsims_by_trt = self.gsim_lt.values
         return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
 
-    def get_grp_ids(self, sm_id):
-        """
-        :returns: a list of source group IDs for the given source model ID
-        """
-        return [sg.id for sg in self.source_models[sm_id].src_groups]
-
     def get_sm_by_grp(self):
         """
         :returns: a dictionary grp_id -> sm_id
@@ -338,18 +325,16 @@ class CompositeSourceModel(collections.abc.Sequence):
         :returns: a new CompositeSourceModel with one group per source
         """
         smodels = []
-        grp_id = 0
         for sm in self.source_models:
             src_groups = []
             smodel = sm.__class__(sm.names, sm.weight, sm.path, src_groups,
-                                  sm.ordinal, sm.samples)
+                                  sm.ordinal, sm.samples, sm.offset)
             for sg in sm.src_groups:
                 for src in sg.sources:
-                    src.src_group_id = grp_id
+                    src.src_group_id = sg.id
                     src_groups.append(
                         sourceconverter.SourceGroup(
-                            sg.trt, [src], name=src.source_id, id=grp_id))
-                    grp_id += 1
+                            sg.trt, [src], name=src.source_id, id=sg.id))
             smodels.append(smodel)
         return self.__class__(self.gsim_lt, self.source_model_lt, smodels)
 

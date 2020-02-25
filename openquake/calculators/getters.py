@@ -464,7 +464,7 @@ def gen_rgetters(dstore, slc=slice(None)):
     ct = dstore['oqparam'].concurrent_tasks or 1
     nr = len(dstore['ruptures'])
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
-        if not rlzs_by_gsim[grp_id]:  # the model has no sources
+        if not rlzs_by_gsim.get(grp_id, []):  # the model has no sources
             continue
         for block in general.split_in_blocks(arr, len(arr) / nr * ct):
             rgetter = RuptureGetter(
