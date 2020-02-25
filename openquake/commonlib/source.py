@@ -176,43 +176,28 @@ class CompositionInfo(object):
         return {trt: i for i, trt in enumerate(trts)}
 
     def __toh5__(self):
-        # save csm_info/sg_data, csm_info/sm_data in the datastore
+        # save csm_info/sm_data in the datastore
         trti = self.trt2i()
-        sg_data = []
         sm_data = []
         for sm in self.source_models:
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
                             sm.samples, sm.seed, sm.offset))
-            for src_group in sm.src_groups:
-                sg_data.append((src_group.id, src_group.name,
-                                trti[src_group.trt], src_group.eff_ruptures,
-                                src_group.tot_ruptures, sm.ordinal))
         return (dict(
             gsim_lt=self.gsim_lt,
-            sg_data=numpy.array(sg_data, src_group_dt),
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(sorted(trti))))
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
-        sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
         self.gsim_lt = dic['gsim_lt']
         self.source_models = []
         for sm_id, rec in enumerate(sm_data):
-            tdata = sg_data[sm_id]
-            srcgroups = [
-                sourceconverter.SourceGroup(
-                    self.trts[data['trti']], id=data['grp_id'],
-                    name=get_field(data, 'name', ''),
-                    eff_ruptures=data['effrup'],
-                    tot_ruptures=get_field(data, 'totrup', 0))
-                for data in tdata]
             path = tuple(str(decode(rec['path'])).split('_'))
             sm = source_reader.LtSourceModel(
-                rec['name'], rec['weight'], path, srcgroups,
+                rec['name'], rec['weight'], path, [],
                 sm_id, rec['samples'], rec['seed'], rec['offset'])
             self.source_models.append(sm)
         self.init()
