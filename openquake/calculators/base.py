@@ -805,7 +805,7 @@ class HazardCalculator(BaseCalculator):
                     assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info
 
-        R = len(self.rlzs_assoc.realizations)
+        R = self.R
         logging.info('There are %d realization(s)', R)
         rlzs_by_grp = self.rlzs_assoc.by_grp()
 

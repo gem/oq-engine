@@ -305,7 +305,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         for grp_id, trt in csm_info.trt_by_grp.items():
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
-            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            rlzs_by_gsim = self.csm_info.get_rlzs_by_gsim(grp_id)
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim,
                 {'truncation_level': oq.truncation_level,
