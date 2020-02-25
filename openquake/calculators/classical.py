@@ -411,7 +411,7 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        trt_by_grp = self.csm_info.grp_by_trt()
+        trt_by_grp = self.csm_info.trt_by_grp
         data = []
         with self.monitor('saving probability maps'):
             for grp_id, pmap in pmap_by_grp_id.items():

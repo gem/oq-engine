@@ -109,7 +109,12 @@ class CompositionInfo(object):
         self.init()
 
     def init(self):
-        self.trt_by_grp = self.grp_by_trt()
+        self.trt_by_grp = {}
+        n = len(self.source_models)
+        trts = list(self.gsim_lt.values)
+        for smodel in self.source_models:
+            for grp_id in self.grp_ids(smodel.ordinal):
+                self.trt_by_grp[grp_id] = trts[grp_id // n]
 
     def get_info(self, sm_id):
         """
@@ -263,18 +268,6 @@ class CompositionInfo(object):
         """
         return {grp_id: sm.ordinal for sm in self.source_models
                 for grp_id in self.grp_ids(sm.ordinal)}
-
-    def grp_by_trt(self):
-        """
-        :returns: a dictionary grp_id -> trt
-        """
-        dic = {}
-        n = len(self.source_models)
-        trts = list(self.gsim_lt.values)
-        for smodel in self.source_models:
-            for grp_id in self.grp_ids(smodel.ordinal):
-                dic[grp_id] = trts[grp_id // n]
-        return dic
 
     def __repr__(self):
         info_by_model = {}
