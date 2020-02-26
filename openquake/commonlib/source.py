@@ -315,7 +315,7 @@ class CompositionInfo(object):
         :returns: an array of realizations
         """
         tups = [(r.ordinal, r.pid, r.weight['weight'])
-                for r in self.get_rlzs_assoc().realizations]
+                for r in self.get_realizations()]
         return numpy.array(tups, rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
