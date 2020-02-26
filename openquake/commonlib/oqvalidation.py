@@ -112,6 +112,7 @@ class OqParam(valid.ParamSet):
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
     discard_assets = valid.Param(valid.boolean, False)
+    discard_trts = valid.Param(str, '')  # tested in the cariboo example
     distance_bin_width = valid.Param(valid.positivefloat)
     approx_ddd = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)

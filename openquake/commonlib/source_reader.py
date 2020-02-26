@@ -227,7 +227,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
-        not spinning_off, oq.source_id)
+        not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
     rlzs = source_model_lt.get_eff_rlzs()
     if not source_model_lt.num_samples:
         num_gsim_rlzs = gsim_lt.get_num_paths()

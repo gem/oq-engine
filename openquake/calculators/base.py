@@ -796,6 +796,8 @@ class HazardCalculator(BaseCalculator):
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
             self.datastore['csm_info'] = self.csm_info
+        else:
+            self.csm_info = self.csm.info
 
         R = self.R
         logging.info('There are %d realization(s)', R)
@@ -814,6 +816,12 @@ class HazardCalculator(BaseCalculator):
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
+
+        # check for gsim logic tree reduction
+        for trt in self.csm_info.gsim_lt.values:
+            if eff_ruptures.get(trt, 0) == 0:
+                logging.warning('No sources/ruptures for %s: you should '
+                                'reduce the GSIM logic tree', trt)
 
     def store_source_info(self, calc_times):
         """
