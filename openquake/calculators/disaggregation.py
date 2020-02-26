@@ -216,7 +216,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
 
-        self.ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        self.ws = [rlz.weight for rlz in self.realizations]
         self.pgetter = getters.PmapGetter(
             self.datastore, self.ws, self.sitecol.sids)
 

@@ -441,7 +441,7 @@ class ClassicalCalculator(base.HazardCalculator):
             L = M * len(oq.soil_intensities)
         else:
             L = len(oq.imtls.array)
-        R = len(self.rlzs_assoc.realizations)
+        R = len(self.realizations)
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
@@ -453,7 +453,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        weights = [rlz.weight for rlz in self.realizations]
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg,

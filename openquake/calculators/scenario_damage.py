@@ -191,7 +191,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         dstates = self.crmodel.damage_states
         ltypes = self.crmodel.loss_types
         L = len(ltypes)
-        R = len(self.rlzs_assoc.realizations)
+        R = len(self.realizations)
         D = len(dstates)
         A = len(self.assetcol)
         indices = self.datastore['dd_data/indices'][()]

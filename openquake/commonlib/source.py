@@ -186,8 +186,18 @@ class CompositionInfo(object):
         """
         rlzs = []
         for sm in self.sm_rlzs:
-            for grp_id in self.grp_ids(sm.ordinal):
-                rlzs.extend(self.get_rlzs(grp_id))
+            if self.num_samples:
+                gsim_rlzs = self.gsim_lt.sample(
+                    sm.samples, self.seed + sm.ordinal)
+            elif hasattr(self, 'gsim_rlzs'):  # cache
+                gsim_rlzs = self.gsim_rlzs
+            else:
+                self.gsim_rlzs = gsim_rlzs = logictree.get_effective_rlzs(
+                    self.gsim_lt)
+            for i, gsim_rlz in enumerate(gsim_rlzs):
+                weight = sm.weight * gsim_rlz.weight
+                rlz = LtRealization(sm.offset + i, sm.path, gsim_rlz, weight)
+                rlzs.append(rlz)
         return rlzs
 
     def get_rlzs_by_gsim(self, grp_id):
