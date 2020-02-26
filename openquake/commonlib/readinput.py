@@ -577,6 +577,12 @@ def get_source_model_lt(oqparam, validate=True):
     smlt = logictree.SourceModelLogicTree(
         fname, validate, seed=int(oqparam.random_seed),
         num_samples=oqparam.number_of_logic_tree_samples)
+    if oqparam.discard_trts:
+        trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
+        # smlt.tectonic_region_types comes from applyToTectonicRegionType
+        smlt.tectonic_region_types = smlt.tectonic_region_types - trts
+    if 'ucerf' in oqparam.calculation_mode:
+        smlt.tectonic_region_types = {'Active Shallow Crust'}
     return smlt
 
 
@@ -595,7 +601,9 @@ def get_composite_source_model(oqparam, h5=None):
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
     for trt in reqv:
-        if trt.lower() not in trts_lower:
+        if trt in oqparam.discard_trts:
+            continue
+        elif trt.lower() not in trts_lower:
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
