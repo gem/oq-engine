@@ -160,6 +160,12 @@ class CompositionInfo(object):
         return {grp_id: sm.samples for sm in self.sm_rlzs
                 for grp_id in self.grp_ids(sm.ordinal)}
 
+    def gsim_by_trt(self, rlz):
+        """
+        :returns: a dictionary trt->gsim for the given realization
+        """
+        return dict(zip(self.gsim_lt.values, rlz.gsim_rlz.value))
+
     def get_rlzs(self, eri):
         """
         :returns: a list of LtRealization objects

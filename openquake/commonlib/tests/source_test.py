@@ -728,9 +728,8 @@ class CompositeSourceModelTestCase(unittest.TestCase):
 Active Shallow Crust,b1,[SadighEtAl1997],w=0.5
 Active Shallow Crust,b2,[ChiouYoungs2008],w=0.5
 Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
-        assoc = csm.info.get_rlzs_assoc()
-        [rlz] = assoc.realizations
-        self.assertEqual(assoc.gsim_by_trt[rlz.ordinal],
+        [rlz] = csm.info.get_realizations()
+        self.assertEqual(csm.info.gsim_by_trt(rlz),
                          {'Subduction Interface': '[SadighEtAl1997]',
                           'Active Shallow Crust': '[ChiouYoungs2008]'})
         # ignoring the end of the tuple, with the uid field
@@ -738,7 +737,6 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight['default'], 1.)
-        self.assertEqual(str(assoc), "<RlzsAssoc(size=1, rlzs=1)>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -748,8 +746,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         # there are 2 distinct tectonic region types, so 18 src_groups
         self.assertEqual(sum(1 for tm in csm.src_groups), 18)
 
-        rlzs_assoc = csm.info.get_rlzs_assoc()
-        rlzs = rlzs_assoc.realizations
+        rlzs = csm.info.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         # counting the sources in each TRT model (after splitting)
         self.assertEqual(
@@ -763,9 +760,6 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
             else:
                 return 1
         csm.info.update_eff_ruptures(count_ruptures)
-        assoc = csm.info.get_rlzs_assoc()
-        expected_assoc = "<RlzsAssoc(size=9, rlzs=18)>"
-        self.assertEqual(str(assoc), expected_assoc)
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
@@ -773,8 +767,6 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         csm = readinput.get_composite_source_model(oq)
         csm.info.update_eff_ruptures(lambda tm: 1)
-        assoc = csm.info.get_rlzs_assoc()
-        self.assertEqual(str(assoc), "<RlzsAssoc(size=5, rlzs=5)>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()
