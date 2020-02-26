@@ -257,24 +257,6 @@ hazard_uhs-std.csv
         arr = numpy.load(fname)['all']
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
-        cinfo = self.calc.datastore['csm_info']
-        ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM1'])
-        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-03'])
-        '''
-        ra0.by_grp() = {'grp-00': array([[0, 1], [2, 3]], dtype=uint32),
-                        'grp-03': array([[0, 2], [1, 3]], dtype=uint32),
-                        'grp-01': array([[4, 5], [6, 7]], dtype=uint32),
-                        'grp-02': array([[ 8,  9], [10, 11]], dtype=uint32)}
-        ra.by_grp() = {'grp-00': array([[0, 1], [2, 3]], dtype=uint32),
-                       'grp-03': array([[0, 2], [1, 3]], dtype=uint32)}
-        '''
-        # not reducing the gsim logic tree
-        ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
-        self.assertEqual(
-            sorted(ra.by_grp()),
-            ['grp-00', 'grp-01', 'grp-02', 'grp-03', 'grp-04', 'grp-05'])
-        numpy.testing.assert_equal(ra.by_grp()['grp-00'], [[0, 1], [2, 3]])
-
         # check deserialization of source_model_lt
         #smlt = self.calc.datastore['source_model_lt']
         #print(list(smlt))
