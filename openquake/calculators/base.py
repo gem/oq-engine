@@ -823,14 +823,11 @@ class HazardCalculator(BaseCalculator):
         for trt in self.csm_info.gsim_lt.values:
             if eff_ruptures.get(trt, 0) == 0:
                 discard_trts.append(trt)
-        if discard_trts:
+        if discard_trts and 'ucerf' not in oq.calculation_mode:
             msg = ('No sources for some TRTs: you should set\n'
                    'discard_trts = %s\nin %s') % (', '.join(discard_trts),
                                                   oq.inputs['job_ini'])
-            if 'ucerf' in oq.calculation_mode:
-                raise RuntimeError(msg)
-            else:
-                logging.warning(msg)
+            logging.warning(msg)
 
     def store_source_info(self, calc_times):
         """
