@@ -153,7 +153,7 @@ class SourceGroup(collections.abc.Sequence):
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
-        self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
+        self.eff_ruptures = eff_ruptures  # set later
         self.temporal_occurrence_model = temporal_occurrence_model
         self.cluster = cluster
         # check weights in case of mutually exclusive ruptures

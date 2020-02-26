@@ -475,7 +475,7 @@ DisaggMatrix = collections.namedtuple(
 @deprecated(msg='Use the CSV exporter instead')
 def export_disagg_xml(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     group = dstore['disagg']
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
@@ -512,7 +512,7 @@ def export_disagg_xml(ekey, dstore):
 @export.add(('disagg', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     group = dstore[ekey[0]]
     fnames = []
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')

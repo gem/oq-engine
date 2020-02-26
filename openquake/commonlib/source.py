@@ -26,7 +26,7 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree, source_reader
-from openquake.commonlib.rlzs_assoc import get_rlzs_assoc, LtRealization
+from openquake.commonlib.rlzs_assoc import LtRealization
 
 
 MINWEIGHT = source.MINWEIGHT
@@ -98,8 +98,6 @@ class CompositionInfo(object):
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             ordinal=0, samples=1, offset=0)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
-
-    get_rlzs_assoc = get_rlzs_assoc
 
     def __init__(self, gsim_lt, seed, num_samples, source_models):
         self.gsim_lt = gsim_lt

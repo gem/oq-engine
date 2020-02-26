@@ -89,7 +89,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def init_logic_tree(self, csm_info):
         self.trt_by_grp = csm_info.trt_by_grp
-        self.rlzs_assoc = csm_info.get_rlzs_assoc()
         self.rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
         self.samples_by_grp = csm_info.get_samples_by_grp()
         self.num_rlzs_by_grp = {
