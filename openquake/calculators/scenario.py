@@ -39,6 +39,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         cinfo = source.CompositionInfo.fake(readinput.get_gsim_lt(oq))
+        self.realizations = cinfo.get_realizations()
         self.datastore['csm_info'] = cinfo
         if 'rupture_model' not in oq.inputs:
             logging.warning(
