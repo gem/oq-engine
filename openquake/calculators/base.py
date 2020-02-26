@@ -498,7 +498,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
-            self.rlzs_assoc = fake.get_rlzs_assoc()
             self.realizations = fake.get_realizations()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
@@ -538,7 +537,7 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.run(remove=False)
-            for name in ('csm param sitecol assetcol crmodel rlzs_assoc '
+            for name in ('csm param sitecol assetcol crmodel realizations '
                          'policy_name policy_dict csm_info').split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -557,7 +556,6 @@ class HazardCalculator(BaseCalculator):
                     self.datastore.parent['oqparam'].risk_imtls)
         if 'precalc' in vars(self):
             self.realizations = self.precalc.realizations
-            self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
             csm_info = self.datastore['csm_info']
             self.realizations = csm_info.get_realizations()
@@ -566,14 +564,11 @@ class HazardCalculator(BaseCalculator):
                 # gsim_logic_tree_file that could be different from the parent
                 csm_info.gsim_lt = logictree.GsimLogicTree(
                     oq.inputs['gsim_logic_tree'], set(csm_info.trts))
-            self.rlzs_assoc = csm_info.get_rlzs_assoc()
         elif hasattr(self, 'csm'):
             self.check_floating_spinning()
-            self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
             self.realizations = self.csm.info.get_realizations()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
-            self.rlzs_assoc = fake.get_rlzs_assoc()
             self.realizations = fake.get_realizations()
 
     @general.cached_property
@@ -798,8 +793,6 @@ class HazardCalculator(BaseCalculator):
         """
         if hasattr(self, 'csm_info'):  # no scenario
             self.csm_info.update_eff_ruptures(eff_ruptures)
-            self.rlzs_assoc = self.csm_info.get_rlzs_assoc(
-                self.oqparam.sm_lt_path)
             self.realizations = self.csm_info.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
@@ -984,7 +977,7 @@ class RiskCalculator(HazardCalculator):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
         Require a `.core_task` to be defined with signature
-        (riskinputs, crmodel, rlzs_assoc, monitor).
+        (riskinputs, crmodel, param, monitor).
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return

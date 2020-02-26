@@ -26,7 +26,6 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree, source_reader
-from openquake.commonlib.rlzs_assoc import get_rlzs_assoc, LtRealization
 
 
 MINWEIGHT = source.MINWEIGHT
@@ -76,6 +75,42 @@ def get_field(data, field, default):
         return default
 
 
+class LtRealization(object):
+    """
+    Composite realization build on top of a source model realization and
+    a GSIM realization.
+    """
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+        self.ordinal = ordinal
+        self.sm_lt_path = tuple(sm_lt_path)
+        self.gsim_rlz = gsim_rlz
+        self.weight = weight
+
+    def __repr__(self):
+        return '<%d,%s,w=%s>' % (self.ordinal, self.pid, self.weight)
+
+    @property
+    def gsim_lt_path(self):
+        return self.gsim_rlz.lt_path
+
+    @property
+    def pid(self):
+        """An unique identifier for effective realizations"""
+        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.pid
+
+    def __lt__(self, other):
+        return self.ordinal < other.ordinal
+
+    def __eq__(self, other):
+        return repr(self) == repr(other)
+
+    def __ne__(self, other):
+        return repr(self) != repr(other)
+
+    def __hash__(self):
+        return hash(repr(self))
+
+
 class CompositionInfo(object):
     """
     An object to collect information about the composition of
@@ -98,8 +133,6 @@ class CompositionInfo(object):
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             ordinal=0, samples=1, offset=0)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
-
-    get_rlzs_assoc = get_rlzs_assoc
 
     def __init__(self, gsim_lt, seed, num_samples, source_models):
         self.gsim_lt = gsim_lt
@@ -282,7 +315,7 @@ class CompositionInfo(object):
         :returns: an array of realizations
         """
         tups = [(r.ordinal, r.pid, r.weight['weight'])
-                for r in self.get_rlzs_assoc().realizations]
+                for r in self.get_realizations()]
         return numpy.array(tups, rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):

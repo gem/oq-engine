@@ -75,7 +75,6 @@ class PmapGetter(object):
 
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
-    :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
     def __init__(self, dstore, weights, sids=None, poes=()):
         self.dstore = dstore

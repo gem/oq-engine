@@ -800,7 +800,7 @@ def extract_aggregate(dstore, what):
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
     loss_dt = dstore['oqparam'].loss_dt()
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
         losses_by_asset = dstore['losses_by_asset'][()]
@@ -924,7 +924,7 @@ def build_damage_array(data, damage_dt):
 @extract.add('dmg_by_asset')
 def extract_dmg_by_asset_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     data = dstore['dmg_by_asset']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
@@ -972,7 +972,7 @@ def extract_mfd(dstore, what):
 # @extract.add('event_based_mfd')
 # def extract_mfd(dstore, what):
 #     oq = dstore['oqparam']
-#     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+#     rlzs = dstore['csm_info'].get_realizations()
 #     weights = [rlz.weight['default'] for rlz in rlzs]
 #     duration = oq.investigation_time * oq.ses_per_logic_tree_path
 #     mag = dict(dstore['ruptures']['rup_id', 'mag'])
