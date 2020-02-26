@@ -499,6 +499,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
+            self.realizations = fake.get_realizations()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
             parent = util.read(oq.hazard_calculation_id)
@@ -555,9 +556,11 @@ class HazardCalculator(BaseCalculator):
                 oq.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
         if 'precalc' in vars(self):
+            self.realizations = self.precalc.realizations
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
             csm_info = self.datastore['csm_info']
+            self.realizations = csm_info.get_realizations()
             if oq.hazard_calculation_id and 'gsim_logic_tree' in oq.inputs:
                 # redefine the realizations by reading the weights from the
                 # gsim_logic_tree_file that could be different from the parent
@@ -567,9 +570,11 @@ class HazardCalculator(BaseCalculator):
         elif hasattr(self, 'csm'):
             self.check_floating_spinning()
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+            self.realizations = self.csm.info.get_realizations()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
+            self.realizations = fake.get_realizations()
 
     @general.cached_property
     def R(self):
@@ -795,7 +800,8 @@ class HazardCalculator(BaseCalculator):
             self.csm_info.update_eff_ruptures(eff_ruptures)
             self.rlzs_assoc = self.csm_info.get_rlzs_assoc(
                 self.oqparam.sm_lt_path)
-            if not self.rlzs_assoc.realizations:
+            self.realizations = self.csm_info.get_realizations()
+            if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
 
             # sanity check that eff_ruptures have been set, i.e. are not -1
@@ -809,7 +815,7 @@ class HazardCalculator(BaseCalculator):
 
         if self.oqparam.imtls:
             self.datastore['weights'] = arr = build_weights(
-                self.rlzs_assoc.realizations, self.oqparam.imt_dt())
+                self.realizations, self.oqparam.imt_dt())
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
         if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
@@ -935,7 +941,7 @@ class RiskCalculator(HazardCalculator):
         else:
             dstore = self.datastore
         if kind == 'poe':  # hcurves, shape (R, N)
-            ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+            ws = [rlz.weight for rlz in self.realizations]
             getter = getters.PmapGetter(dstore, ws, [sid])
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)

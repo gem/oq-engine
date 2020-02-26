@@ -36,10 +36,10 @@ than 20 lines of code:
        sitecol = readinput.get_site_collection(oq)
        src_filter = SourceFilter(sitecol, oq.maximum_distance)
        csm = readinput.get_composite_source_model(oq, srcfilter=src_filter)
-       rlzs_assoc = csm.info.get_rlzs_assoc()
-       for i, sm in enumerate(csm.sm_rlzs):
-           for rlz in rlzs_assoc.rlzs_by_smodel[i]:
-               gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz.ordinal]
+       cinfo = csm.info
+       for sm in cinfo.sm_rlzs:
+           for rlz in cinfo.get_rlzs(sm.ordinal):
+               gsim_by_trt = cinfo.gsim_by_trt(rlz)
                hcurves = calc_hazard_curves(
                    sm.src_groups, src_filter, oq.imtls,
                    gsim_by_trt, oq.truncation_level,

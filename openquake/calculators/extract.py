@@ -1018,8 +1018,8 @@ def extract_mean_std_curves(dstore, what):
     """
     Yield imls/IMT and poes/IMT containg mean and stddev for all sites
     """
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    w = [rlz.weight for rlz in rlzs_assoc.realizations]
+    rlzs = dstore['csm_info'].get_realizations()
+    w = [rlz.weight for rlz in rlzs]
     getter = getters.PmapGetter(dstore, w)
     arr = getter.get_mean().array
     for imt in getter.imtls:
@@ -1070,8 +1070,9 @@ def extract_event_info(dstore, eidx):
     [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz_id']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    gsim = rlzs_assoc.gsim_by_trt[rlzi][rupdict['trt']]
+    csm_info = dstore['csm_info']
+    rlz = csm_info.get_realizations()[rlzi]
+    gsim = csm_info.gsim_by_trt(rlz)[rupdict['trt']]
     for key, val in rupdict.items():
         yield key, val
     yield 'rlzi', rlzi
