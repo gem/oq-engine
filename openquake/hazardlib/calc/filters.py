@@ -125,7 +125,10 @@ class IntegrationDistance(collections.abc.Mapping):
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
         maxdist = self(src.tectonic_region_type)
-        bbox = get_bounding_box(src, maxdist)
+        try:
+            bbox = get_bounding_box(src, maxdist)
+        except Exception as exc:
+            raise exc.__class__('source %s: %s' % (src.source_id, exc))
         return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
 
     def get_dist_bins(self, trt, nbins=51):
