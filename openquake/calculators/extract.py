@@ -944,7 +944,7 @@ def extract_mfd(dstore, what):
     kind_mean = 'mean' in qdic.get('kind', [])
     kind_by_group = 'by_group' in qdic.get('kind', [])
     csm_info = dstore['csm_info']
-    weights = [sm.weight for sm in csm_info.source_models]
+    weights = [sm.weight for sm in csm_info.sm_rlzs]
     n = len(weights)
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     dic = {'duration': duration}

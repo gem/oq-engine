@@ -84,7 +84,7 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
     return np
 
 
-class LtSourceModel(object):
+class SmRealization(object):
     """
     A container of SourceGroup instances with some additional attributes
     describing the source model in the logic tree.
@@ -207,7 +207,7 @@ class SourceReader(object):
                     ordinal=ordinal, fileno=fileno)
 
 
-def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
+def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
     """
     Build source models from the logic tree and to store
     them inside the `source_info` dataset.
@@ -231,33 +231,33 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     rlzs = source_model_lt.get_eff_rlzs()
     if not source_model_lt.num_samples:
         num_gsim_rlzs = gsim_lt.get_num_paths()
-    lt_models = []
+    sm_rlzs = []
     offset = 0
     for rlz in rlzs:
-        ltm = LtSourceModel(
+        sm_rlz = SmRealization(
             rlz['value'], rlz['weight'], rlz['lt_path'], [],
             rlz['ordinal'], rlz['samples'], offset)
         if source_model_lt.num_samples:
             offset += rlz['samples']
         else:
             offset += num_gsim_rlzs
-        lt_models.append(ltm)
+        sm_rlzs.append(sm_rlz)
     if oq.calculation_mode.startswith('ucerf'):
         idx = 0
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-        for grp_id, ltm in enumerate(lt_models):
+        for grp_id, sm_rlz in enumerate(sm_rlzs):
             sg = copy.copy(grp)
             sg.id = grp_id
-            ltm.src_groups = [sg]
-            src = sg[0].new(ltm.ordinal, ltm.names)  # one source
+            sm_rlz.src_groups = [sg]
+            src = sg[0].new(sm_rlz.ordinal, sm_rlz.names)  # one source
             src.src_group_id = grp_id
             idx += 1
-            src.samples = ltm.samples
+            src.samples = sm_rlz.samples
             sg.sources = [src]
             data = [((grp_id, grp_id, src.source_id, src.code,
                       0, 0, -1, src.num_ruptures, 0, ''))]
             sg.info = numpy.array(data, source_info_dt)
-        return lt_models
+        return sm_rlzs
 
     logging.info('Reading the source model(s) in parallel')
     allargs = []
@@ -273,17 +273,17 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
         SourceReader(converter, smlt_dir, h5),
         allargs, distribute=dist, h5=h5 if h5 else None)
     # NB: h5 is None in logictree_test.py
-    return _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5)
+    return _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5)
 
 
-def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
+def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
     mags = set()
     changes = 0
     fname_hits = collections.Counter()
-    groups = [[] for _ in lt_models]  # [src_groups] for each ordinal
+    groups = [[] for _ in sm_rlzs]  # [src_groups] for each ordinal
     for dic in sorted(smap, key=operator.itemgetter('fileno')):
-        ltm = lt_models[dic['ordinal']]
-        groups[ltm.ordinal].extend(dic['src_groups'])
+        sm_rlz = sm_rlzs[dic['ordinal']]
+        groups[sm_rlz.ordinal].extend(dic['src_groups'])
         fname_hits += dic['fname_hits']
         changes += dic['changes']
         mags.update(dic['mags'])
@@ -294,26 +294,26 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                     raise ValueError(
                         "Found in %r a tectonic region type %r "
                         "inconsistent with the ones in %r" %
-                        (ltm, src_group.trt, gsim_file))
+                        (sm_rlz, src_group.trt, gsim_file))
     # set src_group_ids
     get_grp_id = source_model_lt.get_grp_id(gsim_lt.values)
-    for ltm in lt_models:
-        for grp in groups[ltm.ordinal]:
-            grp.id = grp_id = get_grp_id(grp.trt, ltm.ordinal)
+    for sm_rlz in sm_rlzs:
+        for grp in groups[sm_rlz.ordinal]:
+            grp.id = grp_id = get_grp_id(grp.trt, sm_rlz.ordinal)
             for src in grp:
                 src.src_group_id = grp_id
-            ltm.src_groups.append(grp)
+            sm_rlz.src_groups.append(grp)
             grp_id += 1
             if grp_id >= TWO16:
                 # the limit is only for event based calculations
                 raise ValueError('There is a limit of %d src groups!' %
                                  TWO16)
         # check applyToSources
-        source_ids = set(src.source_id for grp in ltm.src_groups
+        source_ids = set(src.source_id for grp in sm_rlz.src_groups
                          for src in grp)
         for brid, srcids in source_model_lt.info.\
                 applytosources.items():
-            if brid in ltm.path:
+            if brid in sm_rlz.path:
                 for srcid in srcids:
                     if srcid not in source_ids:
                         raise ValueError(
@@ -335,4 +335,4 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
-    return lt_models
+    return sm_rlzs

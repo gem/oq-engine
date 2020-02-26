@@ -37,7 +37,7 @@ than 20 lines of code:
        src_filter = SourceFilter(sitecol, oq.maximum_distance)
        csm = readinput.get_composite_source_model(oq, srcfilter=src_filter)
        rlzs_assoc = csm.info.get_rlzs_assoc()
-       for i, sm in enumerate(csm.source_models):
+       for i, sm in enumerate(csm.sm_rlzs):
            for rlz in rlzs_assoc.rlzs_by_smodel[i]:
                gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz.ordinal]
                hcurves = calc_hazard_curves(

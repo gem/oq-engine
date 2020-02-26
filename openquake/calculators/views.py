@@ -202,7 +202,7 @@ def view_csm_info(token, dstore):
     csm_info = dstore['csm_info']
     header = ['smlt_path', 'weight', 'gsim_logic_tree', 'num_realizations']
     rows = []
-    for sm in csm_info.source_models:
+    for sm in csm_info.sm_rlzs:
         kind, num_rlzs = csm_info.classify_gsim_lt(sm)
         row = ('_'.join(sm.path), sm.weight, kind, num_rlzs)
         rows.append(row)
