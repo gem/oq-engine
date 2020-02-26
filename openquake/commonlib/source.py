@@ -160,12 +160,11 @@ class CompositionInfo(object):
         return {grp_id: sm.samples for sm in self.sm_rlzs
                 for grp_id in self.grp_ids(sm.ordinal)}
 
-    def get_rlzs(self, grp_id):
+    def get_rlzs(self, eri):
         """
         :returns: a list of LtRealization objects
         """
         rlzs = []
-        trti, eri = divmod(grp_id, len(self.sm_rlzs))
         sm = self.sm_rlzs[eri]
         if self.num_samples:
             gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
@@ -184,29 +183,28 @@ class CompositionInfo(object):
         """
         :returns: the complete list of LtRealizations
         """
-        rlzs = []
-        for sm in self.sm_rlzs:
-            if self.num_samples:
-                gsim_rlzs = self.gsim_lt.sample(
-                    sm.samples, self.seed + sm.ordinal)
-            elif hasattr(self, 'gsim_rlzs'):  # cache
-                gsim_rlzs = self.gsim_rlzs
-            else:
-                self.gsim_rlzs = gsim_rlzs = logictree.get_effective_rlzs(
-                    self.gsim_lt)
-            for i, gsim_rlz in enumerate(gsim_rlzs):
-                weight = sm.weight * gsim_rlz.weight
-                rlz = LtRealization(sm.offset + i, sm.path, gsim_rlz, weight)
-                rlzs.append(rlz)
+        rlzs = sum((self.get_rlzs(sm.ordinal) for sm in self.sm_rlzs), [])
+        if self.num_samples:
+            assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
+            for rlz in rlzs:
+                for k in rlz.weight.dic:
+                    rlz.weight.dic[k] = 1. / self.num_samples
+        else:
+            tot_weight = sum(rlz.weight for rlz in rlzs)
+            if not tot_weight.is_one():
+                # this may happen for rounding errors; we ensure the sum of
+                # the weights is 1
+                for rlz in rlzs:
+                    rlz.weight = rlz.weight / tot_weight
         return rlzs
 
     def get_rlzs_by_gsim(self, grp_id):
         """
         :returns: a dictionary gsim -> rlzs
         """
-        trti = grp_id // len(self.sm_rlzs)
+        trti, eri = divmod(grp_id, len(self.sm_rlzs))
         rlzs_by_gsim = AccumDict(accum=[])
-        for rlz in self.get_rlzs(grp_id):
+        for rlz in self.get_rlzs(eri):
             rlzs_by_gsim[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
         return {gsim: U32(rlzs) for gsim, rlzs in sorted(rlzs_by_gsim.items())}
 
