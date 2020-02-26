@@ -319,16 +319,6 @@ class CompositionInfo(object):
                 for r in self.get_realizations()]
         return numpy.array(tups, rlz_dt)
 
-    def update_eff_ruptures(self, count_ruptures):
-        """
-        :param count_ruptures: function or dict src_group_id -> num_ruptures
-        """
-        for smodel in self.sm_rlzs:
-            for sg in smodel.src_groups:
-                sg.eff_ruptures = (count_ruptures(sg.id)
-                                   if callable(count_ruptures)
-                                   else count_ruptures.get(sg.id, 0))
-
     def get_source_model(self, src_group_id):
         """
         :returns: the source model for the given src_group_id
@@ -439,7 +429,6 @@ class CompositeSourceModel(collections.abc.Sequence):
                 sm.ordinal, sm.samples, sm.offset)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
-        new.info.update_eff_ruptures(new.get_num_ruptures())
         return new
 
     @property

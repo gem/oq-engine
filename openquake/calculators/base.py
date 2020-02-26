@@ -792,15 +792,9 @@ class HazardCalculator(BaseCalculator):
         Save info about the composite source model inside the csm_info dataset
         """
         if hasattr(self, 'csm_info'):  # no scenario
-            self.csm_info.update_eff_ruptures(eff_ruptures)
             self.realizations = self.csm_info.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-
-            # sanity check that eff_ruptures have been set, i.e. are not -1
-            for sm in self.csm_info.sm_rlzs:
-                for sg in sm.src_groups:
-                    assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info
 
         R = self.R

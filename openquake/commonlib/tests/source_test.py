@@ -753,20 +753,11 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
             [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
             list(map(len, csm.src_groups)))
 
-        # removing 9 src_groups out of 18
-        def count_ruptures(src_group_id):
-            if src_group_id % 2 == 1:  # Active Shallow Crust
-                return 0
-            else:
-                return 1
-        csm.info.update_eff_ruptures(count_ruptures)
-
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
         oq = readinput.get_oqparam(
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         csm = readinput.get_composite_source_model(oq)
-        csm.info.update_eff_ruptures(lambda tm: 1)
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()
