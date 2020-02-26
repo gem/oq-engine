@@ -45,7 +45,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_reader import get_ltmodels, source_info_dt
+from openquake.commonlib.source_reader import get_sm_rlzs, source_info_dt
 from openquake.commonlib import logictree, source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
@@ -628,7 +628,7 @@ def get_composite_source_model(oqparam, h5=None):
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
-    ltmodels = get_ltmodels(oqparam, gsim_lt, source_model_lt, h5)
+    ltmodels = get_sm_rlzs(oqparam, gsim_lt, source_model_lt, h5)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, ltmodels)
     key = operator.attrgetter('source_id', 'checksum')
     srcidx = 0
