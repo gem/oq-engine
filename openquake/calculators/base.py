@@ -787,27 +787,28 @@ class HazardCalculator(BaseCalculator):
             save_exposed_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
-    def store_rlz_info(self, eff_ruptures=None):
+    def store_rlz_info(self, eff_ruptures):
         """
         Save info about the composite source model inside the csm_info dataset
         """
+        oq = self.oqparam
         if hasattr(self, 'csm_info'):  # no scenario
             self.realizations = self.csm_info.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
             self.datastore['csm_info'] = self.csm_info
-        else:
-            self.csm_info = self.csm.info
+        else:  # scenario
+            self.csm_info = self.datastore['csm_info']
 
         R = self.R
         logging.info('There are %d realization(s)', R)
 
-        if self.oqparam.imtls:
+        if oq.imtls:
             self.datastore['weights'] = arr = build_weights(
-                self.realizations, self.oqparam.imt_dt())
+                self.realizations, oq.imt_dt())
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
-        if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
+        if ('event_based' in oq.calculation_mode and R >= TWO16
                 or R >= TWO32):
             raise ValueError(
                 'The logic tree has too many realizations (%d), use sampling '
@@ -818,10 +819,18 @@ class HazardCalculator(BaseCalculator):
                 'sampling it', R)
 
         # check for gsim logic tree reduction
+        discard_trts = []
         for trt in self.csm_info.gsim_lt.values:
             if eff_ruptures.get(trt, 0) == 0:
-                logging.warning('No sources/ruptures for %s: you should '
-                                'reduce the GSIM logic tree', trt)
+                discard_trts.append(trt)
+        if discard_trts:
+            msg = ('No sources for some TRTs: you should set\n'
+                   'discard_trts = %s\nin %s') % (', '.join(discard_trts),
+                                                  oq.inputs['job_ini'])
+            if 'ucerf' in oq.calculation_mode:
+                raise RuntimeError(msg)
+            else:
+                logging.warning(msg)
 
     def store_source_info(self, calc_times):
         """
