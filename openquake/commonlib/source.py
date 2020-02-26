@@ -223,6 +223,7 @@ class CompositionInfo(object):
         :returns: the complete list of LtRealizations
         """
         rlzs = sum((self.get_rlzs(sm.ordinal) for sm in self.sm_rlzs), [])
+        assert rlzs, 'No realizations found??'
         if self.num_samples:
             assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
             for rlz in rlzs:
