@@ -95,7 +95,7 @@ class RlzsAssoc(object):
         self.csm_info = csm_info
         self.num_samples = csm_info.num_samples
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
-        self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
+        self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.sm_rlzs}
 
     def get_rlzs_by_gsim(self, trt_or_grp_id, sm_id=None):
         """
@@ -132,7 +132,7 @@ class RlzsAssoc(object):
         :returns: a dictionary grp -> rlzis
         """
         dic = {}  # grp -> rlzis
-        for sm in self.csm_info.source_models:
+        for sm in self.csm_info.sm_rlzs:
             for grp_id in self.csm_info.grp_ids(sm.ordinal):
                 rlzs_by_gsim = self.get_rlzs_by_gsim(grp_id)
                 if not rlzs_by_gsim:
@@ -193,7 +193,7 @@ class RlzsAssoc(object):
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
     def __repr__(self):
-        size = sum(sm.samples for sm in self.csm_info.source_models)
+        size = sum(sm.samples for sm in self.csm_info.sm_rlzs)
         return '<%s(size=%d, rlzs=%d)>' % (
             self.__class__.__name__, size, len(self.realizations))
 
@@ -234,7 +234,7 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
     all_trts = list(cinfo.gsim_lt.values)
     if not cinfo.num_samples:
         rlzs = get_effective_rlzs(cinfo.gsim_lt)
-    for smodel in cinfo.source_models:
+    for smodel in cinfo.sm_rlzs:
         # discard source models with non-acceptable lt_path
         if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
             continue

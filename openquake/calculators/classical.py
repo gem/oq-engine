@@ -226,7 +226,7 @@ class ClassicalCalculator(base.HazardCalculator):
         rparams = {'grp_id', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_', 'rrup_'}
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        for sm in self.csm_info.source_models:
+        for sm in self.csm_info.sm_rlzs:
             for grp in sm.src_groups:
                 gsims = gsims_by_trt[grp.trt]
                 cm = ContextMaker(grp.trt, gsims)

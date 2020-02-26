@@ -105,14 +105,14 @@ class CompositionInfo(object):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
-        self.source_models = source_models
+        self.sm_rlzs = source_models
         self.init()
 
     def init(self):
         self.trt_by_grp = {}
-        n = len(self.source_models)
+        n = len(self.sm_rlzs)
         trts = list(self.gsim_lt.values)
-        for smodel in self.source_models:
+        for smodel in self.sm_rlzs:
             for grp_id in self.grp_ids(smodel.ordinal):
                 self.trt_by_grp[grp_id] = trts[grp_id // n]
 
@@ -121,7 +121,7 @@ class CompositionInfo(object):
         Extract a CompositionInfo instance containing the single
         model of index `sm_id`.
         """
-        sm = self.source_models[sm_id]
+        sm = self.sm_rlzs[sm_id]
         num_samples = sm.samples if self.num_samples else 0
         return self.__class__(self.gsim_lt, self.seed, num_samples, [sm])
 
@@ -150,14 +150,14 @@ class CompositionInfo(object):
         :returns: array of T group IDs, being T the number of TRTs
         """
         nt = len(self.gsim_lt.values)
-        ns = len(self.source_models)
+        ns = len(self.sm_rlzs)
         return eri + numpy.arange(nt) * ns
 
     def get_samples_by_grp(self):
         """
         :returns: a dictionary src_group_id -> source_model.samples
         """
-        return {grp_id: sm.samples for sm in self.source_models
+        return {grp_id: sm.samples for sm in self.sm_rlzs
                 for grp_id in self.grp_ids(sm.ordinal)}
 
     def get_rlzs(self, grp_id):
@@ -165,8 +165,8 @@ class CompositionInfo(object):
         :returns: a list of LtRealization objects
         """
         rlzs = []
-        trti, eri = divmod(grp_id, len(self.source_models))
-        sm = self.source_models[eri]
+        trti, eri = divmod(grp_id, len(self.sm_rlzs))
+        sm = self.sm_rlzs[eri]
         if self.num_samples:
             gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
         elif hasattr(self, 'gsim_rlzs'):  # cache
@@ -185,7 +185,7 @@ class CompositionInfo(object):
         :returns: the complete list of LtRealizations
         """
         rlzs = []
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             for grp_id in self.grp_ids(sm.ordinal):
                 rlzs.extend(self.get_rlzs(grp_id))
         return rlzs
@@ -194,7 +194,7 @@ class CompositionInfo(object):
         """
         :returns: a dictionary gsim -> rlzs
         """
-        trti = grp_id // len(self.source_models)
+        trti = grp_id // len(self.sm_rlzs)
         rlzs_by_gsim = AccumDict(accum=[])
         for rlz in self.get_rlzs(grp_id):
             rlzs_by_gsim[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
@@ -205,7 +205,7 @@ class CompositionInfo(object):
         :returns: a dictionary src_group_id -> gsim -> rlzs
         """
         dic = {}
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             for grp_id in self.grp_ids(sm.ordinal):
                 dic[grp_id] = self.get_rlzs_by_gsim(grp_id)
         return dic
@@ -215,7 +215,7 @@ class CompositionInfo(object):
         :returns: a dictionary src_group_id -> [rlzis, ...]
         """
         dic = {}
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             for grp_id in self.grp_ids(sm.ordinal):
                 grp = 'grp-%02d' % grp_id
                 dic[grp] = list(self.get_rlzs_by_gsim(grp_id).values())
@@ -223,12 +223,12 @@ class CompositionInfo(object):
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
-        return self.seed, self.num_samples, self.source_models
+        return self.seed, self.num_samples, self.sm_rlzs
 
     def __toh5__(self):
         # save csm_info/sm_data in the datastore
         sm_data = []
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
                             sm.samples, sm.offset))
         return (dict(
@@ -242,13 +242,13 @@ class CompositionInfo(object):
         sm_data = dic['sm_data']
         vars(self).update(attrs)
         self.gsim_lt = dic['gsim_lt']
-        self.source_models = []
+        self.sm_rlzs = []
         for sm_id, rec in enumerate(sm_data):
             path = tuple(str(decode(rec['path'])).split('_'))
             sm = source_reader.SmRealization(
                 rec['name'], rec['weight'], path, [],
                 sm_id, rec['samples'], rec['offset'])
-            self.source_models.append(sm)
+            self.sm_rlzs.append(sm)
         self.init()
 
     def get_num_rlzs(self, source_model=None):
@@ -257,7 +257,7 @@ class CompositionInfo(object):
         :returns: the number of realizations per source model (or all)
         """
         if source_model is None:
-            return sum(self.get_num_rlzs(sm) for sm in self.source_models)
+            return sum(self.get_num_rlzs(sm) for sm in self.sm_rlzs)
         if self.num_samples:
             return source_model.samples
         return self.gsim_lt.get_num_paths()
@@ -275,7 +275,7 @@ class CompositionInfo(object):
         """
         :param count_ruptures: function or dict src_group_id -> num_ruptures
         """
-        for smodel in self.source_models:
+        for smodel in self.sm_rlzs:
             for sg in smodel.src_groups:
                 sg.eff_ruptures = (count_ruptures(sg.id)
                                    if callable(count_ruptures)
@@ -285,7 +285,7 @@ class CompositionInfo(object):
         """
         :returns: the source model for the given src_group_id
         """
-        for smodel in self.source_models:
+        for smodel in self.sm_rlzs:
             for src_group in smodel.src_groups:
                 if src_group.id == src_group_id:
                     return smodel
@@ -296,7 +296,7 @@ class CompositionInfo(object):
         """
         if self.num_samples:
             gsims_by_trt = AccumDict(accum=set())
-            for sm in self.source_models:
+            for sm in self.sm_rlzs:
                 rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
                 for t, trt in enumerate(self.gsim_lt.values):
                     gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
@@ -308,12 +308,12 @@ class CompositionInfo(object):
         """
         :returns: a dictionary grp_id -> sm_id
         """
-        return {grp_id: sm.ordinal for sm in self.source_models
+        return {grp_id: sm.ordinal for sm in self.sm_rlzs
                 for grp_id in self.grp_ids(sm.ordinal)}
 
     def __repr__(self):
         info_by_model = {}
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             info_by_model[sm.path] = (
                 '_'.join(map(decode, sm.path)),
                 decode(sm.names), sm.weight, self.get_num_rlzs(sm))
@@ -333,19 +333,19 @@ class CompositeSourceModel(collections.abc.Sequence):
     def __init__(self, gsim_lt, source_model_lt, source_models):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
-        self.source_models = source_models
+        self.sm_rlzs = source_models
         self.source_info = ()
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
-            [sm.get_skeleton() for sm in self.source_models])
+            [sm.get_skeleton() for sm in self.sm_rlzs])
 
     def grp_by_src(self):
         """
         :returns: a new CompositeSourceModel with one group per source
         """
         smodels = []
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             src_groups = []
             smodel = sm.__class__(sm.names, sm.weight, sm.path, src_groups,
                                   sm.ordinal, sm.samples, sm.offset)
@@ -363,7 +363,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         Extract a CompositeSourceModel instance containing the single
         model of index `sm_id`.
         """
-        sm = self.source_models[sm_id]
+        sm = self.sm_rlzs[sm_id]
         if self.source_model_lt.num_samples:
             self.source_model_lt.num_samples = sm.samples
         new = self.__class__(self.gsim_lt, self.source_model_lt, [sm])
@@ -379,7 +379,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         :returns: a new CompositeSourceModel instance
         """
         source_models = []
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             src_groups = []
             for src_group in sm.src_groups:
                 sg = copy.copy(src_group)
@@ -399,7 +399,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         """
         Yields the SourceGroups inside each source model.
         """
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             for src_group in sm.src_groups:
                 yield src_group
 
@@ -407,7 +407,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         """
         :returns: list of non parametric sources in the composite source model
         """
-        return [src for sm in self.source_models
+        return [src for sm in self.sm_rlzs
                 for src_group in sm.src_groups
                 for src in src_group if hasattr(src, 'data')]
 
@@ -418,7 +418,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         """
         assert kind in ('all', 'indep', 'mutex'), kind
         sources = []
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             for src_group in sm.src_groups:
                 if kind in ('all', src_group.src_interdep):
                     for src in src_group:
@@ -434,7 +434,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         """
         atomic = []
         acc = AccumDict(accum=[])
-        for sm in self.source_models:
+        for sm in self.sm_rlzs:
             for grp in sm.src_groups:
                 if grp and grp.atomic:
                     atomic.append((grp.trt, grp, True))
@@ -498,17 +498,17 @@ class CompositeSourceModel(collections.abc.Sequence):
         """
         models = ['%d-%s-%s,w=%s [%d src_group(s)]' % (
             sm.ordinal, sm.name, '_'.join(sm.path), sm.weight,
-            len(sm.src_groups)) for sm in self.source_models]
+            len(sm.src_groups)) for sm in self.sm_rlzs]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(models))
 
     def __getitem__(self, i):
         """Return the i-th source model"""
-        return self.source_models[i]
+        return self.sm_rlzs[i]
 
     def __iter__(self):
         """Return an iterator over the underlying source models"""
-        return iter(self.source_models)
+        return iter(self.sm_rlzs)
 
     def __len__(self):
         """Return the number of underlying source models"""
-        return len(self.source_models)
+        return len(self.sm_rlzs)

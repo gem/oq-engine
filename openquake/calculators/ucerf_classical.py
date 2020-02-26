@@ -37,7 +37,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
     def pre_execute(self):
         super().pre_execute()
         self.csm_info = self.csm.info
-        for sm in self.csm.source_models:  # one branch at the time
+        for sm in self.csm.sm_rlzs:  # one branch at the time
             [grp] = sm.src_groups
             for src in grp:
                 grp.tot_ruptures += src.num_ruptures
@@ -61,7 +61,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         [gsims] = self.csm.info.get_gsims_by_trt().values()
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         srcfilter = self.src_filter()
-        for sm in self.csm.source_models:  # one branch at the time
+        for sm in self.csm.sm_rlzs:  # one branch at the time
             [grp] = sm.src_groups
             [src] = grp
             srcs = list(src)

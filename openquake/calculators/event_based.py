@@ -137,7 +137,7 @@ class EventBasedCalculator(base.HazardCalculator):
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         ses_idx = 0
         allargs = []
-        for sm_id, sm in enumerate(self.csm.source_models):
+        for sm_id, sm in enumerate(self.csm.sm_rlzs):
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
                 if not sg.sources:

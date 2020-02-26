@@ -799,7 +799,7 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError('Empty logic tree: too much filtering?')
 
             # sanity check that eff_ruptures have been set, i.e. are not -1
-            for sm in self.csm_info.source_models:
+            for sm in self.csm_info.sm_rlzs:
                 for sg in sm.src_groups:
                     assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info

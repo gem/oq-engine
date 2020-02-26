@@ -187,7 +187,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         logging.warning('%s is still experimental', self.__class__.__name__)
         self.read_inputs()  # read the site collection
         logging.info('Found %d source model logic tree branches',
-                     len(self.csm.source_models))
+                     len(self.csm.sm_rlzs))
         self.datastore['sitecol'] = self.sitecol
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.eid = collections.Counter()  # sm_id -> event_id
