@@ -26,7 +26,6 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree, source_reader
-from openquake.commonlib.rlzs_assoc import LtRealization
 
 
 MINWEIGHT = source.MINWEIGHT
@@ -74,6 +73,42 @@ def get_field(data, field, default):
         return data[field]
     except ValueError:  # field missing in old engines
         return default
+
+
+class LtRealization(object):
+    """
+    Composite realization build on top of a source model realization and
+    a GSIM realization.
+    """
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+        self.ordinal = ordinal
+        self.sm_lt_path = tuple(sm_lt_path)
+        self.gsim_rlz = gsim_rlz
+        self.weight = weight
+
+    def __repr__(self):
+        return '<%d,%s,w=%s>' % (self.ordinal, self.pid, self.weight)
+
+    @property
+    def gsim_lt_path(self):
+        return self.gsim_rlz.lt_path
+
+    @property
+    def pid(self):
+        """An unique identifier for effective realizations"""
+        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.pid
+
+    def __lt__(self, other):
+        return self.ordinal < other.ordinal
+
+    def __eq__(self, other):
+        return repr(self) == repr(other)
+
+    def __ne__(self, other):
+        return repr(self) != repr(other)
+
+    def __hash__(self):
+        return hash(repr(self))
 
 
 class CompositionInfo(object):
