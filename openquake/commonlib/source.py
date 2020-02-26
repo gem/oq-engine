@@ -82,7 +82,7 @@ class CompositionInfo(object):
     a composite source model.
 
     :param source_model_lt: a SourceModelLogicTree object
-    :param source_models: a list of LtSourceModel instances
+    :param source_models: a list of SmRealization instances
     """
     @classmethod
     def fake(cls, gsimlt=None):
@@ -93,7 +93,7 @@ class CompositionInfo(object):
         """
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('[FromFile]')
-        fakeSM = source_reader.LtSourceModel(
+        fakeSM = source_reader.SmRealization(
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             ordinal=0, samples=1, offset=0)
@@ -245,7 +245,7 @@ class CompositionInfo(object):
         self.source_models = []
         for sm_id, rec in enumerate(sm_data):
             path = tuple(str(decode(rec['path'])).split('_'))
-            sm = source_reader.LtSourceModel(
+            sm = source_reader.SmRealization(
                 rec['name'], rec['weight'], path, [],
                 sm_id, rec['samples'], rec['offset'])
             self.source_models.append(sm)
@@ -253,7 +253,7 @@ class CompositionInfo(object):
 
     def get_num_rlzs(self, source_model=None):
         """
-        :param source_model: a LtSourceModel instance (or None)
+        :param source_model: a SmRealization instance (or None)
         :returns: the number of realizations per source model (or all)
         """
         if source_model is None:
@@ -386,7 +386,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 sg.sources = sorted(sources_by_grp.get(sg.id, []),
                                     key=operator.attrgetter('id'))
                 src_groups.append(sg)
-            newsm = source_reader.LtSourceModel(
+            newsm = source_reader.SmRealization(
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.ordinal, sm.samples, sm.offset)
             source_models.append(newsm)

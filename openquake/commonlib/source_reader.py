@@ -84,7 +84,7 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
     return np
 
 
-class LtSourceModel(object):
+class SmRealization(object):
     """
     A container of SourceGroup instances with some additional attributes
     describing the source model in the logic tree.
@@ -234,7 +234,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     lt_models = []
     offset = 0
     for rlz in rlzs:
-        ltm = LtSourceModel(
+        ltm = SmRealization(
             rlz['value'], rlz['weight'], rlz['lt_path'], [],
             rlz['ordinal'], rlz['samples'], offset)
         if source_model_lt.num_samples:
