@@ -226,10 +226,9 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
     mags = set()
     changes = 0
     fname_hits = collections.Counter()
-    groups = [[] for _ in sm_rlzs]  # [src_groups] for each ordinal
     for dic in sorted(smap, key=operator.itemgetter('fileno')):
         sm_rlz = sm_rlzs[dic['ordinal']]
-        groups[sm_rlz.ordinal].extend(dic['src_groups'])
+        sm_rlz.src_groups.extend(dic['src_groups'])
         fname_hits += dic['fname_hits']
         changes += dic['changes']
         mags.update(dic['mags'])
@@ -244,7 +243,7 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
     # set src_group_ids
     get_grp_id = source_model_lt.get_grp_id(gsim_lt.values)
     for sm_rlz in sm_rlzs:
-        for grp in groups[sm_rlz.ordinal]:
+        for grp in sm_rlz.src_groups:
             grp.id = grp_id = get_grp_id(grp.trt, sm_rlz.ordinal)
             for src in grp:
                 src.src_group_id = grp_id
