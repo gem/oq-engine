@@ -359,24 +359,6 @@ class CompositeSourceModel(collections.abc.Sequence):
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.sm_rlzs])
 
-    def grp_by_src(self):
-        """
-        :returns: a new CompositeSourceModel with one group per source
-        """
-        smodels = []
-        for sm in self.sm_rlzs:
-            src_groups = []
-            smodel = sm.__class__(sm.value, sm.weight, sm.ordinal, sm.lt_path,
-                                  src_groups, sm.samples, sm.offset)
-            for sg in sm.src_groups:
-                for src in sg.sources:
-                    src.src_group_id = sg.id
-                    src_groups.append(
-                        sourceconverter.SourceGroup(
-                            sg.trt, [src], name=src.source_id, id=sg.id))
-            smodels.append(smodel)
-        return self.__class__(self.gsim_lt, self.source_model_lt, smodels)
-
     def get_model(self, sm_id):
         """
         Extract a CompositeSourceModel instance containing the single

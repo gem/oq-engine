@@ -643,9 +643,6 @@ def get_composite_source_model(oqparam, h5=None):
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
 
-    if oqparam.disagg_by_src:
-        csm = csm.grp_by_src()  # one group per source
-
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     return csm
 
