@@ -461,7 +461,7 @@ class mtkActiveFault(object):
             if np.max(model.magnitudes) > mmax:
                 mmax = np.max(model.magnitudes)
         if collapse:
-            self.mfd = ([self.collapse_branches(mmin, bin_width, mmax)],
+            self.mfd = ([self.collapse_branches(mmin, model.recurrence.bin_width, mmax)],
                         [1.0],
                         [rendered_msr])
         else:
