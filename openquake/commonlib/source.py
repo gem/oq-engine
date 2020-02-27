@@ -25,7 +25,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib import source, sourceconverter
-from openquake.commonlib import logictree, source_reader
+from openquake.commonlib import logictree
 
 
 MINWEIGHT = source.MINWEIGHT
@@ -156,25 +156,6 @@ class CompositionInfo(object):
         sm = self.sm_rlzs[sm_id]
         num_samples = sm.samples if self.num_samples else 0
         return self.__class__(self.gsim_lt, self.seed, num_samples, [sm])
-
-    def classify_gsim_lt(self, source_model):
-        """
-        Determine if a gsim logic tree can be reduced: not used in the code.
-
-        :returns: (kind, num_paths), where kind is trivial, simple, complex
-        """
-        trts = set(sg.trt for sg in source_model.src_groups if sg.eff_ruptures)
-        gsim_lt = self.gsim_lt.reduce(trts)
-        num_branches = list(gsim_lt.get_num_branches().values())
-        num_paths = gsim_lt.get_num_paths()
-        num_gsims = '(%s)' % ','.join(map(str, num_branches))
-        multi_gsim_trts = sum(1 for num_gsim in num_branches if num_gsim > 1)
-        if multi_gsim_trts == 0:
-            return "trivial" + num_gsims, num_paths
-        elif multi_gsim_trts == 1:
-            return "simple" + num_gsims, num_paths
-        else:
-            return "complex" + num_gsims, num_paths
 
     def grp_ids(self, eri):
         """
@@ -354,7 +335,7 @@ class CompositionInfo(object):
         for sm in self.sm_rlzs:
             info_by_model[sm.lt_path] = (
                 '_'.join(map(decode, sm.lt_path)),
-                decode(sm.names), sm.weight, self.get_num_rlzs(sm))
+                decode(sm.value), sm.weight, self.get_num_rlzs(sm))
         summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
