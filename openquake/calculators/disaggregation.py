@@ -139,7 +139,8 @@ def agg_probs(*probs):
     return 1. - acc
 
 
-def gen_rupdata(dstore, grp_id, nsplit):
+def _gen_rupdata(dstore, grp_id, nsplit):
+    # yield nsplit dictionaries rup_key->rup_array for the given grp_id
     ok = dstore['rup/grp_id'][()] == grp_id
     data = {k: numpy.array_split(dstore['rup/' + k][ok], nsplit)
             for k in dstore['rup']}
@@ -318,7 +319,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
-            for rupdata in gen_rupdata(dstore, grp_id, nsplit):
+            for rupdata in _gen_rupdata(dstore, grp_id, nsplit):
                 smap.submit((rupdata, self.sitecol, oq, cmaker,
                              self.iml4, trti, self.bin_edges))
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
