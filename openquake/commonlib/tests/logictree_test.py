@@ -2210,16 +2210,16 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.seed = oqparam.random_seed
 
     def test_sample_source_model(self):
-        [(sm_name, weight, _, branch_ids, _)] = self.source_model_lt
-        self.assertEqual(sm_name, 'example-source-model.xml')
-        self.assertEqual(('b1', 'b4', 'b7'), branch_ids)
+        [rlz] = self.source_model_lt
+        self.assertEqual(rlz.value, 'example-source-model.xml')
+        self.assertEqual(('b1', 'b4', 'b7'), rlz.lt_path)
 
     def test_sample_gmpe(self):
-        [(value, weight, _, branch_ids, _)] = logictree.sample(
+        [rlz] = logictree.sample(
             list(self.gmpe_lt), 1, self.seed)
-        self.assertEqual(value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
-        self.assertEqual(weight['default'], 0.5)
-        self.assertEqual(('b2', 'b3'), branch_ids)
+        self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
+        self.assertEqual(rlz.weight['default'], 0.5)
+        self.assertEqual(('b2', 'b3'), rlz.lt_path)
 
 
 class LogicTreeProcessorParsePathTestCase(unittest.TestCase):

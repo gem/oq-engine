@@ -73,19 +73,60 @@ def unique(objects, key=None):
     return objects
 
 
-Realization = namedtuple('Realization', 'value weight ordinal lt_path samples')
-Realization.pid = property(lambda self: '_'.join(self.lt_path))  # path ID
+class Realization(object):
+    def __init__(self, value, weight, ordinal, lt_path, samples, offset=0):
+        self.value = value
+        self.weight = weight
+        self.ordinal = ordinal
+        self.lt_path = lt_path
+        self.samples = samples
+        self.offset = offset
 
-rlz_dt = numpy.dtype([
-    ('ordinal', numpy.uint32),
-    ('lt_path', hdf5.vstr),
-    ('weight', numpy.float64),
-    ('value', hdf5.vstr),
-    ('samples', numpy.uint32),
-    ('offset', numpy.uint32),
-])
+    @property
+    def pid(self):
+        return '_'.join(self.lt_path)  # path ID
+
+    @property
+    def name(self):
+        """
+        Compact representation for the names
+        """
+        names = self.value.split()
+        if len(names) == 1:
+            return names[0]
+        elif len(names) == 2:
+            return ' '.join(names)
+        else:
+            return ' '.join([names[0], '...', names[-1]])
+
+    @property
+    def num_sources(self):
+        """
+        Number of sources contained in the source model
+        """
+        return sum(len(sg) for sg in self.src_groups)
+
+    def get_skeleton(self):
+        """
+        Return an empty copy of the source model, i.e. without sources,
+        but with the proper attributes for each SourceGroup contained within.
+        """
+        src_groups = []
+        for grp in self.src_groups:
+            sg = copy.copy(grp)
+            sg.sources = []
+            src_groups.append(sg)
+        return self.__class__(self.value, self.weight, self.ordinal,
+                              self.lt_path, self.samples, self.offset)
+
+    def __repr__(self):
+        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
+        return '<%s #%d %s, path=%s, weight=%s%s>' % (
+            self.__class__.__name__, self.ordinal, self.value,
+            '_'.join(self.lt_path), self.weight, samples)
 
 
+@functools.lru_cache()
 def get_effective_rlzs(rlzs):
     """
     Group together realizations with the same path
@@ -1099,30 +1140,18 @@ class SourceModelLogicTree(object):
                 sg.changes += changes
         return sg  # something changed
 
-    @functools.lru_cache()
-    def get_eff_rlzs(self):
-        """
-        :returns: an array of effective realization of dtype rlz_dt
-        """
-        rlzs = get_effective_rlzs(self)
-        arr = numpy.zeros(len(rlzs), rlz_dt)
-        for rlz in rlzs:
-            arr[rlz.ordinal] = (rlz.ordinal, rlz.lt_path, rlz.weight,
-                                rlz.value, rlz.samples, 0)
-        return arr
-
     def get_trti_eri(self):
         """
         :returns: a function grp_id -> (trti, eri)
         """
-        return lambda gid, n=len(self.get_eff_rlzs()): divmod(gid, n)
+        return lambda gid, n=len(get_effective_rlzs(self)): divmod(gid, n)
 
     def get_grp_id(self, trts):
         """
         :returns: a function trt, eri -> grp_id
         """
         trti = {trt: i for i, trt in enumerate(trts)}
-        return (lambda trt, eri, n=len(self.get_eff_rlzs()):
+        return (lambda trt, eri, n=len(get_effective_rlzs(self)):
                 trti[trt] * n + int(eri))
 
     def __toh5__(self):
