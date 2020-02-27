@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Changed the disaggregation calculator to submit one task per group
+  * Avoided submitting too many tasks in the disaggregation calculator
   * Added a parameter `discard_trts` for manual reduction of GSIM logic tree
   * Fixed a bug in case of duplicated nodal planes affecting the Italy model
   * Removed dynamic reduction of the gsim logic tree (i.e. now the
