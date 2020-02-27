@@ -324,7 +324,7 @@ def get_bounding_box(obj, maxdist):
     a2 = angular_distance(maxdist, bbox[1], bbox[3])
     delta = bbox[2] - bbox[0] + 2 * a2
     if delta > 180:
-        raise BBoxError('The maximum distance %d is too large, the bounding '
+        raise BBoxError('The buffer of %d km is too large, the bounding '
                         'box is larger than half the globe: %d degrees' %
                         (maxdist, delta))
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
