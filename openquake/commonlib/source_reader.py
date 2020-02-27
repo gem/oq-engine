@@ -247,7 +247,6 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
             grp.id = grp_id = get_grp_id(grp.trt, sm_rlz.ordinal)
             for src in grp:
                 src.src_group_id = grp_id
-            sm_rlz.src_groups.append(grp)
             grp_id += 1
             if grp_id >= TWO16:
                 # the limit is only for event based calculations
