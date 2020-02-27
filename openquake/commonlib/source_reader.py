@@ -27,6 +27,8 @@ import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, calc
+from openquake.commonlib.logictree import get_effective_rlzs
+
 
 TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
@@ -228,17 +230,17 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
-    rlzs = source_model_lt.get_eff_rlzs()
+    rlzs = get_effective_rlzs(source_model_lt)
     if not source_model_lt.num_samples:
         num_gsim_rlzs = gsim_lt.get_num_paths()
     sm_rlzs = []
     offset = 0
     for rlz in rlzs:
         sm_rlz = SmRealization(
-            rlz['value'], rlz['weight'], rlz['lt_path'], [],
-            rlz['ordinal'], rlz['samples'], offset)
+            rlz.value, rlz.weight, rlz.lt_path, [],
+            rlz.ordinal, rlz.samples, offset)
         if source_model_lt.num_samples:
-            offset += rlz['samples']
+            offset += rlz.samples
         else:
             offset += num_gsim_rlzs
         sm_rlzs.append(sm_rlz)
@@ -263,9 +265,9 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
     allargs = []
     fileno = 0
     for rlz in rlzs:
-        for name in rlz['value'].split():
+        for name in rlz.value.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            allargs.append((rlz['ordinal'], rlz['lt_path'],
+            allargs.append((rlz.ordinal, rlz.lt_path,
                             source_model_lt.apply_uncertainties, fname,
                             fileno))
             fileno += 1

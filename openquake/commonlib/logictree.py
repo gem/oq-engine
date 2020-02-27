@@ -73,19 +73,20 @@ def unique(objects, key=None):
     return objects
 
 
-Realization = namedtuple('Realization', 'value weight ordinal lt_path samples')
-Realization.pid = property(lambda self: '_'.join(self.lt_path))  # path ID
+class Realization(object):
+    def __init__(self, value, weight, ordinal, lt_path, samples):
+        self.value = value
+        self.weight = weight
+        self.ordinal = ordinal
+        self.lt_path = lt_path
+        self.samples = samples
 
-rlz_dt = numpy.dtype([
-    ('ordinal', numpy.uint32),
-    ('lt_path', hdf5.vstr),
-    ('weight', numpy.float64),
-    ('value', hdf5.vstr),
-    ('samples', numpy.uint32),
-    ('offset', numpy.uint32),
-])
+    @property
+    def pid(self):
+        return '_'.join(self.lt_path)  # path ID
 
 
+@functools.lru_cache()
 def get_effective_rlzs(rlzs):
     """
     Group together realizations with the same path
@@ -1099,30 +1100,18 @@ class SourceModelLogicTree(object):
                 sg.changes += changes
         return sg  # something changed
 
-    @functools.lru_cache()
-    def get_eff_rlzs(self):
-        """
-        :returns: an array of effective realization of dtype rlz_dt
-        """
-        rlzs = get_effective_rlzs(self)
-        arr = numpy.zeros(len(rlzs), rlz_dt)
-        for rlz in rlzs:
-            arr[rlz.ordinal] = (rlz.ordinal, rlz.lt_path, rlz.weight,
-                                rlz.value, rlz.samples, 0)
-        return arr
-
     def get_trti_eri(self):
         """
         :returns: a function grp_id -> (trti, eri)
         """
-        return lambda gid, n=len(self.get_eff_rlzs()): divmod(gid, n)
+        return lambda gid, n=len(get_effective_rlzs(self)): divmod(gid, n)
 
     def get_grp_id(self, trts):
         """
         :returns: a function trt, eri -> grp_id
         """
         trti = {trt: i for i, trt in enumerate(trts)}
-        return (lambda trt, eri, n=len(self.get_eff_rlzs()):
+        return (lambda trt, eri, n=len(get_effective_rlzs(self)):
                 trti[trt] * n + int(eri))
 
     def __toh5__(self):
