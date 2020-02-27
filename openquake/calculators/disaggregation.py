@@ -311,7 +311,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks or 1
         grp_trt = self.csm_info.trt_by_grp.items()
         nsplit = math.ceil(ct / len(grp_trt))
-        for grp_id, trt in grp_trt:
+        for grp_id, trt in sorted(grp_trt):
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
             cmaker = ContextMaker(
