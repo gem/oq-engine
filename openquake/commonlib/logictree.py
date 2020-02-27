@@ -1131,19 +1131,16 @@ class SourceModelLogicTree(object):
                     branchsets_and_uncertainties.append(
                         (branchset, branch.value))
                 branchset = branch.bset
-            if not branchsets_and_uncertainties:
-                newsm.src_groups.append(src_group)
-                continue
-
-            sg = copy.deepcopy(src_group)
-            for source in sg:
-                changes = sum(
-                    branchset.apply_uncertainty(value, source)
-                    for branchset, value in branchsets_and_uncertainties)
-                if changes:  # redoing count_ruptures can be slow
-                    source.num_ruptures = source.count_ruptures()
-                    newsm.changes += changes
-            newsm.src_groups.append(sg)
+            if branchsets_and_uncertainties:
+                src_group = copy.deepcopy(src_group)
+                for source in src_group:
+                    changes = sum(
+                        branchset.apply_uncertainty(value, source)
+                        for branchset, value in branchsets_and_uncertainties)
+                    if changes:  # redoing count_ruptures can be slow
+                        source.num_ruptures = source.count_ruptures()
+                        newsm.changes += changes
+            newsm.src_groups.append(src_group)
         return newsm
 
     def get_trti_eri(self):
