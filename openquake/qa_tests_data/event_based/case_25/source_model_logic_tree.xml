@@ -5,11 +5,11 @@
     <logicTreeBranchSet uncertaintyType="sourceModel"
                         branchSetID="bs">
       <logicTreeBranch branchID="b1">
-        <uncertaintyModel>common.xml</uncertaintyModel>
+        <uncertaintyModel>common.xml extra1.xml</uncertaintyModel>
         <uncertaintyWeight>0.5</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b2">
-        <uncertaintyModel>common.xml extra.xml</uncertaintyModel>
+        <uncertaintyModel>common.xml extra2.xml</uncertaintyModel>
         <uncertaintyWeight>0.5</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
