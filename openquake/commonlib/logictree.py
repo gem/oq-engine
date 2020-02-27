@@ -74,16 +74,56 @@ def unique(objects, key=None):
 
 
 class Realization(object):
-    def __init__(self, value, weight, ordinal, lt_path, samples):
+    def __init__(self, value, weight, ordinal, lt_path, samples, offset=0):
         self.value = value
         self.weight = weight
         self.ordinal = ordinal
         self.lt_path = lt_path
         self.samples = samples
+        self.offset = offset
 
     @property
     def pid(self):
         return '_'.join(self.lt_path)  # path ID
+
+    @property
+    def name(self):
+        """
+        Compact representation for the names
+        """
+        names = self.value.split()
+        if len(names) == 1:
+            return names[0]
+        elif len(names) == 2:
+            return ' '.join(names)
+        else:
+            return ' '.join([names[0], '...', names[-1]])
+
+    @property
+    def num_sources(self):
+        """
+        Number of sources contained in the source model
+        """
+        return sum(len(sg) for sg in self.src_groups)
+
+    def get_skeleton(self):
+        """
+        Return an empty copy of the source model, i.e. without sources,
+        but with the proper attributes for each SourceGroup contained within.
+        """
+        src_groups = []
+        for grp in self.src_groups:
+            sg = copy.copy(grp)
+            sg.sources = []
+            src_groups.append(sg)
+        return self.__class__(self.value, self.weight, self.ordinal,
+                              self.lt_path, self.samples, self.offset)
+
+    def __repr__(self):
+        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
+        return '<%s #%d %s, path=%s, weight=%s%s>' % (
+            self.__class__.__name__, self.ordinal, self.value,
+            '_'.join(self.lt_path), self.weight, samples)
 
 
 @functools.lru_cache()

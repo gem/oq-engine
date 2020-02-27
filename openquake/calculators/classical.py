@@ -226,14 +226,17 @@ class ClassicalCalculator(base.HazardCalculator):
         rparams = {'grp_id', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_', 'rrup_'}
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        n = len(self.csm_info.sm_rlzs)
+        trts = list(self.csm_info.gsim_lt.values)
         for sm in self.csm_info.sm_rlzs:
-            for grp in sm.src_groups:
-                gsims = gsims_by_trt[grp.trt]
-                cm = ContextMaker(grp.trt, gsims)
+            for grp_id in self.csm_info.grp_ids(sm.ordinal):
+                trt = trts[grp_id // n]
+                gsims = gsims_by_trt[trt]
+                cm = ContextMaker(trt, gsims)
                 rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
                 for dparam in cm.REQUIRES_DISTANCES:
                     rparams.add(dparam + '_')
-                zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
+                zd[grp_id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
         for k in self.rparams:

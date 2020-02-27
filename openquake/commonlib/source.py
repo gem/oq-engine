@@ -117,7 +117,7 @@ class CompositionInfo(object):
     a composite source model.
 
     :param source_model_lt: a SourceModelLogicTree object
-    :param source_models: a list of SmRealization instances
+    :param source_models: a list of Realization instances
     """
     @classmethod
     def fake(cls, gsimlt=None):
@@ -128,10 +128,9 @@ class CompositionInfo(object):
         """
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('[FromFile]')
-        fakeSM = source_reader.SmRealization(
-            'scenario', weight,  'b1',
-            [sourceconverter.SourceGroup('*', eff_ruptures=1)],
-            ordinal=0, samples=1, offset=0)
+        fakeSM = logictree.Realization(
+            'scenario', weight,  0, lt_path='b1', samples=1)
+        fakeSM.src_groups = [sourceconverter.SourceGroup('*', eff_ruptures=1)],
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
     def __init__(self, gsim_lt, seed, num_samples, source_models):
@@ -214,7 +213,7 @@ class CompositionInfo(object):
                 self.gsim_lt)
         for i, gsim_rlz in enumerate(gsim_rlzs):
             weight = sm.weight * gsim_rlz.weight
-            rlz = LtRealization(sm.offset + i, sm.path, gsim_rlz, weight)
+            rlz = LtRealization(sm.offset + i, sm.lt_path, gsim_rlz, weight)
             rlzs.append(rlz)
         return rlzs
 
@@ -277,7 +276,7 @@ class CompositionInfo(object):
         # save csm_info/sm_data in the datastore
         sm_data = []
         for sm in self.sm_rlzs:
-            sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
+            sm_data.append((sm.value, sm.weight, '_'.join(sm.lt_path),
                             sm.samples, sm.offset))
         return (dict(
             gsim_lt=self.gsim_lt,
@@ -293,21 +292,21 @@ class CompositionInfo(object):
         self.sm_rlzs = []
         for sm_id, rec in enumerate(sm_data):
             path = tuple(str(decode(rec['path'])).split('_'))
-            sm = source_reader.SmRealization(
-                rec['name'], rec['weight'], path, [],
-                sm_id, rec['samples'], rec['offset'])
+            sm = logictree.Realization(
+                rec['name'], rec['weight'], sm_id, path,
+                rec['samples'], rec['offset'])
             self.sm_rlzs.append(sm)
         self.init()
 
-    def get_num_rlzs(self, source_model=None):
+    def get_num_rlzs(self, sm_rlz=None):
         """
-        :param source_model: a SmRealization instance (or None)
+        :param sm_rlz: a Realization instance (or None)
         :returns: the number of realizations per source model (or all)
         """
-        if source_model is None:
+        if sm_rlz is None:
             return sum(self.get_num_rlzs(sm) for sm in self.sm_rlzs)
         if self.num_samples:
-            return source_model.samples
+            return sm_rlz.samples
         return self.gsim_lt.get_num_paths()
 
     @property
@@ -323,6 +322,7 @@ class CompositionInfo(object):
         """
         :returns: the source model for the given src_group_id
         """
+        1/0
         for smodel in self.sm_rlzs:
             for src_group in smodel.src_groups:
                 if src_group.id == src_group_id:
@@ -352,8 +352,8 @@ class CompositionInfo(object):
     def __repr__(self):
         info_by_model = {}
         for sm in self.sm_rlzs:
-            info_by_model[sm.path] = (
-                '_'.join(map(decode, sm.path)),
+            info_by_model[sm.lt_path] = (
+                '_'.join(map(decode, sm.lt_path)),
                 decode(sm.names), sm.weight, self.get_num_rlzs(sm))
         summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]
@@ -368,10 +368,10 @@ class CompositeSourceModel(collections.abc.Sequence):
         a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
-    def __init__(self, gsim_lt, source_model_lt, source_models):
+    def __init__(self, gsim_lt, source_model_lt, sm_rlzs):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
-        self.sm_rlzs = source_models
+        self.sm_rlzs = sm_rlzs
         self.source_info = ()
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
@@ -385,8 +385,8 @@ class CompositeSourceModel(collections.abc.Sequence):
         smodels = []
         for sm in self.sm_rlzs:
             src_groups = []
-            smodel = sm.__class__(sm.names, sm.weight, sm.path, src_groups,
-                                  sm.ordinal, sm.samples, sm.offset)
+            smodel = sm.__class__(sm.value, sm.weight, sm.ordinal, sm.lt_path,
+                                  src_groups, sm.samples, sm.offset)
             for sg in sm.src_groups:
                 for src in sg.sources:
                     src.src_group_id = sg.id
@@ -424,9 +424,10 @@ class CompositeSourceModel(collections.abc.Sequence):
                 sg.sources = sorted(sources_by_grp.get(sg.id, []),
                                     key=operator.attrgetter('id'))
                 src_groups.append(sg)
-            newsm = source_reader.SmRealization(
-                sm.names, sm.weight, sm.path, src_groups,
-                sm.ordinal, sm.samples, sm.offset)
+            newsm = logictree.Realization(
+                sm.value, sm.weight, sm.ordinal,
+                sm.lt_path, sm.samples, sm.offset)
+            newsm.src_groups = src_groups
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         return new
@@ -534,7 +535,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         Return a string representation of the composite model
         """
         models = ['%d-%s-%s,w=%s [%d src_group(s)]' % (
-            sm.ordinal, sm.name, '_'.join(sm.path), sm.weight,
+            sm.ordinal, sm.name, '_'.join(sm.lt_path), sm.weight,
             len(sm.src_groups)) for sm in self.sm_rlzs]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(models))
 

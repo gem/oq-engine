@@ -86,61 +86,6 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
     return np
 
 
-class SmRealization(object):
-    """
-    A container of SourceGroup instances with some additional attributes
-    describing the source model in the logic tree.
-    """
-    def __init__(self, names, weight, path, src_groups, ordinal, samples,
-                 offset):
-        self.names = ' '.join(names.split())  # replace newlines with spaces
-        self.weight = weight
-        self.path = path
-        self.src_groups = src_groups
-        self.ordinal = ordinal
-        self.samples = samples
-        self.offset = offset
-
-    @property
-    def name(self):
-        """
-        Compact representation for the names
-        """
-        names = self.names.split()
-        if len(names) == 1:
-            return names[0]
-        elif len(names) == 2:
-            return ' '.join(names)
-        else:
-            return ' '.join([names[0], '...', names[-1]])
-
-    @property
-    def num_sources(self):
-        """
-        Number of sources contained in the source model
-        """
-        return sum(len(sg) for sg in self.src_groups)
-
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = []
-        for grp in self.src_groups:
-            sg = copy.copy(grp)
-            sg.sources = []
-            src_groups.append(sg)
-        return self.__class__(self.names, self.weight, self.path, src_groups,
-                              self.ordinal, self.samples, self.offset)
-
-    def __repr__(self):
-        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
-        return '<%s #%d %s, path=%s, weight=%s%s>' % (
-            self.__class__.__name__, self.ordinal, self.names,
-            '_'.join(self.path), self.weight, samples)
-
-
 class SourceReader(object):
     """
     :param converter: a SourceConverter instance
@@ -235,12 +180,11 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         num_gsim_rlzs = gsim_lt.get_num_paths()
     sm_rlzs = []
     offset = 0
-    for rlz in rlzs:
-        sm_rlz = SmRealization(
-            rlz.value, rlz.weight, rlz.lt_path, [],
-            rlz.ordinal, rlz.samples, offset)
+    for sm_rlz in rlzs:
+        sm_rlz.src_groups = []
+        sm_rlz.offset = offset
         if source_model_lt.num_samples:
-            offset += rlz.samples
+            offset += sm_rlz.samples
         else:
             offset += num_gsim_rlzs
         sm_rlzs.append(sm_rlz)
@@ -315,7 +259,7 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
                          for src in grp)
         for brid, srcids in source_model_lt.info.\
                 applytosources.items():
-            if brid in sm_rlz.path:
+            if brid in sm_rlz.lt_path:
                 for srcid in srcids:
                     if srcid not in source_ids:
                         raise ValueError(
