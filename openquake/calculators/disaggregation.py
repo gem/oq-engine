@@ -138,6 +138,13 @@ def agg_probs(*probs):
     return 1. - acc
 
 
+def get_rupdata(dstore, grp_id):
+    ok = dstore['rup/grp_id'][()] == grp_id
+    rupdata = {k: dstore['rup/' + k][ok]
+               for k in dstore['rup']}
+    return rupdata
+
+
 @base.calculators.add('disaggregation')
 class DisaggregationCalculator(base.HazardCalculator):
     """
@@ -212,11 +219,11 @@ class DisaggregationCalculator(base.HazardCalculator):
             if not self.csm.get_sources():
                 raise RuntimeError('All sources were filtered away!')
 
-        csm_info = self.datastore['csm_info']
+        self.csm_info = self.datastore['csm_info']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
 
-        self.ws = [rlz.weight for rlz in csm_info.get_realizations()]
+        self.ws = [rlz.weight for rlz in self.csm_info.get_realizations()]
         self.pgetter = getters.PmapGetter(
             self.datastore, self.ws, self.sitecol.sids)
 
@@ -259,7 +266,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
         # build trt_edges
-        trts = tuple(csm_info.trts)
+        trts = tuple(self.csm_info.trts)
         trt_num = {trt: i for i, trt in enumerate(trts)}
         self.trts = trts
 
@@ -295,28 +302,20 @@ class DisaggregationCalculator(base.HazardCalculator):
                         self.imldict[s, rlz, poe, imt] = self.iml4[s, m, p, z]
 
         # submit disagg tasks
-        gid = self.datastore['rup/grp_id'][()]
-        indices_by_grp = get_indices(gid)  # grp_id -> [(start, stop),...]
-        blocksize = len(gid) // (oq.concurrent_tasks or 1) + 1
         # NB: removing the blocksize causes slow disaggregation tasks
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        for grp_id, trt in csm_info.trt_by_grp.items():
+        for grp_id, trt in self.csm_info.trt_by_grp.items():
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
-            rlzs_by_gsim = self.csm_info.get_rlzs_by_gsim(grp_id)
             cmaker = ContextMaker(
-                trt, rlzs_by_gsim,
+                trt, self.csm_info.get_rlzs_by_gsim(grp_id),
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
-            for start, stop in indices_by_grp[grp_id]:
-                for slc in gen_slices(start, stop, blocksize):
-                    rupdata = {k: dstore['rup/' + k][slc]
-                               for k in self.datastore['rup']}
-                    smap.submit((rupdata, self.sitecol, oq, cmaker,
-                                 self.iml4, trti, self.bin_edges))
+            smap.submit((get_rupdata(dstore, grp_id), self.sitecol, oq, cmaker,
+                         self.iml4, trti, self.bin_edges))
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 8D array
 
