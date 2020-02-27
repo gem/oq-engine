@@ -100,36 +100,14 @@ class SourceReader(object):
             self.srcfilter = calc.filters.SourceFilter(
                 h5['sitecol'], h5['oqparam'].maximum_distance)
 
-    def makesm(self, fname, sm, apply_uncertainties, ltpath):
-        """
-        :param fname:
-            the full pathname of a source model file
-        :param sm:
-            the original source model
-        :param apply_uncertainties:
-            a function modifying the sources (or None)
-        :returns:
-            a copy of the original source model with changed sources, if any
-        """
-        check_nonparametric_sources(
-            fname, sm, self.converter.investigation_time)
-        newsm = nrml.SourceModel(
-            [], sm.name, sm.investigation_time, sm.start_time)
-        newsm.changes = 0
-        for group in sm:
-            newgroup = apply_uncertainties(ltpath, group)
-            newsm.src_groups.append(newgroup)
-            # the attribute .changes is set by logictree.apply_uncertainties
-            newsm.changes += newgroup.changes
-
-        return newsm
-
     def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
         src_groups = []
         [sm] = nrml.read_source_models([fname], self.converter, monitor)
-        newsm = self.makesm(fname, sm, apply_unc, path)
+        check_nonparametric_sources(
+            fname, sm, self.converter.investigation_time)
+        newsm = apply_unc(path, sm)
         fname_hits[fname] += 1
         for sg in newsm:
             # sample a source for each group

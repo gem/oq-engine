@@ -1108,37 +1108,43 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, ltpath, source_group):
+    def apply_uncertainties(self, ltpath, sm):
         """
         :param ltpath:
             List of branch IDs
-        :param source_group:
-            A group of sources
+        :param sm:
+            A :class:`openquake.hazardlib.nrml.SourceModel` instance
         :return:
             A copy of the original group with modified sources
         """
-        branchset = self.root_branchset
-        branchsets_and_uncertainties = []
-        while branchset is not None:
-            brid, ltpath = ltpath[0], ltpath[1:]
-            branch = branchset.get_branch_by_id(brid)
-            if branchset.uncertainty_type != 'sourceModel':
-                branchsets_and_uncertainties.append((branchset, branch.value))
-            branchset = branch.bset
+        newsm = nrml.SourceModel(
+            [], sm.name, sm.investigation_time, sm.start_time)
+        newsm.changes = 0
+        for src_group in sm.src_groups:
+            path = ltpath
+            branchset = self.root_branchset
+            branchsets_and_uncertainties = []
+            while branchset is not None:
+                brid, path = path[0], path[1:]
+                branch = branchset.get_branch_by_id(brid)
+                if branchset.uncertainty_type != 'sourceModel':
+                    branchsets_and_uncertainties.append(
+                        (branchset, branch.value))
+                branchset = branch.bset
+            if not branchsets_and_uncertainties:
+                newsm.src_groups.append(src_group)
+                continue
 
-        if not branchsets_and_uncertainties:
-            source_group.changes = 0
-            return source_group  # nothing changed
-
-        sg = copy.deepcopy(source_group)
-        sg.changes = 0
-        for source in sg:
-            changes = sum(branchset.apply_uncertainty(value, source)
-                          for branchset, value in branchsets_and_uncertainties)
-            if changes:  # redoing count_ruptures can be slow
-                source.num_ruptures = source.count_ruptures()
-                sg.changes += changes
-        return sg  # something changed
+            sg = copy.deepcopy(src_group)
+            for source in sg:
+                changes = sum(
+                    branchset.apply_uncertainty(value, source)
+                    for branchset, value in branchsets_and_uncertainties)
+                if changes:  # redoing count_ruptures can be slow
+                    source.num_ruptures = source.count_ruptures()
+                    newsm.changes += changes
+            newsm.src_groups.append(sg)
+        return newsm
 
     def get_trti_eri(self):
         """
