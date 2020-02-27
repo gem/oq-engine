@@ -301,8 +301,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for m, imt in enumerate(oq.imtls):
                         self.imldict[s, rlz, poe, imt] = self.iml4[s, m, p, z]
 
-        # submit disagg tasks
-        # NB: removing the blocksize causes slow disaggregation tasks
+        # submit #groups disaggregation tasks
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
