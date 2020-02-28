@@ -1129,15 +1129,15 @@ class SourceModelLogicTree(object):
             brid, path = path[0], path[1:]
             branch = branchset.get_branch_by_id(brid)
             if branchset.uncertainty_type == 'extendModel':
-                [ext] = nrml.read_source_models(
-                    [os.path.join(dirname, branch.value)], converter, monitor)
+                extname = os.path.join(dirname, branch.value)
+                [ext] = nrml.read_source_models([extname], converter, monitor)
                 extra_ids = set(src.source_id for sg in ext.src_groups
                                 for src in sg)
                 common = base_ids & extra_ids
                 if common:
-                    raise ValueError('The source model %s contains sources %s '
-                                     'which are already present in %s' %
-                                     (branch.value, common, sm.name))
+                    raise InvalidFile(
+                        '%s contains source(s) %s already present in %s' %
+                        (extname, common, sm.fname))
                 newsm.src_groups.extend(ext.src_groups)
             elif branchset.uncertainty_type != 'sourceModel':
                 branchsets_and_uncertainties.append(
