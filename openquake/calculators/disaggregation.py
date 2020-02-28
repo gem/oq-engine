@@ -301,7 +301,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         size = self.save_bin_edges()  # size of 5D matrix
         M, P = len(oq.imtls), len(oq.poes_disagg)
         logging.info('Required %s for accumulating the matrices',
-                     humansize(size * M * P))
+                     humansize(size * M * P * Z))
 
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
