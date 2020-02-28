@@ -145,17 +145,9 @@ def get_indices(dstore, concurrent_tasks):
     indices = []
     for grp_id in dstore['csm_info'].trt_by_grp:
         idxs, = numpy.where(grp_ids == grp_id)
-        indices.append(block_splitter(idxs, blocksize))
+        blocks = list(block_splitter(idxs, blocksize))
+        indices.append(blocks)
     return indices
-
-
-def _gen_rupdata(dstore, grp_id, nsplit):
-    # yield nsplit dictionaries rup_key->rup_array for the given grp_id
-    ok = dstore['rup/grp_id'][()] == grp_id
-    data = {k: numpy.array_split(dstore['rup/' + k][ok], nsplit)
-            for k in dstore['rup']}
-    for i in range(nsplit):
-        yield {k: data[k][i] for k in data}
 
 
 @base.calculators.add('disaggregation')
@@ -318,10 +310,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        ct = oq.concurrent_tasks or 1
-        grp_trt = self.csm_info.trt_by_grp.items()
-        nsplit = math.ceil(ct / len(grp_trt))
-        for grp_id, trt in sorted(grp_trt):
+        indices = get_indices(dstore, oq.concurrent_tasks or 1)
+        for grp_id, trt in self.csm_info.trt_by_grp.items():
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
             cmaker = ContextMaker(
@@ -329,9 +319,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
-            for rupdata in _gen_rupdata(dstore, grp_id, nsplit):
-                smap.submit((rupdata, self.sitecol, oq, cmaker,
-                             self.iml4, trti, self.bin_edges))
+            for idxs in indices[grp_id]:
+                data = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
+                smap.submit((data, self.sitecol, oq, cmaker, self.iml4, trti,
+                             self.bin_edges))
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 8D array
 
