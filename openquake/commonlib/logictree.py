@@ -1114,6 +1114,8 @@ class SourceModelLogicTree(object):
             List of branch IDs
         :param sm:
             A :class:`openquake.hazardlib.nrml.SourceModel` instance
+        :param converter:
+            A :class:`openquake.hazardlib.sourceconverter.SourceConverter`
         :return:
             A copy of the original group with modified sources
         """

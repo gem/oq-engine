@@ -311,7 +311,7 @@ def read_source_models(fnames, converter):
     :param fnames:
         list of source model files
     :param converter:
-        a SourceConverter instance
+        a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
     :yields:
         SourceModel instances
     """
