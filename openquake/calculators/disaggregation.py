@@ -24,7 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -298,7 +298,10 @@ class DisaggregationCalculator(base.HazardCalculator):
             lon_edges[sid], lat_edges[sid] = disagg.lon_lat_bins(
                 bb, oq.coordinate_bin_width)
         self.bin_edges = mag_edges, dist_edges, lon_edges, lat_edges, eps_edges
-        self.save_bin_edges()
+        size = self.save_bin_edges()  # size of 5D matrix
+        M, P = len(oq.imtls), len(oq.poes_disagg)
+        logging.info('Required %s for accumulating the matrices',
+                     humansize(size * M * P))
 
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
@@ -346,23 +349,26 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         b = self.bin_edges
         T = len(self.trts)
+        size = 0
         for sid in self.sitecol.sids:
             bins = disagg.get_bins(b, sid)
             shape = [len(bin) - 1 for bin in bins] + [T]
             shape_dic = dict(zip(BIN_NAMES, shape))
             if sid == 0:
                 logging.info('nbins=%s for site=#%d', shape_dic, sid)
-            matrix_size = numpy.prod(shape)
+            matrix_size = numpy.prod(shape)  # 6D
             if matrix_size > 1E6:
                 raise ValueError(
                     'The disaggregation matrix for site #%d is too large '
                     '(%d elements): fix the binnning!' % (sid, matrix_size))
+            size += matrix_size / T * 8
         self.datastore['disagg-bins/mags'] = b[0]
         self.datastore['disagg-bins/dists'] = b[1]
         for sid in self.sitecol.sids:
             self.datastore['disagg-bins/lons/sid-%d' % sid] = b[2][sid]
             self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
         self.datastore['disagg-bins/eps'] = b[4]
+        return size
 
     def post_execute(self, results):
         """
