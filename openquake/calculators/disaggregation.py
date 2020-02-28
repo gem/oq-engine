@@ -125,11 +125,10 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges,
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=False)
     gmf_mon = monitor('computing mean_std', measuremem=False)
-    result = dict(disagg.build_matrices(
-        rupdata, sitecol, cmaker, iml4, oq.num_epsilon_bins,
-        bin_edges, pne_mon, mat_mon, gmf_mon))
-    result['trti'] = trti
-    return result  # sid -> array
+    for sid, mat in disagg.build_matrices(
+            rupdata, sitecol, cmaker, iml4, oq.num_epsilon_bins,
+            bin_edges, pne_mon, mat_mon, gmf_mon):
+        yield {'trti': trti, sid: mat}
 
 
 def agg_probs(*probs):
