@@ -171,7 +171,6 @@ class DisaggregationCalculator(base.HazardCalculator):
 
     def execute(self):
         """Performs the disaggregation"""
-        self.datastore.swmr_on()
         return self.full_disaggregation()
 
     def get_curve(self, sid, rlzs):
@@ -309,6 +308,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                         self.imldict[s, rlz, poe, imt] = self.iml4[s, m, p, z]
 
         # submit #groups disaggregation tasks
+        self.datastore.swmr_on()
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
