@@ -565,7 +565,7 @@ class SourceModelLogicTree(object):
                'applyToSources',
                'applyToSourceType')
 
-    def __init__(self, filename, validate=False, seed=0, num_samples=0):
+    def __init__(self, filename, validate=True, seed=0, num_samples=0):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         self.seed = seed
