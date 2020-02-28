@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug that made it impossible to abort/remove a failed task
   * Added `extendModel` feature to the source model logic tree parser
 
   [Graeme Weatherill]
