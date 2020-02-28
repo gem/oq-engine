@@ -230,11 +230,17 @@ def build_matrices(rupdata, sitecol, cmaker, iml4,
             rlz = iml4.rlzs[sid, z]
             iml2 = hdf5.ArrayWrapper(
                 iml3[:, :, z], dict(rlzi=rlz, imts=iml4.imts))
-            bdata = _disaggregate(cmaker, singlesitecol, rupdata,
-                                  indices[sid], iml2, eps3, pne_mon, gmf_mon)
-            if bdata.pnes.sum():
-                with mat_mon:
-                    arr[..., z] = _build_disagg_matrix(bdata, bins)
+            try:
+                bdata = _disaggregate(
+                    cmaker, singlesitecol, rupdata,
+                    indices[sid], iml2, eps3, pne_mon, gmf_mon)
+                if bdata.pnes.sum():
+                    with mat_mon:
+                        arr[..., z] = _build_disagg_matrix(bdata, bins)
+            except Exception as exc:
+                msg = 'Error in task %s for site #%d, rlz #%d: %s' % (
+                    getattr(pne_mon, 'task_no', 0), sid, rlz, exc)
+                raise exc.__class__(msg) from exc
         if arr.any():  # nonzero
             yield sid, arr
 
