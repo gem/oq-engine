@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Fixed bug in the HMTK: the `bin_width` parameter was not passed to
+    `mtkActiveFaultModel.build_fault_model`
+
   [Michele Simionato]
   * Avoided submitting too many tasks in the disaggregation calculator
   * Added a parameter `discard_trts` for manual reduction of GSIM logic tree
