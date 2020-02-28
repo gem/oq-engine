@@ -306,39 +306,12 @@ validators = {
 }
 
 
-def check_nonparametric_sources(fname, smodel, investigation_time):
-    """
-    :param fname:
-        full path to a source model file
-    :param smodel:
-        source model object
-    :param investigation_time:
-        investigation_time to compare with in the case of
-        nonparametric sources
-    :returns:
-        the nonparametric sources in the model
-    :raises:
-        a ValueError if the investigation_time is different from the expected
-    """
-    # NonParametricSeismicSources
-    np = [src for sg in smodel.src_groups for src in sg
-          if hasattr(src, 'data')]
-    if np and smodel.investigation_time != investigation_time:
-        raise ValueError(
-            'The source model %s contains an investigation_time '
-            'of %s, while the job.ini has %s' % (
-                fname, smodel.investigation_time, investigation_time))
-    return np
-
-
-def read_source_models(fnames, converter, monitor=performance.Monitor()):
+def read_source_models(fnames, converter):
     """
     :param fnames:
         list of source model files
     :param converter:
         a SourceConverter instance
-    :param monitor:
-        a :class:`openquake.performance.Monitor` instance
     :yields:
         SourceModel instances
     """
@@ -348,7 +321,15 @@ def read_source_models(fnames, converter, monitor=performance.Monitor()):
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.fname = fname
-        check_nonparametric_sources(fname, sm, converter.investigation_time)
+
+        # check investigation time for NonParametricSeismicSources
+        cit = converter.investigation_time
+        np = [s for sg in sm.src_groups for s in sg if hasattr(s, 'data')]
+        if np and sm.investigation_time != cit:
+            raise ValueError(
+                'The source model %s contains an investigation_time '
+                'of %s, while the job.ini has %s' % (
+                    fname, sm.investigation_time, cit))
         yield sm
 
 

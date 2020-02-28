@@ -1108,7 +1108,7 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, ltpath, sm, converter, monitor):
+    def apply_uncertainties(self, ltpath, sm, converter):
         """
         :param ltpath:
             List of branch IDs
@@ -1130,7 +1130,7 @@ class SourceModelLogicTree(object):
             branch = branchset.get_branch_by_id(brid)
             if branchset.uncertainty_type == 'extendModel':
                 extname = os.path.join(dirname, branch.value)
-                [ext] = nrml.read_source_models([extname], converter, monitor)
+                [ext] = nrml.read_source_models([extname], converter)
                 extra_ids = set(src.source_id for sg in ext.src_groups
                                 for src in sg)
                 common = base_ids & extra_ids
