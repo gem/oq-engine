@@ -21,7 +21,6 @@ Disaggregation calculator core functionality
 """
 import logging
 import operator
-import math
 import numpy
 
 from openquake.baselib import parallel, hdf5
@@ -92,7 +91,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
         iml4, dict(imts=[from_string(imt) for imt in imtls], rlzs=rlzs))
 
 
-def compute_disagg(rupdata, sitecol, oq, cmaker, iml4, trti, bin_edges,
+def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -116,6 +115,10 @@ def compute_disagg(rupdata, sitecol, oq, cmaker, iml4, trti, bin_edges,
     :returns:
         a dictionary sid -> 8D-array
     """
+    dstore.open('r')
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
     # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
@@ -301,7 +304,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
             for z, rlz in enumerate(rlzs[s]):
-                logging.info('Site #%d, disaggregating for rlz=#%d', s, rlz)
                 for p, poe in enumerate(self.poes_disagg):
                     for m, imt in enumerate(oq.imtls):
                         self.imldict[s, rlz, poe, imt] = self.iml4[s, m, p, z]
@@ -320,8 +322,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'maximum_distance': src_filter.integration_distance,
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
             for idxs in indices[grp_id]:
-                data = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
-                smap.submit((data, self.sitecol, oq, cmaker, self.iml4, trti,
+                smap.submit((dstore, idxs, cmaker, self.iml4, trti,
                              self.bin_edges))
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 8D array
