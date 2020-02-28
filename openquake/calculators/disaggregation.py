@@ -25,7 +25,7 @@ import math
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -137,6 +137,16 @@ def agg_probs(*probs):
     for prob in probs[1:]:
         acc *= 1. - prob
     return 1. - acc
+
+
+def get_indices(dstore, concurrent_tasks):
+    grp_ids = dstore['rup/grp_id'][()]
+    blocksize = numpy.ceil(len(grp_ids) / concurrent_tasks)
+    indices = []
+    for grp_id in dstore['csm_info'].trt_by_grp:
+        idxs, = numpy.where(grp_ids == grp_id)
+        indices.append(block_splitter(idxs, blocksize))
+    return indices
 
 
 def _gen_rupdata(dstore, grp_id, nsplit):
