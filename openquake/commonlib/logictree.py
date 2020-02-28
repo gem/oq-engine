@@ -748,7 +748,7 @@ class SourceModelLogicTree(object):
         Doesn't change source model file name, converts other values to either
         pair of floats or a single float depending on uncertainty type.
         """
-        if branchset.uncertainty_type == 'sourceModel':
+        if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
             return node.text.strip()
         elif branchset.uncertainty_type == 'abGRAbsolute':
             [a, b] = node.text.strip().split()
@@ -842,7 +842,7 @@ class SourceModelLogicTree(object):
         """
         _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
 
-        if branchset.uncertainty_type == 'sourceModel':
+        if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
             try:
                 for fname in node.text.strip().split():
                     self.collect_source_model_data(
@@ -1108,7 +1108,7 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, ltpath, sm):
+    def apply_uncertainties(self, ltpath, sm, converter, monitor):
         """
         :param ltpath:
             List of branch IDs
@@ -1117,30 +1117,35 @@ class SourceModelLogicTree(object):
         :return:
             A copy of the original group with modified sources
         """
-        newsm = nrml.SourceModel(
-            [], sm.name, sm.investigation_time, sm.start_time)
+        dirname = os.path.dirname(self.filename)
+        newsm = nrml.SourceModel(copy.copy(sm.src_groups), sm.name,
+                                 sm.investigation_time, sm.start_time)
         newsm.changes = 0
-        for src_group in sm.src_groups:
-            path = ltpath
-            branchset = self.root_branchset
-            branchsets_and_uncertainties = []
-            while branchset is not None:
-                brid, path = path[0], path[1:]
-                branch = branchset.get_branch_by_id(brid)
-                if branchset.uncertainty_type != 'sourceModel':
-                    branchsets_and_uncertainties.append(
-                        (branchset, branch.value))
-                branchset = branch.bset
-            if branchsets_and_uncertainties:
-                src_group = copy.deepcopy(src_group)
-                for source in src_group:
+        path = ltpath
+        branchset = self.root_branchset
+        branchsets_and_uncertainties = []
+        while branchset is not None:
+            brid, path = path[0], path[1:]
+            branch = branchset.get_branch_by_id(brid)
+            if branchset.uncertainty_type == 'extendModel':
+                [ext] = nrml.read_source_models(
+                    [os.path.join(dirname, branch.value)], converter, monitor)
+                newsm.src_groups.extend(ext.src_groups)
+            elif branchset.uncertainty_type != 'sourceModel':
+                branchsets_and_uncertainties.append(
+                    (branchset, branch.value))
+            branchset = branch.bset
+        if branchsets_and_uncertainties:
+            for i, src_group in enumerate(sm.src_groups):
+                sg = copy.deepcopy(src_group)  # do not change the original
+                for source in sg:
                     changes = sum(
                         branchset.apply_uncertainty(value, source)
                         for branchset, value in branchsets_and_uncertainties)
                     if changes:  # redoing count_ruptures can be slow
                         source.num_ruptures = source.count_ruptures()
                         newsm.changes += changes
-            newsm.src_groups.append(src_group)
+                newsm.src_groups[i] = sg
         return newsm
 
     def get_trti_eri(self):
