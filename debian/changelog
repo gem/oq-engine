@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed back the disaggregation calculator to read the rupture data from
+    the workers, thus saving a lot of memory and time
   * Fixed a bug that made it impossible to abort/remove a failed task
   * Added `extendModel` feature to the source model logic tree parser
 

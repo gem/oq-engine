@@ -21,11 +21,10 @@ Disaggregation calculator core functionality
 """
 import logging
 import operator
-import math
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -92,7 +91,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
         iml4, dict(imts=[from_string(imt) for imt in imtls], rlzs=rlzs))
 
 
-def compute_disagg(rupdata, sitecol, oq, cmaker, iml4, trti, bin_edges,
+def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -116,6 +115,10 @@ def compute_disagg(rupdata, sitecol, oq, cmaker, iml4, trti, bin_edges,
     :returns:
         a dictionary sid -> 8D-array
     """
+    dstore.open('r')
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
     # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
@@ -139,13 +142,15 @@ def agg_probs(*probs):
     return 1. - acc
 
 
-def _gen_rupdata(dstore, grp_id, nsplit):
-    # yield nsplit dictionaries rup_key->rup_array for the given grp_id
-    ok = dstore['rup/grp_id'][()] == grp_id
-    data = {k: numpy.array_split(dstore['rup/' + k][ok], nsplit)
-            for k in dstore['rup']}
-    for i in range(nsplit):
-        yield {k: data[k][i] for k in data}
+def get_indices(dstore, concurrent_tasks):
+    grp_ids = dstore['rup/grp_id'][()]
+    blocksize = numpy.ceil(len(grp_ids) / concurrent_tasks)
+    indices = []
+    for grp_id in dstore['csm_info'].trt_by_grp:
+        idxs, = numpy.where(grp_ids == grp_id)
+        blocks = list(block_splitter(idxs, blocksize))
+        indices.append(blocks)
+    return indices
 
 
 @base.calculators.add('disaggregation')
@@ -299,7 +304,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
             for z, rlz in enumerate(rlzs[s]):
-                logging.info('Site #%d, disaggregating for rlz=#%d', s, rlz)
                 for p, poe in enumerate(self.poes_disagg):
                     for m, imt in enumerate(oq.imtls):
                         self.imldict[s, rlz, poe, imt] = self.iml4[s, m, p, z]
@@ -308,10 +312,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        ct = oq.concurrent_tasks or 1
-        grp_trt = self.csm_info.trt_by_grp.items()
-        nsplit = math.ceil(ct / len(grp_trt))
-        for grp_id, trt in sorted(grp_trt):
+        indices = get_indices(dstore, oq.concurrent_tasks or 1)
+        for grp_id, trt in self.csm_info.trt_by_grp.items():
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
             cmaker = ContextMaker(
@@ -319,9 +321,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
-            for rupdata in _gen_rupdata(dstore, grp_id, nsplit):
-                smap.submit((rupdata, self.sitecol, oq, cmaker,
-                             self.iml4, trti, self.bin_edges))
+            for idxs in indices[grp_id]:
+                smap.submit((dstore, idxs, cmaker, self.iml4, trti,
+                             self.bin_edges))
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 8D array
 

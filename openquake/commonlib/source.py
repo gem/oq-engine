@@ -141,12 +141,13 @@ class CompositionInfo(object):
         self.init()
 
     def init(self):
-        self.trt_by_grp = {}
+        trt_by_grp = []
         n = len(self.sm_rlzs)
         trts = list(self.gsim_lt.values)
         for smodel in self.sm_rlzs:
             for grp_id in self.grp_ids(smodel.ordinal):
-                self.trt_by_grp[grp_id] = trts[grp_id // n]
+                trt_by_grp.append((grp_id, trts[grp_id // n]))
+        self.trt_by_grp = dict(sorted(trt_by_grp))
 
     def get_info(self, sm_id):
         """
