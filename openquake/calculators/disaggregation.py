@@ -306,7 +306,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         shapedic['concurrent_tasks'] = oq.concurrent_tasks
         nbytes, msg = get_array_nbytes(shapedic)
         if nbytes > oq.max_data_transfer:
-            raise ValueError('Data transfer too big\n%s' % msg)
+            raise ValueError('Estimated data transfer too big\n%s' % msg)
         logging.info('Estimated data transfer: %s', msg)
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
