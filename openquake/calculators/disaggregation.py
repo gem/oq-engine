@@ -310,11 +310,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                         self.imldict[s, rlz, poe, imt] = self.iml4[s, m, p, z]
 
         # submit #groups disaggregation tasks
-        self.datastore.swmr_on()
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         indices = get_indices(dstore, oq.concurrent_tasks or 1)
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         for grp_id, trt in self.csm_info.trt_by_grp.items():
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
