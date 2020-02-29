@@ -13,7 +13,7 @@
         <uncertaintyWeight>0.4</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
-    <logicTreeBranchSet uncertaintyType="extendModel"
+    <logicTreeBranchSet uncertaintyType="extendModel" applyToBranches="b01"
                         branchSetID="bs1">
       <logicTreeBranch branchID="b11">
         <uncertaintyModel>extra1.xml</uncertaintyModel>
