@@ -24,7 +24,8 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, block_splitter, humansize
+from openquake.baselib.general import (
+    AccumDict, block_splitter, get_array_nbytes)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -119,17 +120,15 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges,
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
-    # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
-    mat_mon = monitor('build_disagg_matrix', measuremem=False)
+    mat_mon = monitor('build_disagg_matrix', measuremem=True)
     gmf_mon = monitor('computing mean_std', measuremem=False)
-    result = dict(disagg.build_matrices(
-        rupdata, sitecol, cmaker, iml4, oq.num_epsilon_bins,
-        bin_edges, pne_mon, mat_mon, gmf_mon))
-    result['trti'] = trti
-    return result  # sid -> array
+    for sid, mat in disagg.build_matrices(
+            rupdata, sitecol, cmaker, iml4, oq.num_epsilon_bins,
+            bin_edges, pne_mon, mat_mon, gmf_mon):
+        yield {'trti': trti, sid: mat}
 
 
 def agg_probs(*probs):
@@ -298,11 +297,17 @@ class DisaggregationCalculator(base.HazardCalculator):
             lon_edges[sid], lat_edges[sid] = disagg.lon_lat_bins(
                 bb, oq.coordinate_bin_width)
         self.bin_edges = mag_edges, dist_edges, lon_edges, lat_edges, eps_edges
-        size = self.save_bin_edges()  # size of 5D matrix
-        M, P = len(oq.imtls), len(oq.poes_disagg)
-        logging.info('Required %s for accumulating the matrices',
-                     humansize(size * M * P * Z))
-
+        shapedic = self.save_bin_edges()
+        del shapedic['trt']
+        shapedic['N'] = self.N
+        shapedic['M'] = len(oq.imtls)
+        shapedic['P'] = len(oq.poes_disagg)
+        shapedic['Z'] = Z
+        shapedic['concurrent_tasks'] = oq.concurrent_tasks
+        nbytes, msg = get_array_nbytes(shapedic)
+        if nbytes > oq.max_data_transfer:
+            raise ValueError('Estimated data transfer too big\n%s' % msg)
+        logging.info('Estimated data transfer: %s', msg)
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
             for z, rlz in enumerate(rlzs[s]):
@@ -311,11 +316,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                         self.imldict[s, rlz, poe, imt] = self.iml4[s, m, p, z]
 
         # submit #groups disaggregation tasks
-        self.datastore.swmr_on()
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         indices = get_indices(dstore, oq.concurrent_tasks or 1)
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         for grp_id, trt in self.csm_info.trt_by_grp.items():
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
@@ -337,10 +342,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param acc: dictionary sid -> trti -> 8D array
         :param result: dictionary with the result coming from a task
         """
-        # this is fast
-        trti = result.pop('trti')
-        for sid, arr in result.items():
-            acc[sid][trti] = agg_probs(acc[sid].get(trti, 0), arr)
+        with self.monitor('aggregating disagg matrices'):
+            trti = result.pop('trti')
+            for sid, arr in result.items():
+                acc[sid][trti] = agg_probs(acc[sid].get(trti, 0), arr)
         return acc
 
     def save_bin_edges(self):
@@ -349,7 +354,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         b = self.bin_edges
         T = len(self.trts)
-        size = 0
         for sid in self.sitecol.sids:
             bins = disagg.get_bins(b, sid)
             shape = [len(bin) - 1 for bin in bins] + [T]
@@ -360,15 +364,14 @@ class DisaggregationCalculator(base.HazardCalculator):
             if matrix_size > 1E6:
                 raise ValueError(
                     'The disaggregation matrix for site #%d is too large '
-                    '(%d elements): fix the binnning!' % (sid, matrix_size))
-            size += matrix_size / T * 8
+                    '(%d elements): fix the binning!' % (sid, matrix_size))
         self.datastore['disagg-bins/mags'] = b[0]
         self.datastore['disagg-bins/dists'] = b[1]
         for sid in self.sitecol.sids:
             self.datastore['disagg-bins/lons/sid-%d' % sid] = b[2][sid]
             self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
         self.datastore['disagg-bins/eps'] = b[4]
-        return size
+        return shape_dic
 
     def post_execute(self, results):
         """
