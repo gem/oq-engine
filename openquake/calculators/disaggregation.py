@@ -120,11 +120,10 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges,
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
-    # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
-    mat_mon = monitor('build_disagg_matrix', measuremem=False)
+    mat_mon = monitor('build_disagg_matrix', measuremem=True)
     gmf_mon = monitor('computing mean_std', measuremem=False)
     for sid, mat in disagg.build_matrices(
             rupdata, sitecol, cmaker, iml4, oq.num_epsilon_bins,
@@ -343,10 +342,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param acc: dictionary sid -> trti -> 8D array
         :param result: dictionary with the result coming from a task
         """
-        # this is fast
-        trti = result.pop('trti')
-        for sid, arr in result.items():
-            acc[sid][trti] = agg_probs(acc[sid].get(trti, 0), arr)
+        with self.monitor('aggregating disagg matrices'):
+            trti = result.pop('trti')
+            for sid, arr in result.items():
+                acc[sid][trti] = agg_probs(acc[sid].get(trti, 0), arr)
         return acc
 
     def save_bin_edges(self):
