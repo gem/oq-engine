@@ -218,7 +218,7 @@ def _validate_characteristic_fault_geometry(utype, node, filename):
 
 @validate_uncertainty.add('abGRAbsolute')
 def _validate_abGRAbsolute(utype, node, filename):
-    ab = node.text.strip().split()
+    ab = node.text.split()
     if len(ab) == 2:
         if _float_re.match(ab[0]) and _float_re.match(ab[1]):
             return
@@ -229,3 +229,66 @@ def _validate_abGRAbsolute(utype, node, filename):
 @validate_uncertainty.add('incrementalMFDAbsolute')
 def _validate_incMFD(utype, node, filename):
     pass
+
+
+#                         apply_uncertainty                                #
+
+apply_uncertainty = CallableDict()
+
+
+@apply_uncertainty.add('simpleFaultDipRelative')
+def _simple_fault_dip_relative(utype, source, value):
+    source.modify('adjust_dip', dict(increment=value))
+
+
+@apply_uncertainty.add('simpleFaultDipAbsolute')
+def _simple_fault_dip_absolute(bset, source, value):
+    source.modify('set_dip', dict(dip=value))
+
+
+@apply_uncertainty.add('simpleFaultGeometryAbsolute')
+def _simple_fault_geom_absolute(utype, source, value):
+    trace, usd, lsd, dip, spacing = value
+    source.modify(
+        'set_geometry',
+        dict(fault_trace=trace, upper_seismogenic_depth=usd,
+             lower_seismogenic_depth=lsd, dip=dip, spacing=spacing))
+
+
+@apply_uncertainty.add('complexFaultGeometryAbsolute')
+def _complex_fault_geom_absolute(utype, source, value):
+    edges, spacing = value
+    source.modify('set_geometry', dict(edges=edges, spacing=spacing))
+
+
+@apply_uncertainty.add('characteristicFaultGeometryAbsolute')
+def _char_fault_geom_absolute(utype, source, value):
+    source.modify('set_geometry', dict(surface=value))
+
+
+@apply_uncertainty.add('abGRAbsolute')
+def _abGR_absolute(utype, source, value):
+    a, b = value
+    source.mfd.modify('set_ab', dict(a_val=a, b_val=b))
+
+
+@apply_uncertainty.add('bGRRelative')
+def _abGR_relativ(utype, source, value):
+    source.mfd.modify('increment_b', dict(value=value))
+
+
+@apply_uncertainty.add('maxMagGRRelative')
+def _maxmagGR_relative(utype, source, value):
+    source.mfd.modify('increment_max_mag', dict(value=value))
+
+
+@apply_uncertainty.add('maxMagGRAbsolute')
+def _maxmagGR_absolute(utype, source, value):
+    source.mfd.modify('set_max_mag', dict(value=value))
+
+
+@apply_uncertainty.add('incrementalMFDAbsolute')
+def _incMFD_absolute(bset, source, value):
+    min_mag, bin_width, occur_rates = value
+    source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
+                                      occurrence_rates=occur_rates))
