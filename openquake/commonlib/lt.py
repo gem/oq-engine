@@ -82,13 +82,13 @@ def charGeom(utype, node):
     surfaces = []
     for geom_node in node.surface:
         if "simpleFaultGeometry" in geom_node.tag:
-            trace, usd, lsd, dip, spacing =\
-                parse_uncertainty('simpleFaultGeometry', geom_node)
+            trace, usd, lsd, dip, spacing = parse_uncertainty(
+                'simpleFaultGeometry', geom_node)
             surfaces.append(geo.SimpleFaultSurface.from_fault_data(
                 trace, usd, lsd, dip, spacing))
         elif "complexFaultGeometry" in geom_node.tag:
-            edges, spacing =\
-                parse_uncertainty('complexFaultGeometry', geom_node)
+            edges, spacing = parse_uncertainty(
+                'complexFaultGeometry', geom_node)
             surfaces.append(geo.ComplexFaultSurface.from_fault_data(
                 edges, spacing))
         elif "planarSurface" in geom_node.tag:
