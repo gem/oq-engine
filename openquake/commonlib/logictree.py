@@ -686,8 +686,8 @@ class SourceModelLogicTree(object):
             if validate:
                 self.validate_uncertainty_value(
                     value_node, branchnode, branchset)
-            value = lt.parse_uncertainty_value(
-                value_node, branchset.uncertainty_type)
+            value = lt.parse_uncertainty(
+                branchset.uncertainty_type, value_node)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
