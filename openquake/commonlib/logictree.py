@@ -760,6 +760,7 @@ class SourceModelLogicTree(object):
             branch.bset = branchset
 
     def _get_source_model(self, source_model_file):
+        # NB: do not remove this, it is meant to be overridden in the tests
         return open(os.path.join(self.basepath, source_model_file),
                     encoding='utf-8')
 
