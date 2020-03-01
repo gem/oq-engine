@@ -21,27 +21,21 @@ from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
 
-def parse_uncertainty_value(node, branchset):
-    """
-    See superclass' method for description and signature specification.
-
-    Doesn't change source model file name, converts other values to either
-    pair of floats or a single float depending on uncertainty type.
-    """
-    if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
+def parse_uncertainty_value(node, utype):
+    if utype in ('sourceModel', 'extendModel'):
         return node.text.strip()
-    elif branchset.uncertainty_type == 'abGRAbsolute':
+    elif utype == 'abGRAbsolute':
         [a, b] = node.text.strip().split()
         return float(a), float(b)
-    elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
+    elif utype == 'incrementalMFDAbsolute':
         min_mag, bin_width = (node.incrementalMFD["minMag"],
                               node.incrementalMFD["binWidth"])
         return min_mag,  bin_width, ~node.incrementalMFD.occurRates
-    elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
+    elif utype == 'simpleFaultGeometryAbsolute':
         return _parse_simple_fault_geometry_surface(node.simpleFaultGeometry)
-    elif branchset.uncertainty_type == 'complexFaultGeometryAbsolute':
+    elif utype == 'complexFaultGeometryAbsolute':
         return _parse_complex_fault_geometry_surface(node.complexFaultGeometry)
-    elif branchset.uncertainty_type == 'characteristicFaultGeometryAbsolute':
+    elif utype == 'characteristicFaultGeometryAbsolute':
         surfaces = []
         for geom_node in node.surface:
             if "simpleFaultGeometry" in geom_node.tag:
@@ -68,9 +62,6 @@ def parse_uncertainty_value(node, branchset):
 
 
 def _parse_simple_fault_geometry_surface(node):
-    """
-    Parses a simple fault geometry surface
-    """
     spacing = node["spacing"]
     usd, lsd, dip = (~node.upperSeismoDepth, ~node.lowerSeismoDepth,
                      ~node.dip)
@@ -81,9 +72,6 @@ def _parse_simple_fault_geometry_surface(node):
 
 
 def _parse_complex_fault_geometry_surface(node):
-    """
-    Parses a complex fault geometry surface
-    """
     spacing = node["spacing"]
     edges = []
     for edge_node in node.nodes:
@@ -93,9 +81,6 @@ def _parse_complex_fault_geometry_surface(node):
 
 
 def _parse_planar_geometry_surface(node):
-    """
-    Parses a planar geometry surface
-    """
     nodes = []
     for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
         nodes.append(geo.Point(getattr(node, key)["lon"],
