@@ -552,7 +552,18 @@ class SourceModelLogicTree(object):
             value_node = node_from_elem(branchnode.uncertaintyModel)
             if value_node.text is not None:
                 values.append(value_node.text.strip())
-            self.validate_uncertainty_value(value_node, branchnode, branchset)
+            if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
+                try:
+                    for fname in value_node.text.strip().split():
+                        if fname.endswith('.xml'):  # except UCERF
+                            self.collect_source_model_data(
+                                branchnode['branchID'], fname)
+                except Exception as exc:
+                    raise LogicTreeError(
+                        value_node, self.filename, str(exc)) from exc
+            else:
+                validate_uncertainty(
+                    branchset.uncertainty_type, value_node, self.filename)
             value = parse_uncertainty(branchset.uncertainty_type, value_node)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(bs_id, branch_id, weight, value)
@@ -608,32 +619,6 @@ class SourceModelLogicTree(object):
                 yield Realization(name, weight, ordinal,
                                   tuple(smlt_branch_ids), 1)
                 ordinal += 1
-
-    def validate_uncertainty_value(self, node, branchnode, branchset):
-        """
-        See superclass' method for description and signature specification.
-
-        Checks that the following conditions are met:
-
-        * For uncertainty of type "sourceModel": referenced file must exist
-          and be readable. This is checked in :meth:`collect_source_model_data`
-          along with saving the source model information.
-        * For uncertainty of type "abGRAbsolute": value should be two float
-          values.
-        * For both absolute uncertainties: the source (only one) must
-          be referenced in branchset's filter "applyToSources".
-        * For all other cases: value should be a single float value.
-        """
-        if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
-            try:
-                for fname in node.text.strip().split():
-                    if fname.endswith('.xml'):  # except UCERF
-                        self.collect_source_model_data(
-                            branchnode['branchID'], fname)
-            except Exception as exc:
-                raise LogicTreeError(node, self.filename, str(exc)) from exc
-            return
-        validate_uncertainty(branchset.uncertainty_type, node, self.filename)
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
