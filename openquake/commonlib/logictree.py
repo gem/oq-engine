@@ -555,7 +555,7 @@ class SourceModelLogicTree(object):
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
                 try:
                     for fname in value_node.text.strip().split():
-                        if fname.endswith('.xml'):  # except UCERF
+                        if fname.endswith(('.xml', '.nrml')):  # except UCERF
                             self.collect_source_model_data(
                                 branchnode['branchID'], fname)
                 except Exception as exc:
