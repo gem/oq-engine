@@ -48,7 +48,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.commonlib.lt import (
-    LogicTreeError, parse_uncertainty, validate_uncertainty)
+    LogicTreeError, parse_uncertainty, validate_uncertainty, apply_uncertainty)
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -372,76 +372,6 @@ class BranchSet(object):
                 raise AssertionError("unknown filter '%s'" % key)
         # All filters pass, return True.
         return True
-
-    def apply_uncertainty(self, value, source):
-        """
-        Apply this branchset's uncertainty with value ``value`` to source
-        ``source``, if it passes :meth:`filters <filter_source>`.
-
-        This method is not called for uncertainties of types "gmpeModel"
-        and "sourceModel".
-
-        :param value:
-            The actual uncertainty value of :meth:`sampled <sample>` branch.
-            Type depends on uncertainty type.
-        :param source:
-            The opensha source data object.
-        :return:
-            0 if the source was not changed, 1 otherwise
-        """
-        if not self.filter_source(source):
-            # source didn't pass the filter
-            return 0
-        if self.uncertainty_type in MFD_UNCERTAINTY_TYPES:
-            self._apply_uncertainty_to_mfd(source.mfd, value)
-        elif self.uncertainty_type in GEOMETRY_UNCERTAINTY_TYPES:
-            self._apply_uncertainty_to_geometry(source, value)
-        else:
-            raise AssertionError("unknown uncertainty type '%s'"
-                                 % self.uncertainty_type)
-        return 1
-
-    def _apply_uncertainty_to_geometry(self, source, value):
-        """
-        Modify ``source`` geometry with the uncertainty value ``value``
-        """
-        if self.uncertainty_type == 'simpleFaultDipRelative':
-            source.modify('adjust_dip', dict(increment=value))
-        elif self.uncertainty_type == 'simpleFaultDipAbsolute':
-            source.modify('set_dip', dict(dip=value))
-        elif self.uncertainty_type == 'simpleFaultGeometryAbsolute':
-            trace, usd, lsd, dip, spacing = value
-            source.modify(
-                'set_geometry',
-                dict(fault_trace=trace, upper_seismogenic_depth=usd,
-                     lower_seismogenic_depth=lsd, dip=dip, spacing=spacing))
-        elif self.uncertainty_type == 'complexFaultGeometryAbsolute':
-            edges, spacing = value
-            source.modify('set_geometry', dict(edges=edges, spacing=spacing))
-        elif self.uncertainty_type == 'characteristicFaultGeometryAbsolute':
-            source.modify('set_geometry', dict(surface=value))
-
-    def _apply_uncertainty_to_mfd(self, mfd, value):
-        """
-        Modify ``mfd`` object with uncertainty value ``value``.
-        """
-        if self.uncertainty_type == 'abGRAbsolute':
-            a, b = value
-            mfd.modify('set_ab', dict(a_val=a, b_val=b))
-
-        elif self.uncertainty_type == 'bGRRelative':
-            mfd.modify('increment_b', dict(value=value))
-
-        elif self.uncertainty_type == 'maxMagGRRelative':
-            mfd.modify('increment_max_mag', dict(value=value))
-
-        elif self.uncertainty_type == 'maxMagGRAbsolute':
-            mfd.modify('set_max_mag', dict(value=value))
-
-        elif self.uncertainty_type == 'incrementalMFDAbsolute':
-            min_mag, bin_width, occur_rates = value
-            mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
-                                       occurrence_rates=occur_rates))
 
     def __repr__(self):
         return repr(self.branches)
@@ -943,9 +873,12 @@ class SourceModelLogicTree(object):
             for i, src_group in enumerate(sm.src_groups):
                 sg = copy.deepcopy(src_group)  # do not change the original
                 for source in sg:
-                    changes = sum(
-                        branchset.apply_uncertainty(value, source)
-                        for branchset, value in branchsets_and_uncertainties)
+                    changes = 0
+                    for branchset, value in branchsets_and_uncertainties:
+                        if branchset.filter_source(source):
+                            apply_uncertainty(
+                                branchset.uncertainty_type, source, value)
+                            changes += 1
                     if changes:  # redoing count_ruptures can be slow
                         source.num_ruptures = source.count_ruptures()
                         newsm.changes += changes
