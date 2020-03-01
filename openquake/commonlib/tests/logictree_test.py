@@ -1359,15 +1359,15 @@ class BranchSetGetBranchByIdTestCase(unittest.TestCase):
         b2 = logictree.Branch('BS', '2', 0.33, None)
         bbzz = logictree.Branch('BS', 'bzz', 0.34, None)
         bs.branches = [b1, b2, bbzz]
-        self.assertIs(bs.get_branch_by_id('1'), b1)
-        self.assertIs(bs.get_branch_by_id('2'), b2)
-        self.assertIs(bs.get_branch_by_id('bzz'), bbzz)
+        self.assertIs(bs['1'], b1)
+        self.assertIs(bs['2'], b2)
+        self.assertIs(bs['bzz'], bbzz)
 
     def test_nonexistent_branch(self):
         bs = logictree.BranchSet(None, None)
         br = logictree.Branch('BS', 'br', 1.0, None)
         bs.branches.append(br)
-        self.assertRaises(AssertionError, bs.get_branch_by_id, 'bz')
+        self.assertRaises(KeyError, bs.__getitem__, 'bz')
 
 
 class BranchSetApplyUncertaintyTestCase(unittest.TestCase):

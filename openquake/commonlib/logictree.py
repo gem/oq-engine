@@ -296,7 +296,7 @@ class BranchSet(object):
             else:
                 yield path
 
-    def get_branch_by_id(self, branch_id):
+    def __getitem__(self, branch_id):
         """
         Return :class:`Branch` object belonging to this branch set with id
         equal to ``branch_id``.
@@ -304,7 +304,7 @@ class BranchSet(object):
         for branch in self.branches:
             if branch.branch_id == branch_id:
                 return branch
-        raise AssertionError("couldn't find branch '%s'" % branch_id)
+        raise KeyError(branch_id)
 
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
@@ -826,7 +826,7 @@ class SourceModelLogicTree(object):
         branchsets_and_uncertainties = []
         while branchset is not None:
             brid, path = path[0], path[1:]
-            branch = branchset.get_branch_by_id(brid)
+            branch = branchset[brid]
             if branchset.uncertainty_type == 'extendModel':
                 extname = os.path.join(dirname, branch.value)
                 [ext] = nrml.read_source_models([extname], converter)
