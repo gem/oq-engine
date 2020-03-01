@@ -273,7 +273,7 @@ def _abGR_absolute(utype, source, value):
 
 
 @apply_uncertainty.add('bGRRelative')
-def _abGR_relativ(utype, source, value):
+def _abGR_relative(utype, source, value):
     source.mfd.modify('increment_b', dict(value=value))
 
 
@@ -288,7 +288,7 @@ def _maxmagGR_absolute(utype, source, value):
 
 
 @apply_uncertainty.add('incrementalMFDAbsolute')
-def _incMFD_absolute(bset, source, value):
+def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
     source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))

@@ -75,6 +75,10 @@ def unique(objects, key=None):
 
 
 class Realization(object):
+    """
+    Generic Realization object with attributes value, weight, ordinal, lt_path,
+    samples and optionally offset.
+    """
     def __init__(self, value, weight, ordinal, lt_path, samples, offset=0):
         self.value = value
         self.weight = weight
@@ -99,13 +103,6 @@ class Realization(object):
             return ' '.join(names)
         else:
             return ' '.join([names[0], '...', names[-1]])
-
-    @property
-    def num_sources(self):
-        """
-        Number of sources contained in the source model
-        """
-        return sum(len(sg) for sg in self.src_groups)
 
     def get_skeleton(self):
         """
