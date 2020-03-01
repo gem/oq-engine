@@ -187,19 +187,6 @@ class Branch(object):
             return '%s' % self.branch_id
 
 
-# Define the keywords associated with the MFD
-MFD_UNCERTAINTY_TYPES = ['maxMagGRRelative', 'maxMagGRAbsolute',
-                         'bGRRelative', 'abGRAbsolute',
-                         'incrementalMFDAbsolute']
-
-# Define the keywords associated with the source geometry
-GEOMETRY_UNCERTAINTY_TYPES = ['simpleFaultDipRelative',
-                              'simpleFaultDipAbsolute',
-                              'simpleFaultGeometryAbsolute',
-                              'complexFaultGeometryAbsolute',
-                              'characteristicFaultGeometryAbsolute']
-
-
 def tomldict(ddic):
     out = {}
     for key, dic in ddic.items():
@@ -361,6 +348,7 @@ class BranchSet(object):
         return repr(self.branches)
 
 
+# manage the legacy logicTreeBranchingLevel nodes
 def _bsnodes(fname, branchinglevel):
     if branchinglevel.tag.endswith('logicTreeBranchingLevel'):
         if len(branchinglevel) > 1:
@@ -404,11 +392,12 @@ def collect_info(smlt):
             for br in bset:
                 with context(smlt, br):
                     fnames = unique(br.uncertaintyModel.text.split())
-                    paths[br['branchID']].update(_get_paths(smlt, fnames))
+                    paths[br['branchID']].update(_abs_paths(smlt, fnames))
     return Info({k: sorted(v) for k, v in paths.items()}, applytosources)
 
 
-def _get_paths(smlt, fnames):
+def _abs_paths(smlt, fnames):
+    # relative -> absolute paths
     base_path = os.path.dirname(smlt)
     paths = []
     for fname in fnames:
