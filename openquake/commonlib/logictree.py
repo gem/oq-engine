@@ -45,10 +45,10 @@ import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
-from openquake.hazardlib.sourceconverter import (
-    split_coords_2d, split_coords_3d, SourceGroup)
-from openquake.commonlib import lt
+from openquake.hazardlib import valid, nrml, InvalidFile, pmf
+from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.commonlib.lt import (
+    LogicTreeError, parse_uncertainty, validate_uncertainty)
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -144,28 +144,6 @@ def get_effective_rlzs(rlzs):
                         ordinal, rlz.lt_path, len(group)))
         ordinal += 1
     return effective
-
-
-class LogicTreeError(Exception):
-    """
-    Logic tree file contains a logic error.
-
-    :param node:
-        XML node object that causes fail. Used to determine
-        the affected line number.
-
-    All other constructor parameters are passed to :class:`superclass'
-    <LogicTreeError>` constructor.
-    """
-    def __init__(self, node, filename, message):
-        self.filename = filename
-        self.message = message
-        self.lineno = node if isinstance(node, int) else getattr(
-            node, 'lineno', '?')
-
-    def __str__(self):
-        return "filename '%s', line %s: %s" % (
-            self.filename, self.lineno, self.message)
 
 
 def sample(weighted_objects, num_samples, seed):
@@ -686,8 +664,7 @@ class SourceModelLogicTree(object):
             if validate:
                 self.validate_uncertainty_value(
                     value_node, branchnode, branchset)
-            value = lt.parse_uncertainty(
-                branchset.uncertainty_type, value_node)
+            value = parse_uncertainty(branchset.uncertainty_type, value_node)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
@@ -742,6 +719,7 @@ class SourceModelLogicTree(object):
                 yield Realization(name, weight, ordinal,
                                   tuple(smlt_branch_ids), 1)
                 ordinal += 1
+
     def validate_uncertainty_value(self, node, branchnode, branchset):
         """
         See superclass' method for description and signature specification.
@@ -757,8 +735,6 @@ class SourceModelLogicTree(object):
           be referenced in branchset's filter "applyToSources".
         * For all other cases: value should be a single float value.
         """
-        _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
-
         if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
             try:
                 for fname in node.text.strip().split():
@@ -766,107 +742,8 @@ class SourceModelLogicTree(object):
                         branchnode['branchID'], fname)
             except Exception as exc:
                 raise LogicTreeError(node, self.filename, str(exc)) from exc
-
-        elif branchset.uncertainty_type == 'abGRAbsolute':
-            ab = (node.text.strip()).split()
-            if len(ab) == 2:
-                a, b = ab
-                if _float_re.match(a) and _float_re.match(b):
-                    return
-            raise LogicTreeError(
-                node, self.filename,
-                'expected a pair of floats separated by space')
-        elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            pass
-        elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
-            self._validate_simple_fault_geometry(node.simpleFaultGeometry,
-                                                 _float_re)
-        elif branchset.uncertainty_type == 'complexFaultGeometryAbsolute':
-            self._validate_complex_fault_geometry(node.complexFaultGeometry,
-                                                  _float_re)
-        elif branchset.uncertainty_type ==\
-                'characteristicFaultGeometryAbsolute':
-            for geom_node in node.surface:
-                if "simpleFaultGeometry" in geom_node.tag:
-                    self._validate_simple_fault_geometry(geom_node, _float_re)
-                elif "complexFaultGeometry" in geom_node.tag:
-                    self._validate_complex_fault_geometry(geom_node, _float_re)
-                elif "planarSurface" in geom_node.tag:
-                    self._validate_planar_fault_geometry(geom_node, _float_re)
-                else:
-                    raise LogicTreeError(
-                        geom_node, self.filename,
-                        "Surface geometry type not recognised")
-        else:
-            try:
-                float(node.text)
-            except (TypeError, ValueError):
-                raise LogicTreeError(
-                    node, self.filename, 'expected single float value')
-
-    def _validate_simple_fault_geometry(self, node, _float_re):
-        """
-        Validates a node representation of a simple fault geometry
-        """
-        try:
-            # Parse the geometry
-            coords = split_coords_2d(~node.LineString.posList)
-            trace = geo.Line([geo.Point(*p) for p in coords])
-        except ValueError:
-            # If the geometry cannot be created then use the LogicTreeError
-            # to point the user to the incorrect node. Hence, if trace is
-            # compiled successfully then len(trace) is True, otherwise it is
-            # False
-            trace = []
-        if len(trace):
             return
-        raise LogicTreeError(
-            node, self.filename,
-            "'simpleFaultGeometry' node is not valid")
-
-    def _validate_complex_fault_geometry(self, node, _float_re):
-        """
-        Validates a node representation of a complex fault geometry - this
-        check merely verifies that the format is correct. If the geometry
-        does not conform to the Aki & Richards convention this will not be
-        verified here, but will raise an error when the surface is created.
-        """
-        valid_edges = []
-        for edge_node in node.nodes:
-            try:
-                coords = split_coords_3d(edge_node.LineString.posList.text)
-                edge = geo.Line([geo.Point(*p) for p in coords])
-            except ValueError:
-                # See use of validation error in simple geometry case
-                # The node is valid if all of the edges compile correctly
-                edge = []
-            if len(edge):
-                valid_edges.append(True)
-            else:
-                valid_edges.append(False)
-        if node["spacing"] and all(valid_edges):
-            return
-        raise LogicTreeError(
-            node, self.filename,
-            "'complexFaultGeometry' node is not valid")
-
-    def _validate_planar_fault_geometry(self, node, _float_re):
-        """
-        Validares a node representation of a planar fault geometry
-        """
-        valid_spacing = node["spacing"]
-        for key in ["topLeft", "topRight", "bottomLeft", "bottomRight"]:
-            lon = getattr(node, key)["lon"]
-            lat = getattr(node, key)["lat"]
-            depth = getattr(node, key)["depth"]
-            valid_lon = (lon >= -180.0) and (lon <= 180.0)
-            valid_lat = (lat >= -90.0) and (lat <= 90.0)
-            valid_depth = (depth >= 0.0)
-            is_valid = valid_lon and valid_lat and valid_depth
-            if not is_valid or not valid_spacing:
-                raise LogicTreeError(
-                    node, self.filename,
-                    "'planarFaultGeometry' node is not valid")
+        validate_uncertainty(branchset.uncertainty_type, node, self.filename)
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
