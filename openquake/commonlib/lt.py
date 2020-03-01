@@ -45,6 +45,8 @@ def incMFD(utype, node):
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
 def simpleGeom(utype, node):
+    if hasattr(node, 'simpleFaultGeometry'):
+        node = node.simpleFaultGeometry
     spacing = node["spacing"]
     usd, lsd, dip = (~node.upperSeismoDepth, ~node.lowerSeismoDepth,
                      ~node.dip)
@@ -56,6 +58,8 @@ def simpleGeom(utype, node):
 
 @parse_uncertainty.add('complexFaultGeometryAbsolute')
 def complexGeom(utype, node):
+    if hasattr(node, 'complexFaultGeometry'):
+        node = node.complexFaultGeometry
     spacing = node["spacing"]
     edges = []
     for edge_node in node.nodes:
@@ -64,35 +68,30 @@ def complexGeom(utype, node):
     return edges, spacing
 
 
-@parse_uncertainty.add('planarSurface')
-def planarSurface(utype, node):
-    nodes = []
-    for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
-        nodes.append(geo.Point(getattr(node, key)["lon"],
-                               getattr(node, key)["lat"],
-                               getattr(node, key)["depth"]))
-    top_left, top_right, bottom_right, bottom_left = tuple(nodes)
-    surface = geo.PlanarSurface.from_corner_points(
-        top_left, top_right, bottom_right, bottom_left)
-    return surface
-
-
 @parse_uncertainty.add('characteristicFaultGeometryAbsolute')
 def charGeom(utype, node):
     surfaces = []
     for geom_node in node.surface:
         if "simpleFaultGeometry" in geom_node.tag:
             trace, usd, lsd, dip, spacing = parse_uncertainty(
-                'simpleFaultGeometry', geom_node)
+                'simpleFaultGeometryAbsolute', geom_node)
             surfaces.append(geo.SimpleFaultSurface.from_fault_data(
                 trace, usd, lsd, dip, spacing))
         elif "complexFaultGeometry" in geom_node.tag:
             edges, spacing = parse_uncertainty(
-                'complexFaultGeometry', geom_node)
+                'complexFaultGeometryAbsolute', geom_node)
             surfaces.append(geo.ComplexFaultSurface.from_fault_data(
                 edges, spacing))
         elif "planarSurface" in geom_node.tag:
-            surfaces.append(parse_uncertainty('planarSurface', geom_node))
+            nodes = []
+            for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
+                nodes.append(geo.Point(getattr(geom_node, key)["lon"],
+                                       getattr(geom_node, key)["lat"],
+                                       getattr(geom_node, key)["depth"]))
+            top_left, top_right, bottom_right, bottom_left = tuple(nodes)
+            surface = geo.PlanarSurface.from_corner_points(
+                top_left, top_right, bottom_right, bottom_left)
+            surfaces.append(surface)
         else:
             pass
     if len(surfaces) > 1:
