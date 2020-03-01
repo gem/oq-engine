@@ -404,11 +404,11 @@ def collect_info(smlt):
             for br in bset:
                 with context(smlt, br):
                     fnames = unique(br.uncertaintyModel.text.split())
-                    paths[br['branchID']].update(get_paths(smlt, fnames))
+                    paths[br['branchID']].update(_get_paths(smlt, fnames))
     return Info({k: sorted(v) for k, v in paths.items()}, applytosources)
 
 
-def get_paths(smlt, fnames):
+def _get_paths(smlt, fnames):
     base_path = os.path.dirname(smlt)
     paths = []
     for fname in fnames:
