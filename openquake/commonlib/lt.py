@@ -64,6 +64,19 @@ def complexGeom(utype, node):
     return edges, spacing
 
 
+@parse_uncertainty.add('planarSurface')
+def planarSurface(utype, node):
+    nodes = []
+    for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
+        nodes.append(geo.Point(getattr(node, key)["lon"],
+                               getattr(node, key)["lat"],
+                               getattr(node, key)["depth"]))
+    top_left, top_right, bottom_right, bottom_left = tuple(nodes)
+    surface = geo.PlanarSurface.from_corner_points(
+        top_left, top_right, bottom_right, bottom_left)
+    return surface
+
+
 @parse_uncertainty.add('characteristicFaultGeometryAbsolute')
 def charGeom(utype, node):
     surfaces = []
@@ -79,29 +92,10 @@ def charGeom(utype, node):
             surfaces.append(geo.ComplexFaultSurface.from_fault_data(
                 edges, spacing))
         elif "planarSurface" in geom_node.tag:
-            nodes = []
-            for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
-                nodes.append(geo.Point(getattr(geom_node, key)["lon"],
-                                       getattr(geom_node, key)["lat"],
-                                       getattr(geom_node, key)["depth"]))
-            top_left, top_right, bottom_right, bottom_left = tuple(nodes)
-            surface = geo.PlanarSurface.from_corner_points(
-                top_left, top_right, bottom_right, bottom_left)
-            surfaces.append(surface)
+            surfaces.append(parse_uncertainty('planarSurface', geom_node))
         else:
             pass
     if len(surfaces) > 1:
         return geo.MultiSurface(surfaces)
     else:
         return surfaces[0]
-
-
-def _parse_planar_geometry_surface(node):
-    nodes = []
-    for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
-        nodes.append(geo.Point(getattr(node, key)["lon"],
-                               getattr(node, key)["lat"],
-                               getattr(node, key)["depth"]))
-    top_left, top_right, bottom_right, bottom_left = tuple(nodes)
-    return geo.PlanarSurface.from_corner_points(
-        top_left, top_right, bottom_right, bottom_left)
