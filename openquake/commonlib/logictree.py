@@ -104,19 +104,6 @@ class Realization(object):
         else:
             return ' '.join([names[0], '...', names[-1]])
 
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = []
-        for grp in self.src_groups:
-            sg = copy.copy(grp)
-            sg.sources = []
-            src_groups.append(sg)
-        return self.__class__(self.value, self.weight, self.ordinal,
-                              self.lt_path, self.samples, self.offset)
-
     def __repr__(self):
         samples = ', samples=%d' % self.samples if self.samples > 1 else ''
         return '<%s #%d %s, path=%s, weight=%s%s>' % (
