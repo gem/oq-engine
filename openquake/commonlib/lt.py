@@ -45,40 +45,6 @@ def incMFD(utype, node):
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
 def simpleGeom(utype, node):
-    return _parse_simple_fault_geometry_surface(node.simpleFaultGeometry)
-
-
-@parse_uncertainty.add('complexFaultGeometryAbsolute')
-def complexGeom(utype, node):
-    return _parse_complex_fault_geometry_surface(node.complexFaultGeometry)
-
-
-@parse_uncertainty.add('characteristicFaultGeometryAbsolute')
-def charGeom(utype, node):
-    surfaces = []
-    for geom_node in node.surface:
-        if "simpleFaultGeometry" in geom_node.tag:
-            trace, usd, lsd, dip, spacing =\
-                _parse_simple_fault_geometry_surface(geom_node)
-            surfaces.append(geo.SimpleFaultSurface.from_fault_data(
-                trace, usd, lsd, dip, spacing))
-        elif "complexFaultGeometry" in geom_node.tag:
-            edges, spacing =\
-                _parse_complex_fault_geometry_surface(geom_node)
-            surfaces.append(geo.ComplexFaultSurface.from_fault_data(
-                edges, spacing))
-        elif "planarSurface" in geom_node.tag:
-            surfaces.append(
-                _parse_planar_geometry_surface(geom_node))
-        else:
-            pass
-    if len(surfaces) > 1:
-        return geo.MultiSurface(surfaces)
-    else:
-        return surfaces[0]
-
-
-def _parse_simple_fault_geometry_surface(node):
     spacing = node["spacing"]
     usd, lsd, dip = (~node.upperSeismoDepth, ~node.lowerSeismoDepth,
                      ~node.dip)
@@ -88,13 +54,46 @@ def _parse_simple_fault_geometry_surface(node):
     return trace, usd, lsd, dip, spacing
 
 
-def _parse_complex_fault_geometry_surface(node):
+@parse_uncertainty.add('complexFaultGeometryAbsolute')
+def complexGeom(utype, node):
     spacing = node["spacing"]
     edges = []
     for edge_node in node.nodes:
         coords = split_coords_3d(~edge_node.LineString.posList)
         edges.append(geo.Line([geo.Point(*p) for p in coords]))
     return edges, spacing
+
+
+@parse_uncertainty.add('characteristicFaultGeometryAbsolute')
+def charGeom(utype, node):
+    surfaces = []
+    for geom_node in node.surface:
+        if "simpleFaultGeometry" in geom_node.tag:
+            trace, usd, lsd, dip, spacing =\
+                parse_uncertainty('simpleFaultGeometry', geom_node)
+            surfaces.append(geo.SimpleFaultSurface.from_fault_data(
+                trace, usd, lsd, dip, spacing))
+        elif "complexFaultGeometry" in geom_node.tag:
+            edges, spacing =\
+                parse_uncertainty('complexFaultGeometry', geom_node)
+            surfaces.append(geo.ComplexFaultSurface.from_fault_data(
+                edges, spacing))
+        elif "planarSurface" in geom_node.tag:
+            nodes = []
+            for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
+                nodes.append(geo.Point(getattr(geom_node, key)["lon"],
+                                       getattr(geom_node, key)["lat"],
+                                       getattr(geom_node, key)["depth"]))
+            top_left, top_right, bottom_right, bottom_left = tuple(nodes)
+            surface = geo.PlanarSurface.from_corner_points(
+                top_left, top_right, bottom_right, bottom_left)
+            surfaces.append(surface)
+        else:
+            pass
+    if len(surfaces) > 1:
+        return geo.MultiSurface(surfaces)
+    else:
+        return surfaces[0]
 
 
 def _parse_planar_geometry_surface(node):
