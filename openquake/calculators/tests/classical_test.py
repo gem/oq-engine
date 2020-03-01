@@ -258,8 +258,9 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
         # check deserialization of source_model_lt
-        #smlt = self.calc.datastore['source_model_lt']
-        #print(list(smlt))
+        smlt = self.calc.datastore['source_model_lt']
+        exp = str(list(smlt))
+        self.assertEqual('''[<Realization #0 source_model_1.xml, path=SM1, weight=0.5>, <Realization #1 source_model_2.xml, path=SM2_a3pt2b0pt8, weight=0.25>, <Realization #2 source_model_2.xml, path=SM2_a3b1, weight=0.25>]''', exp)
 
     def test_case_16(self):   # sampling
         self.assert_curves_ok(

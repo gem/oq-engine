@@ -853,36 +853,30 @@ class SourceModelLogicTree(object):
             tbl.append((br.bs_id, brid, utype, br.value, br.weight))
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
               ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
-        return numpy.array(tbl, dt), tomldict(self.bsetdict)
+        attrs = tomldict(self.bsetdict)
+        attrs['num_samples'] = self.num_samples
+        attrs['filename'] = self.filename
+        return numpy.array(tbl, dt), attrs
 
     def __fromh5__(self, array, attrs):
-        vars(self).update(attrs)
-        self.bsetdict = AccumDict(accum={})
-        self.branches = {}
-        self.root_branchset = prev_bset = BranchSet('sourceModel', {})
-        prev_bs = None
-        branches = []
-        for lineno, rec in enumerate(array, 2):
-            bs = rec['branchset']
-            dic = self.bsetdict[bs]
-            dic['uncertaintyType'] = rec['utype']
-            dic.update(toml.loads(rec['filter'][1:-1].replace('\\n', '\n')))
-            br = Branch(bs, rec['branch'], rec['weight'], rec['uvalue'])
-            branches.append(br)
-            self.branches[br.branch_id] = br
-            if bs != prev_bs:
-                bset = BranchSet(dic['uncertaintyType'], {})
-                bset.branches.extend(branches)
-                atb = dic.get('applyToBranches', '').split()
-                if atb:
-                    for brid in atb:
-                        self.branches[brid].bset = bset
-                elif prev_bset:
-                    for branch in prev_bset.branches:
-                        branch.bset = bset
-                prev_bs = bs
-                prev_bset = bset
-                branches.clear()
+        bsets = []
+        for bsid, rows in group_array(array, 'branchset').items():
+            utype = rows[0]['utype']
+            bset = BranchSet(utype, [])  # TODO: filters
+            bset.id = bsid
+            for row in rows:
+                br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
+                bset.branches.append(br)
+            bsets.append(bset)
+        self.root_branchset = bsets[0]
+        for i, childset in enumerate(bsets[1:]):
+            dic = toml.loads(attrs[childset.id])
+            atb = dic.get('applyToBranches')
+            for branch in bsets[i].branches:  # parent branches
+                if not atb or branch.branch_id in atb:
+                    branch.bset = bset
+        self.num_samples = attrs['num_samples']
+        self.filename = attrs['filename']
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
