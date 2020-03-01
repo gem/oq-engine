@@ -357,8 +357,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         self.source_info = ()
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
-            self.source_model_lt.num_samples,
-            [sm.get_skeleton() for sm in self.sm_rlzs])
+            self.source_model_lt.num_samples, self.sm_rlzs)
 
     def get_model(self, sm_id):
         """

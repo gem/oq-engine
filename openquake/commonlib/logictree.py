@@ -75,6 +75,10 @@ def unique(objects, key=None):
 
 
 class Realization(object):
+    """
+    Generic Realization object with attributes value, weight, ordinal, lt_path,
+    samples and optionally offset.
+    """
     def __init__(self, value, weight, ordinal, lt_path, samples, offset=0):
         self.value = value
         self.weight = weight
@@ -99,26 +103,6 @@ class Realization(object):
             return ' '.join(names)
         else:
             return ' '.join([names[0], '...', names[-1]])
-
-    @property
-    def num_sources(self):
-        """
-        Number of sources contained in the source model
-        """
-        return sum(len(sg) for sg in self.src_groups)
-
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = []
-        for grp in self.src_groups:
-            sg = copy.copy(grp)
-            sg.sources = []
-            src_groups.append(sg)
-        return self.__class__(self.value, self.weight, self.ordinal,
-                              self.lt_path, self.samples, self.offset)
 
     def __repr__(self):
         samples = ', samples=%d' % self.samples if self.samples > 1 else ''
@@ -201,19 +185,6 @@ class Branch(object):
             return '%s%s' % (self.branch_id, self.bset)
         else:
             return '%s' % self.branch_id
-
-
-# Define the keywords associated with the MFD
-MFD_UNCERTAINTY_TYPES = ['maxMagGRRelative', 'maxMagGRAbsolute',
-                         'bGRRelative', 'abGRAbsolute',
-                         'incrementalMFDAbsolute']
-
-# Define the keywords associated with the source geometry
-GEOMETRY_UNCERTAINTY_TYPES = ['simpleFaultDipRelative',
-                              'simpleFaultDipAbsolute',
-                              'simpleFaultGeometryAbsolute',
-                              'complexFaultGeometryAbsolute',
-                              'characteristicFaultGeometryAbsolute']
 
 
 def tomldict(ddic):
@@ -325,7 +296,7 @@ class BranchSet(object):
             else:
                 yield path
 
-    def get_branch_by_id(self, branch_id):
+    def __getitem__(self, branch_id):
         """
         Return :class:`Branch` object belonging to this branch set with id
         equal to ``branch_id``.
@@ -333,7 +304,7 @@ class BranchSet(object):
         for branch in self.branches:
             if branch.branch_id == branch_id:
                 return branch
-        raise AssertionError("couldn't find branch '%s'" % branch_id)
+        raise KeyError(branch_id)
 
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
@@ -377,6 +348,7 @@ class BranchSet(object):
         return repr(self.branches)
 
 
+# manage the legacy logicTreeBranchingLevel nodes
 def _bsnodes(fname, branchinglevel):
     if branchinglevel.tag.endswith('logicTreeBranchingLevel'):
         if len(branchinglevel) > 1:
@@ -420,11 +392,12 @@ def collect_info(smlt):
             for br in bset:
                 with context(smlt, br):
                     fnames = unique(br.uncertaintyModel.text.split())
-                    paths[br['branchID']].update(get_paths(smlt, fnames))
+                    paths[br['branchID']].update(_abs_paths(smlt, fnames))
     return Info({k: sorted(v) for k, v in paths.items()}, applytosources)
 
 
-def get_paths(smlt, fnames):
+def _abs_paths(smlt, fnames):
+    # relative -> absolute paths
     base_path = os.path.dirname(smlt)
     paths = []
     for fname in fnames:
@@ -459,11 +432,6 @@ class SourceModelLogicTree(object):
 
     :param filename:
         Full pathname of logic tree file
-    :param validate:
-        Boolean indicating whether or not the tree should be validated
-        while parsed. This should be set to ``True`` on initial load
-        of the logic tree (before importing it to the database) and
-        to ``False`` on workers side (when loaded from the database).
     :raises LogicTreeError:
         If logic tree file has a logic error, which can not be prevented
         by xml schema rules (like referencing sources with missing id).
@@ -474,7 +442,7 @@ class SourceModelLogicTree(object):
                'applyToSources',
                'applyToSourceType')
 
-    def __init__(self, filename, validate=True, seed=0, num_samples=0):
+    def __init__(self, filename, seed=0, num_samples=0):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         self.seed = seed
@@ -491,7 +459,7 @@ class SourceModelLogicTree(object):
         except AttributeError:
             raise LogicTreeError(
                 root, self.filename, "missing logicTree node")
-        self.parse_tree(tree, validate)
+        self.parse_tree(tree)
 
     @property
     def on_each_source(self):
@@ -501,7 +469,7 @@ class SourceModelLogicTree(object):
         return (self.info.applytosources and
                 self.info.applytosources == self.source_ids)
 
-    def parse_tree(self, tree_node, validate):
+    def parse_tree(self, tree_node):
         """
         Parse the whole tree and point ``root_branchset`` attribute
         to the tree's root.
@@ -511,20 +479,17 @@ class SourceModelLogicTree(object):
         t0 = time.time()
         for depth, blnode in enumerate(tree_node.nodes):
             [bsnode] = _bsnodes(self.filename, blnode)
-            self.parse_branchset(bsnode, depth, validate)
+            self.parse_branchset(bsnode, depth)
         dt = time.time() - t0
-        if validate:
-            bname = os.path.basename(self.filename)
-            logging.info('Validated %s in %.2f seconds', bname, dt)
+        bname = os.path.basename(self.filename)
+        logging.info('Validated %s in %.2f seconds', bname, dt)
 
-    def parse_branchset(self, branchset_node, depth, validate):
+    def parse_branchset(self, branchset_node, depth):
         """
         :param branchset_ node:
             ``etree.Element`` object with tag "logicTreeBranchSet".
         :param depth:
             The sequential number of this branching level, based on 0.
-        :param validate:
-            Whether or not the branchset and its branches should be validated.
 
         Enumerates children branchsets and call :meth:`parse_branchset`,
         :meth:`validate_branchset`, :meth:`parse_branches` and finally
@@ -541,15 +506,13 @@ class SourceModelLogicTree(object):
         filters = dict((filtername, branchset_node.attrib.get(filtername))
                        for filtername in self.FILTERS
                        if filtername in branchset_node.attrib)
-        if validate:
-            self.validate_filters(branchset_node, uncertainty_type, filters)
+        self.validate_filters(branchset_node, uncertainty_type, filters)
 
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
         branchset = BranchSet(uncertainty_type, filters)
-        if validate:
-            self.validate_branchset(branchset_node, depth, branchset)
+        self.validate_branchset(branchset_node, depth, branchset)
 
-        self.parse_branches(branchset_node, branchset, validate)
+        self.parse_branches(branchset_node, branchset)
         if self.root_branchset is None:  # not set yet
             self.num_paths = 1
             self.root_branchset = branchset
@@ -564,7 +527,7 @@ class SourceModelLogicTree(object):
         self.previous_branches = branchset.branches
         self.num_paths *= len(branchset.branches)
 
-    def parse_branches(self, branchset_node, branchset, validate):
+    def parse_branches(self, branchset_node, branchset):
         """
         Create and attach branches at ``branchset_node`` to ``branchset``.
 
@@ -572,8 +535,6 @@ class SourceModelLogicTree(object):
             Same as for :meth:`parse_branchset`.
         :param branchset:
             An instance of :class:`BranchSet`.
-        :param validate:
-            Whether or not branches' uncertainty values should be validated.
 
         Checks that each branch has :meth:`valid <validate_uncertainty_value>`
         value, unique id and that all branches have total weight of 1.0.
@@ -591,9 +552,18 @@ class SourceModelLogicTree(object):
             value_node = node_from_elem(branchnode.uncertaintyModel)
             if value_node.text is not None:
                 values.append(value_node.text.strip())
-            if validate:
-                self.validate_uncertainty_value(
-                    value_node, branchnode, branchset)
+            if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
+                try:
+                    for fname in value_node.text.strip().split():
+                        if fname.endswith(('.xml', '.nrml')):  # except UCERF
+                            self.collect_source_model_data(
+                                branchnode['branchID'], fname)
+                except Exception as exc:
+                    raise LogicTreeError(
+                        value_node, self.filename, str(exc)) from exc
+            else:
+                validate_uncertainty(
+                    branchset.uncertainty_type, value_node, self.filename)
             value = parse_uncertainty(branchset.uncertainty_type, value_node)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(bs_id, branch_id, weight, value)
@@ -649,31 +619,6 @@ class SourceModelLogicTree(object):
                 yield Realization(name, weight, ordinal,
                                   tuple(smlt_branch_ids), 1)
                 ordinal += 1
-
-    def validate_uncertainty_value(self, node, branchnode, branchset):
-        """
-        See superclass' method for description and signature specification.
-
-        Checks that the following conditions are met:
-
-        * For uncertainty of type "sourceModel": referenced file must exist
-          and be readable. This is checked in :meth:`collect_source_model_data`
-          along with saving the source model information.
-        * For uncertainty of type "abGRAbsolute": value should be two float
-          values.
-        * For both absolute uncertainties: the source (only one) must
-          be referenced in branchset's filter "applyToSources".
-        * For all other cases: value should be a single float value.
-        """
-        if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
-            try:
-                for fname in node.text.strip().split():
-                    self.collect_source_model_data(
-                        branchnode['branchID'], fname)
-            except Exception as exc:
-                raise LogicTreeError(node, self.filename, str(exc)) from exc
-            return
-        validate_uncertainty(branchset.uncertainty_type, node, self.filename)
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
@@ -815,6 +760,7 @@ class SourceModelLogicTree(object):
             branch.bset = branchset
 
     def _get_source_model(self, source_model_file):
+        # NB: do not remove this, it is meant to be overridden in the tests
         return open(os.path.join(self.basepath, source_model_file),
                     encoding='utf-8')
 
@@ -853,7 +799,7 @@ class SourceModelLogicTree(object):
         branchsets_and_uncertainties = []
         while branchset is not None:
             brid, path = path[0], path[1:]
-            branch = branchset.get_branch_by_id(brid)
+            branch = branchset[brid]
             if branchset.uncertainty_type == 'extendModel':
                 extname = os.path.join(dirname, branch.value)
                 [ext] = nrml.read_source_models([extname], converter)
