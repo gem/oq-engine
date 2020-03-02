@@ -209,19 +209,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = d_asset
 
-        # damage by event
-        eid_dmg_dt = self.crmodel.eid_dmg_dt()
-        d_event = numpy.array(sorted(result['d_event'].items()), eid_dmg_dt)
-        self.datastore['dmg_by_event'] = d_event
+        # damage by event: make sure the sum of the assets is consistent
+        tot = self.assetcol['number'].sum()
+        dbe = numpy.zeros(self.E, self.crmodel.eid_dmg_dt())  # shape E, L, D
+        dbe['dmg'][:, :, 0] = tot
+        for eid, dmg in result['d_event'].items():
+            dmg[:, 0] = tot - dmg[:, 0]
+            dbe['dmg'][eid] = dmg
+        self.datastore['dmg_by_event'] = dbe
 
-        # sanity check on the total number of assets, same for each event
-        num_sums = len(set(d['dmg'].sum() for d in d_event))
-        if self.param['approx_ddd'] and num_sums > 1:
-            logging.warning('Due to numeric errors the sum of assets in each '
-                            'damage state is not the same for each event')
-        elif num_sums > 1:
-            raise ValueError('The sum of assets in each damage state is not '
-                             'the same for each event!')
         # consequence distributions
         del result['d_asset']
         del result['d_event']
