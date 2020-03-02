@@ -214,11 +214,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         d_event = numpy.array(sorted(result['d_event'].items()), eid_dmg_dt)
         # sanity check on the total number of assets, same for each event
         num_sums = len(set(d['dmg'].sum() for d in d_event))
-        if self.param['approx_ddd']:
-            if num_sums > 1:
-                msg = ('Due to numeric errors the sum of assets in each damage'
-                       ' state is not the same for each event')
-                logging.warning(msg)
+        if self.param['approx_ddd'] and num_sums > 1:
+            logging.warning('Due to numeric errors the sum of assets in each '
+                            'damage state is not the same for each event')
         elif num_sums > 1:
             raise ValueError('The sum of assets in each damage state is not '
                              'the same for each event!')
