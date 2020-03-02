@@ -56,7 +56,7 @@ def approx_ddd(fractions, n, seed=None):
     """
     Converting fractions into uint16 discrete damage distributions using round
     """
-    ddd = U32(numpy.round(fractions * n))
+    ddd = U32(numpy.round(fractions * n))  # shape (E, D)
     # fix the no-damage discrete damage distributions by making sure
     # that the total sum is n: nodamage = n - sum(others)
     ddd[:, 0] = n - ddd[:, 1:].sum(axis=1)
@@ -114,9 +114,8 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         ddds = make_ddd(fractions, asset['number'], seed + aid)
                         for e, ddd in enumerate(ddds):
                             eid = out.eids[e]
-                            if ddd[1:].any():
-                                ddic[aid, eid][l] = ddd[1:]
-                                d_event[eid][l] += ddd
+                            ddic[aid, eid][l] = ddd[1:]
+                            d_event[eid][l] += ddd
                         if make_ddd is approx_ddd:
                             ms = mean_std(fractions * asset['number'])
                         else:
@@ -213,6 +212,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         # damage by event
         eid_dmg_dt = self.crmodel.eid_dmg_dt()
         d_event = numpy.array(sorted(result['d_event'].items()), eid_dmg_dt)
+        # sanity check on the total number of assets, same for each event
+        sums = set(d['dmg'].sum() for d in d_event)
+        if self.param['approx_ddd']:
+            if len(sums) > 1:
+                msg = ('Due to numeric errors the sum of assets in each damage'
+                       ' state is not the same for each event')
+                logging.warning(msg)
+        elif len(sums) > 1:
+            raise ValueError('The sum of assets in each damage state is not '
+                             'the same for each event! %s', sums)
         self.datastore['dmg_by_event'] = d_event
 
         # consequence distributions
