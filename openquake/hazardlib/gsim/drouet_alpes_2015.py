@@ -89,11 +89,11 @@ class DrouetAlpes2015Rjb(GMPE):
 
     #: Required rupture parameter is only magnitude, see equation 30 page
     #: 1021.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

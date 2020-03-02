@@ -53,13 +53,13 @@ class BommerEtAl2009RSD(GMPE):
     ])
 
     #: Requires vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and top of rupture depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     #: Required distance measure is closest distance to rupture
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

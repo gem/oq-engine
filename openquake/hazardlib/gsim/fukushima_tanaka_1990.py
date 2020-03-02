@@ -61,13 +61,13 @@ class FukushimaTanaka1990(GMPE):
     #: raised by 40 %. For greatest consistencty the site condition is
     #: neglected currently but a site-dependent GMPE may be implemented
     #: inside a subclass.
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is rupture distance
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

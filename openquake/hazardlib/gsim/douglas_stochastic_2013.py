@@ -133,13 +133,13 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
     ])
 
     #: No additional site term is defined
-    REQUIRES_SITES_PARAMETERS = set()
+    REQUIRES_SITES_PARAMETERS = {}
 
     #: The required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: The required distance parameter is hypocentral distance
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

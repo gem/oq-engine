@@ -63,15 +63,15 @@ class AkkarEtAlRjb2014(GMPE):
     ])
 
     #: The required site parameter is vs30, see equation 1, page 20.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: The required rupture parameters are rake and magnitude, see equation 1,
     #: page 20.
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: The required distance parameter is 'Joyner-Boore' distance, because
     #: coefficients in table 4.a, pages 22-23, are used.
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, adjustment_factor=1.0):
         super().__init__()

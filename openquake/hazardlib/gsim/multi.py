@@ -21,7 +21,6 @@ multiple GMPEs for different IMTs when passed a dictionary of ground motion
 models organised by IMT type or by a string describing the association
 """
 import collections
-import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.imt import from_string
@@ -60,7 +59,7 @@ class MultiGMPE(GMPE, collections.abc.Mapping):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is magnitude, others will be set later
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance metrics will be set by the GMPEs
     REQUIRES_DISTANCES = set()

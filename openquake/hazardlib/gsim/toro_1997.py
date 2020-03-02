@@ -81,10 +81,10 @@ class ToroEtAl1997MblgNSHMP2008(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is only magnitude (Mblg).
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is rjb
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
