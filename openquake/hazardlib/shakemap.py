@@ -289,8 +289,7 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
         imts = std.dtype.names
     else:
         imts = [imt for imt in imts if imt in std.dtype.names]
-    val = {imt: numpy.log(shakemap['val'][imt]) - std[imt] ** 2 / 2.
-           for imt in imts}
+    val = {imt: numpy.log(shakemap['val'][imt]) for imt in imts}
     imts_ = [imt.from_string(name) for name in imts]
     M = len(imts_)
     cross_corr = cross_correlation_matrix(imts_, crosscorr)
