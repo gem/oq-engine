@@ -133,7 +133,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
     ])
 
     #: No additional site term is defined
-    REQUIRES_SITES_PARAMETERS = {}
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: The required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
