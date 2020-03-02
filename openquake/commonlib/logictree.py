@@ -818,10 +818,10 @@ class SourceModelLogicTree(object):
                 sg = copy.deepcopy(src_group)  # do not change the original
                 for source in sg:
                     changes = 0
-                    for branchset, value in branchsets_and_uncertainties:
-                        if branchset.filter_source(source):
+                    for bset, value in branchsets_and_uncertainties:
+                        if bset.filter_source(source):
                             apply_uncertainty(
-                                branchset.uncertainty_type, source, value)
+                                bset.uncertainty_type, source, value)
                             changes += 1
                     if changes:  # redoing count_ruptures can be slow
                         source.num_ruptures = source.count_ruptures()
