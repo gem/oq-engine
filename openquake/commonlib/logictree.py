@@ -40,7 +40,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.node import node_from_elem, Node as N, context
 from openquake.baselib.general import (groupby, group_array, duplicated,
-                                       add_defaults, AccumDict)
+                                       add_defaults)
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -48,7 +48,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.commonlib.lt import (
-    LogicTreeError, parse_uncertainty, validate_uncertainty, apply_uncertainty)
+    LogicTreeError, parse_uncertainty, apply_uncertainty)
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -561,10 +561,8 @@ class SourceModelLogicTree(object):
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-            else:
-                validate_uncertainty(
-                    branchset.uncertainty_type, value_node, self.filename)
-            value = parse_uncertainty(branchset.uncertainty_type, value_node)
+            value = parse_uncertainty(branchset.uncertainty_type, value_node,
+                                      self.filename)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:

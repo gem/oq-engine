@@ -48,32 +48,44 @@ class LogicTreeError(Exception):
 
 #                           parse_uncertainty                              #
 
-parse_uncertainty = CallableDict(
-    keymissing=lambda utype, node: float(node.text.strip()))
+
+def unknown(utype, node, filename):
+    try:
+        return float(node.text)
+    except (TypeError, ValueError):
+        raise LogicTreeError(node, filename, 'expected single float value')
+
+
+parse_uncertainty = CallableDict(keymissing=unknown)
 
 
 @parse_uncertainty.add('sourceModel', 'extendModel')
-def smodel(utype, node):
+def smodel(utype, node, filename):
     return node.text.strip()
 
 
 @parse_uncertainty.add('abGRAbsolute')
-def abGR(utype, node):
-    [a, b] = node.text.strip().split()
-    return float(a), float(b)
+def abGR(utype, node, filename):
+    try:
+        [a, b] = node.text.split()
+        return float(a), float(b)
+    except ValueError:
+        raise LogicTreeError(
+            node, filename, 'expected a pair of floats separated by space')
 
 
 @parse_uncertainty.add('incrementalMFDAbsolute')
-def incMFD(utype, node):
+def incMFD(utype, node, filename):
     min_mag, bin_width = (node.incrementalMFD["minMag"],
                           node.incrementalMFD["binWidth"])
     return min_mag,  bin_width, ~node.incrementalMFD.occurRates
 
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
-def simpleGeom(utype, node):
+def simpleGeom(utype, node, filename):
     if hasattr(node, 'simpleFaultGeometry'):
         node = node.simpleFaultGeometry
+    _validate_simple_fault_geometry(utype, node, filename)
     spacing = node["spacing"]
     usd, lsd, dip = (~node.upperSeismoDepth, ~node.lowerSeismoDepth,
                      ~node.dip)
@@ -83,9 +95,10 @@ def simpleGeom(utype, node):
 
 
 @parse_uncertainty.add('complexFaultGeometryAbsolute')
-def complexGeom(utype, node):
+def complexGeom(utype, node, filename):
     if hasattr(node, 'complexFaultGeometry'):
         node = node.complexFaultGeometry
+    _validate_complex_fault_geometry(utype, node, filename)
     spacing = node["spacing"]
     edges = []
     for edge_node in node.nodes:
@@ -95,20 +108,23 @@ def complexGeom(utype, node):
 
 
 @parse_uncertainty.add('characteristicFaultGeometryAbsolute')
-def charGeom(utype, node):
+def charGeom(utype, node, filename):
     surfaces = []
     for geom_node in node.surface:
         if "simpleFaultGeometry" in geom_node.tag:
+            _validate_simple_fault_geometry(utype, geom_node, filename)
             trace, usd, lsd, dip, spacing = parse_uncertainty(
-                'simpleFaultGeometryAbsolute', geom_node)
+                'simpleFaultGeometryAbsolute', geom_node, filename)
             surfaces.append(geo.SimpleFaultSurface.from_fault_data(
                 trace, usd, lsd, dip, spacing))
         elif "complexFaultGeometry" in geom_node.tag:
+            _validate_complex_fault_geometry(utype, geom_node, filename)
             edges, spacing = parse_uncertainty(
-                'complexFaultGeometryAbsolute', geom_node)
+                'complexFaultGeometryAbsolute', geom_node, filename)
             surfaces.append(geo.ComplexFaultSurface.from_fault_data(
                 edges, spacing))
         elif "planarSurface" in geom_node.tag:
+            _validate_planar_fault_geometry(utype, geom_node, filename)
             nodes = []
             for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
                 nodes.append(geo.Point(getattr(geom_node, key)["lon"],
@@ -119,32 +135,17 @@ def charGeom(utype, node):
                 top_left, top_right, bottom_right, bottom_left)
             surfaces.append(surface)
         else:
-            pass
+            raise LogicTreeError(
+                geom_node, filename, "Surface geometry type not recognised")
     if len(surfaces) > 1:
         return geo.MultiSurface(surfaces)
     else:
         return surfaces[0]
 
 
-#                             validate_uncertainty                          #
+# validations
 
-_float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
-
-
-def unknown(utype, node, filename):
-    try:
-        float(node.text)
-    except (TypeError, ValueError):
-        raise LogicTreeError(node, filename, 'expected single float value')
-
-
-validate_uncertainty = CallableDict(keymissing=unknown)
-
-
-@validate_uncertainty.add('simpleFaultGeometryAbsolute')
 def _validate_simple_fault_geometry(utype, node, filename):
-    if hasattr(node, 'simpleFaultGeometry'):
-        node = node.simpleFaultGeometry
     try:
         coords = split_coords_2d(~node.LineString.posList)
         trace = geo.Line([geo.Point(*p) for p in coords])
@@ -160,13 +161,10 @@ def _validate_simple_fault_geometry(utype, node, filename):
         node, filename, "'simpleFaultGeometry' node is not valid")
 
 
-@validate_uncertainty.add('complexFaultGeometryAbsolute')
 def _validate_complex_fault_geometry(utype, node, filename):
     # NB: if the geometry does not conform to the Aki & Richards convention
     # this will not be verified here, but will raise an error when the surface
     # is created
-    if hasattr(node, 'complexFaultGeometry'):
-        node = node.complexFaultGeometry
     valid_edges = []
     for edge_node in node.nodes:
         try:
@@ -186,7 +184,6 @@ def _validate_complex_fault_geometry(utype, node, filename):
         node, filename, "'complexFaultGeometry' node is not valid")
 
 
-@validate_uncertainty.add('planarSurface')
 def _validate_planar_fault_geometry(utype, node, filename):
     valid_spacing = node["spacing"]
     for key in ["topLeft", "topRight", "bottomLeft", "bottomRight"]:
@@ -200,35 +197,6 @@ def _validate_planar_fault_geometry(utype, node, filename):
         if not is_valid or not valid_spacing:
             raise LogicTreeError(
                 node, filename, "'planarFaultGeometry' node is not valid")
-
-
-@validate_uncertainty.add('characteristicFaultGeometryAbsolute')
-def _validate_characteristic_fault_geometry(utype, node, filename):
-    for geom_node in node.surface:
-        if "simpleFaultGeometry" in geom_node.tag:
-            _validate_simple_fault_geometry(utype, geom_node, filename)
-        elif "complexFaultGeometry" in geom_node.tag:
-            _validate_complex_fault_geometry(utype, geom_node, filename)
-        elif "planarSurface" in geom_node.tag:
-            _validate_planar_fault_geometry(utype, geom_node, filename)
-        else:
-            raise LogicTreeError(
-                geom_node, filename, "Surface geometry type not recognised")
-
-
-@validate_uncertainty.add('abGRAbsolute')
-def _validate_abGRAbsolute(utype, node, filename):
-    ab = node.text.split()
-    if len(ab) == 2:
-        if _float_re.match(ab[0]) and _float_re.match(ab[1]):
-            return
-    raise LogicTreeError(
-        node, filename, 'expected a pair of floats separated by space')
-
-
-@validate_uncertainty.add('incrementalMFDAbsolute')
-def _validate_incMFD(utype, node, filename):
-    pass
 
 
 #                         apply_uncertainty                                #
