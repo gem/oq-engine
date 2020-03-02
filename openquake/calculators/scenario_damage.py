@@ -218,8 +218,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             logging.warning('Due to numeric errors the sum of assets in each '
                             'damage state is not the same for each event')
         elif num_sums > 1:
-            raise ValueError('The sum of assets in each damage state is not '
-                             'the same for each event!')
+            logging.error('The sum of assets in each damage state is not '
+                          'the same for each event!')
         self.datastore['dmg_by_event'] = d_event
 
         # consequence distributions
