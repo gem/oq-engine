@@ -319,7 +319,8 @@ hazard_uhs-std.csv
             'hazard_curve-mean_SA(0.15).csv',
         ], case_19.__file__, delta=1E-5)
 
-    def test_case_20(self):  # Source geometry enumeration
+    def test_case_20(self):
+        # Source geometry enumeration, apply_to_sources
         self.assert_curves_ok([
             'hazard_curve-smltp_sm1_sg1_cog1_char_complex-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg1_cog1_char_plane-gsimltp_Sad1997.csv',
@@ -334,8 +335,12 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_sm1_sg2_cog2_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
             case_20.__file__, delta=1E-7)
+        srcs = self.calc.csm.get_sources()
+        dupl = sum(len(src.src_group_ids) - 1 for src in srcs)
+        self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
-    def test_case_21(self):  # Simple fault dip and MFD enumeration
+    def test_case_21(self):
+        # Simple fault dip and MFD enumeration
         self.assert_curves_ok([
             'hazard_curve-smltp_b1_mfd1_high_dip_dip30-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd1_high_dip_dip45-gsimltp_Sad1997.csv',

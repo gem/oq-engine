@@ -73,7 +73,6 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-# NB: this is NOT called if split_by_magnitude is true
 def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
@@ -115,25 +114,27 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
-def split_by_mag(sources):
+# not used right now
+def split_by_mag(src_group):
     """
     Split sources by magnitude
     """
-    out = []
-    for src in sources:
+    out = copy.copy(src_group)
+    out.sorces = []
+    for src in src_group:
         if hasattr(src, 'get_annual_occurrence_rates'):
             for mag, rate in src.get_annual_occurrence_rates():
                 new = copy.copy(src)
                 new.mfd = mfd.ArbitraryMFD([mag], [rate])
                 new.num_ruptures = new.count_ruptures()
-                out.append(new)
+                out.sources.append(new)
         else:  # nonparametric source
             # data is a list of pairs (rup, pmf)
             for mag, group in itertools.groupby(
                     src.data, lambda pair: pair[0].mag):
                 new = src.__class__(src.source_id, src.name,
                                     src.tectonic_region_type, list(group))
-                out.append(new)
+                out.sources.append(new)
     return out
 
 
@@ -325,8 +326,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        del self.csm  # save memory
+        src_groups = self.csm.get_src_groups(optimize_dupl=True)
 
         def srcweight(src):
             trt = src.tectonic_region_type
@@ -334,8 +334,7 @@ class ClassicalCalculator(base.HazardCalculator):
             m = (oq.maximum_distance(trt) / 300) ** 2
             return src.weight * g * m
 
-        totweight = sum(sum(srcweight(src) for src in sources)
-                        for trt, sources, atomic in trt_sources)
+        totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -346,39 +345,35 @@ class ClassicalCalculator(base.HazardCalculator):
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
-        elif oq.split_by_magnitude:
-            f1 = f2 = classical
         else:
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
-        for trt, sources, atomic in trt_sources:
-            gsims = gsims_by_trt[trt]
-            if atomic:
+        for sg in src_groups:
+            gsims = gsims_by_trt[sg.trt]
+            if sg.atomic:
                 # do not split atomic groups
                 nb = 1
-                yield f1, (sources, srcfilter, gsims, param)
+                yield f1, (sg, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
-                if oq.split_by_magnitude:
-                    sources = split_by_mag(sources)
-                blocks = list(block_splitter(sources, totweight/C, srcweight))
+                blocks = list(block_splitter(sg, totweight/C, srcweight))
                 nb = len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d sources with weight %d',
                                   len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
 
-            nr = sum(src.weight for src in sources)
-            logging.info('TRT = %s', trt)
+            nr = sum(src.weight for src in sg)
+            logging.info('TRT = %s', sg.trt)
             if oq.maximum_distance.magdist:
                 md = ', '.join('%s->%d' % item for item in sorted(
-                    oq.maximum_distance.magdist[trt].items()))
+                    oq.maximum_distance.magdist[sg.trt].items()))
             else:
-                md = oq.maximum_distance(trt)
+                md = oq.maximum_distance(sg.trt)
             logging.info('max_dist=%s, gsims=%d, ruptures=%d, blocks=%d',
                          md, len(gsims), nr, nb)
             if oq.pointsource_distance['default']:
                 pd = ', '.join('%s->%d' % item for item in sorted(
-                    oq.pointsource_distance[trt].items()))
+                    oq.pointsource_distance[sg.trt].items()))
                 logging.info('ps_dist=%s', pd)
 
     def save_hazard(self, acc, pmap_by_kind):
