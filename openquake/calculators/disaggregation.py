@@ -218,7 +218,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         tl = oq.truncation_level
         src_filter = self.src_filter()
         if hasattr(self, 'csm'):
-            for sg in self.csm.src_groups:
+            for sg in self.csm.get_src_groups():
                 if sg.atomic:
                     raise NotImplementedError(
                         'Atomic groups are not supported yet')
