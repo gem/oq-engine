@@ -354,7 +354,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 blocks = list(block_splitter(sg, totweight/C, srcweight))
                 nb = len(blocks)
                 for block in blocks:
-                    logging.debug('Sending %d sources with weight %d',
+                    logging.debug('Sending %d source(s) with weight %d',
                                   len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
 

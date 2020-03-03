@@ -333,7 +333,7 @@ def read_source_models(fnames, converter):
         yield sm
 
 
-def read(source, chatty=True, stop=None):
+def read(source, stop=None):
     """
     Convert a NRML file into a validated Node object. Keeps
     the entire tree in memory.
@@ -348,9 +348,6 @@ def read(source, chatty=True, stop=None):
                          (source, nrml.tag))
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
-    if xmlns != NRML05 and chatty:
-        # for the moment NRML04 is still supported, so we hide the warning
-        logging.debug('%s is at an outdated version: %s', source, xmlns)
     nrml['xmlns'] = xmlns
     nrml['xmlns:gml'] = GML_NAMESPACE
     return nrml
