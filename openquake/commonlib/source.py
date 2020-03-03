@@ -348,6 +348,30 @@ class CompositeSourceModel(collections.abc.Sequence):
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples, self.sm_rlzs)
+        atomic = []
+        acc = AccumDict(accum=[])
+        for sm in self.sm_rlzs:
+            for grp in sm.src_groups:
+                if grp and grp.atomic:
+                    atomic.append(grp)
+                elif grp:
+                    acc[grp.trt].extend(grp)
+        # extract a single source from multiple sources with the same ID
+        # and regroup the sources in non-atomic groups by TRT
+        dic = {}
+        key = operator.attrgetter('source_id', 'checksum')
+        for trt in acc:
+            lst = []
+            for srcs in groupby(acc[trt], key).values():
+                src = srcs[0]
+                # src.src_group_id can be a list if get_src_groups was
+                # called before
+                if len(srcs) > 1:
+                    # this happens in classical/case_20
+                    src.src_group_id = [s.src_group_id for s in srcs]
+                lst.append(src)
+            dic[trt] = sourceconverter.SourceGroup(trt, lst)
+        self.src_groups = atomic + list(dic.values())
 
     def get_model(self, sm_id):
         """
@@ -408,35 +432,6 @@ class CompositeSourceModel(collections.abc.Sequence):
                             src.samples = sm.samples
                         sources.append(src)
         return sources
-
-    def get_src_groups(self):
-        """
-        :returns: a list of source groups
-        """
-        atomic = []
-        acc = AccumDict(accum=[])
-        for sm in self.sm_rlzs:
-            for grp in sm.src_groups:
-                if grp and grp.atomic:
-                    atomic.append(grp)
-                elif grp:
-                    acc[grp.trt].extend(grp)
-        # extract a single source from multiple sources with the same ID
-        # and regroup the sources in non-atomic groups by TRT
-        dic = {}
-        key = operator.attrgetter('source_id', 'checksum')
-        for trt in acc:
-            lst = []
-            for srcs in groupby(acc[trt], key).values():
-                src = srcs[0]
-                # src.src_group_id can be a list if get_src_groups was
-                # called before
-                if len(srcs) > 1 and not isinstance(src.src_group_id, list):
-                    # this happens in classical/case_20
-                    src.src_group_id = [s.src_group_id for s in srcs]
-                lst.append(src)
-            dic[trt] = sourceconverter.SourceGroup(trt, lst)
-        return atomic + list(dic.values())
 
     def get_num_ruptures(self):
         """

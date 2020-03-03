@@ -719,7 +719,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         csm = readinput.get_composite_source_model(oqparam)
 
         # check the attributes of the groups are set
-        [grp0, grp1] = csm.get_src_groups()
+        [grp0, grp1] = csm.src_groups
         for grp in [grp0, grp1]:
             self.assertEqual(grp.src_interdep, 'indep')
             self.assertEqual(grp.rup_interdep, 'indep')
@@ -744,12 +744,12 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         csm = readinput.get_composite_source_model(oqparam)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
         # there are 2 distinct tectonic region types, so 2 src_groups
-        self.assertEqual(sum(1 for tm in csm.get_src_groups()), 2)
+        self.assertEqual(sum(1 for tm in csm.src_groups), 2)
 
         rlzs = csm.info.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         # counting the sources in each TRT model (after splitting)
-        self.assertEqual([9, 18], list(map(len, csm.get_src_groups())))
+        self.assertEqual([9, 18], list(map(len, csm.src_groups)))
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
