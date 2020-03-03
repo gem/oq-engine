@@ -334,11 +334,12 @@ class CompositionInfo(object):
 
 class CompositeSourceModel(collections.abc.Sequence):
     """
+    :param gsim_lt:
+        a :class:`openquake.commonlib.logictree.GsimLogicTree` instance
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
-    :param source_models:
-        a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
-        tuples
+    :param sm_rlzs:
+        a list of Realization instances with attribute sm.src_groups
     """
     def __init__(self, gsim_lt, source_model_lt, sm_rlzs, ses_seed=0,
                  event_based=False):
