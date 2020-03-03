@@ -340,14 +340,22 @@ class CompositeSourceModel(collections.abc.Sequence):
         a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
-    def __init__(self, gsim_lt, source_model_lt, sm_rlzs, event_based=False):
+    def __init__(self, gsim_lt, source_model_lt, sm_rlzs, ses_seed=0,
+                 event_based=False):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.sm_rlzs = sm_rlzs
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples, self.sm_rlzs)
-        if not event_based:
+        if event_based:  # init serials
+            sources = self.get_sources()
+            serial = ses_seed
+            for src in sources:
+                nr = src.num_ruptures
+                src.serial = serial
+                serial += nr
+        else:
             atomic = []
             acc = AccumDict(accum=[])
             for sm in self.sm_rlzs:
@@ -372,18 +380,6 @@ class CompositeSourceModel(collections.abc.Sequence):
                     lst.append(src)
                 dic[trt] = sourceconverter.SourceGroup(trt, lst)
             self.src_groups = atomic + list(dic.values())
-
-    def get_model(self, sm_id):
-        """
-        Extract a CompositeSourceModel instance containing the single
-        model of index `sm_id`.
-        """
-        sm = self.sm_rlzs[sm_id]
-        if self.source_model_lt.num_samples:
-            self.source_model_lt.num_samples = sm.samples
-        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm])
-        new.sm_id = sm_id
-        return new
 
     # used only by UCERF
     def new(self, sources_by_grp):
@@ -432,25 +428,6 @@ class CompositeSourceModel(collections.abc.Sequence):
                             src.samples = sm.samples
                         sources.append(src)
         return sources
-
-    def get_num_ruptures(self):
-        """
-        :returns: the number of ruptures per source group ID
-        """
-        return {grp.id: sum(src.num_ruptures for src in grp)
-                for grp in self.src_groups}
-
-    def init_serials(self, ses_seed):
-        """
-        Generate unique seeds for each rupture with numpy.arange.
-        This should be called only in event based calculators
-        """
-        sources = self.get_sources()
-        serial = ses_seed
-        for src in sources:
-            nr = src.num_ruptures
-            src.serial = serial
-            serial += nr
 
     def get_floating_spinning_factors(self):
         """
