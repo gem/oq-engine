@@ -385,15 +385,6 @@ class CompositeSourceModel(collections.abc.Sequence):
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         return new
 
-    @property
-    def src_groups(self):
-        """
-        Yields the SourceGroups inside each source model.
-        """
-        for sm in self.sm_rlzs:
-            for src_group in sm.src_groups:
-                yield src_group
-
     def get_nonparametric_sources(self):
         """
         :returns: list of non parametric sources in the composite source model
