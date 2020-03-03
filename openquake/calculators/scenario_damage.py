@@ -87,7 +87,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     consequences = crmodel.get_consequences()
     haz_mon = monitor('getting hazard', measuremem=False)
     rsk_mon = monitor('aggregating risk', measuremem=False)
-    d_event = AccumDict(accum=numpy.zeros((L, D), U32))
+    d_event = AccumDict(accum=numpy.zeros((L, D - 1), U32))
     res = {'d_event': d_event}
     for name in consequences:
         res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
@@ -115,7 +115,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         for e, ddd in enumerate(ddds):
                             eid = out.eids[e]
                             ddic[aid, eid][l] = ddd[1:]
-                            d_event[eid][l] += ddd
+                            d_event[eid][l] += ddd[1:]
                         if make_ddd is approx_ddd:
                             ms = mean_std(fractions * asset['number'])
                         else:
@@ -209,19 +209,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = d_asset
 
-        # damage by event
-        eid_dmg_dt = self.crmodel.eid_dmg_dt()
-        d_event = numpy.array(sorted(result['d_event'].items()), eid_dmg_dt)
-        self.datastore['dmg_by_event'] = d_event
+        # damage by event: make sure the sum of the buildings is consistent
+        tot = self.assetcol['number'].sum()
+        dbe = numpy.zeros((self.E, L, D), U32)  # shape E, L, D
+        dbe[:, :, 0] = tot
+        for e, dmg_by_lt in result['d_event'].items():
+            for l, dmg in enumerate(dmg_by_lt):
+                dbe[e, l,  0] = tot - dmg.sum()
+                dbe[e, l,  1:] = dmg
+        self.datastore['dmg_by_event'] = dbe
 
-        # sanity check on the total number of assets, same for each event
-        num_sums = len(set(d['dmg'].sum() for d in d_event))
-        if self.param['approx_ddd'] and num_sums > 1:
-            logging.warning('Due to numeric errors the sum of assets in each '
-                            'damage state is not the same for each event')
-        elif num_sums > 1:
-            raise ValueError('The sum of assets in each damage state is not '
-                             'the same for each event!')
         # consequence distributions
         del result['d_asset']
         del result['d_event']

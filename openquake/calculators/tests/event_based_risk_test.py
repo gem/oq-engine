@@ -92,6 +92,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(('dmg_by_asset', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        fnames = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     def test_case_1_eb(self):
         # this is a case with no insured losses, no tags
