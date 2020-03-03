@@ -776,18 +776,19 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, ltpath, sm, converter):
+    def apply_uncertainties(self, ltpath, fname, converter):
         """
         :param ltpath:
             List of branch IDs
-        :param sm:
-            A :class:`openquake.hazardlib.nrml.SourceModel` instance
+        :param fname:
+            Path to a source model file
         :param converter:
-            A :class:`openquake.hazardlib.sourceconverter.SourceConverter`
+            class:`openquake.hazardlib.sourceconverter.SourceConverter` object
         :return:
             A copy of the original group with modified sources
         """
         dirname = os.path.dirname(self.filename)
+        [sm] = nrml.read_source_models([fname], converter)
         base_ids = set(src.source_id for sg in sm.src_groups for src in sg)
         newsm = nrml.SourceModel(copy.copy(sm.src_groups), sm.name,
                                  sm.investigation_time, sm.start_time)

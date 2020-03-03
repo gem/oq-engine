@@ -79,8 +79,7 @@ class SourceReader(object):
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
         src_groups = []
-        [sm] = nrml.read_source_models([fname], self.converter)
-        newsm = apply_unc(path, sm, self.converter)
+        newsm = apply_unc(path, fname, self.converter)
         fname_hits[fname] += 1
         for sg in newsm:
             # sample a source for each group
