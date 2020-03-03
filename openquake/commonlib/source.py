@@ -300,16 +300,6 @@ class CompositionInfo(object):
                 for r in self.get_realizations()]
         return numpy.array(tups, rlz_dt)
 
-    def get_source_model(self, src_group_id):
-        """
-        :returns: the source model for the given src_group_id
-        """
-        1/0
-        for smodel in self.sm_rlzs:
-            for src_group in smodel.src_groups:
-                if src_group.id == src_group_id:
-                    return smodel
-
     def get_gsims_by_trt(self):
         """
         :returns: a dictionary trt -> sorted gsims
