@@ -34,7 +34,7 @@ https://www.python.org/dev/peps/pep-0008/
 
 - A particular point to note is that, as explained in [Python documentation](https://docs.python.org/3.7/tutorial/datastructures.html#sets),
 "Curly braces or the set() function can be used to create sets. Note: to create an empty set you have to use set(), not {}; the latter creates an empty dictionary".
-Therefore the assignment statements REQUIRES_RUPTURE_PARAMETERS = {'mag'} and REQUIRES_RUPTURE_PARAMETERS = set() are correct.
+Therefore assignment statements such as REQUIRES_RUPTURE_PARAMETERS = {'mag'} and REQUIRES_RUPTURE_PARAMETERS = set() are both correct.
 
 - Update the changelog file 
 https://github.com/gem/oq-engine/blob/master/debian/changelog following the [Developers notes](updating-the-changelog.md)
