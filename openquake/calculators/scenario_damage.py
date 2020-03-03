@@ -211,11 +211,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # damage by event: make sure the sum of the assets is consistent
         tot = self.assetcol['number'].sum()
-        dbe = numpy.zeros(self.E, self.crmodel.eid_dmg_dt())  # shape E, L, D
-        dbe['dmg'][:, :, 0] = tot
+        dbe = numpy.zeros((self.E, L, D), U32)  # shape E, L, D
+        dbe[:, :, 0] = tot
         for eid, dmg in result['d_event'].items():
-            dmg[:, 0] = tot - dmg[:, 0]
-            dbe['dmg'][eid] = dmg
+            dbe[eid] = dmg
         self.datastore['dmg_by_event'] = dbe
 
         # consequence distributions
