@@ -422,20 +422,18 @@ class CompositeSourceModel(collections.abc.Sequence):
                     atomic.append(grp)
                 elif grp:
                     acc[grp.trt].extend(grp)
-        if not acc:
-            return atomic
-        elif not optimize_dupl:
-            # for UCERF or for event_based
+        if not optimize_dupl:  # for event_based
             return atomic + [sourceconverter.SourceGroup(trt, lst)
                              for trt, lst in acc.items()]
         # extract a single source from multiple sources with the same ID
+        # and regroup the sources in non-atomic groups by TRT
         dic = {}
         key = operator.attrgetter('source_id', 'checksum')
         for trt in acc:
             lst = []
             for srcs in groupby(acc[trt], key).values():
                 src = srcs[0]
-                # src.src_group_id can be a list if get_sources_by_trt was
+                # src.src_group_id can be a list if get_src_groups was
                 # called before
                 if len(srcs) > 1 and not isinstance(src.src_group_id, list):
                     src.src_group_id = [s.src_group_id for s in srcs]
