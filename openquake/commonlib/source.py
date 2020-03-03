@@ -409,9 +409,8 @@ class CompositeSourceModel(collections.abc.Sequence):
                         sources.append(src)
         return sources
 
-    def get_src_groups(self, optimize_dupl=False):
+    def get_src_groups(self):
         """
-        :param optimize_dupl: if True change src_group_id to a list
         :returns: a list of source groups
         """
         atomic = []
@@ -422,9 +421,6 @@ class CompositeSourceModel(collections.abc.Sequence):
                     atomic.append(grp)
                 elif grp:
                     acc[grp.trt].extend(grp)
-        if not optimize_dupl:  # for event_based
-            return atomic + [sourceconverter.SourceGroup(trt, lst)
-                             for trt, lst in acc.items()]
         # extract a single source from multiple sources with the same ID
         # and regroup the sources in non-atomic groups by TRT
         dic = {}

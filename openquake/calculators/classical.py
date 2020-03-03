@@ -322,7 +322,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        src_groups = self.csm.get_src_groups(optimize_dupl=True)
+        src_groups = self.csm.get_src_groups()
 
         def srcweight(src):
             trt = src.tectonic_region_type
