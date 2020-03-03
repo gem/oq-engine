@@ -209,7 +209,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = d_asset
 
-        # damage by event: make sure the sum of the assets is consistent
+        # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
         dbe = numpy.zeros((self.E, L, D), U32)  # shape E, L, D
         dbe[:, :, 0] = tot
