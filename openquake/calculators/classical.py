@@ -252,10 +252,6 @@ class ClassicalCalculator(base.HazardCalculator):
             else:
                 dt = F32
             self.datastore.create_dset('rup/' + k, dt)
-        rparams = [p for p in self.rparams if not p.endswith('_')]
-        dparams = [p[:-1] for p in self.rparams if p.endswith('_')]
-        logging.info('Scalar parameters %s', rparams)
-        logging.info('Vector parameters %s', dparams)
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         return zd

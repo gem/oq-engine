@@ -550,7 +550,7 @@ class SourceConverter(RuptureConverter):
     """
     Convert sources from valid nodes into Hazardlib objects.
     """
-    def __init__(self, investigation_time=50., rupture_mesh_spacing=10.,
+    def __init__(self, investigation_time=50., rupture_mesh_spacing=5.,
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},

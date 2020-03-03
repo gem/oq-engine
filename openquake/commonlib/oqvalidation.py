@@ -182,7 +182,7 @@ class OqParam(valid.ParamSet):
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
-    rupture_mesh_spacing = valid.Param(valid.positivefloat)
+    rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
