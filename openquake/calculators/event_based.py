@@ -114,9 +114,9 @@ class EventBasedCalculator(base.HazardCalculator):
         :returns: an iterator over blocks of sources
         """
         if not hasattr(self, 'maxweight'):
-            trt_sources = self.csm.get_trt_sources()
+            src_groups = self.csm.get_src_groups()
             self.maxweight = sum(sum(weight(s) for s in srcs)
-                                 for _, srcs in trt_sources) / (
+                                 for srcs in src_groups) / (
                 self.oqparam.concurrent_tasks or 1)
             if self.maxweight < source.MINWEIGHT:
                 self.maxweight = source.MINWEIGHT

@@ -409,24 +409,25 @@ class CompositeSourceModel(collections.abc.Sequence):
                         sources.append(src)
         return sources
 
-    def get_trt_sources(self, optimize_dupl=False):
+    def get_src_groups(self, optimize_dupl=False):
         """
         :param optimize_dupl: if True change src_group_id to a list
-        :returns: a list of pairs [(trt, group of sources)]
+        :returns: a list of source groups
         """
         atomic = []
         acc = AccumDict(accum=[])
         for sm in self.sm_rlzs:
             for grp in sm.src_groups:
                 if grp and grp.atomic:
-                    atomic.append((grp.trt, grp))
+                    atomic.append(grp)
                 elif grp:
                     acc[grp.trt].extend(grp)
         if not acc:
             return atomic
         elif not optimize_dupl:
             # for UCERF or for event_based
-            return atomic + list(acc.items())
+            return atomic + [sourceconverter.SourceGroup(trt, lst)
+                             for trt, lst in acc.items()]
         # extract a single source from multiple sources with the same ID
         dic = {}
         key = operator.attrgetter('source_id', 'checksum')
@@ -440,7 +441,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                     src.src_group_id = [s.src_group_id for s in srcs]
                 lst.append(src)
             dic[trt] = sourceconverter.SourceGroup(trt, lst)
-        return atomic + list(dic.items())
+        return atomic + list(dic.values())
 
     def get_num_ruptures(self):
         """
