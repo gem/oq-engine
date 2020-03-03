@@ -564,7 +564,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam, validate=True):
+def get_source_model_lt(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -575,8 +575,14 @@ def get_source_model_lt(oqparam, validate=True):
     fname = oqparam.inputs['source_model_logic_tree']
     # NB: converting the random_seed into an integer is needed on Windows
     smlt = logictree.SourceModelLogicTree(
-        fname, validate, seed=int(oqparam.random_seed),
+        fname, seed=int(oqparam.random_seed),
         num_samples=oqparam.number_of_logic_tree_samples)
+    if oqparam.discard_trts:
+        trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
+        # smlt.tectonic_region_types comes from applyToTectonicRegionType
+        smlt.tectonic_region_types = smlt.tectonic_region_types - trts
+    if 'ucerf' in oqparam.calculation_mode:
+        smlt.tectonic_region_types = {'Active Shallow Crust'}
     return smlt
 
 
@@ -589,13 +595,14 @@ def get_composite_source_model(oqparam, h5=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
-    ucerf = oqparam.calculation_mode.startswith('ucerf')
-    source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
+    source_model_lt = get_source_model_lt(oqparam)
     trts = source_model_lt.tectonic_region_types
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
     for trt in reqv:
-        if trt.lower() not in trts_lower:
+        if trt in oqparam.discard_trts:
+            continue
+        elif trt.lower() not in trts_lower:
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
@@ -615,8 +622,8 @@ def get_composite_source_model(oqparam, h5=None):
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
-    ltmodels = get_sm_rlzs(oqparam, gsim_lt, source_model_lt, h5)
-    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, ltmodels)
+    sm_rlzs = get_sm_rlzs(oqparam, gsim_lt, source_model_lt, h5)
+    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, sm_rlzs)
     key = operator.attrgetter('source_id', 'checksum')
     srcidx = 0
     if h5:
@@ -634,9 +641,6 @@ def get_composite_source_model(oqparam, h5=None):
         # initialize the rupture rup_id numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
-
-    if oqparam.disagg_by_src:
-        csm = csm.grp_by_src()  # one group per source
 
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     return csm

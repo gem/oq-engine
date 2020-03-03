@@ -719,8 +719,8 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         csm = readinput.get_composite_source_model(oqparam)
 
         # check the attributes of the groups are set
-        [grp0, grp1] = csm.src_groups
-        for grp in csm.src_groups:
+        [grp0, grp1] = csm.get_src_groups()
+        for grp in [grp0, grp1]:
             self.assertEqual(grp.src_interdep, 'indep')
             self.assertEqual(grp.rup_interdep, 'indep')
         self.assertEqual(repr(csm.gsim_lt), '''\
@@ -743,30 +743,19 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         oqparam.number_of_logic_tree_samples = 0
         csm = readinput.get_composite_source_model(oqparam)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
-        # there are 2 distinct tectonic region types, so 18 src_groups
-        self.assertEqual(sum(1 for tm in csm.src_groups), 18)
+        # there are 2 distinct tectonic region types, so 2 src_groups
+        self.assertEqual(sum(1 for tm in csm.get_src_groups()), 2)
 
         rlzs = csm.info.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         # counting the sources in each TRT model (after splitting)
-        self.assertEqual(
-            [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
-            list(map(len, csm.src_groups)))
-
-        # removing 9 src_groups out of 18
-        def count_ruptures(src_group_id):
-            if src_group_id % 2 == 1:  # Active Shallow Crust
-                return 0
-            else:
-                return 1
-        csm.info.update_eff_ruptures(count_ruptures)
+        self.assertEqual([9, 18], list(map(len, csm.get_src_groups())))
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
         oq = readinput.get_oqparam(
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         csm = readinput.get_composite_source_model(oq)
-        csm.info.update_eff_ruptures(lambda tm: 1)
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()

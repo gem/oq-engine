@@ -27,6 +27,8 @@ import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, calc
+from openquake.commonlib.logictree import get_effective_rlzs
+
 
 TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
@@ -59,86 +61,6 @@ def random_filtered_sources(sources, srcfilter, seed):
     return []
 
 
-def check_nonparametric_sources(fname, smodel, investigation_time):
-    """
-    :param fname:
-        full path to a source model file
-    :param smodel:
-        source model object
-    :param investigation_time:
-        investigation_time to compare with in the case of
-        nonparametric sources
-    :returns:
-        the nonparametric sources in the model
-    :raises:
-        a ValueError if the investigation_time is different from the expected
-    """
-    # NonParametricSeismicSources
-    np = [src for sg in smodel.src_groups for src in sg
-          if hasattr(src, 'data')]
-    if np and smodel.investigation_time != investigation_time:
-        raise ValueError(
-            'The source model %s contains an investigation_time '
-            'of %s, while the job.ini has %s' % (
-                fname, smodel.investigation_time, investigation_time))
-    return np
-
-
-class SmRealization(object):
-    """
-    A container of SourceGroup instances with some additional attributes
-    describing the source model in the logic tree.
-    """
-    def __init__(self, names, weight, path, src_groups, ordinal, samples,
-                 offset):
-        self.names = ' '.join(names.split())  # replace newlines with spaces
-        self.weight = weight
-        self.path = path
-        self.src_groups = src_groups
-        self.ordinal = ordinal
-        self.samples = samples
-        self.offset = offset
-
-    @property
-    def name(self):
-        """
-        Compact representation for the names
-        """
-        names = self.names.split()
-        if len(names) == 1:
-            return names[0]
-        elif len(names) == 2:
-            return ' '.join(names)
-        else:
-            return ' '.join([names[0], '...', names[-1]])
-
-    @property
-    def num_sources(self):
-        """
-        Number of sources contained in the source model
-        """
-        return sum(len(sg) for sg in self.src_groups)
-
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = []
-        for grp in self.src_groups:
-            sg = copy.copy(grp)
-            sg.sources = []
-            src_groups.append(sg)
-        return self.__class__(self.names, self.weight, self.path, src_groups,
-                              self.ordinal, self.samples, self.offset)
-
-    def __repr__(self):
-        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
-        return '<%s #%d %s, path=%s, weight=%s%s>' % (
-            self.__class__.__name__, self.ordinal, self.names,
-            '_'.join(self.path), self.weight, samples)
-
-
 class SourceReader(object):
     """
     :param converter: a SourceConverter instance
@@ -153,38 +75,12 @@ class SourceReader(object):
             self.srcfilter = calc.filters.SourceFilter(
                 h5['sitecol'], h5['oqparam'].maximum_distance)
 
-    def makesm(self, fname, sm, apply_uncertainties, ltpath):
-        """
-        :param fname:
-            the full pathname of a source model file
-        :param sm:
-            the original source model
-        :param apply_uncertainties:
-            a function modifying the sources (or None)
-        :returns:
-            a copy of the original source model with changed sources, if any
-        """
-        check_nonparametric_sources(
-            fname, sm, self.converter.investigation_time)
-        newsm = nrml.SourceModel(
-            [], sm.name, sm.investigation_time, sm.start_time)
-        newsm.changes = 0
-        for group in sm:
-            newgroup = apply_uncertainties(ltpath, group)
-            newsm.src_groups.append(newgroup)
-            # the attribute .changes is set by logictree.apply_uncertainties
-            newsm.changes += newgroup.changes
-
-        return newsm
-
     def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
-        src_groups = []
-        [sm] = nrml.read_source_models([fname], self.converter, monitor)
-        newsm = self.makesm(fname, sm, apply_unc, path)
+        sm = apply_unc(path, fname, self.converter)
         fname_hits[fname] += 1
-        for sg in newsm:
+        for sg in sm:
             # sample a source for each group
             if os.environ.get('OQ_SAMPLE_SOURCES'):
                 sg.sources = random_filtered_sources(
@@ -201,9 +97,7 @@ class SourceReader(object):
                 src.checksum = zlib.adler32(
                     pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
                 src._wkt = src.wkt()
-            src_groups.append(sg)
-        return dict(fname_hits=fname_hits, changes=newsm.changes,
-                    src_groups=src_groups, mags=mags,
+        return dict(fname_hits=fname_hits, sm=sm, mags=mags,
                     ordinal=ordinal, fileno=fileno)
 
 
@@ -227,18 +121,17 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
-        not spinning_off, oq.source_id)
-    rlzs = source_model_lt.get_eff_rlzs()
+        not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
+    rlzs = get_effective_rlzs(source_model_lt)
     if not source_model_lt.num_samples:
         num_gsim_rlzs = gsim_lt.get_num_paths()
     sm_rlzs = []
     offset = 0
-    for rlz in rlzs:
-        sm_rlz = SmRealization(
-            rlz['value'], rlz['weight'], rlz['lt_path'], [],
-            rlz['ordinal'], rlz['samples'], offset)
+    for sm_rlz in rlzs:
+        sm_rlz.src_groups = []
+        sm_rlz.offset = offset
         if source_model_lt.num_samples:
-            offset += rlz['samples']
+            offset += sm_rlz.samples
         else:
             offset += num_gsim_rlzs
         sm_rlzs.append(sm_rlz)
@@ -249,7 +142,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
             sg = copy.copy(grp)
             sg.id = grp_id
             sm_rlz.src_groups = [sg]
-            src = sg[0].new(sm_rlz.ordinal, sm_rlz.names)  # one source
+            src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             src.src_group_id = grp_id
             idx += 1
             src.samples = sm_rlz.samples
@@ -263,9 +156,9 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
     allargs = []
     fileno = 0
     for rlz in rlzs:
-        for name in rlz['value'].split():
+        for name in rlz.value.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            allargs.append((rlz['ordinal'], rlz['lt_path'],
+            allargs.append((rlz.ordinal, rlz.lt_path,
                             source_model_lt.apply_uncertainties, fname,
                             fileno))
             fileno += 1
@@ -280,16 +173,15 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
     mags = set()
     changes = 0
     fname_hits = collections.Counter()
-    groups = [[] for _ in sm_rlzs]  # [src_groups] for each ordinal
     for dic in sorted(smap, key=operator.itemgetter('fileno')):
         sm_rlz = sm_rlzs[dic['ordinal']]
-        groups[sm_rlz.ordinal].extend(dic['src_groups'])
+        sm_rlz.src_groups.extend(dic['sm'])
         fname_hits += dic['fname_hits']
-        changes += dic['changes']
+        changes += dic['sm'].changes
         mags.update(dic['mags'])
         gsim_file = oq.inputs.get('gsim_logic_tree')
         if gsim_file:  # check TRTs
-            for src_group in dic['src_groups']:
+            for src_group in dic['sm']:
                 if src_group.trt not in gsim_lt.values:
                     raise ValueError(
                         "Found in %r a tectonic region type %r "
@@ -298,11 +190,10 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
     # set src_group_ids
     get_grp_id = source_model_lt.get_grp_id(gsim_lt.values)
     for sm_rlz in sm_rlzs:
-        for grp in groups[sm_rlz.ordinal]:
+        for grp in sm_rlz.src_groups:
             grp.id = grp_id = get_grp_id(grp.trt, sm_rlz.ordinal)
             for src in grp:
                 src.src_group_id = grp_id
-            sm_rlz.src_groups.append(grp)
             grp_id += 1
             if grp_id >= TWO16:
                 # the limit is only for event based calculations
@@ -313,7 +204,7 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
                          for src in grp)
         for brid, srcids in source_model_lt.info.\
                 applytosources.items():
-            if brid in sm_rlz.path:
+            if brid in sm_rlz.lt_path:
                 for srcid in srcids:
                     if srcid not in source_ids:
                         raise ValueError(

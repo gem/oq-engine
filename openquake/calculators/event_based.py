@@ -114,9 +114,9 @@ class EventBasedCalculator(base.HazardCalculator):
         :returns: an iterator over blocks of sources
         """
         if not hasattr(self, 'maxweight'):
-            trt_sources = self.csm.get_trt_sources()
+            src_groups = self.csm.get_src_groups()
             self.maxweight = sum(sum(weight(s) for s in srcs)
-                                 for _, srcs, _ in trt_sources) / (
+                                 for srcs in src_groups) / (
                 self.oqparam.concurrent_tasks or 1)
             if self.maxweight < source.MINWEIGHT:
                 self.maxweight = source.MINWEIGHT
@@ -132,7 +132,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsims_by_trt = self.csm.info.get_gsims_by_trt()
         logging.info('Building ruptures')
-        eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
+        eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         ses_idx = 0
         allargs = []

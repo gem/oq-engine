@@ -200,11 +200,14 @@ def view_contents(token, dstore):
 @view.add('csm_info')
 def view_csm_info(token, dstore):
     csm_info = dstore['csm_info']
-    header = ['smlt_path', 'weight', 'gsim_logic_tree', 'num_realizations']
+    if csm_info.num_samples == 0:
+        num_rlzs = csm_info.gsim_lt.get_num_paths()
+    header = ['smlt_path', 'weight', 'num_realizations']
     rows = []
     for sm in csm_info.sm_rlzs:
-        kind, num_rlzs = csm_info.classify_gsim_lt(sm)
-        row = ('_'.join(sm.path), sm.weight, kind, num_rlzs)
+        if csm_info.num_samples:
+            num_rlzs = sm.samples
+        row = ('_'.join(sm.lt_path), sm.weight, num_rlzs)
         rows.append(row)
     return rst_table(rows, header)
 

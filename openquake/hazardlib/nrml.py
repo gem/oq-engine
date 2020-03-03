@@ -80,7 +80,7 @@ import collections.abc
 
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, performance
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
@@ -212,7 +212,7 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         sg = converter.convert_node(src_group)
-        if len(sg):
+        if sg and len(sg):
             # a source group can be empty if the source_id filtering is on
             groups.append(sg)
     itime = node.get('investigation_time')
@@ -306,14 +306,12 @@ validators = {
 }
 
 
-def read_source_models(fnames, converter, monitor):
+def read_source_models(fnames, converter):
     """
     :param fnames:
         list of source model files
     :param converter:
-        a SourceConverter instance
-    :param monitor:
-        a :class:`openquake.performance.Monitor` instance
+        a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
     :yields:
         SourceModel instances
     """
@@ -323,6 +321,15 @@ def read_source_models(fnames, converter, monitor):
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.fname = fname
+
+        # check investigation time for NonParametricSeismicSources
+        cit = converter.investigation_time
+        np = [s for sg in sm.src_groups for s in sg if hasattr(s, 'data')]
+        if np and sm.investigation_time != cit:
+            raise ValueError(
+                'The source model %s contains an investigation_time '
+                'of %s, while the job.ini has %s' % (
+                    fname, sm.investigation_time, cit))
         yield sm
 
 

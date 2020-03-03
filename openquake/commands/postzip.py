@@ -21,6 +21,7 @@ import json
 import logging
 import requests
 from openquake.baselib import sap, config
+from openquake.commonlib import oqzip
 from openquake.calculators.extract import WebAPIError
 
 
@@ -36,6 +37,10 @@ def postzip(zipfile):
                                  password=config.webapi.password))
         if resp.status_code != 200:
             raise WebAPIError(resp.text)
+    if zipfile.endswith('.ini'):  # not a zip file yet
+        archive = zipfile[:-3] + 'zip'
+        oqzip.zip_job(zipfile, archive)
+        zipfile = archive
     resp = sess.post("%s/v1/calc/run" % config.webapi.server, {},
                      files=dict(archive=open(zipfile, 'rb')))
     print(json.loads(resp.text))

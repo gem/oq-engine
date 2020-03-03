@@ -554,7 +554,8 @@ class SourceConverter(RuptureConverter):
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 spinning_floating=True, source_id=None):
+                 spinning_floating=True, source_id=None,
+                 discard_trts=''):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -564,14 +565,18 @@ class SourceConverter(RuptureConverter):
         self.width_of_mfd_bin = width_of_mfd_bin
         self.spinning_floating = spinning_floating
         self.source_id = source_id
+        self.discard_trts = discard_trts
 
     def convert_node(self, node):
         """
-        Convert the given rupture node into a hazardlib rupture, depending
+        Convert the given source node into a hazardlib source, depending
         on the node tag.
 
-        :param node: a node representing a rupture
+        :param node: a node representing a source or a SourceGroup
         """
+        trt = node.attrib.get('tectonicRegion')
+        if trt and trt in self.discard_trts:
+            return
         obj = getattr(self, 'convert_' + striptag(node.tag))(node)
         source_id = getattr(obj, 'source_id', '')
         if self.source_id and source_id and source_id not in self.source_id:

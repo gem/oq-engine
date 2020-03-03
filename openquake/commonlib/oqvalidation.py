@@ -112,6 +112,7 @@ class OqParam(valid.ParamSet):
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
     discard_assets = valid.Param(valid.boolean, False)
+    discard_trts = valid.Param(str, '')  # tested in the cariboo example
     distance_bin_width = valid.Param(valid.positivefloat)
     approx_ddd = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
@@ -146,6 +147,7 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
+    max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
@@ -199,7 +201,6 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    split_by_magnitude = valid.Param(valid.boolean, False)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 5E7)  # used in ebrisk
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
@@ -873,7 +874,7 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(msg)
             else:
                 getattr(logging, action)(msg)
-
+        
     def hazard_precomputed(self):
         """
         :returns: True if the hazard is precomputed

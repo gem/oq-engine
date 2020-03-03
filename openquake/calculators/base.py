@@ -344,6 +344,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if fnames:
                 logging.info('exported %s: %s', ekey[0], fnames)
 
+    def __repr__(self):
+        return '<%s#%d>' % (self.__class__.__name__, self.datastore.calc_id)
+
 
 def check_time_event(oqparam, occupancy_periods):
     """
@@ -437,10 +440,10 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                logging.info('Checking the sources bounding box')
                 srcs = csm.get_sources()
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')
+                logging.info('Checking the sources bounding box')
                 sids = self.src_filter().within_bbox(srcs)
                 if len(sids) == 0:
                     raise RuntimeError('All sources were discarded!?')
@@ -787,31 +790,28 @@ class HazardCalculator(BaseCalculator):
             save_exposed_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
-    def store_rlz_info(self, eff_ruptures=None):
+    def store_rlz_info(self, eff_ruptures):
         """
         Save info about the composite source model inside the csm_info dataset
         """
+        oq = self.oqparam
         if hasattr(self, 'csm_info'):  # no scenario
-            self.csm_info.update_eff_ruptures(eff_ruptures)
             self.realizations = self.csm_info.get_realizations()
             if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-
-            # sanity check that eff_ruptures have been set, i.e. are not -1
-            for sm in self.csm_info.sm_rlzs:
-                for sg in sm.src_groups:
-                    assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info
+        else:  # scenario
+            self.csm_info = self.datastore['csm_info']
 
         R = self.R
         logging.info('There are %d realization(s)', R)
 
-        if self.oqparam.imtls:
+        if oq.imtls:
             self.datastore['weights'] = arr = build_weights(
-                self.realizations, self.oqparam.imt_dt())
+                self.realizations, oq.imt_dt())
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
-        if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
+        if ('event_based' in oq.calculation_mode and R >= TWO16
                 or R >= TWO32):
             raise ValueError(
                 'The logic tree has too many realizations (%d), use sampling '
@@ -820,6 +820,17 @@ class HazardCalculator(BaseCalculator):
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
+
+        # check for gsim logic tree reduction
+        discard_trts = []
+        for trti, trt in enumerate(self.csm_info.gsim_lt.values):
+            if eff_ruptures.get(trti, 0) == 0:
+                discard_trts.append(trt)
+        if discard_trts and 'ucerf' not in oq.calculation_mode:
+            msg = ('No sources for some TRTs: you should set\n'
+                   'discard_trts = %s\nin %s') % (', '.join(discard_trts),
+                                                  oq.inputs['job_ini'])
+            logging.warning(msg)
 
     def store_source_info(self, calc_times):
         """

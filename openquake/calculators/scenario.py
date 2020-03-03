@@ -55,7 +55,7 @@ class ScenarioCalculator(base.HazardCalculator):
                                     'filter_distance': oq.filter_distance})
         super().pre_execute()
         self.datastore['oqparam'] = oq
-        self.store_rlz_info()
+        self.store_rlz_info({})
         rlzs_by_gsim = cinfo.get_rlzs_by_gsim(0)
         E = oq.number_of_ground_motion_fields
         n_occ = numpy.array([E])
