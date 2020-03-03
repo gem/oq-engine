@@ -74,13 +74,13 @@ class BooreEtAl2014(GMPE):
     ])
 
     #: Required site parameters is Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is Rjb
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -798,7 +798,7 @@ class BooreEtAl2014NoSOF(BooreEtAl2014):
     dependent on rake.
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _get_style_of_faulting_term(self, C, rup):
         """
@@ -813,7 +813,7 @@ class BooreEtAl2014HighQNoSOF(BooreEtAl2014HighQ):
     case in which the style-of-faulting is unspecified.
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _get_style_of_faulting_term(self, C, rup):
         """
@@ -828,7 +828,7 @@ class BooreEtAl2014LowQNoSOF(BooreEtAl2014LowQ):
     case in which the style-of-faulting is unspecified.
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _get_style_of_faulting_term(self, C, rup):
         """

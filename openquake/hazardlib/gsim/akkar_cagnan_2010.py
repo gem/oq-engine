@@ -70,15 +70,15 @@ class AkkarCagnan2010(BooreAtkinson2008):
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Functionl Form', p. 2981.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake.
     #: See paragraph 'Functional Form', p. 2981.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is Rjb.
     #: See paragraph 'Functional Form', p. 2981.
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

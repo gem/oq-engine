@@ -77,14 +77,14 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: containing True for a backarc site or False for a forearc or
     #: unknown site.
 
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
     #: Required rupture parameters are magnitude for the interface model
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is closest distance to rupture, for
     #: interface events
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -329,10 +329,10 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Required distance measure is hypocentral for in-slab events
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     #: In-slab events require constraint of hypocentral depth and magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     def _get_delta_c1(self, imt):
         """

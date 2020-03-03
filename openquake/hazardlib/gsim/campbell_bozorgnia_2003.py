@@ -67,15 +67,15 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
     #: No sites parameters are required. Mean value is computed for
     #: 'firm rock'.
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude, rake and dip (eq. 1 and
     #: following, page 319).
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'dip'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'dip'}
 
     #: Required distance measure are RRup and Rjb (eq. 1 and following,
     #: page 319).
-    REQUIRES_DISTANCES = set(('rrup', 'rjb'))
+    REQUIRES_DISTANCES = {'rrup', 'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

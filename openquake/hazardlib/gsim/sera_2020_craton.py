@@ -113,13 +113,13 @@ class SERA2020Craton(GMPE):
     ])
 
     #: Median calibrated for Vs30 3000 m/s Vs30, no site term required Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Requires only magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is Rrup
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Defined for a reference velocity of 3000 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 3000.0

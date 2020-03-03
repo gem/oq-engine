@@ -61,10 +61,10 @@ class SomervilleEtAl2009NonCratonic(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
     #: The required rupture parameter is magnitude, see table 2
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: The required distance parameter is 'Joyner-Boore' distance, see table 2
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

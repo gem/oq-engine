@@ -65,13 +65,13 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
     ])
 
     #: Required site parameter is Vs30 and  backarc flag
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
     #: Required rupture parameters are magnitude and hypocentral depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is Rhypo.
-    REQUIRES_DISTANCES = set(('rhypo', ))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

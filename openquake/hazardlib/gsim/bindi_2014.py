@@ -78,13 +78,13 @@ class BindiEtAl2014Rjb(GMPE):
     ])
 
     #: Required site parameter is only Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and rake (eq. 1).
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Required distance measure is Rjb (eq. 1).
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, adjustment_factor=1.0):
         super().__init__()
@@ -285,7 +285,7 @@ class BindiEtAl2014RjbEC8NoSOF(BindiEtAl2014RjbEC8):
     classification, but style-of-faulting is neglected
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _get_mean(self, C, rup, dists, sites):
         """
@@ -405,7 +405,7 @@ class BindiEtAl2014RhypEC8NoSOF(BindiEtAl2014RhypEC8):
     and style-of-faulting is unspecfied.
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _get_mean(self, C, rup, dists, sites):
         """

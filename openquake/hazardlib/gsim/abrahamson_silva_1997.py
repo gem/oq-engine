@@ -61,16 +61,16 @@ class AbrahamsonSilva1997(GMPE):
 
     #: The only site parameter is vs30 used to distinguish between rock
     #: (vs30 > 600 m/s) and deep soil (see table 2, page 95)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake (eq. 3, page 105).
     #: Rake is used to distinguish between 'reverse' (45 <= rake <= 135) and
     #: 'other' (i.e. strike-slip and normal). If an earthquake is classified
     #: as 'reverse' than the hanging-wall term is taken into account.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is RRup (eq. 3, page 105).
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
