@@ -59,14 +59,14 @@ class ChiouYoungs2014(GMPE):
 
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
 
     #: Required rupture parameters are magnitude, rake,
     #: dip and ztor.
-    REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor'}
 
     #: Required distance measures are RRup, Rjb and Rx.
-    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
+    REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

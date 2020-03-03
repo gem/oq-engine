@@ -52,13 +52,13 @@ class EasternCan15Mid(PezeshkEtAl2011):
     non_verified = True
 
     #: Required site parameters
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required distance is only repi since rrup and rjb are obtained from repi
-    REQUIRES_DISTANCES = set(('repi',))
+    REQUIRES_DISTANCES = {'repi'}
 
     #: Required rupture parameters
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.

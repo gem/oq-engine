@@ -68,10 +68,10 @@ class ToroEtAl2002(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is only magnitude.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is rjb, see equation 4, page 46.
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -171,7 +171,7 @@ class ToroEtAl2002(GMPE):
 class ToroEtAl2002SHARE(ToroEtAl2002):
 
     #: Required rupture parameters are magnitude and rake
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 800.

@@ -180,10 +180,10 @@ class YuEtAl2013Ms(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measures are epicentral distance and azimuth
-    REQUIRES_DISTANCES = set(('repi', 'azimuth'))
+    REQUIRES_DISTANCES = {'repi', 'azimuth'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

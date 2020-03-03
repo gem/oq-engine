@@ -42,11 +42,7 @@ class MegawatiPan2010(GMPE):
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see table IV
     #: pag. 837
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components,
@@ -54,23 +50,21 @@ class MegawatiPan2010(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total, see equation IV page 837.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
     #: This GMPE is for very hard rock site condition,
     #: see the abstract page 827.
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude, and focal depth, see
     #: equation 10 page 226.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance,
     #: see equation 1 page 834.
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

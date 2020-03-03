@@ -84,13 +84,13 @@ class EdwardsFah2013Alpine10Bars(GMPE):
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters: magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is Rrup
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group

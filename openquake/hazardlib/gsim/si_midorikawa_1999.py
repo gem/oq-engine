@@ -180,13 +180,13 @@ class SiMidorikawa1999Asc(GMPE):
 
     #: No sites parameters are required
     # REQUIRES_SITES_PARAMETERS = set()
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and hypocentral depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is Rrup
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Amplification factor to scale PGV from 600 to 400 m/s vs30,
     #: see equation 3.5.1-1 page 148

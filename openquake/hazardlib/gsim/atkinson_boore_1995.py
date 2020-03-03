@@ -66,11 +66,11 @@ class AtkinsonBoore1995GSCBest(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance
     #: see page 18 in Atkinson and Boore's manuscript
-    REQUIRES_DISTANCES = set(('rhypo', ))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

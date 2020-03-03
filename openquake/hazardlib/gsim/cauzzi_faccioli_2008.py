@@ -71,20 +71,18 @@ class CauzziFaccioli2008(GMPE):
 
     #: Supported standard deviation type is only total, see paragraph 'On
     #: functional forms', page 462.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soils), see paragraph 'On functional forms', page 463.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and rake, see paragraph 'On
     #: functional forms', page 463
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Required distance measure is Rhypo, see paragraph 'Distance', page 456.
-    REQUIRES_DISTANCES = set(('rhypo', ))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

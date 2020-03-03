@@ -67,15 +67,15 @@ class YoungsEtAl1997SInter(GMPE):
 
     #: Required site parameters is Vs30, used to distinguish between rock
     #: and soil sites, see paragraph 'Strong Motion Data Base', page 59.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and focal depth, see
     #: equations 1 and 2, pages 59 and 66, respectively.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is Rrup, see equations 1 and 2, page 59 and
     #: 66, respectively.
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Vs30 value representing typical rock conditions in California.
     ROCK_VS30 = 760

@@ -64,13 +64,13 @@ class BindiEtAl2017Rjb(GMPE):
     ])
 
     #: Required site parameter is only Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is Rjb
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, adjustment_factor=1.0):
         super().__init__()

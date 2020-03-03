@@ -51,13 +51,13 @@ class Campbell1997(GMPE):
     ])
 
     #: Requires vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and top of rupture depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is closest distance to rupture. In the
-    #: publication, Rseis is used. We assume Rrup=Rseis, justified by 
+    #: publication, Rseis is used. We assume Rrup=Rseis, justified by
     #: our calculations matching the verification tables
     REQUIRES_DISTANCES = set(('rrup', ))
 
@@ -126,7 +126,7 @@ class Campbell1997(GMPE):
         sigma = 0.39 + np.zeros(mean.shape)
         sigma[mean < 0.068] = 0.55
         idx = np.logical_and(mean >= 0.068, mean <= 0.21)
-        sigma[idx] = 0.173- 0.140 * np.log(mean[idx])
+        sigma[idx] = 0.173 - 0.140 * np.log(mean[idx])
         stddevs = []
         for stddev in stddev_types:
             if stddev == const.StdDev.TOTAL:

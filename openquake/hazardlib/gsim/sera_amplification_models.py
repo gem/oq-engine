@@ -115,13 +115,13 @@ class PitilakisEtAl2018(GMPE):
 
     #: Required site parameters are Vs30 and the Pitilakis et al (2018) site
     #: class (others will be added for the GMPE in question)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', "ec8_p18"))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'ec8_p18'}
 
     #: Required rupture parameter is magnitude, others will be set later
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance metrics will be set by the GMPEs
-    REQUIRES_DISTANCES = set(())
+    REQUIRES_DISTANCES = set()
 
     #: Defined reference velocity is 800 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 800.0
@@ -276,10 +276,10 @@ class Eurocode8Amplification(PitilakisEtAl2018):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     #: Required site parameters will be set be selected GMPES
-    REQUIRES_SITES_PARAMETERS = set(('vs30', "h800",))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'h800'}
 
     #: Required rupture parameter is magnitude, others will be set later
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance metrics will be set by the GMPEs
     REQUIRES_DISTANCES = set()
@@ -490,10 +490,10 @@ class SandikkayaDinsever2018(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     #: Required site parameters will be set be selected GMPES
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
     #: Required rupture parameter is magnitude, others will be set later
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance metrics will be set by the GMPEs
     REQUIRES_DISTANCES = set()

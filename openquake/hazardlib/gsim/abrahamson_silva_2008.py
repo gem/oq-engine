@@ -70,14 +70,14 @@ class AbrahamsonSilva2008(GMPE):
     #: Required site parameters are Vs30, Vs30 type (measured or inferred),
     #: and Z1.0, see paragraph 'Soil Depth Model', page 79, and table 6,
     #: page 86.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
 
     #: Required rupture parameters are magnitude, rake, dip, ztor, and width
     #: (see table 2, page 75)
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'dip', 'ztor', 'width'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'dip', 'ztor', 'width'}
 
     #: Required distance measures are Rrup, Rjb and Rx (see Table 2, page 75).
-    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
+    REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
