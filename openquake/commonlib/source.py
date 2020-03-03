@@ -349,9 +349,8 @@ class CompositeSourceModel(collections.abc.Sequence):
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples, self.sm_rlzs)
         if event_based:  # init serials
-            sources = self.get_sources()
             serial = ses_seed
-            for src in sources:
+            for src in self.get_sources():
                 nr = src.num_ruptures
                 src.serial = serial
                 serial += nr
