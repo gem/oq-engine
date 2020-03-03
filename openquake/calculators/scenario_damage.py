@@ -87,7 +87,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     consequences = crmodel.get_consequences()
     haz_mon = monitor('getting hazard', measuremem=False)
     rsk_mon = monitor('aggregating risk', measuremem=False)
-    d_event = AccumDict(accum=numpy.zeros((L, D), U32))
+    d_event = AccumDict(accum=numpy.zeros((L, D - 1), U32))
     res = {'d_event': d_event}
     for name in consequences:
         res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
@@ -115,7 +115,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         for e, ddd in enumerate(ddds):
                             eid = out.eids[e]
                             ddic[aid, eid][l] = ddd[1:]
-                            d_event[eid][l] += ddd
+                            d_event[eid][l] += ddd[1:]
                         if make_ddd is approx_ddd:
                             ms = mean_std(fractions * asset['number'])
                         else:
@@ -213,8 +213,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         tot = self.assetcol['number'].sum()
         dbe = numpy.zeros((self.E, L, D), U32)  # shape E, L, D
         dbe[:, :, 0] = tot
-        for eid, dmg in result['d_event'].items():
-            dbe[eid] = dmg
+        for e, dmg_by_lt in result['d_event'].items():
+            for l, dmg in enumerate(dmg_by_lt):
+                dbe[e, l,  0] = tot - dmg.sum()
+                dbe[e, l,  1:] = dmg
         self.datastore['dmg_by_event'] = dbe
 
         # consequence distributions
