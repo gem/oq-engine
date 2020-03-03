@@ -23,7 +23,8 @@ from openquake.baselib import sap
 from openquake.hazardlib import nrml
 from openquake.baselib.datastore import read
 from openquake.hazardlib.geo.geodetic import geodetic_distance
-from openquake.commonlib import readinput, calc
+from openquake.commonlib import readinput, calc, logs
+from openquake.calculators.base import get_calc
 from openquake.calculators.extract import extract, WebExtractor
 
 
@@ -48,6 +49,7 @@ class OpenQuake(object):
         self.get_site_collection = readinput.get_site_collection
         self.get_composite_source_model = readinput.get_composite_source_model
         self.get_exposure = readinput.get_exposure
+        self.get_calc = lambda job_ini: get_calc(job_ini, logs.init())
         self.make_hmap = calc.make_hmap
         self.geodetic_distance = geodetic_distance
         # TODO: more utilities will be added when deemed useful

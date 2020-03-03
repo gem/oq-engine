@@ -344,6 +344,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if fnames:
                 logging.info('exported %s: %s', ekey[0], fnames)
 
+    def __repr__(self):
+        return '<%s#%d>' % (self.__class__.__name__, self.datastore.calc_id)
+
 
 def check_time_event(oqparam, occupancy_periods):
     """
