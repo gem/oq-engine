@@ -97,8 +97,7 @@ class SourceReader(object):
                 src.checksum = zlib.adler32(
                     pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
                 src._wkt = src.wkt()
-        return dict(fname_hits=fname_hits, changes=sm.changes,
-                    src_groups=sm.src_groups, mags=mags,
+        return dict(fname_hits=fname_hits, sm=sm, mags=mags,
                     ordinal=ordinal, fileno=fileno)
 
 
@@ -176,13 +175,13 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
     fname_hits = collections.Counter()
     for dic in sorted(smap, key=operator.itemgetter('fileno')):
         sm_rlz = sm_rlzs[dic['ordinal']]
-        sm_rlz.src_groups.extend(dic['src_groups'])
+        sm_rlz.src_groups.extend(dic['sm'])
         fname_hits += dic['fname_hits']
-        changes += dic['changes']
+        changes += dic['sm'].changes
         mags.update(dic['mags'])
         gsim_file = oq.inputs.get('gsim_logic_tree')
         if gsim_file:  # check TRTs
-            for src_group in dic['src_groups']:
+            for src_group in dic['sm']:
                 if src_group.trt not in gsim_lt.values:
                     raise ValueError(
                         "Found in %r a tectonic region type %r "
