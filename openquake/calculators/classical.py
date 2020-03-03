@@ -73,7 +73,6 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-# NB: this is NOT called if split_by_magnitude is true
 def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
@@ -115,6 +114,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
+# not used right now
 def split_by_mag(src_group):
     """
     Split sources by magnitude
@@ -346,8 +346,6 @@ class ClassicalCalculator(base.HazardCalculator):
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
-        elif oq.split_by_magnitude:
-            f1 = f2 = classical
         else:
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
@@ -358,8 +356,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 nb = 1
                 yield f1, (sg, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
-                if oq.split_by_magnitude:
-                    sg = split_by_mag(sg)
                 blocks = list(block_splitter(sg, totweight/C, srcweight))
                 nb = len(blocks)
                 for block in blocks:

@@ -436,6 +436,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 # src.src_group_id can be a list if get_src_groups was
                 # called before
                 if len(srcs) > 1 and not isinstance(src.src_group_id, list):
+                    # this happens in classical/case_20
                     src.src_group_id = [s.src_group_id for s in srcs]
                 lst.append(src)
             dic[trt] = sourceconverter.SourceGroup(trt, lst)
