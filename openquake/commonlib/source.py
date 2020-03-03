@@ -340,7 +340,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
-    def __init__(self, gsim_lt, source_model_lt, sm_rlzs):
+    def __init__(self, gsim_lt, source_model_lt, sm_rlzs, event_based=False):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.sm_rlzs = sm_rlzs
@@ -348,30 +348,31 @@ class CompositeSourceModel(collections.abc.Sequence):
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples, self.sm_rlzs)
-        atomic = []
-        acc = AccumDict(accum=[])
-        for sm in self.sm_rlzs:
-            for grp in sm.src_groups:
-                if grp and grp.atomic:
-                    atomic.append(grp)
-                elif grp:
-                    acc[grp.trt].extend(grp)
-        # extract a single source from multiple sources with the same ID
-        # and regroup the sources in non-atomic groups by TRT
-        dic = {}
-        key = operator.attrgetter('source_id', 'checksum')
-        for trt in acc:
-            lst = []
-            for srcs in groupby(acc[trt], key).values():
-                src = srcs[0]
-                # src.src_group_id can be a list if get_src_groups was
-                # called before
-                if len(srcs) > 1:
-                    # this happens in classical/case_20
-                    src.src_group_id = [s.src_group_id for s in srcs]
-                lst.append(src)
-            dic[trt] = sourceconverter.SourceGroup(trt, lst)
-        self.src_groups = atomic + list(dic.values())
+        if not event_based:
+            atomic = []
+            acc = AccumDict(accum=[])
+            for sm in self.sm_rlzs:
+                for grp in sm.src_groups:
+                    if grp and grp.atomic:
+                        atomic.append(grp)
+                    elif grp:
+                        acc[grp.trt].extend(grp)
+            # extract a single source from multiple sources with the same ID
+            # and regroup the sources in non-atomic groups by TRT
+            dic = {}
+            key = operator.attrgetter('source_id', 'checksum')
+            for trt in acc:
+                lst = []
+                for srcs in groupby(acc[trt], key).values():
+                    src = srcs[0]
+                    # src.src_group_id can be a list if get_src_groups was
+                    # called before
+                    if len(srcs) > 1:
+                        # this happens in classical/case_20
+                        src.src_group_id = [s.src_group_id for s in srcs]
+                    lst.append(src)
+                dic[trt] = sourceconverter.SourceGroup(trt, lst)
+            self.src_groups = atomic + list(dic.values())
 
     def get_model(self, sm_id):
         """

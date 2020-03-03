@@ -623,7 +623,8 @@ def get_composite_source_model(oqparam, h5=None):
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     sm_rlzs = get_sm_rlzs(oqparam, gsim_lt, source_model_lt, h5)
-    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, sm_rlzs)
+    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, sm_rlzs,
+                                      oqparam.is_event_based())
     key = operator.attrgetter('source_id', 'checksum')
     srcidx = 0
     if h5:
