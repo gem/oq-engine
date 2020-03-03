@@ -334,32 +334,49 @@ class CompositionInfo(object):
 
 class CompositeSourceModel(collections.abc.Sequence):
     """
+    :param gsim_lt:
+        a :class:`openquake.commonlib.logictree.GsimLogicTree` instance
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
-    :param source_models:
-        a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
-        tuples
+    :param sm_rlzs:
+        a list of Realization instances with attribute sm.src_groups
     """
-    def __init__(self, gsim_lt, source_model_lt, sm_rlzs):
+    def __init__(self, gsim_lt, source_model_lt, sm_rlzs, ses_seed=0,
+                 event_based=False):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.sm_rlzs = sm_rlzs
-        self.source_info = ()
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples, self.sm_rlzs)
-
-    def get_model(self, sm_id):
-        """
-        Extract a CompositeSourceModel instance containing the single
-        model of index `sm_id`.
-        """
-        sm = self.sm_rlzs[sm_id]
-        if self.source_model_lt.num_samples:
-            self.source_model_lt.num_samples = sm.samples
-        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm])
-        new.sm_id = sm_id
-        return new
+        if event_based:  # init serials
+            serial = ses_seed
+            for src in self.get_sources():
+                nr = src.num_ruptures
+                src.serial = serial
+                serial += nr
+        else:
+            # extract a single source from multiple sources with the same ID
+            # and regroup the sources in non-atomic groups by TRT
+            atomic = []
+            acc = AccumDict(accum=[])
+            for sm in self.sm_rlzs:
+                for grp in sm.src_groups:
+                    if grp and grp.atomic:
+                        atomic.append(grp)
+                    elif grp:
+                        acc[grp.trt].extend(grp)
+            dic = {}
+            key = operator.attrgetter('source_id', 'checksum')
+            for trt in acc:
+                lst = []
+                for srcs in groupby(acc[trt], key).values():
+                    src = srcs[0]
+                    if len(srcs) > 1:  # happens in classical/case_20
+                        src.src_group_id = [s.src_group_id for s in srcs]
+                    lst.append(src)
+                dic[trt] = sourceconverter.SourceGroup(trt, lst)
+            self.src_groups = atomic + list(dic.values())
 
     # used only by UCERF
     def new(self, sources_by_grp):
@@ -408,58 +425,6 @@ class CompositeSourceModel(collections.abc.Sequence):
                             src.samples = sm.samples
                         sources.append(src)
         return sources
-
-    def get_src_groups(self, optimize_dupl=False):
-        """
-        :param optimize_dupl: if True change src_group_id to a list
-        :returns: a list of source groups
-        """
-        atomic = []
-        acc = AccumDict(accum=[])
-        for sm in self.sm_rlzs:
-            for grp in sm.src_groups:
-                if grp and grp.atomic:
-                    atomic.append(grp)
-                elif grp:
-                    acc[grp.trt].extend(grp)
-        if not optimize_dupl:  # for event_based
-            return atomic + [sourceconverter.SourceGroup(trt, lst)
-                             for trt, lst in acc.items()]
-        # extract a single source from multiple sources with the same ID
-        # and regroup the sources in non-atomic groups by TRT
-        dic = {}
-        key = operator.attrgetter('source_id', 'checksum')
-        for trt in acc:
-            lst = []
-            for srcs in groupby(acc[trt], key).values():
-                src = srcs[0]
-                # src.src_group_id can be a list if get_src_groups was
-                # called before
-                if len(srcs) > 1 and not isinstance(src.src_group_id, list):
-                    # this happens in classical/case_20
-                    src.src_group_id = [s.src_group_id for s in srcs]
-                lst.append(src)
-            dic[trt] = sourceconverter.SourceGroup(trt, lst)
-        return atomic + list(dic.values())
-
-    def get_num_ruptures(self):
-        """
-        :returns: the number of ruptures per source group ID
-        """
-        return {grp.id: sum(src.num_ruptures for src in grp)
-                for grp in self.src_groups}
-
-    def init_serials(self, ses_seed):
-        """
-        Generate unique seeds for each rupture with numpy.arange.
-        This should be called only in event based calculators
-        """
-        sources = self.get_sources()
-        serial = ses_seed
-        for src in sources:
-            nr = src.num_ruptures
-            src.serial = serial
-            serial += nr
 
     def get_floating_spinning_factors(self):
         """

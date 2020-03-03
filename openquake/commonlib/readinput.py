@@ -623,7 +623,9 @@ def get_composite_source_model(oqparam, h5=None):
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     sm_rlzs = get_sm_rlzs(oqparam, gsim_lt, source_model_lt, h5)
-    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, sm_rlzs)
+    csm = source.CompositeSourceModel(
+        gsim_lt, source_model_lt, sm_rlzs,
+        oqparam.ses_seed, oqparam.is_event_based())
     key = operator.attrgetter('source_id', 'checksum')
     srcidx = 0
     if h5:
@@ -637,11 +639,6 @@ def get_composite_source_model(oqparam, h5=None):
         srcidx += 1
     if h5:
         hdf5.extend(info, numpy.array(data, source_info_dt))
-    if oqparam.is_event_based():
-        # initialize the rupture rup_id numbers before splitting/filtering; in
-        # this way the serials are independent from the site collection
-        csm.init_serials(oqparam.ses_seed)
-
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     return csm
 
