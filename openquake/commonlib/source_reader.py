@@ -78,10 +78,9 @@ class SourceReader(object):
     def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
-        src_groups = []
-        newsm = apply_unc(path, fname, self.converter)
+        sm = apply_unc(path, fname, self.converter)
         fname_hits[fname] += 1
-        for sg in newsm:
+        for sg in sm:
             # sample a source for each group
             if os.environ.get('OQ_SAMPLE_SOURCES'):
                 sg.sources = random_filtered_sources(
@@ -98,9 +97,8 @@ class SourceReader(object):
                 src.checksum = zlib.adler32(
                     pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
                 src._wkt = src.wkt()
-            src_groups.append(sg)
-        return dict(fname_hits=fname_hits, changes=newsm.changes,
-                    src_groups=src_groups, mags=mags,
+        return dict(fname_hits=fname_hits, changes=sm.changes,
+                    src_groups=sm.src_groups, mags=mags,
                     ordinal=ordinal, fileno=fileno)
 
 

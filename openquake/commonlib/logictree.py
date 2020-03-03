@@ -790,9 +790,8 @@ class SourceModelLogicTree(object):
         dirname = os.path.dirname(self.filename)
         [sm] = nrml.read_source_models([fname], converter)
         base_ids = set(src.source_id for sg in sm.src_groups for src in sg)
-        newsm = nrml.SourceModel(copy.copy(sm.src_groups), sm.name,
-                                 sm.investigation_time, sm.start_time)
-        newsm.changes = 0
+        src_groups = sm.src_groups
+        sm.changes = 0
         path = ltpath
         branchset = self.root_branchset
         branchsets_and_uncertainties = []
@@ -809,7 +808,8 @@ class SourceModelLogicTree(object):
                     raise InvalidFile(
                         '%s contains source(s) %s already present in %s' %
                         (extname, common, sm.fname))
-                newsm.src_groups.extend(ext.src_groups)
+                sm.src_groups = copy.copy(src_groups)
+                sm.src_groups.extend(ext.src_groups)
             elif branchset.uncertainty_type != 'sourceModel':
                 branchsets_and_uncertainties.append(
                     (branchset, branch.value))
@@ -826,9 +826,9 @@ class SourceModelLogicTree(object):
                             changes += 1
                     if changes:  # redoing count_ruptures can be slow
                         source.num_ruptures = source.count_ruptures()
-                        newsm.changes += changes
-                newsm.src_groups[i] = sg
-        return newsm
+                        sm.changes += changes
+                sm.src_groups[i] = sg
+        return sm
 
     def get_trti_eri(self):
         """
