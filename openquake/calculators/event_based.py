@@ -116,7 +116,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if not hasattr(self, 'maxweight'):
             trt_sources = self.csm.get_trt_sources()
             self.maxweight = sum(sum(weight(s) for s in srcs)
-                                 for _, srcs, _ in trt_sources) / (
+                                 for _, srcs in trt_sources) / (
                 self.oqparam.concurrent_tasks or 1)
             if self.maxweight < source.MINWEIGHT:
                 self.maxweight = source.MINWEIGHT

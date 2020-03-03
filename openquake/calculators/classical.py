@@ -335,7 +335,7 @@ class ClassicalCalculator(base.HazardCalculator):
             return src.weight * g * m
 
         totweight = sum(sum(srcweight(src) for src in sources)
-                        for trt, sources, atomic in trt_sources)
+                        for trt, sources in trt_sources)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -351,9 +351,9 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
-        for trt, sources, atomic in trt_sources:
+        for trt, sources in trt_sources:
             gsims = gsims_by_trt[trt]
-            if atomic:
+            if sources.atomic:
                 # do not split atomic groups
                 nb = 1
                 yield f1, (sources, srcfilter, gsims, param)
