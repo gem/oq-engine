@@ -823,8 +823,8 @@ class HazardCalculator(BaseCalculator):
 
         # check for gsim logic tree reduction
         discard_trts = []
-        for trt in self.csm_info.gsim_lt.values:
-            if eff_ruptures.get(trt, 0) == 0:
+        for trti, trt in enumerate(self.csm_info.gsim_lt.values):
+            if eff_ruptures.get(trti, 0) == 0:
                 discard_trts.append(trt)
         if discard_trts and 'ucerf' not in oq.calculation_mode:
             msg = ('No sources for some TRTs: you should set\n'
