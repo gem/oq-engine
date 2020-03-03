@@ -47,11 +47,11 @@ xmlns:gml="http://www.opengis.net/gml"
                     </occurRates>
                 </incrementalMFD>
                 <nodalPlaneDist>
-                    <nodalPlane dip="9.0000000E+01" probability="5.0000000E-01" rake="0.0000000E+00" strike="0.0000000E+00"/>
-                    <nodalPlane dip="9.0000000E+01" probability="5.0000000E-01" rake="0.0000000E+00" strike="9.0000000E+01"/>
+                    <nodalPlane dip="90" probability=".5" rake="0" strike="0"/>
+                    <nodalPlane dip="90" probability=".55" rake="0" strike="90"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
-                    <hypoDepth depth="1.0500000E+01" probability="1.0000000E+00"/>
+                    <hypoDepth depth="10.5" probability="1"/>
                 </hypoDepthDist>
             </areaSource>
             <areaSource
@@ -91,11 +91,11 @@ xmlns:gml="http://www.opengis.net/gml"
                     </occurRates>
                 </incrementalMFD>
                 <nodalPlaneDist>
-                    <nodalPlane dip="9.0000000E+01" probability="5.0000000E-01" rake="0.0000000E+00" strike="0.0000000E+00"/>
-                    <nodalPlane dip="9.0000000E+01" probability="5.0000000E-01" rake="0.0000000E+00" strike="9.0000000E+01"/>
+                    <nodalPlane dip="90" probability=".5" rake="0" strike="0"/>
+                    <nodalPlane dip="90" probability=".5" rake="0" strike="90"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
-                    <hypoDepth depth="1.0500000E+01" probability="1.0000000E+00"/>
+                    <hypoDepth depth="10.5" probability="1"/>
                 </hypoDepthDist>
             </areaSource>
             <areaSource
@@ -135,11 +135,11 @@ xmlns:gml="http://www.opengis.net/gml"
                     </occurRates>
                 </incrementalMFD>
                 <nodalPlaneDist>
-                    <nodalPlane dip="9.0000000E+01" probability="5.0000000E-01" rake="0.0000000E+00" strike="0.0000000E+00"/>
-                    <nodalPlane dip="9.0000000E+01" probability="5.0000000E-01" rake="0.0000000E+00" strike="9.0000000E+01"/>
+                    <nodalPlane dip="90" probability=".5" rake="0" strike="0"/>
+                    <nodalPlane dip="90" probability=".5" rake="0" strike="90"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
-                    <hypoDepth depth="1.0500000E+01" probability="1.0000000E+00"/>
+                    <hypoDepth depth="10.5" probability="1"/>
                 </hypoDepthDist>
             </areaSource>
         </sourceGroup>
