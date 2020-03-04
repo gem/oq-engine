@@ -39,8 +39,8 @@ def reduce_sm(calc_id):
             if count > 1]
         if duplicate_source_ids:
             logging.warning(
-                'Duplicate source ids were found and they were not removed:'
-                ' %s', duplicate_source_ids)
+                'Duplicate source ids were found and they will not be removed:'
+                ' %s', sorted(duplicate_source_ids))
         source_ids_set = set(source_ids_list)
     if ok.sum() == 0:
         raise RuntimeError('All sources were filtered away!')
