@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Fixed reduce_sm filtering by eff_ruptures instead of calc_time and adding
+    a warning listing duplicate source ids if any of them are found
+
   [Michele Simionato]
   * Fixed the ShakeMap code to use the formula for the median and not the mean
   * Added a check on excessive data transfer in disaggregation calculations
