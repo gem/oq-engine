@@ -146,15 +146,16 @@ Ruptures in TOML format
 -------------------------------------------
 
 Since engine v3.8 there is a way to serialize ruptures in
-TOML format. The command to give is::
+[TOML](https://github.com/toml-lang/toml format). The command to give is::
   
   $ oq extract rupture/<rup_id> <calc_id>`
 
 For instance, assuming there is an event based calculation with ID 42,
 we can extract the first rupture in the datastore with `oq extract
 rupture/0 42`: this will generate a file named `rupture-0_42.txt`. The
-extension is .txt so that it can be open with any text editor, but the
-format is actually .toml Then it is possible to run scenario
+extension is `.txt` so that it can be open with any text editor, but the
+format is actually TOML (the engine will accept both `.txt` and `.toml`
+extensions). Then it is possible to run scenario
 calculations starting from that rupture by simply setting
 
 ``rupture_model_file = rupture-0_42.txt``
