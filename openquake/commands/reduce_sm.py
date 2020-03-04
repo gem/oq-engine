@@ -35,7 +35,7 @@ def reduce_sm(calc_id):
             info['source_id'], return_counts=True)
         duplicate_source_ids = np.array([
             item for item in zip(source_ids, source_counts) if item[1] > 1])
-        if duplicate_source_ids:
+        if len(duplicate_source_ids):
             logging.warning(
                 'Duplicate source ids were found and they will not be removed:'
                 ' %s', duplicate_source_ids)
