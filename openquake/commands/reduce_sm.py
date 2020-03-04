@@ -38,7 +38,7 @@ def reduce_sm(calc_id):
         if len(duplicate_source_ids):
             logging.warning(
                 'Duplicate source ids were found and they will not be removed:'
-                ' %s', duplicate_source_ids)
+                '\n%s', duplicate_source_ids)
         ok = info['eff_ruptures'] > 0
         source_ids = set(info[ok]['source_id'])
     if ok.sum() == 0:
