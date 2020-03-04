@@ -180,16 +180,12 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     #   only for nons-parametric sources).
     # * The group contains mutually exclusive sources. In this case we
     #   choose one source and then one rupture from this source.
-    rup_counter = {}
+    rup_counter = AccumDict(accum={})  # src_id ->rup_idx -> number
     rup_data = {}
     for rlz_num in range(grp_num_occ):
         for src, _sites in srcfilter(sources):
             t0 = time.time()
             rup = src.get_one_rupture()
-            # The problem here is that we do not know a-priori the
-            # number of occurrences of a given rupture.
-            if src.id not in rup_counter:
-                rup_counter[src.id] = {}
             if rup.idx not in rup_counter[src.id]:
                 rup_counter[src.id][rup.idx] = 1
                 rup_data[src.id, rup.idx] = [rup, src.id, grp_id]
