@@ -183,34 +183,27 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     rup_counter = {}
     rup_data = {}
     for rlz_num in range(grp_num_occ):
-        if sources.cluster:
-            for src, _sites in srcfilter(sources):
-                # Track calculation time
-                t0 = time.time()
-                rup = src.get_one_rupture()
-                # The problem here is that we do not know a-priori the
-                # number of occurrences of a given rupture.
-                if src.id not in rup_counter:
-                    rup_counter[src.id] = {}
-                    rup_data[src.id] = {}
-                if rup.idx not in rup_counter[src.id]:
-                    rup_counter[src.id][rup.idx] = 1
-                    rup_data[src.id][rup.idx] = [rup, src.id, grp_id]
-                else:
-                    rup_counter[src.id][rup.idx] += 1
-                # Store info
-                dt = time.time() - t0
-                calc_times[src.id] += numpy.array(
-                    [len(rup_data[src.id]), len(_sites), dt])
-        elif param['src_interdep'] == 'mutex':
-            raise NotImplementedError('src_interdep == mutex')
+        for src, _sites in srcfilter(sources):
+            t0 = time.time()
+            rup = src.get_one_rupture()
+            # The problem here is that we do not know a-priori the
+            # number of occurrences of a given rupture.
+            if src.id not in rup_counter:
+                rup_counter[src.id] = {}
+            if rup.idx not in rup_counter[src.id]:
+                rup_counter[src.id][rup.idx] = 1
+                rup_data[src.id, rup.idx] = [rup, src.id, grp_id]
+            else:
+                rup_counter[src.id][rup.idx] += 1
+            dt = time.time() - t0
+            calc_times[src.id] += numpy.array([1, len(_sites), dt])
+
     # Create event based ruptures
-    for src_key in rup_data:
-        for rup_key in rup_data[src_key]:
-            rup, srcidx, grp_id = rup_data[src_key][rup_key]
-            cnt = rup_counter[src_key][rup_key]
-            ebr = EBRupture(rup, srcidx, grp_id, cnt, samples)
-            eb_ruptures.append(ebr)
+    for src_key, rup_key in rup_data:
+        rup, srcidx, grp_id = rup_data[src_key, rup_key]
+        cnt = rup_counter[src_key][rup_key]
+        ebr = EBRupture(rup, srcidx, grp_id, cnt, samples)
+        eb_ruptures.append(ebr)
 
     return eb_ruptures, calc_times
 

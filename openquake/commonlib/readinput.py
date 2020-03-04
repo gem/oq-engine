@@ -833,7 +833,7 @@ def get_pmap_from_csv(oqparam, fnames):
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
-# used in utils/reduce_sm and utils/extract_source
+# used in reduce_sm and utils/extract_source
 def reduce_source_model(smlt_file, source_ids, remove=True):
     """
     Extract sources from the composite source model
