@@ -335,8 +335,22 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_sm1_sg2_cog2_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
             case_20.__file__, delta=1E-7)
-        srcs = self.calc.csm.get_sources()
-        dupl = sum(len(src.src_group_ids) - 1 for src in srcs)
+        # there are 3 sources x 12 sm_rlzs
+        [sg] = self.calc.csm.src_groups  # 1 source group with 7 sources
+        self.assertEqual(len(sg), 7)
+        tbl = []
+        for src in sg:
+            tbl.append([src.source_id, src.checksum] + src.src_group_ids)
+        tbl.sort()
+        self.assertEqual(tbl,
+                         [['CHAR1', 1020111046, 2, 5, 8, 11],
+                          ['CHAR1', 1117683992, 0, 3, 6, 9],
+                          ['CHAR1', 1442321585, 1, 4, 7, 10],
+                          ['COMFLT1', 2221824602, 3, 4, 5, 9, 10, 11],
+                          ['COMFLT1', 3381942518, 0, 1, 2, 6, 7, 8],
+                          ['SFLT1', 4233779789, 6, 7, 8, 9, 10, 11],
+                          ['SFLT1', 4256912415, 0, 1, 2, 3, 4, 5]])
+        dupl = sum(len(src.src_group_ids) - 1 for src in sg)
         self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
     def test_case_21(self):
