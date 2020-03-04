@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import ast
 import csv
 import copy
@@ -833,11 +834,33 @@ def get_pmap_from_csv(oqparam, fnames):
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
-# used in utils/reduce_sm and utils/extract_source
+tag2code = {'ar': b'A',
+            'mu': b'M',
+            'po': b'P',
+            'si': b'S',
+            'co': b'C',
+            'ch': b'X',
+            'no': b'N'}
+
+
+# used in oq reduce_sm and utils/extract_source
 def reduce_source_model(smlt_file, source_ids, remove=True):
     """
-    Extract sources from the composite source model
+    Extract sources from the composite source model.
+
+    :param smlt_file: path to a source model logic tree file
+    :param source_ids: dictionary source_id -> source_code
+    :param remove: if True, remove sm.xml files containing no sources
+    :returns: the number of sources satisfying the filter
     """
+    if isinstance(source_ids, dict):  # in oq reduce_sm
+        def ok(src_node):
+            code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
+            return source_ids.get(src_node['id']) == code
+    else:  # list of source IDs, in extract_source
+        def ok(src_node):
+            return src_node['id'] in source_ids
+
     found = 0
     to_remove = set()
     for paths in logictree.collect_info(smlt_file).smpaths.values():
@@ -848,7 +871,8 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             origmodel = root[0]
             if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
                 for src_node in origmodel:
-                    if src_node['id'] in source_ids:
+                    if ok(src_node):
+                        found += 1
                         model.nodes.append(src_node)
             else:  # nrml/0.5
                 for src_group in origmodel:
@@ -861,7 +885,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                         weights = [1] * len(src_group.nodes)
                     src_group['srcs_weights'] = reduced_weigths = []
                     for src_node, weight in zip(src_group, weights):
-                        if src_node['id'] in source_ids:
+                        if ok(src_node):
                             found += 1
                             sg.nodes.append(src_node)
                             reduced_weigths.append(weight)
@@ -876,6 +900,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     if found:
         for path in to_remove:
             os.remove(path)
+    return found
 
 
 def get_input_files(oqparam, hazard=False):
