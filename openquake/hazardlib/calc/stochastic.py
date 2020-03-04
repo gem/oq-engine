@@ -234,7 +234,6 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
     num_ses = param['ses_per_logic_tree_path']
-    [grp_id] = set(src.src_group_id for src in sources)
     trt = sources[0].tectonic_region_type
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
