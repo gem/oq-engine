@@ -45,7 +45,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_reader import get_ltmodels, source_info_dt
+from openquake.commonlib.source_reader import get_sm_rlzs, source_info_dt
 from openquake.commonlib import logictree, source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
@@ -212,7 +212,7 @@ def get_params(job_inis, **kw):
         raise IOError('File not found: %s' % not_found[0])
 
     cp = configparser.ConfigParser()
-    cp.read(job_inis)
+    cp.read(job_inis, encoding='utf8')
 
     # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_inis[0])
@@ -511,9 +511,6 @@ def get_gsim_lt(oqparam, trts=('*',)):
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             {StdDev.TOTAL}):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
-    trts = set(oqparam.minimum_magnitude) - {'default'}
-    expected_trts = set(gsim_lt.values)
-    assert trts <= expected_trts, (trts, expected_trts)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
         logging.error('IMT-dependent weights in the logic tree cannot work '
@@ -543,19 +540,6 @@ def get_gsims(oqparam):
     return [rlz.value[0] for rlz in get_gsim_lt(oqparam)]
 
 
-def get_rlzs_by_gsim(oqparam):
-    """
-    Return an ordered dictionary gsim -> [realization index]. Work for
-    gsim logic trees with a single tectonic region type.
-    """
-    cinfo = source.CompositionInfo.fake(get_gsim_lt(oqparam))
-    ra = cinfo.get_rlzs_assoc()
-    dic = {}
-    for rlzi, gsim_by_trt in enumerate(ra.gsim_by_trt):
-        dic[gsim_by_trt['*']] = [rlzi]
-    return dic
-
-
 def get_rupture(oqparam):
     """
     Read the `rupture_model` file and by filter the site collection
@@ -580,7 +564,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam, validate=True):
+def get_source_model_lt(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -588,16 +572,17 @@ def get_source_model_lt(oqparam, validate=True):
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
         instance
     """
-    fname = oqparam.inputs.get('source_model_logic_tree')
-    if fname:
-        # NB: converting the random_seed into an integer is needed on Windows
-        smlt = logictree.SourceModelLogicTree(
-            fname, validate, seed=int(oqparam.random_seed),
-            num_samples=oqparam.number_of_logic_tree_samples)
-    else:
-        smlt = logictree.FakeSmlt(oqparam.inputs['source_model'],
-                                  int(oqparam.random_seed),
-                                  oqparam.number_of_logic_tree_samples)
+    fname = oqparam.inputs['source_model_logic_tree']
+    # NB: converting the random_seed into an integer is needed on Windows
+    smlt = logictree.SourceModelLogicTree(
+        fname, seed=int(oqparam.random_seed),
+        num_samples=oqparam.number_of_logic_tree_samples)
+    if oqparam.discard_trts:
+        trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
+        # smlt.tectonic_region_types comes from applyToTectonicRegionType
+        smlt.tectonic_region_types = smlt.tectonic_region_types - trts
+    if 'ucerf' in oqparam.calculation_mode:
+        smlt.tectonic_region_types = {'Active Shallow Crust'}
     return smlt
 
 
@@ -610,13 +595,14 @@ def get_composite_source_model(oqparam, h5=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
-    ucerf = oqparam.calculation_mode.startswith('ucerf')
-    source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
+    source_model_lt = get_source_model_lt(oqparam)
     trts = source_model_lt.tectonic_region_types
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
     for trt in reqv:
-        if trt.lower() not in trts_lower:
+        if trt in oqparam.discard_trts:
+            continue
+        elif trt.lower() not in trts_lower:
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
@@ -636,8 +622,10 @@ def get_composite_source_model(oqparam, h5=None):
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
-    ltmodels = get_ltmodels(oqparam, gsim_lt, source_model_lt, h5)
-    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, ltmodels)
+    sm_rlzs = get_sm_rlzs(oqparam, gsim_lt, source_model_lt, h5)
+    csm = source.CompositeSourceModel(
+        gsim_lt, source_model_lt, sm_rlzs,
+        oqparam.ses_seed, oqparam.is_event_based())
     key = operator.attrgetter('source_id', 'checksum')
     srcidx = 0
     if h5:
@@ -651,14 +639,6 @@ def get_composite_source_model(oqparam, h5=None):
         srcidx += 1
     if h5:
         hdf5.extend(info, numpy.array(data, source_info_dt))
-    if oqparam.is_event_based():
-        # initialize the rupture rup_id numbers before splitting/filtering; in
-        # this way the serials are independent from the site collection
-        csm.init_serials(oqparam.ses_seed)
-
-    if oqparam.disagg_by_src:
-        csm = csm.grp_by_src()  # one group per source
-
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     return csm
 

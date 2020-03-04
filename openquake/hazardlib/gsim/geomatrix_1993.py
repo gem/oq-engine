@@ -62,10 +62,10 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude and top of rupture depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     #: Required distance measure is rrup (closest distance to rupture)
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     # Shear-wave velocity for reference soil conditions in [m s-1])
     REQUIRES_SITES_PARAMETERS = set()

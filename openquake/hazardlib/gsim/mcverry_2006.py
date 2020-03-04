@@ -87,16 +87,16 @@ class McVerry2006Asc(GMPE):
 
     #: The legacy implementation of the McVerry model takes vs30 and maps
     #  to New Zealand's categorical site classification scheme
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake and hypocentral
     # depth rake is for determining fault style flags. Hypo depth is for
     # subduction GMPEs
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
 
     #: Required distance measure is RRup (paragraphy 3, page 26) which is
     # defined as nearest distance to the source.
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

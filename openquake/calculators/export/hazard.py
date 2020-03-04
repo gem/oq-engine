@@ -261,14 +261,14 @@ def get_metadata(realizations, kind):
 @deprecated(msg='Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    R = len(rlzs_assoc.realizations)
+    rlzs = dstore['csm_info'].get_realizations()
+    R = len(rlzs)
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
     periods = [imt.period for imt in oq.imt_periods()]
     for kind in oq.get_kinds(kind, R):
-        metadata = get_metadata(rlzs_assoc.realizations, kind)
+        metadata = get_metadata(rlzs, kind)
         uhs = extract(dstore, 'uhs?kind=' + kind)[kind]
         for p, poe in enumerate(oq.poes):
             fname = hazard_curve_name(dstore, (key, fmt), kind + '-%s' % poe)
@@ -300,13 +300,13 @@ def export_hcurves_xml(ekey, dstore):
     len_ext = len(fmt) + 1
     oq = dstore['oqparam']
     sitemesh = get_mesh(dstore['sitecol'])
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    R = len(rlzs_assoc.realizations)
+    rlzs = dstore['csm_info'].get_realizations()
+    R = len(rlzs)
     fnames = []
     writercls = hazard_writers.HazardCurveXMLWriter
     for kind in oq.get_kinds(kind, R):
         if kind.startswith('rlz-'):
-            rlz = rlzs_assoc.realizations[int(kind[4:])]
+            rlz = rlzs[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
             gsimlt_path = rlz.gsim_rlz.pid
         else:
@@ -338,15 +338,15 @@ def export_hmaps_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    R = len(rlzs_assoc.realizations)
+    rlzs = dstore['csm_info'].get_realizations()
+    R = len(rlzs)
     fnames = []
     writercls = hazard_writers.HazardMapXMLWriter
     for kind in oq.get_kinds(kind, R):
         # shape (N, M, P)
         hmaps = extract(dstore, 'hmaps?kind=' + kind)[kind]
         if kind.startswith('rlz-'):
-            rlz = rlzs_assoc.realizations[int(kind[4:])]
+            rlz = rlzs[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
             gsimlt_path = rlz.gsim_rlz.pid
         else:
@@ -390,7 +390,7 @@ def export_hazard_npz(ekey, dstore):
 @export.add(('gmf_data', 'csv'))
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    rlzs = dstore['csm_info'].get_realizations()
     imts = list(oq.imtls)
     sc = dstore['sitecol'].array
     arr = sc[['lon', 'lat']]
@@ -423,7 +423,7 @@ def export_gmf_data_csv(ekey, dstore):
     gmfa = gmfa[gmfa['eid'] == eid]
     eid2rlz = dict(dstore['events'])
     rlzi = eid2rlz[eid]
-    rlz = rlzs_assoc.realizations[rlzi]
+    rlz = rlzs[rlzi]
     data, comment = _build_csv_data(
         gmfa, rlz, dstore['sitecol'], imts, oq.investigation_time)
     fname = dstore.build_fname(
@@ -475,7 +475,7 @@ DisaggMatrix = collections.namedtuple(
 @deprecated(msg='Use the CSV exporter instead')
 def export_disagg_xml(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     group = dstore['disagg']
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
@@ -512,7 +512,7 @@ def export_disagg_xml(ekey, dstore):
 @export.add(('disagg', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     group = dstore[ekey[0]]
     fnames = []
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')

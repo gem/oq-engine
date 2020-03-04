@@ -91,7 +91,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         super().pre_execute()
         if 'poes' not in self.datastore:  # when building short report
             return
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        csm_info = self.datastore['csm_info']
+        self.realizations = csm_info.get_realizations()
+        weights = [rlz.weight for rlz in self.realizations]
         stats = list(oq.hazard_stats().items())
         self.param = dict(stats=stats, weights=weights)
         self.riskinputs = self.build_riskinputs('poe')

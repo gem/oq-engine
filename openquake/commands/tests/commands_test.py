@@ -78,9 +78,8 @@ class Print(object):
 
 class InfoTestCase(unittest.TestCase):
     EXPECTED = '''<CompositionInfo
-b1, x15.xml, grp=[0], weight=1.0: 1 realization(s)>
-See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
-<RlzsAssoc(size=1, rlzs=1)>'''
+b1, x15.xml, weight=1.0: 1 realization(s)>
+See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -125,7 +124,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
             info(None, None, None, None, None, None, None, path)
-        self.assertIn('RlzsAssoc(size=2, rlzs=2)', str(p))
+        self.assertIn('<CompositionInfo\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')

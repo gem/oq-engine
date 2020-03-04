@@ -109,14 +109,14 @@ class WorkerMaster(object):
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
-                logging.warning(
-                    'Starting zmq workers on %s: if it hangs, check the ssh '
-                    'keys', host)
                 args = ['ssh', host, self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
                      '-n', cores]
-            starting.append(' '.join(args))
+            if host != '127.0.0.1':
+                logging.warning(
+                    '%s: if it hangs, check the ssh keys', ' '.join(args))
             self.popens.append(subprocess.Popen(args))
+            starting.append(host)
         return 'starting %s' % starting
 
     def stop(self):

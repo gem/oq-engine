@@ -62,15 +62,15 @@ class KaleEtAl2015Turkey(GMPE):
     ])
 
     #: The required site parameter is vs30, see equation 6, page 970.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: The required rupture parameters are rake and magnitude, see equations
     #: 2 and 4, page 970.
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: The required distance parameter is 'Joyner-Boore' distance, see
     #: equation 3, page 970.
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

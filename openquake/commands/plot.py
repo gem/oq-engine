@@ -47,10 +47,7 @@ def make_figure_hcurves(extractors, what):
     for i, ex in enumerate(extractors):
         hcurves = ex.get(what)
         for kind in hcurves.kind:
-            if hcurves.rlzs:
-                arr = getattr(hcurves, 'rlz-%03d' % hcurves.k[0])
-            else:
-                arr = getattr(hcurves, kind)
+            arr = getattr(hcurves, kind)
             got[ex.calc_id, kind] = arr
     oq = ex.oqparam
     n_imts = len(hcurves.imt)
@@ -65,7 +62,6 @@ def make_figure_hcurves(extractors, what):
             if (arr == 0).all():
                 logging.warning('There is a zero curve %s_%s', *ck)
             ax.loglog(imls, arr[0], '-', label='%s_%s' % ck)
-            ax.loglog(imls, arr[0], '.')
         ax.grid(True)
         ax.legend()
     return plt

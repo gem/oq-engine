@@ -59,10 +59,10 @@ class AllenEtAl2012(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude (ML is used)
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is rupture distance
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

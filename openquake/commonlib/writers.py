@@ -133,8 +133,8 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
 
     nfields = len(autoheader) or len(data[0])
     if comment:
-        if '"' in comment:
-            raise ValueError('There cannot be quotes in %s' % comment)
+        if '"' in comment:  # double quote
+            comment = comment.replace('"', '""')
         com = '#%s"%s"\n' % (sep * (nfields - 1), comment)
         dest.write(encode(com))
 

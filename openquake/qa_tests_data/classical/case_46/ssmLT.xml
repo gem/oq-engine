@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+<logicTree logicTreeID="lt1">
+  <logicTreeBranchSet uncertaintyType="sourceModel"
+                      branchSetID="A">
+    
+    <logicTreeBranch branchID="a1">
+      <uncertaintyModel>
+        sm1.xml
+      </uncertaintyModel>
+      <uncertaintyWeight>
+        0.5
+      </uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="a2">
+      <uncertaintyModel>
+        sm2.xml
+      </uncertaintyModel>
+      <uncertaintyWeight>
+        0.5
+      </uncertaintyWeight>
+    </logicTreeBranch>
+    
+  </logicTreeBranchSet>
+  <logicTreeBranchSet uncertaintyType="bGRRelative"
+                      applyToBranches="a2"
+                      branchSetID="B">
+    
+    <logicTreeBranch branchID="b1">
+      <uncertaintyModel>+0.05</uncertaintyModel>
+      <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="b2">
+      <uncertaintyModel>0.0</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="b3">
+      <uncertaintyModel>-0.05</uncertaintyModel>
+      <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    
+  </logicTreeBranchSet>
+  
+  <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
+                      applyToBranches="b1 b2"
+                      branchSetID="C">
+    
+    <logicTreeBranch branchID="c1">
+      <uncertaintyModel>+0.2</uncertaintyModel>
+      <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="c2">
+      <uncertaintyModel>0.0</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="c3">
+      <uncertaintyModel>-0.2</uncertaintyModel>
+      <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    
+  </logicTreeBranchSet>
+</logicTree>
+
+</nrml>

@@ -1,4 +1,26 @@
   [Michele Simionato]
+  * Fixed the ShakeMap code to use the formula for the median and not the mean
+  * Added a check on excessive data transfer in disaggregation calculations
+  * Changed back the disaggregation calculator to read the rupture data from
+    the workers, thus saving a lot of memory and time
+  * Fixed a bug that made it impossible to abort/remove a failed task
+  * Added `extendModel` feature to the source model logic tree parser
+
+  [Graeme Weatherill]
+  * Fixed bug in the HMTK: the `bin_width` parameter was not passed to
+    `mtkActiveFaultModel.build_fault_model`
+
+  [Michele Simionato]
+  * Avoided submitting too many tasks in the disaggregation calculator
+  * Added a parameter `discard_trts` for manual reduction of GSIM logic tree
+  * Fixed a bug in case of duplicated nodal planes affecting the Italy model
+  * Removed dynamic reduction of the gsim logic tree (i.e. now the
+    logic tree is known upfront, before calculating the PoES)
+
+  [Paolo Tormene]
+  * Fixed an encoding issue in reading configuration files on Windows
+
+  [Michele Simionato]
   * Internal: started the zmq workers when the DbServer starts
   * Fixed a bug when reading rupture.txt files
   * Internal: added an option `--calc-id` to `oq run`
@@ -18,6 +40,9 @@
   that values correspond to inter event sigma
 
   [Graeme Weatherill]
+  * Adds independent verification tables for the USGS CEUS models and revises
+    implementation for collapsed epistemic uncertainty on sigma and site
+    amplification
   * Enhances SERA adaptation of the Abrahamson et al. (2015) `BC Hydro` GMPE to
     add in a configurable smoothed tapering term on the forearc/backarc scaling
 

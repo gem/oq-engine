@@ -74,14 +74,14 @@ class AbrahamsonEtAl2018SInter(GMPE):
     ])
 
     #: Site amplification is dependent only upon Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are only magnitude for the interface model
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is closest distance to rupture, for
     #: interface events
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: A "low" and "high" epistemic adjustment factor will be applied to
     #: subclasses of this model
@@ -325,7 +325,7 @@ class AbrahamsonEtAl2018SSlab(AbrahamsonEtAl2018SInter):
 
     #: Required rupture parameters for the in-slab model are magnitude and top
     # of rupture depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     #: Cascadia adjustment factor
     CASCADIA_ADJUSTMENT = "adj_slab"

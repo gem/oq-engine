@@ -57,13 +57,13 @@ class SadighEtAl1997(GMPE):
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and rake (eq. 1).
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Required distance measure is RRup (eq. 1).
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: If site vs30 is more than 750 m/s -- treat the soil as rock.
     #: See page 180.

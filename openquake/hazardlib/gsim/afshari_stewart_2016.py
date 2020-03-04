@@ -59,13 +59,13 @@ class AfshariStewart2016(GMPE):
     ])
 
     #: Requires vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
     #: Required rupture parameters are magnitude and top of rupture depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is closest distance to rupture
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

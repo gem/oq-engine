@@ -70,7 +70,7 @@ def set_status(db, job_id, status):
     :param status: status string
     """
     assert status in (
-        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed'
+        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed',
         'deleted'), status
     if status in ('created', 'complete', 'failed', 'aborted', 'deleted'):
         is_running = 0

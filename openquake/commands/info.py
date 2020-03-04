@@ -72,10 +72,6 @@ def print_csm_info(fname):
     print(csm.info)
     print('See http://docs.openquake.org/oq-engine/stable/'
           'effective-realizations.html for an explanation')
-    rlzs_assoc = csm.info.get_rlzs_assoc()
-    print(rlzs_assoc)
-    tot, pairs = get_pickled_sizes(rlzs_assoc)
-    print(rst_table(pairs, ['attribute', 'nbytes']))
 
 
 def do_build_reports(directory):

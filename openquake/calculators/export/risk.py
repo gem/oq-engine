@@ -198,7 +198,7 @@ def export_losses_by_asset(ekey, dstore):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt(stat_dt)
     losses_by_asset = dstore[ekey[0]][()]
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
@@ -280,7 +280,7 @@ def export_loss_maps_csv(ekey, dstore):
     value = get_loss_maps(dstore, kind)
     oq = dstore['oqparam']
     if kind == 'rlzs':
-        tags = dstore['csm_info'].get_rlzs_assoc().realizations
+        tags = dstore['csm_info'].get_realizations()
     else:
         tags = oq.hazard_stats()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -317,7 +317,7 @@ def export_loss_maps_npz(ekey, dstore):
 
 @export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     oq = dstore['oqparam']
     loss_types = oq.loss_dt().names
     assets = get_assets(dstore)
@@ -352,7 +352,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
     E = len(dstore['events'])
     oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore, mean_std=E > 1)
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
@@ -376,10 +376,7 @@ def export_dmg_by_event(ekey, dstore):
     damage_dt = build_damage_dt(dstore, mean_std=False)
     dt_list = [('event_id', U32), ('rlz_id', U16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
-    L = len(damage_dt.names)
-    D = len(damage_dt[damage_dt.names[0]].names)
-    zero = numpy.zeros((L, D), U32)
-    data_by_eid = AccumDict(dict(dstore[ekey[0]][()]), accum=zero)
+    dmg_by_event = dstore[ekey[0]][()]  # shape E, L, D
     events_by_rlz = group_array(dstore['events'], 'rlz_id')
     writer = writers.CsvWriter(fmt='%d')
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
@@ -387,7 +384,7 @@ def export_dmg_by_event(ekey, dstore):
     with open(fname, 'ab') as dest:
         for rlz, events in events_by_rlz.items():
             data = numpy.array(  # shape (E, L, D)
-                [data_by_eid[eid] for eid in events['id']])
+                [dmg_by_event[eid] for eid in events['id']])
             arr = numpy.zeros(len(data), dt_list)
             arr['event_id'] = events['id']
             arr['rlz_id'] = events['rlz_id']

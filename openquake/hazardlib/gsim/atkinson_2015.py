@@ -59,13 +59,13 @@ class Atkinson2015(GMPE):
 
     #: No required site parameters, the GMPE is derived for B/C site
     #: amplification factors
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     #: GMPE not tested against independent implementation so raise
     #: not verified warning

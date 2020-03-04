@@ -57,13 +57,13 @@ class MegawatiEtAl2003(GMPE):
     ])
 
     #: No site parameter required. This GMPE is for very hard rock conditions
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance, and azimuth
-    REQUIRES_DISTANCES = set(('rhypo', 'azimuth'))
+    REQUIRES_DISTANCES = {'rhypo', 'azimuth'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

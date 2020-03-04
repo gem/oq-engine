@@ -31,12 +31,11 @@ aae = numpy.testing.assert_almost_equal
 
 
 def check_csm_info(calc1, calc2):
-    data1 = (calc1['csm_info/sg_data'][()], calc1['csm_info/sm_data'][()])
-    data2 = (calc2['csm_info/sg_data'][()], calc2['csm_info/sm_data'][()])
-    for val1, val2 in zip(data1, data2):
-        for name in val1.dtype.names:
-            if name not in ('name', 'path'):  # avoid comparing strings
-                aae(val1[name], val2[name])
+    val1 = calc1['csm_info/sm_data'][()]
+    val2 = calc2['csm_info/sm_data'][()]
+    for name in val1.dtype.names:
+        if name not in ('name', 'path'):  # avoid comparing strings
+            aae(val1[name], val2[name])
 
 
 class GmfEbRiskTestCase(CalculatorTestCase):

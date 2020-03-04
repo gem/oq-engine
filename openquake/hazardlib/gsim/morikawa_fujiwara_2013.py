@@ -60,13 +60,13 @@ class MorikawaFujiwara2013Crustal(GMPE):
     #: - Vs30 - time averaged shear-wave velocity [m/s]
     #: - z1p4 - Depth to the 1.4 km/s interface [m]
     #: - xvf - Distance from the volcanic front [km, positive in the forearc]
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt4', 'xvf'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt4', 'xvf'}
 
     #: Required rupture parameters are magnitude, and hypocentral depth [km].
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is Rrup [km]
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def _set_params(self):
         self.region = None

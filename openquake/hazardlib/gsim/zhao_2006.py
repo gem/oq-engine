@@ -68,15 +68,15 @@ class ZhaoEtAl2006Asc(GMPE):
 
     #: Required site parameters is Vs30.
     #: See table 2, p. 901.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, rake, and focal depth.
     #: See paragraph 'Development of Base Model', p. 901.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
 
     #: Required distance measure is Rrup.
     #: See paragraph 'Development of Base Model', p. 902.
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -243,7 +243,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Required rupture parameters are magnitude and focal depth.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -326,7 +326,7 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Required rupture parameters are magnitude and focal depth.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

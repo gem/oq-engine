@@ -65,8 +65,8 @@ def fix_dupl(dist, fname=None, lineno=None):
                             got, fname, lineno)
             assert abs(sum(values.values()) - 1) < EPSILON  # sanity check
             newdist = sorted([(p, v) for v, p in values.items()])
-            if isinstance(newdist[0][1], tuple):
-                newdist = [(p, geo.nodal_plane.NodalPlane(*v))
+            if isinstance(newdist[0][1], tuple):  # nodal planes
+                newdist = [(p, geo.nodalplane.NodalPlane(*v))
                            for p, v in newdist]
             # run hazardlib/tests/data/context/job.ini to check this;
             # you will get [(0.2, 6.0), (0.2, 8.0), (0.2, 10.0), (0.4, 2.0)]
@@ -153,7 +153,7 @@ class SourceGroup(collections.abc.Sequence):
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
-        self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
+        self.eff_ruptures = eff_ruptures  # set later
         self.temporal_occurrence_model = temporal_occurrence_model
         self.cluster = cluster
         # check weights in case of mutually exclusive ruptures
@@ -550,11 +550,12 @@ class SourceConverter(RuptureConverter):
     """
     Convert sources from valid nodes into Hazardlib objects.
     """
-    def __init__(self, investigation_time=50., rupture_mesh_spacing=10.,
+    def __init__(self, investigation_time=50., rupture_mesh_spacing=5.,
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 spinning_floating=True, source_id=None):
+                 spinning_floating=True, source_id=None,
+                 discard_trts=''):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -564,14 +565,18 @@ class SourceConverter(RuptureConverter):
         self.width_of_mfd_bin = width_of_mfd_bin
         self.spinning_floating = spinning_floating
         self.source_id = source_id
+        self.discard_trts = discard_trts
 
     def convert_node(self, node):
         """
-        Convert the given rupture node into a hazardlib rupture, depending
+        Convert the given source node into a hazardlib source, depending
         on the node tag.
 
-        :param node: a node representing a rupture
+        :param node: a node representing a source or a SourceGroup
         """
+        trt = node.attrib.get('tectonicRegion')
+        if trt and trt in self.discard_trts:
+            return
         obj = getattr(self, 'convert_' + striptag(node.tag))(node)
         source_id = getattr(obj, 'source_id', '')
         if self.source_id and source_id and source_id not in self.source_id:

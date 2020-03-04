@@ -43,7 +43,7 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
-memoized = lru_cache(100)
+memoized = lru_cache()
 
 
 class NotFound(Exception):
@@ -800,7 +800,7 @@ def extract_aggregate(dstore, what):
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
     loss_dt = dstore['oqparam'].loss_dt()
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
         losses_by_asset = dstore['losses_by_asset'][()]
@@ -924,7 +924,7 @@ def build_damage_array(data, damage_dt):
 @extract.add('dmg_by_asset')
 def extract_dmg_by_asset_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['csm_info'].get_realizations()
     data = dstore['dmg_by_asset']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
@@ -943,9 +943,9 @@ def extract_mfd(dstore, what):
     qdic = parse(what)
     kind_mean = 'mean' in qdic.get('kind', [])
     kind_by_group = 'by_group' in qdic.get('kind', [])
-    weights = dstore['csm_info/sm_data']['weight']
-    sm_idx = dstore['csm_info/sg_data']['sm_id']
-    grp_weight = weights[sm_idx]
+    csm_info = dstore['csm_info']
+    weights = [sm.weight for sm in csm_info.sm_rlzs]
+    n = len(weights)
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     dic = {'duration': duration}
     dd = collections.defaultdict(float)
@@ -956,7 +956,7 @@ def extract_mfd(dstore, what):
     frequencies = numpy.zeros((len(mags), num_groups), float)
     for grp_id, mag, n_occ in rups:
         if kind_mean:
-            dd[mag] += n_occ * grp_weight[grp_id] / duration
+            dd[mag] += n_occ * weights[grp_id % n] / duration
         if kind_by_group:
             frequencies[magidx[mag], grp_id] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)
@@ -972,7 +972,7 @@ def extract_mfd(dstore, what):
 # @extract.add('event_based_mfd')
 # def extract_mfd(dstore, what):
 #     oq = dstore['oqparam']
-#     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+#     rlzs = dstore['csm_info'].get_realizations()
 #     weights = [rlz.weight['default'] for rlz in rlzs]
 #     duration = oq.investigation_time * oq.ses_per_logic_tree_path
 #     mag = dict(dstore['ruptures']['rup_id', 'mag'])
@@ -1018,8 +1018,8 @@ def extract_mean_std_curves(dstore, what):
     """
     Yield imls/IMT and poes/IMT containg mean and stddev for all sites
     """
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    w = [rlz.weight for rlz in rlzs_assoc.realizations]
+    rlzs = dstore['csm_info'].get_realizations()
+    w = [rlz.weight for rlz in rlzs]
     getter = getters.PmapGetter(dstore, w)
     arr = getter.get_mean().array
     for imt in getter.imtls:
@@ -1070,8 +1070,9 @@ def extract_event_info(dstore, eidx):
     [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz_id']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    gsim = rlzs_assoc.gsim_by_trt[rlzi][rupdict['trt']]
+    csm_info = dstore['csm_info']
+    rlz = csm_info.get_realizations()[rlzi]
+    gsim = csm_info.gsim_by_trt(rlz)[rupdict['trt']]
     for key, val in rupdict.items():
         yield key, val
     yield 'rlzi', rlzi

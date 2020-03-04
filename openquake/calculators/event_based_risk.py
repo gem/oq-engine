@@ -94,8 +94,11 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
                     agglosses[:, l] += ratios * aval
                     if 'builder' in param:
                         with mon:  # this is the heaviest part
-                            all_curves[idx, r][loss_type] = (
-                                builder.build_curve(aval, ratios, r))
+                            try:
+                                all_curves[idx, r][loss_type] = (
+                                    builder.build_curve(aval, ratios, r))
+                            except ValueError:
+                                pass  # not enough event to compute the curve
 
             # NB: I could yield the agglosses per output, but then I would
             # have millions of small outputs with big data transfer and slow

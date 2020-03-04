@@ -24,6 +24,7 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib.general import assert_close
+from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
@@ -719,7 +720,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
 
         # check the attributes of the groups are set
         [grp0, grp1] = csm.src_groups
-        for grp in csm.src_groups:
+        for grp in [grp0, grp1]:
             self.assertEqual(grp.src_interdep, 'indep')
             self.assertEqual(grp.rup_interdep, 'indep')
         self.assertEqual(repr(csm.gsim_lt), '''\
@@ -727,9 +728,8 @@ class CompositeSourceModelTestCase(unittest.TestCase):
 Active Shallow Crust,b1,[SadighEtAl1997],w=0.5
 Active Shallow Crust,b2,[ChiouYoungs2008],w=0.5
 Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
-        assoc = csm.info.get_rlzs_assoc()
-        [rlz] = assoc.realizations
-        self.assertEqual(assoc.gsim_by_trt[rlz.ordinal],
+        [rlz] = csm.info.get_realizations()
+        self.assertEqual(csm.info.gsim_by_trt(rlz),
                          {'Subduction Interface': '[SadighEtAl1997]',
                           'Active Shallow Crust': '[ChiouYoungs2008]'})
         # ignoring the end of the tuple, with the uid field
@@ -737,53 +737,32 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight['default'], 1.)
-        self.assertEqual(
-            str(assoc), "<RlzsAssoc(size=2, rlzs=1)>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
         csm = readinput.get_composite_source_model(oqparam)
-        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
-        # there are 2 distinct tectonic region types, so 18 src_groups
-        self.assertEqual(sum(1 for tm in csm.src_groups), 18)
+        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
+        # there are 2 distinct tectonic region types, so 2 src_groups
+        self.assertEqual(sum(1 for tm in csm.src_groups), 2)
 
-        rlzs_assoc = csm.info.get_rlzs_assoc()
-        rlzs = rlzs_assoc.realizations
+        rlzs = csm.info.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         # counting the sources in each TRT model (after splitting)
-        self.assertEqual(
-            [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
-            list(map(len, csm.src_groups)))
-
-        # removing 9 src_groups out of 18
-        def count_ruptures(src_group_id):
-            if src_group_id % 2 == 1:  # Active Shallow Crust
-                return 0
-            else:
-                return 1
-        csm.info.update_eff_ruptures(count_ruptures)
-        assoc = csm.info.get_rlzs_assoc()
-        expected_assoc = "<RlzsAssoc(size=9, rlzs=9)>"
-        self.assertEqual(str(assoc), expected_assoc)
-        self.assertEqual(len(assoc.realizations), 9)
-
-        # removing all src_groups
-        csm.info.update_eff_ruptures(lambda t: 0)
-        self.assertEqual(csm.info.get_rlzs_assoc().realizations, [])
+        self.assertEqual([9, 18], list(map(len, csm.src_groups)))
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
         oq = readinput.get_oqparam(
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         csm = readinput.get_composite_source_model(oq)
-        csm.info.update_eff_ruptures(lambda tm: 1)
-        assoc = csm.info.get_rlzs_assoc()
-        self.assertEqual(str(assoc), "<RlzsAssoc(size=2, rlzs=5)>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()
         new = object.__new__(CompositionInfo)
         new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(csm.info).
-                         replace('0.20000000000000004', '0.2'))
+                         replace('0.6000000000000001', '0.6'))
+
+    def tearDown(self):
+        Starmap.shutdown()

@@ -344,6 +344,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if fnames:
                 logging.info('exported %s: %s', ekey[0], fnames)
 
+    def __repr__(self):
+        return '<%s#%d>' % (self.__class__.__name__, self.datastore.calc_id)
+
 
 def check_time_event(oqparam, occupancy_periods):
     """
@@ -437,10 +440,10 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                logging.info('Checking the sources bounding box')
                 srcs = csm.get_sources()
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')
+                logging.info('Checking the sources bounding box')
                 sids = self.src_filter().within_bbox(srcs)
                 if len(sids) == 0:
                     raise RuntimeError('All sources were discarded!?')
@@ -498,8 +501,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
-            self.rlzs_assoc = fake.get_rlzs_assoc()
-            self.datastore['rlzs_by_grp'] = self.rlzs_assoc.by_grp()
+            self.realizations = fake.get_realizations()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
             parent = util.read(oq.hazard_calculation_id)
@@ -538,7 +540,7 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.run(remove=False)
-            for name in ('csm param sitecol assetcol crmodel rlzs_assoc '
+            for name in ('csm param sitecol assetcol crmodel realizations '
                          'policy_name policy_dict csm_info').split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -556,21 +558,21 @@ class HazardCalculator(BaseCalculator):
                 oq.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
         if 'precalc' in vars(self):
-            self.rlzs_assoc = self.precalc.rlzs_assoc
+            self.realizations = self.precalc.realizations
         elif 'csm_info' in self.datastore:
             csm_info = self.datastore['csm_info']
+            self.realizations = csm_info.get_realizations()
             if oq.hazard_calculation_id and 'gsim_logic_tree' in oq.inputs:
                 # redefine the realizations by reading the weights from the
                 # gsim_logic_tree_file that could be different from the parent
                 csm_info.gsim_lt = logictree.GsimLogicTree(
                     oq.inputs['gsim_logic_tree'], set(csm_info.trts))
-            self.rlzs_assoc = csm_info.get_rlzs_assoc()
         elif hasattr(self, 'csm'):
             self.check_floating_spinning()
-            self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+            self.realizations = self.csm.info.get_realizations()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
-            self.rlzs_assoc = fake.get_rlzs_assoc()
+            self.realizations = fake.get_realizations()
 
     @general.cached_property
     def R(self):
@@ -788,35 +790,29 @@ class HazardCalculator(BaseCalculator):
             save_exposed_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
-    def store_rlz_info(self, eff_ruptures=None):
+    def store_rlz_info(self, eff_ruptures):
         """
         Save info about the composite source model inside the csm_info dataset
         """
+        oq = self.oqparam
         if hasattr(self, 'csm_info'):  # no scenario
-            self.csm_info.update_eff_ruptures(eff_ruptures)
-            self.rlzs_assoc = self.csm_info.get_rlzs_assoc(
-                self.oqparam.sm_lt_path)
-            if not self.rlzs_assoc.realizations:
+            self.realizations = self.csm_info.get_realizations()
+            if not self.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
-
-            # sanity check that eff_ruptures have been set, i.e. are not -1
-            for sm in self.csm_info.source_models:
-                for sg in sm.src_groups:
-                    assert sg.eff_ruptures != -1, sg
             self.datastore['csm_info'] = self.csm_info
+        else:  # scenario
+            self.csm_info = self.datastore['csm_info']
 
-        R = len(self.rlzs_assoc.realizations)
+        R = self.R
         logging.info('There are %d realization(s)', R)
-        rlzs_by_grp = self.rlzs_assoc.by_grp()
 
-        if self.oqparam.imtls:
+        if oq.imtls:
             self.datastore['weights'] = arr = build_weights(
-                self.rlzs_assoc.realizations, self.oqparam.imt_dt())
+                self.realizations, oq.imt_dt())
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
-        if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
+        if ('event_based' in oq.calculation_mode and R >= TWO16
                 or R >= TWO32):
-            # rlzi is 16 bit integer in the GMFs and 32 bit in rlzs_by_grp
             raise ValueError(
                 'The logic tree has too many realizations (%d), use sampling '
                 'instead' % R)
@@ -825,9 +821,16 @@ class HazardCalculator(BaseCalculator):
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
 
-        # save vlen-arrays of rlz indices, one per group
-        if rlzs_by_grp:
-            self.datastore['rlzs_by_grp'] = rlzs_by_grp
+        # check for gsim logic tree reduction
+        discard_trts = []
+        for trti, trt in enumerate(self.csm_info.gsim_lt.values):
+            if eff_ruptures.get(trti, 0) == 0:
+                discard_trts.append(trt)
+        if discard_trts and 'ucerf' not in oq.calculation_mode:
+            msg = ('No sources for some TRTs: you should set\n'
+                   'discard_trts = %s\nin %s') % (', '.join(discard_trts),
+                                                  oq.inputs['job_ini'])
+            logging.warning(msg)
 
     def store_source_info(self, calc_times):
         """
@@ -942,7 +945,7 @@ class RiskCalculator(HazardCalculator):
         else:
             dstore = self.datastore
         if kind == 'poe':  # hcurves, shape (R, N)
-            ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+            ws = [rlz.weight for rlz in self.realizations]
             getter = getters.PmapGetter(dstore, ws, [sid])
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
@@ -985,7 +988,7 @@ class RiskCalculator(HazardCalculator):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
         Require a `.core_task` to be defined with signature
-        (riskinputs, crmodel, rlzs_assoc, monitor).
+        (riskinputs, crmodel, param, monitor).
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return

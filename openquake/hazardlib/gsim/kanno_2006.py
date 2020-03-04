@@ -64,7 +64,7 @@ class Kanno2006Shallow(GMPE):
     #: "regression coefficients for the base model in equations (5) and (6)
     #: for PGA , PGV , and 5% damped response spectral acceleration are given"
     #: (p. 883)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: "The peak value is the peak square root of the sum of squares
     #: of two orthogonal horizontal components in the time domain" (p. 880)
@@ -73,20 +73,20 @@ class Kanno2006Shallow(GMPE):
     #: Although interevent and intraevent residuals are separately discussed
     #: in the context of focal depth and site conditions, only the total
     #: standard deviation is tabulated.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: "Coefficients p and q were derived by regression analysis on the
     #: residuals averaged at intervals of every 100 m/sec in AVS30." (p. 884)
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Sole required rupture parameter is magnitude; faulting style is not
     #: addressed.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: "The source distance is the closest distance from a fault plane to the
     #: observation site and is the hypocentral distance in the case of
     #: earthquakes for which the fault model is not available." (p. 880)
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         # pylint: disable=too-many-arguments

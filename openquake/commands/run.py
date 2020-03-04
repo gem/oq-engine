@@ -148,7 +148,7 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
         params = {}
     if slowest:
         prof = cProfile.Profile()
-        stmt = ('_run(job_ini, concurrent_tasks, pdb, loglevel, hc, '
+        stmt = ('_run(job_ini, concurrent_tasks, calc_id, pdb, loglevel, hc, '
                 'exports, params)')
         prof.runctx(stmt, globals(), locals())
         pstat = calc_path + '.pstat'

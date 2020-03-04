@@ -42,7 +42,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 MINWEIGHT = 1000
 weight = operator.attrgetter('weight')
-grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
+grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
@@ -73,7 +73,6 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-# NB: this is NOT called if split_by_magnitude is true
 def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
@@ -115,25 +114,27 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
-def split_by_mag(sources):
+# not used right now
+def split_by_mag(src_group):
     """
     Split sources by magnitude
     """
-    out = []
-    for src in sources:
+    out = copy.copy(src_group)
+    out.sorces = []
+    for src in src_group:
         if hasattr(src, 'get_annual_occurrence_rates'):
             for mag, rate in src.get_annual_occurrence_rates():
                 new = copy.copy(src)
                 new.mfd = mfd.ArbitraryMFD([mag], [rate])
                 new.num_ruptures = new.count_ruptures()
-                out.append(new)
+                out.sources.append(new)
         else:  # nonparametric source
             # data is a list of pairs (rup, pmf)
             for mag, group in itertools.groupby(
                     src.data, lambda pair: pair[0].mag):
                 new = src.__class__(src.source_id, src.name,
                                     src.tectonic_region_type, list(group))
-                out.append(new)
+                out.sources.append(new)
     return out
 
 
@@ -226,14 +227,17 @@ class ClassicalCalculator(base.HazardCalculator):
         rparams = {'grp_id', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_', 'rrup_'}
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        for sm in self.csm_info.source_models:
-            for grp in sm.src_groups:
-                gsims = gsims_by_trt[grp.trt]
-                cm = ContextMaker(grp.trt, gsims)
+        n = len(self.csm_info.sm_rlzs)
+        trts = list(self.csm_info.gsim_lt.values)
+        for sm in self.csm_info.sm_rlzs:
+            for grp_id in self.csm_info.grp_ids(sm.ordinal):
+                trt = trts[grp_id // n]
+                gsims = gsims_by_trt[trt]
+                cm = ContextMaker(trt, gsims)
                 rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
                 for dparam in cm.REQUIRES_DISTANCES:
                     rparams.add(dparam + '_')
-                zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
+                zd[grp_id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
         for k in self.rparams:
@@ -248,10 +252,6 @@ class ClassicalCalculator(base.HazardCalculator):
             else:
                 dt = F32
             self.datastore.create_dset('rup/' + k, dt)
-        rparams = [p for p in self.rparams if not p.endswith('_')]
-        dparams = [p[:-1] for p in self.rparams if p.endswith('_')]
-        logging.info('Scalar parameters %s', rparams)
-        logging.info('Vector parameters %s', dparams)
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         return zd
@@ -322,8 +322,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        del self.csm  # save memory
+        src_groups = self.csm.src_groups
 
         def srcweight(src):
             trt = src.tectonic_region_type
@@ -331,8 +330,7 @@ class ClassicalCalculator(base.HazardCalculator):
             m = (oq.maximum_distance(trt) / 300) ** 2
             return src.weight * g * m
 
-        totweight = sum(sum(srcweight(src) for src in sources)
-                        for trt, sources, atomic in trt_sources)
+        totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -343,39 +341,35 @@ class ClassicalCalculator(base.HazardCalculator):
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
-        elif oq.split_by_magnitude:
-            f1 = f2 = classical
         else:
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
-        for trt, sources, atomic in trt_sources:
-            gsims = gsims_by_trt[trt]
-            if atomic:
+        for sg in src_groups:
+            gsims = gsims_by_trt[sg.trt]
+            if sg.atomic:
                 # do not split atomic groups
                 nb = 1
-                yield f1, (sources, srcfilter, gsims, param)
+                yield f1, (sg, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
-                if oq.split_by_magnitude:
-                    sources = split_by_mag(sources)
-                blocks = list(block_splitter(sources, totweight/C, srcweight))
+                blocks = list(block_splitter(sg, totweight/C, srcweight))
                 nb = len(blocks)
                 for block in blocks:
-                    logging.debug('Sending %d sources with weight %d',
+                    logging.debug('Sending %d source(s) with weight %d',
                                   len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
 
-            nr = sum(src.weight for src in sources)
-            logging.info('TRT = %s', trt)
+            nr = sum(src.weight for src in sg)
+            logging.info('TRT = %s', sg.trt)
             if oq.maximum_distance.magdist:
                 md = ', '.join('%s->%d' % item for item in sorted(
-                    oq.maximum_distance.magdist[trt].items()))
+                    oq.maximum_distance.magdist[sg.trt].items()))
             else:
-                md = oq.maximum_distance(trt)
+                md = oq.maximum_distance(sg.trt)
             logging.info('max_dist=%s, gsims=%d, ruptures=%d, blocks=%d',
                          md, len(gsims), nr, nb)
             if oq.pointsource_distance['default']:
                 pd = ', '.join('%s->%d' % item for item in sorted(
-                    oq.pointsource_distance[trt].items()))
+                    oq.pointsource_distance[sg.trt].items()))
                 logging.info('ps_dist=%s', pd)
 
     def save_hazard(self, acc, pmap_by_kind):
@@ -411,9 +405,7 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        trt_by_grp = self.csm_info.grp_by("trt")
-        grp_name = {grp.id: grp.name for sm in self.csm_info.source_models
-                    for grp in sm.src_groups}
+        trt_by_grp = self.csm_info.trt_by_grp
         data = []
         with self.monitor('saving probability maps'):
             for grp_id, pmap in pmap_by_grp_id.items():
@@ -426,7 +418,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
-                    data.append((grp_id, grp_name[grp_id], extreme))
+                    data.append((grp_id, trt_by_grp[grp_id], extreme))
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
@@ -443,7 +435,7 @@ class ClassicalCalculator(base.HazardCalculator):
             L = M * len(oq.soil_intensities)
         else:
             L = len(oq.imtls.array)
-        R = len(self.rlzs_assoc.realizations)
+        R = len(self.realizations)
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
@@ -455,7 +447,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        weights = [rlz.weight for rlz in self.realizations]
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg,

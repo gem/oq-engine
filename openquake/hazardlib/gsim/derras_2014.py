@@ -64,13 +64,13 @@ class DerrasEtAl2014(GMPE):
     ])
 
     #: The required site parameter is vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: The required rupture parameters are rake and magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag', 'hypo_depth'}
 
     #: The required distance parameter is 'Joyner-Boore' distance
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

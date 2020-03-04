@@ -200,11 +200,14 @@ def view_contents(token, dstore):
 @view.add('csm_info')
 def view_csm_info(token, dstore):
     csm_info = dstore['csm_info']
-    header = ['smlt_path', 'weight', 'gsim_logic_tree', 'num_realizations']
+    if csm_info.num_samples == 0:
+        num_rlzs = csm_info.gsim_lt.get_num_paths()
+    header = ['smlt_path', 'weight', 'num_realizations']
     rows = []
-    for sm in csm_info.source_models:
-        kind, num_rlzs = csm_info.classify_gsim_lt(sm)
-        row = ('_'.join(sm.path), sm.weight, kind, num_rlzs)
+    for sm in csm_info.sm_rlzs:
+        if csm_info.num_samples:
+            num_rlzs = sm.samples
+        row = ('_'.join(sm.lt_path), sm.weight, num_rlzs)
         rows.append(row)
     return rst_table(rows, header)
 
@@ -517,7 +520,7 @@ def view_required_params_per_trt(token, dstore):
     """
     csm_info = dstore['csm_info']
     tbl = []
-    for grp_id, trt in sorted(csm_info.grp_by("trt").items()):
+    for grp_id, trt in sorted(csm_info.trt_by_grp.items()):
         gsims = csm_info.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
@@ -658,8 +661,8 @@ def view_global_hcurves(token, dstore):
     """
     oq = dstore['oqparam']
     nsites = len(dstore['sitecol'])
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    weights = [rlz.weight for rlz in rlzs_assoc.realizations]
+    rlzs = dstore['csm_info'].get_realizations()
+    weights = [rlz.weight for rlz in rlzs]
     mean = getters.PmapGetter(dstore, weights).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
     res = numpy.zeros(1, array.dtype)
@@ -766,8 +769,8 @@ def view_pmap(token, dstore):
     """
     grp = token.split(':')[1]  # called as pmap:grp
     pmap = {}
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    weights = [rlz.weight for rlz in rlzs_assoc.realizations]
+    rlzs = dstore['csm_info'].get_realizations()
+    weights = [rlz.weight for rlz in rlzs]
     pgetter = getters.PmapGetter(dstore, weights)
     pmap = pgetter.get_mean(grp)
     return str(pmap)

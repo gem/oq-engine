@@ -82,15 +82,15 @@ class AtkinsonBoore2003SInter(GMPE):
 
     #: Required site parameters is Vs30, used to distinguish between NEHRP
     #: soil classes, see paragraph 'Functional Form', page 1706
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and focal depth, see equation
     #: 1, page 1706
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is closest distance to rupture, see equation
     #: 1, page 1706
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

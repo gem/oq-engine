@@ -65,13 +65,13 @@ class AmeriEtAl2017Rjb(GMPE):
     ])
 
     #: Required site parameter is only Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and rake (eq. 1).
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Required distance measure is Rjb (eq. 1).
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, adjustment_factor=1.0):
         super().__init__()
@@ -355,7 +355,7 @@ class AmeriEtAl2017RjbStressDrop(AmeriEtAl2017Rjb):
     Bull. Earthquake Eng., 15: 4681-4717.
     """
     #: Required rupture parameters are magnitude and rake (eq. 1).
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     def __init__(self, norm_stress_drop, adjustment_factor=1.0):
         super().__init__(adjustment_factor=adjustment_factor)
@@ -513,7 +513,7 @@ class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
     accounting for regional differences in the source stress parameter, 
     Bull. Earthquake Eng., 15: 4681-4717.
     """
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     def __init__(self, norm_stress_drop, adjustment_factor=1.0):
         super().__init__(adjustment_factor=adjustment_factor)

@@ -20,6 +20,10 @@ Test case for the Central and Eastern US (CEUS) models used in the 2019
 National Seismic Hazard Map. Tests generated from test tables adopted in USGS
 NSHMP software:
 https://github.com/usgs/nshmp-haz/tree/master/src/gov/usgs/earthquake/nshmp/gmm/tables
+
+An independent set of test tables to exercise the complete site amplification
+and aleatory uncertainty models is provided from the US NSHMP implementation
+courtesy of Eric Thompson (USGS)
 """
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 import openquake.hazardlib.gsim.usgs_ceus_2019 as ceus
@@ -73,7 +77,7 @@ class NGAEastUSGSCEUSUncertaintyPANELTestCase(BaseGSIMTestCase):
                    sigma_model="PANEL")
 
 
-# Site Amplification Test Cases
+# Site Amplification Epistemic Uncertainty Test Cases
 class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
@@ -82,34 +86,40 @@ class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_table="nga_east_PEER_EX.hdf5")
 
-    def test_plus1(self):
-        self.check("usgs_ceus_2019/NGAEAST_SITE_PLUS1EPSILON_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   site_epsilon=1.0, gmpe_table="nga_east_PEER_EX.hdf5")
 
-    def test_minus1(self):
-        self.check("usgs_ceus_2019/NGAEAST_SITE_MINUS1EPSILON_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   site_epsilon=-1.0, gmpe_table="nga_east_PEER_EX.hdf5")
-
-
-# Mean models Test Cases
-def maketest(alias, key):
-    def test(self):
+# USGS verification tests using independently generated test tables
+# Verification Test Cases - Means
+def make_mean_test(alias, key):
+    def test_mean(self):
         self.check(f"usgs_ceus_2019/{alias}_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP,
-                   gmpe_table=f"nga_east_{key}.hdf5")
-    test.__name__ = 'test_' + key
-    return test
+                   max_discrep_percentage=0.15,
+                   gmpe_table=f"nga_east_{key}.hdf5",
+                   epistemic_site=False)
+    test_mean.__name__ = 'test_mean' + key
+    return test_mean
+
+
+# Verification Test Cases - Stddevs
+def make_stddev_test(alias, key):
+    def test_stddev(self):
+        self.check(f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
+                   max_discrep_percentage=0.01,
+                   gmpe_table=f"nga_east_{key}.hdf5",
+                   epistemic_site=False)
+    test_stddev.__name__ = 'test_stddev' + key
+    return test_stddev
 
 
 def add_tests(cls):
     for line in ceus.lines:
+        if not line.startswith("NGAEastUSGSSammons"):
+            continue
         alias, key = line.split()
-        setattr(cls, 'test_' + key, maketest(alias, key))
+        setattr(cls, 'test_mean' + key, make_mean_test(alias, key))
+        setattr(cls, 'test_stddev' + key, make_stddev_test(alias, key))
     return cls
 
 
-@add_tests  # 38 tests
+@add_tests  # 34 tests
 class NGAEastUSGSTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSGMPE

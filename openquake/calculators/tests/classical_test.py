@@ -32,7 +32,7 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42, case_43, case_44, case_45)
+    case_42, case_43, case_44, case_45, case_46)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -257,43 +257,10 @@ hazard_uhs-std.csv
         arr = numpy.load(fname)['all']
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
-        # here is the size of assoc_by_grp for a complex logic tree
-        # grp_id gsim_idx rlzis
-        # 00 {0, 1}
-        # 01 {2, 3}
-        # 10 {0, 2}
-        # 11 {1, 3}
-        # 20 {4}
-        # 21 {5}
-        # 30 {6}
-        # 31 {7}
-        # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
-
-        # full source model logic tree
-        cinfo = self.calc.datastore['csm_info']
-        ra0 = cinfo.get_rlzs_assoc()
-        self.assertEqual(
-            sorted(ra0.by_grp()), ['grp-00', 'grp-01', 'grp-02', 'grp-03'])
-
-        # reduction of the source model logic tree
-        ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM2', 'a3b1'])
-        self.assertEqual(len(ra.by_grp()), 1)
-        numpy.testing.assert_equal(
-            len(ra.by_grp()['grp-02']),
-            len(ra0.by_grp()['grp-02']))
-
-        # more reduction of the source model logic tree
-        ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM1'])
-        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
-        numpy.testing.assert_equal(
-            ra.by_grp()['grp-00'], ra0.by_grp()['grp-00'])
-        numpy.testing.assert_equal(
-            ra.by_grp()['grp-01'], ra0.by_grp()['grp-01'])
-
-        # reduction of the gsim logic tree
-        ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
-        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
-        numpy.testing.assert_equal(ra.by_grp()['grp-00'], [[0, 1]])
+        # check deserialization of source_model_lt
+        smlt = self.calc.datastore['source_model_lt']
+        exp = str(list(smlt))
+        self.assertEqual('''[<Realization #0 source_model_1.xml, path=SM1, weight=0.5>, <Realization #1 source_model_2.xml, path=SM2_a3pt2b0pt8, weight=0.25>, <Realization #2 source_model_2.xml, path=SM2_a3b1, weight=0.25>]''', exp)
 
     def test_case_16(self):   # sampling
         self.assert_curves_ok(
@@ -352,7 +319,8 @@ hazard_uhs-std.csv
             'hazard_curve-mean_SA(0.15).csv',
         ], case_19.__file__, delta=1E-5)
 
-    def test_case_20(self):  # Source geometry enumeration
+    def test_case_20(self):
+        # Source geometry enumeration, apply_to_sources
         self.assert_curves_ok([
             'hazard_curve-smltp_sm1_sg1_cog1_char_complex-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg1_cog1_char_plane-gsimltp_Sad1997.csv',
@@ -367,8 +335,26 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_sm1_sg2_cog2_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
             case_20.__file__, delta=1E-7)
+        # there are 3 sources x 12 sm_rlzs
+        [sg] = self.calc.csm.src_groups  # 1 source group with 7 sources
+        self.assertEqual(len(sg), 7)
+        tbl = []
+        for src in sg:
+            tbl.append([src.source_id, src.checksum] + src.src_group_ids)
+        tbl.sort()
+        self.assertEqual(tbl,
+                         [['CHAR1', 1020111046, 2, 5, 8, 11],
+                          ['CHAR1', 1117683992, 0, 3, 6, 9],
+                          ['CHAR1', 1442321585, 1, 4, 7, 10],
+                          ['COMFLT1', 2221824602, 3, 4, 5, 9, 10, 11],
+                          ['COMFLT1', 3381942518, 0, 1, 2, 6, 7, 8],
+                          ['SFLT1', 4233779789, 6, 7, 8, 9, 10, 11],
+                          ['SFLT1', 4256912415, 0, 1, 2, 3, 4, 5]])
+        dupl = sum(len(src.src_group_ids) - 1 for src in sg)
+        self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
-    def test_case_21(self):  # Simple fault dip and MFD enumeration
+    def test_case_21(self):
+        # Simple fault dip and MFD enumeration
         self.assert_curves_ok([
             'hazard_curve-smltp_b1_mfd1_high_dip_dip30-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd1_high_dip_dip45-gsimltp_Sad1997.csv',
@@ -571,3 +557,7 @@ hazard_uhs-std.csv
     def test_case_45(self):
         # this is a test for MMI
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
+
+    def test_case_46(self):
+        # SMLT with applyToBranches
+        self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__)

@@ -88,8 +88,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.rupser = calc.RuptureSerializer(self.datastore)
 
     def init_logic_tree(self, csm_info):
-        self.trt_by_grp = csm_info.grp_by("trt")
-        self.rlzs_assoc = csm_info.get_rlzs_assoc()
+        self.trt_by_grp = csm_info.trt_by_grp
         self.rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
         self.samples_by_grp = csm_info.get_samples_by_grp()
         self.num_rlzs_by_grp = {
@@ -115,10 +114,10 @@ class EventBasedCalculator(base.HazardCalculator):
         :returns: an iterator over blocks of sources
         """
         if not hasattr(self, 'maxweight'):
-            trt_sources = self.csm.get_trt_sources()
-            self.maxweight = sum(sum(weight(s) for s in srcs)
-                                 for _, srcs, _ in trt_sources) / (
-                self.oqparam.concurrent_tasks or 1)
+            ct = self.oqparam.concurrent_tasks or 1
+            self.maxweight = sum(sum(weight(s) for s in sg)
+                                 for sm in self.csm.sm_rlzs
+                                 for sg in sm.src_groups) / ct
             if self.maxweight < source.MINWEIGHT:
                 self.maxweight = source.MINWEIGHT
                 logging.info('Using minweight=%d', source.MINWEIGHT)
@@ -133,11 +132,11 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsims_by_trt = self.csm.info.get_gsims_by_trt()
         logging.info('Building ruptures')
-        eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
+        eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         ses_idx = 0
         allargs = []
-        for sm_id, sm in enumerate(self.csm.source_models):
+        for sm_id, sm in enumerate(self.csm.sm_rlzs):
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
                 if not sg.sources:
@@ -179,18 +178,11 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('store source_info'):
             self.store_source_info(calc_times)
         logging.info('Reordering the ruptures and storing the events')
-        attrs = self.datastore.getitem('ruptures').attrs
         sorted_ruptures = self.datastore.getitem('ruptures')[()]
         # order the ruptures by rup_id
         sorted_ruptures.sort(order='serial')
-        ngroups = len(self.csm.info.trt_by_grp)
-        grp_indices = numpy.zeros((ngroups, 2), U32)
-        grp_ids = sorted_ruptures['grp_id']
-        for grp_id, [startstop] in get_indices(grp_ids).items():
-            grp_indices[grp_id] = startstop
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore['ruptures']['id'] = numpy.arange(len(sorted_ruptures))
-        self.datastore.set_attrs('ruptures', grp_indices=grp_indices, **attrs)
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 
@@ -385,7 +377,7 @@ class EventBasedCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
-            rlzs = self.rlzs_assoc.realizations
+            rlzs = self.datastore['csm_info'].get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
