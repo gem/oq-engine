@@ -156,6 +156,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     :yields:
         dictionaries with keys rup_array, calc_times, eff_ruptures
     """
+    assert sources.cluster
     eb_ruptures = []
     numpy.random.seed(sources[0].serial)
     [grp_id] = set(src.src_group_id for src in sources)
@@ -177,11 +178,11 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     # * The group is a cluster. In this case we choose one rupture per each
     #   source; uncertainty in the ruptures can be handled in this case
     #   using mutually exclusive ruptures (note that this is admitted
-    #   only for nons-parametric sources).
+    #   only for non-parametric sources).
     # * The group contains mutually exclusive sources. In this case we
     #   choose one source and then one rupture from this source.
     rup_counter = AccumDict(accum={})  # src_id ->rup_idx -> number
-    rup_data = {}
+    rup_data = {}  # src_id, rup_idx -> [rup, src.id, grp_id]
     for rlz_num in range(grp_num_occ):
         for src, _sites in srcfilter(sources):
             t0 = time.time()
