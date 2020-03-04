@@ -146,7 +146,7 @@ Ruptures in TOML format
 -------------------------------------------
 
 Since engine v3.8 there is a way to serialize ruptures in
-[TOML](https://github.com/toml-lang/toml format). The command to give is::
+TOML_ format. The command to give is::
   
   $ oq extract rupture/<rup_id> <calc_id>`
 
@@ -162,3 +162,5 @@ calculations starting from that rupture by simply setting
 
 in the `job.ini` file. There is an example in the test
 `openquake.qa_tests_data.event_based.case_15`.
+
+.. _TOML: https://github.com/toml-lang/toml
