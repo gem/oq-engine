@@ -252,27 +252,26 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         # AccumDict of arrays with 2 elements weight, calc_time
         calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         for src, _sites in srcfilter(sources):
-            for grp_id in src.src_group_ids:
-                eff_ruptures += 1
-                t0 = time.time()
-                if len(eb_ruptures) > MAX_RUPTURES:
-                    # yield partial result to avoid running out of memory
-                    yield AccumDict(rup_array=get_rup_array(eb_ruptures,
-                                                            srcfilter),
-                                    calc_times={}, eff_ruptures={})
-                    eb_ruptures.clear()
-                samples = getattr(src, 'samples', 1)
-                n_occ = 0
-                for rup, n_occ in src.sample_ruptures(samples * num_ses):
-                    ebr = EBRupture(rup, src.id, grp_id, n_occ, samples)
-                    eb_ruptures.append(ebr)
-                    n_occ += ebr.n_occ
-                dt = time.time() - t0
-                try:
-                    n_sites = len(_sites)
-                except (TypeError, ValueError):  # for None or a closed dataset
-                    n_sites = 0
-                calc_times[src.id] += numpy.array([n_occ, n_sites, dt])
+            eff_ruptures += 1
+            t0 = time.time()
+            if len(eb_ruptures) > MAX_RUPTURES:
+                # yield partial result to avoid running out of memory
+                yield AccumDict(rup_array=get_rup_array(eb_ruptures,
+                                                        srcfilter),
+                                calc_times={}, eff_ruptures={})
+                eb_ruptures.clear()
+            samples = getattr(src, 'samples', 1)
+            n_occ = 0
+            for rup, grp_id, n_occ in src.sample_ruptures(samples * num_ses):
+                ebr = EBRupture(rup, src.id, grp_id, n_occ, samples)
+                eb_ruptures.append(ebr)
+                n_occ += ebr.n_occ
+            dt = time.time() - t0
+            try:
+                n_sites = len(_sites)
+            except (TypeError, ValueError):  # for None or a closed dataset
+                n_sites = 0
+            calc_times[src.id] += numpy.array([n_occ, n_sites, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(rup_array=rup_array, calc_times=calc_times,
                         eff_ruptures={trt: eff_ruptures})

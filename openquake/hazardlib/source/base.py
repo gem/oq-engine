@@ -111,10 +111,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         rup_id = self.serial
         numpy.random.seed(self.serial)
-        for rup, num_occ in self._sample_ruptures(eff_num_ses):
-            rup.rup_id = rup_id
-            rup_id += 1
-            yield rup, num_occ
+        for grp_id in self.src_group_ids:
+            for rup, num_occ in self._sample_ruptures(eff_num_ses):
+                rup.rup_id = rup_id
+                rup_id += 1
+                yield rup, grp_id, num_occ
 
     def _sample_ruptures(self, eff_num_ses):
         tom = getattr(self, 'temporal_occurrence_model', None)
