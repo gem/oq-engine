@@ -109,6 +109,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :param eff_num_ses: number of stochastic event sets * number of samples
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
+        numpy.random.seed(self.serial)
         tom = getattr(self, 'temporal_occurrence_model', None)
         rupids = numpy.arange(self.serial, self.serial + self.num_ruptures)
         if tom:  # time-independent source
@@ -149,7 +150,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if not hasattr(self, 'nodal_plane_distribution'):  # fault
             ruptures = list(self.iter_ruptures())
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
-            numpy.random.seed(self.serial)
             occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
             for rup, rup_id, num_occ in zip(ruptures, rupids, occurs):
                 if num_occ:
@@ -170,7 +170,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                         rup_args.append(args)
                         rates.append(mag_occ_rate * np_prob * hc_prob)
         eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
-        numpy.random.seed(self.serial)
         occurs = numpy.random.poisson(eff_rates)
         for num_occ, args, rate, ser in zip(occurs, rup_args, rates, rupids):
             if num_occ:
