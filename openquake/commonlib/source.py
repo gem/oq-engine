@@ -369,7 +369,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                     src.src_group_id = [s.src_group_id for s in srcs]
                 lst.append(src)
             dic[trt] = sourceconverter.SourceGroup(trt, lst)
-        self.src_groups = atomic + list(dic.values())
+        self.src_groups = list(dic.values()) + atomic
         if event_based:
             serial = ses_seed
             for sg in self.src_groups:
