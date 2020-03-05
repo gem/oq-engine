@@ -136,26 +136,25 @@ class EventBasedCalculator(base.HazardCalculator):
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         ses_idx = 0
         allargs = []
-        for sm_id, sm in enumerate(self.csm.sm_rlzs):
-            logging.info('Sending %s', sm)
-            for sg in sm.src_groups:
-                if not sg.sources:
-                    continue
-                par = self.param.copy()
-                par['gsims'] = gsims_by_trt[sg.trt]
-                if sg.atomic:  # do not split the group
-                    allargs.append((sg, srcfilter, par))
-                else:  # traditional groups
-                    for block in self.block_splitter(sg.sources, key=by_grp):
-                        if 'ucerf' in oq.calculation_mode:
-                            for i in range(oq.ses_per_logic_tree_path):
-                                par = par.copy()  # avoid mutating the dict
-                                par['ses_seeds'] = [
-                                    (ses_idx, oq.ses_seed + i + 1)]
-                                allargs.append((block, srcfilter, par))
-                                ses_idx += 1
-                        else:
+        for sg in self.csm.src_groups:
+            logging.info('Sending %s', sg)
+            if not sg.sources:
+                continue
+            par = self.param.copy()
+            par['gsims'] = gsims_by_trt[sg.trt]
+            if sg.atomic:  # do not split the group
+                allargs.append((sg, srcfilter, par))
+            else:  # traditional groups
+                for block in self.block_splitter(sg.sources, key=by_grp):
+                    if 'ucerf' in oq.calculation_mode:
+                        for i in range(oq.ses_per_logic_tree_path):
+                            par = par.copy()  # avoid mutating the dict
+                            par['ses_seeds'] = [
+                                (ses_idx, oq.ses_seed + i + 1)]
                             allargs.append((block, srcfilter, par))
+                            ses_idx += 1
+                    else:
+                        allargs.append((block, srcfilter, par))
         smap = parallel.Starmap(
             self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
