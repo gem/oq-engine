@@ -37,7 +37,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 
 
-def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
+def generate_event_set(ucerf, background_sids, ses_idx, seed):
     """
     Generates the event set corresponding to a particular branch
     """
@@ -53,7 +53,7 @@ def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
         ruptures = []
         rupture_occ = []
         for iloc, n_occ in zip(indices, occurrences[indices]):
-            ucerf_rup = ucerf.get_ucerf_rupture(iloc, src_filter)
+            ucerf_rup = ucerf.get_ucerf_rupture(iloc)
             if ucerf_rup:
                 ucerf_rup.rup_id = rup_id
                 rup_id += 1
@@ -149,7 +149,8 @@ def build_ruptures(sources, src_filter, param, monitor):
     res.calc_times = []
     sampl_mon = monitor('sampling ruptures', measuremem=True)
     res.trt = DEFAULT_TRT
-    background_sids = src.get_background_sids(src_filter)
+    src.src_filter = src_filter
+    background_sids = src.get_background_sids()
     samples = getattr(src, 'samples', 1)
     n_occ = AccumDict(accum=0)
     t0 = time.time()
@@ -158,7 +159,7 @@ def build_ruptures(sources, src_filter, param, monitor):
             for ses_idx, ses_seed in param['ses_seeds']:
                 seed = sam_idx * TWO16 + ses_seed
                 rups, occs = generate_event_set(
-                    src, background_sids, src_filter, ses_idx, seed)
+                    src, background_sids, ses_idx, seed)
                 for rup, occ in zip(rups, occs):
                     n_occ[rup] += occ
     tot_occ = sum(n_occ.values())

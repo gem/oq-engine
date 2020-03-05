@@ -311,18 +311,18 @@ class UCERFSource(BaseSeismicSource):
         a2 = angular_distance(maxdist, bbox[1], bbox[3])
         return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
-    def get_background_sids(self, src_filter):
+    def get_background_sids(self):
         """
         We can apply the filtering of the background sites as a pre-processing
         step - this is done here rather than in the sampling of the ruptures
         themselves
         """
         branch_key = self.idx_set["grid_key"]
-        idist = src_filter.integration_distance(DEFAULT_TRT)
+        idist = self.src_filter.integration_distance(DEFAULT_TRT)
         with h5py.File(self.source_file, 'r') as hdf5:
             bg_locations = hdf5["Grid/Locations"][()]
             distances = min_geodetic_distance(
-                src_filter.sitecol.xyz,
+                self.src_filter.sitecol.xyz,
                 (bg_locations[:, 0], bg_locations[:, 1]))
             # Add buffer equal to half of length of median area from Mmax
             mmax_areas = self.msr.get_median_area(
@@ -333,18 +333,16 @@ class UCERFSource(BaseSeismicSource):
             # get list of indices from array of booleans
             return numpy.where(ok)[0].tolist()
 
-    def get_ucerf_rupture(self, iloc, src_filter):
+    def get_ucerf_rupture(self, iloc):
         """
         :param iloc:
             Location of the rupture plane in the hdf5 file
-        :param src_filter:
-            Sites for consideration and maximum distance
         """
         trt = self.tectonic_region_type
         ridx = self.get_ridx(iloc)
         mag = self.orig.mags[iloc]
         surface_set = []
-        indices = src_filter.get_indices(self, ridx, mag)
+        indices = self.src_filter.get_indices(self, ridx, mag)
         if len(indices) == 0:
             return None
         for trace, plane in self.gen_trace_planes(ridx):
@@ -380,7 +378,7 @@ class UCERFSource(BaseSeismicSource):
         assert self.orig, '%s is not fully initialized' % self
         for ridx in range(self.start, self.stop):
             if self.orig.rate[ridx]:  # ruptures may have have zero rate
-                rup = self.get_ucerf_rupture(ridx, self.src_filter)
+                rup = self.get_ucerf_rupture(ridx)
                 if rup:
                     yield rup
 
@@ -401,16 +399,14 @@ class UCERFSource(BaseSeismicSource):
         return '<%s %s[%d:%d]>' % (self.__class__.__name__, self.source_id,
                                    self.start, self.stop)
 
-    def get_background_sources(self, src_filter, sample_factor=None):
+    def get_background_sources(self, sample_factor=None):
         """
         Turn the background model of a given branch into a set of point sources
 
-        :param src_filter:
-            SourceFilter instance
         :param sample_factor:
             Used to reduce the sources if OQ_SAMPLE_SOURCES is set
         """
-        background_sids = self.get_background_sids(src_filter)
+        background_sids = self.get_background_sids()
         if sample_factor is not None:  # hack for use in the mosaic
             background_sids = random_filter(
                 background_sids, sample_factor, seed=42)
