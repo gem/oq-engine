@@ -78,7 +78,7 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
     accept_precalc = ['event_based', 'ebrisk', 'event_based_risk',
-                      'ucerf_hazard']
+                      'ucerf_event_based']
     build_ruptures = sample_ruptures
 
     def init(self):
