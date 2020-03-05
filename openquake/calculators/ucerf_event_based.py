@@ -37,14 +37,15 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 
 
-def generate_event_set(ucerf, background_sids, ses_idx, seed):
+def generate_event_set(ucerf, background_sids, n_ses):
     """
     Generates the event set corresponding to a particular branch
     """
-    rup_id = seed + ses_idx * TWO16
+    rup_id = ucerf.serial
     # get rates from file
     with h5py.File(ucerf.source_file, 'r') as hdf5:
-        occurrences = ucerf.tom.sample_number_of_occurrences(ucerf.rate, seed)
+        occurrences = ucerf.tom.sample_number_of_occurrences(
+            ucerf.rate * n_ses, ucerf.serial)
         indices, = numpy.where(occurrences)
         logging.debug(
             'Considering "%s", %d ruptures', ucerf.source_id, len(indices))
@@ -62,7 +63,7 @@ def generate_event_set(ucerf, background_sids, ses_idx, seed):
 
         # sample background sources
         background_ruptures, background_n_occ = sample_background_model(
-            hdf5, ucerf.idx_set["grid_key"], ucerf.tom, seed,
+            hdf5, ucerf.idx_set["grid_key"], ucerf.tom, n_ses, ucerf.serial,
             background_sids, ucerf.min_mag, ucerf.npd, ucerf.hdd, ucerf.usd,
             ucerf.lsd, ucerf.msr, ucerf.aspect, ucerf.tectonic_region_type)
         for i, brup in enumerate(background_ruptures):
@@ -70,13 +71,11 @@ def generate_event_set(ucerf, background_sids, ses_idx, seed):
             rup_id += 1
             ruptures.append(brup)
         rupture_occ.extend(background_n_occ)
-
-    assert len(ruptures) < TWO16, len(ruptures)  # < 2^16 ruptures per SES
     return ruptures, rupture_occ
 
 
 def sample_background_model(
-        hdf5, branch_key, tom, seed, filter_idx, min_mag, npd, hdd,
+        hdf5, branch_key, tom, n_ses, seed, filter_idx, min_mag, npd, hdd,
         upper_seismogenic_depth, lower_seismogenic_depth, msr=WC1994(),
         aspect=1.5, trt=DEFAULT_TRT):
     """
@@ -118,7 +117,7 @@ def sample_background_model(
     rates = rates[:, mag_idx]
     valid_locs = hdf5["Grid/Locations"][filter_idx, :]
     # Sample remaining rates
-    sampler = tom.sample_number_of_occurrences(rates, seed)
+    sampler = tom.sample_number_of_occurrences(rates * n_ses, seed)
     background_ruptures = []
     background_n_occ = []
     for i, mag in enumerate(mags):
@@ -154,14 +153,12 @@ def build_ruptures(sources, src_filter, param, monitor):
     samples = getattr(src, 'samples', 1)
     n_occ = AccumDict(accum=0)
     t0 = time.time()
+    n_ses = param['ses_per_logic_tree_path']
     with sampl_mon:
         for sam_idx in range(samples):
-            for ses_idx, ses_seed in param['ses_seeds']:
-                seed = sam_idx * TWO16 + ses_seed
-                rups, occs = generate_event_set(
-                    src, background_sids, ses_idx, seed)
-                for rup, occ in zip(rups, occs):
-                    n_occ[rup] += occ
+            rups, occs = generate_event_set(src, background_sids, n_ses)
+            for rup, occ in zip(rups, occs):
+                n_occ[rup] += occ
     tot_occ = sum(n_occ.values())
     dic = {'eff_ruptures': {DEFAULT_TRT: src.num_ruptures}}
     eb_ruptures = [EBRupture(rup, src.id, src.src_group_id, n, samples)
