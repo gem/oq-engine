@@ -155,10 +155,9 @@ def build_ruptures(sources, src_filter, param, monitor):
     t0 = time.time()
     n_ses = param['ses_per_logic_tree_path']
     with sampl_mon:
-        for sam_idx in range(samples):
-            rups, occs = generate_event_set(src, background_sids, n_ses)
-            for rup, occ in zip(rups, occs):
-                n_occ[rup] += occ
+        rups, occs = generate_event_set(src, background_sids, n_ses * samples)
+        for rup, occ in zip(rups, occs):
+            n_occ[rup] += occ
     tot_occ = sum(n_occ.values())
     dic = {'eff_ruptures': {DEFAULT_TRT: src.num_ruptures}}
     eb_ruptures = [EBRupture(rup, src.id, src.src_group_id, n, samples)
