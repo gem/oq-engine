@@ -44,7 +44,7 @@ class UcerfTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
-        # check ucerf_event_based and event_based produces the same GMFs
+        # check they produce the same GMFs
         gmv_eb = view('global_gmfs', self.calc.datastore)
         self.assertEqual(gmv_uc, gmv_eb)
 
