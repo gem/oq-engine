@@ -109,22 +109,26 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :param eff_num_ses: number of stochastic event sets * number of samples
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
+        rup_id = self.serial
         numpy.random.seed(self.serial)
+        for rup, num_occ in self._sample_ruptures(eff_num_ses):
+            rup.rup_id = rup_id
+            rup_id += 1
+            yield rup, num_occ
+
+    def _sample_ruptures(self, eff_num_ses):
         tom = getattr(self, 'temporal_occurrence_model', None)
-        rupids = numpy.arange(self.serial, self.serial + self.num_ruptures)
         if tom:  # time-independent source
-            yield from self.sample_ruptures_poissonian(rupids, eff_num_ses)
+            yield from self.sample_ruptures_poissonian(eff_num_ses)
         else:  # time-dependent source
             mutex_weight = getattr(self, 'mutex_weight', 1)
-            for rup, rup_id in zip(self.iter_ruptures(), rupids):
-                numpy.random.seed(rup_id)
+            for rup in self.iter_ruptures():
                 occurs = rup.sample_number_of_occurrences(eff_num_ses)
                 if mutex_weight < 1:
                     # consider only the occurrencies below the mutex_weight
                     occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
                 num_occ = occurs.sum()
                 if num_occ:
-                    rup.rup_id = rup_id  # used as seed
                     yield rup, num_occ
 
     def get_mags(self):
@@ -141,7 +145,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                     mags.add(rup.mag)
         return sorted(mags)
 
-    def sample_ruptures_poissonian(self, rupids, eff_num_ses):
+    def sample_ruptures_poissonian(self, eff_num_ses):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples
         :yields: pairs (rupture, num_occurrences[num_samples])
@@ -151,9 +155,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             ruptures = list(self.iter_ruptures())
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
             occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
-            for rup, rup_id, num_occ in zip(ruptures, rupids, occurs):
+            for rup, num_occ in zip(ruptures, occurs):
                 if num_occ:
-                    rup.rup_id = rup_id  # used as seed
                     yield rup, num_occ
             return
         # else (multi)point sources and area sources
@@ -171,7 +174,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                         rates.append(mag_occ_rate * np_prob * hc_prob)
         eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
         occurs = numpy.random.poisson(eff_rates)
-        for num_occ, args, rate, ser in zip(occurs, rup_args, rates, rupids):
+        for num_occ, args, rate in zip(occurs, rup_args, rates):
             if num_occ:
                 mag_occ_rate, np_prob, hc_prob, mag, np, hc_depth, src = args
                 hc = Point(latitude=src.location.latitude,
@@ -181,7 +184,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)
-                rup.rup_id = ser  # used as seed
                 yield rup, num_occ
 
     @abc.abstractmethod
