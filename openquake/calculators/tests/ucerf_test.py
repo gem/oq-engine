@@ -30,11 +30,10 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job.ini')
         gmv_uc = view('global_gmfs', self.calc.datastore)
         # check the distribution of the events
-        self.assertEventsByRlz([2, 2, 2, 2, 6, 6, 2, 2, 2, 2, 6, 6, 2, 2, 3,
-                                3, 6, 6, 1, 1, 1, 1, 6, 6, 2, 2, 3, 3, 2, 2,
-                                2, 2, 3, 3, 2, 2, 3, 3, 3, 3, 2, 2, 3, 3,
-                                3, 3, 3, 3])
-
+        self.assertEventsByRlz(
+            [1, 1, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 1, 1, 3, 3,
+             2, 2, 0, 0, 0, 0, 2, 2, 0, 0, 1, 1, 0, 0, 0, 0,
+             1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1])
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-5)
 
