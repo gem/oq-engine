@@ -471,8 +471,7 @@ class UCERFSource(BaseSeismicSource):
                 self.serial, background_sids, self.min_mag, self.npd,
                 self.hdd, self.usd, self.lsd, self.msr, self.aspect,
                 self.tectonic_region_type)
-            for i, brup in enumerate(background_ruptures):
-                ruptures.append(brup)
+            ruptures.extend(background_ruptures)
             rupture_occ.extend(background_n_occ)
         return ruptures, rupture_occ
 

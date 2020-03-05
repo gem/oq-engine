@@ -68,7 +68,7 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
 
 
-@base.calculators.add('event_based')
+@base.calculators.add('event_based', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
@@ -77,8 +77,7 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
-    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk',
-                      'ucerf_event_based']
+    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
     build_ruptures = sample_ruptures
 
     def init(self):

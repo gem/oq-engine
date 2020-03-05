@@ -666,6 +666,12 @@ class OqParam(valid.ParamSet):
                 'event_based_risk ebrisk event_based_damage ucerf_event_based '
                 'ucerf_hazard')
 
+    def is_ucerf(self):
+        """
+        :returns: True for UCERF calculations, False otherwise
+        """
+        return 'source_model' in self.inputs
+
     def is_valid_shakemap(self):
         """
         hazard_calculation_id must be set if shakemap_id is set
