@@ -43,7 +43,6 @@ def build_ruptures(sources, src_filter, param, monitor):
     [src] = sources
     res = AccumDict()
     res.calc_times = []
-    sampl_mon = monitor('sampling ruptures', measuremem=True)
     res.trt = DEFAULT_TRT
     src.src_filter = src_filter
     background_sids = src.get_background_sids()
@@ -51,10 +50,9 @@ def build_ruptures(sources, src_filter, param, monitor):
     n_occ = AccumDict(accum=0)
     t0 = time.time()
     eff_num_ses = param['ses_per_logic_tree_path'] * samples
-    with sampl_mon:
-        rups, occs = src.generate_event_set(background_sids, eff_num_ses)
-        for rup, occ in zip(rups, occs):
-            n_occ[rup] += occ
+    rups, occs = src.generate_event_set(background_sids, eff_num_ses)
+    for rup, occ in zip(rups, occs):
+        n_occ[rup] += occ
     tot_occ = sum(n_occ.values())
     dic = {'eff_ruptures': {DEFAULT_TRT: src.num_ruptures}}
     eb_ruptures = [EBRupture(rup, src.id, src.src_group_id, n, samples)
