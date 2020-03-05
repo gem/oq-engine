@@ -370,12 +370,13 @@ class CompositeSourceModel(collections.abc.Sequence):
                 lst.append(src)
             dic[trt] = sourceconverter.SourceGroup(trt, lst)
         self.src_groups = list(dic.values()) + atomic
-        if event_based:
+
+        if event_based:  # init serials
             serial = ses_seed
             for sg in self.src_groups:
-                for src in sg.sources:
+                for src in sg:
                     src.serial = serial
-                    serial += src.num_ruptures
+                    serial += src.num_ruptures * len(src.src_group_ids)
 
     # used only by UCERF
     def new(self, sources_by_grp):

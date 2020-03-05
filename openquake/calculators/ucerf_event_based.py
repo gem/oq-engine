@@ -162,7 +162,7 @@ def build_ruptures(sources, src_filter, param, monitor):
                 for rup, occ in zip(rups, occs):
                     n_occ[rup] += occ
     tot_occ = sum(n_occ.values())
-    dic = {'eff_ruptures': {src.src_group_id: src.num_ruptures}}
+    dic = {'eff_ruptures': {DEFAULT_TRT: src.num_ruptures}}
     eb_ruptures = [EBRupture(rup, src.id, src.src_group_id, n, samples)
                    for rup, n in n_occ.items()]
     dic['rup_array'] = stochastic.get_rup_array(eb_ruptures, src_filter)

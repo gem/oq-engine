@@ -116,8 +116,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if not hasattr(self, 'maxweight'):
             ct = self.oqparam.concurrent_tasks or 1
             self.maxweight = sum(sum(weight(s) for s in sg)
-                                 for sm in self.csm.sm_rlzs
-                                 for sg in sm.src_groups) / ct
+                                 for sg in self.csm.src_groups) / ct
             if self.maxweight < source.MINWEIGHT:
                 self.maxweight = source.MINWEIGHT
                 logging.info('Using minweight=%d', source.MINWEIGHT)
