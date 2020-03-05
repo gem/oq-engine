@@ -378,30 +378,6 @@ class CompositeSourceModel(collections.abc.Sequence):
                 dic[trt] = sourceconverter.SourceGroup(trt, lst)
             self.src_groups = atomic + list(dic.values())
 
-    # used only by UCERF
-    def new(self, sources_by_grp):
-        """
-        Generate a new CompositeSourceModel from the given dictionary.
-
-        :param sources_by_group: a dictionary grp_id -> sources
-        :returns: a new CompositeSourceModel instance
-        """
-        source_models = []
-        for sm in self.sm_rlzs:
-            src_groups = []
-            for src_group in sm.src_groups:
-                sg = copy.copy(src_group)
-                sg.sources = sorted(sources_by_grp.get(sg.id, []),
-                                    key=operator.attrgetter('id'))
-                src_groups.append(sg)
-            newsm = logictree.Realization(
-                sm.value, sm.weight, sm.ordinal,
-                sm.lt_path, sm.samples, sm.offset)
-            newsm.src_groups = src_groups
-            source_models.append(newsm)
-        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
-        return new
-
     def get_nonparametric_sources(self):
         """
         :returns: list of non parametric sources in the composite source model
