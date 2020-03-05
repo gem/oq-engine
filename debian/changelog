@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the `calculation_mode` from `ucerf_hazard` to `ucerf_event_based`
+    (but the old name still works)
   * Fixed the ShakeMap code to use the formula for the median and not the mean
   * Added a check on excessive data transfer in disaggregation calculations
   * Changed back the disaggregation calculator to read the rupture data from

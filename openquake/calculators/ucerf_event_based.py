@@ -172,13 +172,14 @@ def build_ruptures(sources, src_filter, param, monitor):
     return dic
 
 
-@base.calculators.add('ucerf_hazard')
+# NB: the old name ucerf_hazard is kept for backward compatibility
+@base.calculators.add('ucerf_event_based', 'ucerf_hazard')
 class UCERFHazardCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating the ruptures and GMFs together
     """
     build_ruptures = build_ruptures
-    accept_precalc = ['ucerf_hazard']
+    accept_precalc = ['ucerf_event_based']
 
     def pre_execute(self):
         """

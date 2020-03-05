@@ -176,7 +176,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     core_task = ebrisk
     is_stochastic = True
     precalc = 'event_based'
-    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
+    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_event_based']
 
     def pre_execute(self):
         oq = self.oqparam
