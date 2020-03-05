@@ -96,7 +96,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     for ``gsims``, which is a list of GSIM instances.
 
     :returns:
-        a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
+        a dictionary with keys pmap, calc_times, rup_data, extra
     """
     if not hasattr(src_filter, 'sitecol'):  # do not filter
         src_filter = SourceFilter(src_filter, {})
@@ -121,6 +121,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap, rup_data, calc_times, extra = cmaker.get_pmap_by_grp(
         src_filter, group)
     extra['task_no'] = getattr(monitor, 'task_no', 0)
+    extra['trt'] = trt
 
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
