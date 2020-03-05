@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the seed algorithm in all event based calculators including UCERF
   * Changed the `calculation_mode` from `ucerf_hazard` to `ucerf_event_based`
     (but the old name still works)
   * Fixed the ShakeMap code to use the formula for the median and not the mean
