@@ -663,7 +663,7 @@ class OqParam(valid.ParamSet):
         The calculation mode is event_based, event_based_risk or ebrisk
         """
         return (self.calculation_mode in
-                'event_based_risk ebrisk event_based_damage')
+                'event_based_risk ebrisk event_based_damage ucerf_event_based')
 
     def is_valid_shakemap(self):
         """
