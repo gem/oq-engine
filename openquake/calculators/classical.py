@@ -155,7 +155,8 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
-                extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures))
+                extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures,
+                           trt=src.tectonic_region_type))
 
 
 @base.calculators.add('classical')
@@ -179,6 +180,7 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError('You ran out of memory!')
         if not dic['pmap']:
             return acc
+        trt = dic['extra'].pop('trt')
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
@@ -197,7 +199,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
-                acc.eff_ruptures[grp_id] += eff_rups
+                acc.eff_ruptures[trt] += eff_rups
 
             rup_data = dic['rup_data']
             nr = len(rup_data['grp_id'])
@@ -238,7 +240,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 for dparam in cm.REQUIRES_DISTANCES:
                     rparams.add(dparam + '_')
                 zd[grp_id] = ProbabilityMap(num_levels, len(gsims))
-        zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
+        zd.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
         self.rparams = sorted(rparams)
         for k in self.rparams:
             # variable length arrays
