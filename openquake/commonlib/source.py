@@ -370,7 +370,6 @@ class CompositeSourceModel(collections.abc.Sequence):
                 lst.append(src)
             dic[trt] = sourceconverter.SourceGroup(trt, lst)
         self.src_groups = list(dic.values()) + atomic
-
         if event_based:  # init serials
             serial = ses_seed
             for sg in self.src_groups:
@@ -382,8 +381,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         """
         :returns: list of non parametric sources in the composite source model
         """
-        return [src for sm in self.sm_rlzs
-                for src_group in sm.src_groups
+        return [src for src_group in self.src_groups
                 for src in src_group if hasattr(src, 'data')]
 
     def get_sources(self, kind='all'):
