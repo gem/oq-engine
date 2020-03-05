@@ -2,10 +2,10 @@
 return_period kind  policy taxonomy value  
 30            rlz-0 A      RC       NaN    
 30            rlz-1 A      RC       NaN    
-240           rlz-0 A      RC       0.04934
-240           rlz-1 A      RC       0.04420
-480           rlz-0 A      RC       0.10733
-480           rlz-1 A      RC       0.08257
-960           rlz-0 A      RC       0.11500
-960           rlz-1 A      RC       0.10269
+240           rlz-0 A      RC       0.04702
+240           rlz-1 A      RC       0.04349
+480           rlz-0 A      RC       0.46177
+480           rlz-1 A      RC       0.25790
+960           rlz-0 A      RC       0.55673
+960           rlz-1 A      RC       0.54340
 ============= ===== ====== ======== =======

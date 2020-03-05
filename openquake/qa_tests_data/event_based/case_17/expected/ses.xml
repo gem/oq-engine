@@ -11,19 +11,14 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="active shallow crust"
         >
             <singlePlaneRupture
-            id="149"
+            id="0"
             multiplicity="2"
             >
                 <stochasticEventSets>
                     <SES
                     id="2"
                     >
-                        0
-                    </SES>
-                    <SES
-                    id="1"
-                    >
-                        1
+                        0 1
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -47,17 +42,17 @@ xmlns:gml="http://www.opengis.net/gml"
                 </planarSurface>
             </singlePlaneRupture>
             <singlePlaneRupture
-            id="150"
+            id="1"
             multiplicity="2"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1"
+                    id="3"
                     >
                         0
                     </SES>
                     <SES
-                    id="3"
+                    id="2"
                     >
                         1
                     </SES>
@@ -83,17 +78,17 @@ xmlns:gml="http://www.opengis.net/gml"
                 </planarSurface>
             </singlePlaneRupture>
             <singlePlaneRupture
-            id="151"
+            id="2"
             multiplicity="3"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1"
+                    id="3"
                     >
                         0
                     </SES>
                     <SES
-                    id="3"
+                    id="1"
                     >
                         1
                     </SES>
