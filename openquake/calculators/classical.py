@@ -155,7 +155,8 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
-                extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures))
+                extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures,
+                           trt=src.tectonic_region_type))
 
 
 @base.calculators.add('classical')
