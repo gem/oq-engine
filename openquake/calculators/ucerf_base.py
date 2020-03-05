@@ -23,7 +23,7 @@ from datetime import datetime
 import numpy
 import h5py
 
-from openquake.baselib.general import random_filter
+from openquake.baselib.general import random_filter, AccumDict
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
@@ -448,7 +448,6 @@ class UCERFSource(BaseSeismicSource):
         """
         Generates the event set corresponding to a particular branch
         """
-        rup_id = self.serial
         # get rates from file
         with h5py.File(self.source_file, 'r') as hdf5:
             occurrences = self.tom.sample_number_of_occurrences(
@@ -463,8 +462,6 @@ class UCERFSource(BaseSeismicSource):
             for iloc, n_occ in zip(indices, occurrences[indices]):
                 ucerf_rup = self.get_ucerf_rupture(iloc)
                 if ucerf_rup:
-                    ucerf_rup.rup_id = rup_id
-                    rup_id += 1
                     ruptures.append(ucerf_rup)
                     rupture_occ.append(n_occ)
 
@@ -475,11 +472,17 @@ class UCERFSource(BaseSeismicSource):
                 self.hdd, self.usd, self.lsd, self.msr, self.aspect,
                 self.tectonic_region_type)
             for i, brup in enumerate(background_ruptures):
-                brup.rup_id = rup_id
-                rup_id += 1
                 ruptures.append(brup)
             rupture_occ.extend(background_n_occ)
         return ruptures, rupture_occ
+
+    def _sample_ruptures(self, eff_num_ses):
+        background_sids = self.get_background_sids()
+        n_occ = AccumDict(accum=0)
+        rups, occs = self.generate_event_set(background_sids, eff_num_ses)
+        for rup, occ in zip(rups, occs):
+            n_occ[rup] += occ
+        yield from n_occ.items()
 
 
 def sample_background_model(
