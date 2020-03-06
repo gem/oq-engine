@@ -116,8 +116,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if not hasattr(self, 'maxweight'):
             ct = self.oqparam.concurrent_tasks or 1
             self.maxweight = sum(sum(weight(s) for s in sg)
-                                 for sm in self.csm.sm_rlzs
-                                 for sg in sm.src_groups) / ct
+                                 for sg in self.csm.src_groups) / ct
             if self.maxweight < source.MINWEIGHT:
                 self.maxweight = source.MINWEIGHT
                 logging.info('Using minweight=%d', source.MINWEIGHT)
@@ -136,17 +135,16 @@ class EventBasedCalculator(base.HazardCalculator):
         allargs = []
         if self.oqparam.is_ucerf():
             # manage the filtering in a special way
-            for src in self.csm.get_sources():
-                src.src_filter = srcfilter
+            for sg in self.csm.src_groups:
+                for src in sg:
+                    src.src_filter = srcfilter
             srcfilter = nofilter  # otherwise it would be ultra-slow
-        for sm_id, sm in enumerate(self.csm.sm_rlzs):
-            logging.info('Sending %s', sm)
-            for sg in sm.src_groups:
-                if not sg.sources:
-                    continue
-                par = self.param.copy()
-                par['gsims'] = gsims_by_trt[sg.trt]
-                allargs.append((sg, srcfilter, par))
+        for sg in self.csm.src_groups:
+            if not sg.sources:
+                continue
+            par = self.param.copy()
+            par['gsims'] = gsims_by_trt[sg.trt]
+            allargs.append((sg, srcfilter, par))
         smap = parallel.Starmap(
             self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
@@ -172,8 +170,10 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures = self.datastore.getitem('ruptures')[()]
         # order the ruptures by rup_id
         sorted_ruptures.sort(order='serial')
+        nr = len(sorted_ruptures)
+        assert len(numpy.unique(sorted_ruptures['serial'])) == nr  # sanity
         self.datastore['ruptures'] = sorted_ruptures
-        self.datastore['ruptures']['id'] = numpy.arange(len(sorted_ruptures))
+        self.datastore['ruptures']['id'] = numpy.arange(nr)
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 

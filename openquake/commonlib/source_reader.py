@@ -142,7 +142,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
             sg.id = grp_id
             sm_rlz.src_groups = [sg]
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            src.src_group_id = src.id = grp_id
+            src.checksum = src.src_group_id = src.id = grp_id
             src.samples = sm_rlz.samples
             sg.sources = [src]
             data = [((grp_id, grp_id, src.source_id, src.code,
