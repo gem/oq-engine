@@ -135,16 +135,14 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         else:
             offset += num_gsim_rlzs
         sm_rlzs.append(sm_rlz)
-    if oq.calculation_mode.startswith('ucerf'):
-        idx = 0
+    if oq.is_ucerf():
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         for grp_id, sm_rlz in enumerate(sm_rlzs):
             sg = copy.copy(grp)
             sg.id = grp_id
             sm_rlz.src_groups = [sg]
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            src.src_group_id = grp_id
-            idx += 1
+            src.checksum = src.src_group_id = src.id = grp_id
             src.samples = sm_rlz.samples
             sg.sources = [src]
             data = [((grp_id, grp_id, src.source_id, src.code,

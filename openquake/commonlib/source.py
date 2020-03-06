@@ -349,65 +349,46 @@ class CompositeSourceModel(collections.abc.Sequence):
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples, self.sm_rlzs)
+        # extract a single source from multiple sources with the same ID
+        # and regroup the sources in non-atomic groups by TRT
+        atomic = []
+        acc = AccumDict(accum=[])
+        for sm in self.sm_rlzs:
+            for grp in sm.src_groups:
+                if grp and grp.atomic:
+                    atomic.append(grp)
+                elif grp:
+                    acc[grp.trt].extend(grp)
+        dic = {}
+        key = operator.attrgetter('source_id', 'checksum')
+        idx = 0
+        for trt in acc:
+            lst = []
+            for srcs in groupby(acc[trt], key).values():
+                for src in srcs:
+                    src.id = idx
+                idx += 1
+                if len(srcs) > 1:  # happens in classical/case_20
+                    src.src_group_id = [s.src_group_id for s in srcs]
+                lst.append(src)
+            dic[trt] = sourceconverter.SourceGroup(trt, lst)
+        for ag in atomic:
+            for src in ag:
+                src.id = idx
+                idx += 1
+        self.src_groups = list(dic.values()) + atomic
         if event_based:  # init serials
             serial = ses_seed
-            for src in self.get_sources():
-                nr = src.num_ruptures
-                src.serial = serial
-                serial += nr
-        else:
-            # extract a single source from multiple sources with the same ID
-            # and regroup the sources in non-atomic groups by TRT
-            atomic = []
-            acc = AccumDict(accum=[])
-            for sm in self.sm_rlzs:
-                for grp in sm.src_groups:
-                    if grp and grp.atomic:
-                        atomic.append(grp)
-                    elif grp:
-                        acc[grp.trt].extend(grp)
-            dic = {}
-            key = operator.attrgetter('source_id', 'checksum')
-            for trt in acc:
-                lst = []
-                for srcs in groupby(acc[trt], key).values():
-                    src = srcs[0]
-                    if len(srcs) > 1:  # happens in classical/case_20
-                        src.src_group_id = [s.src_group_id for s in srcs]
-                    lst.append(src)
-                dic[trt] = sourceconverter.SourceGroup(trt, lst)
-            self.src_groups = atomic + list(dic.values())
-
-    # used only by UCERF
-    def new(self, sources_by_grp):
-        """
-        Generate a new CompositeSourceModel from the given dictionary.
-
-        :param sources_by_group: a dictionary grp_id -> sources
-        :returns: a new CompositeSourceModel instance
-        """
-        source_models = []
-        for sm in self.sm_rlzs:
-            src_groups = []
-            for src_group in sm.src_groups:
-                sg = copy.copy(src_group)
-                sg.sources = sorted(sources_by_grp.get(sg.id, []),
-                                    key=operator.attrgetter('id'))
-                src_groups.append(sg)
-            newsm = logictree.Realization(
-                sm.value, sm.weight, sm.ordinal,
-                sm.lt_path, sm.samples, sm.offset)
-            newsm.src_groups = src_groups
-            source_models.append(newsm)
-        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
-        return new
+            for sg in self.src_groups:
+                for src in sorted(sg, key=operator.attrgetter('id')):
+                    src.serial = serial
+                    serial += src.num_ruptures * len(src.src_group_ids)
 
     def get_nonparametric_sources(self):
         """
         :returns: list of non parametric sources in the composite source model
         """
-        return [src for sm in self.sm_rlzs
-                for src_group in sm.src_groups
+        return [src for src_group in self.src_groups
                 for src in src_group if hasattr(src, 'data')]
 
     def get_sources(self, kind='all'):
