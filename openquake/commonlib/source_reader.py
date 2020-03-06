@@ -135,7 +135,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         else:
             offset += num_gsim_rlzs
         sm_rlzs.append(sm_rlz)
-    if oq.calculation_mode.startswith('ucerf'):
+    if oq.is_ucerf():
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         for grp_id, sm_rlz in enumerate(sm_rlzs):
             sg = copy.copy(grp)
