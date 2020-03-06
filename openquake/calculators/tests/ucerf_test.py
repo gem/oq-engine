@@ -31,9 +31,9 @@ class UcerfTestCase(CalculatorTestCase):
         gmv_uc = view('global_gmfs', self.calc.datastore)
         # check the distribution of the events
         self.assertEventsByRlz(
-            [1, 1, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 1, 1, 3, 3,
-             2, 2, 0, 0, 0, 0, 2, 2, 0, 0, 1, 1, 0, 0, 0, 0,
-             1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1])
+            [1, 1, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 2, 2, 1, 1, 3, 3, 1, 1,
+             0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0])
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-5)
 
@@ -44,7 +44,7 @@ class UcerfTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
-        # check ucerf_event_based and event_based produces the same GMFs
+        # check they produce the same GMFs
         gmv_eb = view('global_gmfs', self.calc.datastore)
         self.assertEqual(gmv_uc, gmv_eb)
 
@@ -58,7 +58,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
         # check the distribution of the events
-        self.assertEventsByRlz([29, 25])
+        self.assertEventsByRlz([15, 19])
 
         # check the mean hazard map
         got = gettemp(view('hmap', self.calc.datastore))

@@ -393,7 +393,7 @@ class HazardCalculator(BaseCalculator):
         else:  # can happen to the ruptures-only calculator
             sitecol = None
             filename = None
-        if 'ucerf' in oq.calculation_mode:
+        if oq.is_ucerf():
             return UcerfFilter(sitecol, oq.maximum_distance, filename)
         return SourceFilter(sitecol, oq.maximum_distance, filename)
 

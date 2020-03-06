@@ -68,7 +68,7 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
 
 
-@base.calculators.add('event_based')
+@base.calculators.add('event_based', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
@@ -77,8 +77,7 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
-    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk',
-                      'ucerf_event_based']
+    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
     build_ruptures = sample_ruptures
 
     def init(self):
@@ -128,12 +127,10 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        oq = self.oqparam
         gsims_by_trt = self.csm.info.get_gsims_by_trt()
         logging.info('Building ruptures')
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
-        ses_idx = 0
         allargs = []
         for sg in self.csm.src_groups:
             logging.info('Sending %s', sg)
@@ -141,19 +138,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             par = self.param.copy()
             par['gsims'] = gsims_by_trt[sg.trt]
-            if sg.atomic:  # do not split the group
-                allargs.append((sg, srcfilter, par))
-            else:  # traditional groups
-                for block in self.block_splitter(sg.sources, key=by_grp):
-                    if 'ucerf' in oq.calculation_mode:
-                        for i in range(oq.ses_per_logic_tree_path):
-                            par = par.copy()  # avoid mutating the dict
-                            par['ses_seeds'] = [
-                                (ses_idx, oq.ses_seed + i + 1)]
-                            allargs.append((block, srcfilter, par))
-                            ses_idx += 1
-                    else:
-                        allargs.append((block, srcfilter, par))
+            allargs.append((sg, srcfilter, par))
         smap = parallel.Starmap(
             self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
