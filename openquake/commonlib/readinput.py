@@ -846,19 +846,22 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     Extract sources from the composite source model.
 
     :param smlt_file: path to a source model logic tree file
-    :param source_ids: dictionary source_id -> source_code
+    :param source_ids: dictionary source_id -> records (src_id, code)
     :param remove: if True, remove sm.xml files containing no sources
-    :returns: the number of sources satisfying the filter
+    :returns: the number of sources satisfying the filter vs the total
     """
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
             code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
-            return source_ids.get(src_node['id']) == code
+            arr = source_ids.get(src_node['id'])
+            if arr is None:
+                return False
+            return (arr['code'] == code).any()
     else:  # list of source IDs, in extract_source
         def ok(src_node):
             return src_node['id'] in source_ids
 
-    found = 0
+    good, total = 0, 0
     to_remove = set()
     for paths in logictree.collect_info(smlt_file).smpaths.values():
         for path in paths:
@@ -868,8 +871,9 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             origmodel = root[0]
             if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
                 for src_node in origmodel:
+                    total += 1
                     if ok(src_node):
-                        found += 1
+                        good += 1
                         model.nodes.append(src_node)
             else:  # nrml/0.5
                 for src_group in origmodel:
@@ -882,8 +886,9 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                         weights = [1] * len(src_group.nodes)
                     src_group['srcs_weights'] = reduced_weigths = []
                     for src_node, weight in zip(src_group, weights):
+                        total += 1
                         if ok(src_node):
-                            found += 1
+                            good += 1
                             sg.nodes.append(src_node)
                             reduced_weigths.append(weight)
                     if sg.nodes:
@@ -894,10 +899,10 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                     nrml.write([model], f, xmlns=root['xmlns'])
             elif remove:  # remove the files completely reduced
                 to_remove.add(path)
-    if found:
+    if good:
         for path in to_remove:
             os.remove(path)
-    return found
+    return good, total
 
 
 def get_input_files(oqparam, hazard=False):
