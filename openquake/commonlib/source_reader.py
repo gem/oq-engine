@@ -112,10 +112,6 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         spinning_off = sum(oq.pointsource_distance.values()) == 0
     if spinning_off:
         logging.info('Removing nodal plane and hypocenter distributions')
-    # NB: the source models file are often NOT in the shared directory
-    # (for instance in oq-engine/demos) so the processpool must be used
-    dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-            else 'processpool')
     smlt_dir = os.path.dirname(source_model_lt.filename)
     converter = sourceconverter.SourceConverter(
         oq.investigation_time, oq.rupture_mesh_spacing,
@@ -160,9 +156,13 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
                             source_model_lt.apply_uncertainties, fname,
                             fileno))
             fileno += 1
+    # NB: the source models file are often NOT in the shared directory
+    # (for instance in oq-engine/demos) so the processpool must be used
+    dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+            else 'processpool')
     smap = parallel.Starmap(
         SourceReader(converter, smlt_dir, h5),
-        allargs, distribute=dist, h5=h5 if h5 else None)
+        allargs, distribute='no', h5=h5 if h5 else None)
     # NB: h5 is None in logictree_test.py
     return _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5)
 
