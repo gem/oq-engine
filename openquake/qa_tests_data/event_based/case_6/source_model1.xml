@@ -4,7 +4,7 @@
 
     <sourceModel name="Example Source Model Containing Single Area Source of 200 km radius">
 
-        <areaSource id="1" name="Area Source" tectonicRegion="Active Shallow Crust">
+        <areaSource id="1" name="aValue=5" tectonicRegion="Active Shallow Crust">
             <areaGeometry>
                 <gml:Polygon>
                     <gml:exterior>
