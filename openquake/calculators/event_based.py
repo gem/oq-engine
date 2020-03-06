@@ -26,6 +26,7 @@ from openquake.baselib.general import AccumDict, get_indices, block_splitter
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
@@ -133,6 +134,11 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         allargs = []
+        if self.oqparam.is_ucerf():
+            # manage the filtering in a special way
+            for src in self.csm.get_sources():
+                src.src_filter = srcfilter
+            srcfilter = nofilter  # otherwise it would be ultra-slow
         for sm_id, sm in enumerate(self.csm.sm_rlzs):
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
