@@ -359,6 +359,9 @@ class CompositeSourceModel(collections.abc.Sequence):
                     atomic.append(grp)
                 elif grp:
                     acc[grp.trt].extend(grp)
+                for src in grp:
+                    if sm.samples > 1:
+                        src.samples = sm.samples
         dic = {}
         key = operator.attrgetter('source_id', 'checksum')
         idx = 0
@@ -391,32 +394,17 @@ class CompositeSourceModel(collections.abc.Sequence):
         return [src for src_group in self.src_groups
                 for src in src_group if hasattr(src, 'data')]
 
-    def get_sources(self, kind='all'):
-        """
-        Extract the sources contained in the source models by optionally
-        filtering and splitting them, depending on the passed parameter.
-        """
-        assert kind in ('all', 'indep', 'mutex'), kind
-        sources = []
-        for sm in self.sm_rlzs:
-            for src_group in sm.src_groups:
-                if kind in ('all', src_group.src_interdep):
-                    for src in src_group:
-                        if sm.samples > 1:
-                            src.samples = sm.samples
-                        sources.append(src)
-        return sources
-
     def get_floating_spinning_factors(self):
         """
         :returns: (floating rupture factor, spinning rupture factor)
         """
         data = []
-        for src in self.get_sources():
-            if hasattr(src, 'hypocenter_distribution'):
-                data.append(
-                    (len(src.hypocenter_distribution.data),
-                     len(src.nodal_plane_distribution.data)))
+        for sg in self.src_groups:
+            for src in sg:
+                if hasattr(src, 'hypocenter_distribution'):
+                    data.append(
+                        (len(src.hypocenter_distribution.data),
+                         len(src.nodal_plane_distribution.data)))
         if not data:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
