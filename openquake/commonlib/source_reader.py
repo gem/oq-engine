@@ -80,11 +80,11 @@ class SourceReader(object):
         mags = set()
         sm = apply_unc(path, fname, self.converter)
         fname_hits[fname] += 1
-        for sg in sm:
+        for i, sg in enumerate(sm):
             # sample a source for each group
             if os.environ.get('OQ_SAMPLE_SOURCES'):
                 sg.sources = random_filtered_sources(
-                    sg.sources, self.srcfilter, sg.id)
+                    sg.sources, self.srcfilter, i)
             for i, src in enumerate(sg):
                 if hasattr(src, 'data'):  # nonparametric
                     srcmags = ['%.3f' % item[0].mag for item in src.data]
@@ -134,7 +134,6 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         for grp_id, sm_rlz in enumerate(sm_rlzs):
             sg = copy.copy(grp)
-            sg.id = grp_id
             sm_rlz.src_groups = [sg]
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             src.checksum = src.src_group_id = src.id = grp_id

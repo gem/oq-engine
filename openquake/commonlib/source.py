@@ -380,7 +380,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         if event_based:  # init serials
             serial = ses_seed
             for sg in self.src_groups:
-                for src in sorted(sg, key=operator.attrgetter('id')):
+                for src in sg:
                     src.serial = serial
                     serial += src.num_ruptures * len(src.src_group_ids)
 
