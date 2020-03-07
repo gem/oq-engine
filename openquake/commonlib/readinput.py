@@ -626,14 +626,13 @@ def get_composite_source_model(oqparam, h5=None):
     csm = source.CompositeSourceModel(
         gsim_lt, source_model_lt, sm_rlzs,
         oqparam.ses_seed, oqparam.is_event_based())
-    key = operator.attrgetter('source_id', 'checksum')
     if h5:
         info = hdf5.create(h5, 'source_info', source_info_dt)
     data = []
-    for k, srcs in groupby(csm.get_sources(), key).items():
-        src = srcs[0]
-        data.append((0, src.src_group_ids[0], src.source_id, src.code,
-                     src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
+    for sg in csm.src_groups:
+        for src in sg:
+            data.append((0, src.src_group_ids[0], src.source_id, src.code,
+                         src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
     if h5:
         hdf5.extend(info, numpy.array(data, source_info_dt))
     csm.info.gsim_lt.check_imts(oqparam.imtls)
