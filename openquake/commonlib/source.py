@@ -130,7 +130,7 @@ class CompositionInfo(object):
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('[FromFile]')
         fakeSM = logictree.Realization(
             'scenario', weight,  0, lt_path='b1', samples=1)
-        fakeSM.src_groups = [sourceconverter.SourceGroup('*', eff_ruptures=1)],
+        fakeSM.src_groups = [sourceconverter.SourceGroup('*')],
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
     def __init__(self, gsim_lt, seed, num_samples, source_models):
@@ -380,7 +380,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         if event_based:  # init serials
             serial = ses_seed
             for sg in self.src_groups:
-                for src in sorted(sg, key=operator.attrgetter('id')):
+                for src in sg:
                     src.serial = serial
                     serial += src.num_ruptures * len(src.src_group_ids)
 
