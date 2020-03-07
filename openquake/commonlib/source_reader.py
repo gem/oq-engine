@@ -94,8 +94,7 @@ class SourceReader(object):
                 mags.update(srcmags)
                 dic = {k: v for k, v in vars(src).items()
                        if k != 'id' and k != 'src_group_id'}
-                src.checksum = zlib.adler32(
-                    pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
+                src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
                 src._wkt = src.wkt()
         return dict(fname_hits=fname_hits, sm=sm, mags=mags,
                     ordinal=ordinal, fileno=fileno)
