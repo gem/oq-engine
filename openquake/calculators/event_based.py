@@ -104,32 +104,14 @@ class EventBasedCalculator(base.HazardCalculator):
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
-    # called multiple times
-    def block_splitter(self, sources, weight=operator.attrgetter('weight'),
-                       key=lambda src: 1):
-        """
-        :param sources: a list of sources
-        :param weight: a weight function (default .weight)
-        :param key: None or 'src_group_id'
-        :returns: an iterator over blocks of sources
-        """
-        if not hasattr(self, 'maxweight'):
-            ct = self.oqparam.concurrent_tasks or 1
-            self.maxweight = sum(sum(weight(s) for s in sg)
-                                 for sg in self.csm.src_groups) / ct
-            if self.maxweight < source.MINWEIGHT:
-                self.maxweight = source.MINWEIGHT
-                logging.info('Using minweight=%d', source.MINWEIGHT)
-            else:
-                logging.info('Using maxweight=%d', self.maxweight)
-        return block_splitter(sources, self.maxweight, weight, key)
-
     def build_events_from_sources(self, srcfilter):
         """
         Prefilter the composite source model and store the source_info
         """
         gsims_by_trt = self.csm.info.get_gsims_by_trt()
         logging.info('Building ruptures')
+        maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
+            self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         allargs = []
@@ -145,7 +127,8 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.info('Sending %s', sg)
             par = self.param.copy()
             par['gsims'] = gsims_by_trt[sg.trt]
-            allargs.append((sg, srcfilter, par))
+            for src_group in sg.split(maxweight):
+                allargs.append((src_group, srcfilter, par))
         smap = parallel.Starmap(
             self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')

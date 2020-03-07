@@ -19,11 +19,12 @@ import operator
 import collections.abc
 import pickle
 import time
+import copy
 import logging
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, block_splitter
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source, tom
 from openquake.hazardlib import valid, InvalidFile
@@ -166,6 +167,13 @@ class SourceGroup(collections.abc.Sequence):
         return (self.cluster or self.src_interdep == 'mutex' or
                 self.rup_interdep == 'mutex')
 
+    @property
+    def weight(self):
+        """
+        :returns: total weight of the underlying sources
+        """
+        return sum(src.weight for src in self)
+
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
         if src_interdep not in ('indep', 'mutex'):
@@ -216,6 +224,21 @@ class SourceGroup(collections.abc.Sequence):
         prev_max_mag = self.max_mag
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
+
+    def split(self, maxweight):
+        """
+        Split the group in subgroups with weight <= maxweight, unless it
+        it atomic.
+        """
+        if self.atomic:
+            return [self]
+        out = []
+        for block in block_splitter(
+                self, maxweight, operator.attrgetter('weight')):
+            sg = copy.copy(self)
+            sg.sources = block
+            out.append(sg)
+        return out
 
     def __repr__(self):
         return '<%s #%d %s, %d source(s)>' % (
