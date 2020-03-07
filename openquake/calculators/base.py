@@ -418,7 +418,6 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
-        return
         f, s = self.csm.get_floating_spinning_factors()
         if f != 1:
             logging.info('Rupture floating factor = %s', f)
