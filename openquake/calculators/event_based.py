@@ -142,6 +142,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for sg in self.csm.src_groups:
             if not sg.sources:
                 continue
+            logging.info('Sending %s', sg)
             par = self.param.copy()
             par['gsims'] = gsims_by_trt[sg.trt]
             allargs.append((sg, srcfilter, par))

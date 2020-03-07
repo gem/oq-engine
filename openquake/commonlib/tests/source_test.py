@@ -655,20 +655,17 @@ class SourceGroupTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<SourceGroup #0 Volcanic, 3 source(s), -1 effective rupture(s)>')
+            '<SourceGroup #0 Volcanic, 3 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<SourceGroup #0 Stable Continental Crust, 1 source(s), '
-            '-1 effective rupture(s)>'
+            '<SourceGroup #0 Stable Continental Crust, 1 source(s)>'
         )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<SourceGroup #0 Subduction Interface, 1 source(s), '
-            '-1 effective rupture(s)>')
+            '<SourceGroup #0 Subduction Interface, 1 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<SourceGroup #0 Active Shallow Crust, 2 source(s), -1'
-            ' effective rupture(s)>')
+            '<SourceGroup #0 Active Shallow Crust, 2 source(s)>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):

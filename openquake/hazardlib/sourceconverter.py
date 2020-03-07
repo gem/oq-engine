@@ -99,10 +99,6 @@ class SourceGroup(collections.abc.Sequence):
     :param id:
         an optional numeric ID (default 0) set by the engine and used
         when serializing SourceModels to HDF5
-    :param eff_ruptures:
-        the number of ruptures contained in the group; if -1,
-        the number is unknown and has to be computed by using
-        get_set_num_ruptures
     :param tot_ruptures:
         the potential maximum number of ruptures contained in the group
     :param temporal_occurrence_model:
@@ -134,7 +130,7 @@ class SourceGroup(collections.abc.Sequence):
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', grp_probability=None,
-                 min_mag={'default': 0}, max_mag=None, id=0, eff_ruptures=-1,
+                 min_mag={'default': 0}, max_mag=None, id=0,
                  tot_ruptures=0, temporal_occurrence_model=None,
                  cluster=False):
         # checks
@@ -153,7 +149,6 @@ class SourceGroup(collections.abc.Sequence):
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
-        self.eff_ruptures = eff_ruptures  # set later
         self.temporal_occurrence_model = temporal_occurrence_model
         self.cluster = cluster
         # check weights in case of mutually exclusive ruptures
@@ -223,9 +218,8 @@ class SourceGroup(collections.abc.Sequence):
             self.max_mag = max_mag
 
     def __repr__(self):
-        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
-            self.__class__.__name__, self.id, self.trt,
-            len(self.sources), self.eff_ruptures)
+        return '<%s #%d %s, %d source(s)>' % (
+            self.__class__.__name__, self.id, self.trt, len(self.sources))
 
     def __lt__(self, other):
         """
@@ -258,7 +252,6 @@ class SourceGroup(collections.abc.Sequence):
             id=self.id,
             trt=self.trt,
             name=self.name or '',
-            eff_ruptures=self.eff_ruptures,
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
             grp_probability=self.grp_probability or '')
