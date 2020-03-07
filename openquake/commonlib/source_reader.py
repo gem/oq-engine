@@ -94,8 +94,7 @@ class SourceReader(object):
                 mags.update(srcmags)
                 dic = {k: v for k, v in vars(src).items()
                        if k != 'id' and k != 'src_group_id'}
-                src.checksum = zlib.adler32(
-                    pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
+                src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
                 src._wkt = src.wkt()
         return dict(fname_hits=fname_hits, sm=sm, mags=mags,
                     ordinal=ordinal, fileno=fileno)
@@ -162,7 +161,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
             else 'processpool')
     smap = parallel.Starmap(
         SourceReader(converter, smlt_dir, h5),
-        allargs, distribute='no', h5=h5 if h5 else None)
+        allargs, distribute=dist, h5=h5 if h5 else None)
     # NB: h5 is None in logictree_test.py
     return _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5)
 
