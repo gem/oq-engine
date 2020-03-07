@@ -131,7 +131,7 @@ class SourceGroup(collections.abc.Sequence):
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', grp_probability=None,
-                 min_mag={'default': 0}, max_mag=None, id=0,
+                 min_mag={'default': 0}, max_mag=None,
                  tot_ruptures=0, temporal_occurrence_model=None,
                  cluster=False):
         # checks
@@ -144,7 +144,6 @@ class SourceGroup(collections.abc.Sequence):
         self.grp_probability = grp_probability
         self.min_mag = min_mag
         self.max_mag = max_mag
-        self.id = id
         self.tot_ruptures = tot_ruptures  # updated in .update(src)
         if sources:
             for src in sorted(sources, key=operator.attrgetter('source_id')):
@@ -241,8 +240,8 @@ class SourceGroup(collections.abc.Sequence):
         return out
 
     def __repr__(self):
-        return '<%s #%d %s, %d source(s)>' % (
-            self.__class__.__name__, self.id, self.trt, len(self.sources))
+        return '<%s %s, %d source(s)>' % (
+            self.__class__.__name__, self.trt, len(self.sources))
 
     def __lt__(self, other):
         """
@@ -272,7 +271,6 @@ class SourceGroup(collections.abc.Sequence):
             lst.append((src.id, src.num_ruptures,
                         numpy.frombuffer(buf, numpy.uint8)))
         attrs = dict(
-            id=self.id,
             trt=self.trt,
             name=self.name or '',
             src_interdep=self.src_interdep,
