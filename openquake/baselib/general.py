@@ -339,13 +339,8 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         # another shortcut
         assert a == b, (a, b)
         return
-    if hasattr(a, '_slots_'):  # record-like objects
-        assert a._slots_ == b._slots_
-        for x in a._slots_:
-            assert_close(getattr(a, x), getattr(b, x), rtol, atol, x)
-        return
     if hasattr(a, 'keys'):  # dict-like objects
-        assert a.keys() == b.keys()
+        assert a.keys() == b.keys(), set(a).symmetric_difference(set(b))
         for x in a:
             if x != '__geom__':
                 assert_close(a[x], b[x], rtol, atol, x)
