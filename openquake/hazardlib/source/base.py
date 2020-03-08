@@ -91,7 +91,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.src_group_id = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
-        self.id = None  # set by the engine
 
     @abc.abstractmethod
     def iter_ruptures(self, **kwargs):
