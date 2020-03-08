@@ -146,9 +146,9 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         print(data[0][0])
         data[0][0].weight = 0.5
         data[1][0].weight = 0.5
-        print(data[0][0].weight)
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
+        src.id = 0
         src.src_group_id = 0
         src.mutex_weight = 1
         group = SourceGroup(

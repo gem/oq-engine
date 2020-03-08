@@ -38,8 +38,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
-    _slots_ = ['source_id', 'name', 'tectonic_region_type',
-               'src_group_id', 'num_ruptures', 'id', 'min_mag']
+    _slots_ = ['source_id', 'name', 'tectonic_region_type', 'num_ruptures',
+               'min_mag']
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
