@@ -183,31 +183,18 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
                         "Found in %r a tectonic region type %r "
                         "inconsistent with the ones in %r" %
                         (sm_rlz, src_group.trt, gsim_file))
-    # set src_group_ids
-    get_grp_id = source_model_lt.get_grp_id(gsim_lt.values)
     for sm_rlz in sm_rlzs:
-        for grp in sm_rlz.src_groups:
-            grp.id = grp_id = get_grp_id(grp.trt, sm_rlz.ordinal)
-            for src in grp:
-                src.src_group_id = grp_id
-            grp_id += 1
-            if grp_id >= TWO16:
-                # the limit is only for event based calculations
-                raise ValueError('There is a limit of %d src groups!' %
-                                 TWO16)
         # check applyToSources
         source_ids = set(src.source_id for grp in sm_rlz.src_groups
                          for src in grp)
-        for brid, srcids in source_model_lt.info.\
-                applytosources.items():
+        for brid, srcids in source_model_lt.info.applytosources.items():
             if brid in sm_rlz.lt_path:
                 for srcid in srcids:
                     if srcid not in source_ids:
                         raise ValueError(
                             "The source %s is not in the source model,"
                             " please fix applyToSources in %s or the "
-                            "source model" % (
-                                srcid, source_model_lt.filename))
+                            "source model" % (srcid, source_model_lt.filename))
 
     if h5:
         h5['source_mags'] = numpy.array(sorted(mags))
