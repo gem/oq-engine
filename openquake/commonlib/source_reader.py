@@ -76,10 +76,8 @@ class SourceReader(object):
                 h5['sitecol'], h5['oqparam'].maximum_distance)
 
     def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
-        fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
         sm = apply_unc(path, fname, self.converter)
-        fname_hits[fname] += 1
         for i, sg in enumerate(sm):
             # sample a source for each group
             if os.environ.get('OQ_SAMPLE_SOURCES'):
@@ -96,8 +94,7 @@ class SourceReader(object):
                        if k != 'src_group_id'}
                 src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
                 src._wkt = src.wkt()
-        return dict(fname_hits=fname_hits, sm=sm, mags=mags,
-                    ordinal=ordinal, fileno=fileno)
+        return dict(sm=sm, mags=mags, ordinal=ordinal, fileno=fileno)
 
 
 def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
@@ -168,11 +165,9 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
 def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
     mags = set()
     changes = 0
-    fname_hits = collections.Counter()
     for dic in sorted(smap, key=operator.itemgetter('fileno')):
         sm_rlz = sm_rlzs[dic['ordinal']]
         sm_rlz.src_groups.extend(dic['sm'])
-        fname_hits += dic['fname_hits']
         changes += dic['sm'].changes
         mags.update(dic['mags'])
         gsim_file = oq.inputs.get('gsim_logic_tree')
@@ -199,13 +194,6 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
     if h5:
         h5['source_mags'] = numpy.array(sorted(mags))
 
-    # log if some source file is being used more than once
-    dupl = 0
-    for fname, hits in fname_hits.items():
-        if hits > 1:
-            logging.info('%s has been considered %d times', fname, hits)
-            if not changes:
-                dupl += hits
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
