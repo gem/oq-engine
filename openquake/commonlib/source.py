@@ -353,13 +353,16 @@ class CompositeSourceModel(collections.abc.Sequence):
         # and regroup the sources in non-atomic groups by TRT
         atomic = []
         acc = AccumDict(accum=[])
+        get_grp_id = source_model_lt.get_grp_id(gsim_lt.values)
         for sm in self.sm_rlzs:
             for grp in sm.src_groups:
                 if grp and grp.atomic:
                     atomic.append(grp)
                 elif grp:
                     acc[grp.trt].extend(grp)
+                grp_id = get_grp_id(grp.trt, sm.ordinal)
                 for src in grp:
+                    src.src_group_id = grp_id
                     if sm.samples > 1:
                         src.samples = sm.samples
         dic = {}
