@@ -143,7 +143,6 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         rupture = _create_rupture(10., 6.)
         data = [(rupture, PMF([(0.7, 0), (0.3, 1)])),
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
-        print(data[0][0])
         data[0][0].weight = 0.5
         data[1][0].weight = 0.5
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
