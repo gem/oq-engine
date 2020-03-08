@@ -18,10 +18,8 @@ Module :mod:`openquake.hazardlib.mfd.evenly_discretized` defines an evenly
 discretized MFD.
 """
 from openquake.hazardlib.mfd.base import BaseMFD
-from openquake.baselib.slots import with_slots
 
 
-@with_slots
 class EvenlyDiscretizedMFD(BaseMFD):
     """
     Evenly discretized MFD is defined as a precalculated histogram.
@@ -36,8 +34,7 @@ class EvenlyDiscretizedMFD(BaseMFD):
         annual occurrence rates. The resulting histogram has as many bins
         as this list length.
     """
-    MODIFICATIONS = set(('set_mfd',))
-    _slots_ = 'min_mag bin_width occurrence_rates'.split()
+    MODIFICATIONS = {'set_mfd'}
 
     def __init__(self, min_mag, bin_width, occurrence_rates):
         self.min_mag = min_mag

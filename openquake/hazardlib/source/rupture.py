@@ -27,7 +27,6 @@ import itertools
 import collections
 import toml
 from openquake.baselib import general
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo, contexts
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import (
@@ -135,7 +134,6 @@ def to_checksum(cls1, cls2):
     return sum(map(ord, names)) % 256
 
 
-@with_slots
 class BaseRupture(metaclass=abc.ABCMeta):
     """
     Rupture object represents a single earthquake rupture.
@@ -163,8 +161,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
     NB: if you want to convert the rupture into XML, you should set the
     attribute surface_nodes to an appropriate value.
     """
-    _slots_ = '''mag rake tectonic_region_type hypocenter surface
-    rupture_slip_direction weight'''.split()
     rup_id = 0  # set to a value > 0 by the engine
     _code = {}
 
@@ -297,7 +293,6 @@ class NonParametricProbabilisticRupture(BaseRupture):
         return n_occ
 
 
-@with_slots
 class ParametricProbabilisticRupture(BaseRupture):
     """
     :class:`Rupture` associated with an occurrence rate and a temporal
@@ -312,9 +307,6 @@ class ParametricProbabilisticRupture(BaseRupture):
     :raises ValueError:
         If occurrence rate is not positive.
     """
-    _slots_ = BaseRupture._slots_ + [
-        'occurrence_rate', 'temporal_occurrence_model']
-
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
                  occurrence_rate, temporal_occurrence_model,
                  rupture_slip_direction=None):
