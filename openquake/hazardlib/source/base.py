@@ -19,12 +19,10 @@ seismic sources.
 """
 import abc
 import numpy
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
-@with_slots
 class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     Base class representing a seismic source, that is a structure generating
@@ -38,8 +36,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
-    _slots_ = ['source_id', 'name', 'tectonic_region_type', 'num_ruptures',
-               'min_mag']
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
@@ -234,7 +230,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         meth(**parameters)
 
 
-@with_slots
 class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     """
     Parametric Seismic Source generates earthquake ruptures from source
@@ -269,11 +264,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         If either rupture aspect ratio or rupture mesh spacing is not positive
         (if not None).
     """
-
-    _slots_ = BaseSeismicSource._slots_ + '''mfd rupture_mesh_spacing
-    magnitude_scaling_relationship rupture_aspect_ratio
-    temporal_occurrence_model'''.split()
-
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model):
