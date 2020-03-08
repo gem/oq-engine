@@ -21,10 +21,8 @@ import math
 
 from openquake.baselib.python3compat import round
 from openquake.hazardlib.mfd.base import BaseMFD
-from openquake.baselib.slots import with_slots
 
 
-@with_slots
 class TruncatedGRMFD(BaseMFD):
     """
     Truncated Gutenberg-Richter MFD is defined in a functional form.
@@ -61,12 +59,8 @@ class TruncatedGRMFD(BaseMFD):
     both are divisible by ``bin_width`` just before converting a function
     to a histogram. See :meth:`_get_min_mag_and_num_bins`.
     """
-    MODIFICATIONS = set(('increment_max_mag',
-                         'set_max_mag',
-                         'increment_b',
-                         'set_ab'))
-
-    _slots_ = 'min_mag max_mag bin_width a_val b_val'.split()
+    MODIFICATIONS = {'increment_max_mag', 'set_max_mag', 'increment_b',
+                     'set_ab'}
 
     def __init__(self, min_mag, max_mag, bin_width, a_val, b_val):
         self.min_mag = min_mag
