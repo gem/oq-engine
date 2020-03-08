@@ -25,7 +25,6 @@ import zipfile
 import logging
 import tempfile
 import functools
-import operator
 import configparser
 import collections
 import numpy
@@ -33,7 +32,7 @@ import requests
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    random_filter, groupby, countby, group_array, get_duplicates)
+    random_filter, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
