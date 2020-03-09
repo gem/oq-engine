@@ -107,19 +107,17 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
-    rlzs = get_effective_rlzs(source_model_lt)
+    sm_rlzs = get_effective_rlzs(source_model_lt)
     if not source_model_lt.num_samples:
         num_gsim_rlzs = gsim_lt.get_num_paths()
-    sm_rlzs = []
     offset = 0
-    for sm_rlz in rlzs:
+    for sm_rlz in sm_rlzs:
         sm_rlz.src_groups = []
         sm_rlz.offset = offset
         if source_model_lt.num_samples:
             offset += sm_rlz.samples
         else:
             offset += num_gsim_rlzs
-        sm_rlzs.append(sm_rlz)
     if oq.is_ucerf():
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         for grp_id, sm_rlz in enumerate(sm_rlzs):
@@ -137,7 +135,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
     logging.info('Reading the source model(s) in parallel')
     allargs = []
     fileno = 0
-    for rlz in rlzs:
+    for rlz in sm_rlzs:
         for name in rlz.value.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             allargs.append((rlz.ordinal, rlz.lt_path,
