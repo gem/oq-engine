@@ -20,7 +20,6 @@ defines :class:`ComplexFaultSource`.
 import copy
 import numpy
 
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture_collection import split
@@ -127,7 +126,6 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
     return rupture_slices
 
 
-@with_slots
 class ComplexFaultSource(ParametricSeismicSource):
     """
     Complex fault source typology represents seismicity occurring on a fault
@@ -149,8 +147,7 @@ class ComplexFaultSource(ParametricSeismicSource):
     """
     code = b'C'
     # a slice of the rupture_slices, thus splitting the source
-    _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
-    MODIFICATIONS = set(('set_geometry',))
+    MODIFICATIONS = {'set_geometry'}
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,

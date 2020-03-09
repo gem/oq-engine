@@ -179,10 +179,12 @@ def calc_hazard_curves(
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
     # ensure the sources have the right src_group_id
+    idx = 0
     for i, grp in enumerate(groups):
         for src in grp:
-            if src.src_group_id is None:
-                src.src_group_id = i
+            src.src_group_id = i
+            src.id = idx
+            idx += 1
     imtls = DictArray(imtls)
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level,

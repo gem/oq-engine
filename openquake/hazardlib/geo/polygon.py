@@ -26,14 +26,12 @@ import shapely.wkt
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
-from openquake.baselib.slots import with_slots
 
 #: Polygon upsampling step for long edges, in kilometers.
 #: See :func:`get_resampled_coordinates`.
 UPSAMPLING_STEP_KM = 100
 
 
-@with_slots
 class Polygon(object):
     """
     Polygon objects represent an area on the Earth surface.
@@ -47,7 +45,6 @@ class Polygon(object):
         If ``points`` contains less than three unique points or if polygon
         perimeter intersects itself.
     """
-    _slots_ = 'lons lats _bbox _projection _polygon2d'.split()
     _bbox = None
 
     def __init__(self, points):

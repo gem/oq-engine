@@ -130,7 +130,7 @@ class CompositionInfo(object):
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('[FromFile]')
         fakeSM = logictree.Realization(
             'scenario', weight,  0, lt_path='b1', samples=1)
-        fakeSM.src_groups = [sourceconverter.SourceGroup('*', eff_ruptures=1)],
+        fakeSM.src_groups = [sourceconverter.SourceGroup('*')],
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
     def __init__(self, gsim_lt, seed, num_samples, source_models):
@@ -353,12 +353,18 @@ class CompositeSourceModel(collections.abc.Sequence):
         # and regroup the sources in non-atomic groups by TRT
         atomic = []
         acc = AccumDict(accum=[])
+        get_grp_id = source_model_lt.get_grp_id(gsim_lt.values)
         for sm in self.sm_rlzs:
             for grp in sm.src_groups:
                 if grp and grp.atomic:
                     atomic.append(grp)
                 elif grp:
                     acc[grp.trt].extend(grp)
+                grp_id = get_grp_id(grp.trt, sm.ordinal)
+                for src in grp:
+                    src.src_group_id = grp_id
+                    if sm.samples > 1:
+                        src.samples = sm.samples
         dic = {}
         key = operator.attrgetter('source_id', 'checksum')
         idx = 0
@@ -380,7 +386,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         if event_based:  # init serials
             serial = ses_seed
             for sg in self.src_groups:
-                for src in sorted(sg, key=operator.attrgetter('id')):
+                for src in sg:
                     src.serial = serial
                     serial += src.num_ruptures * len(src.src_group_ids)
 
@@ -391,32 +397,17 @@ class CompositeSourceModel(collections.abc.Sequence):
         return [src for src_group in self.src_groups
                 for src in src_group if hasattr(src, 'data')]
 
-    def get_sources(self, kind='all'):
-        """
-        Extract the sources contained in the source models by optionally
-        filtering and splitting them, depending on the passed parameter.
-        """
-        assert kind in ('all', 'indep', 'mutex'), kind
-        sources = []
-        for sm in self.sm_rlzs:
-            for src_group in sm.src_groups:
-                if kind in ('all', src_group.src_interdep):
-                    for src in src_group:
-                        if sm.samples > 1:
-                            src.samples = sm.samples
-                        sources.append(src)
-        return sources
-
     def get_floating_spinning_factors(self):
         """
         :returns: (floating rupture factor, spinning rupture factor)
         """
         data = []
-        for src in self.get_sources():
-            if hasattr(src, 'hypocenter_distribution'):
-                data.append(
-                    (len(src.hypocenter_distribution.data),
-                     len(src.nodal_plane_distribution.data)))
+        for sg in self.src_groups:
+            for src in sg:
+                if hasattr(src, 'hypocenter_distribution'):
+                    data.append(
+                        (len(src.hypocenter_distribution.data),
+                         len(src.nodal_plane_distribution.data)))
         if not data:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)

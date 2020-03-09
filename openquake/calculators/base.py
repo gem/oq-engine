@@ -440,7 +440,7 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                srcs = csm.get_sources()
+                srcs = [src for sg in csm.src_groups for src in sg]
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')
                 logging.info('Checking the sources bounding box')
@@ -826,7 +826,8 @@ class HazardCalculator(BaseCalculator):
         for trt in self.csm_info.gsim_lt.values:
             if eff_ruptures.get(trt, 0) == 0:
                 discard_trts.append(trt)
-        if discard_trts and 'ucerf' not in oq.calculation_mode:
+        if (discard_trts and 'scenario' not in oq.calculation_mode
+                and not oq.is_ucerf()):
             msg = ('No sources for some TRTs: you should set\n'
                    'discard_trts = %s\nin %s') % (', '.join(discard_trts),
                                                   oq.inputs['job_ini'])

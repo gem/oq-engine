@@ -26,7 +26,6 @@ import zipfile
 import logging
 import tempfile
 import functools
-import operator
 import configparser
 import collections
 import numpy
@@ -34,7 +33,7 @@ import requests
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    random_filter, groupby, countby, group_array, get_duplicates)
+    random_filter, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -627,16 +626,25 @@ def get_composite_source_model(oqparam, h5=None):
     csm = source.CompositeSourceModel(
         gsim_lt, source_model_lt, sm_rlzs,
         oqparam.ses_seed, oqparam.is_event_based())
-    key = operator.attrgetter('source_id', 'checksum')
     if h5:
         info = hdf5.create(h5, 'source_info', source_info_dt)
     data = []
-    for k, srcs in groupby(csm.get_sources(), key).items():
-        src = srcs[0]
-        data.append((0, src.src_group_ids[0], src.source_id, src.code,
-                     src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
+    mags = set()
+    for sg in csm.src_groups:
+        for src in sg:
+            data.append((0, src.src_group_ids[0], src.source_id, src.code,
+                         src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
+            if hasattr(src, 'mags'):  # UCERF
+                srcmags = ['%.3f' % mag for mag in src.mags]
+            elif hasattr(src, 'data'):  # nonparametric
+                srcmags = ['%.3f' % item[0].mag for item in src.data]
+            else:
+                srcmags = ['%.3f' % item[0] for item in
+                           src.get_annual_occurrence_rates()]
+            mags.update(srcmags)
     if h5:
         hdf5.extend(info, numpy.array(data, source_info_dt))
+        h5['source_mags'] = numpy.array(sorted(mags))
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     return csm
 

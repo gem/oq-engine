@@ -76,29 +76,18 @@ class SourceReader(object):
                 h5['sitecol'], h5['oqparam'].maximum_distance)
 
     def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
-        fname_hits = collections.Counter()  # fname -> number of calls
-        mags = set()
         sm = apply_unc(path, fname, self.converter)
-        fname_hits[fname] += 1
-        for sg in sm:
+        for i, sg in enumerate(sm):
             # sample a source for each group
             if os.environ.get('OQ_SAMPLE_SOURCES'):
                 sg.sources = random_filtered_sources(
-                    sg.sources, self.srcfilter, sg.id)
+                    sg.sources, self.srcfilter, i)
             for i, src in enumerate(sg):
-                if hasattr(src, 'data'):  # nonparametric
-                    srcmags = ['%.3f' % item[0].mag for item in src.data]
-                else:
-                    srcmags = ['%.3f' % item[0] for item in
-                               src.get_annual_occurrence_rates()]
-                mags.update(srcmags)
                 dic = {k: v for k, v in vars(src).items()
-                       if k != 'id' and k != 'src_group_id'}
-                src.checksum = zlib.adler32(
-                    pickle.dumps(dic, pickle.HIGHEST_PROTOCOL))
+                       if k != 'src_group_id'}
+                src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
                 src._wkt = src.wkt()
-        return dict(fname_hits=fname_hits, sm=sm, mags=mags,
-                    ordinal=ordinal, fileno=fileno)
+        return dict(sm=sm, ordinal=ordinal, fileno=fileno)
 
 
 def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
@@ -112,10 +101,6 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         spinning_off = sum(oq.pointsource_distance.values()) == 0
     if spinning_off:
         logging.info('Removing nodal plane and hypocenter distributions')
-    # NB: the source models file are often NOT in the shared directory
-    # (for instance in oq-engine/demos) so the processpool must be used
-    dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-            else 'processpool')
     smlt_dir = os.path.dirname(source_model_lt.filename)
     converter = sourceconverter.SourceConverter(
         oq.investigation_time, oq.rupture_mesh_spacing,
@@ -139,7 +124,6 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         for grp_id, sm_rlz in enumerate(sm_rlzs):
             sg = copy.copy(grp)
-            sg.id = grp_id
             sm_rlz.src_groups = [sg]
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             src.checksum = src.src_group_id = src.id = grp_id
@@ -160,23 +144,21 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
                             source_model_lt.apply_uncertainties, fname,
                             fileno))
             fileno += 1
+    # NB: the source models file are often NOT in the shared directory
+    # (for instance in oq-engine/demos) so the processpool must be used
+    dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+            else 'processpool')
     smap = parallel.Starmap(
         SourceReader(converter, smlt_dir, h5),
         allargs, distribute=dist, h5=h5 if h5 else None)
     # NB: h5 is None in logictree_test.py
-    return _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5)
 
-
-def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
-    mags = set()
+    # various checks
     changes = 0
-    fname_hits = collections.Counter()
     for dic in sorted(smap, key=operator.itemgetter('fileno')):
         sm_rlz = sm_rlzs[dic['ordinal']]
         sm_rlz.src_groups.extend(dic['sm'])
-        fname_hits += dic['fname_hits']
         changes += dic['sm'].changes
-        mags.update(dic['mags'])
         gsim_file = oq.inputs.get('gsim_logic_tree')
         if gsim_file:  # check TRTs
             for src_group in dic['sm']:
@@ -185,42 +167,19 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
                         "Found in %r a tectonic region type %r "
                         "inconsistent with the ones in %r" %
                         (sm_rlz, src_group.trt, gsim_file))
-    # set src_group_ids
-    get_grp_id = source_model_lt.get_grp_id(gsim_lt.values)
     for sm_rlz in sm_rlzs:
-        for grp in sm_rlz.src_groups:
-            grp.id = grp_id = get_grp_id(grp.trt, sm_rlz.ordinal)
-            for src in grp:
-                src.src_group_id = grp_id
-            grp_id += 1
-            if grp_id >= TWO16:
-                # the limit is only for event based calculations
-                raise ValueError('There is a limit of %d src groups!' %
-                                 TWO16)
         # check applyToSources
         source_ids = set(src.source_id for grp in sm_rlz.src_groups
                          for src in grp)
-        for brid, srcids in source_model_lt.info.\
-                applytosources.items():
+        for brid, srcids in source_model_lt.info.applytosources.items():
             if brid in sm_rlz.lt_path:
                 for srcid in srcids:
                     if srcid not in source_ids:
                         raise ValueError(
                             "The source %s is not in the source model,"
                             " please fix applyToSources in %s or the "
-                            "source model" % (
-                                srcid, source_model_lt.filename))
+                            "source model" % (srcid, source_model_lt.filename))
 
-    if h5:
-        h5['source_mags'] = numpy.array(sorted(mags))
-
-    # log if some source file is being used more than once
-    dupl = 0
-    for fname, hits in fname_hits.items():
-        if hits > 1:
-            logging.info('%s has been considered %d times', fname, hits)
-            if not changes:
-                dupl += hits
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)

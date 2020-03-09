@@ -29,10 +29,8 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.baselib.slots import with_slots
 
 
-@with_slots
 class PlanarSurface(BaseSurface):
     """
     Planar rectangular surface with two sides parallel to the Earth surface.
@@ -65,10 +63,6 @@ class PlanarSurface(BaseSurface):
     #: downdip perpendicular to top edge from top left corner, expressed
     #: as a fraction of the surface's area.
     IMPERFECT_RECTANGLE_TOLERANCE = 0.002
-
-    _slots_ = ('strike dip width length '
-               'corner_lons corner_lats corner_depths '
-               'normal d uv1 uv2 zero_zero').split()
 
     @property
     def surface_nodes(self):

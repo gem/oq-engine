@@ -20,11 +20,9 @@ Module :mod:`openquake.hazardlib.source.characteristic` defines
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 
 
-@with_slots
 class CharacteristicFaultSource(ParametricSeismicSource):
     """
     Characteristic source typology represents seismicity occuring on a generic
@@ -54,9 +52,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     as a LiteralNode object.
     """
     code = b'X'
-    _slots_ = ParametricSeismicSource._slots_ + 'surface rake'.split()
-
-    MODIFICATIONS = set(('set_geometry',))
+    MODIFICATIONS = {'set_geometry'}
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, temporal_occurrence_model, surface, rake,

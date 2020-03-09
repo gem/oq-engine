@@ -389,10 +389,11 @@ def collect_info(smlt):
             if 'applyToSources' in bset.attrib:
                 applytosources[bset.get('applyToBranches')].extend(
                         bset['applyToSources'].split())
-            for br in bset:
-                with context(smlt, br):
-                    fnames = unique(br.uncertaintyModel.text.split())
-                    paths[br['branchID']].update(_abs_paths(smlt, fnames))
+            if bset['uncertaintyType'] in 'sourceModel extendModel':
+                for br in bset:
+                    with context(smlt, br):
+                        fnames = unique(br.uncertaintyModel.text.split())
+                        paths[br['branchID']].update(_abs_paths(smlt, fnames))
     return Info({k: sorted(v) for k, v in paths.items()}, applytosources)
 
 
