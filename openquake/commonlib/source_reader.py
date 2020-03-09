@@ -76,7 +76,6 @@ class SourceReader(object):
                 h5['sitecol'], h5['oqparam'].maximum_distance)
 
     def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
-        mags = set()
         sm = apply_unc(path, fname, self.converter)
         for i, sg in enumerate(sm):
             # sample a source for each group
@@ -84,17 +83,11 @@ class SourceReader(object):
                 sg.sources = random_filtered_sources(
                     sg.sources, self.srcfilter, i)
             for i, src in enumerate(sg):
-                if hasattr(src, 'data'):  # nonparametric
-                    srcmags = ['%.3f' % item[0].mag for item in src.data]
-                else:
-                    srcmags = ['%.3f' % item[0] for item in
-                               src.get_annual_occurrence_rates()]
-                mags.update(srcmags)
                 dic = {k: v for k, v in vars(src).items()
                        if k != 'src_group_id'}
                 src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
                 src._wkt = src.wkt()
-        return dict(sm=sm, mags=mags, ordinal=ordinal, fileno=fileno)
+        return dict(sm=sm, ordinal=ordinal, fileno=fileno)
 
 
 def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
@@ -159,17 +152,13 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         SourceReader(converter, smlt_dir, h5),
         allargs, distribute=dist, h5=h5 if h5 else None)
     # NB: h5 is None in logictree_test.py
-    return _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5)
 
-
-def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
-    mags = set()
+    # various checks
     changes = 0
     for dic in sorted(smap, key=operator.itemgetter('fileno')):
         sm_rlz = sm_rlzs[dic['ordinal']]
         sm_rlz.src_groups.extend(dic['sm'])
         changes += dic['sm'].changes
-        mags.update(dic['mags'])
         gsim_file = oq.inputs.get('gsim_logic_tree')
         if gsim_file:  # check TRTs
             for src_group in dic['sm']:
@@ -190,9 +179,6 @@ def _store_results(smap, sm_rlzs, source_model_lt, gsim_lt, oq, h5):
                             "The source %s is not in the source model,"
                             " please fix applyToSources in %s or the "
                             "source model" % (srcid, source_model_lt.filename))
-
-    if h5:
-        h5['source_mags'] = numpy.array(sorted(mags))
 
     if changes:
         logging.info('Applied %d changes to the composite source model',
