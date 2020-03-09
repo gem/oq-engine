@@ -18,6 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 from openquake.baselib import sap, datastore, performance, general
+import numpy as np
 from openquake.commonlib import readinput
 
 
@@ -42,6 +43,10 @@ def reduce_sm(calc_id):
         good, total = readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], ok_ids)
     logging.info('Removed %d/%d sources', total - good, good)
+    scs, counts = np.unique(info[['source_id', 'code']], return_counts=True)
+    for (srcid, code), count in zip(scs, counts):
+        if srcid in bad_ids and count > 1:
+            logging.warning('Duplicated source %s could not be removed', srcid)
     print(mon)
 
 

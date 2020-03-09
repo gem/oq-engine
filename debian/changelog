@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Fixed reduce_sm filtering by eff_ruptures instead of calc_time and adding
+    a warning listing duplicate source ids if any of them are found
+
   [Michele Simionato]
   * Improved `oq reduce_sm` to reduce also duplicated source IDs if they
     belong to different source types
