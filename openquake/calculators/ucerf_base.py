@@ -60,7 +60,7 @@ NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
 
 def convert_UCERFSource(self, node):
     """
-    Converts the Ucerf Source node into an SES Control object
+    Converts the node into an UCERFSource object
     """
     dirname = os.path.dirname(self.fname)  # where the source_model_file is
     source_file = os.path.join(dirname, node["filename"])

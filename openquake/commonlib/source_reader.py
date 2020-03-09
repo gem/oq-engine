@@ -127,9 +127,6 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
             src.checksum = src.src_group_id = src.id = grp_id
             src.samples = sm_rlz.samples
             sg.sources = [src]
-            data = [((grp_id, grp_id, src.source_id, src.code,
-                      0, 0, -1, src.num_ruptures, 0, ''))]
-            sg.info = numpy.array(data, source_info_dt)
         return sm_rlzs
 
     logging.info('Reading the source model(s) in parallel')
