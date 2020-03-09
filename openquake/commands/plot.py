@@ -300,7 +300,14 @@ def make_figure_sources(extractors, what):
         else:
             color = 'yellow'
             alpha = .1
-        pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
+        geom = shapely.wkt.loads(wkt)
+        if geom.type == 'Polygon':
+            pp.add(geom, alpha=alpha, color=color)
+        elif geom.type == 'Point':
+            ax.plot(geom.x, geom.y, 'o', alpha=alpha, color=color)
+        else:
+            # FIXME: what if it's a line?
+            continue
         tot += 1
     pp.set_lim(sitecol)
     ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
