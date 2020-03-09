@@ -45,7 +45,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = numpy.float64(2 ** 32)
-by_grp = operator.attrgetter('src_group_id')
+by_grp = operator.attrgetter('grp_id')
 
 
 # ######################## GMF calculator ############################ #

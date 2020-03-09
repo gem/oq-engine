@@ -32,7 +32,7 @@ from openquake.hazardlib.geo.utils import (
 
 U32 = numpy.uint32
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
-src_group_id = operator.attrgetter('src_group_id')
+grp_id = operator.attrgetter('grp_id')
 
 
 @contextmanager
@@ -197,14 +197,14 @@ def split_sources(srcs):
         if len(splits) > 1:
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
-                split.src_group_id = src.src_group_id
+                split.grp_id = src.grp_id
                 split.id = src.id
                 if has_samples:
                     split.samples = src.samples
         elif splits:  # single source
             [s] = splits
             s.source_id = src.source_id
-            s.src_group_id = src.src_group_id
+            s.grp_id = src.grp_id
             s.id = src.id
             if has_samples:
                 s.samples = src.samples
@@ -217,7 +217,7 @@ class SourceFilter(object):
     i.e. sources with an attribute .indices, containg the IDs of the sites
     within the given maximum distance. There is also a .new method
     that filters the sources in parallel and returns a dictionary
-    src_group_id -> filtered sources.
+    grp_id -> filtered sources.
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """

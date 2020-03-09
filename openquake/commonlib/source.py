@@ -169,7 +169,7 @@ class CompositionInfo(object):
 
     def get_samples_by_grp(self):
         """
-        :returns: a dictionary src_group_id -> source_model.samples
+        :returns: a dictionary grp_id -> source_model.samples
         """
         return {grp_id: sm.samples for sm in self.sm_rlzs
                 for grp_id in self.grp_ids(sm.ordinal)}
@@ -231,7 +231,7 @@ class CompositionInfo(object):
 
     def get_rlzs_by_gsim_grp(self):
         """
-        :returns: a dictionary src_group_id -> gsim -> rlzs
+        :returns: a dictionary grp_id -> gsim -> rlzs
         """
         dic = {}
         for sm in self.sm_rlzs:
@@ -241,7 +241,7 @@ class CompositionInfo(object):
 
     def get_rlzs_by_grp(self):
         """
-        :returns: a dictionary src_group_id -> [rlzis, ...]
+        :returns: a dictionary grp_id -> [rlzis, ...]
         """
         dic = {}
         for sm in self.sm_rlzs:
@@ -362,7 +362,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                     acc[grp.trt].extend(grp)
                 grp_id = get_grp_id(grp.trt, sm.ordinal)
                 for src in grp:
-                    src.src_group_id = grp_id
+                    src.grp_id = grp_id
                     if sm.samples > 1:
                         src.samples = sm.samples
         dic = {}
@@ -375,7 +375,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                     src.id = idx
                 idx += 1
                 if len(srcs) > 1:  # happens in classical/case_20
-                    src.src_group_id = [s.src_group_id for s in srcs]
+                    src.grp_id = [s.grp_id for s in srcs]
                 lst.append(src)
             dic[trt] = sourceconverter.SourceGroup(trt, lst)
         for ag in atomic:
@@ -388,7 +388,7 @@ class CompositeSourceModel(collections.abc.Sequence):
             for sg in self.src_groups:
                 for src in sg:
                     src.serial = serial
-                    serial += src.num_ruptures * len(src.src_group_ids)
+                    serial += src.num_ruptures * len(src.grp_ids)
 
     def get_nonparametric_sources(self):
         """

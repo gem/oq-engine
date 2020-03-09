@@ -255,7 +255,7 @@ class UCERFSource(BaseSeismicSource):
         """
         new = copy.copy(self)
         new.orig = new
-        new.src_group_id = grp_id
+        new.grp_id = grp_id
         new.source_id = branch_id
         new.idx_set = build_idx_set(branch_id, self.start_date)
         with h5py.File(self.source_file, "r") as hdf5:
@@ -436,7 +436,7 @@ class UCERFSource(BaseSeismicSource):
                     Point(locations[i, 0], locations[i, 1]),
                     self.npd, self.hdd)
                 ps.id = self.id
-                ps.src_group_id = self.src_group_id
+                ps.grp_id = self.grp_id
                 ps.num_ruptures = ps.count_ruptures()
                 sources.append(ps)
         return sources

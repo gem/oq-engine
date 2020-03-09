@@ -396,7 +396,7 @@ class PmapMaker(object):
             return
         if self.src_mutex:
             pm *= src.mutex_weight
-        for grp_id in src.src_group_ids:
+        for grp_id in src.grp_ids:
             if self.src_mutex:
                 pmap[grp_id] += pm
             else:
@@ -443,7 +443,7 @@ class PmapMaker(object):
         poemap.nsites = nsites
         self._update(pmap, poemap, src)
         if len(rupdata.data):
-            for gid in src.src_group_ids:
+            for gid in src.grp_ids:
                 rup_data['grp_id'].extend([gid] * numrups)
                 for k, v in rupdata.data.items():
                     rup_data[k].extend(v)

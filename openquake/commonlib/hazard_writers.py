@@ -377,7 +377,7 @@ class SESXMLWriter(object):
         Serialize a collection of stochastic event sets to XML.
 
         :param data:
-            A dictionary src_group_id -> list of
+            A dictionary grp_id -> list of
             :class:`openquake.commonlib.calc.Rupture` objects.
             Each Rupture should have the following attributes:
 

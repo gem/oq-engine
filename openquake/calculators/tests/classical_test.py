@@ -340,7 +340,7 @@ hazard_uhs-std.csv
         self.assertEqual(len(sg), 7)
         tbl = []
         for src in sg:
-            tbl.append([src.source_id, src.checksum] + src.src_group_ids)
+            tbl.append([src.source_id, src.checksum] + src.grp_ids)
         tbl.sort()
         '''
         self.assertEqual(tbl,
@@ -352,7 +352,7 @@ hazard_uhs-std.csv
                           ['SFLT1', 4233779789, 6, 7, 8, 9, 10, 11],
                           ['SFLT1', 4256912415, 0, 1, 2, 3, 4, 5]])
         '''
-        dupl = sum(len(src.src_group_ids) - 1 for src in sg)
+        dupl = sum(len(src.grp_ids) - 1 for src in sg)
         self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
     def test_case_21(self):
