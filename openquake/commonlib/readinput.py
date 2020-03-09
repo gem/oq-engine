@@ -628,12 +628,20 @@ def get_composite_source_model(oqparam, h5=None):
     if h5:
         info = hdf5.create(h5, 'source_info', source_info_dt)
     data = []
+    mags = set()
     for sg in csm.src_groups:
         for src in sg:
             data.append((0, src.src_group_ids[0], src.source_id, src.code,
                          src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
+            if hasattr(src, 'data'):  # nonparametric
+                srcmags = ['%.3f' % item[0].mag for item in src.data]
+            else:
+                srcmags = ['%.3f' % item[0] for item in
+                           src.get_annual_occurrence_rates()]
+            mags.update(srcmags)
     if h5:
         hdf5.extend(info, numpy.array(data, source_info_dt))
+        h5['source_mags'] = numpy.array(sorted(mags))
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     return csm
 
