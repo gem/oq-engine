@@ -279,13 +279,6 @@ def make_figure_sources(extractors, what):
     # bmap = basemap('cyl', sitecol)
     # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     ax.plot(sitecol['lon'], sitecol['lat'], '+')
-    maximum_distance = IntegrationDistance(
-        ex.oqparam.maximum_distance)['default']  # FIXME default?
-    if len(sitecol) < 20:
-        for site in sitecol:
-            circle = plt.Circle((site['lon'], site['lat']), maximum_distance,
-                                color='r', fill=False, ls='--')
-            ax.add_artist(circle)
     pp = PolygonPlotter(ax)
     n = 0
     tot = 0
