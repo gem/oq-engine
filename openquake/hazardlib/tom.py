@@ -85,8 +85,11 @@ class BaseTOM(metaclass=abc.ABCMeta):
         given in the constructor.
         """
 
-class FatedTOM(BaseTOM):
 
+class FatedTOM(BaseTOM):
+    """
+    Used with clusters of mutex sources
+    """
     def __init__(self, time_span, occurrence_rate=None):
         self.time_span = time_span
         self.occurrence_rate = occurrence_rate
@@ -95,16 +98,13 @@ class FatedTOM(BaseTOM):
         return 1
 
     def get_probability_n_occurrences(self, occurrence_rate, num):
-        if num != 1:
-            return 0
-        else:
-            return 1
+        return num == 1
 
     def sample_number_of_occurrences(self, seeds=None):
         return 1
 
     def get_probability_no_exceedance(self, occurrence_rate, poes):
-        return 1-poes
+        return 1 - poes
 
 
 class PoissonTOM(BaseTOM):
