@@ -125,7 +125,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
-        pmap[src.src_group_id] *= group_probability
+        pmap[src.grp_id] *= group_probability
 
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
@@ -178,11 +178,11 @@ def calc_hazard_curves(
         odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
-    # ensure the sources have the right src_group_id
+    # ensure the sources have the right grp_id
     idx = 0
     for i, grp in enumerate(groups):
         for src in grp:
-            src.src_group_id = i
+            src.grp_id = i
             src.id = idx
             idx += 1
     imtls = DictArray(imtls)

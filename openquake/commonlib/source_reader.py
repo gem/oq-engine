@@ -84,7 +84,7 @@ class SourceReader(object):
                     sg.sources, self.srcfilter, i)
             for i, src in enumerate(sg):
                 dic = {k: v for k, v in vars(src).items()
-                       if k != 'src_group_id'}
+                       if k != 'grp_id'}
                 src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
                 src._wkt = src.wkt()
         return dict(sm=sm, ordinal=ordinal, fileno=fileno)
@@ -124,7 +124,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
             sg = copy.copy(grp)
             sm_rlz.src_groups = [sg]
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            src.checksum = src.src_group_id = src.id = grp_id
+            src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
             sg.sources = [src]
         return sm_rlzs

@@ -158,7 +158,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     """
     eb_ruptures = []
     numpy.random.seed(sources[0].serial)
-    [grp_id] = set(src.src_group_id for src in sources)
+    [grp_id] = set(src.grp_id for src in sources)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Set the parameters required to compute the number of occurrences
