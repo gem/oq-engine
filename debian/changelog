@@ -1,4 +1,9 @@
+  [Paolo Tormene]
+  * Added a warning in `oq reduce_sm` listing duplicate source IDs
+
   [Michele Simionato]
+  * Improved `oq reduce_sm` to reduce also duplicated source IDs if they
+    belong to different source types
   * Removed the `ucerf_hazard` calculator (just use the `event_based` one)
   * Changed the seed algorithm in all event based calculators including UCERF
   * Fixed the ShakeMap code to use the formula for the median and not the mean
