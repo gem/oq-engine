@@ -446,7 +446,12 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        readinput.reduce_source_model(smlt, [], False)
+        found, total = readinput.reduce_source_model(smlt, [], remove=False)
+        self.assertEqual(found, 0)
+        found, total = readinput.reduce_source_model(smlt, {}, remove=False)
+        self.assertEqual(found, 0)
+        # TODO: add a test with two sources with the same ID and different
+        # codes
 
     def test_wrong_trts(self):
         # invalid TRT in job.ini [reqv]

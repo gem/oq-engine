@@ -16,7 +16,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap, datastore, performance
+import logging
+from openquake.baselib import sap, datastore, performance, general
 from openquake.commonlib import readinput
 
 
@@ -29,13 +30,15 @@ def reduce_sm(calc_id):
     with datastore.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'][()]
-        ok = info['calc_time'] > 0
-        source_ids = set(info[ok]['source_id'])
+        ok = info['eff_ruptures'] > 0
+        source_ids = general.group_array(info[ok][['source_id', 'code']],
+                                         'source_id')
     if ok.sum() == 0:
         raise RuntimeError('All sources were filtered away!')
     with performance.Monitor() as mon:
-        readinput.reduce_source_model(
+        good, total = readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], source_ids)
+    logging.info('Removed %d/%d sources', total - good, good)
     print(mon)
 
 

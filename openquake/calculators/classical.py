@@ -275,7 +275,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        if 'source_mags' in self.datastore:
+        if 'source_mags' in self.datastore and oq.imtls:
             mags = self.datastore['source_mags'][()]
             self.datastore['effect_by_mag_dst_trt'] = calc.get_effect(
                 mags, self.sitecol, gsims_by_trt, oq)
