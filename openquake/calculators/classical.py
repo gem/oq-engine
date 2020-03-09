@@ -46,23 +46,6 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def get_src_ids(sources):
-    """
-    :returns:
-       a string with the source IDs of the given sources, stripping the
-       extension after the colon, if any
-    """
-    src_ids = []
-    for src in sources:
-        long_src_id = src.source_id
-        try:
-            src_id, ext = long_src_id.rsplit(':', 1)
-        except ValueError:
-            src_id = long_src_id
-        src_ids.append(src_id)
-    return ' '.join(set(src_ids))
-
-
 def get_extreme_poe(array, imtls):
     """
     :param array: array of shape (L, G) with L=num_levels, G=num_gsims
@@ -112,30 +95,6 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             # a foreign key error in case of `oq run` is expected
             print(msg)
     yield classical(blocks[-1], srcfilter, gsims, params, monitor)
-
-
-# not used right now
-def split_by_mag(src_group):
-    """
-    Split sources by magnitude
-    """
-    out = copy.copy(src_group)
-    out.sorces = []
-    for src in src_group:
-        if hasattr(src, 'get_annual_occurrence_rates'):
-            for mag, rate in src.get_annual_occurrence_rates():
-                new = copy.copy(src)
-                new.mfd = mfd.ArbitraryMFD([mag], [rate])
-                new.num_ruptures = new.count_ruptures()
-                out.sources.append(new)
-        else:  # nonparametric source
-            # data is a list of pairs (rup, pmf)
-            for mag, group in itertools.groupby(
-                    src.data, lambda pair: pair[0].mag):
-                new = src.__class__(src.source_id, src.name,
-                                    src.tectonic_region_type, list(group))
-                out.sources.append(new)
-    return out
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
