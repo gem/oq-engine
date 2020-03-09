@@ -76,7 +76,8 @@ class UcerfClassicalCalculator(ClassicalCalculator):
             ).reduce(self.agg_dicts, acc)
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
-            srcs = ucerf.get_background_sources(srcfilter, sample)
+            src.src_filter = srcfilter
+            srcs = ucerf.get_background_sources(sample)
             acc = parallel.Starmap.apply(
                 classical, (srcs, srcfilter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),

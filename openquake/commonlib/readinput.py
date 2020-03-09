@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import ast
 import csv
 import copy
@@ -25,7 +26,6 @@ import zipfile
 import logging
 import tempfile
 import functools
-import operator
 import configparser
 import collections
 import numpy
@@ -33,7 +33,7 @@ import requests
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    random_filter, groupby, countby, group_array, get_duplicates)
+    random_filter, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -626,19 +626,25 @@ def get_composite_source_model(oqparam, h5=None):
     csm = source.CompositeSourceModel(
         gsim_lt, source_model_lt, sm_rlzs,
         oqparam.ses_seed, oqparam.is_event_based())
-    key = operator.attrgetter('source_id', 'checksum')
-    srcidx = 0
     if h5:
         info = hdf5.create(h5, 'source_info', source_info_dt)
     data = []
-    for k, srcs in groupby(csm.get_sources(), key).items():
-        for src in srcs:
-            src.id = srcidx
-        data.append((0, src.src_group_ids[0], src.source_id, src.code,
-                     src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
-        srcidx += 1
+    mags = set()
+    for sg in csm.src_groups:
+        for src in sg:
+            data.append((0, src.src_group_ids[0], src.source_id, src.code,
+                         src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
+            if hasattr(src, 'mags'):  # UCERF
+                srcmags = ['%.3f' % mag for mag in src.mags]
+            elif hasattr(src, 'data'):  # nonparametric
+                srcmags = ['%.3f' % item[0].mag for item in src.data]
+            else:
+                srcmags = ['%.3f' % item[0] for item in
+                           src.get_annual_occurrence_rates()]
+            mags.update(srcmags)
     if h5:
         hdf5.extend(info, numpy.array(data, source_info_dt))
+        h5['source_mags'] = numpy.array(sorted(mags))
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     return csm
 
@@ -833,12 +839,37 @@ def get_pmap_from_csv(oqparam, fnames):
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
-# used in reduce_sm and utils/extract_source
+tag2code = {'ar': b'A',
+            'mu': b'M',
+            'po': b'P',
+            'si': b'S',
+            'co': b'C',
+            'ch': b'X',
+            'no': b'N'}
+
+
+# used in oq reduce_sm and utils/extract_source
 def reduce_source_model(smlt_file, source_ids, remove=True):
     """
-    Extract sources from the composite source model
+    Extract sources from the composite source model.
+
+    :param smlt_file: path to a source model logic tree file
+    :param source_ids: dictionary source_id -> records (src_id, code)
+    :param remove: if True, remove sm.xml files containing no sources
+    :returns: the number of sources satisfying the filter vs the total
     """
-    found = 0
+    if isinstance(source_ids, dict):  # in oq reduce_sm
+        def ok(src_node):
+            code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
+            arr = source_ids.get(src_node['id'])
+            if arr is None:
+                return False
+            return (arr['code'] == code).any()
+    else:  # list of source IDs, in extract_source
+        def ok(src_node):
+            return src_node['id'] in source_ids
+
+    good, total = 0, 0
     to_remove = set()
     for paths in logictree.collect_info(smlt_file).smpaths.values():
         for path in paths:
@@ -848,7 +879,9 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             origmodel = root[0]
             if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
                 for src_node in origmodel:
-                    if src_node['id'] in source_ids:
+                    total += 1
+                    if ok(src_node):
+                        good += 1
                         model.nodes.append(src_node)
             else:  # nrml/0.5
                 for src_group in origmodel:
@@ -861,8 +894,9 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                         weights = [1] * len(src_group.nodes)
                     src_group['srcs_weights'] = reduced_weigths = []
                     for src_node, weight in zip(src_group, weights):
-                        if src_node['id'] in source_ids:
-                            found += 1
+                        total += 1
+                        if ok(src_node):
+                            good += 1
                             sg.nodes.append(src_node)
                             reduced_weigths.append(weight)
                     if sg.nodes:
@@ -873,9 +907,10 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                     nrml.write([model], f, xmlns=root['xmlns'])
             elif remove:  # remove the files completely reduced
                 to_remove.add(path)
-    if found:
+    if good:
         for path in to_remove:
             os.remove(path)
+    return good, total
 
 
 def get_input_files(oqparam, hazard=False):

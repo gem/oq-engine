@@ -222,8 +222,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                 if sg.atomic:
                     raise NotImplementedError(
                         'Atomic groups are not supported yet')
-            if not self.csm.get_sources():
-                raise RuntimeError('All sources were filtered away!')
 
         self.csm_info = self.datastore['csm_info']
         self.poes_disagg = oq.poes_disagg or (None,)

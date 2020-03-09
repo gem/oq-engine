@@ -26,6 +26,7 @@ from openquake.baselib.general import AccumDict, get_indices, block_splitter
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
@@ -68,7 +69,7 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
 
 
-@base.calculators.add('event_based')
+@base.calculators.add('event_based', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
@@ -77,8 +78,7 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
-    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk',
-                      'ucerf_hazard']
+    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
     build_ruptures = sample_ruptures
 
     def init(self):
@@ -104,58 +104,31 @@ class EventBasedCalculator(base.HazardCalculator):
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
-    # called multiple times
-    def block_splitter(self, sources, weight=operator.attrgetter('weight'),
-                       key=lambda src: 1):
-        """
-        :param sources: a list of sources
-        :param weight: a weight function (default .weight)
-        :param key: None or 'src_group_id'
-        :returns: an iterator over blocks of sources
-        """
-        if not hasattr(self, 'maxweight'):
-            ct = self.oqparam.concurrent_tasks or 1
-            self.maxweight = sum(sum(weight(s) for s in sg)
-                                 for sm in self.csm.sm_rlzs
-                                 for sg in sm.src_groups) / ct
-            if self.maxweight < source.MINWEIGHT:
-                self.maxweight = source.MINWEIGHT
-                logging.info('Using minweight=%d', source.MINWEIGHT)
-            else:
-                logging.info('Using maxweight=%d', self.maxweight)
-        return block_splitter(sources, self.maxweight, weight, key)
-
     def build_events_from_sources(self, srcfilter):
         """
         Prefilter the composite source model and store the source_info
         """
-        oq = self.oqparam
         gsims_by_trt = self.csm.info.get_gsims_by_trt()
         logging.info('Building ruptures')
+        maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
+            self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
-        ses_idx = 0
         allargs = []
-        for sm_id, sm in enumerate(self.csm.sm_rlzs):
-            logging.info('Sending %s', sm)
-            for sg in sm.src_groups:
-                if not sg.sources:
-                    continue
-                par = self.param.copy()
-                par['gsims'] = gsims_by_trt[sg.trt]
-                if sg.atomic:  # do not split the group
-                    allargs.append((sg, srcfilter, par))
-                else:  # traditional groups
-                    for block in self.block_splitter(sg.sources, key=by_grp):
-                        if 'ucerf' in oq.calculation_mode:
-                            for i in range(oq.ses_per_logic_tree_path):
-                                par = par.copy()  # avoid mutating the dict
-                                par['ses_seeds'] = [
-                                    (ses_idx, oq.ses_seed + i + 1)]
-                                allargs.append((block, srcfilter, par))
-                                ses_idx += 1
-                        else:
-                            allargs.append((block, srcfilter, par))
+        if self.oqparam.is_ucerf():
+            # manage the filtering in a special way
+            for sg in self.csm.src_groups:
+                for src in sg:
+                    src.src_filter = srcfilter
+            srcfilter = nofilter  # otherwise it would be ultra-slow
+        for sg in self.csm.src_groups:
+            if not sg.sources:
+                continue
+            logging.info('Sending %s', sg)
+            par = self.param.copy()
+            par['gsims'] = gsims_by_trt[sg.trt]
+            for src_group in sg.split(maxweight):
+                allargs.append((src_group, srcfilter, par))
         smap = parallel.Starmap(
             self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
@@ -181,8 +154,10 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures = self.datastore.getitem('ruptures')[()]
         # order the ruptures by rup_id
         sorted_ruptures.sort(order='serial')
+        nr = len(sorted_ruptures)
+        assert len(numpy.unique(sorted_ruptures['serial'])) == nr  # sanity
         self.datastore['ruptures'] = sorted_ruptures
-        self.datastore['ruptures']['id'] = numpy.arange(len(sorted_ruptures))
+        self.datastore['ruptures']['id'] = numpy.arange(nr)
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 

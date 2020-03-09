@@ -30,7 +30,6 @@ from scipy.spatial import cKDTree
 import shapely.geometry
 
 from openquake.baselib.hdf5 import vstr
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import geodetic
 
 U32 = numpy.uint32
@@ -367,7 +366,6 @@ def get_spherical_bounding_box(lons, lats):
     return SphericalBB(west, east, north, south)
 
 
-@with_slots
 class OrthographicProjection(object):
     """
     Callable OrthographicProjection object that can perform both forward
@@ -405,9 +403,6 @@ class OrthographicProjection(object):
     can be also used for measuring distance to an extent of around 700
     kilometers (error doesn't exceed 1 km up until then).
     """
-    _slots_ = ('west east north south lambda0 phi0 '
-               'cos_phi0 sin_phi0 sin_pi_over_4').split()
-
     @classmethod
     def from_lons_lats(cls, lons, lats):
         return cls(*get_spherical_bounding_box(lons, lats))

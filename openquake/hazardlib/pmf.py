@@ -17,12 +17,10 @@
 Module :mod:`openquake.hazardlib.pmf` implements :class:`PMF`.
 """
 import numpy as np
-from openquake.baselib.slots import with_slots
 
 PRECISION = 1E-12  # precision used when comparing sum(probs) to 1
 
 
-@with_slots
 class PMF(object):
     """
     Probability mass function is a function that gives the probability
@@ -46,7 +44,6 @@ class PMF(object):
         If probabilities do not sum up to 1 or there is zero or negative
         probability.
     """ % PRECISION
-    _slots_ = ['data']
 
     def __init__(self, data, epsilon=PRECISION):
         probs, values = list(zip(*data))

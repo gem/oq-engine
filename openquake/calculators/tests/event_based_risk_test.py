@@ -105,7 +105,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        self.assertEqual(aw.array, numpy.float32([767.82324]))
+        self.assertEqual(aw.array, numpy.float32([779.6024]))
 
         fnames = export(('tot_curves-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -187,10 +187,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job12.ini', exports='csv')
         # check size of the event_loss_table
         arr = self.calc.datastore['losses_by_event'][()]
-        self.assertEqual(len(arr), 16)
-        self.assertEqual(arr['event_id'].nbytes, 64)
-        self.assertEqual(arr['rlzi'].nbytes, 32)
-        self.assertEqual(arr['loss'].nbytes, 64)
+        self.assertEqual(len(arr), 15)
+        self.assertEqual(arr['event_id'].nbytes, 60)
+        self.assertEqual(arr['rlzi'].nbytes, 30)
+        self.assertEqual(arr['loss'].nbytes, 60)
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_loss_12.csv', fname)
 
@@ -324,7 +324,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
                       'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
-        self.assertEqual(len(arr.to_table()), 1)
+        self.assertEqual(len(arr.to_table()), 5)
 
         # aggregate by all loss types
         fnames = export(

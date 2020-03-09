@@ -96,7 +96,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     for ``gsims``, which is a list of GSIM instances.
 
     :returns:
-        a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
+        a dictionary with keys pmap, calc_times, rup_data, extra
     """
     if not hasattr(src_filter, 'sitecol'):  # do not filter
         src_filter = SourceFilter(src_filter, {})
@@ -121,6 +121,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap, rup_data, calc_times, extra = cmaker.get_pmap_by_grp(
         src_filter, group)
     extra['task_no'] = getattr(monitor, 'task_no', 0)
+    extra['trt'] = trt
 
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
@@ -178,10 +179,12 @@ def calc_hazard_curves(
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
     # ensure the sources have the right src_group_id
+    idx = 0
     for i, grp in enumerate(groups):
         for src in grp:
-            if src.src_group_id is None:
-                src.src_group_id = i
+            src.src_group_id = i
+            src.id = idx
+            idx += 1
     imtls = DictArray(imtls)
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level,

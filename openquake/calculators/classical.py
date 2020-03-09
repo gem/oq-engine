@@ -46,23 +46,6 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
-def get_src_ids(sources):
-    """
-    :returns:
-       a string with the source IDs of the given sources, stripping the
-       extension after the colon, if any
-    """
-    src_ids = []
-    for src in sources:
-        long_src_id = src.source_id
-        try:
-            src_id, ext = long_src_id.rsplit(':', 1)
-        except ValueError:
-            src_id = long_src_id
-        src_ids.append(src_id)
-    return ' '.join(set(src_ids))
-
-
 def get_extreme_poe(array, imtls):
     """
     :param array: array of shape (L, G) with L=num_levels, G=num_gsims
@@ -114,30 +97,6 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
-# not used right now
-def split_by_mag(src_group):
-    """
-    Split sources by magnitude
-    """
-    out = copy.copy(src_group)
-    out.sorces = []
-    for src in src_group:
-        if hasattr(src, 'get_annual_occurrence_rates'):
-            for mag, rate in src.get_annual_occurrence_rates():
-                new = copy.copy(src)
-                new.mfd = mfd.ArbitraryMFD([mag], [rate])
-                new.num_ruptures = new.count_ruptures()
-                out.sources.append(new)
-        else:  # nonparametric source
-            # data is a list of pairs (rup, pmf)
-            for mag, group in itertools.groupby(
-                    src.data, lambda pair: pair[0].mag):
-                new = src.__class__(src.source_id, src.name,
-                                    src.tectonic_region_type, list(group))
-                out.sources.append(new)
-    return out
-
-
 def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     Split and prefilter the sources
@@ -155,7 +114,8 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
-                extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures))
+                extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures,
+                           trt=src.tectonic_region_type))
 
 
 @base.calculators.add('classical')
@@ -179,6 +139,7 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError('You ran out of memory!')
         if not dic['pmap']:
             return acc
+        trt = dic['extra'].pop('trt')
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
@@ -197,7 +158,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
-                acc.eff_ruptures[grp_id] += eff_rups
+                acc.eff_ruptures[trt] += eff_rups
 
             rup_data = dic['rup_data']
             nr = len(rup_data['grp_id'])
@@ -238,7 +199,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 for dparam in cm.REQUIRES_DISTANCES:
                     rparams.add(dparam + '_')
                 zd[grp_id] = ProbabilityMap(num_levels, len(gsims))
-        zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
+        zd.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
         self.rparams = sorted(rparams)
         for k in self.rparams:
             # variable length arrays
@@ -273,7 +234,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        if 'source_mags' in self.datastore:
+        if 'source_mags' in self.datastore and oq.imtls:
             mags = self.datastore['source_mags'][()]
             self.datastore['effect_by_mag_dst_trt'] = calc.get_effect(
                 mags, self.sitecol, gsims_by_trt, oq)

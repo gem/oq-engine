@@ -19,12 +19,10 @@ seismic sources.
 """
 import abc
 import numpy
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
-@with_slots
 class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     Base class representing a seismic source, that is a structure generating
@@ -38,8 +36,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
-    _slots_ = ['source_id', 'name', 'tectonic_region_type',
-               'src_group_id', 'num_ruptures', 'id', 'min_mag']
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
@@ -91,7 +87,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.src_group_id = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
-        self.id = None  # set by the engine
+        self.min_mag = 0  # set by the SourceConverter
 
     @abc.abstractmethod
     def iter_ruptures(self, **kwargs):
@@ -109,21 +105,27 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :param eff_num_ses: number of stochastic event sets * number of samples
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
+        rup_id = self.serial
+        numpy.random.seed(self.serial)
+        for grp_id in self.src_group_ids:
+            for rup, num_occ in self._sample_ruptures(eff_num_ses):
+                rup.rup_id = rup_id
+                rup_id += 1
+                yield rup, grp_id, num_occ
+
+    def _sample_ruptures(self, eff_num_ses):
         tom = getattr(self, 'temporal_occurrence_model', None)
-        rupids = numpy.arange(self.serial, self.serial + self.num_ruptures)
         if tom:  # time-independent source
-            yield from self.sample_ruptures_poissonian(rupids, eff_num_ses)
+            yield from self.sample_ruptures_poissonian(eff_num_ses)
         else:  # time-dependent source
             mutex_weight = getattr(self, 'mutex_weight', 1)
-            for rup, rup_id in zip(self.iter_ruptures(), rupids):
-                numpy.random.seed(rup_id)
+            for rup in self.iter_ruptures():
                 occurs = rup.sample_number_of_occurrences(eff_num_ses)
                 if mutex_weight < 1:
                     # consider only the occurrencies below the mutex_weight
                     occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
                 num_occ = occurs.sum()
                 if num_occ:
-                    rup.rup_id = rup_id  # used as seed
                     yield rup, num_occ
 
     def get_mags(self):
@@ -140,7 +142,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                     mags.add(rup.mag)
         return sorted(mags)
 
-    def sample_ruptures_poissonian(self, rupids, eff_num_ses):
+    def sample_ruptures_poissonian(self, eff_num_ses):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples
         :yields: pairs (rupture, num_occurrences[num_samples])
@@ -149,11 +151,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if not hasattr(self, 'nodal_plane_distribution'):  # fault
             ruptures = list(self.iter_ruptures())
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
-            numpy.random.seed(self.serial)
             occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
-            for rup, rup_id, num_occ in zip(ruptures, rupids, occurs):
+            for rup, num_occ in zip(ruptures, occurs):
                 if num_occ:
-                    rup.rup_id = rup_id  # used as seed
                     yield rup, num_occ
             return
         # else (multi)point sources and area sources
@@ -170,9 +170,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                         rup_args.append(args)
                         rates.append(mag_occ_rate * np_prob * hc_prob)
         eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
-        numpy.random.seed(self.serial)
         occurs = numpy.random.poisson(eff_rates)
-        for num_occ, args, rate, ser in zip(occurs, rup_args, rates, rupids):
+        for num_occ, args, rate in zip(occurs, rup_args, rates):
             if num_occ:
                 mag_occ_rate, np_prob, hc_prob, mag, np, hc_depth, src = args
                 hc = Point(latitude=src.location.latitude,
@@ -182,7 +181,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 rup = ParametricProbabilisticRupture(
                     mag, np.rake, src.tectonic_region_type, hc,
                     surface, rate, tom)
-                rup.rup_id = ser  # used as seed
                 yield rup, num_occ
 
     @abc.abstractmethod
@@ -233,7 +231,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         meth(**parameters)
 
 
-@with_slots
 class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     """
     Parametric Seismic Source generates earthquake ruptures from source
@@ -268,11 +265,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         If either rupture aspect ratio or rupture mesh spacing is not positive
         (if not None).
     """
-
-    _slots_ = BaseSeismicSource._slots_ + '''mfd rupture_mesh_spacing
-    magnitude_scaling_relationship rupture_aspect_ratio
-    temporal_occurrence_model'''.split()
-
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model):
@@ -323,7 +315,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         String representation of a source, displaying the source class name
         and the source id.
         """
-        return '<%s %s>' % (self.__class__.__name__, self.source_id)
+        return '<%s %s (%s)>' % (
+            self.__class__.__name__, self.source_id, self.name)
 
     def get_one_rupture(self, rupture_mutex=False):
         """

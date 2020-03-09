@@ -663,7 +663,13 @@ class OqParam(valid.ParamSet):
         The calculation mode is event_based, event_based_risk or ebrisk
         """
         return (self.calculation_mode in
-                'event_based_risk ebrisk event_based_damage')
+                'event_based_risk ebrisk event_based_damage ucerf_hazard')
+
+    def is_ucerf(self):
+        """
+        :returns: True for UCERF calculations, False otherwise
+        """
+        return 'source_model' in self.inputs
 
     def is_valid_shakemap(self):
         """
@@ -814,7 +820,6 @@ class OqParam(valid.ParamSet):
         if self.export_dir and not os.path.isabs(self.export_dir):
             self.export_dir = os.path.normpath(
                 os.path.join(self.input_dir, self.export_dir))
-            logging.info('Using export_dir=%s', self.export_dir)
         if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
             logging.warning('export_dir not specified. Using export_dir=%s'

@@ -287,11 +287,13 @@ def make_figure_sources(extractors, what):
             logging.warning('No geometries for source id %s', srcid)
             continue
         if rec['eff_ruptures']:  # not filtered out
+            color = 'green'
             alpha = .3
             n += 1
         else:
+            color = 'yellow'
             alpha = .1
-        pp.add(shapely.wkt.loads(wkt), alpha=alpha)
+        pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
         tot += 1
     pp.set_lim(sitecol)
     ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))

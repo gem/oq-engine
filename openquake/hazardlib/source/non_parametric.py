@@ -28,12 +28,10 @@ from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.geo.mesh import Mesh, point3d
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.pmf import PMF
-from openquake.baselib.slots import with_slots
 
 F32 = numpy.float32
 
 
-@with_slots
 class NonParametricSeismicSource(BaseSeismicSource):
     """
     Non Parametric Seismic Source explicitly defines earthquake ruptures in the
@@ -52,8 +50,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
         of occurrences equal to 0)
     """
     code = b'N'
-    _slots_ = BaseSeismicSource._slots_ + ['data']
-
     MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type, data):

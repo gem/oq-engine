@@ -22,10 +22,8 @@ from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.baselib.slots import with_slots
 
 
-@with_slots
 class AreaSource(ParametricSeismicSource):
     """
     Area source represents uniform seismicity occurring over a geographical
@@ -42,10 +40,7 @@ class AreaSource(ParametricSeismicSource):
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
     code = 'A'
-    _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
-    lower_seismogenic_depth nodal_plane_distribution hypocenter_distribution
-    polygon area_discretization'''.split()
-    MODIFICATIONS = set(())
+    MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,

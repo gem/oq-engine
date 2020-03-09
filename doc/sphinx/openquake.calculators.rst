@@ -120,14 +120,6 @@ ucerf_event_classical module
     :undoc-members:
     :show-inheritance:
 
-ucerf_event_based module
-----------------------------------------------
-
-.. automodule:: openquake.calculators.ucerf_event_based
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 views module
 ----------------------------------
 
