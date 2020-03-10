@@ -102,8 +102,10 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     pmap = AccumDict(accum=0)
     with monitor("splitting/filtering sources"):
         splits, _stime = split_sources(srcs)
+    totrups = 0
     for src in splits:
         t0 = time.time()
+        totrups += src.num_ruptures
         if srcfilter.get_close_sites(src) is None:
             continue
         dt = time.time() - t0
@@ -111,7 +113,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.grp_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
-                extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures,
+                extra=dict(task_no=monitor.task_no, totrups=totrups,
                            trt=src.tectonic_region_type))
 
 
