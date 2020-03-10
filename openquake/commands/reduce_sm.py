@@ -45,8 +45,8 @@ def reduce_sm(calc_id):
     logging.info('Removed %d/%d sources', total - good, good)
     srcs, cnts = np.unique(info[['source_id', 'code']], return_counts=True)
     dupl = srcs[cnts > 1]
-    if len(dupl):
-        logging.warning('There were duplicated sources %s', dupl)
+    if bad_ids & set(dict(dupl)):
+        logging.info('There were duplicated sources %s', dupl)
     print(mon)
 
 
