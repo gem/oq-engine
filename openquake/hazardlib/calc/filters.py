@@ -341,6 +341,9 @@ class SourceFilter(object):
         :param sources: a sequence of sources
         :yields: sources with .indices
         """
+        if self.sitecol is None:  # nofilter
+            yield from sources
+            return
         for src in sources:
             if hasattr(src, 'indices'):   # already filtered
                 yield src

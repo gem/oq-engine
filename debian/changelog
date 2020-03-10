@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Removed the `ucerf_classical` calculator (just use the `classical` one)
+
   [Paolo Tormene]
   * Added a warning in `oq reduce_sm` listing duplicate source IDs
 
