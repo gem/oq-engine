@@ -235,8 +235,9 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm_info.get_gsims_by_trt()
         if 'source_mags' in self.datastore and oq.imtls:
             mags = self.datastore['source_mags'][()]
-            self.datastore['effect_by_mag_dst_trt'] = calc.get_effect(
-                mags, self.sitecol, gsims_by_trt, oq)
+            aw = calc.get_effect(mags, self.sitecol, gsims_by_trt, oq)
+            if hasattr(aw, 'array'):
+                self.datastore['effect_by_mag_dst_trt'] = aw
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)
