@@ -630,9 +630,11 @@ def get_composite_source_model(oqparam, h5=None):
         info = hdf5.create(h5, 'source_info', source_info_dt)
     data = []
     mags = set()
+    n = len(sm_rlzs)
     for sg in csm.src_groups:
         for src in sg:
-            data.append((0, src.grp_ids[0], src.source_id, src.code,
+            eri = src.grp_ids[0] % n
+            data.append((eri, src.grp_ids[0], src.source_id, src.code,
                          src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
             if hasattr(src, 'mags'):  # UCERF
                 srcmags = ['%.2f' % mag for mag in src.mags]
