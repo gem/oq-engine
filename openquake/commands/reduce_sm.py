@@ -43,10 +43,10 @@ def reduce_sm(calc_id):
         good, total = readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], ok_ids)
     logging.info('Removed %d/%d sources', total - good, good)
-    scs, counts = np.unique(info[['source_id', 'code']], return_counts=True)
-    for (srcid, code), count in zip(scs, counts):
-        if srcid in bad_ids and count > 1:
-            logging.warning('Duplicated source %s could not be removed', srcid)
+    srcs, cnts = np.unique(info[['source_id', 'code']], return_counts=True)
+    dupl = srcs[cnts > 1]
+    if bad_ids & set(dict(dupl)):
+        logging.info('There were duplicated sources %s', dupl)
     print(mon)
 
 
