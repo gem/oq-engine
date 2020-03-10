@@ -16,17 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import copy
 import time
 import logging
 import operator
 from datetime import datetime
-import itertools
 import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
-from openquake.hazardlib import mfd
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -118,7 +115,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
                            trt=src.tectonic_region_type))
 
 
-@base.calculators.add('classical')
+@base.calculators.add('classical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator

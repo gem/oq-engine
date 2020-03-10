@@ -20,7 +20,6 @@ import random
 import os.path
 import pickle
 import operator
-import collections
 import logging
 import zlib
 import numpy
@@ -119,14 +118,27 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         else:
             offset += num_gsim_rlzs
     if oq.is_ucerf():
+        classical = not oq.is_event_based()
+        sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
+        checksum = 0
         for grp_id, sm_rlz in enumerate(sm_rlzs):
             sg = copy.copy(grp)
             sm_rlz.src_groups = [sg]
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
-            sg.sources = [src]
+            if classical:
+                # split the sources upfront to improve the task distribution
+                sg.sources = []
+                for s in src:
+                    s.checksum = checksum
+                    sg.sources.append(s)
+                    checksum += 1
+                sg.sources.extend(src.get_background_sources(sample))
+            else:  # event_based, use one source
+                sg.sources = [src]
+
         return sm_rlzs
 
     logging.info('Reading the source model(s) in parallel')

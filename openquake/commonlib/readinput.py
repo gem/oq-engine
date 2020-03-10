@@ -635,11 +635,11 @@ def get_composite_source_model(oqparam, h5=None):
             data.append((0, src.grp_ids[0], src.source_id, src.code,
                          src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
             if hasattr(src, 'mags'):  # UCERF
-                srcmags = ['%.3f' % mag for mag in src.mags]
+                srcmags = ['%.2f' % mag for mag in src.mags]
             elif hasattr(src, 'data'):  # nonparametric
-                srcmags = ['%.3f' % item[0].mag for item in src.data]
+                srcmags = ['%.2f' % item[0].mag for item in src.data]
             else:
-                srcmags = ['%.3f' % item[0] for item in
+                srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags.update(srcmags)
     if h5:

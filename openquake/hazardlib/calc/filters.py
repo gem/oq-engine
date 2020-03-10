@@ -86,14 +86,14 @@ class IntegrationDistance(collections.abc.Mapping):
         for trt, value in dic.items():
             if isinstance(value, (list, numpy.ndarray)):
                 # assume a list of pairs (magstring, dist)
-                self.magdist[trt] = {'%.3f' % mag: dist for mag, dist in value}
+                self.magdist[trt] = {'%.2f' % mag: dist for mag, dist in value}
                 self.dic[trt] = value[-1][-1]
             else:
                 self.dic[trt] = float(value)
 
     def __call__(self, trt, mag=None):
         if mag and trt in self.magdist:
-            return self.magdist[trt]['%.3f' % mag]
+            return self.magdist[trt]['%.2f' % mag]
         elif not self.dic:
             return MAX_DISTANCE
         return getdefault(self.dic, trt)
@@ -341,6 +341,9 @@ class SourceFilter(object):
         :param sources: a sequence of sources
         :yields: sources with .indices
         """
+        if self.sitecol is None:  # nofilter
+            yield from sources
+            return
         for src in sources:
             if hasattr(src, 'indices'):   # already filtered
                 yield src

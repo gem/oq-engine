@@ -22,7 +22,7 @@ import operator
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, get_indices, block_splitter
+from openquake.baselib.general import AccumDict, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -31,7 +31,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
-from openquake.commonlib import source, calc, util, logs
+from openquake.commonlib import calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rgetters, gen_rupture_getters,
