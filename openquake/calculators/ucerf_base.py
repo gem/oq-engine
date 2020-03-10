@@ -19,9 +19,11 @@ import os
 import copy
 import math
 import logging
+import pickle
 from datetime import datetime
 import numpy
 import h5py
+import zlib
 
 from openquake.baselib.general import random_filter, AccumDict
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -320,9 +322,14 @@ class UCERFSource(BaseSeismicSource):
         themselves
         """
         branch_key = self.idx_set["grid_key"]
-        idist = self.src_filter.integration_distance(DEFAULT_TRT)
         with h5py.File(self.source_file, 'r') as hdf5:
             bg_locations = hdf5["Grid/Locations"][()]
+            if hasattr(self, 'src_filter'):
+                # in event based
+                idist = self.src_filter.integration_distance(DEFAULT_TRT)
+            else:
+                # in classical
+                return range(len(bg_locations))
             distances = min_geodetic_distance(
                 self.src_filter.sitecol.xyz,
                 (bg_locations[:, 0], bg_locations[:, 1]))
@@ -435,6 +442,8 @@ class UCERFSource(BaseSeismicSource):
                     self.usd, self.lsd,
                     Point(locations[i, 0], locations[i, 1]),
                     self.npd, self.hdd)
+                ps.checksum = zlib.adler32(pickle.dumps(vars(ps), protocol=4))
+                ps._wkt = ps.wkt()
                 ps.id = self.id
                 ps.grp_id = self.grp_id
                 ps.num_ruptures = ps.count_ruptures()

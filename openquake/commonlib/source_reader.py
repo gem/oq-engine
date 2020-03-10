@@ -119,6 +119,8 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         else:
             offset += num_gsim_rlzs
     if oq.is_ucerf():
+        classical = not oq.is_event_based()
+        sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         for grp_id, sm_rlz in enumerate(sm_rlzs):
             sg = copy.copy(grp)
@@ -127,6 +129,11 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
             sg.sources = [src]
+            if classical:
+                logging.info('Getting background sources from %s',
+                             src.source_id)
+                sg.sources.extend(src.get_background_sources(sample))
+
         return sm_rlzs
 
     logging.info('Reading the source model(s) in parallel')
