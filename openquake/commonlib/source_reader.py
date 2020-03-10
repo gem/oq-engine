@@ -20,7 +20,6 @@ import random
 import os.path
 import pickle
 import operator
-import collections
 import logging
 import zlib
 import numpy
