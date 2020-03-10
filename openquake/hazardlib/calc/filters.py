@@ -18,6 +18,7 @@
 import os
 import sys
 import time
+import logging
 import operator
 import collections.abc
 from contextlib import contextmanager
@@ -369,7 +370,11 @@ class SourceFilter(object):
         lons = []
         lats = []
         for src in srcs:
-            box = self.integration_distance.get_affected_box(src)
+            try:
+                box = self.integration_distance.get_affected_box(src)
+            except BBoxError as exc:
+                logging.error(exc)
+                continue
             lons.append(box[0])
             lats.append(box[1])
             lons.append(box[2])
