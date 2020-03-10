@@ -44,7 +44,7 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 DEFAULT_TRT = "Active Shallow Crust"
-RUPTURES_PER_BLOCK = 20000  # decided by MS
+RUPTURES_PER_BLOCK = 10000  # decided by MS
 HDD = PMF([(0.2, 3.0), (0.6, 6.0), (0.2, 9.0)])
 NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
            (0.15, NodalPlane(45.0, 90.0, 0.0)),
@@ -398,6 +398,8 @@ class UCERFSource(BaseSeismicSource):
         while stop > start:
             new = copy.copy(self)
             new.id = self.id
+            new.source_id = '%s:%d:%d' % (
+                self.source_id, self.start, self.stop)
             new.orig = self.orig
             new.start = start
             new.stop = min(start + RUPTURES_PER_BLOCK, stop)
@@ -405,8 +407,8 @@ class UCERFSource(BaseSeismicSource):
             yield new
 
     def __repr__(self):
-        return '<%s %s[%d:%d]>' % (self.__class__.__name__, self.source_id,
-                                   self.start, self.stop)
+        return '<%s %s:%d:%d>' % (self.__class__.__name__, self.source_id,
+                                  self.start, self.stop)
 
     def get_background_sources(self, sample_factor=None):
         """
