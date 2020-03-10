@@ -127,11 +127,10 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
-            sg.sources = [src]
             if classical:
-                logging.info('Getting background sources from %s',
-                             src.source_id)
-                sg.sources.extend(src.get_background_sources(sample))
+                sg.sources = [src] + src.get_background_sources(sample)
+            else:  # event_based, use one source
+                sg.sources = [src]
 
         return sm_rlzs
 
