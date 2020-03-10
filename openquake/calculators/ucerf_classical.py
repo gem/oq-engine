@@ -34,14 +34,6 @@ class UcerfClassicalCalculator(ClassicalCalculator):
     """
     accept_precalc = ['ucerf_classical']
 
-    def pre_execute(self):
-        super().pre_execute()
-        self.csm_info = self.csm.info
-        for sm in self.csm.sm_rlzs:  # one branch at the time
-            [grp] = sm.src_groups
-            for src in grp:
-                grp.tot_ruptures += src.num_ruptures
-
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
