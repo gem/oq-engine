@@ -453,7 +453,7 @@ class HazardCalculator(BaseCalculator):
                         '%s: disagg_by_src can be set only if there are <=1000'
                         ' sources, but %d were found in the model' %
                         (j, len(srcs)))
-                self.full_lt = csm.info
+                self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
 
         if not oq.hazard_calculation_id:
@@ -568,7 +568,7 @@ class HazardCalculator(BaseCalculator):
                     oq.inputs['gsim_logic_tree'], set(full_lt.trts))
         elif hasattr(self, 'csm'):
             self.check_floating_spinning()
-            self.realizations = self.csm.info.get_realizations()
+            self.realizations = self.csm.full_lt.get_realizations()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['full_lt'] = fake = source.FullLogicTree.fake()
             self.realizations = fake.get_realizations()
@@ -579,7 +579,7 @@ class HazardCalculator(BaseCalculator):
         :returns: the number of realizations
         """
         try:
-            return self.csm.info.get_num_rlzs()
+            return self.csm.full_lt.get_num_rlzs()
         except AttributeError:  # no self.csm
             return self.datastore['full_lt'].get_num_rlzs()
 
