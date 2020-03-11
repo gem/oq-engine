@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,27 +22,27 @@
 # Test tables elaboratated from data provided directly from the authors.
 #
 
-from openquake.hazardlib.gsim.bindi_2011 import BindiEtAl2011scaled
+from openquake.hazardlib.gsim.bindi_2011scaled import BindiEtAl2011scaled
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class BindiEtAl2011TestCase(BaseGSIMTestCase):
+class BindiEtAl2011scaledTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BindiEtAl2011scaled
 
     # Tables provided by original authors
 
     def test_mean(self):
-        self.check('BINDI11scaled/BINDI2011scaled_MEAN.csv',
+        self.check('BINDI2011scaled/BINDI2011scaled_MEAN.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_inter(self):
-        self.check('BINDI11scaled/BINDI2011scaled_STD_INTER.csv',
+        self.check('BINDI2011scaled/BINDI2011scaled_STD_INTER.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_intra(self):
-        self.check('BINDI11scaled/BINDI2011scaled_STD_INTRA.csv',
+        self.check('BINDI2011scaled/BINDI2011scaled_STD_INTRA.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('BINDI11scaled/BINDI2011scaled_STD_TOTAL.csv',
+        self.check('BINDI2011scaled/BINDI2011scaled_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
