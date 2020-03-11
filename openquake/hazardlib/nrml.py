@@ -203,6 +203,18 @@ def get_source_model_04(node, fname, converter=default):
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
 def get_source_model_05(node, fname, converter=default):
     converter.fname = fname
+    # read investigation time and start time
+    itime = node.get('investigation_time')
+    if itime is not None:
+        itime = valid.positivefloat(itime)
+    stime = node.get('start_time')
+    if stime is not None:
+        stime = valid.positivefloat(stime)
+    # adding this to make sure the converter has the proper investigation
+    # time even when we read just the model .xml file
+    if itime is not None:
+        converter.investigation_time = itime
+    # reading groupss
     groups = []  # expect a sequence of sourceGroup nodes
     for src_group in node:
         if 'sourceGroup' not in src_group.tag:
@@ -214,12 +226,7 @@ def get_source_model_05(node, fname, converter=default):
         if sg and len(sg):
             # a source group can be empty if the source_id filtering is on
             groups.append(sg)
-    itime = node.get('investigation_time')
-    if itime is not None:
-        itime = valid.positivefloat(itime)
-    stime = node.get('start_time')
-    if stime is not None:
-        stime = valid.positivefloat(stime)
+
     return SourceModel(sorted(groups), node.get('name'), itime, stime)
 
 

@@ -72,7 +72,7 @@ class SampleClusterTestCase(unittest.TestCase):
         idis = IntegrationDistance({'default': 400})
         scol = SiteCollection([Site(Point(0., 0.))])
         sf = calc.filters.SourceFilter(scol, idis)
-        # TODO check who prepares this set of parameters
+        # Create list of parameters
         param = dict(ses_per_logic_tree_path=1,
                      filter_distance='rjb',
                      src_interdep=group.src_interdep,
@@ -85,8 +85,10 @@ class SampleClusterTestCase(unittest.TestCase):
             nr = src.num_ruptures
             src.serial = start + seed
             start += nr
-
+        # Counting the number of occuurences of the three ruptures admitted
+        # by this test model
         rups, tme = sample_cluster(group, sf, num_ses=1000, param=param)
-        print('rups', len(rups))
-
-        assert len(rups) == 1
+        nocc = sum([r.n_occ for r in rups])
+        # The number of occurrences must be close to 10 since the occurrence
+        # rate of the cluster is 0.01 events/year
+        assert nocc == 9

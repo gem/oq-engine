@@ -177,9 +177,6 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     grp_num_occ = numpy.random.poisson(rate * time_span * samples *
                                        num_ses)
     lam = rate * time_span * samples * num_ses
-    print(lam, rate , time_span , samples , num_ses)
-    print(grp_num_occ)
-
     # Now we process the sources included in the group. Possible cases:
     # * The group is a cluster. In this case we choose one rupture per each
     #   source; uncertainty in the ruptures can be handled in this case
@@ -236,7 +233,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                 calc_times[src.id] += numpy.array(
                     [len(rup_data[src.id]), len(_sites), dt])
 
-    # Create event based ruptures
+    # Create ruptures
     for src_key in rup_data:
         for rup_key in rup_data[src_key]:
             rup, srcidx, grp_id = rup_data[src_key][rup_key]
