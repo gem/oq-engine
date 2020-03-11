@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import copy
 import operator
 import collections
 import numpy
@@ -126,37 +125,50 @@ class CompositionInfo(object):
             a fake `CompositionInfo` instance with the given gsim logic tree
             object; if None, builds automatically a fake gsim logic tree
         """
-        weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('[FromFile]')
         fakeSM = logictree.Realization(
-            'scenario', weight,  0, lt_path='b1', samples=1)
-        fakeSM.src_groups = [sourceconverter.SourceGroup('*')],
-        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
+            'scenario', weight=1,  ordinal=0, lt_path='b1', samples=1)
+        info = object.__new__(cls)
+        info.source_model_lt = logictree.SourceModelLogicTree.fake()
+        info.gsim_lt = gsim_lt
+        info.sm_rlzs = [fakeSM]
+        return info
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models):
+    def __init__(self, source_model_lt, gsim_lt):
+        self.source_model_lt = source_model_lt
         self.gsim_lt = gsim_lt
-        self.seed = seed
-        self.num_samples = num_samples
-        self.sm_rlzs = source_models
-        self.init()
+        self.init()  # set .sm_rlzs and .trt_by_grp
 
     def init(self):
+        sm_rlzs = logictree.get_effective_rlzs(self.source_model_lt)
+        if not self.num_samples:
+            num_gsim_rlzs = self.gsim_lt.get_num_paths()
+        offset = 0
+        for sm_rlz in sm_rlzs:
+            sm_rlz.offset = offset
+            if self.num_samples:
+                offset += sm_rlz.samples
+            else:
+                offset += num_gsim_rlzs
+        self.sm_rlzs = sm_rlzs
+
+    @property
+    def trt_by_grp(self):
         trt_by_grp = []
         n = len(self.sm_rlzs)
         trts = list(self.gsim_lt.values)
         for smodel in self.sm_rlzs:
             for grp_id in self.grp_ids(smodel.ordinal):
                 trt_by_grp.append((grp_id, trts[grp_id // n]))
-        self.trt_by_grp = dict(sorted(trt_by_grp))
+        return dict(sorted(trt_by_grp))
 
-    def get_info(self, sm_id):
-        """
-        Extract a CompositionInfo instance containing the single
-        model of index `sm_id`.
-        """
-        sm = self.sm_rlzs[sm_id]
-        num_samples = sm.samples if self.num_samples else 0
-        return self.__class__(self.gsim_lt, self.seed, num_samples, [sm])
+    @property
+    def seed(self):
+        return self.source_model_lt.seed
+
+    @property
+    def num_samples(self):
+        return self.source_model_lt.num_samples
 
     def grp_ids(self, eri):
         """
@@ -262,6 +274,7 @@ class CompositionInfo(object):
                             sm.samples, sm.offset))
         return (dict(
             gsim_lt=self.gsim_lt,
+            source_model_lt=self.source_model_lt,
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(self.gsim_lt.values)))
@@ -270,6 +283,7 @@ class CompositionInfo(object):
         # TODO: this is called more times than needed, maybe we should cache it
         sm_data = dic['sm_data']
         vars(self).update(attrs)
+        self.source_model_lt = dic['source_model_lt']
         self.gsim_lt = dic['gsim_lt']
         self.sm_rlzs = []
         for sm_id, rec in enumerate(sm_data):
@@ -278,7 +292,6 @@ class CompositionInfo(object):
                 rec['name'], rec['weight'], sm_id, path,
                 rec['samples'], rec['offset'])
             self.sm_rlzs.append(sm)
-        self.init()
 
     def get_num_rlzs(self, sm_rlz=None):
         """
@@ -341,21 +354,18 @@ class CompositeSourceModel(collections.abc.Sequence):
     :param sm_rlzs:
         a list of Realization instances with attribute sm.src_groups
     """
-    def __init__(self, gsim_lt, source_model_lt, sm_rlzs, ses_seed=0,
-                 event_based=False):
-        self.gsim_lt = gsim_lt
-        self.source_model_lt = source_model_lt
-        self.sm_rlzs = sm_rlzs
-        self.info = CompositionInfo(
-            gsim_lt, self.source_model_lt.seed,
-            self.source_model_lt.num_samples, self.sm_rlzs)
+    def __init__(self, info, groups, ses_seed=0, event_based=False):
+        self.gsim_lt = info.gsim_lt
+        self.source_model_lt = info.source_model_lt
+        self.sm_rlzs = info.sm_rlzs
+        self.info = info
         # extract a single source from multiple sources with the same ID
         # and regroup the sources in non-atomic groups by TRT
         atomic = []
         acc = AccumDict(accum=[])
-        get_grp_id = source_model_lt.get_grp_id(gsim_lt.values)
+        get_grp_id = info.source_model_lt.get_grp_id(info.gsim_lt.values)
         for sm in self.sm_rlzs:
-            for grp in sm.src_groups:
+            for grp in groups[sm.ordinal]:
                 if grp and grp.atomic:
                     atomic.append(grp)
                 elif grp:

@@ -64,6 +64,7 @@ class FromFile(object):
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
+    REQUIRES_DISTANCES = set()
     kwargs = {}
 
     def init(self):

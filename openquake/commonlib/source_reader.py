@@ -27,6 +27,7 @@ import numpy
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, calc
 from openquake.commonlib.logictree import get_effective_rlzs
+from openquake.commonlib.source import CompositionInfo
 
 
 TWO16 = 2 ** 16  # 65,536
@@ -106,25 +107,16 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
-    sm_rlzs = get_effective_rlzs(source_model_lt)
-    if not source_model_lt.num_samples:
-        num_gsim_rlzs = gsim_lt.get_num_paths()
-    offset = 0
-    for sm_rlz in sm_rlzs:
-        sm_rlz.offset = offset
-        sm_rlz.src_groups = []
-        if source_model_lt.num_samples:
-            offset += sm_rlz.samples
-        else:
-            offset += num_gsim_rlzs
+    info = CompositionInfo(source_model_lt, gsim_lt)
+    groups = [[] for sm_rlz in info.sm_rlzs]
     if oq.is_ucerf():
         classical = not oq.is_event_based()
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         checksum = 0
-        for grp_id, sm_rlz in enumerate(sm_rlzs):
+        for grp_id, sm_rlz in enumerate(info.sm_rlzs):
             sg = copy.copy(grp)
-            sm_rlz.src_groups = [sg]
+            groups[grp_id] = [sg]
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
@@ -140,13 +132,12 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
                 sg.sources.extend(src.get_background_sources(sample))
             else:  # event_based, use one source
                 sg.sources = [src]
-
-        return sm_rlzs
+        return info, groups
 
     logging.info('Reading the source model(s) in parallel')
     allargs = []
     fileno = 0
-    for rlz in sm_rlzs:
+    for rlz in info.sm_rlzs:
         for name in rlz.value.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             allargs.append((rlz.ordinal, rlz.lt_path,
@@ -165,8 +156,8 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
     # various checks
     changes = 0
     for dic in sorted(smap, key=operator.itemgetter('fileno')):
-        sm_rlz = sm_rlzs[dic['ordinal']]
-        sm_rlz.src_groups.extend(dic['src_groups'])
+        eri = dic['ordinal']
+        groups[eri].extend(dic['src_groups'])
         for sg in dic['src_groups']:
             changes += sg.changes
         gsim_file = oq.inputs.get('gsim_logic_tree')
@@ -174,12 +165,12 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
             for src_group in dic['src_groups']:
                 if src_group.trt not in gsim_lt.values:
                     raise ValueError(
-                        "Found in %r a tectonic region type %r "
+                        "Found in the source models a tectonic region type %r "
                         "inconsistent with the ones in %r" %
-                        (sm_rlz, src_group.trt, gsim_file))
-    for sm_rlz in sm_rlzs:
+                        (src_group.trt, gsim_file))
+    for sm_rlz in info.sm_rlzs:
         # check applyToSources
-        source_ids = set(src.source_id for grp in sm_rlz.src_groups
+        source_ids = set(src.source_id for grp in groups[sm_rlz.ordinal]
                          for src in grp)
         for brid, srcids in source_model_lt.info.applytosources.items():
             if brid in sm_rlz.lt_path:
@@ -193,4 +184,4 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
-    return sm_rlzs
+    return info, groups
