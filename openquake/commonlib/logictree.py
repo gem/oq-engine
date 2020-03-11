@@ -27,7 +27,6 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 import io
 import os
 import re
-import copy
 import time
 import logging
 import functools
@@ -58,6 +57,9 @@ MAX_SINT_32 = (2 ** 31) - 1
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
 SOURCE_TYPE_REGEX = re.compile(r'<(\w+Source)\b')
+
+branch_dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
+             ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
 
 
 def unique(objects, key=None):
@@ -442,6 +444,18 @@ class SourceModelLogicTree(object):
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
                'applyToSourceType')
+
+    @classmethod
+    def fake(cls):
+        """
+        :returns: a fake SourceModelLogicTree with a single branch
+        """
+        self = object.__new__(cls)
+        arr = numpy.array([('bs0', 'b0', 'sourceModel', 'fake.xml', 1)],
+                          branch_dt)
+        dic = dict(filename='fake.xml', seed=0, num_samples=0)
+        self.__fromh5__(arr, dic)
+        return self
 
     def __init__(self, filename, seed=0, num_samples=0):
         self.filename = filename
@@ -848,23 +862,26 @@ class SourceModelLogicTree(object):
             dic = self.bsetdict[br.bs_id].copy()
             utype = dic.pop('uncertaintyType')
             tbl.append((br.bs_id, brid, utype, br.value, br.weight))
-        dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
-              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
         attrs = tomldict(self.bsetdict)
+        attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples
         attrs['filename'] = self.filename
-        return numpy.array(tbl, dt), attrs
+        return numpy.array(tbl, branch_dt), attrs
 
     def __fromh5__(self, array, attrs):
         bsets = []
+        self.branches = {}
+        self.bsetdict = {}
         for bsid, rows in group_array(array, 'branchset').items():
             utype = rows[0]['utype']
             bset = BranchSet(utype, [])  # TODO: filters
             bset.id = bsid
             for row in rows:
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
+                self.branches[br.branch_id] = br
                 bset.branches.append(br)
             bsets.append(bset)
+            self.bsetdict[bsid] = {'uncertaintyType': utype}
         self.root_branchset = bsets[0]
         for i, childset in enumerate(bsets[1:]):
             dic = toml.loads(attrs[childset.id])
@@ -872,6 +889,7 @@ class SourceModelLogicTree(object):
             for branch in bsets[i].branches:  # parent branches
                 if not atb or branch.branch_id in atb:
                     branch.bset = bset
+        self.seed = attrs['seed']
         self.num_samples = attrs['num_samples']
         self.filename = attrs['filename']
 

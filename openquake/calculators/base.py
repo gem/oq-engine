@@ -454,7 +454,6 @@ class HazardCalculator(BaseCalculator):
                         ' sources, but %d were found in the model' %
                         (j, len(srcs)))
                 self.csm_info = csm.info
-                self.datastore['source_model_lt'] = csm.source_model_lt
         self.init()  # do this at the end of pre-execute
 
         if not oq.hazard_calculation_id:

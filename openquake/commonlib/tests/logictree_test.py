@@ -2136,13 +2136,13 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         gs_lt = GsimLogicTree(fname_gmc)
 
         mags = [5.7, 5.98, 6.26, 6.54, 6.82, 7.1]
-        for sm in get_sm_rlzs(oqparam, gs_lt, ssc_lt):
-            for src in sm.src_groups[0]:
-                if src.source_id == 'a2':
-                    self.assertEqual(src.mfd.max_mag, 6.5)
-                elif src.source_id == 'a1':
-                    msg = "Wrong mmax value assigned to source 'a1'"
-                    self.assertIn(src.mfd.max_mag, mags, msg)
+        info, groups = get_sm_rlzs(oqparam, gs_lt, ssc_lt)
+        for src in groups[0][0]:
+            if src.source_id == 'a2':
+                self.assertEqual(src.mfd.max_mag, 6.5)
+            elif src.source_id == 'a1':
+                msg = "Wrong mmax value assigned to source 'a1'"
+                self.assertIn(src.mfd.max_mag, mags, msg)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch
