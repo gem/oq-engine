@@ -131,13 +131,13 @@ class CompositionInfo(object):
         fakeSM = logictree.Realization(
             'scenario', weight,  0, lt_path='b1', samples=1)
         fakeSM.src_groups = [sourceconverter.SourceGroup('*')],
-        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
+        return cls(gsim_lt, seed=0, num_samples=0, sm_rlzs=[fakeSM])
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models):
+    def __init__(self, gsim_lt, seed, num_samples, sm_rlzs):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
-        self.sm_rlzs = source_models
+        self.sm_rlzs = sm_rlzs
         self.init()
 
     def init(self):
