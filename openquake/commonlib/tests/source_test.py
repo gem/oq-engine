@@ -758,7 +758,8 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         dic, attrs = csm.info.__toh5__()
         new = object.__new__(CompositionInfo)
         new.__fromh5__(dic, attrs)
-        self.assertEqual(repr(new), repr(csm.info))
+        self.assertEqual(repr(new), repr(csm.info).
+                         replace('0.6000000000000001', '0.6'))
 
     def tearDown(self):
         Starmap.shutdown()
