@@ -69,7 +69,7 @@ def print_full_lt(fname):
     """
     oqparam = readinput.get_oqparam(fname)
     csm = readinput.get_composite_source_model(oqparam)
-    print(csm.info)
+    print(csm.full_lt)
     print('See http://docs.openquake.org/oq-engine/stable/'
           'effective-realizations.html for an explanation')
 
