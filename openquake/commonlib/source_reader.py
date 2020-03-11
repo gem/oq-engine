@@ -135,6 +135,8 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
                     s.checksum = checksum
                     sg.sources.append(s)
                     checksum += 1
+                    if sample:  # consider only the first source
+                        break
                 sg.sources.extend(src.get_background_sources(sample))
             else:  # event_based, use one source
                 sg.sources = [src]
