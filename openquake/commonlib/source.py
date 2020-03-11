@@ -151,13 +151,16 @@ class CompositionInfo(object):
             else:
                 offset += num_gsim_rlzs
         self.sm_rlzs = sm_rlzs
+
+    @property
+    def trt_by_grp(self):
         trt_by_grp = []
         n = len(self.sm_rlzs)
         trts = list(self.gsim_lt.values)
         for smodel in self.sm_rlzs:
             for grp_id in self.grp_ids(smodel.ordinal):
                 trt_by_grp.append((grp_id, trts[grp_id // n]))
-        self.trt_by_grp = dict(sorted(trt_by_grp))
+        return dict(sorted(trt_by_grp))
 
     @property
     def seed(self):
@@ -289,7 +292,6 @@ class CompositionInfo(object):
                 rec['name'], rec['weight'], sm_id, path,
                 rec['samples'], rec['offset'])
             self.sm_rlzs.append(sm)
-        self.init()
 
     def get_num_rlzs(self, sm_rlz=None):
         """
