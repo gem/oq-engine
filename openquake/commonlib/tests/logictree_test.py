@@ -29,9 +29,10 @@ import numpy
 from xml.parsers.expat import ExpatError
 from copy import deepcopy
 
+from openquake.baselib import parallel
+from openquake.baselib.general import gettemp
 import openquake.hazardlib
 from openquake.hazardlib import geo
-from openquake.baselib.general import gettemp
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_sm_rlzs
 from openquake.hazardlib.tom import PoissonTOM
@@ -2197,3 +2198,7 @@ taxo4,taxo1,.5
                                [('taxo2', 1.0)],
                                [('taxo3', 1.0)],
                                [('taxo2', 0.5), ('taxo1', 0.5)]])
+
+
+def teardown_module():
+    parallel.Starmap.shutdown()

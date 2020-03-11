@@ -75,8 +75,8 @@ class SourceReader(object):
                 h5['sitecol'], h5['oqparam'].maximum_distance)
 
     def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
-        sm = apply_unc(path, fname, self.converter)
-        for i, sg in enumerate(sm):
+        src_groups = apply_unc(path, fname, self.converter)
+        for i, sg in enumerate(src_groups):
             # sample a source for each group
             if os.environ.get('OQ_SAMPLE_SOURCES'):
                 sg.sources = random_filtered_sources(
@@ -86,7 +86,7 @@ class SourceReader(object):
                        if k != 'grp_id'}
                 src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
                 src._wkt = src.wkt()
-        return dict(sm=sm, ordinal=ordinal, fileno=fileno)
+        return dict(src_groups=src_groups, ordinal=ordinal, fileno=fileno)
 
 
 def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
@@ -111,8 +111,8 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         num_gsim_rlzs = gsim_lt.get_num_paths()
     offset = 0
     for sm_rlz in sm_rlzs:
-        sm_rlz.src_groups = []
         sm_rlz.offset = offset
+        sm_rlz.src_groups = []
         if source_model_lt.num_samples:
             offset += sm_rlz.samples
         else:
@@ -166,11 +166,12 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
     changes = 0
     for dic in sorted(smap, key=operator.itemgetter('fileno')):
         sm_rlz = sm_rlzs[dic['ordinal']]
-        sm_rlz.src_groups.extend(dic['sm'])
-        changes += dic['sm'].changes
+        sm_rlz.src_groups.extend(dic['src_groups'])
+        for sg in dic['src_groups']:
+            changes += sg.changes
         gsim_file = oq.inputs.get('gsim_logic_tree')
         if gsim_file:  # check TRTs
-            for src_group in dic['sm']:
+            for src_group in dic['src_groups']:
                 if src_group.trt not in gsim_lt.values:
                     raise ValueError(
                         "Found in %r a tectonic region type %r "

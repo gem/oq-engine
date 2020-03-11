@@ -786,13 +786,12 @@ class SourceModelLogicTree(object):
         :param converter:
             class:`openquake.hazardlib.sourceconverter.SourceConverter` object
         :return:
-            A copy of the original group with modified sources
+            A list of SourceGroups
         """
         dirname = os.path.dirname(self.filename)
         [sm] = nrml.read_source_models([fname], converter)
         base_ids = set(src.source_id for sg in sm.src_groups for src in sg)
         src_groups = sm.src_groups
-        sm.changes = 0
         path = ltpath
         branchset = self.root_branchset
         branchsets_and_uncertainties = []
@@ -809,15 +808,14 @@ class SourceModelLogicTree(object):
                     raise InvalidFile(
                         '%s contains source(s) %s already present in %s' %
                         (extname, common, sm.fname))
-                sm.src_groups = copy.copy(src_groups)
-                sm.src_groups.extend(ext.src_groups)
+                src_groups.extend(ext.src_groups)
             elif branchset.uncertainty_type != 'sourceModel':
                 branchsets_and_uncertainties.append(
                     (branchset, branch.value))
             branchset = branch.bset
         if branchsets_and_uncertainties:
-            for i, src_group in enumerate(sm.src_groups):
-                sg = copy.deepcopy(src_group)  # do not change the original
+            for sg in src_groups:
+                sg.changes = 0
                 for source in sg:
                     changes = 0
                     for bset, value in branchsets_and_uncertainties:
@@ -827,9 +825,8 @@ class SourceModelLogicTree(object):
                             changes += 1
                     if changes:  # redoing count_ruptures can be slow
                         source.num_ruptures = source.count_ruptures()
-                        sm.changes += changes
-                sm.src_groups[i] = sg
-        return sm
+                        sg.changes += changes
+        return src_groups
 
     def get_trti_eri(self):
         """

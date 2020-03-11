@@ -109,6 +109,8 @@ class SourceGroup(collections.abc.Sequence):
         to what used by the USGS for the New Madrid in the 2008 National
         Hazard Model.
     """
+    changes = 0  # set in apply_uncertainty
+
     @classmethod
     def collect(cls, sources):
         """
