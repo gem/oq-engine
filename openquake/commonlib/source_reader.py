@@ -122,14 +122,12 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
             src.samples = sm_rlz.samples
             if classical:
                 # split the sources upfront to improve the task distribution
-                sg.sources = []
-                for s in src:
-                    s.checksum = checksum
-                    sg.sources.append(s)
-                    checksum += 1
-                    if sample:  # consider only the first source
-                        break
-                sg.sources.extend(src.get_background_sources(sample))
+                sg.sources = src.get_background_sources(sample)
+                if not sample:
+                    for s in src:
+                        sg.sources.append(s)
+                        s.checksum = checksum
+                        checksum += 1
             else:  # event_based, use one source
                 sg.sources = [src]
         return info, groups
