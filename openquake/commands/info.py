@@ -62,7 +62,7 @@ def source_model_info(nodes):
     return rst_table(out)
 
 
-def print_csm_info(fname):
+def print_full_lt(fname):
     """
     Parse the composite source model and
     prints information about its composition and the full logic tree
@@ -159,7 +159,7 @@ def info(calculators, gsims, views, exports, extracts, parameters,
             if report:
                 print('Generated', reportwriter.build_report(input_file))
             else:
-                print_csm_info(input_file)
+                print_full_lt(input_file)
         if mon.duration > 1:
             print(mon)
     elif input_file:

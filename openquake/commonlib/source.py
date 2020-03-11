@@ -267,7 +267,7 @@ class FullLogicTree(object):
         return self.seed, self.num_samples, self.sm_rlzs
 
     def __toh5__(self):
-        # save csm_info/sm_data in the datastore
+        # save full_lt/sm_data in the datastore
         sm_data = []
         for sm in self.sm_rlzs:
             sm_data.append((sm.value, sm.weight, '_'.join(sm.lt_path),

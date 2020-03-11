@@ -30,9 +30,9 @@ from openquake.qa_tests_data.event_based_risk import (
 aae = numpy.testing.assert_almost_equal
 
 
-def check_csm_info(calc1, calc2):
-    val1 = calc1['csm_info/sm_data'][()]
-    val2 = calc2['csm_info/sm_data'][()]
+def check_full_lt(calc1, calc2):
+    val1 = calc1['full_lt/sm_data'][()]
+    val2 = calc2['full_lt/sm_data'][()]
     for name in val1.dtype.names:
         if name not in ('name', 'path'):  # avoid comparing strings
             aae(val1[name], val2[name])
@@ -99,8 +99,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
                       gsim_logic_tree_file='')
         calc2 = self.calc.datastore  # two files event_based_risk
 
-        check_csm_info(calc0, calc1)  # the csm_info arrays must be equal
-        check_csm_info(calc0, calc2)  # the csm_info arrays must be equal
+        check_full_lt(calc0, calc1)  # the full_lt arrays must be equal
+        check_full_lt(calc0, calc2)  # the full_lt arrays must be equal
 
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
