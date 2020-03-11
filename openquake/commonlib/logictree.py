@@ -346,6 +346,23 @@ class BranchSet(object):
         # All filters pass, return True.
         return True
 
+    def gen_bset_values(self, ltpath):
+        """
+        :param ltpath:
+            List of branch IDs
+        :yield:
+            Pairs (bset, value)
+        """
+        bset = self
+        pairs = []
+        while ltpath:
+            brid, ltpath = ltpath[0], ltpath[1:]
+            # if bset.uncertainty_type not in ('sourceModel', 'extendModel'):
+            pairs.append((bset, bset[brid].value))
+            bset = bset[brid].bset
+            if bset is None:
+                return pairs
+
     def __repr__(self):
         return repr(self.branches)
 
@@ -802,37 +819,16 @@ class SourceModelLogicTree(object):
         :return:
             A list of SourceGroups
         """
-        dirname = os.path.dirname(self.filename)
         [sm] = nrml.read_source_models([fname], converter)
-        base_ids = set(src.source_id for sg in sm.src_groups for src in sg)
         src_groups = sm.src_groups
-        path = ltpath
-        branchset = self.root_branchset
-        branchsets_and_uncertainties = []
-        while branchset is not None:
-            brid, path = path[0], path[1:]
-            branch = branchset[brid]
-            if branchset.uncertainty_type == 'extendModel':
-                extname = os.path.join(dirname, branch.value)
-                [ext] = nrml.read_source_models([extname], converter)
-                extra_ids = set(src.source_id for sg in ext.src_groups
-                                for src in sg)
-                common = base_ids & extra_ids
-                if common:
-                    raise InvalidFile(
-                        '%s contains source(s) %s already present in %s' %
-                        (extname, common, sm.fname))
-                src_groups.extend(ext.src_groups)
-            elif branchset.uncertainty_type != 'sourceModel':
-                branchsets_and_uncertainties.append(
-                    (branchset, branch.value))
-            branchset = branch.bset
-        if branchsets_and_uncertainties:
+        (root, fname), *pairs = branchsets_and_uncertainties = (
+            self.root_branchset.gen_bset_values(ltpath))
+        if pairs:
             for sg in src_groups:
                 sg.changes = 0
                 for source in sg:
                     changes = 0
-                    for bset, value in branchsets_and_uncertainties:
+                    for bset, value in pairs:
                         if bset.filter_source(source):
                             apply_uncertainty(
                                 bset.uncertainty_type, source, value)

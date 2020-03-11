@@ -133,41 +133,21 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
 
     logging.info('Reading the source model(s) in parallel')
     groups = [[] for sm_rlz in full_lt.sm_rlzs]
-    allargs = []
-    fileno = 0
     for rlz in full_lt.sm_rlzs:
         for name in rlz.value.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            allargs.append((rlz.ordinal, rlz.lt_path,
-                            source_model_lt.apply_uncertainties, fname,
-                            fileno))
-            fileno += 1
-    # NB: the source models file are often NOT in the shared directory
-    # (for instance in oq-engine/demos) so the processpool must be used
-    dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-            else 'processpool')
-    smap = parallel.Starmap(
-        SourceReader(converter, smlt_dir, h5),
-        allargs, distribute=dist, h5=h5 if h5 else None)
-    # NB: h5 is None in logictree_test.py
+            src_groups = source_model_lt.apply_uncertainties(
+                rlz.lt_path, fname, converter)
+            groups[rlz.ordinal].extend(src_groups)
+            for sg in src_groups:
+                for src in sg:
+                    dic = {k: v for k, v in vars(src).items()
+                           if k != 'grp_id'}
+                    src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
+                    src._wkt = src.wkt()
 
-    # various checks
-    changes = 0
-    for dic in sorted(smap, key=operator.itemgetter('fileno')):
-        eri = dic['ordinal']
-        groups[eri].extend(dic['src_groups'])
-        for sg in dic['src_groups']:
-            changes += sg.changes
-        gsim_file = oq.inputs.get('gsim_logic_tree')
-        if gsim_file:  # check TRTs
-            for src_group in dic['src_groups']:
-                if src_group.trt not in gsim_lt.values:
-                    raise ValueError(
-                        "Found in the source models a tectonic region type %r "
-                        "inconsistent with the ones in %r" %
-                        (src_group.trt, gsim_file))
+    # check applyToSources
     for sm_rlz in full_lt.sm_rlzs:
-        # check applyToSources
         source_ids = set(src.source_id for grp in groups[sm_rlz.ordinal]
                          for src in grp)
         for brid, srcids in source_model_lt.info.applytosources.items():
@@ -179,6 +159,19 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                             " please fix applyToSources in %s or the "
                             "source model" % (srcid, source_model_lt.filename))
 
+    # various checks
+    changes = 0
+    for rlz in full_lt.sm_rlzs:
+        for sg in groups[rlz.ordinal]:
+            changes += sg.changes
+        gsim_file = oq.inputs.get('gsim_logic_tree')
+        if gsim_file:  # check TRTs
+            for src_group in groups[rlz.ordinal]:
+                if src_group.trt not in gsim_lt.values:
+                    raise ValueError(
+                        "Found in the source models a tectonic region type %r "
+                        "inconsistent with the ones in %r" %
+                        (src_group.trt, gsim_file))
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
