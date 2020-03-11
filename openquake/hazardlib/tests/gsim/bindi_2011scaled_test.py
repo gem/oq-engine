@@ -32,17 +32,17 @@ class BindiEtAl2011TestCase(BaseGSIMTestCase):
     # Tables provided by original authors
 
     def test_mean(self):
-        self.check('BINDI2011/BINDI2011scaled_MEAN.csv',
+        self.check('BINDI11scaled/BINDI2011scaled_MEAN.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_inter(self):
-        self.check('BINDI2011/BINDI2011scaled_STD_INTER.csv',
+        self.check('BINDI11scaled/BINDI2011scaled_STD_INTER.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_intra(self):
-        self.check('BINDI2011/BINDI2011scaled_STD_INTRA.csv',
+        self.check('BINDI11scaled/BINDI2011scaled_STD_INTRA.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('BINDI2011/BINDI2011scaled_STD_TOTAL.csv',
+        self.check('BINDI11scaled/BINDI2011scaled_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
