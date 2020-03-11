@@ -273,8 +273,8 @@ class FullLogicTree(object):
             sm_data.append((sm.value, sm.weight, '_'.join(sm.lt_path),
                             sm.samples, sm.offset))
         return (dict(
-            gsim_lt=self.gsim_lt,
             source_model_lt=self.source_model_lt,
+            gsim_lt=self.gsim_lt,
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(self.gsim_lt.values)))

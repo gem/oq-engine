@@ -1059,7 +1059,7 @@ class GsimLogicTree(object):
         branches = [(b.trt, b.id, b.gsim) +
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches if b.effective]
-        dic = {'branches': numpy.array(branches, dt)}
+        dic = {}
         if hasattr(self, 'filename'):
             # missing in EventBasedRiskTestCase case_1f
             dirname = os.path.dirname(self.filename)
@@ -1070,12 +1070,12 @@ class GsimLogicTree(object):
                             fname = os.path.join(dirname, v)
                             with open(fname, 'rb') as f:
                                 dic[os.path.basename(v)] = f.read()
-        return dic, {}
+        return numpy.array(branches, dt), dic
 
-    def __fromh5__(self, dic, attrs):
+    def __fromh5__(self, array, dic):
         self.branches = []
         self.values = collections.defaultdict(list)
-        for branch in dic.pop('branches'):
+        for branch in array:
             br_id = branch['branch']
             gsim = valid.gsim(branch['uncertainty'])
             for k, v in gsim.kwargs.items():
