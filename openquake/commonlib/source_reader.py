@@ -24,10 +24,9 @@ import logging
 import zlib
 import numpy
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import nrml, sourceconverter, calc
-from openquake.commonlib.logictree import get_effective_rlzs
-from openquake.commonlib.source import FullLogicTree
+from openquake.commonlib.source import FullLogicTree, CompositeSourceModel
 
 
 TWO16 = 2 ** 16  # 65,536
@@ -90,7 +89,7 @@ class SourceReader(object):
         return dict(src_groups=src_groups, ordinal=ordinal, fileno=fileno)
 
 
-def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
+def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     """
     Build source models from the logic tree and to store
     them inside the `source_info` dataset.
@@ -109,8 +108,8 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
     info = FullLogicTree(source_model_lt, gsim_lt)
     groups = [[] for sm_rlz in info.sm_rlzs]
+    classical = not oq.is_event_based()
     if oq.is_ucerf():
-        classical = not oq.is_event_based()
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         checksum = 0
@@ -132,7 +131,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
                 sg.sources.extend(src.get_background_sources(sample))
             else:  # event_based, use one source
                 sg.sources = [src]
-        return info, groups
+        return _get_csm(info, groups, oq.ses_seed, not classical)
 
     logging.info('Reading the source model(s) in parallel')
     allargs = []
@@ -184,4 +183,48 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
-    return info, groups
+    return _get_csm(info, groups, oq.ses_seed, not classical)
+
+
+def _get_csm(full_lt, groups, ses_seed=0, event_based=False):
+    # extract a single source from multiple sources with the same ID
+    # and regroup the sources in non-atomic groups by TRT
+    atomic = []
+    acc = general.AccumDict(accum=[])
+    get_grp_id = full_lt.source_model_lt.get_grp_id(full_lt.gsim_lt.values)
+    for sm in full_lt.sm_rlzs:
+        for grp in groups[sm.ordinal]:
+            if grp and grp.atomic:
+                atomic.append(grp)
+            elif grp:
+                acc[grp.trt].extend(grp)
+            grp_id = get_grp_id(grp.trt, sm.ordinal)
+            for src in grp:
+                src.grp_id = grp_id
+                if sm.samples > 1:
+                    src.samples = sm.samples
+    dic = {}
+    key = operator.attrgetter('source_id', 'checksum')
+    idx = 0
+    for trt in acc:
+        lst = []
+        for srcs in general.groupby(acc[trt], key).values():
+            for src in srcs:
+                src.id = idx
+            idx += 1
+            if len(srcs) > 1:  # happens in classical/case_20
+                src.grp_id = [s.grp_id for s in srcs]
+            lst.append(src)
+        dic[trt] = sourceconverter.SourceGroup(trt, lst)
+    for ag in atomic:
+        for src in ag:
+            src.id = idx
+            idx += 1
+    src_groups = list(dic.values()) + atomic
+    if event_based:  # init serials
+        serial = ses_seed
+        for sg in src_groups:
+            for src in sg:
+                src.serial = serial
+                serial += src.num_ruptures * len(src.grp_ids)
+    return CompositeSourceModel(full_lt, src_groups)
