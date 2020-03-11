@@ -197,7 +197,9 @@ class NankaiTestCase(unittest.TestCase):
     # use a source model for the Nankai region provided by M. Pagani
     # also tests the case of undefined rake
     def test(self):
-        source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
+        path = os.path.join(os.path.dirname(__file__), 'data')
+        fname = os.path.join(path, 'nankai.xml')
+        source_model = os.path.join(fname)
         groups = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(135.68, 35.68), 400, z1pt0=100., z2pt5=1.)
