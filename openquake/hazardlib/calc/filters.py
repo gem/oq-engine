@@ -221,6 +221,12 @@ class SourceFilter(object):
     grp_id -> filtered sources.
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
+
+    :param sitecol:
+        A :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param integration_distance:
+        It can be either a float [km] or a dictionary where keys are strings
+        defining tectonic regions
     """
     def __init__(self, sitecol, integration_distance, filename=None):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):

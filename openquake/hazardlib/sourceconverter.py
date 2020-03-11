@@ -133,7 +133,7 @@ class SourceGroup(collections.abc.Sequence):
                  rup_interdep='indep', grp_probability=None,
                  min_mag={'default': 0}, max_mag=None,
                  tot_ruptures=0, temporal_occurrence_model=None,
-                 cluster=False):
+                 cluster=False, srcs_weights=None):
         # checks
         self.trt = trt
         self.sources = []
@@ -142,6 +142,7 @@ class SourceGroup(collections.abc.Sequence):
         self.rup_interdep = rup_interdep
         self._check_init_variables(sources, name, src_interdep, rup_interdep)
         self.grp_probability = grp_probability
+        self.srcs_weights = srcs_weights
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.tot_ruptures = tot_ruptures  # updated in .update(src)
@@ -275,7 +276,8 @@ class SourceGroup(collections.abc.Sequence):
             name=self.name or '',
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
-            grp_probability=self.grp_probability or '')
+            grp_probability=self.grp_probability or '',
+            srcs_weights=self.srcs_weights or '')
         return numpy.array(lst, source_dt), attrs
 
     def __fromh5__(self, array, attrs):
@@ -609,6 +611,7 @@ class SourceConverter(RuptureConverter):
             tom_cls = tom.registry[node['tom']]
         else:
             tom_cls = tom.registry['PoissonTOM']
+        print('investigation time: ', self.investigation_time)
         return tom_cls(time_span=self.investigation_time,
                        occurrence_rate=node.get('occurrence_rate'))
 
@@ -908,6 +911,7 @@ class SourceConverter(RuptureConverter):
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
         sg.grp_probability = node.attrib.get('grp_probability')
+        sg.srcs_weights = node.attrib.get('srcs_weights')
         # Set the cluster attribute
         sg.cluster = node.attrib.get('cluster') == 'true'
         # Filter admitted cases
@@ -933,7 +937,7 @@ class SourceConverter(RuptureConverter):
                             raise ValueError('Found %s, expected %s' %
                                              (src_node['tectonicRegion'], trt))
                     src.tectonic_region_type = trt
-                elif attr == 'grp_probability':
+                elif attr == 'grp_probability' or attr == 'srcs_weights':
                     pass  # do not transmit
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])

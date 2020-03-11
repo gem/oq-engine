@@ -148,11 +148,14 @@ def sample_cluster(sources, srcfilter, num_ses, param):
 
     :param sources:
         A sequence of sources of the same group
+    :param srcfilter:
+        SourceFilter instance used also for bounding box post filtering
     :param num_ses:
         Number of stochastic event sets
     :param param:
-        a dictionary of additional parameters including
-        ses_per_logic_tree_path
+        A dictionary of additional parameters including
+        - ses_per_logic_tree_path
+        - src_interdep
     :yields:
         dictionaries with keys rup_array, calc_times, eff_ruptures
     """
@@ -173,6 +176,10 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     # here is admitted only in the case of a time-independent model
     grp_num_occ = numpy.random.poisson(rate * time_span * samples *
                                        num_ses)
+    lam = rate * time_span * samples * num_ses
+    print(lam, rate , time_span , samples , num_ses)
+    print(grp_num_occ)
+
     # Now we process the sources included in the group. Possible cases:
     # * The group is a cluster. In this case we choose one rupture per each
     #   source; uncertainty in the ruptures can be handled in this case
@@ -183,10 +190,12 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     rup_counter = {}
     rup_data = {}
     for rlz_num in range(grp_num_occ):
-        if sources.cluster:
+        if param['src_interdep'] == 'indep':
             for src, _sites in srcfilter(sources):
                 # Track calculation time
                 t0 = time.time()
+                # For each realisation of the cluster each source generates
+                # one rupture
                 rup = src.get_one_rupture()
                 # The problem here is that we do not know a-priori the
                 # number of occurrences of a given rupture.
@@ -203,7 +212,30 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                 calc_times[src.id] += numpy.array(
                     [len(rup_data[src.id]), len(_sites), dt])
         elif param['src_interdep'] == 'mutex':
-            raise NotImplementedError('src_interdep == mutex')
+            # Track calculation time
+            t0 = time.time()
+            # Choose the source and rupture
+            src = numpy.random.choice(sources, 1, param['srcs_weights'])[0]
+            # Check if the rupture should be filtered out
+            check = has_sites(srcfilter([src]))
+            if check[0]:
+                _sites = check[1]
+                # Get rupture
+                rup = src.get_one_rupture()
+                # Update rupture storage
+                if src.id not in rup_counter:
+                    rup_counter[src.id] = {}
+                    rup_data[src.id] = {}
+                if rup.idx not in rup_counter[src.id]:
+                    rup_counter[src.id][rup.idx] = 1
+                    rup_data[src.id][rup.idx] = [rup, src.id, grp_id]
+                else:
+                    rup_counter[src.id][rup.idx] += 1
+                # Store info
+                dt = time.time() - t0
+                calc_times[src.id] += numpy.array(
+                    [len(rup_data[src.id]), len(_sites), dt])
+
     # Create event based ruptures
     for src_key in rup_data:
         for rup_key in rup_data[src_key]:
@@ -213,6 +245,12 @@ def sample_cluster(sources, srcfilter, num_ses, param):
             eb_ruptures.append(ebr)
 
     return eb_ruptures, calc_times
+
+
+def has_sites(generator):
+    for item in generator:
+        return (True, item[1])
+    return (False, [])
 
 
 # NB: there is postfiltering of the ruptures, which is more efficient

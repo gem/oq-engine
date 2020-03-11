@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    investigation_time="1."
+    name="test"
+    >
+        <sourceGroup
+        cluster="true"
+        name="Test"
+        rup_interdep="indep"
+        src_interdep="mutex"
+        srcs_weights="0.6 0.3 0.1"
+        tectonicRegion="Stable Shallow Faults"
+        occurrence_rate="1e-2"
+        tom="PoissonTOM"
+        >
+            
+            <nonParametricSeismicSource id="src1" name="Source 1" tectonicRegion="Stable Shallow Faults" >
+                <simpleFaultRupture probs_occur="0.0 1.0" >
+                    <magnitude> 6.2 </magnitude>
+                    <rake> 0 </rake>
+                    <hypocenter depth="0.0" lat="0.0" lon="-0.5"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -1.0 0.0 0.0 0.0
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip> 89.0 </dip>
+                        <upperSeismoDepth> 0.0 </upperSeismoDepth>
+                        <lowerSeismoDepth> 10.0 </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+
+            <nonParametricSeismicSource id="src2" name="Source 2" tectonicRegion="Stable Shallow Faults">
+                <simpleFaultRupture probs_occur="0.0 1.0" >
+                    <magnitude> 6.4 </magnitude>
+                    <rake> 0 </rake>
+                    <hypocenter depth="0.0" lat="0.0" lon="-0.5"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -1.0 0.0 0.0 0.0
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip> 89.0 </dip>
+                        <upperSeismoDepth> 0.0 </upperSeismoDepth>
+                        <lowerSeismoDepth> 10.0 </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+
+            <nonParametricSeismicSource id="src3" name="Source 3" tectonicRegion="Stable Shallow Faults">
+                <simpleFaultRupture probs_occur="0.0 1.0" >
+                    <magnitude> 6.6 </magnitude>
+                    <rake> 0 </rake>
+                    <hypocenter depth="0.0" lat="0.0" lon="-0.5"/>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -1.0 0.0 0.0 0.0
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip> 89.0 </dip>
+                        <upperSeismoDepth> 0.0 </upperSeismoDepth>
+                        <lowerSeismoDepth> 10.0 </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+            </nonParametricSeismicSource>
+                
+        </sourceGroup>
+    </sourceModel>
+</nrml>

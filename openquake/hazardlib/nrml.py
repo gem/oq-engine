@@ -74,13 +74,12 @@ supplemented by a dictionary of validators.
 import io
 import re
 import sys
-import logging
 import operator
 import collections.abc
 
 import numpy
 
-from openquake.baselib import hdf5, performance
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
