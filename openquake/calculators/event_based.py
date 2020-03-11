@@ -108,7 +108,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        gsims_by_trt = self.csm.info.get_gsims_by_trt()
+        gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         logging.info('Building ruptures')
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
@@ -147,7 +147,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # logic tree reduction, must be called before storing the events
         self.store_rlz_info(eff_ruptures)
-        self.init_logic_tree(self.csm.info)
+        self.init_logic_tree(self.csm.full_lt)
         with self.monitor('store source_info'):
             self.store_source_info(calc_times)
         logging.info('Reordering the ruptures and storing the events')

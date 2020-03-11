@@ -38,7 +38,7 @@ it is perfect for serializing into text literal Python objects like
 dictionaries and lists. The serialization feature is essential for the
 engine since the GMPEs are read from the GMPE logic tree file which is a
 text file, and because the GMPEs are saved into the datastore as a text,
-in the dataset ``csm_info/gsim_lt/branches``.
+in the dataset ``full_lt/gsim_lt``.
 
 The examples below will clarify how it works.
 

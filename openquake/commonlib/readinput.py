@@ -646,7 +646,7 @@ def get_composite_source_model(oqparam, h5=None):
     if h5:
         hdf5.extend(info, numpy.array(data, source_info_dt))
         h5['source_mags'] = numpy.array(sorted(mags))
-    csm.info.gsim_lt.check_imts(oqparam.imtls)
+    csm.gsim_lt.check_imts(oqparam.imtls)
     return csm
 
 
