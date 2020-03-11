@@ -623,6 +623,8 @@ def get_composite_source_model(oqparam, h5=None):
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     csm = get_csm(oqparam, source_model_lt, gsim_lt, h5)
+    if oqparam.is_event_based():
+        csm.init_serials(oqparam.ses_seed)
     if h5:
         info = hdf5.create(h5, 'source_info', source_info_dt)
     data = []

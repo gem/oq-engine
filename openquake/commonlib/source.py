@@ -365,6 +365,16 @@ class CompositeSourceModel(collections.abc.Sequence):
         self.full_lt = full_lt
         self.src_groups = src_groups
 
+    def init_serials(self, ses_seed):
+        """
+        Called only for event based calculations
+        """
+        serial = ses_seed
+        for sg in self.src_groups:
+            for src in sg:
+                src.serial = serial
+                serial += src.num_ruptures * len(src.grp_ids)
+
     def get_nonparametric_sources(self):
         """
         :returns: list of non parametric sources in the composite source model
