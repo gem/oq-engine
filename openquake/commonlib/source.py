@@ -110,7 +110,7 @@ class LtRealization(object):
         return hash(repr(self))
 
 
-class CompositionInfo(object):
+class FullLogicTree(object):
     """
     An object to collect information about the composition of
     a composite source model.
@@ -122,7 +122,7 @@ class CompositionInfo(object):
     def fake(cls, gsimlt=None):
         """
         :returns:
-            a fake `CompositionInfo` instance with the given gsim logic tree
+            a fake `FullLogicTree` instance with the given gsim logic tree
             object; if None, builds automatically a fake gsim logic tree
         """
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('[FromFile]')
@@ -263,11 +263,11 @@ class CompositionInfo(object):
         return dic  # grp_id -> lists of rlzi
 
     def __getnewargs__(self):
-        # with this CompositionInfo instances will be unpickled correctly
+        # with this FullLogicTree instances will be unpickled correctly
         return self.seed, self.num_samples, self.sm_rlzs
 
     def __toh5__(self):
-        # save csm_info/sm_data in the datastore
+        # save full_lt/sm_data in the datastore
         sm_data = []
         for sm in self.sm_rlzs:
             sm_data.append((sm.value, sm.weight, '_'.join(sm.lt_path),

@@ -40,7 +40,7 @@ class ReportWriter(object):
     title = {
         'params': 'Parameters',
         'inputs': 'Input files',
-        'csm_info': 'Composite source model',
+        'full_lt': 'Composite source model',
         'required_params_per_trt':
         'Required parameters per tectonic region type',
         'ruptures_per_grp': 'Number of ruptures per source group',
@@ -62,7 +62,7 @@ class ReportWriter(object):
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
         try:
-            num_rlzs = dstore['csm_info'].get_num_rlzs()
+            num_rlzs = dstore['full_lt'].get_num_rlzs()
         except KeyError:
             num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
@@ -86,9 +86,9 @@ class ReportWriter(object):
         oq, ds = self.oq, self.dstore
         for name in ('params', 'inputs'):
             self.add(name)
-        if 'csm_info' in ds:
-            self.add('csm_info')
-            if ds['csm_info'].sm_rlzs[0].name != 'scenario':
+        if 'full_lt' in ds:
+            self.add('full_lt')
+            if ds['full_lt'].sm_rlzs[0].name != 'scenario':
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
         if 'source_info' in ds:

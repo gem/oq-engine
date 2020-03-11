@@ -197,15 +197,15 @@ def view_contents(token, dstore):
     return rst_table(rows, header=(desc, '')) + total
 
 
-@view.add('csm_info')
-def view_csm_info(token, dstore):
-    csm_info = dstore['csm_info']
-    if csm_info.num_samples == 0:
-        num_rlzs = csm_info.gsim_lt.get_num_paths()
+@view.add('full_lt')
+def view_full_lt(token, dstore):
+    full_lt = dstore['full_lt']
+    if full_lt.num_samples == 0:
+        num_rlzs = full_lt.gsim_lt.get_num_paths()
     header = ['smlt_path', 'weight', 'num_realizations']
     rows = []
-    for sm in csm_info.sm_rlzs:
-        if csm_info.num_samples:
+    for sm in full_lt.sm_rlzs:
+        if full_lt.num_samples:
             num_rlzs = sm.samples
         row = ('_'.join(sm.lt_path), sm.weight, num_rlzs)
         rows.append(row)
@@ -314,7 +314,7 @@ def avglosses_data_transfer(token, dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
-    R = dstore['csm_info'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_rlzs()
     L = len(dstore.get_attr('risk_model', 'loss_types'))
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * 8 * ct  # 8 byte floats
@@ -339,7 +339,7 @@ def view_totlosses(token, dstore):
 
 # for event based risk and ebrisk
 def portfolio_loss(dstore):
-    R = dstore['csm_info'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_rlzs()
     array = dstore['losses_by_event'][()]
     L, = array.dtype['loss'].shape  # loss has shape L
     data = numpy.zeros((R, L), F32)
@@ -518,10 +518,10 @@ def view_required_params_per_trt(token, dstore):
     """
     Display the parameters needed by each tectonic region type
     """
-    csm_info = dstore['csm_info']
+    full_lt = dstore['full_lt']
     tbl = []
-    for grp_id, trt in sorted(csm_info.trt_by_grp.items()):
-        gsims = csm_info.gsim_lt.get_gsims(trt)
+    for grp_id, trt in sorted(full_lt.trt_by_grp.items()):
+        gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
@@ -661,7 +661,7 @@ def view_global_hcurves(token, dstore):
     """
     oq = dstore['oqparam']
     nsites = len(dstore['sitecol'])
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     weights = [rlz.weight for rlz in rlzs]
     mean = getters.PmapGetter(dstore, weights).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
@@ -750,7 +750,7 @@ def view_elt(token, dstore):
     Display the event loss table averaged by event
     """
     oq = dstore['oqparam']
-    R = len(dstore['csm_info'].rlzs)
+    R = len(dstore['full_lt'].rlzs)
     dic = group_array(dstore['losses_by_event'][()], 'rlzi')
     header = oq.loss_dt().names
     tbl = []
@@ -769,7 +769,7 @@ def view_pmap(token, dstore):
     """
     grp = token.split(':')[1]  # called as pmap:grp
     pmap = {}
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     weights = [rlz.weight for rlz in rlzs]
     pgetter = getters.PmapGetter(dstore, weights)
     pmap = pgetter.get_mean(grp)
@@ -831,7 +831,7 @@ def view_gmvs_to_hazard(token, dstore):
     else:
         sid, rlz = int(args[0]), int(args[1])
     assert sid in dstore['sitecol'].sids
-    assert rlz < dstore['csm_info'].get_num_rlzs()
+    assert rlz < dstore['full_lt'].get_num_rlzs()
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
     data = dstore['gmf_data/data'][()]
@@ -878,5 +878,5 @@ def view_maximum_intensity(token, dstore):
     Show intensities at minimum and maximum distance for the highest magnitude
     """
     effect = extract(dstore, 'effect')
-    data = zip(dstore['csm_info'].trts, effect[-1, -1], effect[-1, 0])
+    data = zip(dstore['full_lt'].trts, effect[-1, -1], effect[-1, 0])
     return rst_table(data, ['trt', 'intensity1', 'intensity2'])

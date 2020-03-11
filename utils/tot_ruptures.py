@@ -37,7 +37,7 @@ def main(datadir):
             except (KeyError, AttributeError):  # not a calculation
                 continue
             try:
-                tot_ruptures = dstore['csm_info/sg_data']['totrup'].sum()
+                tot_ruptures = dstore['full_lt/sg_data']['totrup'].sum()
             except KeyError:
                 tot_ruptures = 0
             else:

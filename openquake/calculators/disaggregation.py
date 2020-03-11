@@ -145,7 +145,7 @@ def get_indices(dstore, concurrent_tasks):
     grp_ids = dstore['rup/grp_id'][()]
     blocksize = numpy.ceil(len(grp_ids) / concurrent_tasks)
     indices = []
-    for grp_id in dstore['csm_info'].trt_by_grp:
+    for grp_id in dstore['full_lt'].trt_by_grp:
         idxs, = numpy.where(grp_ids == grp_id)
         blocks = list(block_splitter(idxs, blocksize))
         indices.append(blocks)
@@ -223,11 +223,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                     raise NotImplementedError(
                         'Atomic groups are not supported yet')
 
-        self.csm_info = self.datastore['csm_info']
+        self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
 
-        self.ws = [rlz.weight for rlz in self.csm_info.get_realizations()]
+        self.ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
         self.pgetter = getters.PmapGetter(
             self.datastore, self.ws, self.sitecol.sids)
 
@@ -270,7 +270,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
         # build trt_edges
-        trts = tuple(self.csm_info.trts)
+        trts = tuple(self.full_lt.trts)
         trt_num = {trt: i for i, trt in enumerate(trts)}
         self.trts = trts
 
@@ -319,11 +319,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         indices = get_indices(dstore, oq.concurrent_tasks or 1)
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        for grp_id, trt in self.csm_info.trt_by_grp.items():
+        for grp_id, trt in self.full_lt.trt_by_grp.items():
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
             cmaker = ContextMaker(
-                trt, self.csm_info.get_rlzs_by_gsim(grp_id),
+                trt, self.full_lt.get_rlzs_by_gsim(grp_id),
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
@@ -457,7 +457,7 @@ class DisaggregationCalculator(base.HazardCalculator):
     def build_disagg_by_src(self, rlzs):
         logging.warning('Disaggregation by source is experimental')
         oq = self.oqparam
-        groups = list(self.csm_info.get_rlzs_by_grp())
+        groups = list(self.full_lt.get_rlzs_by_grp())
         M = len(oq.imtls)
         P = len(self.poes_disagg)
         for (s, z), rlz in numpy.ndenumerate(rlzs):

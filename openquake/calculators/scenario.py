@@ -38,9 +38,9 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer and seeds
         """
         oq = self.oqparam
-        cinfo = source.CompositionInfo.fake(readinput.get_gsim_lt(oq))
+        cinfo = source.FullLogicTree.fake(readinput.get_gsim_lt(oq))
         self.realizations = cinfo.get_realizations()
-        self.datastore['csm_info'] = cinfo
+        self.datastore['full_lt'] = cinfo
         if 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '

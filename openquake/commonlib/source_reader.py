@@ -27,7 +27,7 @@ import numpy
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, calc
 from openquake.commonlib.logictree import get_effective_rlzs
-from openquake.commonlib.source import CompositionInfo
+from openquake.commonlib.source import FullLogicTree
 
 
 TWO16 = 2 ** 16  # 65,536
@@ -107,7 +107,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
-    info = CompositionInfo(source_model_lt, gsim_lt)
+    info = FullLogicTree(source_model_lt, gsim_lt)
     groups = [[] for sm_rlz in info.sm_rlzs]
     if oq.is_ucerf():
         classical = not oq.is_event_based()

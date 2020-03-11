@@ -186,11 +186,11 @@ class ClassicalCalculator(base.HazardCalculator):
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_', 'rrup_'}
-        gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        n = len(self.csm_info.sm_rlzs)
-        trts = list(self.csm_info.gsim_lt.values)
-        for sm in self.csm_info.sm_rlzs:
-            for grp_id in self.csm_info.grp_ids(sm.ordinal):
+        gsims_by_trt = self.full_lt.get_gsims_by_trt()
+        n = len(self.full_lt.sm_rlzs)
+        trts = list(self.full_lt.gsim_lt.values)
+        for sm in self.full_lt.sm_rlzs:
+            for grp_id in self.full_lt.grp_ids(sm.ordinal):
                 trt = trts[grp_id // n]
                 gsims = gsims_by_trt[trt]
                 cm = ContextMaker(trt, gsims)
@@ -225,14 +225,14 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         if oq.hazard_calculation_id and not oq.compare_with_classical:
             with util.read(self.oqparam.hazard_calculation_id) as parent:
-                self.csm_info = parent['csm_info']
+                self.full_lt = parent['full_lt']
             self.calc_stats()  # post-processing
             return {}
 
         mags = self.datastore['source_mags'][()]
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
-        gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        gsims_by_trt = self.full_lt.get_gsims_by_trt()
         if 'source_mags' in self.datastore and oq.imtls:
             mags = self.datastore['source_mags'][()]
             aw = calc.get_effect(mags, self.sitecol, gsims_by_trt, oq)
@@ -282,7 +282,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Build a task queue to be attached to the Starmap instance
         """
         oq = self.oqparam
-        gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        gsims_by_trt = self.full_lt.get_gsims_by_trt()
         src_groups = self.csm.src_groups
 
         def srcweight(src):
@@ -371,7 +371,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
-                    trt = self.csm_info.trt_by_grp[grp_id]
+                    trt = self.full_lt.trt_by_grp[grp_id]
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(key, trt=trt)

@@ -52,7 +52,7 @@ def build_loss_tables(dstore):
     Compute the total losses by rupture
     """
     oq = dstore['oqparam']
-    R = dstore['csm_info'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_rlzs()
     lbe = dstore['losses_by_event'][()]
     loss = lbe['loss']  # shape (E, L, T...)
     shp = (R,) + lbe.dtype['loss'].shape
