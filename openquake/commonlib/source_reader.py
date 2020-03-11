@@ -121,14 +121,12 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             src.samples = sm_rlz.samples
             if classical:
                 # split the sources upfront to improve the task distribution
-                sg.sources = []
-                for s in src:
-                    s.checksum = checksum
-                    sg.sources.append(s)
-                    checksum += 1
-                    if sample:  # consider only the first source
-                        break
-                sg.sources.extend(src.get_background_sources(sample))
+                sg.sources = src.get_background_sources(sample)
+                if not sample:
+                    for s in src:
+                        sg.sources.append(s)
+                        s.checksum = checksum
+                        checksum += 1
             else:  # event_based, use one source
                 sg.sources = [src]
         return _get_csm(info, groups, oq.ses_seed, not classical)

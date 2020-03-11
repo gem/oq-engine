@@ -22,10 +22,9 @@ import operator
 import collections
 import numpy
 from decorator import FunctionMaker
-from openquake.baselib import sap
+from openquake.baselib import sap, parallel
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
-from openquake.baselib.parallel import get_pickled_sizes
 from openquake.hazardlib import gsim, nrml, InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
@@ -69,7 +68,7 @@ def print_full_lt(fname):
     """
     oqparam = readinput.get_oqparam(fname)
     csm = readinput.get_composite_source_model(oqparam)
-    print(csm.info)
+    print(csm.full_lt)
     print('See http://docs.openquake.org/oq-engine/stable/'
           'effective-realizations.html for an explanation')
 
@@ -79,15 +78,19 @@ def do_build_reports(directory):
     Walk the directory and builds pre-calculation reports for all the
     job.ini files found.
     """
-    for cwd, dirs, files in os.walk(directory):
-        for f in sorted(files):
-            if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
-                job_ini = os.path.join(cwd, f)
-                logging.info(job_ini)
-                try:
-                    reportwriter.build_report(job_ini, cwd)
-                except Exception as e:
-                    logging.error(str(e))
+    try:
+        for cwd, dirs, files in os.walk(directory):
+            for f in sorted(files):
+                if f in ('job.ini', 'job_h.ini', 'job_haz.ini',
+                         'job_hazard.ini'):
+                    job_ini = os.path.join(cwd, f)
+                    logging.info(job_ini)
+                    try:
+                        reportwriter.build_report(job_ini, cwd)
+                    except Exception as e:
+                        logging.error(str(e))
+    finally:
+        parallel.Starmap.shutdown()
 
 
 # the documentation about how to use this feature can be found
