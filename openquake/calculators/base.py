@@ -499,7 +499,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['poes/grp-00'] = fix_ones(readinput.pmap)
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
-            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
+            self.datastore['csm_info'] = fake = source.FullLogicTree.fake()
             self.realizations = fake.get_realizations()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
@@ -570,7 +570,7 @@ class HazardCalculator(BaseCalculator):
             self.check_floating_spinning()
             self.realizations = self.csm.info.get_realizations()
         else:  # build a fake; used by risk-from-file calculators
-            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
+            self.datastore['csm_info'] = fake = source.FullLogicTree.fake()
             self.realizations = fake.get_realizations()
 
     @general.cached_property

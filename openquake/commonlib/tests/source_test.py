@@ -29,7 +29,7 @@ from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import tests, readinput
-from openquake.commonlib.source import CompositionInfo
+from openquake.commonlib.source import FullLogicTree
 from openquake.hazardlib import nrml
 
 # directory where the example files are
@@ -754,9 +754,9 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         csm = readinput.get_composite_source_model(oq)
 
-        # check CompositionInfo serialization
+        # check FullLogicTree serialization
         dic, attrs = csm.info.__toh5__()
-        new = object.__new__(CompositionInfo)
+        new = object.__new__(FullLogicTree)
         new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(csm.info).
                          replace('0.6000000000000001', '0.6'))
