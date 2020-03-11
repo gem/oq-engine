@@ -34,7 +34,7 @@ from openquake.baselib.general import gettemp
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.commonlib import logictree, readinput, tests
-from openquake.commonlib.source_reader import get_sm_rlzs
+from openquake.commonlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
@@ -2136,8 +2136,8 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         gs_lt = GsimLogicTree(fname_gmc)
 
         mags = [5.7, 5.98, 6.26, 6.54, 6.82, 7.1]
-        info, groups = get_sm_rlzs(oqparam, gs_lt, ssc_lt)
-        for src in groups[0][0]:
+        csm = get_csm(oqparam, ssc_lt, gs_lt)
+        for src in csm.src_groups[0][0]:
             if src.source_id == 'a2':
                 self.assertEqual(src.mfd.max_mag, 6.5)
             elif src.source_id == 'a1':

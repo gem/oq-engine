@@ -24,10 +24,9 @@ import logging
 import zlib
 import numpy
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import nrml, sourceconverter, calc
-from openquake.commonlib.logictree import get_effective_rlzs
-from openquake.commonlib.source import FullLogicTree
+from openquake.commonlib.source import FullLogicTree, CompositeSourceModel
 
 
 TWO16 = 2 ** 16  # 65,536
@@ -90,10 +89,10 @@ class SourceReader(object):
         return dict(src_groups=src_groups, ordinal=ordinal, fileno=fileno)
 
 
-def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
+def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     """
     Build source models from the logic tree and to store
-    them inside the `source_info` dataset.
+    them inside the `source_full_lt` dataset.
     """
     if oq.pointsource_distance['default'] == {}:
         spinning_off = False
@@ -107,16 +106,16 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
-    info = FullLogicTree(source_model_lt, gsim_lt)
-    groups = [[] for sm_rlz in info.sm_rlzs]
+    full_lt = FullLogicTree(source_model_lt, gsim_lt)
+    classical = not oq.is_event_based()
     if oq.is_ucerf():
-        classical = not oq.is_event_based()
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         checksum = 0
-        for grp_id, sm_rlz in enumerate(info.sm_rlzs):
+        src_groups = []
+        for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
             sg = copy.copy(grp)
-            groups[grp_id] = [sg]
+            src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
@@ -130,12 +129,13 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
                         checksum += 1
             else:  # event_based, use one source
                 sg.sources = [src]
-        return info, groups
+        return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
+    groups = [[] for sm_rlz in full_lt.sm_rlzs]
     allargs = []
     fileno = 0
-    for rlz in info.sm_rlzs:
+    for rlz in full_lt.sm_rlzs:
         for name in rlz.value.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             allargs.append((rlz.ordinal, rlz.lt_path,
@@ -166,7 +166,7 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
                         "Found in the source models a tectonic region type %r "
                         "inconsistent with the ones in %r" %
                         (src_group.trt, gsim_file))
-    for sm_rlz in info.sm_rlzs:
+    for sm_rlz in full_lt.sm_rlzs:
         # check applyToSources
         source_ids = set(src.source_id for grp in groups[sm_rlz.ordinal]
                          for src in grp)
@@ -182,4 +182,42 @@ def get_sm_rlzs(oq, gsim_lt, source_model_lt, h5=None):
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
-    return info, groups
+    return _get_csm(full_lt, groups)
+
+
+def _get_csm(full_lt, groups):
+    # extract a single source from multiple sources with the same ID
+    # and regroup the sources in non-atomic groups by TRT
+    atomic = []
+    acc = general.AccumDict(accum=[])
+    get_grp_id = full_lt.source_model_lt.get_grp_id(full_lt.gsim_lt.values)
+    for sm in full_lt.sm_rlzs:
+        for grp in groups[sm.ordinal]:
+            if grp and grp.atomic:
+                atomic.append(grp)
+            elif grp:
+                acc[grp.trt].extend(grp)
+            grp_id = get_grp_id(grp.trt, sm.ordinal)
+            for src in grp:
+                src.grp_id = grp_id
+                if sm.samples > 1:
+                    src.samples = sm.samples
+    dic = {}
+    key = operator.attrgetter('source_id', 'checksum')
+    idx = 0
+    for trt in acc:
+        lst = []
+        for srcs in general.groupby(acc[trt], key).values():
+            for src in srcs:
+                src.id = idx
+            idx += 1
+            if len(srcs) > 1:  # happens in classical/case_20
+                src.grp_id = [s.grp_id for s in srcs]
+            lst.append(src)
+        dic[trt] = sourceconverter.SourceGroup(trt, lst)
+    for ag in atomic:
+        for src in ag:
+            src.id = idx
+            idx += 1
+    src_groups = list(dic.values()) + atomic
+    return CompositeSourceModel(full_lt, src_groups)

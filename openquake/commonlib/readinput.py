@@ -45,8 +45,8 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_reader import get_sm_rlzs, source_info_dt
-from openquake.commonlib import logictree, source
+from openquake.commonlib.source_reader import get_csm, source_info_dt
+from openquake.commonlib import logictree
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
@@ -622,14 +622,14 @@ def get_composite_source_model(oqparam, h5=None):
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
-    cinfo, groups = get_sm_rlzs(oqparam, gsim_lt, source_model_lt, h5)
-    csm = source.CompositeSourceModel(
-        cinfo, groups, oqparam.ses_seed, oqparam.is_event_based())
+    csm = get_csm(oqparam, source_model_lt, gsim_lt, h5)
+    if oqparam.is_event_based():
+        csm.init_serials(oqparam.ses_seed)
     if h5:
         info = hdf5.create(h5, 'source_info', source_info_dt)
     data = []
     mags = set()
-    n = len(cinfo.sm_rlzs)
+    n = len(csm.full_lt.sm_rlzs)
     for sg in csm.src_groups:
         for src in sg:
             eri = src.grp_ids[0] % n

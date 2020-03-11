@@ -358,51 +358,22 @@ class CompositeSourceModel(collections.abc.Sequence):
     :param event_based:
         a flag True for event based calculations, flag otherwise
     """
-    def __init__(self, full_lt, groups, ses_seed=0, event_based=False):
+    def __init__(self, full_lt, src_groups):
         self.gsim_lt = full_lt.gsim_lt
         self.source_model_lt = full_lt.source_model_lt
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
-        # extract a single source from multiple sources with the same ID
-        # and regroup the sources in non-atomic groups by TRT
-        atomic = []
-        acc = AccumDict(accum=[])
-        get_grp_id = full_lt.source_model_lt.get_grp_id(full_lt.gsim_lt.values)
-        for sm in self.sm_rlzs:
-            for grp in groups[sm.ordinal]:
-                if grp and grp.atomic:
-                    atomic.append(grp)
-                elif grp:
-                    acc[grp.trt].extend(grp)
-                grp_id = get_grp_id(grp.trt, sm.ordinal)
-                for src in grp:
-                    src.grp_id = grp_id
-                    if sm.samples > 1:
-                        src.samples = sm.samples
-        dic = {}
-        key = operator.attrgetter('source_id', 'checksum')
-        idx = 0
-        for trt in acc:
-            lst = []
-            for srcs in groupby(acc[trt], key).values():
-                for src in srcs:
-                    src.id = idx
-                idx += 1
-                if len(srcs) > 1:  # happens in classical/case_20
-                    src.grp_id = [s.grp_id for s in srcs]
-                lst.append(src)
-            dic[trt] = sourceconverter.SourceGroup(trt, lst)
-        for ag in atomic:
-            for src in ag:
-                src.id = idx
-                idx += 1
-        self.src_groups = list(dic.values()) + atomic
-        if event_based:  # init serials
-            serial = ses_seed
-            for sg in self.src_groups:
-                for src in sg:
-                    src.serial = serial
-                    serial += src.num_ruptures * len(src.grp_ids)
+        self.src_groups = src_groups
+
+    def init_serials(self, ses_seed):
+        """
+        Called only for event based calculations
+        """
+        serial = ses_seed
+        for sg in self.src_groups:
+            for src in sg:
+                src.serial = serial
+                serial += src.num_ruptures * len(src.grp_ids)
 
     def get_nonparametric_sources(self):
         """
