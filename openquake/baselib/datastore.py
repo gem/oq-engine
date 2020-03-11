@@ -250,7 +250,13 @@ class DataStore(collections.abc.MutableMapping):
         """
         Return a dataset by using h5py.File.__getitem__
         """
-        return h5py.File.__getitem__(self.hdf5, name)
+        try:
+            return h5py.File.__getitem__(self.hdf5, name)
+        except KeyError:
+            if self.parent != ():
+                return self.parent.getitem(name)
+            else:
+                raise
 
     def swmr_on(self):
         """
