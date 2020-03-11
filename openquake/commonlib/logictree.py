@@ -808,21 +808,16 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, ltpath, fname, converter):
+    def apply_uncertainties(self, ltpath, src_groups):
         """
         :param ltpath:
             List of branch IDs
-        :param fname:
-            Path to a source model file
-        :param converter:
-            class:`openquake.hazardlib.sourceconverter.SourceConverter` object
+        :param src_groups:
+            List of SourceGroups
         :return:
-            A list of SourceGroups
+            A modified list of SourceGroups
         """
-        [sm] = nrml.read_source_models([fname], converter)
-        src_groups = sm.src_groups
-        (root, fname), *pairs = branchsets_and_uncertainties = (
-            self.root_branchset.gen_bset_values(ltpath))
+        pairs = self.root_branchset.gen_bset_values(ltpath)[1:]
         if pairs:
             for sg in src_groups:
                 sg.changes = 0

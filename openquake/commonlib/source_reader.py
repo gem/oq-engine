@@ -136,8 +136,9 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     for rlz in full_lt.sm_rlzs:
         for name in rlz.value.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
+            [sm] = nrml.read_source_models([fname], converter)
             src_groups = source_model_lt.apply_uncertainties(
-                rlz.lt_path, fname, converter)
+                rlz.lt_path, sm.src_groups)
             groups[rlz.ordinal].extend(src_groups)
             for sg in src_groups:
                 for src in sg:
