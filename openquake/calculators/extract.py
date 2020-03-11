@@ -206,7 +206,7 @@ def extract_realizations(dstore, dummy):
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
     if scenario:
-        gsims = dstore['full_lt/gsim_lt/branches']['uncertainty']
+        gsims = dstore.getitem('full_lt/gsim_lt')['uncertainty']
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
         arr['branch_path'] = ['"%s"' % repr(gsim)[1:-1].replace('"', '""')

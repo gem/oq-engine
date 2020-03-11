@@ -273,8 +273,8 @@ class FullLogicTree(object):
             sm_data.append((sm.value, sm.weight, '_'.join(sm.lt_path),
                             sm.samples, sm.offset))
         return (dict(
-            gsim_lt=self.gsim_lt,
             source_model_lt=self.source_model_lt,
+            gsim_lt=self.gsim_lt,
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(self.gsim_lt.values)))
@@ -349,21 +349,25 @@ class CompositeSourceModel(collections.abc.Sequence):
     """
     :param gsim_lt:
         a :class:`openquake.commonlib.logictree.GsimLogicTree` instance
-    :param source_model_lt:
-        a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
-    :param sm_rlzs:
-        a list of Realization instances with attribute sm.src_groups
+    :param full_lt:
+        a :class:`FullLogicTree` instance
+    :param groups:
+        a list of SourceGroups
+    :param ses_seed:
+        a seed used in event based
+    :param event_based:
+        a flag True for event based calculations, flag otherwise
     """
-    def __init__(self, info, groups, ses_seed=0, event_based=False):
-        self.gsim_lt = info.gsim_lt
-        self.source_model_lt = info.source_model_lt
-        self.sm_rlzs = info.sm_rlzs
-        self.info = info
+    def __init__(self, full_lt, groups, ses_seed=0, event_based=False):
+        self.gsim_lt = full_lt.gsim_lt
+        self.source_model_lt = full_lt.source_model_lt
+        self.sm_rlzs = full_lt.sm_rlzs
+        self.full_lt = full_lt
         # extract a single source from multiple sources with the same ID
         # and regroup the sources in non-atomic groups by TRT
         atomic = []
         acc = AccumDict(accum=[])
-        get_grp_id = info.source_model_lt.get_grp_id(info.gsim_lt.values)
+        get_grp_id = full_lt.source_model_lt.get_grp_id(full_lt.gsim_lt.values)
         for sm in self.sm_rlzs:
             for grp in groups[sm.ordinal]:
                 if grp and grp.atomic:

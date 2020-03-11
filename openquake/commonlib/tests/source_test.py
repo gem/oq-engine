@@ -725,8 +725,8 @@ class CompositeSourceModelTestCase(unittest.TestCase):
 Active Shallow Crust,b1,[SadighEtAl1997],w=0.5
 Active Shallow Crust,b2,[ChiouYoungs2008],w=0.5
 Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
-        [rlz] = csm.info.get_realizations()
-        self.assertEqual(csm.info.gsim_by_trt(rlz),
+        [rlz] = csm.full_lt.get_realizations()
+        self.assertEqual(csm.full_lt.gsim_by_trt(rlz),
                          {'Subduction Interface': '[SadighEtAl1997]',
                           'Active Shallow Crust': '[ChiouYoungs2008]'})
         # ignoring the end of the tuple, with the uid field
@@ -743,7 +743,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         # there are 2 distinct tectonic region types, so 2 src_groups
         self.assertEqual(sum(1 for tm in csm.src_groups), 2)
 
-        rlzs = csm.info.get_realizations()
+        rlzs = csm.full_lt.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         # counting the sources in each TRT model (after splitting)
         self.assertEqual([9, 18], list(map(len, csm.src_groups)))
@@ -755,10 +755,10 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         csm = readinput.get_composite_source_model(oq)
 
         # check FullLogicTree serialization
-        dic, attrs = csm.info.__toh5__()
+        dic, attrs = csm.full_lt.__toh5__()
         new = object.__new__(FullLogicTree)
         new.__fromh5__(dic, attrs)
-        self.assertEqual(repr(new), repr(csm.info).
+        self.assertEqual(repr(new), repr(csm.full_lt).
                          replace('0.6000000000000001', '0.6'))
 
     def tearDown(self):
