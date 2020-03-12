@@ -154,6 +154,10 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
 
 
 def reduce_sources(sources_with_same_id):
+    """
+    :param sources_with_same_id: a list of sources with the same source_id
+    :returns: a list of truly unique sources, ordered by grp_id
+    """
     out = []
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items() if k != 'grp_id'}
