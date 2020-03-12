@@ -9,7 +9,7 @@ xmlns:gml="http://www.opengis.net/gml"
     <pointSource
         id="1"
         name="point source"
-        tectonicRegion='active shallow crust'
+        tectonicRegion="active shallow crust"
         >
       <pointGeometry>
         <gml:Point>
