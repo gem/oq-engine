@@ -89,10 +89,10 @@ class SourceReader(object):
         return dict(src_groups=src_groups, ordinal=ordinal, fileno=fileno)
 
 
-def read_source_model(fname, converter, sm_id, monitor):
+def read_source_model(fname, converter, ordinal, monitor):
     [sm] = nrml.read_source_models([fname], converter)
     sm.fname = fname
-    sm.sm_id = sm_id
+    sm.ordinal = ordinal
     return sm
 
 
@@ -140,12 +140,20 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
 
     logging.info('Reading the source model(s) in parallel')
     groups = [[] for sm_rlz in full_lt.sm_rlzs]
+    dic = source_model_lt.info.smpaths  # branch_id -> pathnames
+    smap = parallel.Starmap(read_source_model)
+    ordinal = 0
+    for brid, fnames in source_model_lt.info.smpaths.items():
+        for fname in fnames:
+            smap.submit((fname, converter, ordinal))
+            ordinal += 1
+    smdict = {sm.fname: sm
+              for sm in sorted(smap, key=operator.attrgetter('ordinal'))}
     for rlz in full_lt.sm_rlzs:
         for name in rlz.value.split():
-            fname = os.path.abspath(os.path.join(smlt_dir, name))
-            [sm] = nrml.read_source_models([fname], converter)
+            sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
             src_groups = source_model_lt.apply_uncertainties(
-                rlz.lt_path, sm.src_groups)
+                rlz.lt_path, copy.deepcopy(sm.src_groups))
             groups[rlz.ordinal].extend(src_groups)
             for sg in src_groups:
                 for src in sg:
