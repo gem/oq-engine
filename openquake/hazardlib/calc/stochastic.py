@@ -209,7 +209,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
         elif sources.src_interdep == 'mutex':
             # Track calculation time
             t0 = time.time()
-            # Choose the sosurce and rupture
+            # Choose the sosurce and ruptures
             src = numpy.random.choice(sources, 1, sources.srcs_weights)[0]
             # Check if the rupture should be filtered out or not
             check = has_sites(srcfilter([src]))
