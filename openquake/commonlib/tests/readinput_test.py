@@ -454,7 +454,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         # codes
 
     def test_wrong_trts(self):
-        # uppercase issue
+        # 'active Shallow Crust' is missing, 'Active Shallow Crust' is there
         oq = readinput.get_oqparam('job.ini', case_16)
         with self.assertRaises(logictree.InvalidLogicTree) as c:
             readinput.get_gsim_lt(oq, ['active Shallow Crust'])
