@@ -47,7 +47,7 @@ source_info_dt = numpy.dtype([
 def random_filtered_sources(sources, srcfilter, seed):
     """
     :param sources: a list of sources
-    :param srcfilte: a SourceFilter instance
+    :param srcfilter: a SourceFilter instance
     :param seed: a random seed
     :returns: an empty list or a list with a single filtered source
     """
@@ -60,39 +60,19 @@ def random_filtered_sources(sources, srcfilter, seed):
     return []
 
 
-class SourceReader(object):
+def read_source_model(fname, converter, srcfilter, monitor):
     """
-    :param converter: a SourceConverter instance
-    :param smlt_dir: directory where the source model logic tree file is
-    :param h5: if any, HDF5 file with datasets sitecol and oqparam
+    :param fname: path to a source model XML file
+    :param converter: SourceConverter
+    :param srcfilter: None unless OQ_SAMPLE_SOURCES is set
+    :param monitor: a Monitor instance
+    :returns: a SourceModel instance with attribute .fname
     """
-    def __init__(self, converter, smlt_dir, h5=None):
-        self.converter = converter
-        self.smlt_dir = smlt_dir
-        self.__name__ = 'SourceReader'
-        if 'OQ_SAMPLE_SOURCES' in os.environ and h5:
-            self.srcfilter = calc.filters.SourceFilter(
-                h5['sitecol'], h5['oqparam'].maximum_distance)
-
-    def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
-        src_groups = apply_unc(path, fname, self.converter)
-        for i, sg in enumerate(src_groups):
-            # sample a source for each group
-            if os.environ.get('OQ_SAMPLE_SOURCES'):
-                sg.sources = random_filtered_sources(
-                    sg.sources, self.srcfilter, i)
-            for i, src in enumerate(sg):
-                dic = {k: v for k, v in vars(src).items()
-                       if k != 'grp_id'}
-                src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
-                src._wkt = src.wkt()
-        return dict(src_groups=src_groups, ordinal=ordinal, fileno=fileno)
-
-
-def read_source_model(fname, converter, ordinal, monitor):
     [sm] = nrml.read_source_models([fname], converter)
+    if srcfilter:  # if OQ_SAMPLE_SOURCES is set sample the close sources
+        for i, sg in enumerate(sm.src_groups):
+            sg.sources = random_filtered_sources(sg.sources, srcfilter, i)
     sm.fname = fname
-    sm.ordinal = ordinal
     return sm
 
 
@@ -139,22 +119,32 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
+    if 'OQ_SAMPLE_SOURCES' in os.environ and h5:
+        srcfilter = calc.filters.SourceFilter(
+            h5['sitecol'], h5['oqparam'].maximum_distance)
+    else:
+        srcfilter = None
     groups = [[] for sm_rlz in full_lt.sm_rlzs]
-    dic = source_model_lt.info.smpaths  # branch_id -> pathnames
-    smap = parallel.Starmap(read_source_model)
-    ordinal = 0
+
+    # NB: the source models file are often NOT in the shared directory
+    # (for instance in oq-engine/demos) so the processpool must be used
+    dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+            else 'processpool')
+    # NB: h5 is None in logictree_test.py
+    smap = parallel.Starmap(read_source_model, distribute=dist,
+                            h5=h5 if h5 else None)
     for brid, fnames in source_model_lt.info.smpaths.items():
         for fname in fnames:
-            smap.submit((fname, converter, ordinal))
-            ordinal += 1
-    smdict = {sm.fname: sm
-              for sm in sorted(smap, key=operator.attrgetter('ordinal'))}
+            smap.submit((fname, converter, srcfilter))
+    smdict = {sm.fname: sm for sm in smap}
     for rlz in full_lt.sm_rlzs:
         for name in rlz.value.split():
             sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
             src_groups = source_model_lt.apply_uncertainties(
                 rlz.lt_path, copy.deepcopy(sm.src_groups))
             groups[rlz.ordinal].extend(src_groups)
+
+            # compute the checksum of each source
             for sg in src_groups:
                 for src in sg:
                     dic = {k: v for k, v in vars(src).items()
