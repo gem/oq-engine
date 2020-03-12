@@ -137,6 +137,8 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         for fname in fnames:
             smap.submit((fname, converter, srcfilter))
     smdict = {sm.fname: sm for sm in smap}
+    parallel.Starmap.shutdown()
+    logging.info('Applying logic tree uncertainties')
     for rlz in full_lt.sm_rlzs:
         for name in rlz.value.split():
             sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
