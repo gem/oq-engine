@@ -85,7 +85,6 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     if oq.is_ucerf():
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-        checksum = 0
         src_groups = []
         for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
             sg = copy.copy(grp)
@@ -99,8 +98,6 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                 if not sample:
                     for s in src:
                         sg.sources.append(s)
-                        s.checksum = checksum
-                        checksum += 1
             else:  # event_based, use one source
                 sg.sources = [src]
         return CompositeSourceModel(full_lt, src_groups)
@@ -135,13 +132,6 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                 rlz.lt_path, copy.deepcopy(sm.src_groups))
             groups[rlz.ordinal].extend(src_groups)
 
-            # compute the checksum of each source
-            for sg in src_groups:
-                for src in sg:
-                    dic = {k: v for k, v in vars(src).items()
-                           if k != 'grp_id'}
-                    src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
-
         # check applyToSources
         source_ids = set(src.source_id for grp in groups[rlz.ordinal]
                          for src in grp)
@@ -163,6 +153,20 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     return _get_csm(full_lt, groups)
 
 
+def reduce_sources(sources_with_same_id):
+    out = []
+    for src in sources_with_same_id:
+        dic = {k: v for k, v in vars(src).items() if k != 'grp_id'}
+        src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
+    for srcs in general.groupby(
+            sources_with_same_id, operator.attrgetter('checksum')).values():
+        src = srcs[0]
+        if len(srcs) > 1:  # happens in classical/case_20
+            src.grp_id = sorted(s.grp_id for s in srcs)
+        out.append(src)
+    return out
+
+
 def _get_csm(full_lt, groups):
     # extract a single source from multiple sources with the same ID
     # and regroup the sources in non-atomic groups by TRT
@@ -181,18 +185,18 @@ def _get_csm(full_lt, groups):
                 if sm.samples > 1:
                     src.samples = sm.samples
     dic = {}
-    key = operator.attrgetter('source_id', 'checksum')
+    key = operator.attrgetter('source_id')
     idx = 0
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
+            if len(srcs) > 1:
+                srcs = reduce_sources(srcs)
             for src in srcs:
                 src.id = idx
                 src._wkt = src.wkt()
-            idx += 1
-            if len(srcs) > 1:  # happens in classical/case_20
-                src.grp_id = sorted(s.grp_id for s in srcs)
-            lst.append(src)
+                idx += 1
+                lst.append(src)
         dic[trt] = sourceconverter.SourceGroup(trt, lst)
     for ag in atomic:
         for src in ag:
