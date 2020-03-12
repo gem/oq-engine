@@ -1,10 +1,10 @@
 
 | Test ID | Description |
 |---------|-------------|
-| case_1  | Simple source model with one point source. Here we also test the use of IMT-dependent weights in the GMC logic tree | 
-| case_2  |  | 
-| case_3  |  | 
-| case_4  |  | 
+| case_1  | Source model with one point source. We test the use of IMT-dependent weights in the GMC logic tree. | 
+| case_2  | Source model with one point source. | 
+| case_3  | Source model with one point source. The GMC LT contains two GMMs. | 
+| case_4  | Source model with one simple fault source. | 
 | case_5  |  | 
 | case_6  |  | 
 | case_7  |  | 
