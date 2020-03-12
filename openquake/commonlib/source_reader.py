@@ -190,7 +190,7 @@ def _get_csm(full_lt, groups):
                 if sm.samples > 1:
                     src.samples = sm.samples
     dic = {}
-    key = operator.attrgetter('source_id')
+    key = operator.attrgetter('source_id', 'code')
     idx = 0
     for trt in acc:
         lst = []
