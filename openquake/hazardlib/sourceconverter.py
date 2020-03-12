@@ -611,7 +611,6 @@ class SourceConverter(RuptureConverter):
             tom_cls = tom.registry[node['tom']]
         else:
             tom_cls = tom.registry['PoissonTOM']
-        print('investigation time: ', self.investigation_time)
         return tom_cls(time_span=self.investigation_time,
                        occurrence_rate=node.get('occurrence_rate'))
 
