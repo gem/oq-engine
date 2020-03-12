@@ -158,14 +158,6 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         groups[eri].extend(dic['src_groups'])
         for sg in dic['src_groups']:
             changes += sg.changes
-        gsim_file = oq.inputs.get('gsim_logic_tree')
-        if gsim_file:  # check TRTs
-            for src_group in dic['src_groups']:
-                if src_group.trt not in gsim_lt.values:
-                    raise ValueError(
-                        "Found in the source models a tectonic region type %r "
-                        "inconsistent with the ones in %r" %
-                        (src_group.trt, gsim_file))
     for sm_rlz in full_lt.sm_rlzs:
         # check applyToSources
         source_ids = set(src.source_id for grp in groups[sm_rlz.ordinal]
