@@ -23,6 +23,6 @@
 | case_20 | Test EB hazard for Vancouver (CAN) with a reduced model + site conditions | 
 | case_21 | Test the use of a source model containing a cluster | 
 | case_22 | Test the use of the [SplitSigmaGMPE](https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/split_sigma_gmpe.py) modifiable GMPE | 
-| case_23 | In this test we infer the region from the exposure model | 
+| case_23 | Test the definition of the region of investigation from the exposure model | 
 | case_24 | Test the use of the `shift_hypo` option | 
 | case_25 | Test the use of multiple files for the definition of a source models | 
