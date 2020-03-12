@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Added support for the creation of SESs using a cluster with mutex sources
+
   [Michele Simionato]
   * Removed the `ucerf_classical` calculator (just use the `classical` one)
 
