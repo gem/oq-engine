@@ -5,7 +5,7 @@
 | case_2  | Test the use of a rather small discretisation for MFDs | 
 | case_3  | Source model with one point source The GMC LT contains two GMMs | 
 | case_4  | Source model with one simple fault source | 
-| case_5  | Test the option of discarding from the `job.ini` some TR as shown [here](https://github.com/gem/oq-engine/blob/20200312_table/openquake/qa_tests_data/event_based/case_5/job.ini#L33s)  | 
+| case_5  | Test the option of discarding some TR using the `job.ini` file. See example [here](https://github.com/gem/oq-engine/blob/20200312_table/openquake/qa_tests_data/event_based/case_5/job.ini#L33s)  | 
 | case_6  | Check we calculate only hazard curves | 
 | case_7  | Test a simple case with logic tree sampling | 
 | case_8  | Test EB with a non-parametric source | 
