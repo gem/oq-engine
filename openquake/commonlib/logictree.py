@@ -346,18 +346,17 @@ class BranchSet(object):
         # All filters pass, return True.
         return True
 
-    def gen_bset_values(self, ltpath):
+    def get_bset_values(self, ltpath):
         """
         :param ltpath:
             List of branch IDs
-        :yield:
+        :returns:
             Pairs (bset, value)
         """
         bset = self
         pairs = []
         while ltpath:
             brid, ltpath = ltpath[0], ltpath[1:]
-            # if bset.uncertainty_type not in ('sourceModel', 'extendModel'):
             pairs.append((bset, bset[brid].value))
             bset = bset[brid].bset
             if bset is None:
@@ -817,7 +816,7 @@ class SourceModelLogicTree(object):
         :return:
             A modified list of SourceGroups
         """
-        pairs = self.root_branchset.gen_bset_values(ltpath)[1:]
+        pairs = self.root_branchset.get_bset_values(ltpath)[1:]
         if pairs:
             for sg in src_groups:
                 sg.changes = 0

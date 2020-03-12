@@ -139,7 +139,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                             h5=h5 if h5 else None)
     smdict = {sm.fname: sm for sm in smap}
     if len(smdict) > 1:  # really parallel
-        parallel.Starmap.shutdown()
+        parallel.Starmap.shutdown()  # save memory
     logging.info('Applying logic tree uncertainties')
     for rlz in full_lt.sm_rlzs:
         for name in rlz.value.split():
