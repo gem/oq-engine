@@ -17,8 +17,9 @@ xmlns:gml="http://www.opengis.net/gml"
         occurrence_rate="1e-2"
         tom="PoissonTOM"
         >
-            
-            <nonParametricSeismicSource id="src1" name="Source 1" tectonicRegion="Stable Shallow Faults" >
+
+            <nonParametricSeismicSource id="src1" name="Source 1"
+                  tectonicRegion="Stable Shallow Faults" >
                 <simpleFaultRupture probs_occur="0.0 1.0" >
                     <magnitude> 6.2 </magnitude>
                     <rake> 0 </rake>
@@ -36,7 +37,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </simpleFaultRupture>
             </nonParametricSeismicSource>
 
-            <nonParametricSeismicSource id="src2" name="Source 2" tectonicRegion="Stable Shallow Faults">
+            <nonParametricSeismicSource id="src2" name="Source 2"
+                  tectonicRegion="Stable Shallow Faults">
                 <simpleFaultRupture probs_occur="0.0 1.0" >
                     <magnitude> 6.4 </magnitude>
                     <rake> 0 </rake>
@@ -54,7 +56,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </simpleFaultRupture>
             </nonParametricSeismicSource>
 
-            <nonParametricSeismicSource id="src3" name="Source 3" tectonicRegion="Stable Shallow Faults">
+            <nonParametricSeismicSource id="src3" name="Source 3"
+                  tectonicRegion="Stable Shallow Faults">
                 <simpleFaultRupture probs_occur="0.0 1.0" >
                     <magnitude> 6.6 </magnitude>
                     <rake> 0 </rake>
@@ -71,7 +74,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     </simpleFaultGeometry>
                 </simpleFaultRupture>
             </nonParametricSeismicSource>
-                
+
         </sourceGroup>
     </sourceModel>
 </nrml>

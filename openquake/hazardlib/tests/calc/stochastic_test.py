@@ -75,8 +75,6 @@ class SampleClusterTestCase(unittest.TestCase):
         # Create list of parameters
         param = dict(ses_per_logic_tree_path=1,
                      filter_distance='rjb',
-                     src_interdep=group.src_interdep,
-                     srcs_weights=group.srcs_weights,
                      gsims=[SiMidorikawa1999SInter()])
         seed = 1
         start = 0
