@@ -167,6 +167,8 @@ def reduce_sources(sources_with_same_id):
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
             src.grp_id = tuple(s.grp_id for s in srcs)
+        else:
+            src.grp_id = src.grp_id,
         out.append(src)
     out.sort(key=operator.attrgetter('grp_id'))
     return out
