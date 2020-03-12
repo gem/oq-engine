@@ -416,8 +416,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            logictree.LogicTreeError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 16)
         self.assertEqual(exc.message, 'expected single float value',
                          "wrong exception message: %s" % exc.message)
@@ -500,8 +500,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn("Found a non-float in -121.8229 wrong "
                       "-122.0388 37.8771: 'wrong' is not a float",
                       str(exc))
@@ -549,8 +549,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn('Could not convert posList->posList: Found a non-float ',
                       str(exc))
 
@@ -593,8 +593,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn('Could not convert lat->latitude', str(exc))
 
     def test_characteristic_fault_simple_geometry_wrong_format(self):
@@ -642,8 +642,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn('Could not convert posList->posList: Found a non-float',
                       str(exc))
 
@@ -692,8 +692,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn('Could not convert posList->posList: Found a non-float',
                       str(exc))
 

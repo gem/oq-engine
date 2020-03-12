@@ -995,6 +995,7 @@ class GsimLogicTree(object):
         return cls('fake/' + gsim.__class__.__name__, ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
+        # tectonic_region_types usually comes from the source models
         self.filename = fname
         trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):
@@ -1009,9 +1010,7 @@ class GsimLogicTree(object):
             self.values = {trt: self.values[trt] for trt in trts}
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
-                'Could not find branches with attribute '
-                "'applyToTectonicRegionType' in %s" %
-                set(tectonic_region_types))
+                '%s is missing in %s' % (set(tectonic_region_types), fname))
 
     @property
     def req_site_params(self):

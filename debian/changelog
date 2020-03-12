@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Avoided reading multiple times the source models in the case of complex
     logic trees
+  * Moved the check on invalid TRTs earlier, before processing the source models
   * Removed the `ucerf_classical` calculator (just use the `classical` one)
 
   [Paolo Tormene]
