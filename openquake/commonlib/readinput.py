@@ -45,7 +45,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_reader import get_csm, source_info_dt
+from openquake.commonlib.source_reader import get_csm
 from openquake.commonlib import logictree
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
@@ -58,6 +58,20 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
+
+source_info_dt = numpy.dtype([
+    ('sm_id', numpy.uint16),           # 0
+    ('grp_id', numpy.uint16),          # 1
+    ('source_id', hdf5.vstr),          # 2
+    ('code', (numpy.string_, 1)),      # 3
+    ('num_ruptures', numpy.uint32),    # 4
+    ('calc_time', numpy.float32),      # 5
+    ('num_sites', numpy.float32),      # 6
+    ('eff_ruptures', numpy.float32),   # 7
+    ('checksum', numpy.uint32),        # 8
+    ('serial', numpy.uint32),          # 9
+    ('wkt', hdf5.vstr),                # 10
+])
 
 
 class DuplicatedPoint(Exception):
@@ -634,7 +648,8 @@ def get_composite_source_model(oqparam, h5=None):
         for src in sg:
             eri = src.grp_ids[0] % n
             data.append((eri, src.grp_ids[0], src.source_id, src.code,
-                         src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
+                         src.num_ruptures, 0, 0, 0, src.checksum,
+                         src.serial, src._wkt))
             if hasattr(src, 'mags'):  # UCERF
                 srcmags = ['%.2f' % mag for mag in src.mags]
             elif hasattr(src, 'data'):  # nonparametric

@@ -39,6 +39,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
+    serial = 0  # set in init_serials
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
