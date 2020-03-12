@@ -42,11 +42,14 @@ def reduce_sm(calc_id):
     with performance.Monitor() as mon:
         good, total = readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], ok_ids)
-    logging.info('Removed %d/%d sources', total - good, good)
+    logging.info('Removed %d/%d sources', total - good, total)
     srcs, cnts = np.unique(info[['source_id', 'code']], return_counts=True)
     dupl = dict(srcs[cnts > 1])  # source_id -> code
-    if bad_ids & set(dupl):
-        logging.info('There were duplicated sources %s', dupl)
+    bad_dupl = bad_ids & set(dupl)
+    for source_id in bad_dupl:
+        recs = info[info['source_id'] == source_id]
+        if recs['num_ruptures'].sum():
+            logging.info('Could not remove %r: is duplicated', source_id)
     print(mon)
 
 
