@@ -9,18 +9,18 @@
 | case_6  | Check we calculate only hazard curves from EB | 
 | case_7  | Test a simple case with logic tree sampling | 
 | case_8  | Test EB with a non-parametric source | 
-| case_9  | Test EB hazard for San-Jose (CRI) | 
-| case_10 | Test EB hazard for Bogota (COL)  | 
-| case_11 | Missing :^) |
+| case_9  | Test EB hazard for San-Jose (CRI) with a reduced model | 
+| case_10 | Test EB hazard for Bogota (COL) with a reduced model | 
+| case_11 | *missing :^)* |
 | case_12 | Test a SSM with sources from 2 TRs | 
-| case_13 | *unclear*| 
-| case_14 |  | 
-| case_15 |  | 
-| case_16 |  | 
-| case_17 |  | 
-| case_18 |  | 
-| case_19 |  | 
-| case_20 |  | 
+| case_13 | *unclear* | 
+| case_14 | Test calculation for South Africa | 
+| case_15 | Test calculation using a reduced model similar to the Japan one | 
+| case_16 | Test calculation using a reduced model similar to the Italy one | 
+| case_17 | Test a simple case with logic tree sampling *check this* | 
+| case_18 | *unclear* | 
+| case_19 | Test EB hazard for Vancouver (CAN) with a reduced model | 
+| case_20 | Test EB hazard for Vancouver (CAN) with a reduced model + site conditions | 
 | case_21 | Test the use of a source model containing a cluster | 
 | case_22 | Test the use of the [SplitSigmaGMPE](https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/split_sigma_gmpe.py) modifiable GMPE | 
 | case_23 | In this test we infer the region from the exposure model | 
