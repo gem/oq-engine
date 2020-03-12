@@ -340,7 +340,7 @@ hazard_uhs-std.csv
         self.assertEqual(len(sg), 7)
         tbl = []
         for src in sg:
-            tbl.append([src.source_id, src.checksum] + src.grp_ids)
+            tbl.append((src.source_id, src.checksum) + src.grp_ids)
         tbl.sort()
         '''
         self.assertEqual(tbl,

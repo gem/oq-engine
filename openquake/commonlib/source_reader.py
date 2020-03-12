@@ -154,6 +154,10 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
 
 
 def reduce_sources(sources_with_same_id):
+    """
+    :param sources_with_same_id: a list of sources with the same source_id
+    :returns: a list of truly unique sources, ordered by grp_id
+    """
     out = []
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items() if k != 'grp_id'}
@@ -162,8 +166,9 @@ def reduce_sources(sources_with_same_id):
             sources_with_same_id, operator.attrgetter('checksum')).values():
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
-            src.grp_id = sorted(s.grp_id for s in srcs)
+            src.grp_id = tuple(s.grp_id for s in srcs)
         out.append(src)
+    out.sort(key=operator.attrgetter('grp_id'))
     return out
 
 
@@ -185,7 +190,7 @@ def _get_csm(full_lt, groups):
                 if sm.samples > 1:
                     src.samples = sm.samples
     dic = {}
-    key = operator.attrgetter('source_id')
+    key = operator.attrgetter('source_id', 'code')
     idx = 0
     for trt in acc:
         lst = []
