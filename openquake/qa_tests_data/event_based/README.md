@@ -21,7 +21,7 @@
 | case_19  |  | 
 | case_20  |  | 
 | case_21  |  | 
-| case_22  |  | 
-| case_23  |  | 
+| case_22  | Tests the use of the [SpliSigmagmpe](https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/split_sigma_gmpe.py) modifiable GMPE | 
+| case_23  | In this test we infer the region from the exposure model | 
 | case_24  |  | 
 | case_25  |  | 
