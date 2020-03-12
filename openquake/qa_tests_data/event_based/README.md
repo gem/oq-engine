@@ -1,10 +1,10 @@
 
 | Test ID | Description |
 |---------|-------------|
-| case_1  | Source model with one point source. We test the use of IMT-dependent weights in the GMC logic tree. | 
-| case_2  | Source model with one point source. | 
-| case_3  | Source model with one point source. The GMC LT contains two GMMs. | 
-| case_4  | Source model with one simple fault source. | 
+| case_1  | Source model with one point source. We test the use of IMT-dependent weights in the GMC logic tree | 
+| case_2  | Source model with one point source | 
+| case_3  | Source model with one point source The GMC LT contains two GMMs | 
+| case_4  | Source model with one simple fault source | 
 | case_5  |  | 
 | case_6  |  | 
 | case_7  |  | 
@@ -20,8 +20,8 @@
 | case_18  |  | 
 | case_19  |  | 
 | case_20  |  | 
-| case_21  |  | 
-| case_22  | Tests the use of the [SpliSigmagmpe](https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/split_sigma_gmpe.py) modifiable GMPE | 
+| case_21  | Test the use of a source model containing a cluster | 
+| case_22  | Test the use of the [SplitSigmaGMPE](https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/split_sigma_gmpe.py) modifiable GMPE | 
 | case_23  | In this test we infer the region from the exposure model | 
-| case_24  |  | 
-| case_25  |  | 
+| case_24  | Test the use of the `shift_hypo` option | 
+| case_25  | Test the use of multiple files for the definition of a source models | 
