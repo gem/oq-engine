@@ -346,6 +346,22 @@ class BranchSet(object):
         # All filters pass, return True.
         return True
 
+    def get_bset_values(self, ltpath):
+        """
+        :param ltpath:
+            List of branch IDs
+        :returns:
+            Pairs (bset, value)
+        """
+        bset = self
+        pairs = []
+        while ltpath:
+            brid, ltpath = ltpath[0], ltpath[1:]
+            pairs.append((bset, bset[brid].value))
+            bset = bset[brid].bset
+            if bset is None:
+                return pairs
+
     def __repr__(self):
         return repr(self.branches)
 
@@ -791,48 +807,22 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, ltpath, fname, converter):
+    def apply_uncertainties(self, ltpath, src_groups):
         """
         :param ltpath:
             List of branch IDs
-        :param fname:
-            Path to a source model file
-        :param converter:
-            class:`openquake.hazardlib.sourceconverter.SourceConverter` object
+        :param src_groups:
+            List of SourceGroups
         :return:
-            A list of SourceGroups
+            A modified list of SourceGroups
         """
-        dirname = os.path.dirname(self.filename)
-        [sm] = nrml.read_source_models([fname], converter)
-        base_ids = set(src.source_id for sg in sm.src_groups for src in sg)
-        src_groups = sm.src_groups
-        path = ltpath
-        branchset = self.root_branchset
-        branchsets_and_uncertainties = []
-        while branchset is not None:
-            brid, path = path[0], path[1:]
-            branch = branchset[brid]
-            if branchset.uncertainty_type == 'extendModel':
-                extname = os.path.join(dirname, branch.value)
-                [ext] = nrml.read_source_models([extname], converter)
-                extra_ids = set(src.source_id for sg in ext.src_groups
-                                for src in sg)
-                common = base_ids & extra_ids
-                if common:
-                    raise InvalidFile(
-                        '%s contains source(s) %s already present in %s' %
-                        (extname, common, sm.fname))
-                src_groups.extend(ext.src_groups)
-            elif branchset.uncertainty_type != 'sourceModel':
-                branchsets_and_uncertainties.append(
-                    (branchset, branch.value))
-            branchset = branch.bset
-        if branchsets_and_uncertainties:
+        pairs = self.root_branchset.get_bset_values(ltpath)[1:]
+        if pairs:
             for sg in src_groups:
                 sg.changes = 0
                 for source in sg:
                     changes = 0
-                    for bset, value in branchsets_and_uncertainties:
+                    for bset, value in pairs:
                         if bset.filter_source(source):
                             apply_uncertainty(
                                 bset.uncertainty_type, source, value)

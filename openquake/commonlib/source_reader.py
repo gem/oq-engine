@@ -47,7 +47,7 @@ source_info_dt = numpy.dtype([
 def random_filtered_sources(sources, srcfilter, seed):
     """
     :param sources: a list of sources
-    :param srcfilte: a SourceFilter instance
+    :param srcfilter: a SourceFilter instance
     :param seed: a random seed
     :returns: an empty list or a list with a single filtered source
     """
@@ -60,33 +60,20 @@ def random_filtered_sources(sources, srcfilter, seed):
     return []
 
 
-class SourceReader(object):
+def read_source_model(fname, converter, srcfilter, monitor):
     """
-    :param converter: a SourceConverter instance
-    :param smlt_dir: directory where the source model logic tree file is
-    :param h5: if any, HDF5 file with datasets sitecol and oqparam
+    :param fname: path to a source model XML file
+    :param converter: SourceConverter
+    :param srcfilter: None unless OQ_SAMPLE_SOURCES is set
+    :param monitor: a Monitor instance
+    :returns: a SourceModel instance with attribute .fname
     """
-    def __init__(self, converter, smlt_dir, h5=None):
-        self.converter = converter
-        self.smlt_dir = smlt_dir
-        self.__name__ = 'SourceReader'
-        if 'OQ_SAMPLE_SOURCES' in os.environ and h5:
-            self.srcfilter = calc.filters.SourceFilter(
-                h5['sitecol'], h5['oqparam'].maximum_distance)
-
-    def __call__(self, ordinal, path, apply_unc, fname, fileno, monitor):
-        src_groups = apply_unc(path, fname, self.converter)
-        for i, sg in enumerate(src_groups):
-            # sample a source for each group
-            if os.environ.get('OQ_SAMPLE_SOURCES'):
-                sg.sources = random_filtered_sources(
-                    sg.sources, self.srcfilter, i)
-            for i, src in enumerate(sg):
-                dic = {k: v for k, v in vars(src).items()
-                       if k != 'grp_id'}
-                src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
-                src._wkt = src.wkt()
-        return dict(src_groups=src_groups, ordinal=ordinal, fileno=fileno)
+    [sm] = nrml.read_source_models([fname], converter)
+    if srcfilter:  # if OQ_SAMPLE_SOURCES is set sample the close sources
+        for i, sg in enumerate(sm.src_groups):
+            sg.sources = random_filtered_sources(sg.sources, srcfilter, i)
+    sm.fname = fname
+    return sm
 
 
 def get_csm(oq, source_model_lt, gsim_lt, h5=None):
@@ -132,38 +119,47 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
+    if 'OQ_SAMPLE_SOURCES' in os.environ and h5:
+        srcfilter = calc.filters.SourceFilter(
+            h5['sitecol'], h5['oqparam'].maximum_distance)
+    else:
+        srcfilter = None
     groups = [[] for sm_rlz in full_lt.sm_rlzs]
-    allargs = []
-    fileno = 0
-    for rlz in full_lt.sm_rlzs:
-        for name in rlz.value.split():
-            fname = os.path.abspath(os.path.join(smlt_dir, name))
-            allargs.append((rlz.ordinal, rlz.lt_path,
-                            source_model_lt.apply_uncertainties, fname,
-                            fileno))
-            fileno += 1
+
     # NB: the source models file are often NOT in the shared directory
     # (for instance in oq-engine/demos) so the processpool must be used
     dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
             else 'processpool')
-    smap = parallel.Starmap(
-        SourceReader(converter, smlt_dir, h5),
-        allargs, distribute=dist, h5=h5 if h5 else None)
     # NB: h5 is None in logictree_test.py
+    allargs = []
+    for brid, fnames in source_model_lt.info.smpaths.items():
+        for fname in fnames:
+            allargs.append((fname, converter, srcfilter))
+    smap = parallel.Starmap(read_source_model, allargs, distribute=dist,
+                            h5=h5 if h5 else None)
+    smdict = {sm.fname: sm for sm in smap}
+    if len(smdict) > 1:  # really parallel
+        parallel.Starmap.shutdown()  # save memory
+    logging.info('Applying logic tree uncertainties')
+    for rlz in full_lt.sm_rlzs:
+        for name in rlz.value.split():
+            sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
+            src_groups = source_model_lt.apply_uncertainties(
+                rlz.lt_path, copy.deepcopy(sm.src_groups))
+            groups[rlz.ordinal].extend(src_groups)
 
-    # various checks
-    changes = 0
-    for dic in sorted(smap, key=operator.itemgetter('fileno')):
-        eri = dic['ordinal']
-        groups[eri].extend(dic['src_groups'])
-        for sg in dic['src_groups']:
-            changes += sg.changes
-    for sm_rlz in full_lt.sm_rlzs:
+            # compute the checksum of each source
+            for sg in src_groups:
+                for src in sg:
+                    dic = {k: v for k, v in vars(src).items()
+                           if k != 'grp_id'}
+                    src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
+
         # check applyToSources
-        source_ids = set(src.source_id for grp in groups[sm_rlz.ordinal]
+        source_ids = set(src.source_id for grp in groups[rlz.ordinal]
                          for src in grp)
         for brid, srcids in source_model_lt.info.applytosources.items():
-            if brid in sm_rlz.lt_path:
+            if brid in rlz.lt_path:
                 for srcid in srcids:
                     if srcid not in source_ids:
                         raise ValueError(
@@ -171,6 +167,9 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                             " please fix applyToSources in %s or the "
                             "source model" % (srcid, source_model_lt.filename))
 
+    # checking the changes
+    changes = sum(sg.changes for rlz in full_lt.sm_rlzs
+                  for sg in groups[rlz.ordinal])
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
@@ -202,6 +201,7 @@ def _get_csm(full_lt, groups):
         for srcs in general.groupby(acc[trt], key).values():
             for src in srcs:
                 src.id = idx
+                src._wkt = src.wkt()
             idx += 1
             if len(srcs) > 1:  # happens in classical/case_20
                 src.grp_id = [s.grp_id for s in srcs]
@@ -210,6 +210,7 @@ def _get_csm(full_lt, groups):
     for ag in atomic:
         for src in ag:
             src.id = idx
+            src._wkt = src.wkt()
             idx += 1
     src_groups = list(dic.values()) + atomic
     return CompositeSourceModel(full_lt, src_groups)
