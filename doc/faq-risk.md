@@ -5,7 +5,7 @@
 Short answer: `ses_seed` is the one that you should change if you want to
 understand the effect of randomness in an event based calculation.
 
-Long answer: `random_seed` is the seed used when sampling the sources
+Long answer: `random_seed` is the seed used for sampling the sources
 when the parameter `number_of_logic_tree_samples` is nonzero. By changing
 it different paths in the source model logic tree will be taken. It
 affects both classical calculations and event based calculations.
