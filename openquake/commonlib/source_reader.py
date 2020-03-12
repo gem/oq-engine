@@ -89,6 +89,13 @@ class SourceReader(object):
         return dict(src_groups=src_groups, ordinal=ordinal, fileno=fileno)
 
 
+def read_source_model(fname, converter, sm_id, monitor):
+    [sm] = nrml.read_source_models([fname], converter)
+    sm.fname = fname
+    sm.sm_id = sm_id
+    return sm
+
+
 def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     """
     Build source models from the logic tree and to store
@@ -145,7 +152,6 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                     dic = {k: v for k, v in vars(src).items()
                            if k != 'grp_id'}
                     src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
-                    src._wkt = src.wkt()
 
     # check applyToSources
     for sm_rlz in full_lt.sm_rlzs:
@@ -204,6 +210,7 @@ def _get_csm(full_lt, groups):
         for srcs in general.groupby(acc[trt], key).values():
             for src in srcs:
                 src.id = idx
+                src._wkt = src.wkt()
             idx += 1
             if len(srcs) > 1:  # happens in classical/case_20
                 src.grp_id = [s.grp_id for s in srcs]
@@ -212,6 +219,7 @@ def _get_csm(full_lt, groups):
     for ag in atomic:
         for src in ag:
             src.id = idx
+            src._wkt = src.wkt()
             idx += 1
     src_groups = list(dic.values()) + atomic
     return CompositeSourceModel(full_lt, src_groups)
