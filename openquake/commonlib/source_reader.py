@@ -204,7 +204,7 @@ def _get_csm(full_lt, groups):
                 src._wkt = src.wkt()
             idx += 1
             if len(srcs) > 1:  # happens in classical/case_20
-                src.grp_id = [s.grp_id for s in srcs]
+                src.grp_id = sorted(s.grp_id for s in srcs)
             lst.append(src)
         dic[trt] = sourceconverter.SourceGroup(trt, lst)
     for ag in atomic:
