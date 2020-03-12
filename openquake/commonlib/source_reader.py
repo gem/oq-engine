@@ -131,13 +131,15 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
             else 'processpool')
     # NB: h5 is None in logictree_test.py
-    smap = parallel.Starmap(read_source_model, distribute=dist,
-                            h5=h5 if h5 else None)
+    allargs = []
     for brid, fnames in source_model_lt.info.smpaths.items():
         for fname in fnames:
-            smap.submit((fname, converter, srcfilter))
+            allargs.append((fname, converter, srcfilter))
+    smap = parallel.Starmap(read_source_model, allargs, distribute=dist,
+                            h5=h5 if h5 else None)
     smdict = {sm.fname: sm for sm in smap}
-    parallel.Starmap.shutdown()
+    if len(smdict) > 1:  # really parallel
+        parallel.Starmap.shutdown()
     logging.info('Applying logic tree uncertainties')
     for rlz in full_lt.sm_rlzs:
         for name in rlz.value.split():
@@ -153,12 +155,11 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                            if k != 'grp_id'}
                     src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
-    # check applyToSources
-    for sm_rlz in full_lt.sm_rlzs:
-        source_ids = set(src.source_id for grp in groups[sm_rlz.ordinal]
+        # check applyToSources
+        source_ids = set(src.source_id for grp in groups[rlz.ordinal]
                          for src in grp)
         for brid, srcids in source_model_lt.info.applytosources.items():
-            if brid in sm_rlz.lt_path:
+            if brid in rlz.lt_path:
                 for srcid in srcids:
                     if srcid not in source_ids:
                         raise ValueError(
@@ -166,19 +167,9 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                             " please fix applyToSources in %s or the "
                             "source model" % (srcid, source_model_lt.filename))
 
-    # various checks
-    changes = 0
-    for rlz in full_lt.sm_rlzs:
-        for sg in groups[rlz.ordinal]:
-            changes += sg.changes
-        gsim_file = oq.inputs.get('gsim_logic_tree')
-        if gsim_file:  # check TRTs
-            for src_group in groups[rlz.ordinal]:
-                if src_group.trt not in gsim_lt.values:
-                    raise ValueError(
-                        "Found in the source models a tectonic region type %r "
-                        "inconsistent with the ones in %r" %
-                        (src_group.trt, gsim_file))
+    # checking the changes
+    changes = sum(sg.changes for rlz in full_lt.sm_rlzs
+                  for sg in groups[rlz.ordinal])
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
