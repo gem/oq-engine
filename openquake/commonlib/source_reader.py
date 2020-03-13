@@ -184,7 +184,7 @@ def _get_csm(full_lt, groups):
     # and regroup the sources in non-atomic groups by TRT
     atomic = []
     acc = general.AccumDict(accum=[])
-    get_grp_id = full_lt.source_model_lt.get_grp_id(full_lt.gsim_lt.values)
+    get_grp_id = full_lt.source_model_lt.get_grp_id
     for sm in full_lt.sm_rlzs:
         for grp in groups[sm.ordinal]:
             if grp and grp.atomic:

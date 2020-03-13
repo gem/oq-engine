@@ -837,19 +837,17 @@ class SourceModelLogicTree(object):
                     sg.changes += changes
         return src_groups
 
-    def get_trti_eri(self):
+    def get_trti_eri(self, grp_id):
         """
-        :returns: a function grp_id -> (trti, eri)
+        :returns: (trti, eri)
         """
-        return lambda gid, n=len(get_effective_rlzs(self)): divmod(gid, n)
+        return divmod(grp_id, self.num_eff_rlzs)
 
-    def get_grp_id(self, trts):
+    def get_grp_id(self, trt, eri):
         """
-        :returns: a function trt, eri -> grp_id
+        :returns: grp_id
         """
-        trti = {trt: i for i, trt in enumerate(trts)}
-        return (lambda trt, eri, n=len(get_effective_rlzs(self)):
-                trti[trt] * n + int(eri))
+        return self.trti[trt] * self.num_eff_rlzs + int(eri)
 
     def __toh5__(self):
         tbl = []
