@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
+import copy
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo
@@ -260,3 +260,34 @@ def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
     source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))
+
+
+# ######################### apply_uncertainties ########################### #
+
+def apply_uncertainties(bset_values, src_group, grp_id):
+    """
+    :param bset_value: a list of pairs (branchset, value)
+        List of branch IDs
+    :param src_group:
+        SourceGroup instance
+    :param grp_id:
+        Integer
+    """
+    sg = copy.copy(src_group)
+    sg.sources = []
+    sg.changes = 0
+    for source in src_group:
+        oks = [bset.filter_source(source) for bset, value in bset_values]
+        if sum(oks):  # source not filtered out
+            src = copy.deepcopy(source)
+            for (bset, value), ok in zip(bset_values, oks):
+                if ok:
+                    apply_uncertainty(bset.uncertainty_type, src, value)
+                    sg.changes += 1
+            # redoing count_ruptures can be slow
+            src.num_ruptures = src.count_ruptures()
+        else:
+            src = copy.copy(source)
+        src.grp_id = grp_id
+        sg.sources.append(src)
+    return sg

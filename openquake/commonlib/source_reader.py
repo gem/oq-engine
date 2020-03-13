@@ -25,6 +25,7 @@ import zlib
 
 from openquake.baselib import parallel, general
 from openquake.hazardlib import nrml, sourceconverter, calc
+from openquake.commonlib.lt import apply_uncertainties
 from openquake.commonlib.source import FullLogicTree, CompositeSourceModel
 
 
@@ -129,9 +130,8 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         for name in rlz.value.split():
             sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
             for src_group in sm.src_groups:
-                grp_id = source_model_lt.get_grp_id(src_group.trt, rlz.ordinal)
-                sg = source_model_lt.apply_uncertainties(
-                    bset_values, src_group, grp_id)
+                grp_id = full_lt.get_grp_id(src_group.trt, rlz.ordinal)
+                sg = apply_uncertainties(bset_values, src_group, grp_id)
                 groups.append(sg)
                 for src in sg:
                     if rlz.samples > 1:

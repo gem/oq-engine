@@ -47,8 +47,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.commonlib.lt import (
-    LogicTreeError, parse_uncertainty, apply_uncertainty)
+from openquake.commonlib.lt import LogicTreeError, parse_uncertainty
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -814,46 +813,6 @@ class SourceModelLogicTree(object):
         :returns: a list of B - 1 pairs (branchset, value)
         """
         return self.root_branchset.get_bset_values(sm_rlz.lt_path)[1:]
-
-    def apply_uncertainties(self, bset_values, src_group, grp_id):
-        """
-        :param bset_value: a list of pairs (branchset, value)
-            List of branch IDs
-        :param src_group:
-            SourceGroup instance
-        :param grp_id:
-            Integer
-        """
-        sg = copy.copy(src_group)
-        sg.sources = []
-        sg.changes = 0
-        for source in src_group:
-            oks = [bset.filter_source(source) for bset, value in bset_values]
-            if sum(oks):  # source not filtered out
-                src = copy.deepcopy(source)
-                for (bset, value), ok in zip(bset_values, oks):
-                    if ok:
-                        apply_uncertainty(bset.uncertainty_type, src, value)
-                        sg.changes += 1
-                # redoing count_ruptures can be slow
-                src.num_ruptures = src.count_ruptures()
-            else:
-                src = copy.copy(source)
-            src.grp_id = grp_id
-            sg.sources.append(src)
-        return sg
-
-    def get_trti_eri(self, grp_id):
-        """
-        :returns: (trti, eri)
-        """
-        return divmod(grp_id, self.num_eff_rlzs)
-
-    def get_grp_id(self, trt, eri):
-        """
-        :returns: grp_id
-        """
-        return self.trti[trt] * self.num_eff_rlzs + int(eri)
 
     def __toh5__(self):
         tbl = []
