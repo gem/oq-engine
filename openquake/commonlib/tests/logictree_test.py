@@ -2145,7 +2145,6 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                 self.assertIn(src.mfd.max_mag, mags, msg)
 
     def test_smlt_bad(self):
-        raise unittest.SkipTest  # temporarily
         # apply to a source that does not exist in the given branch
         path = os.path.join(DATADIR, 'source_specific_uncertainty')
         job_ini = os.path.join(path, 'job.ini')
