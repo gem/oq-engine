@@ -126,6 +126,19 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
             info(None, None, None, None, None, None, None, path)
         self.assertIn('<FullLogicTree\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
 
+    def test_logictree(self):
+        path = os.path.join(os.path.dirname(case_9.__file__),
+                            'source_model_logic_tree.xml')
+        with Print.patch() as p:
+            info(None, None, None, None, None, None, None, path)
+        self.assertEqual(str(p), """\
+==================== ===========
+TRT                  pointSource
+==================== ===========
+active shallow crust 1          
+Total                1          
+==================== ===========""")
+
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'

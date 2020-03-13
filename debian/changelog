@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: fixed `oq info source_model_logic_tree.xml`
   * Avoided reading multiple times the source models in the case of complex
     logic trees
   * Moved the check on invalid TRTs earlier, before processing the source models

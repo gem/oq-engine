@@ -25,7 +25,7 @@ from decorator import FunctionMaker
 from openquake.baselib import sap, parallel
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import gsim, nrml, InvalidFile
+from openquake.hazardlib import gsim, nrml
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
@@ -34,16 +34,19 @@ from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 
 
-def source_model_info(nodes):
+def source_model_info(sm_nodes):
     """
-    Extract information about NRML/0.5 source models. Returns a table
+    Extract information about source models. Returns a table
     with TRTs as rows and source classes as columns.
     """
     c = collections.Counter()
-    for node in nodes:
-        for src_group in node:
-            trt = src_group['tectonicRegion']
-            for src in src_group:
+    for sm in sm_nodes:
+        groups = [sm[0]] if sm['xmlns'].endswith('nrml/0.4') else sm[0]
+        for group in groups:
+            trt = group.get('tectonicRegion')
+            for src in group:
+                if trt is None:
+                    trt = src['tectonicRegion']
                 src_class = src.tag.split('}')[1]
                 c[trt, src_class] += 1
     trts, classes = zip(*c)
@@ -145,16 +148,14 @@ def info(calculators, gsims, views, exports, extracts, parameters,
     elif input_file.endswith('.xml'):
         node = nrml.read(input_file)
         if node[0].tag.endswith('sourceModel'):
-            if node['xmlns'].endswith('nrml/0.4'):
-                raise InvalidFile(
-                    '%s is in NRML 0.4 format, please run the following '
-                    'command:\noq upgrade_nrml %s' % (
-                        input_file, os.path.dirname(input_file) or '.'))
-            print(source_model_info([node[0]]))
+            print(source_model_info([node]))
         elif node[0].tag.endswith('logicTree'):
-            nodes = [nrml.read(sm_path)[0]
-                     for sm_path in logictree.collect_info(input_file).smpaths]
-            print(source_model_info(nodes))
+            sm_nodes = []
+            smpaths = logictree.collect_info(input_file).smpaths
+            for values in smpaths.values():
+                for sm_path in values:
+                    sm_nodes.append(nrml.read(sm_path))
+            print(source_model_info(sm_nodes))
         else:
             print(node.to_str())
     elif input_file.endswith(('.ini', '.zip')):
