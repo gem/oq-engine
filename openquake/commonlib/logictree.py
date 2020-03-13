@@ -27,6 +27,7 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 import io
 import os
 import re
+import copy
 import time
 import logging
 import functools
@@ -814,24 +815,33 @@ class SourceModelLogicTree(object):
         """
         return self.root_branchset.get_bset_values(sm_rlz.lt_path)[1:]
 
-    def apply_uncertainties(self, bset_values, src_group):
+    def apply_uncertainties(self, bset_values, src_group, grp_id):
         """
         :param bset_value: a list of pairs (branchset, value)
             List of branch IDs
         :param src_group:
             SourceGroup instance
+        :param grp_id:
+            Integer
         """
-        src_group.changes = 0
+        sg = copy.copy(src_group)
+        sg.sources = []
+        sg.changes = 0
         for source in src_group:
-            changes = 0
-            for bset, value in bset_values:
-                if bset.filter_source(source):
-                    apply_uncertainty(
-                        bset.uncertainty_type, source, value)
-                    changes += 1
-            if changes:  # redoing count_ruptures can be slow
-                source.num_ruptures = source.count_ruptures()
-                src_group.changes += changes
+            oks = [bset.filter_source(source) for bset, value in bset_values]
+            if sum(oks):  # source not filtered out
+                src = copy.deepcopy(source)
+                for (bset, value), ok in zip(bset_values, oks):
+                    if ok:
+                        apply_uncertainty(bset.uncertainty_type, src, value)
+                        sg.changes += 1
+                # redoing count_ruptures can be slow
+                src.num_ruptures = src.count_ruptures()
+            else:
+                src = copy.copy(source)
+            src.grp_id = grp_id
+            sg.sources.append(src)
+        return sg
 
     def get_trti_eri(self, grp_id):
         """
