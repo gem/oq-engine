@@ -80,6 +80,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
     full_lt = FullLogicTree(source_model_lt, gsim_lt)
+    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     classical = not oq.is_event_based()
     if oq.is_ucerf():
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
