@@ -814,28 +814,24 @@ class SourceModelLogicTree(object):
         """
         return self.root_branchset.get_bset_values(sm_rlz.lt_path)[1:]
 
-    def apply_uncertainties(self, bset_values, src_groups):
+    def apply_uncertainties(self, bset_values, src_group):
         """
         :param bset_value: a list of pairs (branchset, value)
             List of branch IDs
-        :param src_groups:
-            List of SourceGroups
-        :return:
-            A modified list of SourceGroups
+        :param src_group:
+            SourceGroup instance
         """
-        for sg in src_groups:
-            sg.changes = 0
-            for source in sg:
-                changes = 0
-                for bset, value in bset_values:
-                    if bset.filter_source(source):
-                        apply_uncertainty(
-                            bset.uncertainty_type, source, value)
-                        changes += 1
-                if changes:  # redoing count_ruptures can be slow
-                    source.num_ruptures = source.count_ruptures()
-                    sg.changes += changes
-        return src_groups
+        src_group.changes = 0
+        for source in src_group:
+            changes = 0
+            for bset, value in bset_values:
+                if bset.filter_source(source):
+                    apply_uncertainty(
+                        bset.uncertainty_type, source, value)
+                    changes += 1
+            if changes:  # redoing count_ruptures can be slow
+                source.num_ruptures = source.count_ruptures()
+                src_group.changes += changes
 
     def get_trti_eri(self, grp_id):
         """
