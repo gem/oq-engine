@@ -332,7 +332,10 @@ class Result(object):
         elif isinstance(val, tuple) and callable(val[0]):
             self.func = val[0]
             self.pik = pickle_sequence(val[1:])
-            self.nbytes = {'tot': sum(len(p) for p in self.pik)}
+            self.nbytes = {'args': sum(len(p) for p in self.pik)}
+        elif msg == 'TASK_ENDED':
+            self.pik = Pickled(None)
+            self.nbytes = {}
         else:
             self.pik = Pickled(val)
             self.nbytes = {'tot': len(self.pik)}
@@ -486,7 +489,6 @@ class IterResult(object):
         self.name = taskname
         self.argnames = ' '.join(argnames)
         self.sent = sent
-        self.received = []
         self.h5 = h5
 
     def _iter(self):
@@ -501,13 +503,8 @@ class IterResult(object):
                 # this happens with WorkerLostError with celery
                 raise result
             elif isinstance(result, Result):
-                if result.func:  # result contains subtask arguments
-                    self.received.append(sum(len(p) for p in result.pik))
-                else:
-                    val = result.get()
-                    self.received.append(len(result.pik))
-                    if hasattr(result, 'nbytes'):
-                        self.nbytes += result.nbytes
+                val = result.get()
+                self.nbytes += result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
             if sys.platform != 'darwin':
@@ -534,21 +531,15 @@ class IterResult(object):
         if self.iresults == ():
             return ()
         t0 = time.time()
-        self.received = []
         self.nbytes = AccumDict()
         try:
             yield from self._iter()
         finally:
-            tot = sum(self.received)
-            max_per_output = max(self.received) if self.received else 0
-            logging.info(
-                'Received %s in %d seconds, biggest '
-                'output=%s', humansize(tot), time.time() - t0,
-                humansize(max_per_output))
-            if self.nbytes:
-                nb = {k: humansize(v) for k, v in self.nbytes.items()}
-                if len(nb) < 10:
-                    logging.info('Received %s', nb)
+            items = sorted(self.nbytes.items(), key=operator.itemgetter(1))
+            nb = {k: humansize(v) for k, v in reversed(items)}
+            msg = nb if len(nb) < 10 else {
+                'tot': humansize(sum(self.nbytes.values()))}
+            logging.info('Received %s in %d seconds', msg, time.time() - t0)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -563,10 +554,8 @@ class IterResult(object):
         Sum the data transfer information of a set of results
         """
         res = object.__new__(cls)
-        res.received = []
         res.sent = 0
         for iresult in iresults:
-            res.received.extend(iresult.received)
             res.sent += iresult.sent
             name = iresult.name.split('#', 1)[0]
             if hasattr(res, 'name'):
