@@ -212,9 +212,8 @@ def sample_cluster(sources, srcfilter, num_ses, param):
             # Choose the sosurce and ruptures
             src = numpy.random.choice(sources, 1, sources.srcs_weights)[0]
             # Check if the rupture should be filtered out or not
-            try:
-                [(src, _sites)] = srcfilter([src])
-            except ValueError:  # filtered out source
+            _sites = srcfilter.get_close_sites(src)
+            if not _sites:  # filtered out source
                 continue
 
             # Get rupture
