@@ -3,8 +3,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     1_955_755_541      
-date           2020-01-16T05:31:07
-engine_version 3.8.0-git83c45f7244
+date           2020-03-13T11:21:50
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
 num_sites = 281, num_levels = 50, num_rlzs = 1
@@ -12,7 +12,7 @@ num_sites = 281, num_levels = 50, num_rlzs = 1
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'ebrisk'          
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              5.0               
@@ -22,13 +22,12 @@ rupture_mesh_spacing            10.0
 complex_fault_mesh_spacing      10.0              
 width_of_mfd_bin                0.2               
 area_source_discretization      None              
-pointsource_distance            None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     1024              
 master_seed                     100               
 ses_seed                        42                
-avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -45,11 +44,11 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b1        1.00000 trivial(1,1)    1               
-========= ======= =============== ================
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b1        1.00000 1               
+========= ======= ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -60,20 +59,13 @@ grp_id gsims                       distances siteparams ruptparams
 1      '[AtkinsonBoore2003SInter]' rrup      vs30       hypo_depth mag
 ====== =========================== ========= ========== ==============
 
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=2, rlzs=1)>
-
 Number of ruptures per source group
 -----------------------------------
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      140       2_348        2.00000     
-1      140       3_345        2.00000     
+0      3.37393   2_348        2_332       
+1      3.44425   3_345        3_345       
 ====== ========= ============ ============
 
 Exposure model
@@ -104,8 +96,8 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-D         1      C    3_345        3.80148   140       2.00000     
-F         0      C    2_348        2.41395   140       2.00000     
+D         1      C    3_345        0.13964   3.44425   3_345       
+F         0      C    2_348        0.09175   3.37393   2_332       
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -113,36 +105,35 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    6.21543  
+C    0.23140  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.18040 NaN     0.18040 0.18040 1      
-sample_ruptures    3.11469 0.98225 2.42013 3.80925 2      
+preclassical       4.26328 1.52394 3.18569 5.34087 2      
+read_source_model  0.21622 NaN     0.21622 0.21622 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-=============== ============================================= ========
-task            sent                                          received
-SourceReader                                                  3.3 KB  
-sample_ruptures param=9.27 KB sources=2.42 KB srcfilter=446 B 6.24 KB 
-=============== ============================================= ========
+================= ======================================== ========
+task              sent                                     received
+read_source_model                                          2.2 KB  
+preclassical      srcs=2.66 KB params=2 KB srcfilter=446 B 740 B   
+================= ======================================== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_43294               time_sec memory_mb counts
-======================== ======== ========= ======
-total sample_ruptures    6.22937  3.99219   2     
-EventBasedCalculator.run 4.43518  1.02734   1     
-composite source model   0.19032  0.0       1     
-total SourceReader       0.18040  0.0       1     
-reading exposure         0.04500  0.0       1     
-saving events            0.01105  0.25391   1     
-saving ruptures          0.00653  0.0       2     
-store source_info        0.00239  0.0       1     
-======================== ======== ========= ======
+=========================== ========= ========= ======
+calc_66963                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+total preclassical          8.52656   5.37500   2     
+splitting/filtering sources 8.28895   4.59766   2     
+composite source model      0.22798   0.0       1     
+total read_source_model     0.21622   0.0       1     
+reading exposure            0.05229   0.0       1     
+store source_info           0.00265   0.0       1     
+aggregate curves            8.307E-04 0.0       2     
+=========================== ========= ========= ======

@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     1_136_041_000      
-date           2020-01-16T05:30:44
-engine_version 3.8.0-git83c45f7244
+date           2020-03-13T11:20:20
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
 num_sites = 1, num_levels = 19, num_rlzs = 1
@@ -22,7 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      5.0               
-pointsource_distance            None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     1024              
@@ -42,11 +42,11 @@ source_model_logic_tree `source_model_lt_col18_full_model_S_test_slab.xml <sourc
 
 Composite source model
 ----------------------
-========= ======= ================ ================
-smlt_path weight  gsim_logic_tree  num_realizations
-========= ======= ================ ================
-b1        1.00000 trivial(0,1,0,0) 1               
-========= ======= ================ ================
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b1        1.00000 1               
+========= ======= ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -54,23 +54,14 @@ Required parameters per tectonic region type
 grp_id gsims                     distances siteparams   ruptparams    
 ====== ========================= ========= ============ ==============
 0      '[MontalvaEtAl2017SSlab]' rhypo     backarc vs30 hypo_depth mag
-1      '[MontalvaEtAl2017SSlab]' rhypo     backarc vs30 hypo_depth mag
 ====== ========================= ========= ============ ==============
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=2, rlzs=1)>
 
 Number of ruptures per source group
 -----------------------------------
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      1.00000   7            7.00000     
-1      1.00000   8            8.00000     
+0      1.00000   15           15          
 ====== ========= ============ ============
 
 Slowest sources
@@ -78,8 +69,8 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-buc06pt05 0      N    7            0.00433   1.00000   7.00000     
-buc16pt75 1      N    8            0.00254   1.00000   8.00000     
+buc16pt75 0      N    8            0.00260   1.00000   8.00000     
+buc06pt05 0      N    7            0.00233   1.00000   7.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -87,34 +78,34 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-N    0.00686  
+N    0.00493  
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-SourceReader       0.01241 0.00649 0.00782 0.01700 2      
-preclassical       0.00453 0.00170 0.00333 0.00573 2      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+preclassical       0.00326 1.893E-04 0.00313 0.00340 2      
+read_source_model  0.00337 5.911E-04 0.00295 0.00379 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-============ ============================================ ========
-task         sent                                         received
-SourceReader apply_unc=2.27 KB ltmodel=420 B fname=206 B  18.53 KB
-preclassical srcs=11.81 KB params=1.55 KB srcfilter=446 B 732 B   
-============ ============================================ ========
+================= ========================================== ========
+task              sent                                       received
+read_source_model converter=664 B fname=192 B srcfilter=8 B  12.57 KB
+preclassical      srcs=16.4 KB params=1.5 KB srcfilter=446 B 728 B   
+================= ========================================== ========
 
 Slowest operations
 ------------------
 =========================== ========= ========= ======
-calc_43224                  time_sec  memory_mb counts
+calc_66891                  time_sec  memory_mb counts
 =========================== ========= ========= ======
-composite source model      0.03184   0.0       1     
-total SourceReader          0.02481   0.0       2     
-total preclassical          0.00906   0.0       2     
-store source_info           0.00240   0.0       1     
-splitting/filtering sources 6.342E-04 0.0       2     
-aggregate curves            5.515E-04 0.0       2     
+composite source model      0.45893   0.0       1     
+total read_source_model     0.00674   0.26953   2     
+total preclassical          0.00653   1.34375   2     
+store source_info           0.00216   0.0       1     
+aggregate curves            6.020E-04 0.0       2     
+splitting/filtering sources 5.059E-04 0.0       2     
 =========================== ========= ========= ======

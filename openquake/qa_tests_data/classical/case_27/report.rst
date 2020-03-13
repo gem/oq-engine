@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ===================
 checksum32     3_403_305_238      
-date           2020-01-16T05:31:16
-engine_version 3.8.0-git83c45f7244
+date           2020-03-13T11:22:12
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
 num_sites = 1, num_levels = 6, num_rlzs = 1
@@ -22,7 +22,7 @@ rupture_mesh_spacing            1.0
 complex_fault_mesh_spacing      1.0               
 width_of_mfd_bin                1.0               
 area_source_discretization      None              
-pointsource_distance            None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     1066              
@@ -42,11 +42,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b1        1.00000 trivial(1)      1               
-========= ======= =============== ================
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b1        1.00000 1               
+========= ======= ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -55,13 +55,6 @@ grp_id gsims                      distances siteparams ruptparams
 ====== ========================== ========= ========== ==============
 0      '[SiMidorikawa1999SInter]' rrup      vs30       hypo_depth mag
 ====== ========================== ========= ========== ==============
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per source group
 -----------------------------------
@@ -76,21 +69,21 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-case_01   0      N    1            0.00289   1.00000   1.00000     
-case_02   0      N    1            3.140E-04 1.00000   1.00000     
-case_12   0      N    2            3.004E-04 0.50000   2.00000     
-case_13   0      N    2            2.940E-04 0.50000   2.00000     
-case_14   0      N    2            2.933E-04 0.50000   2.00000     
-case_15   0      N    2            2.899E-04 0.50000   2.00000     
-case_03   0      N    1            2.732E-04 1.00000   1.00000     
-case_04   0      N    1            2.673E-04 1.00000   1.00000     
-case_05   0      N    1            2.613E-04 1.00000   1.00000     
-case_10   0      N    1            2.592E-04 1.00000   1.00000     
-case_06   0      N    1            2.508E-04 1.00000   1.00000     
-case_08   0      N    1            2.449E-04 1.00000   1.00000     
-case_07   0      N    1            2.446E-04 1.00000   1.00000     
-case_09   0      N    1            2.365E-04 1.00000   1.00000     
-case_11   0      N    1            2.339E-04 1.00000   1.00000     
+case_01   0      N    1            0.00127   1.00000   1.00000     
+case_12   0      N    2            1.400E-04 0.50000   2.00000     
+case_14   0      N    2            1.369E-04 0.50000   2.00000     
+case_15   0      N    2            1.366E-04 0.50000   2.00000     
+case_13   0      N    2            1.366E-04 0.50000   2.00000     
+case_02   0      N    1            1.366E-04 1.00000   1.00000     
+case_03   0      N    1            1.273E-04 1.00000   1.00000     
+case_04   0      N    1            1.211E-04 1.00000   1.00000     
+case_06   0      N    1            1.154E-04 1.00000   1.00000     
+case_10   0      N    1            1.149E-04 1.00000   1.00000     
+case_08   0      N    1            1.149E-04 1.00000   1.00000     
+case_05   0      N    1            1.147E-04 1.00000   1.00000     
+case_09   0      N    1            1.135E-04 1.00000   1.00000     
+case_07   0      N    1            1.135E-04 1.00000   1.00000     
+case_11   0      N    1            1.113E-04 1.00000   1.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -98,34 +91,34 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-N    0.00665  
+N    0.00301  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.48143 NaN    0.48143 0.48143 1      
-preclassical       0.00845 NaN    0.00845 0.00845 1      
+preclassical       0.00398 NaN    0.00398 0.00398 1      
+read_source_model  0.25090 NaN    0.25090 0.25090 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============ ========================================= ========
-task         sent                                      received
-SourceReader                                           1.11 MB 
-preclassical srcs=1.11 MB params=679 B srcfilter=223 B 983 B   
-============ ========================================= ========
+================= ========================================= ========
+task              sent                                      received
+read_source_model                                           1.08 MB 
+preclassical      srcs=1.11 MB params=654 B srcfilter=223 B 916 B   
+================= ========================================= ========
 
 Slowest operations
 ------------------
 =========================== ========= ========= ======
-calc_43316                  time_sec  memory_mb counts
+calc_66986                  time_sec  memory_mb counts
 =========================== ========= ========= ======
-composite source model      0.49536   3.01562   1     
-total SourceReader          0.48143   3.73828   1     
-total preclassical          0.00845   0.51562   1     
-store source_info           0.00265   0.0       1     
-splitting/filtering sources 4.468E-04 0.0       1     
-aggregate curves            2.456E-04 0.0       1     
+composite source model      0.60967   3.39062   1     
+total read_source_model     0.25090   3.05469   1     
+total preclassical          0.00398   0.0       1     
+store source_info           0.00278   0.0       1     
+aggregate curves            4.661E-04 0.0       1     
+splitting/filtering sources 2.263E-04 0.0       1     
 =========================== ========= ========= ======
