@@ -133,6 +133,12 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                     bset_values, copy.deepcopy(sm.src_groups))
             else:  # the smlt is simple
                 src_groups = sm.src_groups
+            for sg in src_groups:
+                grp_id = source_model_lt.get_grp_id(sg.trt, rlz.ordinal)
+                for src in sg:
+                    src.grp_id = grp_id
+                    if rlz.samples > 1:
+                        src.samples = rlz.samples
             groups[rlz.ordinal].extend(src_groups)
 
         # check applyToSources
@@ -165,7 +171,7 @@ def reduce_sources(sources_with_same_id):
     """
     out = []
     for src in sources_with_same_id:
-        dic = {k: v for k, v in vars(src).items() if k != 'grp_id'}
+        dic = {k: v for k, v in vars(src).items() if k not in 'grp_id samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
@@ -191,11 +197,6 @@ def _get_csm(full_lt, groups):
                 atomic.append(grp)
             elif grp:
                 acc[grp.trt].extend(grp)
-            grp_id = get_grp_id(grp.trt, sm.ordinal)
-            for src in grp:
-                src.grp_id = grp_id
-                if sm.samples > 1:
-                    src.samples = sm.samples
     dic = {}
     key = operator.attrgetter('source_id', 'code')
     idx = 0
