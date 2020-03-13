@@ -128,8 +128,11 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         bset_values = source_model_lt.bset_values(rlz)
         for name in rlz.value.split():
             sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
-            src_groups = source_model_lt.apply_uncertainties(
-                bset_values, copy.deepcopy(sm.src_groups))
+            if bset_values:  # the smlt is complex
+                src_groups = source_model_lt.apply_uncertainties(
+                    bset_values, copy.deepcopy(sm.src_groups))
+            else:  # the smlt is simple
+                src_groups = sm.src_groups
             groups[rlz.ordinal].extend(src_groups)
 
         # check applyToSources
