@@ -270,9 +270,9 @@ def apply_uncertainties(bset_values, src_group):
         List of branch IDs
     :param src_group:
         SourceGroup instance
+    :returns:
+        A copy of the original group with possibly modified sources
     """
-    if not bset_values:
-        return src_group
     sg = copy.copy(src_group)
     sg.sources = []
     sg.changes = 0
@@ -287,6 +287,6 @@ def apply_uncertainties(bset_values, src_group):
             # redoing count_ruptures can be slow
             src.num_ruptures = src.count_ruptures()
         else:
-            src = copy.copy(source)
+            src = copy.copy(source)  # this is ultra-fast
         sg.sources.append(src)
     return sg
