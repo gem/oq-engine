@@ -271,7 +271,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.crmodel.min_iml
         min_iml = oq.min_iml
-        if min_iml.sum() == 0:
+        if oq.ground_motion_fields and min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
         else:

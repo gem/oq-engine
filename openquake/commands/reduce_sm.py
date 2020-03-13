@@ -31,10 +31,12 @@ def reduce_sm(calc_id):
     with datastore.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'][()]
+    num_ids = len(np.unique(info['source_id']))
     bad_ids = set(info[info['eff_ruptures'] == 0]['source_id'])
     if len(bad_ids) == 0:
         logging.warning('All sources are relevant, nothing to remove')
         return
+    logging.info('Found %d filtered out source IDs', len(bad_ids))
     ok = info['eff_ruptures'] > 0
     if ok.sum() == 0:
         raise RuntimeError('All sources were filtered away!')
@@ -42,7 +44,7 @@ def reduce_sm(calc_id):
     with performance.Monitor() as mon:
         good, total = readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], ok_ids)
-    logging.info('Removed %d/%d sources', total - good, total)
+    logging.info('Removed %d/%d sources', total - good, num_ids)
     srcs, cnts = np.unique(info[['source_id', 'code']], return_counts=True)
     dupl = dict(srcs[cnts > 1])  # source_id -> code
     bad_dupl = bad_ids & set(dupl)
