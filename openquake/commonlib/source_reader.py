@@ -117,9 +117,8 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             else 'processpool')
     # NB: h5 is None in logictree_test.py
     allargs = []
-    for fnames in source_model_lt.info.smpaths:
-        for fname in fnames:
-            allargs.append((fname, converter, srcfilter))
+    for fname in source_model_lt.info.smpaths:
+        allargs.append((fname, converter, srcfilter))
     smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel

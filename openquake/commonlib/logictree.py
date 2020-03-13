@@ -411,7 +411,7 @@ def collect_info(smlt):
                 for br in bset:
                     with context(smlt, br):
                         fnames = unique(br.uncertaintyModel.text.split())
-                        paths.add(_abs_paths(smlt, fnames))
+                        paths.update(_abs_paths(smlt, fnames))
     return Info(sorted(paths), applytosources)
 
 
