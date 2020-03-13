@@ -53,14 +53,13 @@ def read_source_model(fname, converter, srcfilter, monitor):
     :param converter: SourceConverter
     :param srcfilter: None unless OQ_SAMPLE_SOURCES is set
     :param monitor: a Monitor instance
-    :returns: a SourceModel instance with attribute .fname
+    :returns: a SourceModel instance
     """
     [sm] = nrml.read_source_models([fname], converter)
     if srcfilter:  # if OQ_SAMPLE_SOURCES is set sample the close sources
         for i, sg in enumerate(sm.src_groups):
             sg.sources = random_filtered_sources(sg.sources, srcfilter, i)
-    sm.fname = fname
-    return sm
+    return {fname: sm}
 
 
 def get_csm(oq, source_model_lt, gsim_lt, h5=None):
@@ -81,6 +80,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
     full_lt = FullLogicTree(source_model_lt, gsim_lt)
+    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     classical = not oq.is_event_based()
     if oq.is_ucerf():
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
@@ -90,7 +90,8 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            src.checksum = src.grp_id = src.id = grp_id
+            src.checksum = src.id = grp_id
+            src.grp_id = grp_id,
             src.samples = sm_rlz.samples
             if classical:
                 # split the sources upfront to improve the task distribution
@@ -119,20 +120,30 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     for brid, fnames in source_model_lt.info.smpaths.items():
         for fname in fnames:
             allargs.append((fname, converter, srcfilter))
-    smap = parallel.Starmap(read_source_model, allargs, distribute=dist,
-                            h5=h5 if h5 else None)
-    smdict = {sm.fname: sm for sm in smap}
+    smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
+                              h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
     logging.info('Applying logic tree uncertainties')
     for rlz in full_lt.sm_rlzs:
+        bset_values = source_model_lt.bset_values(rlz)
         for name in rlz.value.split():
             sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
-            src_groups = source_model_lt.apply_uncertainties(
-                rlz.lt_path, copy.deepcopy(sm.src_groups))
+            if bset_values:  # the smlt is complex
+                src_groups = source_model_lt.apply_uncertainties(
+                    bset_values, copy.deepcopy(sm.src_groups))
+            else:  # the smlt is simple
+                src_groups = sm.src_groups
+            for sg in src_groups:
+                grp_id = source_model_lt.get_grp_id(sg.trt, rlz.ordinal)
+                for src in sg:
+                    src.grp_id = grp_id,
+                    if rlz.samples > 1:
+                        src.samples = rlz.samples
             groups[rlz.ordinal].extend(src_groups)
 
         # check applyToSources
+        '''
         source_ids = set(src.source_id for grp in groups[rlz.ordinal]
                          for src in grp)
         for brid, srcids in source_model_lt.info.applytosources.items():
@@ -143,6 +154,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                             "The source %s is not in the source model,"
                             " please fix applyToSources in %s or the "
                             "source model" % (srcid, source_model_lt.filename))
+        '''
 
     # checking the changes
     changes = sum(sg.changes for rlz in full_lt.sm_rlzs
@@ -160,15 +172,13 @@ def reduce_sources(sources_with_same_id):
     """
     out = []
     for src in sources_with_same_id:
-        dic = {k: v for k, v in vars(src).items() if k != 'grp_id'}
+        dic = {k: v for k, v in vars(src).items() if k not in 'grp_id samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
-            src.grp_id = tuple(s.grp_id for s in srcs)
-        else:
-            src.grp_id = src.grp_id,
+            src.grp_id = sum([s.grp_id for s in srcs], ())
         out.append(src)
     out.sort(key=operator.attrgetter('grp_id'))
     return out
@@ -179,18 +189,12 @@ def _get_csm(full_lt, groups):
     # and regroup the sources in non-atomic groups by TRT
     atomic = []
     acc = general.AccumDict(accum=[])
-    get_grp_id = full_lt.source_model_lt.get_grp_id(full_lt.gsim_lt.values)
     for sm in full_lt.sm_rlzs:
         for grp in groups[sm.ordinal]:
             if grp and grp.atomic:
                 atomic.append(grp)
             elif grp:
                 acc[grp.trt].extend(grp)
-            grp_id = get_grp_id(grp.trt, sm.ordinal)
-            for src in grp:
-                src.grp_id = grp_id
-                if sm.samples > 1:
-                    src.samples = sm.samples
     dic = {}
     key = operator.attrgetter('source_id', 'code')
     idx = 0

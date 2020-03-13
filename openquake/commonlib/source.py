@@ -139,6 +139,8 @@ class FullLogicTree(object):
         self.init()  # set .sm_rlzs and .trt_by_grp
 
     def init(self):
+        # NB: the number of effective rlzs can be less than the number
+        # of realizations in case of sampling
         sm_rlzs = logictree.get_effective_rlzs(self.source_model_lt)
         if not self.num_samples:
             num_gsim_rlzs = self.gsim_lt.get_num_paths()
@@ -150,6 +152,9 @@ class FullLogicTree(object):
             else:
                 offset += num_gsim_rlzs
         self.sm_rlzs = sm_rlzs
+        self.source_model_lt.num_eff_rlzs = len(sm_rlzs)
+        self.source_model_lt.trti = {
+            trt: i for i, trt in enumerate(self.gsim_lt.values)}
 
     @property
     def trt_by_grp(self):
