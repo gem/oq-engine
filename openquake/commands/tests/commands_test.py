@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
+from openquake.baselib import parallel
 from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
 from openquake import commonlib
@@ -516,3 +517,7 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         # test sites_csv
         sc = prepare_site_model([], [output], [vs30_csv],
                                 True, True, False, 0, 5, output)
+
+
+def teardown_module():
+    parallel.Starmap.shutdown()
