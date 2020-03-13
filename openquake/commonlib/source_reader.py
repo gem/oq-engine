@@ -90,8 +90,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            src.checksum = src.id = grp_id
-            src.grp_id = grp_id,
+            src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
             if classical:
                 # split the sources upfront to improve the task distribution
@@ -137,7 +136,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             for sg in src_groups:
                 grp_id = source_model_lt.get_grp_id(sg.trt, rlz.ordinal)
                 for src in sg:
-                    src.grp_id = grp_id,
+                    src.grp_id = grp_id
                     if rlz.samples > 1:
                         src.samples = rlz.samples
             groups.extend(src_groups)
@@ -177,7 +176,9 @@ def reduce_sources(sources_with_same_id):
             sources_with_same_id, operator.attrgetter('checksum')).values():
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
-            src.grp_id = sum([s.grp_id for s in srcs], ())
+            src.grp_id = tuple(s.grp_id for s in srcs)
+        else:
+            src.grp_id = src.grp_id,
         out.append(src)
     out.sort(key=operator.attrgetter('grp_id'))
     return out
