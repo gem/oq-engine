@@ -137,11 +137,10 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                 sg = apply_uncertainties(bset_values, src_group)
                 for src in sg:
                     src.grp_id = grp_id
-                groups.append(sg)
-                for src in sg:
                     source_ids.add(src.source_id)
                     if rlz.samples > 1:
                         src.samples = rlz.samples
+                groups.append(sg)
 
         # check applyToSources
         sm_branch = rlz.lt_path[0]
