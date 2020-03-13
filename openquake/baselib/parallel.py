@@ -537,7 +537,8 @@ class IterResult(object):
         finally:
             items = sorted(self.nbytes.items(), key=operator.itemgetter(1))
             nb = {k: humansize(v) for k, v in reversed(items)}
-            msg = nb if len(nb) < 10 else {'tot': sum(self.nbytes.values())}
+            msg = nb if len(nb) < 10 else {
+                'tot': humansize(sum(self.nbytes.values()))}
             logging.info('Received %s in %d seconds', msg, time.time() - t0)
 
     def reduce(self, agg=operator.add, acc=None):
