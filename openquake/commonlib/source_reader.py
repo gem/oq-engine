@@ -109,7 +109,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             h5['sitecol'], h5['oqparam'].maximum_distance)
     else:
         srcfilter = None
-    groups = [[] for sm_rlz in full_lt.sm_rlzs]
+    groups = []
 
     # NB: the source models file are often NOT in the shared directory
     # (for instance in oq-engine/demos) so the processpool must be used
@@ -140,7 +140,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                     src.grp_id = grp_id,
                     if rlz.samples > 1:
                         src.samples = rlz.samples
-            groups[rlz.ordinal].extend(src_groups)
+            groups.extend(src_groups)
 
         # check applyToSources
         '''
@@ -157,8 +157,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         '''
 
     # checking the changes
-    changes = sum(sg.changes for rlz in full_lt.sm_rlzs
-                  for sg in groups[rlz.ordinal])
+    changes = sum(sg.changes for sg in groups)
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
@@ -189,12 +188,11 @@ def _get_csm(full_lt, groups):
     # and regroup the sources in non-atomic groups by TRT
     atomic = []
     acc = general.AccumDict(accum=[])
-    for sm in full_lt.sm_rlzs:
-        for grp in groups[sm.ordinal]:
-            if grp and grp.atomic:
-                atomic.append(grp)
-            elif grp:
-                acc[grp.trt].extend(grp)
+    for grp in groups:
+        if grp and grp.atomic:
+            atomic.append(grp)
+        elif grp:
+            acc[grp.trt].extend(grp)
     dic = {}
     key = operator.attrgetter('source_id', 'code')
     idx = 0
