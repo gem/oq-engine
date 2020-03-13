@@ -43,10 +43,9 @@ def source_model_info(sm_nodes):
     for sm in sm_nodes:
         groups = [sm[0]] if sm['xmlns'].endswith('nrml/0.4') else sm[0]
         for group in groups:
-            trt = group.get('tectonicRegion')
+            grp_trt = group.get('tectonicRegion')
             for src in group:
-                if trt is None:
-                    trt = src['tectonicRegion']
+                trt = src.get('tectonicRegion', grp_trt)
                 src_class = src.tag.split('}')[1]
                 c[trt, src_class] += 1
     trts, classes = zip(*c)
