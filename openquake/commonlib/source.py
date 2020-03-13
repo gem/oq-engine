@@ -152,9 +152,7 @@ class FullLogicTree(object):
             else:
                 offset += num_gsim_rlzs
         self.sm_rlzs = sm_rlzs
-        self.source_model_lt.num_eff_rlzs = len(sm_rlzs)
-        self.source_model_lt.trti = {
-            trt: i for i, trt in enumerate(self.gsim_lt.values)}
+        self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
 
     @property
     def trt_by_grp(self):
@@ -173,6 +171,18 @@ class FullLogicTree(object):
     @property
     def num_samples(self):
         return self.source_model_lt.num_samples
+
+    def get_trti_eri(self, grp_id):
+        """
+        :returns: (trti, eri)
+        """
+        return divmod(grp_id, len(self.sm_rlzs))
+
+    def get_grp_id(self, trt, eri):
+        """
+        :returns: grp_id
+        """
+        return self.trti[trt] * len(self.sm_rlzs) + int(eri)
 
     def grp_ids(self, eri):
         """

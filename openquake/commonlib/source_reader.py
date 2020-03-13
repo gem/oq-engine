@@ -25,6 +25,7 @@ import zlib
 
 from openquake.baselib import parallel, general
 from openquake.hazardlib import nrml, sourceconverter, calc
+from openquake.commonlib.lt import apply_uncertainties
 from openquake.commonlib.source import FullLogicTree, CompositeSourceModel
 
 
@@ -108,7 +109,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             h5['sitecol'], h5['oqparam'].maximum_distance)
     else:
         srcfilter = None
-    groups = [[] for sm_rlz in full_lt.sm_rlzs]
+    groups = []
 
     # NB: the source models file are often NOT in the shared directory
     # (for instance in oq-engine/demos) so the processpool must be used
@@ -125,39 +126,32 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         parallel.Starmap.shutdown()  # save memory
     logging.info('Applying logic tree uncertainties')
     for rlz in full_lt.sm_rlzs:
+        source_ids = set()
         bset_values = source_model_lt.bset_values(rlz)
         for name in rlz.value.split():
             sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
-            if bset_values:  # the smlt is complex
-                src_groups = source_model_lt.apply_uncertainties(
-                    bset_values, copy.deepcopy(sm.src_groups))
-            else:  # the smlt is simple
-                src_groups = sm.src_groups
-            for sg in src_groups:
-                grp_id = source_model_lt.get_grp_id(sg.trt, rlz.ordinal)
+            for src_group in sm.src_groups:
+                grp_id = full_lt.get_grp_id(src_group.trt, rlz.ordinal)
+                sg = apply_uncertainties(bset_values, src_group, grp_id)
+                groups.append(sg)
                 for src in sg:
-                    src.grp_id = grp_id
+                    source_ids.add(src.source_id)
                     if rlz.samples > 1:
                         src.samples = rlz.samples
-            groups[rlz.ordinal].extend(src_groups)
 
         # check applyToSources
-        '''
-        source_ids = set(src.source_id for grp in groups[rlz.ordinal]
-                         for src in grp)
-        for brid, srcids in source_model_lt.info.applytosources.items():
-            if brid in rlz.lt_path:
-                for srcid in srcids:
-                    if srcid not in source_ids:
-                        raise ValueError(
-                            "The source %s is not in the source model,"
-                            " please fix applyToSources in %s or the "
-                            "source model" % (srcid, source_model_lt.filename))
-        '''
+        sm_branch = rlz.lt_path[0]
+        srcids = source_model_lt.info.applytosources[sm_branch]
+        for srcid in srcids:
+            if srcid not in source_ids:
+                raise ValueError(
+                    "The source %s is not in the source model,"
+                    " please fix applyToSources in %s or the "
+                    "source model(s) %s" % (srcid, source_model_lt.filename,
+                                            rlz.value.split()))
 
     # checking the changes
-    changes = sum(sg.changes for rlz in full_lt.sm_rlzs
-                  for sg in groups[rlz.ordinal])
+    changes = sum(sg.changes for sg in groups)
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
@@ -190,12 +184,11 @@ def _get_csm(full_lt, groups):
     # and regroup the sources in non-atomic groups by TRT
     atomic = []
     acc = general.AccumDict(accum=[])
-    for sm in full_lt.sm_rlzs:
-        for grp in groups[sm.ordinal]:
-            if grp and grp.atomic:
-                atomic.append(grp)
-            elif grp:
-                acc[grp.trt].extend(grp)
+    for grp in groups:
+        if grp and grp.atomic:
+            atomic.append(grp)
+        elif grp:
+            acc[grp.trt].extend(grp)
     dic = {}
     key = operator.attrgetter('source_id', 'code')
     idx = 0
