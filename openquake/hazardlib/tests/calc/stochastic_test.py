@@ -89,4 +89,5 @@ class SampleClusterTestCase(unittest.TestCase):
         nocc = sum([r.n_occ for r in rups])
         # The number of occurrences must be close to 10 since the occurrence
         # rate of the cluster is 0.01 events/year
-        assert nocc == 9
+        msg = 'The computed number of ruptures differs from the expected one'
+        self.assertEqual(nocc, 9, msg)

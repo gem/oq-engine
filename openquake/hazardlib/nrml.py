@@ -214,7 +214,7 @@ def get_source_model_05(node, fname, converter=default):
     # time even when we read just the model .xml file
     if itime is not None:
         converter.investigation_time = itime
-    # reading groupss
+    # reading groups
     groups = []  # expect a sequence of sourceGroup nodes
     for src_group in node:
         if 'sourceGroup' not in src_group.tag:
