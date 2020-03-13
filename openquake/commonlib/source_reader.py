@@ -53,14 +53,13 @@ def read_source_model(fname, converter, srcfilter, monitor):
     :param converter: SourceConverter
     :param srcfilter: None unless OQ_SAMPLE_SOURCES is set
     :param monitor: a Monitor instance
-    :returns: a SourceModel instance with attribute .fname
+    :returns: a SourceModel instance
     """
     [sm] = nrml.read_source_models([fname], converter)
     if srcfilter:  # if OQ_SAMPLE_SOURCES is set sample the close sources
         for i, sg in enumerate(sm.src_groups):
             sg.sources = random_filtered_sources(sg.sources, srcfilter, i)
-    sm.fname = fname
-    return sm
+    return {fname: sm}
 
 
 def get_csm(oq, source_model_lt, gsim_lt, h5=None):
@@ -119,9 +118,8 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     for brid, fnames in source_model_lt.info.smpaths.items():
         for fname in fnames:
             allargs.append((fname, converter, srcfilter))
-    smap = parallel.Starmap(read_source_model, allargs, distribute=dist,
-                            h5=h5 if h5 else None)
-    smdict = {sm.fname: sm for sm in smap}
+    smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
+                              h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
     logging.info('Applying logic tree uncertainties')
