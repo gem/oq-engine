@@ -536,7 +536,7 @@ class IterResult(object):
             yield from self._iter()
         finally:
             items = sorted(self.nbytes.items(), key=operator.itemgetter(1))
-            nb = {k: humansize(v) for k, v in items}
+            nb = {k: humansize(v) for k, v in reversed(items)}
             msg = nb if len(nb) < 10 else {'tot': sum(self.nbytes.values())}
             logging.info('Received %s in %d seconds', msg, time.time() - t0)
 
