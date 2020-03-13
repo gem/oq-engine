@@ -150,10 +150,8 @@ def info(calculators, gsims, views, exports, extracts, parameters,
             print(source_model_info([node]))
         elif node[0].tag.endswith('logicTree'):
             sm_nodes = []
-            smpaths = logictree.collect_info(input_file).smpaths
-            for values in smpaths.values():
-                for sm_path in values:
-                    sm_nodes.append(nrml.read(sm_path))
+            for smpath in logictree.collect_info(input_file).smpaths:
+                sm_nodes.append(nrml.read(smpath))
             print(source_model_info(sm_nodes))
         else:
             print(node.to_str())

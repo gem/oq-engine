@@ -400,7 +400,7 @@ def collect_info(smlt):
     except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
-    paths = collections.defaultdict(set)  # branchID -> paths
+    paths = set()
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
         for bset in _bsnodes(smlt, blevel):
@@ -411,8 +411,8 @@ def collect_info(smlt):
                 for br in bset:
                     with context(smlt, br):
                         fnames = unique(br.uncertaintyModel.text.split())
-                        paths[br['branchID']].update(_abs_paths(smlt, fnames))
-    return Info({k: sorted(v) for k, v in paths.items()}, applytosources)
+                        paths.add(_abs_paths(smlt, fnames))
+    return Info(sorted(paths), applytosources)
 
 
 def _abs_paths(smlt, fnames):
