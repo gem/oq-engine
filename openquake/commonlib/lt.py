@@ -264,15 +264,15 @@ def _incMFD_absolute(utype, source, value):
 
 # ######################### apply_uncertainties ########################### #
 
-def apply_uncertainties(bset_values, src_group, grp_id):
+def apply_uncertainties(bset_values, src_group):
     """
     :param bset_value: a list of pairs (branchset, value)
         List of branch IDs
     :param src_group:
         SourceGroup instance
-    :param grp_id:
-        Integer
     """
+    if not bset_values:
+        return src_group
     sg = copy.copy(src_group)
     sg.sources = []
     sg.changes = 0
@@ -288,6 +288,5 @@ def apply_uncertainties(bset_values, src_group, grp_id):
             src.num_ruptures = src.count_ruptures()
         else:
             src = copy.copy(source)
-        src.grp_id = grp_id
         sg.sources.append(src)
     return sg

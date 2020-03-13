@@ -134,7 +134,9 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
             for src_group in sm.src_groups:
                 grp_id = full_lt.get_grp_id(src_group.trt, rlz.ordinal)
-                sg = apply_uncertainties(bset_values, src_group, grp_id)
+                sg = apply_uncertainties(bset_values, src_group)
+                for src in sg:
+                    src.grp_id = grp_id
                 groups.append(sg)
                 for src in sg:
                     source_ids.add(src.source_id)
