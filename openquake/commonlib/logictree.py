@@ -807,29 +807,34 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, ltpath, src_groups):
+    def bset_values(self, sm_rlz):
         """
-        :param ltpath:
+        :param sm_rlz: an effective realization
+        :returns: a list of B - 1 pairs (branchset, value)
+        """
+        return self.root_branchset.get_bset_values(sm_rlz.lt_path)[1:]
+
+    def apply_uncertainties(self, bset_values, src_groups):
+        """
+        :param bset_value: a list of pairs (branchset, value)
             List of branch IDs
         :param src_groups:
             List of SourceGroups
         :return:
             A modified list of SourceGroups
         """
-        pairs = self.root_branchset.get_bset_values(ltpath)[1:]
-        if pairs:
-            for sg in src_groups:
-                sg.changes = 0
-                for source in sg:
-                    changes = 0
-                    for bset, value in pairs:
-                        if bset.filter_source(source):
-                            apply_uncertainty(
-                                bset.uncertainty_type, source, value)
-                            changes += 1
-                    if changes:  # redoing count_ruptures can be slow
-                        source.num_ruptures = source.count_ruptures()
-                        sg.changes += changes
+        for sg in src_groups:
+            sg.changes = 0
+            for source in sg:
+                changes = 0
+                for bset, value in bset_values:
+                    if bset.filter_source(source):
+                        apply_uncertainty(
+                            bset.uncertainty_type, source, value)
+                        changes += 1
+                if changes:  # redoing count_ruptures can be slow
+                    source.num_ruptures = source.count_ruptures()
+                    sg.changes += changes
         return src_groups
 
     def get_trti_eri(self):

@@ -125,13 +125,15 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         parallel.Starmap.shutdown()  # save memory
     logging.info('Applying logic tree uncertainties')
     for rlz in full_lt.sm_rlzs:
+        bset_values = source_model_lt.bset_values(rlz)
         for name in rlz.value.split():
             sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
             src_groups = source_model_lt.apply_uncertainties(
-                rlz.lt_path, copy.deepcopy(sm.src_groups))
+                bset_values, copy.deepcopy(sm.src_groups))
             groups[rlz.ordinal].extend(src_groups)
 
         # check applyToSources
+        '''
         source_ids = set(src.source_id for grp in groups[rlz.ordinal]
                          for src in grp)
         for brid, srcids in source_model_lt.info.applytosources.items():
@@ -142,6 +144,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                             "The source %s is not in the source model,"
                             " please fix applyToSources in %s or the "
                             "source model" % (srcid, source_model_lt.filename))
+        '''
 
     # checking the changes
     changes = sum(sg.changes for rlz in full_lt.sm_rlzs
