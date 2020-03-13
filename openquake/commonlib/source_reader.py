@@ -147,7 +147,8 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                 raise ValueError(
                     "The source %s is not in the source model,"
                     " please fix applyToSources in %s or the "
-                    "source model" % (srcid, source_model_lt.filename))
+                    "source model(s) %s" % (srcid, source_model_lt.filename,
+                                            rlz.value.split()))
 
     # checking the changes
     changes = sum(sg.changes for sg in groups)
