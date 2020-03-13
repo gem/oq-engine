@@ -212,24 +212,26 @@ def sample_cluster(sources, srcfilter, num_ses, param):
             # Choose the sosurce and ruptures
             src = numpy.random.choice(sources, 1, sources.srcs_weights)[0]
             # Check if the rupture should be filtered out or not
-            check = has_sites(srcfilter([src]))
-            if check[0]:
-                _sites = check[1]
-                # Get rupture
-                rup = src.get_one_rupture()
-                # Update rupture storage
-                if src.id not in rup_counter:
-                    rup_counter[src.id] = {}
-                    rup_data[src.id] = {}
-                if rup.idx not in rup_counter[src.id]:
-                    rup_counter[src.id][rup.idx] = 1
-                    rup_data[src.id][rup.idx] = [rup, src.id, grp_id]
-                else:
-                    rup_counter[src.id][rup.idx] += 1
-                # Store info
-                dt = time.time() - t0
-                calc_times[src.id] += numpy.array(
-                    [len(rup_data[src.id]), len(_sites), dt])
+            try:
+                [(src, _sites)] = srcfilter([src])
+            except ValueError:  # filtered out source
+                continue
+
+            # Get rupture
+            rup = src.get_one_rupture()
+            # Update rupture storage
+            if src.id not in rup_counter:
+                rup_counter[src.id] = {}
+                rup_data[src.id] = {}
+            if rup.idx not in rup_counter[src.id]:
+                rup_counter[src.id][rup.idx] = 1
+                rup_data[src.id][rup.idx] = [rup, src.id, grp_id]
+            else:
+                rup_counter[src.id][rup.idx] += 1
+            # Store info
+            dt = time.time() - t0
+            calc_times[src.id] += numpy.array(
+                [len(rup_data[src.id]), len(_sites), dt])
 
     # Create ruptures
     for src_key in rup_data:
@@ -240,12 +242,6 @@ def sample_cluster(sources, srcfilter, num_ses, param):
             eb_ruptures.append(ebr)
 
     return eb_ruptures, calc_times
-
-
-def has_sites(generator):
-    for item in generator:
-        return (True, item[1])
-    return (False, [])
 
 
 # NB: there is postfiltering of the ruptures, which is more efficient
