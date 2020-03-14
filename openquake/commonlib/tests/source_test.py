@@ -110,7 +110,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             temporal_occurrence_model=PoissonTOM(50.))
-        point.num_ruptures = point.count_ruptures()
         return point
 
     @property
@@ -145,7 +144,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             polygon=polygon,
             area_discretization=2,
             temporal_occurrence_model=PoissonTOM(50.))
-        area.num_ruptures = area.count_ruptures()
         return area
 
     @property
@@ -174,7 +172,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50.),
             hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
             slip_list=numpy.array([[90, 0.7], [135, 0.3]]))
-        simple.num_ruptures = simple.count_ruptures()
         return simple
 
     @property
@@ -216,7 +213,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             edges=edges,
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.))
-        cmplx.num_ruptures = cmplx.count_ruptures()
         return cmplx
 
     @property
@@ -242,7 +238,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             surface=surface,
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.))
-        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
@@ -285,7 +280,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             surface=complex_surface,
             rake=60.0,
             temporal_occurrence_model=PoissonTOM(50.0))
-        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
@@ -317,7 +311,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             surface=multi_surface,
             rake=90.0,
             temporal_occurrence_model=PoissonTOM(50.0))
-        char.num_ruptures = char.count_ruptures()
         return char
 
     def test_point_to_hazardlib(self):
