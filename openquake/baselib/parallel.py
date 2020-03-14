@@ -112,8 +112,8 @@ Here is an example of usage:
 >>> from openquake.baselib.datastore import hdf5new
 >>> h5 = hdf5new()
 >>> smap = Starmap(count, [['hello'], ['world']], h5=h5)
->>> print(smap.reduce())
-{'h': 1, 'e': 1, 'l': 3, 'o': 2, 'w': 1, 'r': 1, 'd': 1}
+>>> print(sorted(smap.reduce().items()))
+[('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
 
 After the calculation, or even while the calculation is running, you can
 open the calculation file for reading and extract the performance information
