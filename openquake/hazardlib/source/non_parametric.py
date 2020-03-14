@@ -162,9 +162,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         :returns: the geometry as a WKT string
         """
-        polys = [rup.surface.mesh.get_convex_hull()._polygon2d
-                 for rup, pmf in self.data]
-        return shapely.geometry.MultiPolygon(polys).wkt
+        return ''
+        # polys = [rup.surface.mesh.get_convex_hull()._polygon2d
+        #          for rup, pmf in self.data]
+        # return shapely.geometry.MultiPolygon(polys).wkt
 
     def get_one_rupture(self, rupture_mutex=False):
         """
