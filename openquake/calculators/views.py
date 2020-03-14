@@ -20,14 +20,13 @@ import os.path
 import numbers
 import operator
 import functools
-import itertools
 import collections
 import numpy
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg, fast_agg3)
-from openquake.baselib.performance import perf_dt
+from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -421,32 +420,6 @@ def view_fullreport(token, dstore):
     # avoid circular imports
     from openquake.calculators.reportwriter import ReportWriter
     return ReportWriter(dstore).make_report()
-
-
-def performance_view(dstore, add_calc_id=True):
-    """
-    Returns the performance view as a numpy array.
-    """
-    pdata = dstore['performance_data']
-    pdata.refresh()
-    data = sorted(pdata[()], key=operator.itemgetter(0))
-    out = []
-    for operation, group in itertools.groupby(data, operator.itemgetter(0)):
-        counts = 0
-        time = 0
-        mem = 0
-        for rec in group:
-            counts += rec['counts']
-            time += rec['time_sec']
-            mem = max(mem, rec['memory_mb'])
-        out.append((operation, time, mem, counts))
-    out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    if add_calc_id:
-        dtlist = [('calc_%d' % dstore.calc_id, perf_dt['operation'])]
-    else:
-        dtlist = [('operation', perf_dt['operation'])]
-    dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
-    return numpy.array(out, dtlist)
 
 
 @view.add('performance')
