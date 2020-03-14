@@ -205,7 +205,7 @@ class SourceGroup(collections.abc.Sequence):
             src.tectonic_region_type, self.trt)
         if not src.min_mag:  # if not set already
             src.min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
-            if not src.get_annual_occurrence_rates():  # filtered out
+            if not src.get_mags():  # filtered out
                 return
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
