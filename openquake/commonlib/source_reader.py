@@ -24,7 +24,7 @@ import logging
 import zlib
 
 from openquake.baselib import parallel, general
-from openquake.hazardlib import nrml, sourceconverter, calc
+from openquake.hazardlib import nrml, sourceconverter, calc, InvalidFile
 from openquake.commonlib.lt import apply_uncertainties
 from openquake.commonlib.source import FullLogicTree, CompositeSourceModel
 
@@ -110,7 +110,6 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             h5['sitecol'], h5['oqparam'].maximum_distance)
     else:
         srcfilter = None
-    groups = []
 
     # NB: the source models file are often NOT in the shared directory
     # (for instance in oq-engine/demos) so the processpool must be used
@@ -127,20 +126,38 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     S = sum(len(sg) for sm in smdict.values() for sg in sm.src_groups)
     logging.info('Applying logic tree uncertainties to %d path(s) and '
                  '%d sources', P, S)
+
+    def getgroups(value):
+        # extract the source groups from a sequence of source files
+        groups = []
+        for name in value.split():
+            fname = os.path.abspath(os.path.join(smlt_dir, name))
+            groups.extend(smdict[fname].src_groups)
+        return groups
+
+    groups = []
     for rlz in full_lt.sm_rlzs:
-        source_ids = set()
+        src_groups = getgroups(rlz.value)
+        source_ids = set(src.source_id for sg in src_groups for src in sg)
         bset_values = source_model_lt.bset_values(rlz)
-        for name in rlz.value.split():
-            sm = smdict[os.path.abspath(os.path.join(smlt_dir, name))]
-            for src_group in sm.src_groups:
-                grp_id = full_lt.get_grp_id(src_group.trt, rlz.ordinal)
-                sg = apply_uncertainties(bset_values, src_group)
-                for src in sg:
-                    src.grp_id = grp_id
-                    source_ids.add(src.source_id)
-                    if rlz.samples > 1:
-                        src.samples = rlz.samples
-                groups.append(sg)
+        if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
+            (bset, value), *bset_values = bset_values
+            extra = getgroups(value)
+            extra_ids = set(src.source_id for sg in extra for src in sg)
+            common = source_ids & extra_ids
+            if common:
+                raise InvalidFile(
+                    '%s contains source(s) %s already present in %s' %
+                    (value, common, rlz.value))
+            src_groups.extend(extra)
+        for src_group in src_groups:
+            grp_id = full_lt.get_grp_id(src_group.trt, rlz.ordinal)
+            sg = apply_uncertainties(bset_values, src_group)
+            for src in sg:
+                src.grp_id = grp_id
+                if rlz.samples > 1:
+                    src.samples = rlz.samples
+            groups.append(sg)
 
         # check applyToSources
         sm_branch = rlz.lt_path[0]
