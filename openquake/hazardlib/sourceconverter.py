@@ -205,6 +205,8 @@ class SourceGroup(collections.abc.Sequence):
             src.tectonic_region_type, self.trt)
         if not src.min_mag:  # if not set already
             src.min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
+            if not src.get_mags():
+                return
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
                 self.rup_interdep == 'mutex'):
@@ -213,8 +215,8 @@ class SourceGroup(collections.abc.Sequence):
             raise ValueError(msg)
 
         nr = get_set_num_ruptures(src)
-        if nr == 0:  # the minimum_magnitude filters all ruptures
-            return
+        #if nr == 0:  # the minimum_magnitude filters all ruptures
+        #    return
         self.sources.append(src)
         _, max_mag = src.get_min_max_mag()
         prev_max_mag = self.max_mag
