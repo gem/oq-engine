@@ -110,14 +110,33 @@ will create a file named ``calc_XXX.hdf5`` in your $OQ_DATA directory
 Here is an example of usage:
 
 >>> from openquake.baselib.datastore import hdf5new
->>> with hdf5new() as h5:
-...     smap = Starmap(count, [['hello'], ['world']], h5=h5)
-...     print(smap.reduce())
+>>> h5 = hdf5new()
+>>> smap = Starmap(count, [['hello'], ['world']], h5=h5)
+>>> print(smap.reduce())
 {'h': 1, 'e': 1, 'l': 3, 'o': 2, 'w': 1, 'r': 1, 'd': 1}
 
 After the calculation, or even while the calculation is running, you can
 open the calculation file for reading and extract the performance information
-for it. The engine provides a command to do that, `oq show performance`.
+for it. The engine provides a command to do that, `oq show performance`,
+but you can also get it manually, with a call to
+`openquake.baselib.performance.performance_view(h5)` which will return
+the performance information as a numpy array:
+
+>>> from openquake.baselib.performance import performance_view
+>>> performance_view(h5).dtype.names
+('operation', 'time_sec', 'memory_mb', 'counts')
+>>> h5.close()
+
+The four columns are as follows:
+
+operation:
+  the name of the function running in parallel (in this case 'count')
+time_sec:
+  the cumulative time in second spent running the function
+memory_mb:
+  the maximum allocated memory per core
+counts:
+  the number of times the function was called (in this case 2)
 
 The Starmap.apply API
 ====================================
