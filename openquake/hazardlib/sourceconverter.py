@@ -281,7 +281,6 @@ class SourceGroup(collections.abc.Sequence):
             self.sources.append(pickle.loads(memoryview(row['pik'])))
 
 
-        print('--------', src, src.num_ruptures)
 def split_coords_2d(seq):
     """
     :param seq: a flat list with lons and lats
