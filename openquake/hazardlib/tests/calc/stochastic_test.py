@@ -38,7 +38,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         start = 0
         for i, src in enumerate(group):
             src.id = i
-            nr = src.num_ruptures
+            nr = src.count_ruptures()
             src.serial = start + seed
             start += nr
         param = dict(ses_per_logic_tree_path=10, filter_distance='rjb',
