@@ -156,7 +156,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     Returns the slowest sources
     """
-    info = dstore['source_info']['source_id', 'grp_id', 'code', 'num_ruptures',
+    info = dstore['source_info']['source_id', 'code', 'num_ruptures',
                                  'calc_time', 'num_sites', 'eff_ruptures']
     info = info[info['eff_ruptures'] > 0]
     info.sort(order='calc_time')
@@ -210,15 +210,6 @@ def view_full_lt(token, dstore):
         row = ('_'.join(sm.lt_path), sm.weight, num_rlzs)
         rows.append(row)
     return rst_table(rows, header)
-
-
-@view.add('ruptures_per_grp')
-def view_ruptures_per_grp(token, dstore):
-    info = dstore['source_info'][()]
-    agg = fast_agg3(
-        info, 'grp_id', ['num_sites', 'num_ruptures', 'eff_ruptures'])
-    agg['num_sites'] /= agg['eff_ruptures']
-    return rst_table(agg)
 
 
 @view.add('eff_ruptures')

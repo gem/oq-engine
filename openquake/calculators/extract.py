@@ -514,7 +514,8 @@ def extract_sources(dstore, what):
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
-    info = dstore['source_info'][()]
+    fields = 'sm_id source_id code num_ruptures num_sites eff_ruptures wkt'
+    info = dstore['source_info'][()][fields.split()]
     info = info[info['sm_id'] == sm_id]
     arrays = []
     if source_ids is not None:

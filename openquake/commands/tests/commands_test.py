@@ -244,7 +244,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('source_id grp_id code num_ruptures '
+        self.assertIn('source_id code num_ruptures '
                       'calc_time num_sites', str(p))
 
     def test_show_attrs(self):

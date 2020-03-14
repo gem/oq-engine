@@ -74,7 +74,6 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         spinning_off = sum(oq.pointsource_distance.values()) == 0
     if spinning_off:
         logging.info('Removing nodal plane and hypocenter distributions')
-    smlt_dir = os.path.dirname(source_model_lt.filename)
     converter = sourceconverter.SourceConverter(
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
@@ -126,24 +125,36 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     S = sum(len(sg) for sm in smdict.values() for sg in sm.src_groups)
     logging.info('Applying logic tree uncertainties to %d path(s) and '
                  '%d sources', P, S)
+    groups = _build_groups(full_lt, smdict)
 
-    def getgroups(value):
-        # extract the source groups from a sequence of source files
+    # checking the changes
+    changes = sum(sg.changes for sg in groups)
+    if changes:
+        logging.info('Applied %d changes to the composite source model',
+                     changes)
+    return _get_csm(full_lt, groups)
+
+
+def _build_groups(full_lt, smdict):
+    # build all the possible source groups from the full logic tree
+    smlt_file = full_lt.source_model_lt.filename
+    smlt_dir = os.path.dirname(smlt_file)
+
+    def _groups_ids(value):
+        # extract the source groups and ids from a sequence of source files
         groups = []
         for name in value.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             groups.extend(smdict[fname].src_groups)
-        return groups
+        return groups, set(src.source_id for grp in groups for src in grp)
 
     groups = []
     for rlz in full_lt.sm_rlzs:
-        src_groups = getgroups(rlz.value)
-        source_ids = set(src.source_id for sg in src_groups for src in sg)
-        bset_values = source_model_lt.bset_values(rlz)
+        src_groups, source_ids = _groups_ids(rlz.value)
+        bset_values = full_lt.source_model_lt.bset_values(rlz)
         if bset_values and bset_values[0][0].uncertainty_type == 'extendModel':
             (bset, value), *bset_values = bset_values
-            extra = getgroups(value)
-            extra_ids = set(src.source_id for sg in extra for src in sg)
+            extra, extra_ids = _groups_ids(value)
             common = source_ids & extra_ids
             if common:
                 raise InvalidFile(
@@ -161,21 +172,15 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
 
         # check applyToSources
         sm_branch = rlz.lt_path[0]
-        srcids = source_model_lt.info.applytosources[sm_branch]
+        srcids = full_lt.source_model_lt.info.applytosources[sm_branch]
         for srcid in srcids:
             if srcid not in source_ids:
                 raise ValueError(
                     "The source %s is not in the source model,"
                     " please fix applyToSources in %s or the "
-                    "source model(s) %s" % (srcid, source_model_lt.filename,
+                    "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value.split()))
-
-    # checking the changes
-    changes = sum(sg.changes for sg in groups)
-    if changes:
-        logging.info('Applied %d changes to the composite source model',
-                     changes)
-    return _get_csm(full_lt, groups)
+    return groups
 
 
 def reduce_sources(sources_with_same_id):

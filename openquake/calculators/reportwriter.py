@@ -43,7 +43,6 @@ class ReportWriter(object):
         'full_lt': 'Composite source model',
         'required_params_per_trt':
         'Required parameters per tectonic region type',
-        'ruptures_per_grp': 'Number of ruptures per source group',
         'ruptures_events': 'Specific information for event based',
         'job_info': 'Data transfer',
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
@@ -91,8 +90,6 @@ class ReportWriter(object):
             if ds['full_lt'].sm_rlzs[0].name != 'scenario':
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
-        if 'source_info' in ds:
-            self.add('ruptures_per_grp')
         if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
