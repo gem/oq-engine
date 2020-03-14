@@ -172,6 +172,8 @@ def split_sources(srcs):
     split_time = {}  # src.id -> time
     for src in srcs:
         t0 = time.time()
+        if not src.num_ruptures:  # not set yet
+            src.num_ruptures = src.count_ruptures()
         mag_a, mag_b = src.get_min_max_mag()
         min_mag = src.min_mag
         if mag_b < min_mag:  # discard the source completely

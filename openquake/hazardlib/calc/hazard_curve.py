@@ -106,8 +106,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     trts = set()
     for src in group:
         if not src.num_ruptures:
-            # src.num_ruptures is set when parsing the XML, but not when
-            # the source is instantiated manually, so it is set here
+            # src.num_ruptures may not be set, so it is set here
             src.num_ruptures = src.count_ruptures()
         # set the proper TOM in case of a cluster
         if cluster:

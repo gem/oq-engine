@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized get_composite_source_model (in the case of a complex source
+    specific logic trees a speedup of 80x was measured)
   * Internal: fixed `oq info source_model_logic_tree.xml`
   * Avoided reading multiple times the source models in the case of complex
     logic trees

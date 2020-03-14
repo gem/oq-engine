@@ -284,8 +284,6 @@ def apply_uncertainties(bset_values, src_group):
                 if ok:
                     apply_uncertainty(bset.uncertainty_type, src, value)
                     sg.changes += 1
-            # redoing count_ruptures can be slow
-            src.num_ruptures = src.count_ruptures()
         else:
             src = copy.copy(source)  # this is ultra-fast
         sg.sources.append(src)

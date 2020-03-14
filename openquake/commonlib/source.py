@@ -387,6 +387,8 @@ class CompositeSourceModel(collections.abc.Sequence):
         for sg in self.src_groups:
             for src in sg:
                 src.serial = serial
+                if not src.num_ruptures:
+                    src.num_ruptures = src.count_ruptures()
                 serial += src.num_ruptures * len(src.grp_ids)
 
     def get_nonparametric_sources(self):

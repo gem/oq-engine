@@ -42,7 +42,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     serial = 0  # set in init_serials
     checksum = 0  # set in source_reader
     grp_id = ()
-    
+
     @abc.abstractproperty
     def MODIFICATIONS(self):
         pass
