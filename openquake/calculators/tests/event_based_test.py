@@ -443,7 +443,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
 
     def test_case_25(self):
-        raise unittest.SkipTest
         # logic tree common + extra
         # common1.xml contains "5" "6"
         # common2.xml contains "1" "2"
