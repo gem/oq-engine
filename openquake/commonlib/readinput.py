@@ -61,7 +61,7 @@ gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
 
 source_info_dt = numpy.dtype([
     ('sm_id', numpy.uint16),           # 0
-    ('grp_id', numpy.uint16),          # 1
+    ('grp_ids', hdf5.vuint16),         # 1
     ('source_id', hdf5.vstr),          # 2
     ('code', (numpy.string_, 1)),      # 3
     ('num_ruptures', numpy.uint32),    # 4
@@ -647,7 +647,7 @@ def get_composite_source_model(oqparam, h5=None):
     for sg in csm.src_groups:
         for src in sg:
             eri = src.grp_ids[0] % n
-            data.append((eri, src.grp_ids[0], src.source_id, src.code,
+            data.append((eri, U16(src.grp_ids), src.source_id, src.code,
                          src.num_ruptures, 0, 0, 0, src.checksum,
                          src.serial, src._wkt))
             if hasattr(src, 'mags'):  # UCERF

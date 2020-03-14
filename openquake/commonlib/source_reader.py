@@ -137,14 +137,14 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
 
 def _build_groups(full_lt, smdict):
     # build all the possible source groups from the full logic tree
-    smlt_file = os.path.abspath(full_lt.source_model_lt.filename)
+    smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
 
     def _groups_ids(value):
         # extract the source groups and ids from a sequence of source files
         groups = []
         for name in value.split():
-            fname = os.path.join(smlt_dir, name)
+            fname = os.path.abspath(os.path.join(smlt_dir, name))
             groups.extend(smdict[fname].src_groups)
         return groups, set(src.source_id for grp in groups for src in grp)
 
