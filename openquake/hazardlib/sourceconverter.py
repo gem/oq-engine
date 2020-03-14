@@ -100,8 +100,6 @@ class SourceGroup(collections.abc.Sequence):
     :param id:
         an optional numeric ID (default 0) set by the engine and used
         when serializing SourceModels to HDF5
-    :param tot_ruptures:
-        the potential maximum number of ruptures contained in the group
     :param temporal_occurrence_model:
         A temporal occurrence model controlling the source group occurrence
     :param cluster:
@@ -134,8 +132,7 @@ class SourceGroup(collections.abc.Sequence):
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', grp_probability=None,
                  min_mag={'default': 0}, max_mag=None,
-                 tot_ruptures=0, temporal_occurrence_model=None,
-                 cluster=False):
+                 temporal_occurrence_model=None, cluster=False):
         # checks
         self.trt = trt
         self.sources = []
@@ -146,7 +143,6 @@ class SourceGroup(collections.abc.Sequence):
         self.grp_probability = grp_probability
         self.min_mag = min_mag
         self.max_mag = max_mag
-        self.tot_ruptures = tot_ruptures  # updated in .update(src)
         if sources:
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
@@ -216,10 +212,6 @@ class SourceGroup(collections.abc.Sequence):
             msg += "modelled using non-parametric sources"
             raise ValueError(msg)
 
-        nr = get_set_num_ruptures(src)
-        if nr == 0:  # the minimum_magnitude filters all ruptures
-            return
-        self.tot_ruptures += nr
         self.sources.append(src)
         _, max_mag = src.get_min_max_mag()
         prev_max_mag = self.max_mag
@@ -285,34 +277,6 @@ class SourceGroup(collections.abc.Sequence):
         self.sources = []
         for row in array:
             self.sources.append(pickle.loads(memoryview(row['pik'])))
-
-
-def get_set_num_ruptures(src):
-    """
-    Extract the number of ruptures and set it
-    """
-    if not src.num_ruptures:
-        t0 = time.time()
-        src.num_ruptures = src.count_ruptures()
-        dt = time.time() - t0
-        clsname = src.__class__.__name__
-        if dt > 10:
-            if 'Area' in clsname:
-                logging.warning(
-                    '%s.count_ruptures took %d seconds, perhaps the '
-                    'area discretization is too small', src, dt)
-            elif 'ComplexFault' in clsname:
-                logging.warning(
-                    '%s.count_ruptures took %d seconds, perhaps the '
-                    'complex_fault_mesh_spacing is too small', src, dt)
-            elif 'SimpleFault' in clsname:
-                logging.warning(
-                    '%s.count_ruptures took %d seconds, perhaps the '
-                    'rupture_mesh_spacing is too small', src, dt)
-            else:
-                # multiPointSource
-                logging.warning('count_ruptures %s took %d seconds', src, dt)
-    return src.num_ruptures
 
 
 def split_coords_2d(seq):
