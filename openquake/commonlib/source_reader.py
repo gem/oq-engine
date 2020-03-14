@@ -129,7 +129,6 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
-    logging.info('Building CompositeSourceModel')
     return _get_csm(full_lt, groups)
 
 
