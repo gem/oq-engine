@@ -220,13 +220,6 @@ class ClassicalTestCase(CalculatorTestCase):
         with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
             self.run_calc(
                 case_14.__file__, 'job.ini', calculation_mode='preclassical')
-        rpt = view('ruptures_per_grp', self.calc.datastore)
-        self.assertEqual(rpt, """\
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      0.33557   447          447         
-====== ========= ============ ============""")
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
