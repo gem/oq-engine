@@ -32,8 +32,16 @@ i.e. embarrassingly parallel problems.
 Typically one wants to apply a callable to a list of arguments - in
 parallel rather then sequentially - and then combine together the
 results. This is known as a `MapReduce` problem. As a simple example,
-we will consider the problem of counting the letters in a text. Here is
-how you can solve the problem in parallel by using
+we will consider the problem of counting the letters in a text, by using
+the following `count` function:
+
+.. python::
+
+def count(word, mon):
+    return collections.Counter(word)
+
+The `collections.Counter` works sequentially, by you can
+solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
 >>> arglist = [('hello',), ('world',)]  # list of arguments
