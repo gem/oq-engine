@@ -252,6 +252,8 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         # AccumDict of arrays with 2 elements weight, calc_time
         calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         for src, _sites in srcfilter(sources):
+            src.num_ruptures = src.count_ruptures()
+            print(src, src.num_ruptures)
             nr = src.num_ruptures
             eff_ruptures += nr
             t0 = time.time()

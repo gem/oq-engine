@@ -114,14 +114,12 @@ class EventBasedTestCase(CalculatorTestCase):
             aae(joint_prob_1_0, p10, decimal=1)
 
     def test_blocksize(self):
-        # here the <AreaSource 1> is light and not split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='3', exports='csv')
         [fname, _, sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
         self.assertEqualFiles('expected/sites.csv', sitefile)
 
-        # here the <AreaSource 1> is heavy and split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='4', exports='csv')
         [fname, sig_eps, _] = out['gmf_data', 'csv']

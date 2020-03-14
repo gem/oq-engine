@@ -214,7 +214,7 @@ class SourceGroup(collections.abc.Sequence):
             msg += "modelled using non-parametric sources"
             raise ValueError(msg)
 
-        nr = get_set_num_ruptures(src)
+        #nr = get_set_num_ruptures(src)
         #if nr == 0:  # the minimum_magnitude filters all ruptures
         #    return
         self.sources.append(src)
@@ -291,6 +291,7 @@ def get_set_num_ruptures(src):
     if not src.num_ruptures:
         t0 = time.time()
         src.num_ruptures = src.count_ruptures()
+        print('--------', src, src.num_ruptures)
         dt = time.time() - t0
         clsname = src.__class__.__name__
         if dt > 10:
