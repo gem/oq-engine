@@ -122,9 +122,6 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
-    S = sum(len(sg) for sm in smdict.values() for sg in sm.src_groups)
-    logging.info('Applying logic tree uncertainties to %d path(s) and '
-                 '%d sources', P, S)
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -132,6 +129,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
     if changes:
         logging.info('Applied %d changes to the composite source model',
                      changes)
+    logging.info('Building CompositeSourceModel')
     return _get_csm(full_lt, groups)
 
 
