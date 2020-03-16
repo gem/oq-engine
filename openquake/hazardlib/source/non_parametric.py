@@ -162,10 +162,16 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         :returns: the geometry as a WKT string
         """
-        return ''
-        # polys = [rup.surface.mesh.get_convex_hull()._polygon2d
-        #          for rup, pmf in self.data]
-        # return shapely.geometry.MultiPolygon(polys).wkt
+        lons = numpy.concatenate(
+            [rup.surface.mesh.lons for rup, pmf in self.data])
+        lats = numpy.concatenate(
+            [rup.surface.mesh.lats for rup, pmf in self.data])
+        points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
+        points['lon'] = lons
+        points['lat'] = lats
+        points = numpy.unique(points)
+        mesh = Mesh(points['lon'], points['lat'])
+        return mesh.get_convex_hull().wkt
 
     def get_one_rupture(self, rupture_mutex=False):
         """
