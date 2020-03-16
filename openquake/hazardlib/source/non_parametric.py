@@ -158,9 +158,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
     def __repr__(self):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
 
-    def wkt(self):
+    @property
+    def polygon(self):
         """
-        :returns: the geometry as a WKT string
+        The convex hull of the underlying mesh of points
         """
         lons = numpy.concatenate(
             [rup.surface.mesh.lons.flatten() for rup, pmf in self.data])
@@ -171,7 +172,13 @@ class NonParametricSeismicSource(BaseSeismicSource):
         points['lat'] = lats
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
-        return mesh.get_convex_hull().wkt
+        return mesh.get_convex_hull()
+
+    def wkt(self):
+        """
+        :returns: the geometry as a WKT string
+        """
+        return self.polygon.wkt
 
     def get_one_rupture(self, rupture_mutex=False):
         """
