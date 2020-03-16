@@ -18,6 +18,7 @@
 
 import os
 import tempfile
+import shutil
 import unittest.mock as mock
 import unittest
 from io import BytesIO
@@ -450,8 +451,6 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(found, 0)
         found, total = readinput.reduce_source_model(smlt, {}, remove=False)
         self.assertEqual(found, 0)
-        # TODO: add a test with two sources with the same ID and different
-        # codes
 
     def test_wrong_trts(self):
         # invalid TRT in job.ini [reqv]

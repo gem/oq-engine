@@ -36,6 +36,7 @@ from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
+from openquake.commands.reduce_sm import reduce_sm
 from openquake.commands.engine import run_job, smart_run
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
@@ -46,7 +47,7 @@ from openquake.commands.prepare_site_model import prepare_site_model
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
 from openquake.calculators.views import view
-from openquake.qa_tests_data.classical import case_1, case_9, case_18
+from openquake.qa_tests_data.classical import case_1, case_9, case_18, case_47
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import (
@@ -503,3 +504,27 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         # test sites_csv
         sc = prepare_site_model([], [output], [vs30_csv],
                                 True, True, False, 0, 5, output)
+
+
+class ReduceSourceModelTestCase(unittest.TestCase):
+
+    def test_reduce_sm_with_duplicate_source_ids(self):
+        # testing reduce_sm in case of two sources with the same ID and
+        # different codes
+        temp_dir = tempfile.mkdtemp()
+        calc_dir = os.path.dirname(case_47.__file__)
+        # NOTE: shutil.copytree does not allow to copy to an existing directory
+        for filename in os.listdir(calc_dir):
+            source = os.path.join(calc_dir, filename)
+            dest = os.path.join(temp_dir, filename)
+            if os.path.isfile(source):
+                shutil.copy(source, dest)
+        job_ini = os.path.join(temp_dir, 'job.ini')
+        with Print.patch():
+            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
+        calc_id = calc.datastore.calc_id
+        # run reduce_sm; check that distant source was removed
+        with Print.patch() as p:
+            reduce_sm(calc_id)
+        shutil.rmtree(temp_dir)
+        self.assertIn('FIXME', str(p))
