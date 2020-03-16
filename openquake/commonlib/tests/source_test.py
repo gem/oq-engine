@@ -29,7 +29,7 @@ from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import tests, readinput
-from openquake.commonlib.source import FullLogicTree
+from openquake.commonlib.logictree import FullLogicTree
 from openquake.hazardlib import nrml
 
 # directory where the example files are
