@@ -1,5 +1,40 @@
 # FAQ about running risk calculations
 
+### What implications do random_seed, ses_seed, and master_seed have on my calculation?
+
+The OpenQuake engine uses (Monte Carlo) sampling strategies for
+propagating epistemic uncertainty at various stages in a calculation.
+The sampling is based on numpy's pseudo-random number generator.
+Setting a 'seed' is useful for controlling the initialization of the 
+random number generator, and repeating a calculation using the same
+seed should result in identical random numbers being generated each time.
+
+Three different seeds are currently recognized and used by the OpenQuake
+engine.
+
+1. `random_seed` is the seed used for sampling branches from the source 
+model logic tree when the parameter `number_of_logic_tree_samples`
+is non-zero. By changing it, different paths in the source model 
+logic tree will be sampled. It affects both classical calculations 
+and event based calculations.
+
+2. `ses_seed` is used to generate seeds for the ruptures generated 
+by an event based calculation. Changing it will affect the generated 
+ruptures. Note that the generation of ruptures is also affected by
+`random_seed` unless full enumeration of the logic tree is used, 
+due to the reasons mentioned in the previous paragraph. 
+For an event based calculation, the rupture seeds (which depend on the
+`ses_seed`) are used for sampling ground motion values / intensities 
+from a GMPE / IPE, when the parameter `truncation_level` is non-zero. 
+For historical reasons, sampling ground motion values / intensities 
+from a GMPE / IPE in a scenario calculation is controlled by the 
+`random_seed`.
+
+3. `master_seed` is used when generating the epsilons in a calculation 
+involving vulnerability functions with non-zero coefficients of 
+variations. This is a purely risk-related seed, while the previous 
+two are hazard-related seeds.
+
 ### What effective investigation time should I use in my calculation?
 
 In an event based calculation the effective investigation time is the number

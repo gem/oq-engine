@@ -20,6 +20,7 @@ import io
 import os
 import re
 import math
+import unittest
 
 import numpy.testing
 
@@ -454,6 +455,11 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_25.__file__, 'job2.ini')
         mean, *others = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
+
+        # test with common1.xml present into branchs and sampling
+        self.run_calc(case_25.__file__, 'job_common.ini')
+        mean, *others = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', mean)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

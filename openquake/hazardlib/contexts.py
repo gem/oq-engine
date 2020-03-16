@@ -717,7 +717,7 @@ class Effect(object):
 def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
                       monitor):
     """
-    :param mag: an ordered list of magnitude strings with format %.3d
+    :param mag: an ordered list of magnitude strings with format %.2f
     :returns: a dict magnitude-string -> array(#dists, #trts)
     """
     trts = list(gsims_by_trt)

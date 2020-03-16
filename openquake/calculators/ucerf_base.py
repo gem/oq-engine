@@ -19,9 +19,11 @@ import os
 import copy
 import math
 import logging
+import pickle
 from datetime import datetime
 import numpy
 import h5py
+import zlib
 
 from openquake.baselib.general import random_filter, AccumDict
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -42,7 +44,7 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 DEFAULT_TRT = "Active Shallow Crust"
-RUPTURES_PER_BLOCK = 200  # decided by MS
+RUPTURES_PER_BLOCK = 10000  # decided by MS
 HDD = PMF([(0.2, 3.0), (0.6, 6.0), (0.2, 9.0)])
 NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
            (0.15, NodalPlane(45.0, 90.0, 0.0)),
@@ -320,9 +322,14 @@ class UCERFSource(BaseSeismicSource):
         themselves
         """
         branch_key = self.idx_set["grid_key"]
-        idist = self.src_filter.integration_distance(DEFAULT_TRT)
         with h5py.File(self.source_file, 'r') as hdf5:
             bg_locations = hdf5["Grid/Locations"][()]
+            if hasattr(self, 'src_filter'):
+                # in event based
+                idist = self.src_filter.integration_distance(DEFAULT_TRT)
+            else:
+                # in classical
+                return range(len(bg_locations))
             distances = min_geodetic_distance(
                 self.src_filter.sitecol.xyz,
                 (bg_locations[:, 0], bg_locations[:, 1]))
@@ -391,6 +398,8 @@ class UCERFSource(BaseSeismicSource):
         while stop > start:
             new = copy.copy(self)
             new.id = self.id
+            new.source_id = '%s:%d:%d' % (
+                self.source_id, self.start, self.stop)
             new.orig = self.orig
             new.start = start
             new.stop = min(start + RUPTURES_PER_BLOCK, stop)
@@ -398,8 +407,8 @@ class UCERFSource(BaseSeismicSource):
             yield new
 
     def __repr__(self):
-        return '<%s %s[%d:%d]>' % (self.__class__.__name__, self.source_id,
-                                   self.start, self.stop)
+        return '<%s %s:%d:%d>' % (self.__class__.__name__, self.source_id,
+                                  self.start, self.stop)
 
     def get_background_sources(self, sample_factor=None):
         """
@@ -435,6 +444,8 @@ class UCERFSource(BaseSeismicSource):
                     self.usd, self.lsd,
                     Point(locations[i, 0], locations[i, 1]),
                     self.npd, self.hdd)
+                ps.checksum = zlib.adler32(pickle.dumps(vars(ps), protocol=4))
+                ps._wkt = ps.wkt()
                 ps.id = self.id
                 ps.grp_id = self.grp_id
                 ps.num_ruptures = ps.count_ruptures()

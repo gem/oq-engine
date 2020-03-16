@@ -36,10 +36,9 @@ than 20 lines of code:
        sitecol = readinput.get_site_collection(oq)
        src_filter = SourceFilter(sitecol, oq.maximum_distance)
        csm = readinput.get_composite_source_model(oq, srcfilter=src_filter)
-       cinfo = csm.info
-       for sm in cinfo.sm_rlzs:
-           for rlz in cinfo.get_rlzs(sm.ordinal):
-               gsim_by_trt = cinfo.gsim_by_trt(rlz)
+       for sm in csm.full_lt.sm_rlzs:
+           for rlz in csm.full_lt.get_rlzs(sm.ordinal):
+               gsim_by_trt = csm.full_lt.gsim_by_trt(rlz)
                hcurves = calc_hazard_curves(
                    sm.src_groups, src_filter, oq.imtls,
                    gsim_by_trt, oq.truncation_level,
@@ -107,8 +106,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     trts = set()
     for src in group:
         if not src.num_ruptures:
-            # src.num_ruptures is set when parsing the XML, but not when
-            # the source is instantiated manually, so it is set here
+            # src.num_ruptures may not be set, so it is set here
             src.num_ruptures = src.count_ruptures()
         # set the proper TOM in case of a cluster
         if cluster:

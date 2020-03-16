@@ -275,7 +275,8 @@ class RuptureSerializer(object):
 def get_effect(mags, sitecol, gsims_by_trt, oq):
     """
     :returns: an ArrayWrapper effect_by_mag_dst_trt
-    Also updates oq.maximum_distance.magdist and oq.pointsource_distance
+
+    Updates oq.maximum_distance.magdist and oq.pointsource_distance
     """
     dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                  for trt in gsims_by_trt}

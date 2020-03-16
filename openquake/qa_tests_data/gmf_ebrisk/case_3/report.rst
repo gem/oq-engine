@@ -2,12 +2,12 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     3_758_233_230      
-date           2020-01-16T05:30:40
-engine_version 3.8.0-git83c45f7244
+checksum32     178_525_834        
+date           2020-03-13T11:20:14
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
-num_sites = 13, num_levels = 170, num_rlzs = 1
+num_sites = 13, num_levels = 2, num_rlzs = 1
 
 Parameters
 ----------
@@ -18,11 +18,11 @@ maximum_distance                None
 investigation_time              1.0               
 ses_per_logic_tree_path         1                 
 truncation_level                None              
-rupture_mesh_spacing            None              
-complex_fault_mesh_spacing      None              
+rupture_mesh_spacing            5.0               
+complex_fault_mesh_spacing      5.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
-pointsource_distance            None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -45,18 +45,11 @@ structural_vulnerability `cr_vulnerability_v5.xml <cr_vulnerability_v5.xml>`_
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 trivial(1)      1               
-========= ======= =============== ================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)>
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b_1       1.00000 1               
+========= ======= ================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -97,7 +90,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ======== ========= ======
-calc_43194       time_sec memory_mb counts
+calc_66860       time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00859  0.0       1     
+reading exposure 0.00936  0.0       1     
 ================ ======== ========= ======

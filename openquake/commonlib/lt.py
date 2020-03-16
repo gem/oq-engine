@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
+import copy
 
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, source as ohs
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
@@ -260,3 +260,232 @@ def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
     source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))
+
+
+# ######################### apply_uncertainties ########################### #
+
+def apply_uncertainties(bset_values, src_group):
+    """
+    :param bset_value: a list of pairs (branchset, value)
+        List of branch IDs
+    :param src_group:
+        SourceGroup instance
+    :returns:
+        A copy of the original group with possibly modified sources
+    """
+    sg = copy.copy(src_group)
+    sg.sources = []
+    sg.changes = 0
+    for source in src_group:
+        oks = [bset.filter_source(source) for bset, value in bset_values]
+        if sum(oks):  # source not filtered out
+            src = copy.deepcopy(source)
+            for (bset, value), ok in zip(bset_values, oks):
+                if ok:
+                    apply_uncertainty(bset.uncertainty_type, src, value)
+                    sg.changes += 1
+        else:
+            src = copy.copy(source)  # this is ultra-fast
+        sg.sources.append(src)
+    return sg
+
+
+# ######################### branches and branchsets ######################## #
+
+class Branch(object):
+    """
+    Branch object, represents a ``<logicTreeBranch />`` element.
+
+    :param bs_id:
+        BranchSetID of the branchset to which the branch belongs
+    :param branch_id:
+        String identifier of the branch
+    :param weight:
+        float value of weight assigned to the branch. A text node contents
+        of ``<uncertaintyWeight />`` child node.
+    :param value:
+        The actual uncertainty parameter value. A text node contents
+        of ``<uncertaintyModel />`` child node. Type depends
+        on the branchset's uncertainty type.
+    """
+    def __init__(self, bs_id, branch_id, weight, value):
+        self.bs_id = bs_id
+        self.branch_id = branch_id
+        self.weight = weight
+        self.value = value
+        self.bset = None
+
+    def __repr__(self):
+        if self.bset:
+            return '%s%s' % (self.branch_id, self.bset)
+        else:
+            return '%s' % self.branch_id
+
+
+class BranchSet(object):
+    """
+    Branchset object, represents a ``<logicTreeBranchSet />`` element.
+
+    :param uncertainty_type:
+        String value. According to the spec one of:
+
+        gmpeModel
+            Branches contain references to different GMPEs. Values are parsed
+            as strings and are supposed to be one of supported GMPEs. See list
+            at :class:`GMPELogicTree`.
+        sourceModel
+            Branches contain references to different PSHA source models. Values
+            are treated as file names, relatively to base path.
+        maxMagGRRelative
+            Different values to add to Gutenberg-Richter ("GR") maximum
+            magnitude. Value should be interpretable as float.
+        bGRRelative
+            Values to add to GR "b" value. Parsed as float.
+        maxMagGRAbsolute
+            Values to replace GR maximum magnitude. Values expected to be
+            lists of floats separated by space, one float for each GR MFD
+            in a target source in order of appearance.
+        abGRAbsolute
+            Values to replace "a" and "b" values of GR MFD. Lists of pairs
+            of floats, one pair for one GR MFD in a target source.
+        incrementalMFDAbsolute
+            Replaces an evenly discretized MFD with the values provided
+        simpleFaultDipRelative
+            Increases or decreases the angle of fault dip from that given
+            in the original source model
+        simpleFaultDipAbsolute
+            Replaces the fault dip in the specified source(s)
+        simpleFaultGeometryAbsolute
+            Replaces the simple fault geometry (trace, upper seismogenic depth
+            lower seismogenic depth and dip) of a given source with the values
+            provided
+        complexFaultGeometryAbsolute
+            Replaces the complex fault geometry edges of a given source with
+            the values provided
+        characteristicFaultGeometryAbsolute
+            Replaces the complex fault geometry surface of a given source with
+            the values provided
+
+    :param filters:
+        Dictionary, a set of filters to specify which sources should
+        the uncertainty be applied to. Represented as branchset element's
+        attributes in xml:
+
+        applyToSources
+            The uncertainty should be applied only to specific sources.
+            This filter is required for absolute uncertainties (also
+            only one source can be used for those). Value should be the list
+            of source ids. Can be used only in source model logic tree.
+        applyToSourceType
+            Can be used in the source model logic tree definition. Allows
+            to specify to which source type (area, point, simple fault,
+            complex fault) the uncertainty applies to.
+        applyToTectonicRegionType
+            Can be used in both the source model and GMPE logic trees. Allows
+            to specify to which tectonic region type (Active Shallow Crust,
+            Stable Shallow Crust, etc.) the uncertainty applies to. This
+            filter is required for all branchsets in GMPE logic tree.
+    """
+    def __init__(self, uncertainty_type, filters=None):
+        self.branches = []
+        self.uncertainty_type = uncertainty_type
+        self.filters = filters or {}
+
+    def enumerate_paths(self):
+        """
+        Generate all possible paths starting from this branch set.
+
+        :returns:
+            Generator of two-item tuples. Each tuple contains weight
+            of the path (calculated as a product of the weights of all path's
+            branches) and list of path's :class:`Branch` objects. Total sum
+            of all paths' weights is 1.0
+        """
+        for path in self._enumerate_paths([]):
+            flat_path = []
+            weight = 1.0
+            while path:
+                path, branch = path
+                weight *= branch.weight
+                flat_path.append(branch)
+            yield weight, flat_path[::-1]
+
+    def _enumerate_paths(self, prefix_path):
+        """
+        Recursive (private) part of :func:`enumerate_paths`. Returns generator
+        of recursive lists of two items, where second item is the branch object
+        and first one is itself list of two items.
+        """
+        for branch in self.branches:
+            path = [prefix_path, branch]
+            if branch.bset is not None:
+                yield from branch.bset._enumerate_paths(path)
+            else:
+                yield path
+
+    def __getitem__(self, branch_id):
+        """
+        Return :class:`Branch` object belonging to this branch set with id
+        equal to ``branch_id``.
+        """
+        for branch in self.branches:
+            if branch.branch_id == branch_id:
+                return branch
+        raise KeyError(branch_id)
+
+    def filter_source(self, source):
+        # pylint: disable=R0911,R0912
+        """
+        Apply filters to ``source`` and return ``True`` if uncertainty should
+        be applied to it.
+        """
+        for key, value in self.filters.items():
+            if key == 'applyToTectonicRegionType':
+                if value != source.tectonic_region_type:
+                    return False
+            elif key == 'applyToSourceType':
+                if value == 'area':
+                    if not isinstance(source, ohs.AreaSource):
+                        return False
+                elif value == 'point':
+                    # area source extends point source
+                    if (not isinstance(source, ohs.PointSource)
+                            or isinstance(source, ohs.AreaSource)):
+                        return False
+                elif value == 'simpleFault':
+                    if not isinstance(source, ohs.SimpleFaultSource):
+                        return False
+                elif value == 'complexFault':
+                    if not isinstance(source, ohs.ComplexFaultSource):
+                        return False
+                elif value == 'characteristicFault':
+                    if not isinstance(source, ohs.CharacteristicFaultSource):
+                        return False
+                else:
+                    raise AssertionError("unknown source type '%s'" % value)
+            elif key == 'applyToSources':
+                if source and source.source_id not in value:
+                    return False
+            else:
+                raise AssertionError("unknown filter '%s'" % key)
+        # All filters pass, return True.
+        return True
+
+    def get_bset_values(self, ltpath):
+        """
+        :param ltpath:
+            List of branch IDs
+        :returns:
+            Pairs (bset, value)
+        """
+        bset = self
+        pairs = []
+        while ltpath:
+            brid, ltpath = ltpath[0], ltpath[1:]
+            pairs.append((bset, bset[brid].value))
+            bset = bset[brid].bset
+            if bset is None:
+                return pairs
+
+    def __repr__(self):
+        return repr(self.branches)

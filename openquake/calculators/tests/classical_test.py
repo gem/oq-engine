@@ -220,13 +220,6 @@ class ClassicalTestCase(CalculatorTestCase):
         with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
             self.run_calc(
                 case_14.__file__, 'job.ini', calculation_mode='preclassical')
-        rpt = view('ruptures_per_grp', self.calc.datastore)
-        self.assertEqual(rpt, """\
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      0.33557   447          447         
-====== ========= ============ ============""")
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
@@ -258,7 +251,7 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
         # check deserialization of source_model_lt
-        smlt = self.calc.datastore['source_model_lt']
+        smlt = self.calc.datastore['full_lt/source_model_lt']
         exp = str(list(smlt))
         self.assertEqual('''[<Realization #0 source_model_1.xml, path=SM1, weight=0.5>, <Realization #1 source_model_2.xml, path=SM2_a3pt2b0pt8, weight=0.25>, <Realization #2 source_model_2.xml, path=SM2_a3b1, weight=0.25>]''', exp)
 
@@ -340,7 +333,7 @@ hazard_uhs-std.csv
         self.assertEqual(len(sg), 7)
         tbl = []
         for src in sg:
-            tbl.append([src.source_id, src.checksum] + src.grp_ids)
+            tbl.append((src.source_id, src.checksum) + src.grp_ids)
         tbl.sort()
         '''
         self.assertEqual(tbl,
@@ -545,7 +538,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 227)  # effective #ruptures
+        self.assertEqual(self.calc.numrups, 170)  # effective #ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results

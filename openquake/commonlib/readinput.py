@@ -45,8 +45,8 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_reader import get_sm_rlzs, source_info_dt
-from openquake.commonlib import logictree, source
+from openquake.commonlib.source_reader import get_csm
+from openquake.commonlib import logictree
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
@@ -58,6 +58,20 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
+
+source_info_dt = numpy.dtype([
+    ('sm_id', numpy.uint16),           # 0
+    ('grp_ids', hdf5.vuint16),         # 1
+    ('source_id', hdf5.vstr),          # 2
+    ('code', (numpy.string_, 1)),      # 3
+    ('num_ruptures', numpy.uint32),    # 4
+    ('calc_time', numpy.float32),      # 5
+    ('num_sites', numpy.float32),      # 6
+    ('eff_ruptures', numpy.float32),   # 7
+    ('checksum', numpy.uint32),        # 8
+    ('serial', numpy.uint32),          # 9
+    ('wkt', hdf5.vstr),                # 10
+])
 
 
 class DuplicatedPoint(Exception):
@@ -622,30 +636,32 @@ def get_composite_source_model(oqparam, h5=None):
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
-    sm_rlzs = get_sm_rlzs(oqparam, gsim_lt, source_model_lt, h5)
-    csm = source.CompositeSourceModel(
-        gsim_lt, source_model_lt, sm_rlzs,
-        oqparam.ses_seed, oqparam.is_event_based())
+    csm = get_csm(oqparam, source_model_lt, gsim_lt, h5)
+    if oqparam.is_event_based():
+        csm.init_serials(oqparam.ses_seed)
     if h5:
         info = hdf5.create(h5, 'source_info', source_info_dt)
     data = []
     mags = set()
+    n = len(csm.full_lt.sm_rlzs)
     for sg in csm.src_groups:
         for src in sg:
-            data.append((0, src.grp_ids[0], src.source_id, src.code,
-                         src.num_ruptures, 0, 0, 0, src.checksum, src._wkt))
+            eri = src.grp_ids[0] % n
+            data.append((eri, U16(src.grp_ids), src.source_id, src.code,
+                         src.num_ruptures, 0, 0, 0, src.checksum,
+                         src.serial, src._wkt))
             if hasattr(src, 'mags'):  # UCERF
-                srcmags = ['%.3f' % mag for mag in src.mags]
+                srcmags = ['%.2f' % mag for mag in src.mags]
             elif hasattr(src, 'data'):  # nonparametric
-                srcmags = ['%.3f' % item[0].mag for item in src.data]
+                srcmags = ['%.2f' % item[0].mag for item in src.data]
             else:
-                srcmags = ['%.3f' % item[0] for item in
+                srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags.update(srcmags)
     if h5:
         hdf5.extend(info, numpy.array(data, source_info_dt))
         h5['source_mags'] = numpy.array(sorted(mags))
-    csm.info.gsim_lt.check_imts(oqparam.imtls)
+    csm.gsim_lt.check_imts(oqparam.imtls)
     return csm
 
 
@@ -871,42 +887,41 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
 
     good, total = 0, 0
     to_remove = set()
-    for paths in logictree.collect_info(smlt_file).smpaths.values():
-        for path in paths:
-            logging.info('Reading %s', path)
-            root = nrml.read(path)
-            model = Node('sourceModel', root[0].attrib)
-            origmodel = root[0]
-            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-                for src_node in origmodel:
+    for path in logictree.collect_info(smlt_file).smpaths:
+        logging.info('Reading %s', path)
+        root = nrml.read(path)
+        model = Node('sourceModel', root[0].attrib)
+        origmodel = root[0]
+        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+            for src_node in origmodel:
+                total += 1
+                if ok(src_node):
+                    good += 1
+                    model.nodes.append(src_node)
+        else:  # nrml/0.5
+            for src_group in origmodel:
+                sg = copy.copy(src_group)
+                sg.nodes = []
+                weights = src_group.get('srcs_weights')
+                if weights:
+                    assert len(weights) == len(src_group.nodes)
+                else:
+                    weights = [1] * len(src_group.nodes)
+                src_group['srcs_weights'] = reduced_weigths = []
+                for src_node, weight in zip(src_group, weights):
                     total += 1
                     if ok(src_node):
                         good += 1
-                        model.nodes.append(src_node)
-            else:  # nrml/0.5
-                for src_group in origmodel:
-                    sg = copy.copy(src_group)
-                    sg.nodes = []
-                    weights = src_group.get('srcs_weights')
-                    if weights:
-                        assert len(weights) == len(src_group.nodes)
-                    else:
-                        weights = [1] * len(src_group.nodes)
-                    src_group['srcs_weights'] = reduced_weigths = []
-                    for src_node, weight in zip(src_group, weights):
-                        total += 1
-                        if ok(src_node):
-                            good += 1
-                            sg.nodes.append(src_node)
-                            reduced_weigths.append(weight)
-                    if sg.nodes:
-                        model.nodes.append(sg)
-            shutil.copy(path, path + '.bak')
-            if model:
-                with open(path, 'wb') as f:
-                    nrml.write([model], f, xmlns=root['xmlns'])
-            elif remove:  # remove the files completely reduced
-                to_remove.add(path)
+                        sg.nodes.append(src_node)
+                        reduced_weigths.append(weight)
+                if sg.nodes:
+                    model.nodes.append(sg)
+        shutil.copy(path, path + '.bak')
+        if model:
+            with open(path, 'wb') as f:
+                nrml.write([model], f, xmlns=root['xmlns'])
+        elif remove:  # remove the files completely reduced
+            to_remove.add(path)
     if good:
         for path in to_remove:
             os.remove(path)
@@ -952,8 +967,8 @@ def get_input_files(oqparam, hazard=False):
                                       (oqparam.inputs['job_ini'], key))
             fnames.update(fname)
         elif key == 'source_model_logic_tree':
-            for smpaths in logictree.collect_info(fname).smpaths.values():
-                fnames.update(smpaths)
+            for smpath in logictree.collect_info(fname).smpaths:
+                fnames.add(smpath)
             fnames.add(fname)
         else:
             fnames.add(fname)

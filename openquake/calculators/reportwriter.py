@@ -40,10 +40,9 @@ class ReportWriter(object):
     title = {
         'params': 'Parameters',
         'inputs': 'Input files',
-        'csm_info': 'Composite source model',
+        'full_lt': 'Composite source model',
         'required_params_per_trt':
         'Required parameters per tectonic region type',
-        'ruptures_per_grp': 'Number of ruptures per source group',
         'ruptures_events': 'Specific information for event based',
         'job_info': 'Data transfer',
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
@@ -62,7 +61,7 @@ class ReportWriter(object):
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
         try:
-            num_rlzs = dstore['csm_info'].get_num_rlzs()
+            num_rlzs = dstore['full_lt'].get_num_rlzs()
         except KeyError:
             num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
@@ -86,13 +85,11 @@ class ReportWriter(object):
         oq, ds = self.oq, self.dstore
         for name in ('params', 'inputs'):
             self.add(name)
-        if 'csm_info' in ds:
-            self.add('csm_info')
-            if ds['csm_info'].sm_rlzs[0].name != 'scenario':
+        if 'full_lt' in ds:
+            self.add('full_lt')
+            if ds['full_lt'].sm_rlzs[0].name != 'scenario':
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
-        if 'source_info' in ds:
-            self.add('ruptures_per_grp')
         if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
@@ -131,7 +128,7 @@ def build_report(job_ini, output_dir=None):
     """
     calc_id = logs.init()
     oq = readinput.get_oqparam(job_ini)
-    if oq.calculation_mode in 'classical disaggregation':
+    if 'source_model_logic_tree' in oq.inputs:
         oq.calculation_mode = 'preclassical'
     oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)

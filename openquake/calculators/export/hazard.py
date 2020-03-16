@@ -192,7 +192,7 @@ def export_hcurves_csv(ekey, dstore):
     """
     oq = dstore['oqparam']
     info = get_info(dstore)
-    R = dstore['csm_info'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_rlzs()
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
     key, kind, fmt = get_kkf(ekey)
@@ -261,7 +261,7 @@ def get_metadata(realizations, kind):
 @deprecated(msg='Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     R = len(rlzs)
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
@@ -300,7 +300,7 @@ def export_hcurves_xml(ekey, dstore):
     len_ext = len(fmt) + 1
     oq = dstore['oqparam']
     sitemesh = get_mesh(dstore['sitecol'])
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     R = len(rlzs)
     fnames = []
     writercls = hazard_writers.HazardCurveXMLWriter
@@ -338,7 +338,7 @@ def export_hmaps_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     R = len(rlzs)
     fnames = []
     writercls = hazard_writers.HazardMapXMLWriter
@@ -390,7 +390,7 @@ def export_hazard_npz(ekey, dstore):
 @export.add(('gmf_data', 'csv'))
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     imts = list(oq.imtls)
     sc = dstore['sitecol'].array
     arr = sc[['lon', 'lat']]
@@ -475,11 +475,11 @@ DisaggMatrix = collections.namedtuple(
 @deprecated(msg='Use the CSV exporter instead')
 def export_disagg_xml(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     group = dstore['disagg']
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
-    trts = dstore.get_attr('csm_info', 'trts')
+    trts = dstore.get_attr('full_lt', 'trts')
     for key in group:
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
@@ -512,7 +512,7 @@ def export_disagg_xml(ekey, dstore):
 @export.add(('disagg', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     group = dstore[ekey[0]]
     fnames = []
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')

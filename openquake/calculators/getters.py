@@ -108,7 +108,7 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
-        self.rlzs_by_grp = self.dstore['csm_info'].get_rlzs_by_grp()
+        self.rlzs_by_grp = self.dstore['full_lt'].get_rlzs_by_grp()
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
@@ -454,10 +454,10 @@ def gen_rgetters(dstore, slc=slice(None)):
     """
     :yields: unfiltered RuptureGetters
     """
-    csm_info = dstore['csm_info']
-    trt_by_grp = csm_info.trt_by_grp
-    samples = csm_info.get_samples_by_grp()
-    rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
+    full_lt = dstore['full_lt']
+    trt_by_grp = full_lt.trt_by_grp
+    samples = full_lt.get_samples_by_grp()
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     ct = dstore['oqparam'].concurrent_tasks or 1
     nr = len(dstore['ruptures'])
@@ -482,10 +482,10 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
     """
     :yields: filtered RuptureGetters
     """
-    csm_info = dstore['csm_info']
-    trt_by_grp = csm_info.trt_by_grp
-    samples = csm_info.get_samples_by_grp()
-    rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
+    full_lt = dstore['full_lt']
+    trt_by_grp = full_lt.trt_by_grp
+    samples = full_lt.get_samples_by_grp()
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     ct = dstore['oqparam'].concurrent_tasks or 1
     items = list(general.group_array(rup_array, 'grp_id').items())

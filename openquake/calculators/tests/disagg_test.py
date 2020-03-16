@@ -68,7 +68,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         #                          fname)
 
         # disaggregation by source group
-        rlzs = self.calc.datastore['csm_info'].get_realizations()
+        rlzs = self.calc.datastore['full_lt'].get_realizations()
         ws = [rlz.weight for rlz in rlzs]
         pgetter = getters.PmapGetter(self.calc.datastore, ws)
         pgetter.init()

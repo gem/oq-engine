@@ -265,7 +265,7 @@ def make_figure_sources(extractors, what):
     """
     $ oq plot sources?sm_id=0&limit=100
     $ oq plot sources?sm_id=0source_id=1&source_id=2
-    $ oq plot sources?sm_id=0code=A&code=B
+    $ oq plot sources?sm_id=0code=A&code=N
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -342,7 +342,7 @@ def make_figure_effect(extractors, what):
     from matplotlib import cm
     [ex] = extractors
     effect = ex.get(what)
-    trts = ex.get('csm_info').trts
+    trts = ex.get('full_lt').trts
     mag_ticks = effect.mags[::-5]
     fig = plt.figure()
     cmap = cm.get_cmap('jet', 100)
@@ -374,7 +374,7 @@ def make_figure_rups_by_mag_dist(extractors, what):
     [ex] = extractors
     counts = ex.get(what)
     counts.array = numpy.log10(counts.array + 1)
-    trts = ex.get('csm_info').trts
+    trts = ex.get('full_lt').trts
     mag_ticks = counts.mags[::-5]
     fig = plt.figure()
     cmap = cm.get_cmap('jet', 100)

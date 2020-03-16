@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
+from openquake.baselib import parallel
 from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
 from openquake import commonlib
@@ -79,7 +80,7 @@ class Print(object):
 
 
 class InfoTestCase(unittest.TestCase):
-    EXPECTED = '''<CompositionInfo
+    EXPECTED = '''<FullLogicTree
 b1, x15.xml, weight=1.0: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation'''
 
@@ -126,7 +127,20 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
             info(None, None, None, None, None, None, None, path)
-        self.assertIn('<CompositionInfo\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
+        self.assertIn('<FullLogicTree\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
+
+    def test_logictree(self):
+        path = os.path.join(os.path.dirname(case_9.__file__),
+                            'source_model_logic_tree.xml')
+        with Print.patch() as p:
+            info(None, None, None, None, None, None, None, path)
+        self.assertEqual(str(p), """\
+==================== ===========
+TRT                  pointSource
+==================== ===========
+active shallow crust 1          
+Total                1          
+==================== ===========""")
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
@@ -232,7 +246,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('source_id grp_id code num_ruptures '
+        self.assertIn('source_id code num_ruptures '
                       'calc_time num_sites', str(p))
 
     def test_show_attrs(self):
@@ -523,3 +537,7 @@ class ReduceSourceModelTestCase(unittest.TestCase):
             reduce_sm(calc_id)
         self.assertIn('Removed', info.call_args[0][0])
         shutil.rmtree(temp_dir)
+
+
+def teardown_module():
+    parallel.Starmap.shutdown()

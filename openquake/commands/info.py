@@ -22,11 +22,10 @@ import operator
 import collections
 import numpy
 from decorator import FunctionMaker
-from openquake.baselib import sap
+from openquake.baselib import sap, parallel
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
-from openquake.baselib.parallel import get_pickled_sizes
-from openquake.hazardlib import gsim, nrml, InvalidFile
+from openquake.hazardlib import gsim, nrml
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
@@ -35,16 +34,18 @@ from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 
 
-def source_model_info(nodes):
+def source_model_info(sm_nodes):
     """
-    Extract information about NRML/0.5 source models. Returns a table
+    Extract information about source models. Returns a table
     with TRTs as rows and source classes as columns.
     """
     c = collections.Counter()
-    for node in nodes:
-        for src_group in node:
-            trt = src_group['tectonicRegion']
-            for src in src_group:
+    for sm in sm_nodes:
+        groups = [sm[0]] if sm['xmlns'].endswith('nrml/0.4') else sm[0]
+        for group in groups:
+            grp_trt = group.get('tectonicRegion')
+            for src in group:
+                trt = src.get('tectonicRegion', grp_trt)
                 src_class = src.tag.split('}')[1]
                 c[trt, src_class] += 1
     trts, classes = zip(*c)
@@ -62,14 +63,14 @@ def source_model_info(nodes):
     return rst_table(out)
 
 
-def print_csm_info(fname):
+def print_full_lt(fname):
     """
     Parse the composite source model and
     prints information about its composition and the full logic tree
     """
     oqparam = readinput.get_oqparam(fname)
     csm = readinput.get_composite_source_model(oqparam)
-    print(csm.info)
+    print(csm.full_lt)
     print('See http://docs.openquake.org/oq-engine/stable/'
           'effective-realizations.html for an explanation')
 
@@ -79,15 +80,19 @@ def do_build_reports(directory):
     Walk the directory and builds pre-calculation reports for all the
     job.ini files found.
     """
-    for cwd, dirs, files in os.walk(directory):
-        for f in sorted(files):
-            if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
-                job_ini = os.path.join(cwd, f)
-                logging.info(job_ini)
-                try:
-                    reportwriter.build_report(job_ini, cwd)
-                except Exception as e:
-                    logging.error(str(e))
+    try:
+        for cwd, dirs, files in os.walk(directory):
+            for f in sorted(files):
+                if f in ('job.ini', 'job_h.ini', 'job_haz.ini',
+                         'job_hazard.ini'):
+                    job_ini = os.path.join(cwd, f)
+                    logging.info(job_ini)
+                    try:
+                        reportwriter.build_report(job_ini, cwd)
+                    except Exception as e:
+                        logging.error(str(e))
+    finally:
+        parallel.Starmap.shutdown()
 
 
 # the documentation about how to use this feature can be found
@@ -142,16 +147,12 @@ def info(calculators, gsims, views, exports, extracts, parameters,
     elif input_file.endswith('.xml'):
         node = nrml.read(input_file)
         if node[0].tag.endswith('sourceModel'):
-            if node['xmlns'].endswith('nrml/0.4'):
-                raise InvalidFile(
-                    '%s is in NRML 0.4 format, please run the following '
-                    'command:\noq upgrade_nrml %s' % (
-                        input_file, os.path.dirname(input_file) or '.'))
-            print(source_model_info([node[0]]))
+            print(source_model_info([node]))
         elif node[0].tag.endswith('logicTree'):
-            nodes = [nrml.read(sm_path)[0]
-                     for sm_path in logictree.collect_info(input_file).smpaths]
-            print(source_model_info(nodes))
+            sm_nodes = []
+            for smpath in logictree.collect_info(input_file).smpaths:
+                sm_nodes.append(nrml.read(smpath))
+            print(source_model_info(sm_nodes))
         else:
             print(node.to_str())
     elif input_file.endswith(('.ini', '.zip')):
@@ -159,7 +160,7 @@ def info(calculators, gsims, views, exports, extracts, parameters,
             if report:
                 print('Generated', reportwriter.build_report(input_file))
             else:
-                print_csm_info(input_file)
+                print_full_lt(input_file)
         if mon.duration > 1:
             print(mon)
     elif input_file:

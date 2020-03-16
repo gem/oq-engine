@@ -2,17 +2,17 @@ event based risk
 ================
 
 ============== ===================
-checksum32     1,634,090,954      
-date           2019-10-02T10:07:23
-engine_version 3.8.0-git6f03622c6e
+checksum32     2_856_676_237      
+date           2020-03-13T11:21:48
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
-num_sites = 7, num_levels = 46, num_rlzs = 8
+num_sites = 7, num_levels = 120, num_rlzs = 8
 
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'event_based_risk'
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              1.0               
@@ -22,12 +22,12 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     24                
 master_seed                     0                 
 ses_seed                        42                
-avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -48,12 +48,12 @@ structural_vulnerability            `structural_vulnerability_model.xml <structu
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b1        0.25000 complex(2,0,2)  4               
-b2        0.75000 complex(2,0,2)  4               
-========= ======= =============== ================
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b1        0.25000 4               
+b2        0.75000 4               
+========= ======= ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -61,32 +61,20 @@ Required parameters per tectonic region type
 grp_id gsims                                                          distances   siteparams              ruptparams       
 ====== ============================================================== =========== ======================= =================
 0      '[BooreAtkinson2008]' '[ChiouYoungs2008]'                      rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-1      '[AkkarBommer2010]\nminimum_distance = 10' '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-2      '[BooreAtkinson2008]' '[ChiouYoungs2008]'                      rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+1      '[BooreAtkinson2008]' '[ChiouYoungs2008]'                      rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+2      '[AkkarBommer2010]\nminimum_distance = 10' '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 3      '[AkkarBommer2010]\nminimum_distance = 10' '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 ====== ============================================================== =========== ======================= =================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=16, rlzs=8)>
 
 Number of ruptures per source group
 -----------------------------------
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      7.00000   482          0.0         
-1      7.00000   4            2.00000     
-2      7.00000   482          0.0         
-3      7.00000   1            0.0         
+0      0.21784   482          482         
+2      1.75000   4            4.00000     
+3      7.00000   1            1.00000     
 ====== ========= ============ ============
-
-Estimated data transfer for the avglosses
------------------------------------------
-7 asset(s) x 8 realization(s) x 5 loss type(s) losses x 8 bytes x 20 tasks = 43.75 KB
 
 Exposure model
 --------------
@@ -108,58 +96,46 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-2         1      S    4            0.00482   3.50000   2.00000     
+1         0      S    482          0.02386   0.21784   482         
+2         2      S    4            0.00325   1.75000   4.00000     
+2         3      X    1            8.655E-05 7.00000   1.00000     
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-S    0.11385   3     
-X    1.924E-04 1     
-==== ========= ======
-
-Duplicated sources
-------------------
-Found 2 unique sources and 1 duplicate sources with multiplicity 2.0: ['1']
+==== =========
+code calc_time
+==== =========
+S    0.02711  
+X    8.655E-05
+==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-SourceReader       0.01920 0.00741   0.01396 0.02444 2      
-compute_gmfs       0.03192 2.276E-04 0.03176 0.03218 3      
-sample_ruptures    0.03388 0.03151   0.00168 0.06180 4      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+preclassical       0.01450 0.01475 0.00408 0.02493 2      
+read_source_model  0.01655 0.00689 0.01168 0.02142 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-=============== ================================================ ========
-task            sent                                             received
-SourceReader    apply_unc=2.45 KB ltmodel=378 B fname=234 B      20.33 KB
-compute_gmfs    param=16.51 KB rupgetter=4.72 KB srcfilter=669 B 55.07 KB
-sample_ruptures param=21.88 KB sources=14.04 KB srcfilter=892 B  2.3 KB  
-=============== ================================================ ========
+================= ========================================= ========
+task              sent                                      received
+read_source_model converter=664 B fname=220 B srcfilter=8 B 13.82 KB
+preclassical      srcs=15.17 KB params=3.5 KB gsims=560 B   789 B   
+================= ========================================= ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_29496               time_sec  memory_mb counts
-======================== ========= ========= ======
-EventBasedCalculator.run 0.32026   1.28906   1     
-total sample_ruptures    0.13554   0.0       4     
-total compute_gmfs       0.09576   0.49219   3     
-composite source model   0.04150   0.0       1     
-total SourceReader       0.03839   0.0       2     
-building hazard          0.03507   0.0       3     
-getting ruptures         0.02901   0.23828   3     
-building hazard curves   0.02040   0.0       80    
-saving events            0.00920   0.0       1     
-saving gmfs              0.00624   0.0       3     
-saving gmf_data/indices  0.00563   0.0       1     
-aggregating hcurves      0.00345   0.0       3     
-store source_info        0.00252   0.0       1     
-saving ruptures          0.00247   0.0       1     
-reading exposure         6.974E-04 0.0       1     
-======================== ========= ========= ======
+=========================== ========= ========= ======
+calc_66961                  time_sec  memory_mb counts
+=========================== ========= ========= ======
+composite source model      0.09632   0.0       1     
+total read_source_model     0.03311   0.34766   2     
+total preclassical          0.02901   1.18750   2     
+store source_info           0.00229   0.0       1     
+reading exposure            7.219E-04 0.0       1     
+splitting/filtering sources 6.144E-04 0.0       2     
+aggregate curves            6.046E-04 0.0       2     
+=========================== ========= ========= ======

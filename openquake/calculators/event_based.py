@@ -22,7 +22,7 @@ import operator
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, get_indices, block_splitter
+from openquake.baselib.general import AccumDict, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -31,7 +31,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
-from openquake.commonlib import source, calc, util, logs
+from openquake.commonlib import calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rgetters, gen_rupture_getters,
@@ -87,10 +87,10 @@ class EventBasedCalculator(base.HazardCalculator):
         if not self.datastore.parent:
             self.rupser = calc.RuptureSerializer(self.datastore)
 
-    def init_logic_tree(self, csm_info):
-        self.trt_by_grp = csm_info.trt_by_grp
-        self.rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = csm_info.get_samples_by_grp()
+    def init_logic_tree(self, full_lt):
+        self.trt_by_grp = full_lt.trt_by_grp
+        self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
+        self.samples_by_grp = full_lt.get_samples_by_grp()
         self.num_rlzs_by_grp = {
             grp_id:
             sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
@@ -108,7 +108,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        gsims_by_trt = self.csm.info.get_gsims_by_trt()
+        gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         logging.info('Building ruptures')
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
@@ -147,7 +147,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # logic tree reduction, must be called before storing the events
         self.store_rlz_info(eff_ruptures)
-        self.init_logic_tree(self.csm.info)
+        self.init_logic_tree(self.csm.full_lt)
         with self.monitor('store source_info'):
             self.store_source_info(calc_times)
         logging.info('Reordering the ruptures and storing the events')
@@ -271,7 +271,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.crmodel.min_iml
         min_iml = oq.min_iml
-        if min_iml.sum() == 0:
+        if oq.ground_motion_fields and min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
         else:
@@ -292,7 +292,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.indices = AccumDict(accum=[])  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
-            self.init_logic_tree(self.datastore.parent['csm_info'])
+            self.init_logic_tree(self.datastore.parent['full_lt'])
         else:  # from sources
             self.build_events_from_sources(srcfilter)
             if (oq.ground_motion_fields is False and
@@ -352,7 +352,7 @@ class EventBasedCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
-            rlzs = self.datastore['csm_info'].get_realizations()
+            rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]

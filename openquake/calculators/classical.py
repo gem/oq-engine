@@ -16,17 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import copy
 import time
 import logging
 import operator
 from datetime import datetime
-import itertools
 import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
-from openquake.hazardlib import mfd
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -105,8 +102,10 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     pmap = AccumDict(accum=0)
     with monitor("splitting/filtering sources"):
         splits, _stime = split_sources(srcs)
+    totrups = 0
     for src in splits:
         t0 = time.time()
+        totrups += src.num_ruptures
         if srcfilter.get_close_sites(src) is None:
             continue
         dt = time.time() - t0
@@ -114,11 +113,11 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.grp_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
-                extra=dict(task_no=monitor.task_no, totrups=src.num_ruptures,
+                extra=dict(task_no=monitor.task_no, totrups=totrups,
                            trt=src.tectonic_region_type))
 
 
-@base.calculators.add('classical')
+@base.calculators.add('classical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
@@ -187,11 +186,11 @@ class ClassicalCalculator(base.HazardCalculator):
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'occurrence_rate',
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_', 'rrup_'}
-        gsims_by_trt = self.csm_info.get_gsims_by_trt()
-        n = len(self.csm_info.sm_rlzs)
-        trts = list(self.csm_info.gsim_lt.values)
-        for sm in self.csm_info.sm_rlzs:
-            for grp_id in self.csm_info.grp_ids(sm.ordinal):
+        gsims_by_trt = self.full_lt.get_gsims_by_trt()
+        n = len(self.full_lt.sm_rlzs)
+        trts = list(self.full_lt.gsim_lt.values)
+        for sm in self.full_lt.sm_rlzs:
+            for grp_id in self.full_lt.grp_ids(sm.ordinal):
                 trt = trts[grp_id // n]
                 gsims = gsims_by_trt[trt]
                 cm = ContextMaker(trt, gsims)
@@ -226,18 +225,19 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         if oq.hazard_calculation_id and not oq.compare_with_classical:
             with util.read(self.oqparam.hazard_calculation_id) as parent:
-                self.csm_info = parent['csm_info']
+                self.full_lt = parent['full_lt']
             self.calc_stats()  # post-processing
             return {}
 
         mags = self.datastore['source_mags'][()]
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
-        gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        gsims_by_trt = self.full_lt.get_gsims_by_trt()
         if 'source_mags' in self.datastore and oq.imtls:
             mags = self.datastore['source_mags'][()]
-            self.datastore['effect_by_mag_dst_trt'] = calc.get_effect(
-                mags, self.sitecol, gsims_by_trt, oq)
+            aw = calc.get_effect(mags, self.sitecol, gsims_by_trt, oq)
+            if hasattr(aw, 'array'):
+                self.datastore['effect_by_mag_dst_trt'] = aw
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)
@@ -282,7 +282,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Build a task queue to be attached to the Starmap instance
         """
         oq = self.oqparam
-        gsims_by_trt = self.csm_info.get_gsims_by_trt()
+        gsims_by_trt = self.full_lt.get_gsims_by_trt()
         src_groups = self.csm.src_groups
 
         def srcweight(src):
@@ -366,20 +366,19 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        trt_by_grp = self.csm_info.trt_by_grp
         data = []
         with self.monitor('saving probability maps'):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
-                    trt = trt_by_grp[grp_id]
+                    trt = self.full_lt.trt_by_grp[grp_id]
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(key, trt=trt)
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
-                    data.append((grp_id, trt_by_grp[grp_id], extreme))
+                    data.append((grp_id, trt, extreme))
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)

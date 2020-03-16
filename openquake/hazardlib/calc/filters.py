@@ -18,6 +18,7 @@
 import os
 import sys
 import time
+import logging
 import operator
 import collections.abc
 from contextlib import contextmanager
@@ -86,14 +87,14 @@ class IntegrationDistance(collections.abc.Mapping):
         for trt, value in dic.items():
             if isinstance(value, (list, numpy.ndarray)):
                 # assume a list of pairs (magstring, dist)
-                self.magdist[trt] = {'%.3f' % mag: dist for mag, dist in value}
+                self.magdist[trt] = {'%.2f' % mag: dist for mag, dist in value}
                 self.dic[trt] = value[-1][-1]
             else:
                 self.dic[trt] = float(value)
 
     def __call__(self, trt, mag=None):
         if mag and trt in self.magdist:
-            return self.magdist[trt]['%.3f' % mag]
+            return self.magdist[trt]['%.2f' % mag]
         elif not self.dic:
             return MAX_DISTANCE
         return getdefault(self.dic, trt)
@@ -171,6 +172,8 @@ def split_sources(srcs):
     split_time = {}  # src.id -> time
     for src in srcs:
         t0 = time.time()
+        if not src.num_ruptures:  # not set yet
+            src.num_ruptures = src.count_ruptures()
         mag_a, mag_b = src.get_min_max_mag()
         min_mag = src.min_mag
         if mag_b < min_mag:  # discard the source completely
@@ -341,6 +344,9 @@ class SourceFilter(object):
         :param sources: a sequence of sources
         :yields: sources with .indices
         """
+        if self.sitecol is None:  # nofilter
+            yield from sources
+            return
         for src in sources:
             if hasattr(src, 'indices'):   # already filtered
                 yield src
@@ -366,7 +372,11 @@ class SourceFilter(object):
         lons = []
         lats = []
         for src in srcs:
-            box = self.integration_distance.get_affected_box(src)
+            try:
+                box = self.integration_distance.get_affected_box(src)
+            except BBoxError as exc:
+                logging.error(exc)
+                continue
             lons.append(box[0])
             lats.append(box[1])
             lons.append(box[2])

@@ -39,7 +39,7 @@ class AreaSource(ParametricSeismicSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
-    code = 'A'
+    code = b'A'
     MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type,

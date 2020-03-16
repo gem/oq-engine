@@ -29,11 +29,12 @@ import numpy
 from xml.parsers.expat import ExpatError
 from copy import deepcopy
 
+from openquake.baselib import parallel
+from openquake.baselib.general import gettemp
 import openquake.hazardlib
 from openquake.hazardlib import geo
-from openquake.baselib.general import gettemp
 from openquake.commonlib import logictree, readinput, tests
-from openquake.commonlib.source_reader import get_sm_rlzs
+from openquake.commonlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
@@ -415,8 +416,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            logictree.LogicTreeError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 16)
         self.assertEqual(exc.message, 'expected single float value',
                          "wrong exception message: %s" % exc.message)
@@ -499,8 +500,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn("Found a non-float in -121.8229 wrong "
                       "-122.0388 37.8771: 'wrong' is not a float",
                       str(exc))
@@ -548,8 +549,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn('Could not convert posList->posList: Found a non-float ',
                       str(exc))
 
@@ -592,8 +593,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn('Could not convert lat->latitude', str(exc))
 
     def test_characteristic_fault_simple_geometry_wrong_format(self):
@@ -641,8 +642,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn('Could not convert posList->posList: Found a non-float',
                       str(exc))
 
@@ -691,8 +692,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm}, 'base',
-                                            ValueError)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm.xml': sm}, 'base', ValueError)
         self.assertIn('Could not convert posList->posList: Found a non-float',
                       str(exc))
 
@@ -2135,13 +2136,13 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         gs_lt = GsimLogicTree(fname_gmc)
 
         mags = [5.7, 5.98, 6.26, 6.54, 6.82, 7.1]
-        for sm in get_sm_rlzs(oqparam, gs_lt, ssc_lt):
-            for src in sm.src_groups[0]:
-                if src.source_id == 'a2':
-                    self.assertEqual(src.mfd.max_mag, 6.5)
-                elif src.source_id == 'a1':
-                    msg = "Wrong mmax value assigned to source 'a1'"
-                    self.assertIn(src.mfd.max_mag, mags, msg)
+        csm = get_csm(oqparam, ssc_lt, gs_lt)
+        for src in csm.src_groups[0][0]:
+            if src.source_id == 'a2':
+                self.assertEqual(src.mfd.max_mag, 6.5)
+            elif src.source_id == 'a1':
+                msg = "Wrong mmax value assigned to source 'a1'"
+                self.assertIn(src.mfd.max_mag, mags, msg)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch
@@ -2197,3 +2198,7 @@ taxo4,taxo1,.5
                                [('taxo2', 1.0)],
                                [('taxo3', 1.0)],
                                [('taxo2', 0.5), ('taxo1', 0.5)]])
+
+
+def teardown_module():
+    parallel.Starmap.shutdown()
