@@ -291,6 +291,7 @@ class ClassicalCalculator(base.HazardCalculator):
             m = (oq.maximum_distance(trt) / 300) ** 2
             return src.weight * g * m
 
+        logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
