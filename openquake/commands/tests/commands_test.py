@@ -526,5 +526,5 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         # run reduce_sm; check that distant source was removed
         with Print.patch() as p:
             reduce_sm(calc_id)
+        self.assertIn('Duplicated source 1 could not be removed', str(p))
         shutil.rmtree(temp_dir)
-        self.assertIn('FIXME', str(p))
