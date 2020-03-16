@@ -49,14 +49,36 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.commonlib.lt import (
     Branch, BranchSet, LogicTreeError, parse_uncertainty)
 
-#: Minimum value for a seed number
-MIN_SINT_32 = -(2 ** 31)
-#: Maximum value for a seed number
-MAX_SINT_32 = (2 ** 31) - 1
-
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
 SOURCE_TYPE_REGEX = re.compile(r'<(\w+Source)\b')
+
+U16 = numpy.uint16
+U32 = numpy.uint32
+I32 = numpy.int32
+F32 = numpy.float32
+
+rlz_dt = numpy.dtype([
+    ('ordinal', U32),
+    ('branch_path', hdf5.vstr),
+    ('weight', F32)
+])
+
+source_model_dt = numpy.dtype([
+    ('name', hdf5.vstr),
+    ('weight', F32),
+    ('path', hdf5.vstr),
+    ('samples', U32),
+    ('offset', U32),
+])
+
+src_group_dt = numpy.dtype(
+    [('grp_id', U32),
+     ('name', hdf5.vstr),
+     ('trti', U16),
+     ('effrup', I32),
+     ('totrup', I32),
+     ('sm_id', U32)])
 
 branch_dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
@@ -1076,35 +1098,6 @@ def taxonomy_mapping(filename, taxonomies):
     return arr, lst
 
 
-MAX_INT = 2 ** 31 - 1
-U16 = numpy.uint16
-U32 = numpy.uint32
-I32 = numpy.int32
-F32 = numpy.float32
-
-rlz_dt = numpy.dtype([
-    ('ordinal', U32),
-    ('branch_path', hdf5.vstr),
-    ('weight', F32)
-])
-
-source_model_dt = numpy.dtype([
-    ('name', hdf5.vstr),
-    ('weight', F32),
-    ('path', hdf5.vstr),
-    ('samples', U32),
-    ('offset', U32),
-])
-
-src_group_dt = numpy.dtype(
-    [('grp_id', U32),
-     ('name', hdf5.vstr),
-     ('trti', U16),
-     ('effrup', I32),
-     ('totrup', I32),
-     ('sm_id', U32)])
-
-
 def capitalize(words):
     """
     Capitalize words separated by spaces.
@@ -1160,11 +1153,10 @@ class LtRealization(object):
 
 class FullLogicTree(object):
     """
-    An object to collect information about the composition of
-    a composite source model.
+    The full logic tree as composition of
 
-    :param source_model_lt: a SourceModelLogicTree object
-    :param source_models: a list of Realization instances
+    :param source_model_lt: :class:`SourceModelLogicTree` object
+    :param gsim_lt: :class:`GsimLogicTree` object
     """
     @classmethod
     def fake(cls, gsimlt=None):
@@ -1205,6 +1197,9 @@ class FullLogicTree(object):
 
     @property
     def trt_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> trt
+        """
         trt_by_grp = []
         n = len(self.sm_rlzs)
         trts = list(self.gsim_lt.values)
@@ -1215,10 +1210,16 @@ class FullLogicTree(object):
 
     @property
     def seed(self):
+        """
+        :returns: the source_model_lt seed
+        """
         return self.source_model_lt.seed
 
     @property
     def num_samples(self):
+        """
+        :returns: the source_model_lt ``num_samples`` parameter
+        """
         return self.source_model_lt.num_samples
 
     def get_trti_eri(self, grp_id):
