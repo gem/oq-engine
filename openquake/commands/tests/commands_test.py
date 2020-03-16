@@ -513,18 +513,12 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         # different codes
         temp_dir = tempfile.mkdtemp()
         calc_dir = os.path.dirname(case_47.__file__)
-        # NOTE: shutil.copytree does not allow to copy to an existing directory
-        for filename in os.listdir(calc_dir):
-            source = os.path.join(calc_dir, filename)
-            dest = os.path.join(temp_dir, filename)
-            if os.path.isfile(source):
-                shutil.copy(source, dest)
-        job_ini = os.path.join(temp_dir, 'job.ini')
+        shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
+        job_ini = os.path.join(temp_dir, 'data', 'job.ini')
         with Print.patch():
             calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
         calc_id = calc.datastore.calc_id
-        # run reduce_sm; check that distant source was removed
-        with Print.patch() as p:
+        with mock.patch('logging.info') as info:
             reduce_sm(calc_id)
-        self.assertIn('Duplicated source 1 could not be removed', str(p))
+        self.assertIn('Removed', info.call_args[0][0])
         shutil.rmtree(temp_dir)
