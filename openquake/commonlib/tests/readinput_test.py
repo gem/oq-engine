@@ -18,7 +18,6 @@
 
 import os
 import tempfile
-import shutil
 import unittest.mock as mock
 import unittest
 from io import BytesIO
