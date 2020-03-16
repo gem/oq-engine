@@ -46,8 +46,9 @@ from openquake.commands.check_input import check_input
 from openquake.commands.prepare_site_model import prepare_site_model
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
+from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
-from openquake.qa_tests_data.classical import case_1, case_9, case_18, case_47
+from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import (
@@ -512,7 +513,7 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         # testing reduce_sm in case of two sources with the same ID and
         # different codes
         temp_dir = tempfile.mkdtemp()
-        calc_dir = os.path.dirname(case_47.__file__)
+        calc_dir = os.path.dirname(to_reduce.__file__)
         shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
         job_ini = os.path.join(temp_dir, 'data', 'job.ini')
         with Print.patch():
