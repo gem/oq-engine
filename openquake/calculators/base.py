@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, source, calc, util
+from openquake.commonlib import readinput, logictree, calc, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -499,7 +499,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['poes/grp-00'] = fix_ones(readinput.pmap)
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
-            self.datastore['full_lt'] = fake = source.FullLogicTree.fake()
+            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.realizations = fake.get_realizations()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
@@ -570,7 +570,7 @@ class HazardCalculator(BaseCalculator):
             self.check_floating_spinning()
             self.realizations = self.csm.full_lt.get_realizations()
         else:  # build a fake; used by risk-from-file calculators
-            self.datastore['full_lt'] = fake = source.FullLogicTree.fake()
+            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.realizations = fake.get_realizations()
 
     @general.cached_property

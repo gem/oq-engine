@@ -22,11 +22,13 @@ import pickle
 import operator
 import logging
 import zlib
+import collections
+import numpy
 
 from openquake.baselib import parallel, general
 from openquake.hazardlib import nrml, sourceconverter, calc, InvalidFile
 from openquake.commonlib.lt import apply_uncertainties
-from openquake.commonlib.source import FullLogicTree, CompositeSourceModel
+from openquake.commonlib.logictree import FullLogicTree
 
 
 TWO16 = 2 ** 16  # 65,536
@@ -232,3 +234,79 @@ def _get_csm(full_lt, groups):
             idx += 1
     src_groups = list(dic.values()) + atomic
     return CompositeSourceModel(full_lt, src_groups)
+
+
+class CompositeSourceModel(collections.abc.Sequence):
+    """
+    :param gsim_lt:
+        a :class:`openquake.commonlib.logictree.GsimLogicTree` instance
+    :param full_lt:
+        a :class:`FullLogicTree` instance
+    :param groups:
+        a list of SourceGroups
+    :param ses_seed:
+        a seed used in event based
+    :param event_based:
+        a flag True for event based calculations, flag otherwise
+    """
+    def __init__(self, full_lt, src_groups):
+        self.gsim_lt = full_lt.gsim_lt
+        self.source_model_lt = full_lt.source_model_lt
+        self.sm_rlzs = full_lt.sm_rlzs
+        self.full_lt = full_lt
+        self.src_groups = src_groups
+
+    def init_serials(self, ses_seed):
+        """
+        Called only for event based calculations
+        """
+        serial = ses_seed
+        for sg in self.src_groups:
+            for src in sg:
+                src.serial = serial
+                if not src.num_ruptures:
+                    src.num_ruptures = src.count_ruptures()
+                serial += src.num_ruptures * len(src.grp_ids)
+
+    def get_nonparametric_sources(self):
+        """
+        :returns: list of non parametric sources in the composite source model
+        """
+        return [src for src_group in self.src_groups
+                for src in src_group if hasattr(src, 'data')]
+
+    def get_floating_spinning_factors(self):
+        """
+        :returns: (floating rupture factor, spinning rupture factor)
+        """
+        data = []
+        for sg in self.src_groups:
+            for src in sg:
+                if hasattr(src, 'hypocenter_distribution'):
+                    data.append(
+                        (len(src.hypocenter_distribution.data),
+                         len(src.nodal_plane_distribution.data)))
+        if not data:
+            return numpy.array([1, 1])
+        return numpy.array(data).mean(axis=0)
+
+    def __repr__(self):
+        """
+        Return a string representation of the composite model
+        """
+        models = ['%d-%s-%s,w=%s [%d src_group(s)]' % (
+            sm.ordinal, sm.name, '_'.join(sm.lt_path), sm.weight,
+            len(sm.src_groups)) for sm in self.sm_rlzs]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(models))
+
+    def __getitem__(self, i):
+        """Return the i-th source model"""
+        return self.sm_rlzs[i]
+
+    def __iter__(self):
+        """Return an iterator over the underlying source models"""
+        return iter(self.sm_rlzs)
+
+    def __len__(self):
+        """Return the number of underlying source models"""
+        return len(self.sm_rlzs)
