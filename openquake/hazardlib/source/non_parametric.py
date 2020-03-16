@@ -163,9 +163,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
         :returns: the geometry as a WKT string
         """
         lons = numpy.concatenate(
-            [rup.surface.mesh.lons for rup, pmf in self.data])
+            [rup.surface.mesh.lons.flatten() for rup, pmf in self.data])
         lats = numpy.concatenate(
-            [rup.surface.mesh.lats for rup, pmf in self.data])
+            [rup.surface.mesh.lats.flatten() for rup, pmf in self.data])
         points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
         points['lon'] = lons
         points['lat'] = lats
