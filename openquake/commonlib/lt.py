@@ -282,11 +282,16 @@ def apply_uncertainties(bset_values, src_group):
             src = copy.deepcopy(source)
             for (bset, value), ok in zip(bset_values, oks):
                 if ok:
-                    apply_uncertainty(bset.uncertainty_type, src, value)
-                    sg.changes += 1
+                    if bset.collapsed:
+                        srcs = collapse_uncertainty(bset, src)
+                        sg.changes += len(srcs)
+                    else:
+                        apply_uncertainty(bset.uncertainty_type, src, value)
+                        sg.changes += 1
+                        srcs = [src]
         else:
-            src = copy.copy(source)  # this is ultra-fast
-        sg.sources.append(src)
+            srcs = [copy.copy(source)]  # this is ultra-fast
+        sg.sources.extend(srcs)
     return sg
 
 
@@ -390,6 +395,7 @@ class BranchSet(object):
         self.branches = []
         self.uncertainty_type = uncertainty_type
         self.filters = filters or {}
+        self.collapsed = False
 
     def enumerate_paths(self):
         """
@@ -401,6 +407,9 @@ class BranchSet(object):
             branches) and list of path's :class:`Branch` objects. Total sum
             of all paths' weights is 1.0
         """
+        if self.collapsed:
+            yield 1, self.branches[0]
+            return
         for path in self._enumerate_paths([]):
             flat_path = []
             weight = 1.0
