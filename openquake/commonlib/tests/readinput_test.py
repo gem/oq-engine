@@ -450,8 +450,6 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(found, 0)
         found, total = readinput.reduce_source_model(smlt, {}, remove=False)
         self.assertEqual(found, 0)
-        # TODO: add a test with two sources with the same ID and different
-        # codes
 
     def test_wrong_trts(self):
         # 'active Shallow Crust' is missing, 'Active Shallow Crust' is there
