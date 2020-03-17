@@ -87,7 +87,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, None, path)
+            info(path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -95,45 +95,45 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
 
     def test_calculators(self):
         with Print.patch() as p:
-            info(True, None, None, None, None, None, None, '')
+            info('calculators')
         self.assertGreater(len(str(p)), 10)
 
     def test_gsims(self):
         with Print.patch() as p:
-            info(None, True, None, None, None, None, None, '')
+            info('gsims')
         self.assertGreater(len(str(p)), 10)
 
     def test_views(self):
         with Print.patch() as p:
-            info(None, None, True, None, None, None, None, '')
+            info('views')
         self.assertGreater(len(str(p)), 10)
 
     def test_exports(self):
         with Print.patch() as p:
-            info(None, None, None, True, None, None, None, '')
+            info('exports')
         self.assertGreater(len(str(p)), 10)
 
     def test_extracts(self):
         with Print.patch() as p:
-            info(None, None, None, None, True, None, None, '')
+            info('extracts')
         self.assertGreater(len(str(p)), 10)
 
     def test_parameters(self):
         with Print.patch() as p:
-            info(None, None, None, None, None, True, None, '')
+            info('parameters')
         self.assertGreater(len(str(p)), 10)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, None, path)
+            info(path)
         self.assertIn('<FullLogicTree\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
 
     def test_logictree(self):
         path = os.path.join(os.path.dirname(case_9.__file__),
                             'source_model_logic_tree.xml')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, None, path)
+            info(path)
         self.assertEqual(str(p), """\
 ==================== ===========
 TRT                  pointSource
@@ -146,14 +146,14 @@ Total                1
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info(None, None, None, None, None, None, True, path)
+            info(path, True)
         self.assertIn('report.rst', str(p))
 
     def test_report_ebr(self):
         path = os.path.join(os.path.dirname(case_16.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info(None, None, None, None, None, None, True, path)
+            info(path, True)
         self.assertIn('report.rst', str(p))
 
 
