@@ -95,25 +95,25 @@ def do_build_reports(directory):
         parallel.Starmap.shutdown()
 
 
-# the documentation about how to use this feature can be found
-# in the file effective-realizations.rst
+choices = ['calculators', 'gsims', 'views', 'exports',
+           'extracts', 'parameters']
+
+
 @sap.script
-def info(calculators, gsims, views, exports, extracts, parameters,
-         report, input_file=''):
+def info(what, report=False):
     """
-    Give information. You can pass the name of an available calculator,
-    a job.ini file, or a zip archive with the input files.
+    Give information about the passed keyword or filename
     """
-    if calculators:
+    if what == 'calculators':
         for calc in sorted(base.calculators):
             print(calc)
-    if gsims:
+    elif what == 'gsims':
         for gs in gsim.get_available_gsims():
             print(gs)
-    if views:
+    elif what == 'views':
         for name in sorted(view):
             print(name)
-    if exports:
+    elif what == 'exports':
         dic = groupby(export, operator.itemgetter(0),
                       lambda group: [r[1] for r in group])
         n = 0
@@ -121,7 +121,7 @@ def info(calculators, gsims, views, exports, extracts, parameters,
             print(exporter, formats)
             n += len(formats)
         print('There are %d exporters defined.' % n)
-    if extracts:
+    elif what == 'extracts':
         for key in extract:
             func = extract[key]
             if hasattr(func, '__wrapped__'):
@@ -131,7 +131,7 @@ def info(calculators, gsims, views, exports, extracts, parameters,
             else:
                 fm = FunctionMaker(func)
             print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))
-    if parameters:
+    elif what == 'parameters':
         params = []
         for val in vars(OqParam).values():
             if hasattr(val, 'name'):
@@ -139,39 +139,33 @@ def info(calculators, gsims, views, exports, extracts, parameters,
         params.sort(key=lambda x: x.name)
         for param in params:
             print(param.name)
-    if os.path.isdir(input_file) and report:
+    elif os.path.isdir(what) and report:
         with Monitor('info', measuremem=True) as mon:
             with mock.patch.object(logging.root, 'info'):  # reduce logging
-                do_build_reports(input_file)
+                do_build_reports(what)
         print(mon)
-    elif input_file.endswith('.xml'):
-        node = nrml.read(input_file)
+    elif what.endswith('.xml'):
+        node = nrml.read(what)
         if node[0].tag.endswith('sourceModel'):
             print(source_model_info([node]))
         elif node[0].tag.endswith('logicTree'):
             sm_nodes = []
-            for smpath in logictree.collect_info(input_file).smpaths:
+            for smpath in logictree.collect_info(what).smpaths:
                 sm_nodes.append(nrml.read(smpath))
             print(source_model_info(sm_nodes))
         else:
             print(node.to_str())
-    elif input_file.endswith(('.ini', '.zip')):
+    elif what.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
             if report:
-                print('Generated', reportwriter.build_report(input_file))
+                print('Generated', reportwriter.build_report(what))
             else:
-                print_full_lt(input_file)
+                print_full_lt(what)
         if mon.duration > 1:
             print(mon)
-    elif input_file:
-        print("No info for '%s'" % input_file)
+    elif what:
+        print("No info for '%s'" % what)
 
 
-info.flg('calculators', 'list available calculators')
-info.flg('gsims', 'list available GSIMs')
-info.flg('views', 'list available views')
-info.flg('exports', 'list available exports')
-info.flg('extracts', 'list available extracts', '-x')
-info.flg('parameters', 'list all parameters in the job.ini')
-info.flg('report', 'build short report(s) in rst format')
-info.arg('input_file', 'job.ini file or zip archive')
+info.arg('what', 'filename or one of %s' % ', '.join(choices))
+info.flg('report', 'build rst report from job.ini file or zip archive')
