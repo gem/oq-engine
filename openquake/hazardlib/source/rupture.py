@@ -173,8 +173,9 @@ class BaseRupture(metaclass=abc.ABCMeta):
         This is useful when serializing the rupture to and from HDF5.
         :returns: {code: pair of classes}
         """
-        rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
-        surface_classes = list(get_subclasses(BaseSurface))
+        rupture_classes = [BaseRupture] + list(
+            general.get_subclasses(BaseRupture))
+        surface_classes = list(general.get_subclasses(BaseSurface))
         code2cls = {}
         for rup, sur in itertools.product(rupture_classes, surface_classes):
             chk = to_checksum(rup, sur)
@@ -497,16 +498,6 @@ class ParametricProbabilisticRupture(BaseRupture):
             cdpp[i] = dpp_target - dpp_mean
 
         return cdpp
-
-
-def get_subclasses(cls):
-    """
-    :returns: the subclasses of `cls`, ordered by name
-    """
-    for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
-        yield subclass
-        for ssc in get_subclasses(subclass):
-            yield ssc
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,
