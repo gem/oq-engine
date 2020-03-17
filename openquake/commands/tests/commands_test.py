@@ -123,6 +123,18 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
             info('parameters')
         self.assertGreater(len(str(p)), 10)
 
+    def test_mfds(self):
+        with Print.patch() as p:
+            info('mfds')
+        lines = str(p).split()
+        self.assertGreaterEqual(len(lines), 5)
+
+    def test_sources(self):
+        with Print.patch() as p:
+            info('sources')
+        lines = str(p).split()
+        self.assertGreaterEqual(len(lines), 10)
+
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:

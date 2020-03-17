@@ -23,9 +23,11 @@ import collections
 import numpy
 from decorator import FunctionMaker
 from openquake.baselib import sap, parallel
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, gen_subclasses
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml
+from openquake.hazardlib.mfd.base import BaseMFD
+from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
@@ -96,7 +98,7 @@ def do_build_reports(directory):
 
 
 choices = ['calculators', 'gsims', 'views', 'exports',
-           'extracts', 'parameters']
+           'extracts', 'parameters', 'sources', 'mfds']
 
 
 @sap.script
@@ -139,6 +141,12 @@ def info(what, report=False):
         params.sort(key=lambda x: x.name)
         for param in params:
             print(param.name)
+    elif what == 'mfds':
+        for cls in gen_subclasses(BaseMFD):
+            print(cls.__name__)
+    elif what == 'sources':
+        for cls in gen_subclasses(BaseSeismicSource):
+            print(cls.__name__)
     elif os.path.isdir(what) and report:
         with Monitor('info', measuremem=True) as mon:
             with mock.patch.object(logging.root, 'info'):  # reduce logging
