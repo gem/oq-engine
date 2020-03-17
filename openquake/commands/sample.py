@@ -113,4 +113,4 @@ def sample(fname, reduction_factor):
 
 sample.arg('fname', 'path to the model file')
 sample.arg('reduction_factor', 'reduction factor in the range 0..1',
-              type=valid.probability)
+           type=valid.probability)
