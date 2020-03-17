@@ -36,7 +36,7 @@ from openquake.commands.tidy import tidy
 from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
-from openquake.commands.reduce import reduce
+from openquake.commands.sample import sample
 from openquake.commands.reduce_sm import reduce_sm
 from openquake.commands.engine import run_job, smart_run
 from openquake.commands.db import db
@@ -265,7 +265,7 @@ class RunShowExportTestCase(unittest.TestCase):
         shutil.rmtree(tempdir)
 
 
-class ReduceTestCase(unittest.TestCase):
+class SampleSmTestCase(unittest.TestCase):
     TESTDIR = os.path.dirname(case_3.__file__)
 
     def test_exposure(self):
@@ -273,7 +273,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'exposure_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'exposure_model.xml'), dest)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 8 nodes out of 13', str(p))
         shutil.rmtree(tempdir)
 
@@ -282,7 +282,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'source_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'source_model.xml'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 9 nodes out of 15', str(p))
         shutil.rmtree(tempdir)
 
@@ -292,7 +292,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'site_model.xml')
         shutil.copy(os.path.join(testdir, 'site_model.xml'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 2 nodes out of 3', str(p))
         shutil.rmtree(tempdir)
 
@@ -302,7 +302,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'sites.csv')
         shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 50 lines out of 99', str(p))
         shutil.rmtree(tempdir)
 
