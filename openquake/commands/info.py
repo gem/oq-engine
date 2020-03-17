@@ -23,7 +23,7 @@ import collections
 import numpy
 from decorator import FunctionMaker
 from openquake.baselib import sap, parallel
-from openquake.baselib.general import groupby, get_subclasses
+from openquake.baselib.general import groupby, gen_subclasses
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml
 from openquake.hazardlib.mfd.base import BaseMFD
@@ -142,10 +142,10 @@ def info(what, report=False):
         for param in params:
             print(param.name)
     elif what == 'mfds':
-        for cls in get_subclasses(BaseMFD):
+        for cls in gen_subclasses(BaseMFD):
             print(cls.__name__)
     elif what == 'sources':
-        for cls in get_subclasses(BaseSeismicSource):
+        for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)
     elif os.path.isdir(what) and report:
         with Monitor('info', measuremem=True) as mon:

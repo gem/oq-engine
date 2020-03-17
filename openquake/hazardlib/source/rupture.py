@@ -174,8 +174,8 @@ class BaseRupture(metaclass=abc.ABCMeta):
         :returns: {code: pair of classes}
         """
         rupture_classes = [BaseRupture] + list(
-            general.get_subclasses(BaseRupture))
-        surface_classes = list(general.get_subclasses(BaseSurface))
+            general.gen_subclasses(BaseRupture))
+        surface_classes = list(general.gen_subclasses(BaseSurface))
         code2cls = {}
         for rup, sur in itertools.product(rupture_classes, surface_classes):
             chk = to_checksum(rup, sur)
