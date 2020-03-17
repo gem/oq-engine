@@ -25,7 +25,7 @@ from decorator import FunctionMaker
 from openquake.baselib import sap, parallel
 from openquake.baselib.general import groupby, gen_subclasses
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import gsim, nrml
+from openquake.hazardlib import gsim, nrml, imt
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.commonlib.oqvalidation import OqParam
@@ -97,7 +97,7 @@ def do_build_reports(directory):
         parallel.Starmap.shutdown()
 
 
-choices = ['calculators', 'gsims', 'views', 'exports',
+choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
            'extracts', 'parameters', 'sources', 'mfds']
 
 
@@ -112,6 +112,9 @@ def info(what, report=False):
     elif what == 'gsims':
         for gs in gsim.get_available_gsims():
             print(gs)
+    elif what == 'imts':
+        for im in gen_subclasses(imt.IMT):
+            print(im.__name__)
     elif what == 'views':
         for name in sorted(view):
             print(name)

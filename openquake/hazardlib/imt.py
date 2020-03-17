@@ -222,6 +222,7 @@ class MMI(IMT):
     and on humans and their structures.
     """
 
+
 class JMA(IMT):
     """
     Modified Mercalli intensity, a Roman numeral describing the severity
