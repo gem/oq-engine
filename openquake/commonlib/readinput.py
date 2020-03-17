@@ -914,6 +914,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                         good += 1
                         sg.nodes.append(src_node)
                         reduced_weigths.append(weight)
+                        src_node.attrib.pop('tectonicRegion', None)
                 if set(reduced_weigths) != {1}:
                     src_group['srcs_weights'] = reduced_weigths
                 if sg.nodes:

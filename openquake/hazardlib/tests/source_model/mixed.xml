@@ -14,7 +14,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <pointSource
             id="2"
             name="point"
-            tectonicRegion="Stable Continental Crust"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -54,7 +53,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <complexFaultSource
             id="4"
             name="Cascadia Megathrust"
-            tectonicRegion="Subduction Interface"
             >
                 <complexFaultGeometry>
                     <faultTopEdge>
@@ -106,7 +104,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <areaSource
             id="1"
             name="Quito"
-            tectonicRegion="Active Shallow Crust"
             >
                 <areaGeometry
                 discretization="2.0"
@@ -153,7 +150,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <simpleFaultSource
             id="3"
             name="Mount Diablo Thrust"
-            tectonicRegion="Active Shallow Crust"
             >
                 <simpleFaultGeometry>
                     <gml:LineString>
@@ -214,7 +210,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <characteristicFaultSource
             id="5"
             name="characteristic source, simple fault"
-            tectonicRegion="Volcanic"
             >
                 <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" maxMag="6.5" minMag="5.0"/>
                 <rake>
@@ -242,7 +237,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <characteristicFaultSource
             id="6"
             name="characteristic source, complex fault"
-            tectonicRegion="Volcanic"
             >
                 <incrementalMFD
                 binWidth="0.1"
@@ -291,7 +285,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <characteristicFaultSource
             id="7"
             name="characteristic source, multi surface"
-            tectonicRegion="Volcanic"
             >
                 <truncGutenbergRichterMFD aValue="-3.6" bValue="1.0" maxMag="6.4" minMag="5.2"/>
                 <rake>
