@@ -46,7 +46,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.commonlib.lt import (
+from openquake.hazardlib.lt import (
     Branch, BranchSet, LogicTreeError, parse_uncertainty, sample)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')

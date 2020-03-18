@@ -26,7 +26,7 @@ import numpy
 
 from openquake.baselib import parallel, general
 from openquake.hazardlib import nrml, sourceconverter, calc, InvalidFile
-from openquake.commonlib.lt import apply_uncertainties
+from openquake.hazardlib.lt import apply_uncertainties
 from openquake.commonlib.logictree import FullLogicTree
 
 

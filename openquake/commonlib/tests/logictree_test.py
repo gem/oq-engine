@@ -32,14 +32,13 @@ from copy import deepcopy
 from openquake.baselib import parallel
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, lt
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.commonlib.logictree import SourceModelLogicTree, GsimLogicTree
-from openquake.commonlib import lt
 
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
