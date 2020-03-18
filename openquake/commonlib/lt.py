@@ -264,10 +264,15 @@ def _incMFD_absolute(utype, source, value):
 
 
 def collapse_uncertainty(bset, src):
+    """
+    :param bset: a :class:`BranchSet` instance
+    :param src: a source object
+    :returns: a list of modified sources, one per branch in the branchset
+    """
     srcs = []
     for br in bset.branches:
         newsrc = copy.deepcopy(src)
-        newsrc.rate_rescaling = br.weight
+        newsrc.rate_scaling = br.weight
         apply_uncertainty(bset.uncertainty_type, newsrc, br.value)
         srcs.append(newsrc)
     return srcs
@@ -292,14 +297,13 @@ def apply_uncertainties(bset_values, src_group):
         if sum(oks):  # source not filtered out
             src = copy.deepcopy(source)
             for (bset, value), ok in zip(bset_values, oks):
-                if ok:
-                    if bset.collapsed:
-                        srcs = collapse_uncertainty(bset, src)
-                        sg.changes += len(srcs)
-                    else:
-                        apply_uncertainty(bset.uncertainty_type, src, value)
-                        sg.changes += 1
-                        srcs = [src]
+                if ok and bset.collapsed:
+                    srcs = collapse_uncertainty(bset, src)
+                    sg.changes += len(srcs)
+                elif ok:
+                    apply_uncertainty(bset.uncertainty_type, src, value)
+                    sg.changes += 1
+                    srcs = [src]
         else:
             srcs = [copy.copy(source)]  # this is ultra-fast
         sg.sources.extend(srcs)

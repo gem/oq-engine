@@ -176,7 +176,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         whole_fault_mesh = whole_fault_surface.mesh
         cell_center, cell_length, cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
-
+        rate_scaling = getattr(self, 'rate_scaling', 1)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             # min_mag is inside get_annual_occurrence_rates
             if mag_occ_rate == 0:
@@ -200,7 +200,8 @@ class ComplexFaultSource(ParametricSeismicSource):
                         self.source_id, str(e)))
                 rup = ParametricProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
-                    surface, occurrence_rate, self.temporal_occurrence_model)
+                    surface, occurrence_rate * rate_scaling,
+                    self.temporal_occurrence_model)
                 rup.mag_occ_rate = mag_occ_rate
                 yield rup
 

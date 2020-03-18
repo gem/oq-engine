@@ -86,7 +86,8 @@ class AreaSource(ParametricSeismicSource):
         of points the polygon discretizes to.
         """
         polygon_mesh = self.polygon.discretize(self.area_discretization)
-        rate_scaling_factor = 1.0 / len(polygon_mesh)
+        rate_scaling_factor = getattr(self, 'rate_scaling', 1) / len(
+            polygon_mesh)
 
         # take the very first point of the polygon mesh
         [epicenter0] = polygon_mesh[0:1]

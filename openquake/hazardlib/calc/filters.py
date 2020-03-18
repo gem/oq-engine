@@ -197,6 +197,7 @@ def split_sources(srcs):
         split_time[src.id] = time.time() - t0
         sources.extend(splits)
         has_samples = hasattr(src, 'samples')
+        has_rate_scaling = hasattr(src, 'rate_scaling')
         if len(splits) > 1:
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
@@ -204,6 +205,8 @@ def split_sources(srcs):
                 split.id = src.id
                 if has_samples:
                     split.samples = src.samples
+                if has_rate_scaling:
+                    s.rate_scaling = src.rate_scaling
         elif splits:  # single source
             [s] = splits
             s.source_id = src.source_id
@@ -211,6 +214,8 @@ def split_sources(srcs):
             s.id = src.id
             if has_samples:
                 s.samples = src.samples
+            if has_rate_scaling:
+                s.rate_scaling = src.rate_scaling
     return sources, split_time
 
 

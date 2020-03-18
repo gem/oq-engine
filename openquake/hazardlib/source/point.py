@@ -157,6 +157,7 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
+        rate_scaling = getattr(self, 'rate_scaling', 1)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             for np_prob, np in self.nodal_plane_distribution.data:
                 for hc_prob, hc_depth in self.hypocenter_distribution.data:
@@ -168,7 +169,7 @@ class PointSource(ParametricSeismicSource):
                     yield ParametricProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type,
                         nhc if kwargs.get('shift_hypo') else hc,
-                        surface, occurrence_rate,
+                        surface, occurrence_rate * rate_scaling,
                         self.temporal_occurrence_model)
 
     def count_nphc(self):
