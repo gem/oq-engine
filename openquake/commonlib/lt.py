@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import numpy
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, source as ohs
@@ -262,6 +263,21 @@ def _incMFD_absolute(utype, source, value):
                                       occurrence_rates=occur_rates))
 
 
+def collapse_uncertainty(bset, src):
+    """
+    :param bset: a :class:`BranchSet` instance
+    :param src: a source object
+    :returns: a list of modified sources, one per branch in the branchset
+    """
+    srcs = []
+    for br in bset.branches:
+        newsrc = copy.deepcopy(src)
+        newsrc.rate_scaling = br.weight
+        apply_uncertainty(bset.uncertainty_type, newsrc, br.value)
+        srcs.append(newsrc)
+    return srcs
+
+
 # ######################### apply_uncertainties ########################### #
 
 def apply_uncertainties(bset_values, src_group):
@@ -281,16 +297,48 @@ def apply_uncertainties(bset_values, src_group):
         if sum(oks):  # source not filtered out
             src = copy.deepcopy(source)
             for (bset, value), ok in zip(bset_values, oks):
-                if ok:
+                if ok and bset.collapsed:
+                    srcs = collapse_uncertainty(bset, src)
+                    sg.changes += len(srcs)
+                elif ok:
                     apply_uncertainty(bset.uncertainty_type, src, value)
                     sg.changes += 1
+                    srcs = [src]
         else:
-            src = copy.copy(source)  # this is ultra-fast
-        sg.sources.append(src)
+            srcs = [copy.copy(source)]  # this is ultra-fast
+        sg.sources.extend(srcs)
     return sg
 
 
 # ######################### branches and branchsets ######################## #
+
+
+def sample(weighted_objects, num_samples, seed):
+    """
+    Take random samples of a sequence of weighted objects
+
+    :param weighted_objects:
+        A finite sequence of objects with a `.weight` attribute.
+        The weights must sum up to 1.
+    :param num_samples:
+        The number of samples to return
+    :param seed:
+        A random seed
+    :return:
+        A subsequence of the original sequence with `num_samples` elements
+    """
+    weights = []
+    for obj in weighted_objects:
+        w = obj.weight
+        if isinstance(obj.weight, float):
+            weights.append(w)
+        else:
+            weights.append(w['weight'])
+    numpy.random.seed(seed)
+    idxs = numpy.random.choice(len(weights), num_samples, p=weights)
+    # NB: returning an array would break things
+    return [weighted_objects[idx] for idx in idxs]
+
 
 class Branch(object):
     """
@@ -390,6 +438,24 @@ class BranchSet(object):
         self.branches = []
         self.uncertainty_type = uncertainty_type
         self.filters = filters or {}
+        self.collapsed = False
+
+    def sample(self, seed):
+        """
+        Return a list of branches.
+
+        :param seed: the seed used for the sampling
+        """
+        branchset = self
+        branches = []
+        while branchset is not None:
+            if branchset.collapsed:
+                branch = branchset.branches[0]
+            else:
+                [branch] = sample(branchset.branches, 1, seed)
+            branches.append(branch)
+            branchset = branch.bset
+        return branches
 
     def enumerate_paths(self):
         """
@@ -401,6 +467,9 @@ class BranchSet(object):
             branches) and list of path's :class:`Branch` objects. Total sum
             of all paths' weights is 1.0
         """
+        if self.collapsed:
+            yield 1, self.branches[0]
+            return
         for path in self._enumerate_paths([]):
             flat_path = []
             weight = 1.0

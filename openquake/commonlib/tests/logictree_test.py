@@ -39,7 +39,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.commonlib.logictree import SourceModelLogicTree, GsimLogicTree
-from openquake.commonlib.lt import apply_uncertainty
+from openquake.commonlib import lt
 
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -1286,7 +1286,7 @@ class SampleTestCase(unittest.TestCase):
         branches = [logictree.Branch('BS', 1, 0.2, 'A'),
                     logictree.Branch('BS', 1, 0.3, 'B'),
                     logictree.Branch('BS', 1, 0.5, 'C')]
-        samples = logictree.sample(branches, 1000, 42)
+        samples = lt.sample(branches, 1000, 42)
 
         def count(samples, value):
             counter = 0
@@ -1303,12 +1303,12 @@ class SampleTestCase(unittest.TestCase):
         branches = [logictree.Branch('BS', 0, 0.1, 0),
                     logictree.Branch('BS', 1, 0.2, 1)]
         with self.assertRaises(ValueError):
-            logictree.sample(branches, 1000, 42)
+            lt.sample(branches, 1000, 42)
 
     def test_sample_one_branch(self):
         # always the same branch is returned
         branches = [logictree.Branch('BS', 0, 1.0, 0)]
-        bs = logictree.sample(branches, 10, 42)
+        bs = lt.sample(branches, 10, 42)
         for b in bs:
             self.assertEqual(b.branch_id, 0)
 
@@ -1396,7 +1396,7 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         uncertainties = [('maxMagGRRelative', +1),
                          ('bGRRelative', -0.2)]
         for utype, uvalue in uncertainties:
-            apply_uncertainty(utype, self.point_source, uvalue)
+            lt.apply_uncertainty(utype, self.point_source, uvalue)
         self.assertEqual(self.point_source.mfd.max_mag, 6.5 + 1)
         self.assertEqual(self.point_source.mfd.b_val, 0.9 - 0.2)
 
@@ -1404,7 +1404,7 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         uncertainties = [('maxMagGRAbsolute', 9),
                          ('abGRAbsolute', (-1, 0.2))]
         for utype, uvalue in uncertainties:
-            apply_uncertainty(utype, self.point_source, uvalue)
+            lt.apply_uncertainty(utype, self.point_source, uvalue)
         self.assertEqual(self.point_source.mfd.max_mag, 9)
         self.assertEqual(self.point_source.mfd.b_val, 0.2)
         self.assertEqual(self.point_source.mfd.a_val, -1)
@@ -1435,7 +1435,8 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         uncertainty, value = ('incrementalMFDAbsolute',
                               (8.5, 0.1, [0.05, 0.01]))
         branchset = logictree.BranchSet(uncertainty, {})
-        apply_uncertainty(branchset.uncertainty_type, inc_point_source, value)
+        lt.apply_uncertainty(
+            branchset.uncertainty_type, inc_point_source, value)
         self.assertEqual(inc_point_source.mfd.min_mag, 8.5)
         self.assertEqual(inc_point_source.mfd.bin_width, 0.1)
         self.assertEqual(inc_point_source.mfd.occurrence_rates[0], 0.05)
@@ -1503,14 +1504,14 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.fault_source.dip, 60.)
         new_fault_source = deepcopy(self.fault_source)
         utype, uvalue = ('simpleFaultDipRelative', -15.)
-        apply_uncertainty(utype, new_fault_source, uvalue)
+        lt.apply_uncertainty(utype, new_fault_source, uvalue)
         self.assertAlmostEqual(new_fault_source.dip, 45.)
 
     def test_simple_fault_dip_absolute_uncertainty(self):
         self.assertAlmostEqual(self.fault_source.dip, 60.)
         new_fault_source = deepcopy(self.fault_source)
         utype, uvalue = ('simpleFaultDipAbsolute', 55.)
-        apply_uncertainty(utype, new_fault_source, uvalue)
+        lt.apply_uncertainty(utype, new_fault_source, uvalue)
         self.assertAlmostEqual(new_fault_source.dip, 55.)
 
     def test_simple_fault_geometry_uncertainty(self):
@@ -1521,7 +1522,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
         new_usd = 1.
         utype, uvalue = ('simpleFaultGeometryAbsolute',
                          (new_trace, new_usd, new_lsd, new_dip, 1.0))
-        apply_uncertainty(utype, new_fault_source, uvalue)
+        lt.apply_uncertainty(utype, new_fault_source, uvalue)
         self.assertEqual(new_fault_source.fault_trace, new_trace)
         self.assertAlmostEqual(new_fault_source.upper_seismogenic_depth, 1.)
         self.assertAlmostEqual(new_fault_source.lower_seismogenic_depth, 12.)
@@ -1541,7 +1542,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
 
         utype, uvalue = ('complexFaultGeometryAbsolute',
                          ([new_top_edge, new_bottom_edge], 2.0))
-        apply_uncertainty(utype, fault_source, uvalue)
+        lt.apply_uncertainty(utype, fault_source, uvalue)
         self.assertEqual(fault_source.edges[0], new_top_edge)
         self.assertEqual(fault_source.edges[1], new_bottom_edge)
 
@@ -1568,7 +1569,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
                               [30.6, 30.0, 10.0]])
         new_surface = self._make_planar_surface([plane3, plane4])
         utype, uvalue = 'characteristicFaultGeometryAbsolute', new_surface
-        apply_uncertainty(utype, fault_source, uvalue)
+        lt.apply_uncertainty(utype, fault_source, uvalue)
         # Only the longitudes are changing
         numpy.testing.assert_array_almost_equal(
             fault_source.surface.surfaces[0].corner_lons,
@@ -1592,7 +1593,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
                                                              65., 1.0)
         utype, uvalue = 'characteristicFaultGeometryAbsolute', new_surface
         new_surface.dip = 65.0
-        apply_uncertainty(utype, fault_source, uvalue)
+        lt.apply_uncertainty(utype, fault_source, uvalue)
         self.assertAlmostEqual(fault_source.surface.get_dip(), 65.)
 
     def test_characteristic_fault_complex_geometry_uncertainty(self):
@@ -1613,7 +1614,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
         new_surface = geo.ComplexFaultSurface.from_fault_data(
             [new_top_edge, new_bottom_edge], 5.)
         utype, uvalue = 'characteristicFaultGeometryAbsolute', new_surface
-        apply_uncertainty(utype, fault_source, uvalue)
+        lt.apply_uncertainty(utype, fault_source, uvalue)
         # If the surface has changed the first element in the latitude
         # array of the surface mesh should be 30.2
         self.assertAlmostEqual(new_surface.mesh.lats[0, 0], 30.2)
@@ -2075,7 +2076,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         counter = collections.Counter()
         gsim_rlzs = list(self.parse_valid(xml, ['Volcanic']))
         for seed in range(1000):
-            [rlz] = logictree.sample(gsim_rlzs, 1, seed)
+            [rlz] = lt.sample(gsim_rlzs, 1, seed)
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 413, ('b2',): 587})
@@ -2096,8 +2097,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.assertEqual(('b1', 'b4', 'b7'), rlz.lt_path)
 
     def test_sample_gmpe(self):
-        [rlz] = logictree.sample(
-            list(self.gmpe_lt), 1, self.seed)
+        [rlz] = lt.sample(list(self.gmpe_lt), 1, self.seed)
         self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(rlz.weight['default'], 0.5)
         self.assertEqual(('b2', 'b3'), rlz.lt_path)
