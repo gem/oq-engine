@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import numpy
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, source as ohs
@@ -262,6 +263,16 @@ def _incMFD_absolute(utype, source, value):
                                       occurrence_rates=occur_rates))
 
 
+def collapse_uncertainty(bset, src):
+    srcs = []
+    for br in bset.branches:
+        newsrc = copy.deepcopy(src)
+        newsrc.rate_rescaling = br.weight
+        apply_uncertainty(bset.uncertainty_type, newsrc, br.value)
+        srcs.append(newsrc)
+    return srcs
+
+
 # ######################### apply_uncertainties ########################### #
 
 def apply_uncertainties(bset_values, src_group):
@@ -296,6 +307,34 @@ def apply_uncertainties(bset_values, src_group):
 
 
 # ######################### branches and branchsets ######################## #
+
+
+def sample(weighted_objects, num_samples, seed):
+    """
+    Take random samples of a sequence of weighted objects
+
+    :param weighted_objects:
+        A finite sequence of objects with a `.weight` attribute.
+        The weights must sum up to 1.
+    :param num_samples:
+        The number of samples to return
+    :param seed:
+        A random seed
+    :return:
+        A subsequence of the original sequence with `num_samples` elements
+    """
+    weights = []
+    for obj in weighted_objects:
+        w = obj.weight
+        if isinstance(obj.weight, float):
+            weights.append(w)
+        else:
+            weights.append(w['weight'])
+    numpy.random.seed(seed)
+    idxs = numpy.random.choice(len(weights), num_samples, p=weights)
+    # NB: returning an array would break things
+    return [weighted_objects[idx] for idx in idxs]
+
 
 class Branch(object):
     """
@@ -396,6 +435,23 @@ class BranchSet(object):
         self.uncertainty_type = uncertainty_type
         self.filters = filters or {}
         self.collapsed = False
+
+    def sample(self, seed):
+        """
+        Return a list of branches.
+
+        :param seed: the seed used for the sampling
+        """
+        branchset = self
+        branches = []
+        while branchset is not None:
+            if branchset.collapsed:
+                branch = branchset.branches[0]
+            else:
+                [branch] = sample(branchset.branches, 1, seed)
+            branches.append(branch)
+            branchset = branch.bset
+        return branches
 
     def enumerate_paths(self):
         """

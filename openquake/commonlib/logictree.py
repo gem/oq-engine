@@ -47,7 +47,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.commonlib.lt import (
-    Branch, BranchSet, LogicTreeError, parse_uncertainty)
+    Branch, BranchSet, LogicTreeError, parse_uncertainty, sample)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
@@ -152,33 +152,6 @@ def get_effective_rlzs(rlzs):
                         ordinal, rlz.lt_path, len(group)))
         ordinal += 1
     return effective
-
-
-def sample(weighted_objects, num_samples, seed):
-    """
-    Take random samples of a sequence of weighted objects
-
-    :param weighted_objects:
-        A finite sequence of objects with a `.weight` attribute.
-        The weights must sum up to 1.
-    :param num_samples:
-        The number of samples to return
-    :param seed:
-        A random seed
-    :return:
-        A subsequence of the original sequence with `num_samples` elements
-    """
-    weights = []
-    for obj in weighted_objects:
-        w = obj.weight
-        if isinstance(obj.weight, float):
-            weights.append(w)
-        else:
-            weights.append(w['weight'])
-    numpy.random.seed(seed)
-    idxs = numpy.random.choice(len(weights), num_samples, p=weights)
-    # NB: returning an array would break things
-    return [weighted_objects[idx] for idx in idxs]
 
 
 # manage the legacy logicTreeBranchingLevel nodes
@@ -427,20 +400,6 @@ class SourceModelLogicTree(object):
                 "there are duplicate values in uncertaintyModel: " +
                 ' '.join(values))
 
-    def sample_path(self, seed):
-        """
-        Return a list of branches.
-
-        :param seed: the seed used for the sampling
-        """
-        branchset = self.root_branchset
-        branches = []
-        while branchset is not None:
-            [branch] = sample(branchset.branches, 1, seed)
-            branches.append(branch)
-            branchset = branch.bset
-        return branches
-
     def __iter__(self):
         """
         Yield Realization tuples. Notice that the weight is homogeneous when
@@ -451,7 +410,7 @@ class SourceModelLogicTree(object):
             # random sampling of the logic tree
             weight = 1. / self.num_samples
             for i in range(self.num_samples):
-                smlt_path = self.sample_path(self.seed + i)
+                smlt_path = self.root_branchset.sample(self.seed + i)
                 name = smlt_path[0].value
                 smlt_path_ids = [branch.branch_id for branch in smlt_path]
                 yield Realization(name, weight, None, tuple(smlt_path_ids), 1)
@@ -621,6 +580,14 @@ class SourceModelLogicTree(object):
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
+
+    def collapse(self, branchset_ids):
+        """
+        Set the attribute .collapsed on the given branchsets
+        """
+        for bsid, bset in self.bsetdict.items():
+            if bsid in branchset_ids:
+                bset.collapsed = True
 
     def bset_values(self, sm_rlz):
         """
