@@ -1164,7 +1164,7 @@ def extract_disagg(dstore, what):
 def extract_disagg_layer(dstore, what):
     """
     Extract a disaggregation output containing all sites
-    for the first realization.
+    for the first realization or the mean.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
     disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0
@@ -1176,11 +1176,11 @@ def extract_disagg_layer(dstore, what):
     grp = disagg_outputs(dstore, imt, 0, poe_id)[0]
     dset = grp[label]
     edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
-    dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz', U32),
+    dt = [('site_id', U32), ('lon', F32), ('lat', F32),
           ('poes', (dset.dtype, dset.shape))]
     sitecol = dstore['sitecol']
     out = numpy.zeros(len(sitecol), dt)
-    out[0] = (0, sitecol.lons[0], sitecol.lats[0], grp.attrs['rlzi'], dset[()])
+    out[0] = (0, sitecol.lons[0], sitecol.lats[0], dset[()])
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         if sid > 0:
@@ -1188,7 +1188,6 @@ def extract_disagg_layer(dstore, what):
             rec['site_id'] = sid
             rec['lon'] = lon
             rec['lat'] = lat
-            rec['rlz'] = grp.attrs['rlzi']
             rec['poes'] = grp[label][()]
     return ArrayWrapper(out, edges)
 

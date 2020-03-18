@@ -38,7 +38,7 @@ from openquake.calculators import getters
 from openquake.calculators import base
 
 weight = operator.attrgetter('weight')
-DISAGG_RES_FMT = 'rlz-%(rlz)s-%(imt)s-%(sid)s-%(poe)s/'
+DISAGG_RES_FMT = '%(rlz)s%(imt)s-%(sid)s-%(poe)s/'
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 POE_TOO_BIG = '''\
 Site #%d: you are trying to disaggregate for poe=%s.
@@ -400,25 +400,33 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         for sid, mat9 in results.items():
             rlzs = self.rlzs[sid]
+            many_rlzs = len(rlzs) > 1
             for m, imt in enumerate(self.imts):
-                # NB: here is how to compute the stats:
-                # weights = numpy.array([self.ws[r][imt] for r in rlzs]
-                # weights /= weights.sum()  # normalize to 1
-                # mean = numpy.average(mat7, -1, weights)
+                if many_rlzs:  # rescale the weights
+                    weights = numpy.array([self.ws[r][imt] for r in rlzs])
+                    weights /= weights.sum()  # normalize to 1
                 for p, poe in enumerate(self.poes_disagg):
                     mat7 = mat9[..., m, p, :]
                     for z in range(self.Z):
                         mat6 = mat7[..., z]
                         if mat6.any():  # nonzero
                             self._save('disagg', sid, rlzs[z], poe, imt, mat6)
+                    if many_rlzs:  # compute the mean matrices
+                        mean = numpy.average(mat7, -1, weights)
+                        if mean.any():  # nonzero
+                            self._save('disagg', sid, 'mean', poe, imt, mean)
         self.datastore.set_attrs('disagg', **attrs)
 
     def _save(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
         disagg_outputs = self.oqparam.disagg_outputs
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
+        try:
+            rlz = 'rlz-%d-' % rlz_id
+        except TypeError:  # for the mean
+            rlz = ''
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
-            rlz=rlz_id, imt=imt_str, sid='sid-%d' % site_id,
+            rlz=rlz, imt=imt_str, sid='sid-%d' % site_id,
             poe='poe-%d' % self.poe_id[poe])
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
@@ -435,7 +443,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         attrs['site_id'] = site_id
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
-        attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
+        try:
+            attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
+        except KeyError:  # for the mean
+            pass
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
