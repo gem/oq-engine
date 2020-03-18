@@ -907,13 +907,15 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                     assert len(weights) == len(src_group.nodes)
                 else:
                     weights = [1] * len(src_group.nodes)
-                src_group['srcs_weights'] = reduced_weigths = []
+                reduced_weigths = []
                 for src_node, weight in zip(src_group, weights):
                     total += 1
                     if ok(src_node):
                         good += 1
                         sg.nodes.append(src_node)
                         reduced_weigths.append(weight)
+                if set(reduced_weigths) != {1}:
+                    src_group['srcs_weights'] = reduced_weigths
                 if sg.nodes:
                     model.nodes.append(sg)
         shutil.copy(path, path + '.bak')

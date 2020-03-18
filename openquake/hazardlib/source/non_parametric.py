@@ -18,7 +18,6 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 import numpy
-import shapely
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface

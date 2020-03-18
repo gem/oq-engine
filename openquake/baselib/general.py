@@ -1357,3 +1357,12 @@ def get_array_nbytes(sizedict):
     nbytes = numpy.prod(list(sizedict.values())) * 8
     prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
     return nbytes, '%s * 8 bytes = %s' % (prod, humansize(nbytes))
+
+
+def gen_subclasses(cls):
+    """
+    :returns: the subclasses of `cls`, ordered by name
+    """
+    for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
+        yield subclass
+        yield from gen_subclasses(subclass)

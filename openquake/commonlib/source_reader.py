@@ -22,7 +22,6 @@ import pickle
 import operator
 import logging
 import zlib
-import collections
 import numpy
 
 from openquake.baselib import parallel, general
@@ -236,7 +235,7 @@ def _get_csm(full_lt, groups):
     return CompositeSourceModel(full_lt, src_groups)
 
 
-class CompositeSourceModel(collections.abc.Sequence):
+class CompositeSourceModel:
     """
     :param gsim_lt:
         a :class:`openquake.commonlib.logictree.GsimLogicTree` instance
@@ -294,19 +293,5 @@ class CompositeSourceModel(collections.abc.Sequence):
         """
         Return a string representation of the composite model
         """
-        models = ['%d-%s-%s,w=%s [%d src_group(s)]' % (
-            sm.ordinal, sm.name, '_'.join(sm.lt_path), sm.weight,
-            len(sm.src_groups)) for sm in self.sm_rlzs]
-        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(models))
-
-    def __getitem__(self, i):
-        """Return the i-th source model"""
-        return self.sm_rlzs[i]
-
-    def __iter__(self):
-        """Return an iterator over the underlying source models"""
-        return iter(self.sm_rlzs)
-
-    def __len__(self):
-        """Return the number of underlying source models"""
-        return len(self.sm_rlzs)
+        return '<%s with %d source group(s)>' % (
+            self.__class__.__name__, len(self.src_groups))

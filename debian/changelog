@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Slightly changed the syntax of `oq info` (see `oq info --help`) and added
+    information about the available IMTs, MFDs and source classes
   * Optimized get_composite_source_model (in the case of a complex source
     specific logic trees a speedup of 80x was measured)
   * Internal: fixed `oq info source_model_logic_tree.xml`
