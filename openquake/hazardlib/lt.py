@@ -434,11 +434,11 @@ class BranchSet(object):
             Stable Shallow Crust, etc.) the uncertainty applies to. This
             filter is required for all branchsets in GMPE logic tree.
     """
-    def __init__(self, uncertainty_type, filters=None):
+    def __init__(self, uncertainty_type, filters=None, collapsed=False):
         self.branches = []
         self.uncertainty_type = uncertainty_type
         self.filters = filters or {}
-        self.collapsed = False
+        self.collapsed = collapsed
 
     def sample(self, seed):
         """
