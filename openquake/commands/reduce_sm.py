@@ -36,7 +36,7 @@ def reduce_sm(calc_id):
     if len(bad_ids) == 0:
         logging.warning('All sources are relevant, nothing to remove')
         return
-    logging.info('Found %d filtered out source IDs', len(bad_ids))
+    logging.info('Found %d far away sources', len(bad_ids))
     ok = info['eff_ruptures'] > 0
     if ok.sum() == 0:
         raise RuntimeError('All sources were filtered away!')
