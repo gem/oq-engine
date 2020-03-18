@@ -103,6 +103,11 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
             info('gsims')
         self.assertGreater(len(str(p)), 10)
 
+    def test_imts(self):
+        with Print.patch() as p:
+            info('imts')
+        self.assertGreaterEqual(len(str(p)), 18)
+
     def test_views(self):
         with Print.patch() as p:
             info('views')

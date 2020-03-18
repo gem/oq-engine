@@ -36,8 +36,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -45,9 +45,8 @@
 # liability for use of the software.
 
 '''
-Defines the :class openquake.hmtk.sources.mtk_area_source.mtkAreaSource  which represents
-the openquake.hmtk defition of an area source. This extends the :class:
-nrml.models.AreaSource
+Defines the :class:`openquake.hmtk.sources.mtk_area_source.mtkAreaSource`
+which represents the openquake.hmtk defition of an area source.
 '''
 import warnings
 import numpy as np
@@ -182,8 +181,8 @@ class mtkAreaSource(object):
         Selects the catalogue of earthquakes attributable to the source
 
         :param selector:
-            Populated instance of openquake.hmtk.seismicity.selector.CatalogueSelector
-            class
+            Populated instance of
+            :class:`openquake.hmtk.seismicity.selector.CatalogueSelector`
         :param float distance:
             Distance (in km) to extend or contract (if negative) the zone for
             selecting events
