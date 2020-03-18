@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Restored the computation of the mean disaggregation when multiple
+    realizations are requested
   * Slightly changed the syntax of `oq info` (see `oq info --help`) and added
     information about the available IMTs, MFDs and source classes
   * Optimized get_composite_source_model (in the case of a complex source
