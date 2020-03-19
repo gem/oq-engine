@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Reduced the storage required for disaggregation calculation in the case
+    of complex logic trees
   * Restored the computation of the mean disaggregation when multiple
     realizations are requested
   * Slightly changed the syntax of `oq info` (see `oq info --help`) and added
