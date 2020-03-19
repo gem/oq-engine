@@ -24,6 +24,7 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.geo.point import Point
 
 
+# a point source with 2(mag) x 2(npd) x 2(hdd) = 8 ruptures
 ps = nrml.get('''\
 <pointSource id="P" name="P" tectonicRegion="Active Shallow Crust">
   <pointGeometry>
@@ -51,7 +52,7 @@ def scaling_rates(srcs):
 
 class CollapseTestCase(unittest.TestCase):
     def setUp(self):
-        # setup a simple logic tree with 3 realizations
+        # simple logic tree with 3 realizations
         #    ___/ b11 (w=.2)
         #  _/   \ b12 (w=.2)
         #   \____ b02 (w=.6)
@@ -90,33 +91,39 @@ class CollapseTestCase(unittest.TestCase):
             weights.append(weight)
         for i, src in enumerate(srcs):
             src.id = i
-        pmap = classical(srcs, self.srcfilter, self.gsims,
-                         dict(imtls=self.imtls, truncation_level2=2))['pmap']
+        res = classical(srcs, self.srcfilter, self.gsims,
+                        dict(imtls=self.imtls, truncation_level2=2))
+        pmap = res['pmap']
+        effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
         curves = [pmap[grp_id].array[0, :, 0] for grp_id in sorted(pmap)]
         mean = numpy.average(curves, axis=0, weights=weights)
-        return mean, srcs, weights
+        return mean, srcs, effrups, weights
 
+    # this tests also the collapsing of the ruptures happening in contexts.py
     def test_point_source_full_enum(self):
         # compute the mean curve
-        mean, srcs, weights = self.full_enum()
+        mean, srcs, effrups, weights = self.full_enum()
         assert weights == [.2, .2, .6]
         assert scaling_rates(srcs) == [1, 1, 1]
+        self.assertEqual(effrups, 22)  # less then 8 x 3 = 24
 
         # compute the partially collapsed curve
         self.bs1.collapsed = True
-        coll1, srcs, weights = self.full_enum()
+        coll1, srcs, effrups, weights = self.full_enum()
         assert weights == [.4, .6]  # two rlzs
         # self.plot(mean, coll1)
         assert scaling_rates(srcs) == [1.0, 0.5, 0.5, 1.0]
+        self.assertEqual(effrups, 28)  # less then 8 x 4 = 32
         numpy.testing.assert_allclose(mean, coll1, atol=.1)
 
         # compute the fully collapsed curve
         self.bs0.collapsed = True
         self.bs1.collapsed = True
-        coll2, srcs, weights = self.full_enum()
+        coll2, srcs, effrups, weights = self.full_enum()
         assert weights == [1]  # one rlz
         # self.plot(mean, coll2)
         assert scaling_rates(srcs) == [0.4, 0.6, 0.5, 0.5]
+        self.assertEqual(effrups, 28)  # less then 8 x 4 = 32
         numpy.testing.assert_allclose(mean, coll2, atol=.16)
 
     def plot(self, mean, coll):
