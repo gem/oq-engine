@@ -286,7 +286,7 @@ def apply_uncertainties(bset_values, src_group):
                 if ok and bset.collapsed:
                     for br in bset.branches:
                         newsrc = copy.deepcopy(src)
-                        newsrc.rate_scaling = br.weight
+                        newsrc.scaling_rate = br.weight
                         apply_uncertainty(
                             bset.uncertainty_type, newsrc, br.value)
                         srcs.append(newsrc)

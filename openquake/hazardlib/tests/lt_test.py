@@ -45,6 +45,10 @@ ps = nrml.get('''\
 </pointSource>''')
 
 
+def scaling_rates(srcs):
+    return [getattr(src, 'scaling_rate', 1.) for src in srcs]
+
+
 class CollapseTestCase(unittest.TestCase):
     def setUp(self):
         # setup a simple logic tree with 3 realizations
@@ -96,14 +100,14 @@ class CollapseTestCase(unittest.TestCase):
         # compute the mean curve
         mean, srcs, weights = self.full_enum()
         assert weights == [.2, .2, .6]
-        assert len(srcs) == 3
+        assert scaling_rates(srcs) == [1, 1, 1]
 
         # compute the partially collapsed curve
         self.bs1.collapsed = True
         coll1, srcs, weights = self.full_enum()
         assert weights == [.4, .6]  # two rlzs
         # self.plot(mean, coll1)
-        assert len(srcs) == 4
+        assert scaling_rates(srcs) == [1.0, 0.5, 0.5, 1.0]
         numpy.testing.assert_allclose(mean, coll1, atol=.1)
 
         # compute the fully collapsed curve
@@ -112,7 +116,7 @@ class CollapseTestCase(unittest.TestCase):
         coll2, srcs, weights = self.full_enum()
         assert weights == [1]  # one rlz
         # self.plot(mean, coll2)
-        assert len(srcs) == 4
+        assert scaling_rates(srcs) == [0.4, 0.6, 0.5, 0.5]
         numpy.testing.assert_allclose(mean, coll2, atol=.16)
 
     def plot(self, mean, coll):

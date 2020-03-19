@@ -300,8 +300,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         :returns:
             A list of two-item tuples -- magnitudes and occurrence rates.
         """
-        rate_scaling = getattr(self, 'rate_scaling', 1)
-        return [(mag, occ_rate * rate_scaling)
+        scaling_rate = getattr(self, 'scaling_rate', 1)
+        return [(mag, occ_rate * scaling_rate)
                 for (mag, occ_rate) in self.mfd.get_annual_occurrence_rates()
                 if (min_rate is None or occ_rate > min_rate) and
                 mag >= self.min_mag]
