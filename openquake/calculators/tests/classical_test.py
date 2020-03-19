@@ -442,7 +442,7 @@ hazard_uhs-std.csv
                 nruptures.append((par, len(rupdata)))
             self.assertEqual(
                 nruptures,
-                [('dip', 3202), ('grp_id', 3202), ('hypo_depth', 3202),
+                [('dip', 3202), ('grp_id_', 3202), ('hypo_depth', 3202),
                  ('lat_', 3202), ('lon_', 3202), ('mag', 3202),
                  ('occurrence_rate', 3202), ('probs_occur', 3202),
                  ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
