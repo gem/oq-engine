@@ -405,6 +405,7 @@ class PmapMaker(object):
         :returns: the total number of ruptures within the maximum distance
         """
         totrups = 0
+        rupdata = RupData(self.cmaker)
         for src in srcs:
             t0 = time.time()
             with self.cmaker.mon('iter_ruptures', measuremem=False):
@@ -412,7 +413,6 @@ class PmapMaker(object):
                     (mag, list(rups)) for mag, rups in itertools.groupby(
                         src.iter_ruptures(shift_hypo=self.shift_hypo),
                         key=operator.attrgetter('mag'))]
-            rupdata = RupData(self.cmaker)
             L, G = len(self.imtls.array), len(self.gsims)
             poemap = ProbabilityMap(L, G)
             numrups, numsites = 0, 0
@@ -445,6 +445,7 @@ class PmapMaker(object):
                     rup_data['grp_id'].extend([gid] * numrups)
                     for k, v in rupdata.data.items():
                         rup_data[k].extend(v)
+            rupdata.data.clear()
             calc_times[src.id] += numpy.array(
                 [numrups, numsites, time.time() - t0])
         return totrups
