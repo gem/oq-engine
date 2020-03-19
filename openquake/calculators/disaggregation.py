@@ -139,12 +139,16 @@ def agg_probs(*probs):
 
 
 def get_indices(dstore, concurrent_tasks):
-    grp_ids = dstore['rup/grp_id'][()]
-    blocksize = numpy.ceil(len(grp_ids) / concurrent_tasks)
+    acc = AccumDict(accum=[])  # grp_id -> indices
+    n = 0
+    for idx, grp_ids in enumerate(dstore['rup/grp_id_'][()]):
+        n += len(grp_ids)
+        for grp_id in grp_ids:
+            acc[grp_id].append(idx)
+    blocksize = numpy.ceil(n / concurrent_tasks)
     indices = []
     for grp_id in dstore['full_lt'].trt_by_grp:
-        idxs, = numpy.where(grp_ids == grp_id)
-        blocks = list(block_splitter(idxs, blocksize))
+        blocks = list(block_splitter(acc[grp_id], blocksize))
         indices.append(blocks)
     return indices
 

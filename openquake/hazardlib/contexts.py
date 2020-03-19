@@ -330,7 +330,6 @@ class ContextMaker(object):
                 msg = '%s (source id=%s)' % (str(err), srcs[0].source_id)
                 raise etype(msg).with_traceback(tb)
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
-        rdata['grp_id'] = numpy.uint16(rup_data['grp_id'])
         extra = dict(totrups=totrups)
         return pmap, rdata, calc_times, extra
 
@@ -425,9 +424,8 @@ class PmapMaker(object):
                         numrups += len(ctxs)
                 for rup, r_sites, dctx in ctxs:
                     if self.fewsites:  # store rupdata
-                        for grp_id in src.grp_ids:
-                            rupdata.add(rup, r_sites, dctx)
-                            rupdata.data['grp_id'].append(grp_id)
+                        rupdata.add(rup, r_sites, dctx)
+                        rupdata.data['grp_id_'].append(src.grp_ids)
                     sids, poes = self._sids_poes(rup, r_sites, dctx)
                     with self.pne_mon:
                         pnes = rup.get_probability_no_exceedance(poes)
