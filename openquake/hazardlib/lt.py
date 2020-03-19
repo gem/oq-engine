@@ -263,21 +263,6 @@ def _incMFD_absolute(utype, source, value):
                                       occurrence_rates=occur_rates))
 
 
-def collapse_uncertainty(bset, src):
-    """
-    :param bset: a :class:`BranchSet` instance
-    :param src: a source object
-    :returns: a list of modified sources, one per branch in the branchset
-    """
-    srcs = []
-    for br in bset.branches:
-        newsrc = copy.deepcopy(src)
-        newsrc.rate_scaling = br.weight
-        apply_uncertainty(bset.uncertainty_type, newsrc, br.value)
-        srcs.append(newsrc)
-    return srcs
-
-
 # ######################### apply_uncertainties ########################### #
 
 def apply_uncertainties(bset_values, src_group):
@@ -296,14 +281,21 @@ def apply_uncertainties(bset_values, src_group):
         oks = [bset.filter_source(source) for bset, value in bset_values]
         if sum(oks):  # source not filtered out
             src = copy.deepcopy(source)
+            srcs = []
             for (bset, value), ok in zip(bset_values, oks):
                 if ok and bset.collapsed:
-                    srcs = collapse_uncertainty(bset, src)
+                    for br in bset.branches:
+                        newsrc = copy.deepcopy(src)
+                        newsrc.scaling_rate = br.weight
+                        apply_uncertainty(
+                            bset.uncertainty_type, newsrc, br.value)
+                        srcs.append(newsrc)
                     sg.changes += len(srcs)
                 elif ok:
+                    if not srcs:  # only the first time
+                        srcs.append(src)
                     apply_uncertainty(bset.uncertainty_type, src, value)
                     sg.changes += 1
-                    srcs = [src]
         else:
             srcs = [copy.copy(source)]  # this is ultra-fast
         sg.sources.extend(srcs)
@@ -367,7 +359,7 @@ class Branch(object):
         if self.bset:
             return '%s%s' % (self.branch_id, self.bset)
         else:
-            return '%s' % self.branch_id
+            return self.branch_id
 
 
 class BranchSet(object):
@@ -434,11 +426,11 @@ class BranchSet(object):
             Stable Shallow Crust, etc.) the uncertainty applies to. This
             filter is required for all branchsets in GMPE logic tree.
     """
-    def __init__(self, uncertainty_type, filters=None):
+    def __init__(self, uncertainty_type, filters=None, collapsed=False):
         self.branches = []
         self.uncertainty_type = uncertainty_type
         self.filters = filters or {}
-        self.collapsed = False
+        self.collapsed = collapsed
 
     def sample(self, seed):
         """
@@ -467,9 +459,6 @@ class BranchSet(object):
             branches) and list of path's :class:`Branch` objects. Total sum
             of all paths' weights is 1.0
         """
-        if self.collapsed:
-            yield 1, self.branches[0]
-            return
         for path in self._enumerate_paths([]):
             flat_path = []
             weight = 1.0
@@ -485,7 +474,13 @@ class BranchSet(object):
         of recursive lists of two items, where second item is the branch object
         and first one is itself list of two items.
         """
-        for branch in self.branches:
+        if self.collapsed:
+            b0 = copy.copy(self.branches[0])
+            b0.weight = 1.0
+            branches = [b0]
+        else:
+            branches = self.branches
+        for branch in branches:
             path = [prefix_path, branch]
             if branch.bset is not None:
                 yield from branch.bset._enumerate_paths(path)
@@ -545,16 +540,20 @@ class BranchSet(object):
         :param ltpath:
             List of branch IDs
         :returns:
-            Pairs (bset, value)
+            A list of pairs [(bset, value), ...]
         """
-        bset = self
         pairs = []
+        bset = self
         while ltpath:
             brid, ltpath = ltpath[0], ltpath[1:]
             pairs.append((bset, bset[brid].value))
             bset = bset[brid].bset
             if bset is None:
-                return pairs
+                break
+        return pairs
+
+    def __str__(self):
+        return repr(self.branches)
 
     def __repr__(self):
-        return repr(self.branches)
+        return '<%s>' % ' '.join(br.branch_id for br in self.branches)

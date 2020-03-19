@@ -86,7 +86,7 @@ class AreaSource(ParametricSeismicSource):
         of points the polygon discretizes to.
         """
         polygon_mesh = self.polygon.discretize(self.area_discretization)
-        rate_scaling_factor = 1. / len(polygon_mesh)
+        scaling_rate_factor = 1. / len(polygon_mesh)
 
         # take the very first point of the polygon mesh
         [epicenter0] = polygon_mesh[0:1]
@@ -103,7 +103,7 @@ class AreaSource(ParametricSeismicSource):
                                            longitude=epicenter0.longitude,
                                            depth=hc_depth)
                     occurrence_rate = (mag_occ_rate * np_prob * hc_prob
-                                       * rate_scaling_factor)
+                                       * scaling_rate_factor)
                     surface, nhc = PointSource._get_rupture_surface(
                         self, mag, np, hypocenter)
                     if kwargs.get('shift_hypo'):

@@ -80,7 +80,7 @@ import collections.abc
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict, groupby
+from openquake.baselib.general import CallableDict, groupby, gettemp
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile
@@ -175,7 +175,8 @@ def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
 
-default = sourceconverter.SourceConverter()  # rupture_mesh_spacing=10
+default = sourceconverter.SourceConverter(area_source_discretization=10,
+                                          rupture_mesh_spacing=10)
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
@@ -383,6 +384,21 @@ def to_string(node):
     with io.BytesIO() as f:
         write([node], f)
         return f.getvalue().decode('utf-8')
+
+
+def get(xml, converter=default):
+    """
+    :param xml: the XML representation of a source
+    :param converter: a SourceConverter instance
+    :returns: a python source object
+    """
+    text = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+%s
+</nrml>''' % xml
+    [node] = read(gettemp(text))
+    return converter.convert_node(node)
 
 
 if __name__ == '__main__':

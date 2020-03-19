@@ -348,8 +348,6 @@ def _collapse(rups):
 
 
 def _collapse_ctxs(ctxs):
-    if len(ctxs) == 1:
-        return ctxs
     rup, sites, dctx = ctxs[0]
     rups = [ctx[0] for ctx in ctxs]
     [rup] = _collapse(rups)
@@ -372,7 +370,7 @@ class PmapMaker(object):
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
 
-    def _sids_poes(self, rup, r_sites, dctx, srcid):
+    def _sids_poes(self, rup, r_sites, dctx):
         # return sids and poes of shape (N, L, G)
         # NB: this must be fast since it is inside an inner loop
         with self.gmf_mon:
@@ -427,7 +425,7 @@ class PmapMaker(object):
             for rup, r_sites, dctx in ctxs:
                 if self.fewsites:  # store rupdata
                     rupdata.add(rup, r_sites, dctx)
-                sids, poes = self._sids_poes(rup, r_sites, dctx, src.id)
+                sids, poes = self._sids_poes(rup, r_sites, dctx)
                 with self.pne_mon:
                     pnes = rup.get_probability_no_exceedance(poes)
                     if self.rup_indep:
@@ -474,8 +472,8 @@ class PmapMaker(object):
                 # NB: the rx distance can be negative, hence the I16 (not U16)
             acc[tuple(tup)].append((rup, sctx, dctx))
         new_ctxs = []
-        for vals in acc.values():
-            new_ctxs.extend(_collapse_ctxs(vals))
+        for ctxs in acc.values():
+            new_ctxs.extend(_collapse_ctxs(ctxs) if len(ctxs) > 1 else ctxs)
         return new_ctxs
 
     def _gen_rups_sites(self, src, sites):
