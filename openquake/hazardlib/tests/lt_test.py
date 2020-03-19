@@ -70,6 +70,7 @@ class CollapseTestCase(unittest.TestCase):
         self.sg = sourceconverter.SourceGroup(ps.tectonic_region_type, [ps])
 
     def full_enum(self):
+        # compute the mean curve with full enumeration
         srcs = []
         weights = []
         grp_id = 0
@@ -99,19 +100,20 @@ class CollapseTestCase(unittest.TestCase):
 
         # compute the partially collapsed curve
         self.bs1.collapsed = True
-        coll, srcs, weights = self.full_enum()
+        coll1, srcs, weights = self.full_enum()
         assert weights == [.4, .6]  # two rlzs
         # self.plot(mean, coll)
-        assert len(srcs) == 3
-        numpy.testing.assert_allclose(mean, coll, rtol=.01)
+        assert len(srcs) == 4
+        numpy.testing.assert_allclose(mean, coll1, atol=.1)
 
         # compute the fully collapsed curve
         self.bs0.collapsed = True
-        coll, srcs, weights = self.full_enum()
+        self.bs1.collapsed = True
+        coll2, srcs, weights = self.full_enum()
         assert weights == [1]  # one rlz
         # self.plot(mean, coll)
-        assert len(srcs) == 2
-        #numpy.testing.assert_allclose(mean, coll)
+        assert len(srcs) == 4
+        numpy.testing.assert_allclose(mean, coll2, atol=.16)
 
     def plot(self, mean, coll):
         import matplotlib.pyplot as plt

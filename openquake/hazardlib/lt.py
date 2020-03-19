@@ -263,21 +263,6 @@ def _incMFD_absolute(utype, source, value):
                                       occurrence_rates=occur_rates))
 
 
-def collapse_uncertainty(bset, src):
-    """
-    :param bset: a :class:`BranchSet` instance
-    :param src: a source object
-    :returns: a list of modified sources, one per branch in the branchset
-    """
-    srcs = []
-    for br in bset.branches:
-        newsrc = copy.deepcopy(src)
-        newsrc.rate_scaling = br.weight
-        apply_uncertainty(bset.uncertainty_type, newsrc, br.value)
-        srcs.append(newsrc)
-    return srcs
-
-
 # ######################### apply_uncertainties ########################### #
 
 def apply_uncertainties(bset_values, src_group):
@@ -296,14 +281,21 @@ def apply_uncertainties(bset_values, src_group):
         oks = [bset.filter_source(source) for bset, value in bset_values]
         if sum(oks):  # source not filtered out
             src = copy.deepcopy(source)
+            srcs = []
             for (bset, value), ok in zip(bset_values, oks):
                 if ok and bset.collapsed:
-                    srcs = collapse_uncertainty(bset, src)
+                    for br in bset.branches:
+                        newsrc = copy.deepcopy(src)
+                        newsrc.rate_scaling = br.weight
+                        apply_uncertainty(
+                            bset.uncertainty_type, newsrc, br.value)
+                        srcs.append(newsrc)
                     sg.changes += len(srcs)
                 elif ok:
+                    if not srcs:  # only the first time
+                        srcs.append(src)
                     apply_uncertainty(bset.uncertainty_type, src, value)
                     sg.changes += 1
-                    srcs = [src]
         else:
             srcs = [copy.copy(source)]  # this is ultra-fast
         sg.sources.extend(srcs)
@@ -485,9 +477,10 @@ class BranchSet(object):
         if self.collapsed:
             b0 = copy.copy(self.branches[0])
             b0.weight = 1.0
-            yield [prefix_path, b0]
-            return
-        for branch in self.branches:
+            branches = [b0]
+        else:
+            branches = self.branches
+        for branch in branches:
             path = [prefix_path, branch]
             if branch.bset is not None:
                 yield from branch.bset._enumerate_paths(path)
