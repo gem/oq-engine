@@ -92,9 +92,9 @@ class RupData(object):
     """
     A class to collect rupture information into an array
     """
-    def __init__(self, cmaker):
+    def __init__(self, cmaker, data):
         self.cmaker = cmaker
-        self.data = AccumDict(accum=[])
+        self.data = data
 
     def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
         """
@@ -405,7 +405,7 @@ class PmapMaker(object):
         :returns: the total number of ruptures within the maximum distance
         """
         totrups = 0
-        rupdata = RupData(self.cmaker)
+        rupdata = RupData(self.cmaker, rup_data)
         for src in srcs:
             t0 = time.time()
             with self.cmaker.mon('iter_ruptures', measuremem=False):
@@ -425,7 +425,9 @@ class PmapMaker(object):
                         numrups += len(ctxs)
                 for rup, r_sites, dctx in ctxs:
                     if self.fewsites:  # store rupdata
-                        rupdata.add(rup, r_sites, dctx)
+                        for grp_id in src.grp_ids:
+                            rupdata.add(rup, r_sites, dctx)
+                            rupdata.data['grp_id'].append(grp_id)
                     sids, poes = self._sids_poes(rup, r_sites, dctx)
                     with self.pne_mon:
                         pnes = rup.get_probability_no_exceedance(poes)
@@ -440,12 +442,6 @@ class PmapMaker(object):
                                     1.-pne) * rup.weight
                     numsites += len(sids)
             self._update(pmap, poemap, src)
-            if len(rupdata.data):
-                for gid in src.grp_ids:
-                    rup_data['grp_id'].extend([gid] * numrups)
-                    for k, v in rupdata.data.items():
-                        rup_data[k].extend(v)
-            rupdata.data.clear()
             calc_times[src.id] += numpy.array(
                 [numrups, numsites, time.time() - t0])
         return totrups
