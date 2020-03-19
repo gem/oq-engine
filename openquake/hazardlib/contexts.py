@@ -325,10 +325,6 @@ class ContextMaker(object):
                 totrups += pmaker.make(srcs, sites, pmap, rup_data, calc_times)
             except StopIteration:
                 break
-            except Exception as err:
-                etype, err, tb = sys.exc_info()
-                msg = '%s (source id=%s)' % (str(err), srcs[0].source_id)
-                raise etype(msg).with_traceback(tb)
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
         extra = dict(totrups=totrups)
         return pmap, rdata, calc_times, extra
