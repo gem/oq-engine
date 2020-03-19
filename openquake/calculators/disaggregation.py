@@ -92,22 +92,19 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
         iml4, dict(imts=[from_string(imt) for imt in imtls], rlzs=rlzs))
 
 
-def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges,
-                   monitor):
+def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param rupdata
-        a dictionary of data corresponding to a slice of ruptures
-    :param sitecol:
-        a SiteCollection instance with the disaggregation sites
-    :param oq:
-        a :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param dstore
+        a DataStore instance
+    :param idxs:
+        an array of indices to ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param iml4:
         an ArrayWrapper of shape (N, M, P, Z)
-    :param dict trti:
+    :param trti:
         tectonic region type index
     :param bin_egdes:
         a quintet (mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
