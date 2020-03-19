@@ -92,9 +92,9 @@ class RupData(object):
     """
     A class to collect rupture information into an array
     """
-    def __init__(self, cmaker, data):
+    def __init__(self, cmaker, data=None):
         self.cmaker = cmaker
-        self.data = data
+        self.data = data or AccumDict(accum=[])
 
     def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
         """
