@@ -25,7 +25,7 @@ from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree, distance
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
@@ -295,6 +295,16 @@ class SourceFilter(object):
             return
         for src in self.filter(sources):
             yield src, self.sitecol.filtered(src.indices)
+
+    def get_sources_sites(self, sources):
+        """
+        :yields: pairs (srcs, sites) where the srcs affect the same sites
+        """
+        acc = general.AccumDict(accum=[])  # indices -> srcs
+        for src in self.filter(sources):
+            acc[tuple(src.indices)].append(src)
+        for indices, srcs in acc.items():
+            yield srcs, self.sitecol.filtered(indices)
 
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):
