@@ -109,7 +109,8 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         if srcfilter.get_close_sites(src) is None:
             continue
         dt = time.time() - t0
-        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
+        calc_times[src.source_id] += F32(
+            [src.num_ruptures, src.nsites, dt])
         for grp_id in src.grp_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
@@ -142,18 +143,18 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
-            d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
+            d = dic['calc_times']  # srcid, code -> eff_rups, eff_sites, dt
             self.calc_times += d
-            srcids = []
+            srcids = set()
             eff_rups = 0
             eff_sites = 0
             for srcid, rec in d.items():
-                srcids.append(srcid)
+                srcids.add(srcid)
                 eff_rups += rec[0]
                 if rec[0]:
                     eff_sites += rec[1] / rec[0]
             self.by_task[extra['task_no']] = (
-                eff_rups, eff_sites, U32(srcids))
+                eff_rups, eff_sites, list(srcids))
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
@@ -260,13 +261,13 @@ class ClassicalCalculator(base.HazardCalculator):
                 es = self.datastore.create_dset('by_task/eff_sites',
                                                 U32, num_tasks)
                 si = self.datastore.create_dset('by_task/srcids',
-                                                hdf5.vuint32, num_tasks,
+                                                hdf5.vstr, num_tasks,
                                                 fillvalue=None)
                 for task_no, rec in self.by_task.items():
                     effrups, effsites, srcids = rec
                     er[task_no] = effrups
                     es[task_no] = effsites
-                    si[task_no] = srcids
+                    #si[task_no] = srcids
                 self.by_task.clear()
         self.numrups = sum(arr[0] for arr in self.calc_times.values())
         numsites = sum(arr[1] for arr in self.calc_times.values())

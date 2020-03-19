@@ -437,7 +437,7 @@ class PmapMaker(object):
                                     1.-pne) * rup.weight
                     numsites += len(sids)
             self._update(pmap, poemap, src)
-            calc_times[src.id] += numpy.array(
+            calc_times[src.source_id] += numpy.array(
                 [numrups, numsites, time.time() - t0])
         return totrups
 

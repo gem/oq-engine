@@ -59,20 +59,6 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
 
-source_info_dt = numpy.dtype([
-    ('sm_id', numpy.uint16),           # 0
-    ('grp_ids', hdf5.vuint16),         # 1
-    ('source_id', hdf5.vstr),          # 2
-    ('code', (numpy.string_, 1)),      # 3
-    ('num_ruptures', numpy.uint32),    # 4
-    ('calc_time', numpy.float32),      # 5
-    ('num_sites', numpy.float32),      # 6
-    ('eff_ruptures', numpy.float32),   # 7
-    ('checksum', numpy.uint32),        # 8
-    ('serial', numpy.uint32),          # 9
-    ('wkt', hdf5.vstr),                # 10
-])
-
 
 class DuplicatedPoint(Exception):
     """
@@ -639,17 +625,16 @@ def get_composite_source_model(oqparam, h5=None):
     csm = get_csm(oqparam, source_model_lt, gsim_lt, h5)
     if oqparam.is_event_based():
         csm.init_serials(oqparam.ses_seed)
-    if h5:
-        info = hdf5.create(h5, 'source_info', source_info_dt)
-    data = []
+    data = {}  # src_id, code -> row
     mags = set()
     n = len(csm.full_lt.sm_rlzs)
     for sg in csm.src_groups:
         for src in sg:
             eri = src.grp_ids[0] % n
-            data.append((eri, U16(src.grp_ids), src.source_id, src.code,
-                         src.num_ruptures, 0, 0, 0, src.checksum,
-                         src.serial, src._wkt))
+            row = [eri, U16(src.grp_ids), src.source_id, src.code,
+                   src.num_ruptures, 0, 0, 0, src.checksum,
+                   src.serial, src._wkt]
+            data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
                 srcmags = ['%.2f' % mag for mag in src.mags]
             elif hasattr(src, 'data'):  # nonparametric
@@ -659,9 +644,9 @@ def get_composite_source_model(oqparam, h5=None):
                            src.get_annual_occurrence_rates()]
             mags.update(srcmags)
     if h5:
-        hdf5.extend(info, numpy.array(data, source_info_dt))
         h5['source_mags'] = numpy.array(sorted(mags))
     csm.gsim_lt.check_imts(oqparam.imtls)
+    csm.source_info = data
     return csm
 
 

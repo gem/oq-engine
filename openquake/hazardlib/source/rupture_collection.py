@@ -28,6 +28,7 @@ class _RuptureCollectionSource(ParametricSeismicSource):
     """
     A parametric source obtained from the splitting of a ComplexFaultSource
     """
+    code = b'C'
     # the mosaic test for Canada is sensitive to such _slots_
     _slots_ = ['source_id', 'name', 'tectonic_region_type', 'num_ruptures',
                'min_mag', 'mfd']
@@ -65,8 +66,8 @@ def split(src, chunksize=MINWEIGHT):
     for i, block in enumerate(block_splitter(src.iter_ruptures(), chunksize,
                                              key=operator.attrgetter('mag'))):
         rup = block[0]
-        source_id = '%s:%d' % (src.source_id, i)
         amfd = mfd.ArbitraryMFD([rup.mag], [rup.mag_occ_rate])
         rcs = _RuptureCollectionSource(
-            source_id, src.name, src.tectonic_region_type, amfd, block)
+            src.source_id, '%s:%d' % (src.name, i), src.tectonic_region_type,
+            amfd, block)
         yield rcs

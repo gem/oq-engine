@@ -200,7 +200,7 @@ def split_sources(srcs):
         has_scaling_rate = hasattr(src, 'scaling_rate')
         if len(splits) > 1:
             for i, split in enumerate(splits):
-                split.source_id = '%s:%s' % (src.source_id, i)
+                split.source_id = src.source_id
                 split.grp_id = src.grp_id
                 split.id = src.id
                 if has_samples:

@@ -54,6 +54,22 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
+source_info_dt = numpy.dtype([
+    ('sm_id', numpy.uint16),           # 0
+    ('grp_ids', hdf5.vuint16),         # 1
+    ('source_id', hdf5.vstr),          # 2
+    ('code', (numpy.string_, 1)),      # 3
+    ('num_ruptures', numpy.uint32),    # 4
+    ('calc_time', numpy.float32),      # 5
+    ('num_sites', numpy.float32),      # 6
+    ('eff_ruptures', numpy.float32),   # 7
+    ('checksum', numpy.uint32),        # 8
+    ('serial', numpy.uint32),          # 9
+    ('wkt', hdf5.vstr),                # 10
+])
+
+EFF_RUPTURES, CALC_TIME, NUM_SITES = 4, 5, 6
+
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
 
@@ -836,16 +852,13 @@ class HazardCalculator(BaseCalculator):
         """
         Save (weight, num_sites, calc_time) inside the source_info dataset
         """
-        if calc_times:
-            source_info = self.datastore['source_info']
-            arr = numpy.zeros((len(source_info), 3), F32)
-            # NB: the zip magic is needed for performance,
-            # looping would be too slow
-            ids, vals = zip(*calc_times.items())
-            arr[numpy.array(ids)] = vals
-            source_info['eff_ruptures'] += arr[:, 0]
-            source_info['num_sites'] += arr[:, 1]
-            source_info['calc_time'] += arr[:, 2]
+        for src_id, arr in calc_times.items():
+            row = self.csm.source_info[src_id]
+            row[EFF_RUPTURES] += arr[0]
+            row[NUM_SITES] += arr[1]
+            row[CALC_TIME] += arr[2]
+        recs = [tuple(row) for row in self.csm.source_info.values()]
+        self.datastore['source_info'] = numpy.array(recs, source_info_dt)
 
     def post_process(self):
         """For compatibility with the engine"""
