@@ -102,7 +102,7 @@ class CollapseTestCase(unittest.TestCase):
         self.bs1.collapsed = True
         coll1, srcs, weights = self.full_enum()
         assert weights == [.4, .6]  # two rlzs
-        # self.plot(mean, coll)
+        # self.plot(mean, coll1)
         assert len(srcs) == 4
         numpy.testing.assert_allclose(mean, coll1, atol=.1)
 
@@ -111,7 +111,7 @@ class CollapseTestCase(unittest.TestCase):
         self.bs1.collapsed = True
         coll2, srcs, weights = self.full_enum()
         assert weights == [1]  # one rlz
-        # self.plot(mean, coll)
+        # self.plot(mean, coll2)
         assert len(srcs) == 4
         numpy.testing.assert_allclose(mean, coll2, atol=.16)
 
