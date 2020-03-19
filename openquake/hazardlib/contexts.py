@@ -94,7 +94,7 @@ class RupData(object):
     """
     def __init__(self, cmaker, data=None):
         self.cmaker = cmaker
-        self.data = data or AccumDict(accum=[])
+        self.data = AccumDict(accum=[]) if data is None else data
 
     def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
         """
