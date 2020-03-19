@@ -367,7 +367,7 @@ class Branch(object):
         if self.bset:
             return '%s%s' % (self.branch_id, self.bset)
         else:
-            return '%s' % self.branch_id
+            return self.branch_id
 
 
 class BranchSet(object):
@@ -467,9 +467,6 @@ class BranchSet(object):
             branches) and list of path's :class:`Branch` objects. Total sum
             of all paths' weights is 1.0
         """
-        if self.collapsed:
-            yield 1, self.branches[0]
-            return
         for path in self._enumerate_paths([]):
             flat_path = []
             weight = 1.0
@@ -485,6 +482,11 @@ class BranchSet(object):
         of recursive lists of two items, where second item is the branch object
         and first one is itself list of two items.
         """
+        if self.collapsed:
+            b0 = copy.copy(self.branches[0])
+            b0.weight = 1.0
+            yield [prefix_path, b0]
+            return
         for branch in self.branches:
             path = [prefix_path, branch]
             if branch.bset is not None:
@@ -545,16 +547,20 @@ class BranchSet(object):
         :param ltpath:
             List of branch IDs
         :returns:
-            Pairs (bset, value)
+            A list of pairs [(bset, value), ...]
         """
-        bset = self
         pairs = []
+        bset = self
         while ltpath:
             brid, ltpath = ltpath[0], ltpath[1:]
             pairs.append((bset, bset[brid].value))
             bset = bset[brid].bset
             if bset is None:
-                return pairs
+                break
+        return pairs
+
+    def __str__(self):
+        return repr(self.branches)
 
     def __repr__(self):
-        return repr(self.branches)
+        return '<%s>' % ' '.join(br.branch_id for br in self.branches)

@@ -386,16 +386,17 @@ def to_string(node):
         return f.getvalue().decode('utf-8')
 
 
-def object(xml, converter=default):
+def get(xml, converter=default):
     """
     :param xml: the XML representation of a source
     :param converter: a SourceConverter instance
     :returns: a python source object
     """
     text = '''<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
 %s
-</nrml>''' % xml.replace('gml:', '')
+</nrml>''' % xml
     [node] = read(gettemp(text))
     return converter.convert_node(node)
 

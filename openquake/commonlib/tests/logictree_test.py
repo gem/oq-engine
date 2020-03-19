@@ -787,8 +787,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': smlt, 'sm1.xml': sm, 'sm2.xml': sm}, 'basepath')
         self.assertEqual(
-            str(lt),
-            '<_TestableSourceModelLogicTree[b1[b3], b2[b4]]>')
+            str(lt), '<_TestableSourceModelLogicTree<b1 b2>>')
 
     def test_gmpe_uncertainty(self):
         lt = _make_nrml("""\
@@ -1243,8 +1242,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sb1, sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.bset is sb3.bset)
         self.assertEqual(
-            str(lt),
-            '<_TestableSourceModelLogicTree[sb1[b2], sb2[b3], sb3[b2]]>')
+            str(lt), '<_TestableSourceModelLogicTree<sb1 sb2 sb3>>')
 
     def test_comments(self):
         source_model_logic_tree = _make_nrml("""\
