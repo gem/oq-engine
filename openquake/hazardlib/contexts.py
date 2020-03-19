@@ -402,6 +402,7 @@ class PmapMaker(object):
         totrups = 0
         rupdata = RupData(self.cmaker, rup_data)
         for src in srcs:
+            grp_ids = numpy.array(src.grp_ids)
             t0 = time.time()
             with self.cmaker.mon('iter_ruptures', measuremem=False):
                 self.mag_rups = [
@@ -421,7 +422,7 @@ class PmapMaker(object):
                 for rup, r_sites, dctx in ctxs:
                     if self.fewsites:  # store rupdata
                         rupdata.add(rup, r_sites, dctx)
-                        rupdata.data['grp_id_'].append(src.grp_ids)
+                        rupdata.data['grp_id_'].append(grp_ids)
                     sids, poes = self._sids_poes(rup, r_sites, dctx)
                     with self.pne_mon:
                         pnes = rup.get_probability_no_exceedance(poes)
