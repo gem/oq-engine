@@ -627,11 +627,9 @@ def get_composite_source_model(oqparam, h5=None):
         csm.init_serials(oqparam.ses_seed)
     data = {}  # src_id, code -> row
     mags = set()
-    n = len(csm.full_lt.sm_rlzs)
     for sg in csm.src_groups:
         for src in sg:
-            eri = src.grp_ids[0] % n
-            row = [eri, U16(src.grp_ids), src.source_id, src.code,
+            row = [U16(src.grp_ids), src.source_id, src.code,
                    src.num_ruptures, 0, 0, 0, src.checksum,
                    src.serial, src._wkt]
             data[src.source_id] = row

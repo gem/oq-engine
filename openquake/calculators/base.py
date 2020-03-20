@@ -56,20 +56,19 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
 source_info_dt = numpy.dtype([
-    ('sm_id', numpy.uint16),           # 0
-    ('grp_ids', hdf5.vuint16),         # 1
-    ('source_id', hdf5.vstr),          # 2
-    ('code', (numpy.string_, 1)),      # 3
-    ('num_ruptures', numpy.uint32),    # 4
-    ('calc_time', numpy.float32),      # 5
-    ('num_sites', numpy.uint32),       # 6
-    ('eff_ruptures', numpy.uint32),    # 7
-    ('checksum', numpy.uint32),        # 8
-    ('serial', numpy.uint32),          # 9
-    ('wkt', hdf5.vstr),                # 10
+    ('grp_ids', hdf5.vuint16),         # 0
+    ('source_id', hdf5.vstr),          # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('num_ruptures', numpy.uint32),    # 3
+    ('calc_time', numpy.float32),      # 4
+    ('num_sites', numpy.uint32),       # 5
+    ('eff_ruptures', numpy.uint32),    # 6
+    ('checksum', numpy.uint32),        # 7
+    ('serial', numpy.uint32),          # 8
+    ('wkt', hdf5.vstr),                # 9
 ])
 
-NUM_RUPTURES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 4, 5, 6, 7
+NUM_RUPTURES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
