@@ -65,7 +65,6 @@ source_info_dt = numpy.dtype([
     ('eff_ruptures', numpy.uint32),    # 6
     ('checksum', numpy.uint32),        # 7
     ('serial', numpy.uint32),          # 8
-    ('wkt', hdf5.vstr),                # 9
 ])
 
 NUM_RUPTURES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
@@ -858,8 +857,11 @@ class HazardCalculator(BaseCalculator):
             row[EFF_RUPTURES] += arr[0]
             row[NUM_SITES] += arr[1]
             row[CALC_TIME] += arr[2]
-        recs = [tuple(row) for row in self.csm.source_info.values()]
+        rows = self.csm.source_info.values()
+        recs = [tuple(row[:-1]) for row in rows]
         self.datastore['source_info'] = numpy.array(recs, source_info_dt)
+        self.datastore['source_wkt'] = numpy.array([row[-1] for row in rows],
+                                                   hdf5.vstr)
 
     def post_process(self):
         """For compatibility with the engine"""
