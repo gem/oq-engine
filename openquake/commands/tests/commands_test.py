@@ -552,7 +552,7 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         calc_id = calc.datastore.calc_id
         with mock.patch('logging.info') as info:
             reduce_sm(calc_id)
-        self.assertIn('Removed', info.call_args[0][0])
+        self.assertIn('there are duplicated source IDs', info.call_args[0][0])
         shutil.rmtree(temp_dir)
 
 

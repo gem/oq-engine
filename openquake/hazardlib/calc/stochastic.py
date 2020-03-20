@@ -200,7 +200,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_counter[src.id][rup.idx] += 1
                 # Store info
                 dt = time.time() - t0
-                calc_times[src.id] += numpy.array(
+                calc_times[src.source_id] += numpy.array(
                     [len(rup_data[src.id]), len(_sites), dt])
         elif param['src_interdep'] == 'mutex':
             raise NotImplementedError('src_interdep == mutex')
@@ -270,7 +270,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                 n_sites = len(_sites)
             except (TypeError, ValueError):  # for None or a closed dataset
                 n_sites = 0
-            calc_times[src.id] += numpy.array([nr, n_sites, dt])
+            calc_times[src.source_id] += numpy.array([nr, n_sites, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(rup_array=rup_array, calc_times=calc_times,
                         eff_ruptures={trt: eff_ruptures})

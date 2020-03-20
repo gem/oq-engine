@@ -263,9 +263,9 @@ class PolygonPlotter():
 
 def make_figure_sources(extractors, what):
     """
-    $ oq plot sources?sm_id=0&limit=100
-    $ oq plot sources?sm_id=0source_id=1&source_id=2
-    $ oq plot sources?sm_id=0code=A&code=N
+    $ oq plot sources?limit=100
+    $ oq plot sources?source_id=1&source_id=2
+    $ oq plot sources?code=A&code=N
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -296,7 +296,7 @@ def make_figure_sources(extractors, what):
         pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
         tot += 1
     pp.set_lim(sitecol)
-    ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
+    ax.set_title('%d/%d sources' % (n, tot))
     return plt
 
 

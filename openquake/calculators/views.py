@@ -559,10 +559,9 @@ def view_task_hazard(token, dstore):
     eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
     eff_sites = dstore['by_task/eff_sites'][taskno]
     srcids = dstore['by_task/srcids'][taskno]
-    srcs = dstore['source_info']['source_id'][srcids]
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
-                             ' '.join(srcs)))
+                             ' '.join(srcids)))
     return res
 
 

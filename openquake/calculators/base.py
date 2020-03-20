@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import abc
 import pdb
@@ -53,6 +54,20 @@ U32 = numpy.uint32
 F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
+
+source_info_dt = numpy.dtype([
+    ('source_id', hdf5.vstr),          # 0
+    ('grp_ids', hdf5.vuint16),         # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('num_ruptures', numpy.uint32),    # 3
+    ('calc_time', numpy.float32),      # 4
+    ('num_sites', numpy.uint32),       # 5
+    ('eff_ruptures', numpy.uint32),    # 6
+    ('checksum', numpy.uint32),        # 7
+    ('serial', numpy.uint32),          # 8
+])
+
+NUM_RUPTURES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
@@ -836,16 +851,17 @@ class HazardCalculator(BaseCalculator):
         """
         Save (weight, num_sites, calc_time) inside the source_info dataset
         """
-        if calc_times:
-            source_info = self.datastore['source_info']
-            arr = numpy.zeros((len(source_info), 3), F32)
-            # NB: the zip magic is needed for performance,
-            # looping would be too slow
-            ids, vals = zip(*calc_times.items())
-            arr[numpy.array(ids)] = vals
-            source_info['eff_ruptures'] += arr[:, 0]
-            source_info['num_sites'] += arr[:, 1]
-            source_info['calc_time'] += arr[:, 2]
+        for src_id, arr in calc_times.items():
+            src_id = re.sub(r':\d+$', '', src_id)
+            row = self.csm.source_info[src_id]
+            row[EFF_RUPTURES] += arr[0]
+            row[NUM_SITES] += arr[1]
+            row[CALC_TIME] += arr[2]
+        rows = self.csm.source_info.values()
+        recs = [tuple(row[:-1]) for row in rows]
+        self.datastore['source_info'] = numpy.array(recs, source_info_dt)
+        self.datastore['source_wkt'] = numpy.array([row[-1] for row in rows],
+                                                   hdf5.vstr)
 
     def post_process(self):
         """For compatibility with the engine"""
