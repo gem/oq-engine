@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check for missing TRTs in the GSIM logic tree file
   * Reduced the storage required for site specific calculations in the case
     of complex logic trees
   * Restored the computation of the mean disaggregation when multiple
@@ -36,7 +37,7 @@
   * Avoided submitting too many tasks in the disaggregation calculator
   * Added a parameter `discard_trts` for manual reduction of GSIM logic tree
   * Fixed a bug in case of duplicated nodal planes affecting the Italy model
-  * Removed dynamic reduction of the gsim logic tree (i.e. now the
+  * Removed dynamic reduction of the GSIM logic tree (i.e. now the
     logic tree is known upfront, before calculating the PoES)
 
   [Paolo Tormene]

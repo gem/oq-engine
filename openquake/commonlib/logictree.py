@@ -763,8 +763,15 @@ class GsimLogicTree(object):
         self.bs_id_by_trt = {}
         self.branches = self._build_trts_branches(trts)  # sorted by trt
         if trts != ['*']:
-            self.values = {trt: self.values[trt] for trt in trts}
-        if tectonic_region_types and not self.branches:
+            # reduce self.values to the listed TRTs
+            values = {}
+            for trt in trts:
+                values[trt] = self.values[trt]
+                if not values[trt]:
+                    raise InvalidLogicTree('%s is missing the TRT %r' %
+                                           (fname, trt))
+            self.values = values
+        if trts and not self.branches:
             raise InvalidLogicTree(
                 '%s is missing in %s' % (set(tectonic_region_types), fname))
 
