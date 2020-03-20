@@ -200,7 +200,7 @@ def split_sources(srcs):
         has_scaling_rate = hasattr(src, 'scaling_rate')
         if len(splits) > 1:
             for i, split in enumerate(splits):
-                split.source_id = src.source_id
+                split.source_id = '%s:%s' % (src.source_id, i)
                 split.grp_id = src.grp_id
                 split.id = src.id
                 if has_samples:
@@ -298,13 +298,15 @@ class SourceFilter(object):
 
     def get_sources_sites(self, sources):
         """
-        :yields: pairs (srcs, sites) where the srcs affect the same sites
+        :yields:
+            pairs (srcs, sites) where the sources have the same source_id
+            and affect the same sites
         """
         acc = general.AccumDict(accum=[])  # indices -> srcs
         for src in self.filter(sources):
-            acc[tuple(src.indices)].append(src)
-        for indices, srcs in acc.items():
-            yield srcs, self.sitecol.filtered(indices)
+            acc[(src.source_id,) + tuple(src.indices)].append(src)
+        for tup, srcs in acc.items():
+            yield srcs, self.sitecol.filtered(tup[1:])
 
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):

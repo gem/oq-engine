@@ -18,7 +18,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 from openquake.baselib import sap, datastore, performance, general
-import numpy as np
 from openquake.commonlib import readinput
 
 
@@ -31,10 +30,11 @@ def reduce_sm(calc_id):
     with datastore.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'][()]
-    num_ids = len(np.unique(info['source_id']))
+    num_ids = len(info['source_id'])
     bad_ids = set(info[info['eff_ruptures'] == 0]['source_id'])
     if len(bad_ids) == 0:
-        logging.warning('All sources are relevant, nothing to remove')
+        logging.info('Nothing to remove, unless there are '
+                     'duplicated source IDs preventing the removal')
         return
     logging.info('Found %d far away sources', len(bad_ids))
     ok = info['eff_ruptures'] > 0
@@ -45,13 +45,6 @@ def reduce_sm(calc_id):
         good, total = readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], ok_ids)
     logging.info('Removed %d/%d sources', total - good, num_ids)
-    srcs, cnts = np.unique(info[['source_id', 'code']], return_counts=True)
-    dupl = dict(srcs[cnts > 1])  # source_id -> code
-    bad_dupl = bad_ids & set(dupl)
-    for source_id in bad_dupl:
-        recs = info[info['source_id'] == source_id]
-        if recs['num_ruptures'].sum():
-            logging.info('Could not remove %r: is duplicated', source_id)
     print(mon)
 
 

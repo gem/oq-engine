@@ -75,7 +75,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
             yield self
             return
         for i, rup_pmf in enumerate(self.data):
-            src = self.__class__(self.source_id, '%s:%d' % (self.name, i),
+            source_id = '%s:%d' % (self.source_id, i)
+            src = self.__class__(source_id, self.name,
                                  self.tectonic_region_type, [rup_pmf])
             src.num_ruptures = 1
             src.grp_id = self.grp_id

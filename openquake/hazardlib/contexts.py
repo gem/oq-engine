@@ -392,18 +392,18 @@ class PmapMaker(object):
 
     def make(self, srcs, sites, pmap, rup_data, calc_times):
         """
-        :param src: a list of hazardlib sources
+        :param src: a list of hazardlib sources with the same source_id
         :param sites: the sites affected by it
         :param pmap: a ProbabilityMap to populate
         :param rup_data: a dictionary to populate
         :param calc_times: a dictionary src.id -> array
         :returns: the total number of ruptures within the maximum distance
         """
-        totrups = 0
+        t0 = time.time()
+        numrups, numsites, totrups = 0, 0, 0
         rupdata = RupData(self.cmaker, rup_data)
         for src in srcs:
             grp_ids = numpy.array(src.grp_ids)
-            t0 = time.time()
             with self.cmaker.mon('iter_ruptures', measuremem=False):
                 self.mag_rups = [
                     (mag, list(rups)) for mag, rups in itertools.groupby(
@@ -411,7 +411,6 @@ class PmapMaker(object):
                         key=operator.attrgetter('mag'))]
             L, G = len(self.imtls.array), len(self.gsims)
             poemap = ProbabilityMap(L, G)
-            numrups, numsites = 0, 0
             for rups, sites in self._gen_rups_sites(src, sites):
                 with self.ctx_mon:
                     ctxs = self.cmaker.make_ctxs(rups, sites)
@@ -437,8 +436,8 @@ class PmapMaker(object):
                                     1.-pne) * rup.weight
                     numsites += len(sids)
             self._update(pmap, poemap, src)
-            calc_times[src.source_id] += numpy.array(
-                [numrups, numsites, time.time() - t0])
+        calc_times[src.source_id] += numpy.array(
+            [numrups, numsites, time.time() - t0])
         return totrups
 
     def collapse(self, ctxs, precision=1E-3):

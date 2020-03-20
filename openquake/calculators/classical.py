@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import time
 import logging
 import operator
@@ -143,18 +144,18 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
-            d = dic['calc_times']  # srcid, code -> eff_rups, eff_sites, dt
+            d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
             srcids = set()
             eff_rups = 0
             eff_sites = 0
             for srcid, rec in d.items():
-                srcids.add(srcid)
+                srcids.add(re.sub(r':\d+$', '', srcid))
                 eff_rups += rec[0]
                 if rec[0]:
                     eff_sites += rec[1] / rec[0]
             self.by_task[extra['task_no']] = (
-                eff_rups, eff_sites, list(srcids))
+                eff_rups, eff_sites, sorted(srcids))
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
@@ -267,7 +268,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     effrups, effsites, srcids = rec
                     er[task_no] = effrups
                     es[task_no] = effsites
-                    #si[task_no] = srcids
+                    si[task_no] = ' '.join(srcids)
                 self.by_task.clear()
         self.numrups = sum(arr[0] for arr in self.calc_times.values())
         numsites = sum(arr[1] for arr in self.calc_times.values())

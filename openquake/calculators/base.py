@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import abc
 import pdb
@@ -61,14 +62,14 @@ source_info_dt = numpy.dtype([
     ('code', (numpy.string_, 1)),      # 3
     ('num_ruptures', numpy.uint32),    # 4
     ('calc_time', numpy.float32),      # 5
-    ('num_sites', numpy.float32),      # 6
-    ('eff_ruptures', numpy.float32),   # 7
+    ('num_sites', numpy.uint32),       # 6
+    ('eff_ruptures', numpy.uint32),    # 7
     ('checksum', numpy.uint32),        # 8
     ('serial', numpy.uint32),          # 9
     ('wkt', hdf5.vstr),                # 10
 ])
 
-EFF_RUPTURES, CALC_TIME, NUM_SITES = 4, 5, 6
+NUM_RUPTURES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 4, 5, 6, 7
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
@@ -853,6 +854,7 @@ class HazardCalculator(BaseCalculator):
         Save (weight, num_sites, calc_time) inside the source_info dataset
         """
         for src_id, arr in calc_times.items():
+            src_id = re.sub(r':\d+$', '', src_id)
             row = self.csm.source_info[src_id]
             row[EFF_RUPTURES] += arr[0]
             row[NUM_SITES] += arr[1]
