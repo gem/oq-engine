@@ -456,7 +456,8 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         oq = readinput.get_oqparam('job.ini', case_16)
         with self.assertRaises(logictree.InvalidLogicTree) as c:
             readinput.get_gsim_lt(oq, ['active Shallow Crust'])
-        self.assertIn("{'active Shallow Crust'} is missing", str(c.exception))
+        self.assertIn("is missing the TRT 'active Shallow Crust'",
+                      str(c.exception))
 
     def test_wrong_trts_in_reqv(self):
         # invalid TRT in job.ini [reqv]

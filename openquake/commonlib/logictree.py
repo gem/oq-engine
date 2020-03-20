@@ -768,8 +768,8 @@ class GsimLogicTree(object):
             for trt in trts:
                 values[trt] = self.values[trt]
                 if not values[trt]:
-                    raise InvalidFile('%s is missing the TRT %r' %
-                                      (self.filename, trt))
+                    raise InvalidLogicTree('%s is missing the TRT %r' %
+                                           (fname, trt))
             self.values = values
         if trts and not self.branches:
             raise InvalidLogicTree(
