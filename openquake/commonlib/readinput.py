@@ -629,9 +629,8 @@ def get_composite_source_model(oqparam, h5=None):
     mags = set()
     for sg in csm.src_groups:
         for src in sg:
-            row = [U16(src.grp_ids), src.source_id, src.code,
-                   src.num_ruptures, 0, 0, 0, src.checksum,
-                   src.serial, src._wkt]
+            row = [src.source_id, U16(src.grp_ids), src.code, src.num_ruptures,
+                   0, 0, 0, src.checksum, src.serial, src._wkt]
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
                 srcmags = ['%.2f' % mag for mag in src.mags]

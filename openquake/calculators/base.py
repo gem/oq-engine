@@ -56,8 +56,8 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
 source_info_dt = numpy.dtype([
-    ('grp_ids', hdf5.vuint16),         # 0
-    ('source_id', hdf5.vstr),          # 1
+    ('source_id', hdf5.vstr),          # 0
+    ('grp_ids', hdf5.vuint16),         # 1
     ('code', (numpy.string_, 1)),      # 2
     ('num_ruptures', numpy.uint32),    # 3
     ('calc_time', numpy.float32),      # 4
