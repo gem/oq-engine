@@ -59,7 +59,7 @@ source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_ids', hdf5.vuint16),         # 1
     ('code', (numpy.string_, 1)),      # 2
-    ('num_ruptures', numpy.uint32),    # 3
+    ('num_sources', numpy.uint32),     # 3
     ('calc_time', numpy.float32),      # 4
     ('num_sites', numpy.uint32),       # 5
     ('eff_ruptures', numpy.uint32),    # 6
@@ -67,7 +67,7 @@ source_info_dt = numpy.dtype([
     ('serial', numpy.uint32),          # 8
 ])
 
-NUM_RUPTURES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
+NUM_SOURCES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
@@ -849,7 +849,7 @@ class HazardCalculator(BaseCalculator):
 
     def store_source_info(self, calc_times):
         """
-        Save (weight, num_sites, calc_time) inside the source_info dataset
+        Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         for src_id, arr in calc_times.items():
             src_id = re.sub(r':\d+$', '', src_id)
