@@ -362,19 +362,6 @@ class PmapMaker(object):
                         poes[:, ll(imt), g] = 0
             return r_sites.sids, poes
 
-    def _update(self, pm, src):
-        if self.rup_indep:
-            pm = ~pm
-        if not pm:
-            return
-        if self.src_mutex:
-            pm *= src.mutex_weight
-        for grp_id in src.grp_ids:
-            if self.src_mutex:
-                self.pmap[grp_id] += pm
-            else:
-                self.pmap[grp_id] |= pm
-
     def _poemap(self, rups_sites):
         L, G = len(self.imtls.array), len(self.gsims)
         p = ProbabilityMap(L, G)
@@ -432,7 +419,13 @@ class PmapMaker(object):
                 numrups += p.numrups
                 numsites += p.numsites
                 self.totrups += p.totrups
-                self._update(p, src)
+                if self.rup_indep:
+                    p = ~p
+                if not p:
+                    continue
+                for grp_id in src.grp_ids:
+                    self.pmap[grp_id] |= p
+
             self.calc_times[src.source_id] += numpy.array(
                 [numrups, numsites, time.time() - t0])
 
@@ -450,9 +443,15 @@ class PmapMaker(object):
             numrups += p.numrups
             numsites += p.numsites
             self.totrups += p.totrups
-            self._update(p, src)
             self.calc_times[src.source_id] += numpy.array(
                 [numrups, numsites, time.time() - t0])
+            if self.rup_indep:
+                p = ~p
+            if not p:
+                continue
+            p *= src.mutex_weight
+            for grp_id in src.grp_ids:
+                self.pmap[grp_id] += p
 
     def collapse(self, ctxs, precision=1E-3):
         """
