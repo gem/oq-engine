@@ -274,3 +274,21 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(rup_array=rup_array, calc_times=calc_times,
                         eff_ruptures={trt: eff_ruptures})
+
+
+def sample_source(src, num_ses=1):
+    """
+    Sample a single source and returns an array with the sample ruptures.
+    Useful for debugging purposes.
+    """
+    fields = ('serial grp_id code n_occ mag rake occurrence_rate '
+              'minlon minlat maxlon maxlat hypo'.split())
+    if not hasattr(src, 'id'):
+        src.id = 0
+    samples = getattr(src, 'samples', 1)
+    # assert len(src.grp_ids) == samples
+    ebrs = [EBRupture(rup, src.id, grp_id, n_occ, samples)
+            for rup, grp_id, n_occ in src.sample_ruptures(samples * num_ses)]
+    return get_rup_array(ebrs)[fields]
+
+# get_eids(rup_array, samples_by_grp, num_rlzs_by_grp)
