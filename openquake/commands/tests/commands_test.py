@@ -263,15 +263,14 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('source_id code num_ruptures '
+        self.assertIn('source_id code num_sources '
                       'calc_time num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
             show_attrs('sitecol', self.calc_id)
-        self.assertEqual(
-            '__pyclass__ openquake.hazardlib.site.SiteCollection',
-            str(p))
+        self.assertEqual('__pyclass__ openquake.hazardlib.site.SiteCollection',
+                         str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
