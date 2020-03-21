@@ -58,7 +58,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
@@ -116,8 +116,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
-    pmap, rup_data, calc_times, extra = cmaker.get_pmap_by_grp(
-        src_filter, group)
+    pmap, rup_data, calc_times, extra = PmapMaker(
+        cmaker, src_filter, group).make()
     extra['task_no'] = getattr(monitor, 'task_no', 0)
     extra['trt'] = trt
 
