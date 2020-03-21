@@ -362,17 +362,17 @@ class PmapMaker(object):
                         poes[:, ll(imt), g] = 0
             return r_sites.sids, poes
 
-    def _poemap(self, rups_sites):
-        L, G = len(self.imtls.array), len(self.gsims)
-        p = ProbabilityMap(L, G)
-        p.numrups, p.numsites, p.totrups = 0, 0, 0
+    def _poemap(self, rups_sites, p=None):
+        if p is None:
+            p = self.pmap
+        d = dict(numrups=0, numsites=0, totrups=0)
         for rups, sites in rups_sites:
             with self.ctx_mon:
                 ctxs = self.cmaker.make_ctxs(rups, sites)
                 if ctxs:
-                    p.totrups += len(ctxs)
+                    d['totrups'] += len(ctxs)
                     ctxs = self.collapse(ctxs)
-                    p.numrups += len(ctxs)
+                    d['numrups'] += len(ctxs)
             for rup, r_sites, dctx in ctxs:
                 if self.fewsites:  # store rupdata
                     self.rupdata.add(rup, r_sites, dctx)
@@ -386,8 +386,56 @@ class PmapMaker(object):
                     else:
                         for sid, pne in zip(sids, pnes):
                             p.setdefault(sid, 0.).array += (1.-pne)*rup.weight
-                p.numsites += len(sids)
-        return p
+                d['numsites'] += len(sids)
+        return d
+
+    def _make_src_indep(self):
+        for srcs, sites in self.srcfilter.get_sources_sites(self.group):
+            t0 = time.time()
+            numrups, numsites = 0, 0
+            for src in srcs:
+                with self.cmaker.mon('iter_ruptures', measuremem=False):
+                    mag_rups = [
+                        (mag, _add(rups, numpy.array(src.grp_ids)))
+                        for mag, rups in itertools.groupby(
+                                src.iter_ruptures(shift_hypo=self.shift_hypo),
+                                key=operator.attrgetter('mag'))]
+                L, G = len(self.imtls.array), len(self.gsims)
+                p = ProbabilityMap(L, G)
+                d = self._poemap(self._gen_rups_sites(src, sites, mag_rups), p)
+                numrups += d['numrups']
+                numsites += d['numsites']
+                self.totrups += d['totrups']
+                if self.rup_indep:
+                    p = ~p
+                if not p:
+                    continue
+                for grp_id in src.grp_ids:
+                    self.pmap[grp_id] |= p
+
+            self.calc_times[src.source_id] += numpy.array(
+                [numrups, numsites, time.time() - t0])
+
+    def _make_src_mutex(self):
+        for src, sites in self.srcfilter(self.group):
+            t0 = time.time()
+            with self.cmaker.mon('iter_ruptures', measuremem=False):
+                mag_rups = [
+                    (mag, _add(rups, numpy.array(src.grp_ids)))
+                    for mag, rups in itertools.groupby(
+                            src.iter_ruptures(shift_hypo=self.shift_hypo),
+                            key=operator.attrgetter('mag'))]
+            L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
+            p = ProbabilityMap(L, G)  # grp_id -> pmap
+            d = self._poemap(self._gen_rups_sites(src, sites, mag_rups), p)
+            if self.rup_indep:
+                p = ~p
+            p *= src.mutex_weight
+            for grp_id in src.grp_ids:
+                self.pmap[grp_id] += p
+            self.totrups += d['totrups']
+            self.calc_times[src.source_id] += numpy.array(
+                [d['numrups'], d['numsites'], time.time() - t0])
 
     def make(self):
         self.rupdata = RupData(self.cmaker)
@@ -403,55 +451,6 @@ class PmapMaker(object):
             self._make_src_indep()
         rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
         return self.pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
-
-    def _make_src_indep(self):
-        for srcs, sites in self.srcfilter.get_sources_sites(self.group):
-            t0 = time.time()
-            numrups, numsites = 0, 0
-            for src in srcs:
-                with self.cmaker.mon('iter_ruptures', measuremem=False):
-                    mag_rups = [
-                        (mag, _add(rups, numpy.array(src.grp_ids)))
-                        for mag, rups in itertools.groupby(
-                                src.iter_ruptures(shift_hypo=self.shift_hypo),
-                                key=operator.attrgetter('mag'))]
-                p = self._poemap(self._gen_rups_sites(src, sites, mag_rups))
-                numrups += p.numrups
-                numsites += p.numsites
-                self.totrups += p.totrups
-                if self.rup_indep:
-                    p = ~p
-                if not p:
-                    continue
-                for grp_id in src.grp_ids:
-                    self.pmap[grp_id] |= p
-
-            self.calc_times[src.source_id] += numpy.array(
-                [numrups, numsites, time.time() - t0])
-
-    def _make_src_mutex(self):
-        for src, sites in self.srcfilter(self.group):
-            t0 = time.time()
-            numrups, numsites = 0, 0
-            with self.cmaker.mon('iter_ruptures', measuremem=False):
-                mag_rups = [
-                    (mag, _add(rups, numpy.array(src.grp_ids)))
-                    for mag, rups in itertools.groupby(
-                            src.iter_ruptures(shift_hypo=self.shift_hypo),
-                            key=operator.attrgetter('mag'))]
-            p = self._poemap(self._gen_rups_sites(src, sites, mag_rups))
-            numrups += p.numrups
-            numsites += p.numsites
-            self.totrups += p.totrups
-            self.calc_times[src.source_id] += numpy.array(
-                [numrups, numsites, time.time() - t0])
-            if self.rup_indep:
-                p = ~p
-            if not p:
-                continue
-            p *= src.mutex_weight
-            for grp_id in src.grp_ids:
-                self.pmap[grp_id] += p
 
     def collapse(self, ctxs, precision=1E-3):
         """
