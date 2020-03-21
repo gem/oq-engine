@@ -403,7 +403,7 @@ def make_figure_dist_by_mag(extractors, what):
     import matplotlib.pyplot as plt
     [ex] = extractors
     effect = ex.get('effect')
-    mags = ['%.3f' % mag for mag in effect.mags]
+    mags = ['%.2f' % mag for mag in effect.mags]
     fig, ax = plt.subplots()
     trti = 0
     for trt, dists in effect.dist_bins.items():
