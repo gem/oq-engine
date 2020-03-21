@@ -326,8 +326,8 @@ def approx_par(rup, parname):
     Approximate a given rupture parameter
     """
     parvalue = getattr(rup, parname)
-    if parname == 'dip':
-        return round(parvalue, 2)
+    # if parname == 'dip':
+    #     return round(parvalue, 2)
     return parvalue
 
 
