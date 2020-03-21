@@ -397,20 +397,19 @@ class PmapMaker(object):
     def _make_src_indep(self):
         for srcs, sites in self.srcfilter.get_sources_sites(self.group):
             t0 = time.time()
-            numrups, numsites = 0, 0
-            for src in srcs:
-                with self.cmaker.mon('iter_ruptures', measuremem=False):
+            rs = []
+            with self.cmaker.mon('iter_ruptures', measuremem=False):
+                for src in srcs:
                     mag_rups = [
                         (mag, _add(rups, numpy.array(src.grp_ids)))
                         for mag, rups in itertools.groupby(
                                 src.iter_ruptures(shift_hypo=self.shift_hypo),
                                 key=operator.attrgetter('mag'))]
-                d = self._poemap(self._gen_rups_sites(src, sites, mag_rups))
-                numrups += d['numrups']
-                numsites += d['numsites']
-                self.totrups += d['totrups']
+                    rs.extend(self._gen_rups_sites(src, sites, mag_rups))
+            d = self._poemap(rs)
+            self.totrups += d['totrups']
             self.calc_times[src.source_id] += numpy.array(
-                [numrups, numsites, time.time() - t0])
+                [d['numrups'], d['numsites'], time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
                          for grp_id, p in self.pmap.items())
 
