@@ -405,24 +405,14 @@ class PmapMaker(object):
                         for mag, rups in itertools.groupby(
                                 src.iter_ruptures(shift_hypo=self.shift_hypo),
                                 key=operator.attrgetter('mag'))]
-                L, G = len(self.imtls.array), len(self.gsims)
-                p = ProbabilityMap(L, G)
-                pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
-                d = self._poemap(self._gen_rups_sites(src, sites, mag_rups),
-                                 pmap)
+                d = self._poemap(self._gen_rups_sites(src, sites, mag_rups))
                 numrups += d['numrups']
                 numsites += d['numsites']
                 self.totrups += d['totrups']
-                for grp_id in src.grp_ids:
-                    p = pmap[grp_id]
-                    if self.rup_indep:
-                        p = ~p
-                    if not p:
-                        continue
-                    self.pmap[grp_id] |= p
-
             self.calc_times[src.source_id] += numpy.array(
                 [numrups, numsites, time.time() - t0])
+        return AccumDict((grp_id, ~p if self.rup_indep else p)
+                         for grp_id, p in self.pmap.items())
 
     def _make_src_mutex(self):
         for src, sites in self.srcfilter(self.group):
@@ -445,6 +435,7 @@ class PmapMaker(object):
             self.totrups += d['totrups']
             self.calc_times[src.source_id] += numpy.array(
                 [d['numrups'], d['numsites'], time.time() - t0])
+        return self.pmap
 
     def make(self):
         self.rupdata = RupData(self.cmaker)
@@ -455,11 +446,11 @@ class PmapMaker(object):
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         self.totrups = 0
         if self.src_mutex:
-            self._make_src_mutex()
+            pmap = self._make_src_mutex()
         else:
-            self._make_src_indep()
+            pmap = self._make_src_indep()
         rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
-        return self.pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
+        return pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
 
     def collapse(self, ctxs, precision=1E-3):
         """
