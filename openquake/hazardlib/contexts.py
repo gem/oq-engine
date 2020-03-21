@@ -443,7 +443,7 @@ class PmapMaker(object):
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
         for rup, sctx, dctx in ctxs:
-            pdist = self.pointsource_distance.get('%.f' % rup.mag)
+            pdist = self.pointsource_distance.get('%.2f' % rup.mag)
             tup = []
             for p in self.REQUIRES_RUPTURE_PARAMETERS:
                 if p != 'mag' and pdist and dctx.rrup.min() > pdist:
