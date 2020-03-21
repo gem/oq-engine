@@ -415,7 +415,7 @@ class PmapMaker(object):
         with self.cmaker.mon('iter_ruptures', measuremem=False):
             out = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                rup.grp_ids = src.grp_ids
+                rup.grp_ids = numpy.array(src.grp_ids)
                 out.append(rup)
         return out
 
