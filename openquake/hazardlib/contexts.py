@@ -422,7 +422,7 @@ class PmapMaker(object):
             for src in srcs:
                 with self.cmaker.mon('iter_ruptures', measuremem=False):
                     mag_rups = [
-                        (mag, _add(rups, src.grp_ids))
+                        (mag, _add(rups, numpy.array(src.grp_ids)))
                         for mag, rups in itertools.groupby(
                                 src.iter_ruptures(shift_hypo=self.shift_hypo),
                                 key=operator.attrgetter('mag'))]
