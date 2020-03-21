@@ -306,29 +306,6 @@ class ContextMaker(object):
                 gmv[m, d] = numpy.exp(max(means))
         return gmv
 
-    def get_pmap_by_grp(self, srcfilter, group):
-        """
-        :return: dictionaries pmap, rdata, calc_times
-        """
-        imtls = self.imtls
-        L, G = len(imtls.array), len(self.gsims)
-        pmap = AccumDict(accum=ProbabilityMap(L, G))
-        rup_data = AccumDict(accum=[])
-        # AccumDict of arrays with 3 elements nrups, nsites, calc_time
-        calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-        pmaker = PmapMaker(self, srcfilter, group)
-        totrups = 0
-        srcs_sites = srcfilter.get_sources_sites(group)
-        while True:
-            try:
-                srcs, sites = next(srcs_sites)
-                totrups += pmaker.make(srcs, sites, pmap, rup_data, calc_times)
-            except StopIteration:
-                break
-        rdata = {k: numpy.array(v) for k, v in rup_data.items()}
-        extra = dict(totrups=totrups)
-        return pmap, rdata, calc_times, extra
-
 
 def _collapse(rups):
     # collapse a list of ruptures into a single rupture
@@ -342,6 +319,14 @@ def _collapse_ctxs(ctxs):
     rups = [ctx[0] for ctx in ctxs]
     [rup] = _collapse(rups)
     return [(rup, sites, dctx)]
+
+
+def _add(rups, grp_ids):
+    out = []
+    for rup in rups:
+        rup.grp_ids = grp_ids
+        out.append(rup)
+    return out
 
 
 class PmapMaker(object):
@@ -377,7 +362,7 @@ class PmapMaker(object):
                         poes[:, ll(imt), g] = 0
             return r_sites.sids, poes
 
-    def _update(self, pmap, pm, src):
+    def _update(self, pm, src):
         if self.rup_indep:
             pm = ~pm
         if not pm:
@@ -386,59 +371,68 @@ class PmapMaker(object):
             pm *= src.mutex_weight
         for grp_id in src.grp_ids:
             if self.src_mutex:
-                pmap[grp_id] += pm
+                self.pmap[grp_id] += pm
             else:
-                pmap[grp_id] |= pm
+                self.pmap[grp_id] |= pm
 
-    def make(self, srcs, sites, pmap, rup_data, calc_times):
-        """
-        :param src: a list of hazardlib sources with the same source_id
-        :param sites: the sites affected by it
-        :param pmap: a ProbabilityMap to populate
-        :param rup_data: a dictionary to populate
-        :param calc_times: a dictionary src.id -> array
-        :returns: the total number of ruptures within the maximum distance
-        """
-        t0 = time.time()
-        numrups, numsites, totrups = 0, 0, 0
-        rupdata = RupData(self.cmaker, rup_data)
-        for src in srcs:
-            grp_ids = numpy.array(src.grp_ids)
-            with self.cmaker.mon('iter_ruptures', measuremem=False):
-                self.mag_rups = [
-                    (mag, list(rups)) for mag, rups in itertools.groupby(
-                        src.iter_ruptures(shift_hypo=self.shift_hypo),
-                        key=operator.attrgetter('mag'))]
-            L, G = len(self.imtls.array), len(self.gsims)
-            poemap = ProbabilityMap(L, G)
-            for rups, sites in self._gen_rups_sites(src, sites):
-                with self.ctx_mon:
-                    ctxs = self.cmaker.make_ctxs(rups, sites)
-                    if ctxs:
-                        totrups += len(ctxs)
-                        ctxs = self.collapse(ctxs)
-                        numrups += len(ctxs)
-                for rup, r_sites, dctx in ctxs:
-                    if self.fewsites:  # store rupdata
-                        rupdata.add(rup, r_sites, dctx)
-                        rupdata.data['grp_id_'].append(grp_ids)
-                    sids, poes = self._sids_poes(rup, r_sites, dctx)
-                    with self.pne_mon:
-                        pnes = rup.get_probability_no_exceedance(poes)
-                        if self.rup_indep:
-                            for sid, pne in zip(sids, pnes):
-                                poemap.setdefault(
-                                    sid, self.rup_indep).array *= pne
-                        else:
-                            for sid, pne in zip(sids, pnes):
-                                poemap.setdefault(
-                                    sid, self.rup_indep).array += (
-                                    1.-pne) * rup.weight
-                    numsites += len(sids)
-            self._update(pmap, poemap, src)
-        calc_times[src.source_id] += numpy.array(
-            [numrups, numsites, time.time() - t0])
-        return totrups
+    def _poemap(self, rups_sites):
+        L, G = len(self.imtls.array), len(self.gsims)
+        p = ProbabilityMap(L, G)
+        p.numrups, p.numsites, p.totrups = 0, 0, 0
+        for rups, sites in rups_sites:
+            with self.ctx_mon:
+                ctxs = self.cmaker.make_ctxs(rups, sites)
+                if ctxs:
+                    p.totrups += len(ctxs)
+                    ctxs = self.collapse(ctxs)
+                    p.numrups += len(ctxs)
+            for rup, r_sites, dctx in ctxs:
+                if self.fewsites:  # store rupdata
+                    self.rupdata.add(rup, r_sites, dctx)
+                    self.rupdata.data['grp_id_'].append(rup.grp_ids)
+                sids, poes = self._sids_poes(rup, r_sites, dctx)
+                with self.pne_mon:
+                    pnes = rup.get_probability_no_exceedance(poes)
+                    if self.rup_indep:
+                        for sid, pne in zip(sids, pnes):
+                            p.setdefault(sid, self.rup_indep).array *= pne
+                    else:
+                        for sid, pne in zip(sids, pnes):
+                            p.setdefault(sid, self.rup_indep).array += (
+                                1.-pne) * rup.weight
+                p.numsites += len(sids)
+        return p
+
+    def make(self):
+        self.rupdata = RupData(self.cmaker)
+        imtls = self.cmaker.imtls
+        L, G = len(imtls.array), len(self.gsims)
+        self.pmap = AccumDict(accum=ProbabilityMap(L, G))  # grp_id -> pmap
+        # AccumDict of arrays with 3 elements nrups, nsites, calc_time
+        self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+        self.totrups = 0
+        self._make()
+        rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
+        return self.pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
+
+    def _make(self):
+        for srcs, sites in self.srcfilter.get_sources_sites(self.group):
+            t0 = time.time()
+            numrups, numsites = 0, 0
+            for src in srcs:
+                with self.cmaker.mon('iter_ruptures', measuremem=False):
+                    mag_rups = [
+                        (mag, _add(rups, numpy.array(src.grp_ids)))
+                        for mag, rups in itertools.groupby(
+                                src.iter_ruptures(shift_hypo=self.shift_hypo),
+                                key=operator.attrgetter('mag'))]
+                p = self._poemap(self._gen_rups_sites(src, sites, mag_rups))
+                numrups += p.numrups
+                numsites += p.numsites
+                self.totrups += p.totrups
+                self._update(p, src)
+            self.calc_times[src.source_id] += numpy.array(
+                [numrups, numsites, time.time() - t0])
 
     def collapse(self, ctxs, precision=1E-3):
         """
@@ -469,9 +463,9 @@ class PmapMaker(object):
             new_ctxs.extend(_collapse_ctxs(ctxs) if len(ctxs) > 1 else ctxs)
         return new_ctxs
 
-    def _gen_rups_sites(self, src, sites):
+    def _gen_rups_sites(self, src, sites, mag_rups):
         loc = getattr(src, 'location', None)
-        rupsites = ((rups, sites) for mag, rups in self.mag_rups)
+        rupsites = ((rups, sites) for mag, rups in mag_rups)
         if loc:
             # implements pointsource_distance: finite site effects
             # are ignored for sites over that distance, if any
@@ -482,7 +476,7 @@ class PmapMaker(object):
                 weights, depths = zip(*src.hypocenter_distribution.data)
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
                 loc.depth = numpy.average(depths, weights=weights)
-                for mag, rups in self.mag_rups:
+                for mag, rups in mag_rups:
                     pdist = self.pointsource_distance.get('%.3f' % mag)
                     close, far = sites.split(loc, pdist)
                     if close is None:  # all is far

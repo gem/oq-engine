@@ -45,7 +45,7 @@ from openquake.commands import engine
 
 def loadnpz(lines):
     bio = io.BytesIO(b''.join(ln for ln in lines))
-    return numpy.load(bio, allow_pickle=True)
+    return numpy.load(bio)
 
 
 class EngineServerTestCase(unittest.TestCase):

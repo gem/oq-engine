@@ -625,11 +625,15 @@ def get_composite_source_model(oqparam, h5=None):
     csm = get_csm(oqparam, source_model_lt, gsim_lt, h5)
     if oqparam.is_event_based():
         csm.init_serials(oqparam.ses_seed)
-    data = {}  # src_id, code -> row
+    data = {}  # src_id -> row
     mags = set()
     for sg in csm.src_groups:
         for src in sg:
-            row = [src.source_id, U16(src.grp_ids), src.code, src.num_ruptures,
+            if src.source_id in data:
+                num_sources = data[src.source_id][3] + 1
+            else:
+                num_sources = 1
+            row = [src.source_id, U16(src.grp_ids), src.code, num_sources,
                    0, 0, 0, src.checksum, src.serial, src._wkt]
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF

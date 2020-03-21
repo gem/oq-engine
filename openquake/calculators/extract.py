@@ -513,7 +513,7 @@ def extract_sources(dstore, what):
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
-    fields = 'source_id code num_ruptures num_sites eff_ruptures'
+    fields = 'source_id code num_sources num_sites eff_ruptures'
     info = dstore['source_info'][()][fields.split()]
     wkt = dstore['source_wkt'][()]
     arrays = []
@@ -537,7 +537,8 @@ def extract_sources(dstore, what):
     info = numpy.concatenate(arrays)
     wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
-    oknames = [n for n in info.dtype.names if n != 'source_id']
+    oknames = [name for name in info.dtype.names  # avoid pickle issues
+               if name not in ('source_id', 'grp_ids')]
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]

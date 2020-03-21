@@ -155,7 +155,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     Returns the slowest sources
     """
-    info = dstore['source_info']['source_id', 'code', 'num_ruptures',
+    info = dstore['source_info']['source_id', 'code', 'num_sources',
                                  'calc_time', 'num_sites', 'eff_ruptures']
     info = info[info['eff_ruptures'] > 0]
     info.sort(order='calc_time')
