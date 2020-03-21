@@ -410,11 +410,14 @@ class PmapMaker(object):
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         self.totrups = 0
-        self._make()
+        if self.src_mutex:
+            self._make_src_mutex()
+        else:
+            self._make_src_indep()
         rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
         return self.pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
 
-    def _make(self):
+    def _make_src_indep(self):
         for srcs, sites in self.srcfilter.get_sources_sites(self.group):
             t0 = time.time()
             numrups, numsites = 0, 0
@@ -430,6 +433,24 @@ class PmapMaker(object):
                 numsites += p.numsites
                 self.totrups += p.totrups
                 self._update(p, src)
+            self.calc_times[src.source_id] += numpy.array(
+                [numrups, numsites, time.time() - t0])
+
+    def _make_src_mutex(self):
+        for src, sites in self.srcfilter(self.group):
+            t0 = time.time()
+            numrups, numsites = 0, 0
+            with self.cmaker.mon('iter_ruptures', measuremem=False):
+                mag_rups = [
+                    (mag, _add(rups, numpy.array(src.grp_ids)))
+                    for mag, rups in itertools.groupby(
+                            src.iter_ruptures(shift_hypo=self.shift_hypo),
+                            key=operator.attrgetter('mag'))]
+            p = self._poemap(self._gen_rups_sites(src, sites, mag_rups))
+            numrups += p.numrups
+            numsites += p.numsites
+            self.totrups += p.totrups
+            self._update(p, src)
             self.calc_times[src.source_id] += numpy.array(
                 [numrups, numsites, time.time() - t0])
 
