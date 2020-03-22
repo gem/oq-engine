@@ -400,12 +400,18 @@ class PmapMaker(object):
         # srcs with the same source_id and grp_ids
         for srcs, sites in self.srcfilter.get_sources_sites(self.group):
             t0 = time.time()
-            rs = []
-            for src in srcs:
-                rups = self._ruptures(src)
-                rs.extend(self._gen_rups_sites(src, sites, rups))
-            self._update_pmap(self._ctxs(rs, numpy.array(src.grp_ids)))
-            self.calc_times[src.source_id] += numpy.array(
+            src_id = srcs[0].source_id
+            grp_ids = numpy.array(srcs[0].grp_ids)
+            if self.fewsites:
+                rups = sum([self._ruptures(src) for src in srcs], [])
+                rs = [(rups, sites)]
+            else:  # many sites
+                rs = []
+                for src in srcs:
+                    rups = self._ruptures(src)
+                    rs.extend(self._gen_rups_sites(src, sites, rups))
+            self._update_pmap(self._ctxs(rs, grp_ids))
+            self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
                          for grp_id, p in self.pmap.items())
@@ -416,8 +422,7 @@ class PmapMaker(object):
             rups = self._ruptures(src)
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
             pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
-            ctxs = self._ctxs(self._gen_rups_sites(src, sites, rups),
-                              numpy.array(src.grp_ids))
+            ctxs = self._ctxs([(rups, sites)], numpy.array(src.grp_ids))
             self._update_pmap(ctxs, pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
