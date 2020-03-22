@@ -262,7 +262,7 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def make_ctxs(self, ruptures, sites):
+    def make_ctxs(self, ruptures, sites, grp_ids):
         """
         :returns: a list of triples (rctx, sctx, dctx)
         """
@@ -272,6 +272,7 @@ class ContextMaker(object):
                 sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
+            rup.grp_ids = grp_ids
             ctxs.append((rup, sctx, dctx))
         return ctxs
 
@@ -354,23 +355,30 @@ class PmapMaker(object):
                         poes[:, ll(imt), g] = 0
             return r_sites.sids, poes
 
-    def _ctxs(self, rups_sites, grp_ids):
+    def _ctxs(self, rups_sites, grp_ids, collapse=False):
         self.numrups = 0
         self.numsites = 0
-        for rups, sites in rups_sites:
-            with self.ctx_mon:
-                ctxs = self.cmaker.make_ctxs(rups, sites)
-                if ctxs:
-                    self.totrups += len(ctxs)
-                    ctxs = self.collapse(ctxs)
-                    self.numrups += len(ctxs)
-            for rup, r_sites, dctx in ctxs:
-                rup.grp_ids = grp_ids
-                if self.fewsites:  # store rupdata
+        if collapse:
+            for rups, sites in rups_sites:
+                with self.ctx_mon:
+                    ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids)
+                    if ctxs:
+                        self.totrups += len(ctxs)
+                        ctxs = self.collapse(ctxs)
+                        self.numrups += len(ctxs)
+                for rup, r_sites, dctx in ctxs:
                     self.rupdata.add(rup, r_sites, dctx)
                     self.rupdata.data['grp_id_'].append(grp_ids)
-                self.numsites += len(r_sites)
-                yield rup, r_sites, dctx
+                    self.numsites += len(r_sites)
+                    yield rup, r_sites, dctx
+        else:
+            for rups, sites in rups_sites:
+                with self.ctx_mon:
+                    ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids)
+                self.totrups += len(ctxs)
+                self.numrups += len(ctxs)
+                self.numsites += sum(len(ctx[1]) for ctx in ctxs)
+                yield from ctxs
 
     def _update_pmap(self, ctxs, pmap=None):
         # make contexts, collapse them and compute PoEs
@@ -402,15 +410,16 @@ class PmapMaker(object):
             t0 = time.time()
             src_id = srcs[0].source_id
             grp_ids = numpy.array(srcs[0].grp_ids)
-            if self.fewsites:
+            if self.fewsites:  # try to collapse the ruptures
                 rups = sum([self._ruptures(src) for src in srcs], [])
-                rs = [(rups, sites)]
-            else:  # many sites
-                rs = []
+                ctxs = self._ctxs([(rups, sites)], grp_ids, collapse=True)
+            else:  # many sites, do not collapse the ruptures
+                ctxs = []
                 for src in srcs:
                     rups = self._ruptures(src)
-                    rs.extend(self._gen_rups_sites(src, sites, rups))
-            self._update_pmap(self._ctxs(rs, grp_ids))
+                    rups_sites = self._gen_rups_sites(src, sites, rups)
+                    ctxs.extend(self._ctxs(rups_sites, grp_ids))
+            self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
