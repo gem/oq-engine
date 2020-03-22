@@ -321,16 +321,6 @@ def _collapse_ctxs(ctxs):
     return [(rup, sites, dctx)]
 
 
-def approx_par(rup, parname):
-    """
-    Approximate a given rupture parameter
-    """
-    parvalue = getattr(rup, parname)
-    # if parname == 'dip':
-    #     return round(parvalue, 2)
-    return parvalue
-
-
 class PmapMaker(object):
     """
     A class to compute the PoEs from a given source
@@ -468,7 +458,7 @@ class PmapMaker(object):
                     # all nonmag rupture parameters are collapsed to 0
                     # over the pointsource_distance
                 else:
-                    tup.append(approx_par(rup, p))
+                    tup.append(getattr(rup, p))
             for name in self.REQUIRES_DISTANCES:
                 dists = getattr(dctx, name)
                 tup.extend(I16(dists / distmax / precision))
