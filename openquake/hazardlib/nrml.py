@@ -386,10 +386,14 @@ def to_string(node):
         return f.getvalue().decode('utf-8')
 
 
-def get(xml, converter=default):
+def get(xml, investigation_time=50., rupture_mesh_spacing=5.,
+        width_of_mfd_bin=1.0, area_source_discretization=10):
     """
     :param xml: the XML representation of a source
-    :param converter: a SourceConverter instance
+    :param investigation_time: investigation time
+    :param rupture_mesh_spacing: rupture mesh spacing
+    :param width_of_mfd_bin: width of MFD bin
+    :param area_source_discretization: area source discretization
     :returns: a python source object
     """
     text = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -398,7 +402,12 @@ def get(xml, converter=default):
 %s
 </nrml>''' % xml
     [node] = read(gettemp(text))
-    return converter.convert_node(node)
+    conv = sourceconverter.SourceConverter(
+        investigation_time,
+        rupture_mesh_spacing,
+        width_of_mfd_bin=width_of_mfd_bin,
+        area_source_discretization=area_source_discretization)
+    return conv.convert_node(node)
 
 
 if __name__ == '__main__':

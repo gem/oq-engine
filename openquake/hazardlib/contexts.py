@@ -462,7 +462,7 @@ class PmapMaker(object):
         acc = AccumDict(accum=[])
         distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
         for rup, sctx, dctx in ctxs:
-            pdist = self.pointsource_distance.get('%.3f' % rup.mag)
+            pdist = self.pointsource_distance.get('%.2f' % rup.mag)
             tup = []
             for p in self.REQUIRES_RUPTURE_PARAMETERS:
                 if p != 'mag' and pdist and dctx.rrup.min() > pdist:
@@ -494,7 +494,7 @@ class PmapMaker(object):
                 loc = copy.copy(loc)  # average hypocenter used in sites.split
                 loc.depth = numpy.average(depths, weights=weights)
                 for mag, rups in groupby(rups, bymag).items():
-                    pdist = self.pointsource_distance.get('%.3f' % mag)
+                    pdist = self.pointsource_distance.get('%.2f' % mag)
                     close, far = sites.split(loc, pdist)
                     if close is None:  # all is far
                         yield _collapse(rups), far
@@ -696,7 +696,7 @@ class Effect(object):
         di = numpy.searchsorted(self.dists, dist)
         if di == self.nbins:
             di = self.nbins
-        eff = self.effect_by_mag['%.3f' % mag][di]
+        eff = self.effect_by_mag['%.2f' % mag][di]
         return eff
 
     # this is useful to compute the collapse_distance and minimum_distance
@@ -743,7 +743,7 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     trt = sources[0].tectonic_region_type
     dist_bins = srcfilter.integration_distance.get_dist_bins(trt)
     nbins = len(dist_bins)
-    mags = set('%.3f' % mag for src in sources for mag in src.get_mags())
+    mags = set('%.2f' % mag for src in sources for mag in src.get_mags())
     dic = {mag: numpy.zeros(len(dist_bins), int) for mag in sorted(mags)}
     cmaker = ContextMaker(trt, gsims, params, monitor)
     for src, sites in srcfilter(sources):
@@ -755,5 +755,5 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
             di = numpy.searchsorted(dist_bins, dctx.rrup[0])
             if di == nbins:
                 di = nbins - 1
-            dic['%.3f' % rup.mag][di] += 1
+            dic['%.2f' % rup.mag][di] += 1
     return {trt: AccumDict(dic)}
