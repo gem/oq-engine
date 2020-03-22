@@ -372,6 +372,17 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
+    def split_all(self):
+        """
+        Split a SiteCollection into atomic site collections
+        """
+        scs = []
+        for sid in self.sids:
+            sc = SiteCollection.__new__(SiteCollection)
+            sc.array = self.array[sid:sid+1]
+            scs.append(sc)
+        return scs
+
     def split(self, location, distance):
         """
         :returns: (close_sites, far_sites)

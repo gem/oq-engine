@@ -404,7 +404,7 @@ class PmapMaker(object):
             for src in srcs:
                 rups = self._ruptures(src)
                 rs.extend(self._gen_rups_sites(src, sites, rups))
-            self._update_pmap(self._ctxs(rs, src.grp_ids))
+            self._update_pmap(self._ctxs(rs, numpy.array(src.grp_ids)))
             self.calc_times[src.source_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
