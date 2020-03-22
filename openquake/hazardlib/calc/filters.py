@@ -299,14 +299,14 @@ class SourceFilter(object):
     def get_sources_sites(self, sources):
         """
         :yields:
-            pairs (srcs, sites) where the sources have the same source_id
-            and affect the same sites
+            pairs (srcs, sites) where the sources have the same source_id,
+            the same grp_ids and affect the same sites
         """
         acc = general.AccumDict(accum=[])  # indices -> srcs
         for src in self.filter(sources):
-            acc[(src.source_id,) + tuple(src.indices)].append(src)
+            acc[(src.source_id, src.grp_id) + tuple(src.indices)].append(src)
         for tup, srcs in acc.items():
-            yield srcs, self.sitecol.filtered(tup[1:])
+            yield srcs, self.sitecol.filtered(tup[2:])
 
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):

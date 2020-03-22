@@ -364,7 +364,7 @@ class PmapMaker(object):
                         poes[:, ll(imt), g] = 0
             return r_sites.sids, poes
 
-    def _update_pmap(self, rups_sites, pmap=None):
+    def _update_pmap(self, rups_sites, grp_ids, pmap=None):
         # make contexts, collapse them and compute PoEs
         if pmap is None:
             pmap = self.pmap
@@ -379,32 +379,33 @@ class PmapMaker(object):
             for rup, r_sites, dctx in ctxs:
                 if self.fewsites:  # store rupdata
                     self.rupdata.add(rup, r_sites, dctx)
-                    self.rupdata.data['grp_id_'].append(rup.grp_ids)
+                    self.rupdata.data['grp_id_'].append(grp_ids)
                 sids, poes = self._sids_poes(rup, r_sites, dctx)
                 d['numsites'] += len(sids)
                 with self.pne_mon:
                     pnes = rup.get_probability_no_exceedance(poes)
                     if self.rup_indep:
                         for sid, pne in zip(sids, pnes):
-                            for grp_id in rup.grp_ids:
+                            for grp_id in grp_ids:
                                 p = pmap[grp_id]
                                 p.setdefault(sid, 1.).array *= pne
                     else:
                         for sid, pne in zip(sids, pnes):
-                            for grp_id in rup.grp_ids:
+                            for grp_id in grp_ids:
                                 p = pmap[grp_id]
                                 p.setdefault(sid, 0.).array += (
                                     1.-pne) * rup.weight
         return d
 
     def _make_src_indep(self):
+        # srcs with the same source_id and grp_ids
         for srcs, sites in self.srcfilter.get_sources_sites(self.group):
             t0 = time.time()
             rs = []
             for src in srcs:
                 rups = self.get_ruptures(src)
                 rs.extend(self._gen_rups_sites(src, sites, rups))
-            d = self._update_pmap(rs)
+            d = self._update_pmap(rs, numpy.array(src.grp_ids))
             self.totrups += d['totrups']
             self.calc_times[src.source_id] += numpy.array(
                 [d['numrups'], d['numsites'], time.time() - t0])
@@ -413,11 +414,7 @@ class PmapMaker(object):
 
     def get_ruptures(self, src):
         with self.cmaker.mon('iter_ruptures', measuremem=False):
-            out = []
-            for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                rup.grp_ids = numpy.array(src.grp_ids)
-                out.append(rup)
-        return out
+            return list(src.iter_ruptures(shift_hypo=self.shift_hypo))
 
     def _make_src_mutex(self):
         for src, sites in self.srcfilter(self.group):
@@ -426,7 +423,8 @@ class PmapMaker(object):
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
             pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
             d = self._update_pmap(
-                self._gen_rups_sites(src, sites, rups), pmap)
+                self._gen_rups_sites(src, sites, rups),
+                numpy.array(src.grp_ids), pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
                 if self.rup_indep:
