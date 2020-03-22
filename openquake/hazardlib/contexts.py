@@ -387,13 +387,17 @@ class PmapMaker(object):
                                     1.-pne) * rup.weight
         return d
 
+    def _ruptures(self, src):
+        with self.cmaker.mon('iter_ruptures', measuremem=False):
+            return list(src.iter_ruptures(shift_hypo=self.shift_hypo))
+
     def _make_src_indep(self):
         # srcs with the same source_id and grp_ids
         for srcs, sites in self.srcfilter.get_sources_sites(self.group):
             t0 = time.time()
             rs = []
             for src in srcs:
-                rups = self.get_ruptures(src)
+                rups = self._ruptures(src)
                 rs.extend(self._gen_rups_sites(src, sites, rups))
             d = self._update_pmap(rs, numpy.array(src.grp_ids))
             self.totrups += d['totrups']
@@ -402,14 +406,10 @@ class PmapMaker(object):
         return AccumDict((grp_id, ~p if self.rup_indep else p)
                          for grp_id, p in self.pmap.items())
 
-    def get_ruptures(self, src):
-        with self.cmaker.mon('iter_ruptures', measuremem=False):
-            return list(src.iter_ruptures(shift_hypo=self.shift_hypo))
-
     def _make_src_mutex(self):
         for src, sites in self.srcfilter(self.group):
             t0 = time.time()
-            rups = self.get_ruptures(src)
+            rups = self._ruptures(src)
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
             pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
             d = self._update_pmap(
