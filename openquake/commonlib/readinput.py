@@ -646,6 +646,7 @@ def get_composite_source_model(oqparam, h5=None):
             mags.update(srcmags)
     if h5:
         h5['source_mags'] = numpy.array(sorted(mags))
+        h5['grp_ids'] = csm.get_grp_ids()
     csm.gsim_lt.check_imts(oqparam.imtls)
     csm.source_info = data
     return csm
