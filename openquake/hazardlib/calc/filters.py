@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import time
 import logging
@@ -304,7 +305,8 @@ class SourceFilter(object):
         """
         acc = general.AccumDict(accum=[])  # indices -> srcs
         for src in self.filter(sources):
-            acc[(src.source_id, src.grp_id) + tuple(src.indices)].append(src)
+            src_id = re.sub(r':\d+$', '', src.source_id)
+            acc[(src_id, src.grp_id) + tuple(src.indices)].append(src)
         for tup, srcs in acc.items():
             yield srcs, self.sitecol.filtered(tup[2:])
 
