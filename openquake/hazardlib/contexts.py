@@ -281,7 +281,9 @@ class ContextMaker(object):
 
     def make_ctxs(self, ruptures, sites, grp_ids, filter):
         """
-        :returns: a list of triples (rctx, sctx, dctx)
+        :returns:
+            a list of triples (rctx, sctx, dctx) if filter is True,
+            a list of pairs (rctx, dctx) if filter is False
         """
         ctxs = []
         for rup in ruptures:
@@ -290,7 +292,10 @@ class ContextMaker(object):
             except FarAwayRupture:
                 continue
             rup.grp_ids = grp_ids
-            ctxs.append((rup, sctx, dctx))
+            if filter:
+                ctxs.append((rup, sctx, dctx))
+            else:
+                ctxs.append((rup, dctx))
         return ctxs
 
     def max_intensity(self, onesite, mags, dists):
@@ -333,10 +338,10 @@ def _collapse(rups):
 
 
 def _collapse_ctxs(ctxs):
-    rup, sites, dctx = ctxs[0]
+    rup, dctx = ctxs[0]
     rups = [ctx[0] for ctx in ctxs]
     [rup] = _collapse(rups)
-    return [(rup, sites, dctx)]
+    return [(rup, dctx)]
 
 
 class PmapMaker(object):
@@ -359,18 +364,18 @@ class PmapMaker(object):
         self.numrups = 0
         self.numsites = 0
         if collapse:  # for few sites do not filter
-            for rups, sites in rups_sites:
-                with self.ctx_mon:
+            with self.ctx_mon:
+                for rups, sites in rups_sites:
                     ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, False)
                     if ctxs:
                         self.totrups += len(ctxs)
-                        ctxs = self.collapse(ctxs)
+                        ctxs = self.collapse(ctxs, sites)
                         self.numrups += len(ctxs)
-                for rup, r_sites, dctx in ctxs:
-                    self.rupdata.add(rup, r_sites, dctx)
+                for rup, dctx in ctxs:
+                    self.rupdata.add(rup, sites, dctx)
                     self.rupdata.data['grp_id'].append(grp_ids)
-                    self.numsites += len(r_sites)
-                    yield rup, r_sites, dctx
+                    self.numsites += len(sites)
+                    yield rup, sites, dctx
         else:  # many sites, filter
             for rups, sites in rups_sites:
                 with self.ctx_mon:
@@ -471,15 +476,15 @@ class PmapMaker(object):
         rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
         return pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
 
-    def collapse(self, ctxs, precision=1E-3):
+    def collapse(self, ctxs, sites, precision=1E-3):
         """
         Collapse the contexts if the distances are equivalent up to 1/1000
         """
         if not self.rup_indep or len(ctxs) == 1:  # do not collapse
             return ctxs
         acc = AccumDict(accum=[])
-        distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
-        for rup, sctx, dctx in ctxs:
+        distmax = max(dctx.rrup.max() for rup, dctx in ctxs)
+        for rup, dctx in ctxs:
             pdist = self.pointsource_distance.get('%.2f' % rup.mag)
             tup = []
             for p in self.REQUIRES_RUPTURE_PARAMETERS:
@@ -493,12 +498,12 @@ class PmapMaker(object):
                 dists = getattr(dctx, name)
                 tup.extend(I16(dists / distmax / precision))
                 # NB: the rx distance can be negative, hence the I16 (not U16)
-            acc[tuple(tup)].append((rup, sctx, dctx))
+            acc[tuple(tup)].append((rup, dctx))
         new_ctxs = []
         for ctxs in acc.values():
             # collapse only if all the sources are parametric
             parametric = not numpy.isnan(
-                [r.occurrence_rate for r, s, d in ctxs]).any()
+                [r.occurrence_rate for r, d in ctxs]).any()
             new_ctxs.extend(_collapse_ctxs(ctxs)
                             if len(ctxs) > 1 and parametric else ctxs)
         return new_ctxs
