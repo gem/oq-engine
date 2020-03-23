@@ -284,6 +284,10 @@ def apply_uncertainties(bset_values, src_group):
             srcs = []
             for (bset, value), ok in zip(bset_values, oks):
                 if ok and bset.collapsed:
+                    if src.code == b'N':
+                        raise NotImplementedError(
+                            'Collapsing of the logic tree is not implemented '
+                            'for %s' % src)
                     for br in bset.branches:
                         newsrc = copy.deepcopy(src)
                         newsrc.scaling_rate = br.weight
