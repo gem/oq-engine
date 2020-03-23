@@ -341,7 +341,7 @@ class PmapMaker(object):
     def _ctxs(self, rups_sites, grp_ids, collapse=False):
         self.numrups = 0
         self.numsites = 0
-        if collapse:
+        if collapse:  # for few sites
             for rups, sites in rups_sites:
                 with self.ctx_mon:
                     ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids)
@@ -354,7 +354,7 @@ class PmapMaker(object):
                     self.rupdata.data['grp_id'].append(grp_ids)
                     self.numsites += len(r_sites)
                     yield rup, r_sites, dctx
-        else:
+        else:  # many sites
             for rups, sites in rups_sites:
                 with self.ctx_mon:
                     ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids)
@@ -364,7 +364,7 @@ class PmapMaker(object):
                 yield from ctxs
 
     def _update_pmap(self, ctxs, pmap=None):
-        # make contexts, collapse them and compute PoEs
+        # compute PoEs and update pmap
         if pmap is None:
             pmap = self.pmap
         for rup, r_sites, dctx in ctxs:
@@ -389,7 +389,7 @@ class PmapMaker(object):
                         for grp_id in rup.grp_ids:
                             p = pmap[grp_id]
                             p.setdefault(sid, 1.).array *= pne
-                else:
+                else:  # rup_mutex
                     for sid, pne in zip(r_sites.sids, pnes):
                         for grp_id in rup.grp_ids:
                             p = pmap[grp_id]
