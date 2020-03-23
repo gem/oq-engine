@@ -368,7 +368,7 @@ class PmapMaker(object):
                         self.numrups += len(ctxs)
                 for rup, r_sites, dctx in ctxs:
                     self.rupdata.add(rup, r_sites, dctx)
-                    self.rupdata.data['grp_id_'].append(grp_ids)
+                    self.rupdata.data['grp_id'].append(grp_ids)
                     self.numsites += len(r_sites)
                     yield rup, r_sites, dctx
         else:

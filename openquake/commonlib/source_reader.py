@@ -272,6 +272,7 @@ class CompositeSourceModel:
         :returns: an array of grp_ids (to be stored as an hdf5.vuint32 array)
         """
         keys = set(tuple(src.grp_ids) for sg in self.src_groups for src in sg)
+        assert len(keys) < TWO16, len(keys)
         return [numpy.array(grp_ids, numpy.uint32) for grp_ids in sorted(keys)]
 
     def get_nonparametric_sources(self):
