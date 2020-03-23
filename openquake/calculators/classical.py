@@ -304,6 +304,7 @@ class ClassicalCalculator(base.HazardCalculator):
             maximum_distance=oq.maximum_distance,
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
+            collapse_ruptures=oq.collapse_ruptures,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':

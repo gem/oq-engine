@@ -92,7 +92,8 @@ class CollapseTestCase(unittest.TestCase):
         for i, src in enumerate(srcs):
             src.id = i
         res = classical(srcs, self.srcfilter, self.gsims,
-                        dict(imtls=self.imtls, truncation_level2=2))
+                        dict(imtls=self.imtls, truncation_level2=2,
+                             collapse_ruptures=True))
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
         curves = [pmap[grp_id].array[0, :, 0] for grp_id in sorted(pmap)]
