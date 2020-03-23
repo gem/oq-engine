@@ -212,7 +212,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rup, sites, self.filter_distance)
-        mdist = self.maximum_distance(rup.tectonic_region_type, rup.mag)
+        mdist = self.maximum_distance(self.trt, rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
@@ -227,7 +227,7 @@ class ContextMaker(object):
         :returns: :class:`DistancesContext`
         """
         distances = get_distances(rup, sites, self.filter_distance)
-        mdist = self.maximum_distance(rup.tectonic_region_type, rup.mag)
+        mdist = self.maximum_distance(self.trt, rup.mag)
         if (distances > mdist).all():
             raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
         return DistancesContext([(self.filter_distance, distances)])
@@ -289,8 +289,7 @@ class ContextMaker(object):
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
-        reqv_obj = (self.reqv.get(rupture.tectonic_region_type)
-                    if self.reqv else None)
+        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
         if reqv_obj and isinstance(rupture.surface, PlanarSurface):
             reqv = reqv_obj.get(dctx.repi, rupture.mag)
             if 'rjb' in self.REQUIRES_DISTANCES:
