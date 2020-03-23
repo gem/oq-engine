@@ -479,7 +479,11 @@ class PmapMaker(object):
             acc[tuple(tup)].append((rup, sctx, dctx))
         new_ctxs = []
         for ctxs in acc.values():
-            new_ctxs.extend(_collapse_ctxs(ctxs) if len(ctxs) > 1 else ctxs)
+            # collapse only if all the sources are parametric
+            parametric = not numpy.isnan(
+                [r.occurrence_rate for r, s, d in ctxs]).any()
+            new_ctxs.extend(_collapse_ctxs(ctxs)
+                            if len(ctxs) > 1 and parametric else ctxs)
         return new_ctxs
 
     def _gen_rups_sites(self, src, sites, rups):
