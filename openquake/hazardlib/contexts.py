@@ -45,6 +45,7 @@ def digitize(values, name=None, minval=None, maxval=None):
     :param values: an array of n floats (or arrays)
     :returns: an array of n numpy.uint8 values
     """
+    assert len(values), name
     if name is None:
         if minval is None:
             minval = values.min()
@@ -506,7 +507,7 @@ class PmapMaker(object):
         Collapse the contexts with similar parameters
         """
         C = len(ctxs)
-        if not self.rup_indep or C == 1:  # do not collapse
+        if C <= 1:  # do not collapse
             return ctxs
         rctxs = []
         dctxs = []
