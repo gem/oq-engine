@@ -176,7 +176,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         self.datastore.hdf5.save_vlen('rup/' + k, v)
                         continue
                     if k == 'grp_id':
-                        v = U16([self.grp_key[tuple(x)] for x in v])
+                        # store indices to the grp_ids table
+                        v = U16([self.gidx[tuple(x)] for x in v])
                     hdf5.extend(self.datastore['rup/' + k], v)
         return acc
 
@@ -216,8 +217,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('rup/' + k, dt)
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
-        self.grp_key = {tuple(grp_ids): i
-                        for i, grp_ids in enumerate(self.datastore['grp_ids'])}
+        self.gidx = {tuple(grp_ids): i
+                     for i, grp_ids in enumerate(self.datastore['grp_ids'])}
         return zd
 
     def execute(self):

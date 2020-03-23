@@ -338,23 +338,6 @@ class PmapMaker(object):
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
 
-    def _sids_poes(self, rup, r_sites, dctx):
-        # return sids and poes of shape (N, L, G)
-        # NB: this must be fast since it is inside an inner loop
-        with self.gmf_mon:
-            mean_std = base.get_mean_std(  # shape (2, N, M, G)
-                r_sites, rup, dctx, self.imts, self.gsims)
-        with self.poe_mon:
-            ll = self.loglevels
-            poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
-            for g, gsim in enumerate(self.gsims):
-                for m, imt in enumerate(ll):
-                    if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
-                        # set by the engine when parsing the gsim logictree;
-                        # when 0 ignore the gsim: see _build_trts_branches
-                        poes[:, ll(imt), g] = 0
-            return r_sites.sids, poes
-
     def _ctxs(self, rups_sites, grp_ids, collapse=False):
         self.numrups = 0
         self.numsites = 0
@@ -385,16 +368,29 @@ class PmapMaker(object):
         if pmap is None:
             pmap = self.pmap
         for rup, r_sites, dctx in ctxs:
-            sids, poes = self._sids_poes(rup, r_sites, dctx)
+            # sids and poes of shape (N, L, G)
+            # this must be fast since it is inside an inner loop
+            with self.gmf_mon:
+                mean_std = base.get_mean_std(  # shape (2, N, M, G)
+                    r_sites, rup, dctx, self.imts, self.gsims)
+            with self.poe_mon:
+                ll = self.loglevels
+                poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
+                for g, gsim in enumerate(self.gsims):
+                    for m, imt in enumerate(ll):
+                        if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
+                            # set by the engine when parsing the gsim logictree
+                            # when 0 ignore the gsim: see _build_trts_branches
+                            poes[:, ll(imt), g] = 0
             with self.pne_mon:
                 pnes = rup.get_probability_no_exceedance(poes)
                 if self.rup_indep:
-                    for sid, pne in zip(sids, pnes):
+                    for sid, pne in zip(r_sites.sids, pnes):
                         for grp_id in rup.grp_ids:
                             p = pmap[grp_id]
                             p.setdefault(sid, 1.).array *= pne
                 else:
-                    for sid, pne in zip(sids, pnes):
+                    for sid, pne in zip(r_sites.sids, pnes):
                         for grp_id in rup.grp_ids:
                             p = pmap[grp_id]
                             p.setdefault(sid, 0.).array += (
