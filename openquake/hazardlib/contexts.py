@@ -481,7 +481,7 @@ class PmapMaker(object):
         for ctxs in acc.values():
             # collapse only if all the sources are parametric
             parametric = not numpy.isnan(
-                [ctx[0].occurrence_rate for ctx in ctxs]).any()
+                [r.occurrence_rate for r, s, d in ctxs]).any()
             new_ctxs.extend(_collapse_ctxs(ctxs)
                             if len(ctxs) > 1 and parametric else ctxs)
         return new_ctxs
