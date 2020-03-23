@@ -196,9 +196,20 @@ class ContextMaker(object):
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
         else:
-            raise FarAwayRupture(
-                '%d: %d km' % (rup.rup_id, distances.min()))
+            raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
         return sites, DistancesContext([(self.filter_distance, distances)])
+
+    def get_dctx(self, sites, rup):
+        """
+        :param sites: :class:`openquake.hazardlib.site.SiteCollection`
+        :param rup: :class:`openquake.hazardlib.source.rupture.BaseRupture`
+        :returns: :class:`DistancesContext`
+        """
+        distances = get_distances(rup, sites, self.filter_distance)
+        mdist = self.maximum_distance(rup.tectonic_region_type, rup.mag)
+        if (distances > mdist).all():
+            raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
+        return DistancesContext([(self.filter_distance, distances)])
 
     def add_rup_params(self, rupture):
         """
@@ -228,7 +239,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture):
+    def make_contexts(self, sites, rupture, filter=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -240,6 +251,9 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
+        :param boolean filter:
+            If True filter the sites
+
         :returns:
             Tuple of two items: sites and distances context.
 
@@ -247,7 +261,10 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        sites, dctx = self.filter(sites, rupture)
+        if filter:
+            sites, dctx = self.filter(sites, rupture)
+        else:
+            dctx = self.get_dctx(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -262,18 +279,23 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def make_ctxs(self, ruptures, sites, grp_ids):
+    def make_ctxs(self, ruptures, sites, grp_ids, filter):
         """
-        :returns: a list of triples (rctx, sctx, dctx)
+        :returns:
+            a list of triples (rctx, sctx, dctx) if filter is True,
+            a list of pairs (rctx, dctx) if filter is False
         """
         ctxs = []
         for rup in ruptures:
             try:
-                sctx, dctx = self.make_contexts(sites, rup)
+                sctx, dctx = self.make_contexts(sites, rup, filter)
             except FarAwayRupture:
                 continue
             rup.grp_ids = grp_ids
-            ctxs.append((rup, sctx, dctx))
+            if filter:
+                ctxs.append((rup, sctx, dctx))
+            else:
+                ctxs.append((rup, dctx))
         return ctxs
 
     def max_intensity(self, onesite, mags, dists):
@@ -316,10 +338,10 @@ def _collapse(rups):
 
 
 def _collapse_ctxs(ctxs):
-    rup, sites, dctx = ctxs[0]
+    rup, dctx = ctxs[0]
     rups = [ctx[0] for ctx in ctxs]
     [rup] = _collapse(rups)
-    return [(rup, sites, dctx)]
+    return [(rup, dctx)]
 
 
 class PmapMaker(object):
@@ -341,23 +363,28 @@ class PmapMaker(object):
     def _ctxs(self, rups_sites, grp_ids, collapse=False):
         self.numrups = 0
         self.numsites = 0
-        if collapse:  # for few sites
-            for rups, sites in rups_sites:
-                with self.ctx_mon:
-                    ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids)
+        if collapse:  # for few sites do not filter
+            with self.ctx_mon:
+                for rups, sites in rups_sites:
+                    ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, False)
                     if ctxs:
                         self.totrups += len(ctxs)
-                        ctxs = self.collapse(ctxs)
+                        ctxs = self.collapse(ctxs, sites)
                         self.numrups += len(ctxs)
-                for rup, r_sites, dctx in ctxs:
+                for rup, dctx in ctxs:
+                    mask = (dctx.rrup <= self.maximum_distance(
+                        rup.tectonic_region_type, rup.mag))
+                    r_sites = sites.filter(mask)
+                    for name in self.REQUIRES_DISTANCES:
+                        setattr(dctx, name, getattr(dctx, name)[mask])
                     self.rupdata.add(rup, r_sites, dctx)
                     self.rupdata.data['grp_id'].append(grp_ids)
                     self.numsites += len(r_sites)
                     yield rup, r_sites, dctx
-        else:  # many sites
+        else:  # many sites, filter
             for rups, sites in rups_sites:
                 with self.ctx_mon:
-                    ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids)
+                    ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, True)
                 self.totrups += len(ctxs)
                 self.numrups += len(ctxs)
                 self.numsites += sum(len(ctx[1]) for ctx in ctxs)
@@ -454,15 +481,15 @@ class PmapMaker(object):
         rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
         return pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
 
-    def collapse(self, ctxs, precision=1E-3):
+    def collapse(self, ctxs, sites, precision=1E-3):
         """
         Collapse the contexts if the distances are equivalent up to 1/1000
         """
         if not self.rup_indep or len(ctxs) == 1:  # do not collapse
             return ctxs
         acc = AccumDict(accum=[])
-        distmax = max(dctx.rrup.max() for rup, sctx, dctx in ctxs)
-        for rup, sctx, dctx in ctxs:
+        distmax = max(dctx.rrup.max() for rup, dctx in ctxs)
+        for rup, dctx in ctxs:
             pdist = self.pointsource_distance.get('%.2f' % rup.mag)
             tup = []
             for p in self.REQUIRES_RUPTURE_PARAMETERS:
@@ -476,12 +503,12 @@ class PmapMaker(object):
                 dists = getattr(dctx, name)
                 tup.extend(I16(dists / distmax / precision))
                 # NB: the rx distance can be negative, hence the I16 (not U16)
-            acc[tuple(tup)].append((rup, sctx, dctx))
+            acc[tuple(tup)].append((rup, dctx))
         new_ctxs = []
         for ctxs in acc.values():
             # collapse only if all the sources are parametric
             parametric = not numpy.isnan(
-                [r.occurrence_rate for r, s, d in ctxs]).any()
+                [r.occurrence_rate for r, d in ctxs]).any()
             new_ctxs.extend(_collapse_ctxs(ctxs)
                             if len(ctxs) > 1 and parametric else ctxs)
         return new_ctxs
