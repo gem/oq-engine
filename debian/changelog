@@ -1,7 +1,7 @@
   [Michele Simionato]
   * Added a check for missing TRTs in the GSIM logic tree file
-  * Reduced the storage required for site specific calculations in the case
-    of complex logic trees
+  * Reduced the storage required for site specific calculations
+    with complex logic trees by removing duplicated ruptures
   * Restored the computation of the mean disaggregation when multiple
     realizations are requested
   * Slightly changed the syntax of `oq info` (see `oq info --help`) and added

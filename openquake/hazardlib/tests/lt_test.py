@@ -113,7 +113,7 @@ class CollapseTestCase(unittest.TestCase):
         assert weights == [.4, .6]  # two rlzs
         # self.plot(mean, coll1)
         assert scaling_rates(srcs) == [1.0, 0.5, 0.5, 1.0]
-        self.assertEqual(effrups, 28)  # less then 8 x 4 = 32
+        self.assertEqual(effrups, 16)  # less then 8 x 4 = 32
         numpy.testing.assert_allclose(mean, coll1, atol=.1)
 
         # compute the fully collapsed curve
@@ -123,7 +123,7 @@ class CollapseTestCase(unittest.TestCase):
         assert weights == [1]  # one rlz
         # self.plot(mean, coll2)
         assert scaling_rates(srcs) == [0.4, 0.6, 0.5, 0.5]
-        self.assertEqual(effrups, 28)  # less then 8 x 4 = 32
+        self.assertEqual(effrups, 10)  # much less then 8 x 4 = 32
         numpy.testing.assert_allclose(mean, coll2, atol=.16)
 
     def plot(self, mean, coll):

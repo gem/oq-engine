@@ -262,7 +262,7 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def make_ctxs(self, ruptures, sites):
+    def make_ctxs(self, ruptures, sites, grp_ids):
         """
         :returns: a list of triples (rctx, sctx, dctx)
         """
@@ -272,6 +272,7 @@ class ContextMaker(object):
                 sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
+            rup.grp_ids = grp_ids
             ctxs.append((rup, sctx, dctx))
         return ctxs
 
@@ -337,55 +338,63 @@ class PmapMaker(object):
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
 
-    def _sids_poes(self, rup, r_sites, dctx):
-        # return sids and poes of shape (N, L, G)
-        # NB: this must be fast since it is inside an inner loop
-        with self.gmf_mon:
-            mean_std = base.get_mean_std(  # shape (2, N, M, G)
-                r_sites, rup, dctx, self.imts, self.gsims)
-        with self.poe_mon:
-            ll = self.loglevels
-            poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
-            for g, gsim in enumerate(self.gsims):
-                for m, imt in enumerate(ll):
-                    if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
-                        # set by the engine when parsing the gsim logictree;
-                        # when 0 ignore the gsim: see _build_trts_branches
-                        poes[:, ll(imt), g] = 0
-            return r_sites.sids, poes
+    def _ctxs(self, rups_sites, grp_ids, collapse=False):
+        self.numrups = 0
+        self.numsites = 0
+        if collapse:
+            for rups, sites in rups_sites:
+                with self.ctx_mon:
+                    ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids)
+                    if ctxs:
+                        self.totrups += len(ctxs)
+                        ctxs = self.collapse(ctxs)
+                        self.numrups += len(ctxs)
+                for rup, r_sites, dctx in ctxs:
+                    self.rupdata.add(rup, r_sites, dctx)
+                    self.rupdata.data['grp_id'].append(grp_ids)
+                    self.numsites += len(r_sites)
+                    yield rup, r_sites, dctx
+        else:
+            for rups, sites in rups_sites:
+                with self.ctx_mon:
+                    ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids)
+                self.totrups += len(ctxs)
+                self.numrups += len(ctxs)
+                self.numsites += sum(len(ctx[1]) for ctx in ctxs)
+                yield from ctxs
 
-    def _update_pmap(self, rups_sites, grp_ids, pmap=None):
+    def _update_pmap(self, ctxs, pmap=None):
         # make contexts, collapse them and compute PoEs
         if pmap is None:
             pmap = self.pmap
-        d = dict(numrups=0, numsites=0, totrups=0)
-        for rups, sites in rups_sites:
-            with self.ctx_mon:
-                ctxs = self.cmaker.make_ctxs(rups, sites)
-                if ctxs:
-                    d['totrups'] += len(ctxs)
-                    ctxs = self.collapse(ctxs)
-                    d['numrups'] += len(ctxs)
-            for rup, r_sites, dctx in ctxs:
-                if self.fewsites:  # store rupdata
-                    self.rupdata.add(rup, r_sites, dctx)
-                    self.rupdata.data['grp_id_'].append(grp_ids)
-                sids, poes = self._sids_poes(rup, r_sites, dctx)
-                d['numsites'] += len(sids)
-                with self.pne_mon:
-                    pnes = rup.get_probability_no_exceedance(poes)
-                    if self.rup_indep:
-                        for sid, pne in zip(sids, pnes):
-                            for grp_id in grp_ids:
-                                p = pmap[grp_id]
-                                p.setdefault(sid, 1.).array *= pne
-                    else:
-                        for sid, pne in zip(sids, pnes):
-                            for grp_id in grp_ids:
-                                p = pmap[grp_id]
-                                p.setdefault(sid, 0.).array += (
-                                    1.-pne) * rup.weight
-        return d
+        for rup, r_sites, dctx in ctxs:
+            # sids and poes of shape (N, L, G)
+            # this must be fast since it is inside an inner loop
+            with self.gmf_mon:
+                mean_std = base.get_mean_std(  # shape (2, N, M, G)
+                    r_sites, rup, dctx, self.imts, self.gsims)
+            with self.poe_mon:
+                ll = self.loglevels
+                poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
+                for g, gsim in enumerate(self.gsims):
+                    for m, imt in enumerate(ll):
+                        if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
+                            # set by the engine when parsing the gsim logictree
+                            # when 0 ignore the gsim: see _build_trts_branches
+                            poes[:, ll(imt), g] = 0
+            with self.pne_mon:
+                pnes = rup.get_probability_no_exceedance(poes)
+                if self.rup_indep:
+                    for sid, pne in zip(r_sites.sids, pnes):
+                        for grp_id in rup.grp_ids:
+                            p = pmap[grp_id]
+                            p.setdefault(sid, 1.).array *= pne
+                else:
+                    for sid, pne in zip(r_sites.sids, pnes):
+                        for grp_id in rup.grp_ids:
+                            p = pmap[grp_id]
+                            p.setdefault(sid, 0.).array += (
+                                1.-pne) * rup.weight
 
     def _ruptures(self, src):
         with self.cmaker.mon('iter_ruptures', measuremem=False):
@@ -395,14 +404,20 @@ class PmapMaker(object):
         # srcs with the same source_id and grp_ids
         for srcs, sites in self.srcfilter.get_sources_sites(self.group):
             t0 = time.time()
-            rs = []
-            for src in srcs:
-                rups = self._ruptures(src)
-                rs.extend(self._gen_rups_sites(src, sites, rups))
-            d = self._update_pmap(rs, numpy.array(src.grp_ids))
-            self.totrups += d['totrups']
-            self.calc_times[src.source_id] += numpy.array(
-                [d['numrups'], d['numsites'], time.time() - t0])
+            src_id = srcs[0].source_id
+            grp_ids = numpy.array(srcs[0].grp_ids)
+            if self.fewsites:  # try to collapse the ruptures
+                rups = sum([self._ruptures(src) for src in srcs], [])
+                ctxs = self._ctxs([(rups, sites)], grp_ids, collapse=True)
+            else:  # many sites, do not collapse the ruptures
+                ctxs = []
+                for src in srcs:
+                    rups = self._ruptures(src)
+                    rups_sites = self._gen_rups_sites(src, sites, rups)
+                    ctxs.extend(self._ctxs(rups_sites, grp_ids))
+            self._update_pmap(ctxs)
+            self.calc_times[src_id] += numpy.array(
+                [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
                          for grp_id, p in self.pmap.items())
 
@@ -412,18 +427,16 @@ class PmapMaker(object):
             rups = self._ruptures(src)
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
             pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
-            d = self._update_pmap(
-                self._gen_rups_sites(src, sites, rups),
-                numpy.array(src.grp_ids), pmap)
+            ctxs = self._ctxs([(rups, sites)], numpy.array(src.grp_ids))
+            self._update_pmap(ctxs, pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
                 if self.rup_indep:
                     p = ~p
                 p *= src.mutex_weight
                 self.pmap[grp_id] += p
-            self.totrups += d['totrups']
             self.calc_times[src.source_id] += numpy.array(
-                [d['numrups'], d['numsites'], time.time() - t0])
+                [self.numrups, self.numsites, time.time() - t0])
         return self.pmap
 
     def make(self):
