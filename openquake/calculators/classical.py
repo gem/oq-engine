@@ -333,8 +333,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     oq.maximum_distance.magdist[sg.trt].items()))
             else:
                 md = oq.maximum_distance(sg.trt)
-            logging.info('max_dist=%s, gsims=%d, ruptures=%d, blocks=%d',
-                         md, len(gsims), nr, nb)
+            logging.info('max_dist={}, gsims={}, ruptures={:,d}, blocks={}'.
+                         format(md, len(gsims), int(nr), nb))
             if oq.pointsource_distance['default']:
                 pd = ', '.join('%s->%d' % item for item in sorted(
                     oq.pointsource_distance[sg.trt].items()))
