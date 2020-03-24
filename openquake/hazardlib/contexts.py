@@ -241,7 +241,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture, filter=True):
+    def make_contexts(self, sites, rupture, filt=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -253,7 +253,7 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
-        :param boolean filter:
+        :param boolean filt:
             If True filter the sites
 
         :returns:
@@ -263,7 +263,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        if filter:
+        if filt:
             sites, dctx = self.filter(sites, rupture)
         else:
             dctx = self.get_dctx(sites, rupture)
@@ -280,20 +280,20 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def make_ctxs(self, ruptures, sites, grp_ids, filter):
+    def make_ctxs(self, ruptures, sites, grp_ids, filt):
         """
         :returns:
-            a list of triples (rctx, sctx, dctx) if filter is True,
-            a list of pairs (rctx, dctx) if filter is False
+            a list of triples (rctx, sctx, dctx) if filt is True,
+            a list of pairs (rctx, dctx) if filt is False
         """
         ctxs = []
         for rup in ruptures:
             try:
-                sctx, dctx = self.make_contexts(sites, rup, filter)
+                sctx, dctx = self.make_contexts(sites, rup, filt)
             except FarAwayRupture:
                 continue
             rup.grp_ids = grp_ids
-            if filter:
+            if filt:
                 ctxs.append((rup, sctx, dctx))
             else:
                 ctxs.append((rup, dctx))
@@ -365,7 +365,7 @@ class PmapMaker(object):
                         rups = self.collapse_psd(rups, sites)
                     if self.collapse_ruptures:
                         rups = self.collapse_md(rups, sites)
-                ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, False)
+                ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
                 self.numrups += len(ctxs)
             for rup, dctx in ctxs:
                 mask = (dctx.rrup <= self.maximum_distance(
@@ -379,7 +379,7 @@ class PmapMaker(object):
                 yield rup, r_sites, dctx
         else:  # many sites, do not collapse, but filter
             with self.ctx_mon:
-                ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, True)
+                ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=True)
             self.totrups += len(ctxs)
             self.numrups += len(ctxs)
             self.numsites += sum(len(ctx[1]) for ctx in ctxs)
