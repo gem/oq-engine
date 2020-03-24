@@ -275,8 +275,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.by_task.clear()
         self.numrups = sum(arr[0] for arr in self.calc_times.values())
         numsites = sum(arr[1] for arr in self.calc_times.values())
-        logging.info('Effective number of ruptures: %d/%d',
-                     self.numrups, self.totrups)
+        logging.info('Effective number of ruptures: {:,d}/{:,d}'.format(
+            int(self.numrups), self.totrups))
         logging.info('Effective number of sites per rupture: %d',
                      numsites / self.numrups)
         self.calc_times.clear()  # save a bit of memory
