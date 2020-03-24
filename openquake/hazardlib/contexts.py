@@ -569,7 +569,7 @@ class PmapMaker(object):
                     coll.append(rup)
             for rs in groupby(coll, operator.attrgetter('distbin')).values():
                 # group together ruptures in the same distbin
-                out.extend(rs)
+                out.extend(_collapse(rs))
         return out
 
     def _gen_rups_sites(self, src, sites, rups):
