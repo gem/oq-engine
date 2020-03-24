@@ -348,6 +348,12 @@ hazard_uhs-std.csv
         dupl = sum(len(src.grp_ids) - 1 for src in sg)
         self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
+        # another way to look at the duplicated sources; protects against
+        # future refactorings breaking the pandas readability of source_info
+        df = self.calc.datastore.read_df('source_info', 'source_id')
+        dic = dict(df['num_sources'])
+        self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
+
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
         self.assert_curves_ok([

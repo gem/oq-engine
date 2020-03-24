@@ -623,6 +623,8 @@ def get_composite_source_model(oqparam, h5=None):
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     csm = get_csm(oqparam, source_model_lt, gsim_lt, h5)
+    grp_ids = csm.get_grp_ids()
+    gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():
         csm.init_serials(oqparam.ses_seed)
     data = {}  # src_id -> row
@@ -633,8 +635,8 @@ def get_composite_source_model(oqparam, h5=None):
                 num_sources = data[src.source_id][3] + 1
             else:
                 num_sources = 1
-            row = [src.source_id, U16(src.grp_ids), src.code, num_sources,
-                   0, 0, 0, src.checksum, src.serial, src._wkt]
+            row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
+                   num_sources, 0, 0, 0, src.checksum, src.serial, src._wkt]
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
                 srcmags = ['%.2f' % mag for mag in src.mags]
@@ -646,7 +648,7 @@ def get_composite_source_model(oqparam, h5=None):
             mags.update(srcmags)
     if h5:
         h5['source_mags'] = numpy.array(sorted(mags))
-        h5['grp_ids'] = csm.get_grp_ids()
+        h5['grp_ids'] = grp_ids
     csm.gsim_lt.check_imts(oqparam.imtls)
     csm.source_info = data
     return csm
