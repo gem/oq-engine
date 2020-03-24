@@ -25,7 +25,8 @@ import numpy
 from scipy.interpolate import interp1d
 
 
-from openquake.baselib.general import AccumDict, DictArray, groupby
+from openquake.baselib.general import (
+    AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim import base
@@ -38,26 +39,6 @@ I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
-
-
-def digitize(values, name=None, minval=None, maxval=None):
-    """
-    :param values: an array of n floats (or arrays)
-    :returns: an array of n numpy.uint8 values
-    """
-    assert len(values), name
-    if name is None:
-        if minval is None:
-            minval = values.min()
-        if maxval is None:
-            maxval = values.max()
-        if minval == maxval:
-            bins = [minval] * 255
-        else:
-            bins = numpy.arange(minval, maxval, (maxval-minval) / 255)
-        return numpy.searchsorted(bins, values)
-    arr = numpy.array([getattr(obj, name) for obj in values])
-    return digitize(arr)
 
 
 def get_distances(rupture, sites, param):
@@ -357,13 +338,6 @@ def _collapse(rups):
     return [rup]
 
 
-def _collapse_ctxs(ctxs):
-    rup, dctx = ctxs[0]
-    rups = [ctx[0] for ctx in ctxs]
-    [rup] = _collapse(rups)
-    return [(rup, dctx)]
-
-
 class PmapMaker(object):
     """
     A class to compute the PoEs from a given source
@@ -384,12 +358,14 @@ class PmapMaker(object):
         if self.fewsites:  # do not filter, but collapse
             with self.ctx_mon:
                 self.totrups += len(rups)
-                rups = self.collapse_psd(rups, sites)
+                rup_parametric = not numpy.isnan(
+                    [r.occurrence_rate for r in rups]).any()
+                if self.rup_indep and rup_parametric:
+                    if self.pointsource_distance:
+                        rups = self.collapse_psd(rups, sites)
+                    if self.collapse_ruptures:
+                        rups = self.collapse_md(rups, sites)
                 ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, False)
-                if self.collapse_ruptures:
-                    # useful when psdist is not set, especially for
-                    # duplicated sources coming from collapsed logic trees
-                    ctxs = self.collapse(ctxs, sites)
                 self.numrups += len(ctxs)
             for rup, dctx in ctxs:
                 mask = (dctx.rrup <= self.maximum_distance(
@@ -504,55 +480,10 @@ class PmapMaker(object):
         rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
         return pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
 
-    def collapse(self, ctxs, sites):
-        """
-        Collapse the contexts with similar parameters
-        """
-        if not self.rup_indep:  # do not collapse
-            return ctxs
-        C = len(ctxs)
-        if C <= 1:  # do not collapse
-            return ctxs
-        rctxs = []
-        dctxs = []
-        for rctx, dctx in ctxs:
-            rctxs.append(rctx)
-            dctxs.append(dctx)
-        P = (len(self.REQUIRES_RUPTURE_PARAMETERS) +
-             len(self.REQUIRES_DISTANCES) * len(sites))
-        idxs = numpy.zeros((C, P), numpy.uint8)
-        p = 0
-        for par in self.REQUIRES_RUPTURE_PARAMETERS:
-            idxs[:, p] = digitize(rctxs, par)
-            p += 1
-        for name in self.REQUIRES_DISTANCES:
-            arr = digitize(dctxs, name)  # shape (C, nsites)
-            for s in range(len(sites)):
-                idxs[:, p] = arr[:, s]
-                p += 1
-        acc = AccumDict(accum=[])
-        for ctx, idx in zip(ctxs, idxs):
-            acc[tuple(idx)].append(ctx)
-        new_ctxs = []
-        for ctxs in acc.values():
-            # collapse only if all the sources are parametric
-            parametric = not numpy.isnan(
-                [r.occurrence_rate for r, d in ctxs]).any()
-            new_ctxs.extend(_collapse_ctxs(ctxs)
-                            if len(ctxs) > 1 and parametric else ctxs)
-        return new_ctxs
-
     def collapse_psd(self, rups, sites):
         """
         Collapse ruptures more distant than the pointsource_distance
         """
-        if not self.rup_indep or not self.pointsource_distance:
-            # do not collapse
-            return rups
-        parametric = not numpy.isnan([r.occurrence_rate for r in rups]).any()
-        if not parametric:
-            # do not collapse
-            return rups
         out = []
         for mag, mrups in groupby(rups, bymag).items():
             if len(mrups) == 1:  # nothing to do
@@ -565,11 +496,18 @@ class PmapMaker(object):
                 if dist < pdist:  # do not collapse
                     out.append(rup)
                 else:
-                    rup.distbin = int(numpy.sqrt(dist))
+                    rup.dist = dist
                     coll.append(rup)
-            for rs in groupby(coll, operator.attrgetter('distbin')).values():
-                # group together ruptures in the same distbin
+            for rs in groupby_bin(coll, 10, operator.attrgetter('dist')):
+                # group together ruptures in the same distance bin
                 out.extend(_collapse(rs))
+        return out
+
+    def collapse_md(self, rups, sites):
+        # collapse ruptures in the same magdist bin
+        def magdist(rup):
+            return rup.mag, get_distances(rup, sites, 'rrup').min()
+        out = sum(map(_collapse, groupby_bin(rups, 255, magdist)), [])
         return out
 
     def _gen_rups_sites(self, src, sites, rups):
