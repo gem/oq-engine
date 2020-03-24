@@ -24,7 +24,7 @@ from datetime import datetime
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -219,6 +219,13 @@ class ClassicalCalculator(base.HazardCalculator):
         self.totrups = 0  # total number of ruptures before collapsing
         self.gidx = {tuple(grp_ids): i
                      for i, grp_ids in enumerate(self.datastore['grp_ids'])}
+
+        # estimate max memory per core
+        max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
+        max_num_grp_ids = max(len(grp_ids) for grp_ids in self.gidx)
+        pmapbytes = self.N * num_levels * max_num_gsims * max_num_grp_ids * 8
+        logging.info('Estimated maximum memory in the pmaps: %s',
+                     humansize(pmapbytes))
         return zd
 
     def execute(self):
