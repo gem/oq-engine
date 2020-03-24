@@ -383,9 +383,12 @@ class PmapMaker(object):
     def _ctxs(self, rups, sites, grp_ids):
         if self.fewsites:  # do not filter, but collapse
             with self.ctx_mon:
+                self.totrups += len(rups)
+                rups = self.collapse_psd(rups, sites)
                 ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, False)
-                self.totrups += len(ctxs)
-                if self.rup_indep and self.collapse_ruptures:
+                if self.collapse_ruptures:
+                    # useful when psdist is not set, especially for
+                    # duplicated sources coming from collapsed logic trees
                     ctxs = self.collapse(ctxs, sites)
                 self.numrups += len(ctxs)
             for rup, dctx in ctxs:
@@ -505,6 +508,8 @@ class PmapMaker(object):
         """
         Collapse the contexts with similar parameters
         """
+        if not self.rup_indep:  # do not collapse
+            return ctxs
         C = len(ctxs)
         if C <= 1:  # do not collapse
             return ctxs
@@ -536,6 +541,36 @@ class PmapMaker(object):
             new_ctxs.extend(_collapse_ctxs(ctxs)
                             if len(ctxs) > 1 and parametric else ctxs)
         return new_ctxs
+
+    def collapse_psd(self, rups, sites):
+        """
+        Collapse ruptures more distant than the pointsource_distance
+        """
+        if not self.rup_indep or not self.pointsource_distance:
+            # do not collapse
+            return rups
+        parametric = not numpy.isnan([r.occurrence_rate for r in rups]).any()
+        if not parametric:
+            # do not collapse
+            return rups
+        out = []
+        for mag, mrups in groupby(rups, bymag).items():
+            if len(mrups) == 1:  # nothing to do
+                out.extend(mrups)
+                continue
+            pdist = self.pointsource_distance['%.2f' % mag]
+            coll = []
+            for rup in mrups:
+                dist = get_distances(rup, sites, 'rrup').min()
+                if dist < pdist:  # do not collapse
+                    out.append(rup)
+                else:
+                    rup.distbin = int(numpy.sqrt(dist))
+                    coll.append(rup)
+            for rs in groupby(coll, operator.attrgetter('distbin')).values():
+                # group together ruptures in the same distbin
+                out.extend(rs)
+        return out
 
     def _gen_rups_sites(self, src, sites, rups):
         loc = getattr(src, 'location', None)
