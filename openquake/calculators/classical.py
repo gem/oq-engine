@@ -52,7 +52,7 @@ The calculation is too big:
 num_sites = %d
 num_levels = %d
 num_gsims = %d
-src_multiplicity = %d
+(num_models) = %d
 The estimated memory per core is %s > 4 GB.
 You MUST reduce one or more of the listed parameters.'''
 
