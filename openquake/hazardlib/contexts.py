@@ -387,10 +387,9 @@ class PmapMaker(object):
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
-        if pmap is None:
+        if pmap is None:  # for src_indep
             pmap = self.pmap
         for rup, r_sites, dctx in ctxs:
-            # sids and poes of shape (N, L, G)
             # this must be fast since it is inside an inner loop
             with self.gmf_mon:
                 mean_std = base.get_mean_std(  # shape (2, N, M, G)
@@ -405,6 +404,7 @@ class PmapMaker(object):
                             # when 0 ignore the gsim: see _build_trts_branches
                             poes[:, ll(imt), g] = 0
             with self.pne_mon:
+                # pnes and poes of shape (N, L, G)
                 pnes = rup.get_probability_no_exceedance(poes)
                 if self.rup_indep:
                     for sid, pne in zip(r_sites.sids, pnes):
