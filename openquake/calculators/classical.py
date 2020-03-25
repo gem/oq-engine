@@ -45,14 +45,14 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 MAXMEMORY = '''Estimated upper memory limit per core:
-%d sites x %d levels x %d gsims x %d (models) * 8 bytes = %s'''
+%d sites x %d levels x %d gsims x %d src_multiplicity * 8 bytes = %s'''
 
 TOOBIG = '''\
 The calculation is too big:
 num_sites = %d
 num_levels = %d
 num_gsims = %d
-(num_models) = %d
+src_multiplicity = %d
 The estimated memory per core is %s > 4 GB.
 You MUST reduce one or more of the listed parameters.'''
 
