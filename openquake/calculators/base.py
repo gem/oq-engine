@@ -62,8 +62,7 @@ num_levels = %d
 num_gsims = %d
 eff_sm_rlzs = %d
 The estimated memory per core is %s > 4 GB.
-You MUST reduce it.
-'''
+You MUST reduce one or more of the listed parameters.'''
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
