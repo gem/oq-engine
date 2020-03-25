@@ -71,8 +71,8 @@ def print_full_lt(fname):
     prints information about its composition and the full logic tree
     """
     oqparam = readinput.get_oqparam(fname)
-    csm = readinput.get_composite_source_model(oqparam)
-    print(csm.full_lt)
+    full_lt = readinput.get_full_lt(oqparam)
+    print(full_lt)
     print('See http://docs.openquake.org/oq-engine/stable/'
           'effective-realizations.html for an explanation')
 
