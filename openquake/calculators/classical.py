@@ -43,6 +43,9 @@ weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
+MAXMEMORY = '''Estimated upper memory limit per core:
+%d sites x %d levels x %d gsims x %d (models) * 8 bytes = %s'''
+
 
 def get_extreme_poe(array, imtls):
     """
@@ -224,8 +227,8 @@ class ClassicalCalculator(base.HazardCalculator):
         max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
         max_num_grp_ids = max(len(grp_ids) for grp_ids in self.gidx)
         pmapbytes = self.N * num_levels * max_num_gsims * max_num_grp_ids * 8
-        logging.info('Estimated maximum memory in the pmaps: %s',
-                     humansize(pmapbytes))
+        logging.info(MAXMEMORY % (self.N, num_levels, max_num_gsims,
+                                  max_num_grp_ids, humansize(pmapbytes)))
         return zd
 
     def execute(self):
