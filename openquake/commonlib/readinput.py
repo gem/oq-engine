@@ -586,14 +586,13 @@ def get_source_model_lt(oqparam):
     return smlt
 
 
-def get_composite_source_model(oqparam, h5=None):
+def get_full_lt(oqparam):
     """
-    Parse the XML and build a complete composite source model in memory.
-
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param h5:
-         an open hdf5.File where to store the source info
+    :returns:
+        a :class:`openquake.commonlib.logictree.FullLogicTree`
+        instance
     """
     source_model_lt = get_source_model_lt(oqparam)
     trts = source_model_lt.tectonic_region_types
@@ -619,10 +618,26 @@ def get_composite_source_model(oqparam, h5=None):
                 'use sampling instead of full enumeration or reduce the '
                 'source model with oq reduce_sm' % p)
         logging.info('Potential number of logic tree paths = {:_d}'.format(p))
-
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
-    csm = get_csm(oqparam, source_model_lt, gsim_lt, h5)
+    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
+    return full_lt
+
+
+def get_composite_source_model(oqparam, full_lt=None, h5=None):
+    """
+    Parse the XML and build a complete composite source model in memory.
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param full_lt:
+        a :class:`openquake.commonlib.logictree.FullLogicTree` or None
+    :param h5:
+         an open hdf5.File where to store the source info
+    """
+    if full_lt is None:
+        full_lt = get_full_lt(oqparam)
+    csm = get_csm(oqparam, full_lt, h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():
