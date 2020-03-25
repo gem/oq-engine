@@ -54,6 +54,17 @@ U32 = numpy.uint32
 F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
+FOURGB = 2 ** 34
+
+TOOBIG = '''\
+The calculation is too big:
+num_sites = %d
+num_levels = %d
+num_gsims = %d
+eff_sm_rlzs = %d
+The estimated memory per core is %s > 4 GB.
+You MUST reduce it.
+'''
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -452,9 +463,17 @@ class HazardCalculator(BaseCalculator):
                 tmp['sitecol'] = self.sitecol
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
+            full_lt = readinput.get_full_lt(oq)
+            L = len(oq.imtls.array)
+            G = max(len(gsims) for gsims in full_lt.gsim_lt.values.values())
+            E = len(full_lt.sm_rlzs)
+            upperlimit = self.N * L * G * E * 8
+            if upperlimit > FOURGB:
+                raise ValueError(TOOBIG % (self.N, L, G, E,
+                                           general.humansize(upperlimit)))
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, self.datastore.hdf5)
+                    oq, full_lt, self.datastore.hdf5)
                 srcs = [src for sg in csm.src_groups for src in sg]
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')
