@@ -54,7 +54,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
-FOURGB = 2 ** 34
 
 TOOBIG = '''\
 The calculation is too big:
@@ -454,7 +453,7 @@ class HazardCalculator(BaseCalculator):
         G = max(len(gsims) for gsims in full_lt.gsim_lt.values.values())
         E = len(full_lt.sm_rlzs)
         upperlimit = self.N * L * G * E * 8
-        if upperlimit > FOURGB:
+        if upperlimit > TWO32:
             raise ValueError(TOOBIG % (self.N, L, G, E,
                                        general.humansize(upperlimit)))
 
