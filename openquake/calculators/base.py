@@ -453,7 +453,7 @@ class HazardCalculator(BaseCalculator):
         G = max(len(gsims) for gsims in full_lt.gsim_lt.values.values())
         E = len(full_lt.sm_rlzs)
         upperlimit = self.N * L * G * E * 8
-        if upperlimit > TWO32:
+        if upperlimit >= TWO32:
             raise ValueError(TOOBIG % (self.N, L, G, E,
                                        general.humansize(upperlimit)))
 
