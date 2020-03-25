@@ -467,6 +467,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
             ampcode = pgetter.dstore['sitecol'].ampcode
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     M = len(imtls)
+    P = len(poes)
     L = len(imtls.array) if amplifier is None else len(amplifier.amplevels) * M
     R = len(weights)
     S = len(hstats)
@@ -476,7 +477,8 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     if hstats:
         pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
         if poes:
-            pmap_by_kind['hmaps-stats'] = [ProbabilityMap(L) for r in range(S)]
+            pmap_by_kind['hmaps-stats'] = [
+                ProbabilityMap(M, P) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
     for sid in pgetter.sids:
