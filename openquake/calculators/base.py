@@ -54,10 +54,21 @@ U32 = numpy.uint32
 F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
+FOURGB = 2 ** 34
+
+TOOBIG = '''\
+The calculation is too big:
+num_sites = %d
+num_levels = %d
+num_gsims = %d
+eff_sm_rlzs = %d
+The estimated memory per core is %s > 4 GB.
+You MUST reduce it.
+'''
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('grp_ids', hdf5.vuint16),         # 1
+    ('gidx', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
     ('num_sources', numpy.uint32),     # 3
     ('calc_time', numpy.float32),      # 4
@@ -439,6 +450,14 @@ class HazardCalculator(BaseCalculator):
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
 
+    def check_size(self, L, full_lt):
+        G = max(len(gsims) for gsims in full_lt.gsim_lt.values.values())
+        E = len(full_lt.sm_rlzs)
+        upperlimit = self.N * L * G * E * 8
+        if upperlimit > FOURGB:
+            raise ValueError(TOOBIG % (self.N, L, G, E,
+                                       general.humansize(upperlimit)))
+
     def read_inputs(self):
         """
         Read risk data and sources if any
@@ -452,9 +471,13 @@ class HazardCalculator(BaseCalculator):
                 tmp['sitecol'] = self.sitecol
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
+            full_lt = readinput.get_full_lt(oq)
+            L = len(oq.imtls.array)
+            if L:  # L is 0 for case_1_ruptures
+                self.check_size(L, full_lt)
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, self.datastore.hdf5)
+                    oq, full_lt, self.datastore.hdf5)
                 srcs = [src for sg in csm.src_groups for src in sg]
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')

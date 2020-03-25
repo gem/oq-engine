@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a flag `collapse_ruptures` and a new collapsing algorithm
   * Added a check for missing TRTs in the GSIM logic tree file
   * Reduced the storage required for site specific calculations
     with complex logic trees by removing duplicated ruptures

@@ -71,8 +71,8 @@ def print_full_lt(fname):
     prints information about its composition and the full logic tree
     """
     oqparam = readinput.get_oqparam(fname)
-    csm = readinput.get_composite_source_model(oqparam)
-    print(csm.full_lt)
+    full_lt = readinput.get_full_lt(oqparam)
+    print(full_lt)
     print('See http://docs.openquake.org/oq-engine/stable/'
           'effective-realizations.html for an explanation')
 
@@ -82,19 +82,16 @@ def do_build_reports(directory):
     Walk the directory and builds pre-calculation reports for all the
     job.ini files found.
     """
-    try:
-        for cwd, dirs, files in os.walk(directory):
-            for f in sorted(files):
-                if f in ('job.ini', 'job_h.ini', 'job_haz.ini',
-                         'job_hazard.ini'):
-                    job_ini = os.path.join(cwd, f)
-                    logging.info(job_ini)
-                    try:
-                        reportwriter.build_report(job_ini, cwd)
-                    except Exception as e:
-                        logging.error(str(e))
-    finally:
-        parallel.Starmap.shutdown()
+    for cwd, dirs, files in os.walk(directory):
+        for f in sorted(files):
+            if f in ('job.ini', 'job_h.ini', 'job_haz.ini',
+                     'job_hazard.ini'):
+                job_ini = os.path.join(cwd, f)
+                logging.info(job_ini)
+                try:
+                    reportwriter.build_report(job_ini, cwd)
+                except Exception as e:
+                    logging.error(str(e))
 
 
 choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
@@ -167,13 +164,18 @@ def info(what, report=False):
         else:
             print(node.to_str())
     elif what.endswith(('.ini', '.zip')):
-        with Monitor('info', measuremem=True) as mon:
-            if report:
-                print('Generated', reportwriter.build_report(what))
-            else:
-                print_full_lt(what)
-        if mon.duration > 1:
-            print(mon)
+        if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+            os.environ['OQ_DISTRIBUTE'] = 'processpool'
+        try:
+            with Monitor('info', measuremem=True) as mon:
+                if report:
+                    print('Generated', reportwriter.build_report(what))
+                else:
+                    print_full_lt(what)
+            if mon.duration > 1:
+                print(mon)
+        finally:
+            parallel.Starmap.shutdown()
     elif what:
         print("No info for '%s'" % what)
 

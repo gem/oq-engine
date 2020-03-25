@@ -27,8 +27,6 @@ import numpy
 from openquake.baselib import parallel, general
 from openquake.hazardlib import nrml, sourceconverter, calc, InvalidFile
 from openquake.hazardlib.lt import apply_uncertainties
-from openquake.commonlib.logictree import FullLogicTree
-
 
 TWO16 = 2 ** 16  # 65,536
 
@@ -64,7 +62,7 @@ def read_source_model(fname, converter, srcfilter, monitor):
     return {fname: sm}
 
 
-def get_csm(oq, source_model_lt, gsim_lt, h5=None):
+def get_csm(oq, full_lt, h5=None):
     """
     Build source models from the logic tree and to store
     them inside the `source_full_lt` dataset.
@@ -80,9 +78,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
-    full_lt = FullLogicTree(source_model_lt, gsim_lt)
-    P = len(full_lt.sm_rlzs)
-    logging.info('%d effective smlt realization(s)', P)
+    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     classical = not oq.is_event_based()
     if oq.is_ucerf():
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
@@ -117,7 +113,7 @@ def get_csm(oq, source_model_lt, gsim_lt, h5=None):
             else 'processpool')
     # NB: h5 is None in logictree_test.py
     allargs = []
-    for fname in source_model_lt.info.smpaths:
+    for fname in full_lt.source_model_lt.info.smpaths:
         allargs.append((fname, converter, srcfilter))
     smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
                               h5=h5 if h5 else None).reduce()
