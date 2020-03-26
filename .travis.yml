@@ -68,7 +68,7 @@ install:
   # Use '[skip wheels]' to get dependencies from upstream pypi without using cached wheels;
   # this is needed to test that (max) requirements in setup.py are still valid.
   - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
-      pip install -r requirements-py38-linux64.txt
+      pip install -r requirements-py38-linux64.txt;
     fi
   - pip install pytest-xdist
   - pip -q install -e .
