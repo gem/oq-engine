@@ -406,15 +406,13 @@ class PmapMaker(object):
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)
                 pnes = rup.get_probability_no_exceedance(poes)
-                if self.rup_indep:
-                    for sid, pne in zip(r_sites.sids, pnes):
-                        for grp_id in rup.grp_ids:
-                            p = pmap[grp_id]
+                for grp_id in rup.grp_ids:
+                    p = pmap[grp_id]
+                    if self.rup_indep:
+                        for sid, pne in zip(r_sites.sids, pnes):
                             p.setdefault(sid, 1.).array *= pne
-                else:  # rup_mutex
-                    for sid, pne in zip(r_sites.sids, pnes):
-                        for grp_id in rup.grp_ids:
-                            p = pmap[grp_id]
+                    else:  # rup_mutex
+                        for sid, pne in zip(r_sites.sids, pnes):
                             p.setdefault(sid, 0.).array += (
                                 1.-pne) * rup.weight
 
