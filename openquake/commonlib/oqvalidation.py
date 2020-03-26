@@ -276,6 +276,10 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
+            lens = set(map(len, self.hazard_imtls.values()))
+            if len(lens) > 1:
+                raise ValueError('Each IMT must have the same number of levels'
+                                 ', instead you have %s' % self.hazard_imtls)
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
