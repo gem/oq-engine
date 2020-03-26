@@ -243,9 +243,9 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
             sources, srcfilter, num_ses, param)
 
         # Yield ruptures
-        yield AccumDict(rup_array=get_rup_array(eb_ruptures, srcfilter),
-                        calc_times=calc_times,
-                        eff_ruptures={trt: len(eb_ruptures)})
+        yield AccumDict(dict(rup_array=get_rup_array(eb_ruptures, srcfilter),
+                             calc_times=calc_times,
+                             eff_ruptures={trt: len(eb_ruptures)}))
     else:
         eb_ruptures = []
         eff_ruptures = 0
@@ -257,9 +257,9 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
             t0 = time.time()
             if len(eb_ruptures) > MAX_RUPTURES:
                 # yield partial result to avoid running out of memory
-                yield AccumDict(rup_array=get_rup_array(eb_ruptures,
-                                                        srcfilter),
-                                calc_times={}, eff_ruptures={})
+                yield AccumDict(dict(rup_array=get_rup_array(eb_ruptures,
+                                                             srcfilter),
+                                     calc_times={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
             for rup, grp_id, n_occ in src.sample_ruptures(samples * num_ses):
@@ -272,5 +272,5 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                 n_sites = 0
             calc_times[src.source_id] += numpy.array([nr, n_sites, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
-        yield AccumDict(rup_array=rup_array, calc_times=calc_times,
-                        eff_ruptures={trt: eff_ruptures})
+        yield AccumDict(dict(rup_array=rup_array, calc_times=calc_times,
+                             eff_ruptures={trt: eff_ruptures}))

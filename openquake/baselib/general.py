@@ -595,8 +595,8 @@ class AccumDict(dict):
 
     The multiplication has been defined::
 
-     >>> prob1 = AccumDict(a=0.4, b=0.5)
-     >>> prob2 = AccumDict(b=0.5)
+     >>> prob1 = AccumDict(dict(a=0.4, b=0.5))
+     >>> prob2 = AccumDict(dict(b=0.5))
      >>> prob1 * prob2
      {'a': 0.4, 'b': 0.25}
      >>> prob1 * 1.2
@@ -622,10 +622,11 @@ class AccumDict(dict):
     accumulator, therefore each key has a different accumulator, which
     initially is the empty list (in this case).
     """
-    def __init__(self, dic=None, accum=None, **kw):
+    def __init__(self, dic=None, accum=None, keys=()):
+        for key in keys:
+            self[key] = copy.deepcopy(accum)
         if dic:
             self.update(dic)
-        self.update(kw)
         self.accum = accum
 
     def __iadd__(self, other):
