@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import time
 import logging
@@ -25,7 +26,7 @@ from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree, distance
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
@@ -172,6 +173,8 @@ def split_sources(srcs):
     split_time = {}  # src.id -> time
     for src in srcs:
         t0 = time.time()
+        if not src.num_ruptures:  # not set yet
+            src.num_ruptures = src.count_ruptures()
         mag_a, mag_b = src.get_min_max_mag()
         min_mag = src.min_mag
         if mag_b < min_mag:  # discard the source completely
@@ -195,6 +198,7 @@ def split_sources(srcs):
         split_time[src.id] = time.time() - t0
         sources.extend(splits)
         has_samples = hasattr(src, 'samples')
+        has_scaling_rate = hasattr(src, 'scaling_rate')
         if len(splits) > 1:
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
@@ -202,6 +206,8 @@ def split_sources(srcs):
                 split.id = src.id
                 if has_samples:
                     split.samples = src.samples
+                if has_scaling_rate:
+                    s.scaling_rate = src.scaling_rate
         elif splits:  # single source
             [s] = splits
             s.source_id = src.source_id
@@ -209,6 +215,8 @@ def split_sources(srcs):
             s.id = src.id
             if has_samples:
                 s.samples = src.samples
+            if has_scaling_rate:
+                s.scaling_rate = src.scaling_rate
     return sources, split_time
 
 
@@ -288,6 +296,19 @@ class SourceFilter(object):
             return
         for src in self.filter(sources):
             yield src, self.sitecol.filtered(src.indices)
+
+    def get_sources_sites(self, sources):
+        """
+        :yields:
+            pairs (srcs, sites) where the sources have the same source_id,
+            the same grp_ids and affect the same sites
+        """
+        acc = general.AccumDict(accum=[])  # indices -> srcs
+        for src in self.filter(sources):
+            src_id = re.sub(r':\d+$', '', src.source_id)
+            acc[(src_id, src.grp_id) + tuple(src.indices)].append(src)
+        for tup, srcs in acc.items():
+            yield srcs, self.sitecol.filtered(tup[2:])
 
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):

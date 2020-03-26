@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
+from openquake.baselib import parallel
 from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
 from openquake import commonlib
@@ -35,7 +36,8 @@ from openquake.commands.tidy import tidy
 from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
-from openquake.commands.reduce import reduce
+from openquake.commands.sample import sample
+from openquake.commands.reduce_sm import reduce_sm
 from openquake.commands.engine import run_job, smart_run
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
@@ -45,6 +47,7 @@ from openquake.commands.check_input import check_input
 from openquake.commands.prepare_site_model import prepare_site_model
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
+from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
@@ -84,7 +87,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, None, path)
+            info(path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -92,52 +95,82 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
 
     def test_calculators(self):
         with Print.patch() as p:
-            info(True, None, None, None, None, None, None, '')
+            info('calculators')
         self.assertGreater(len(str(p)), 10)
 
     def test_gsims(self):
         with Print.patch() as p:
-            info(None, True, None, None, None, None, None, '')
+            info('gsims')
         self.assertGreater(len(str(p)), 10)
+
+    def test_imts(self):
+        with Print.patch() as p:
+            info('imts')
+        self.assertGreaterEqual(len(str(p)), 18)
 
     def test_views(self):
         with Print.patch() as p:
-            info(None, None, True, None, None, None, None, '')
+            info('views')
         self.assertGreater(len(str(p)), 10)
 
     def test_exports(self):
         with Print.patch() as p:
-            info(None, None, None, True, None, None, None, '')
+            info('exports')
         self.assertGreater(len(str(p)), 10)
 
     def test_extracts(self):
         with Print.patch() as p:
-            info(None, None, None, None, True, None, None, '')
+            info('extracts')
         self.assertGreater(len(str(p)), 10)
 
     def test_parameters(self):
         with Print.patch() as p:
-            info(None, None, None, None, None, True, None, '')
+            info('parameters')
         self.assertGreater(len(str(p)), 10)
+
+    def test_mfds(self):
+        with Print.patch() as p:
+            info('mfds')
+        lines = str(p).split()
+        self.assertGreaterEqual(len(lines), 5)
+
+    def test_sources(self):
+        with Print.patch() as p:
+            info('sources')
+        lines = str(p).split()
+        self.assertGreaterEqual(len(lines), 10)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, None, path)
+            info(path)
         self.assertIn('<FullLogicTree\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
+
+    def test_logictree(self):
+        path = os.path.join(os.path.dirname(case_9.__file__),
+                            'source_model_logic_tree.xml')
+        with Print.patch() as p:
+            info(path)
+        self.assertEqual(str(p), """\
+==================== ===========
+TRT                  pointSource
+==================== ===========
+active shallow crust 1          
+Total                1          
+==================== ===========""")
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info(None, None, None, None, None, None, True, path)
+            info(path, True)
         self.assertIn('report.rst', str(p))
 
     def test_report_ebr(self):
         path = os.path.join(os.path.dirname(case_16.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info(None, None, None, None, None, None, True, path)
+            info(path, True)
         self.assertIn('report.rst', str(p))
 
 
@@ -230,15 +263,14 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('source_id grp_id code num_ruptures '
+        self.assertIn('source_id code num_sources '
                       'calc_time num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
             show_attrs('sitecol', self.calc_id)
-        self.assertEqual(
-            '__pyclass__ openquake.hazardlib.site.SiteCollection',
-            str(p))
+        self.assertEqual('__pyclass__ openquake.hazardlib.site.SiteCollection',
+                         str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
@@ -249,7 +281,7 @@ class RunShowExportTestCase(unittest.TestCase):
         shutil.rmtree(tempdir)
 
 
-class ReduceTestCase(unittest.TestCase):
+class SampleSmTestCase(unittest.TestCase):
     TESTDIR = os.path.dirname(case_3.__file__)
 
     def test_exposure(self):
@@ -257,7 +289,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'exposure_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'exposure_model.xml'), dest)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 8 nodes out of 13', str(p))
         shutil.rmtree(tempdir)
 
@@ -266,7 +298,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'source_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'source_model.xml'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 9 nodes out of 15', str(p))
         shutil.rmtree(tempdir)
 
@@ -276,7 +308,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'site_model.xml')
         shutil.copy(os.path.join(testdir, 'site_model.xml'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 2 nodes out of 3', str(p))
         shutil.rmtree(tempdir)
 
@@ -286,7 +318,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'sites.csv')
         shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 50 lines out of 99', str(p))
         shutil.rmtree(tempdir)
 
@@ -503,3 +535,25 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         # test sites_csv
         sc = prepare_site_model([], [output], [vs30_csv],
                                 True, True, False, 0, 5, output)
+
+
+class ReduceSourceModelTestCase(unittest.TestCase):
+
+    def test_reduce_sm_with_duplicate_source_ids(self):
+        # testing reduce_sm in case of two sources with the same ID and
+        # different codes
+        temp_dir = tempfile.mkdtemp()
+        calc_dir = os.path.dirname(to_reduce.__file__)
+        shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
+        job_ini = os.path.join(temp_dir, 'data', 'job.ini')
+        with Print.patch():
+            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
+        calc_id = calc.datastore.calc_id
+        with mock.patch('logging.info') as info:
+            reduce_sm(calc_id)
+        self.assertIn('there are duplicated source IDs', info.call_args[0][0])
+        shutil.rmtree(temp_dir)
+
+
+def teardown_module():
+    parallel.Starmap.shutdown()

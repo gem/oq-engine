@@ -29,7 +29,7 @@ from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import tests, readinput
-from openquake.commonlib.source import FullLogicTree
+from openquake.commonlib.logictree import FullLogicTree
 from openquake.hazardlib import nrml
 
 # directory where the example files are
@@ -110,7 +110,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             temporal_occurrence_model=PoissonTOM(50.))
-        point.num_ruptures = point.count_ruptures()
         return point
 
     @property
@@ -145,7 +144,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             polygon=polygon,
             area_discretization=2,
             temporal_occurrence_model=PoissonTOM(50.))
-        area.num_ruptures = area.count_ruptures()
         return area
 
     @property
@@ -174,7 +172,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50.),
             hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
             slip_list=numpy.array([[90, 0.7], [135, 0.3]]))
-        simple.num_ruptures = simple.count_ruptures()
         return simple
 
     @property
@@ -216,7 +213,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             edges=edges,
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.))
-        cmplx.num_ruptures = cmplx.count_ruptures()
         return cmplx
 
     @property
@@ -242,7 +238,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             surface=surface,
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.))
-        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
@@ -285,7 +280,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             surface=complex_surface,
             rake=60.0,
             temporal_occurrence_model=PoissonTOM(50.0))
-        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
@@ -317,7 +311,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             surface=multi_surface,
             rake=90.0,
             temporal_occurrence_model=PoissonTOM(50.0))
-        char.num_ruptures = char.count_ruptures()
         return char
 
     def test_point_to_hazardlib(self):
@@ -739,7 +732,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
         csm = readinput.get_composite_source_model(oqparam)
-        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths
+        self.assertEqual(len(csm.sm_rlzs), 9)  # example with 1 x 3 x 3 paths
         # there are 2 distinct tectonic region types, so 2 src_groups
         self.assertEqual(sum(1 for tm in csm.src_groups), 2)
 

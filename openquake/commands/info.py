@@ -23,9 +23,11 @@ import collections
 import numpy
 from decorator import FunctionMaker
 from openquake.baselib import sap, parallel
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, gen_subclasses
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import gsim, nrml, InvalidFile
+from openquake.hazardlib import gsim, nrml, imt
+from openquake.hazardlib.mfd.base import BaseMFD
+from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
@@ -34,16 +36,18 @@ from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 
 
-def source_model_info(nodes):
+def source_model_info(sm_nodes):
     """
-    Extract information about NRML/0.5 source models. Returns a table
+    Extract information about source models. Returns a table
     with TRTs as rows and source classes as columns.
     """
     c = collections.Counter()
-    for node in nodes:
-        for src_group in node:
-            trt = src_group['tectonicRegion']
-            for src in src_group:
+    for sm in sm_nodes:
+        groups = [sm[0]] if sm['xmlns'].endswith('nrml/0.4') else sm[0]
+        for group in groups:
+            grp_trt = group.get('tectonicRegion')
+            for src in group:
+                trt = src.get('tectonicRegion', grp_trt)
                 src_class = src.tag.split('}')[1]
                 c[trt, src_class] += 1
     trts, classes = zip(*c)
@@ -67,8 +71,8 @@ def print_full_lt(fname):
     prints information about its composition and the full logic tree
     """
     oqparam = readinput.get_oqparam(fname)
-    csm = readinput.get_composite_source_model(oqparam)
-    print(csm.full_lt)
+    full_lt = readinput.get_full_lt(oqparam)
+    print(full_lt)
     print('See http://docs.openquake.org/oq-engine/stable/'
           'effective-realizations.html for an explanation')
 
@@ -78,40 +82,40 @@ def do_build_reports(directory):
     Walk the directory and builds pre-calculation reports for all the
     job.ini files found.
     """
-    try:
-        for cwd, dirs, files in os.walk(directory):
-            for f in sorted(files):
-                if f in ('job.ini', 'job_h.ini', 'job_haz.ini',
-                         'job_hazard.ini'):
-                    job_ini = os.path.join(cwd, f)
-                    logging.info(job_ini)
-                    try:
-                        reportwriter.build_report(job_ini, cwd)
-                    except Exception as e:
-                        logging.error(str(e))
-    finally:
-        parallel.Starmap.shutdown()
+    for cwd, dirs, files in os.walk(directory):
+        for f in sorted(files):
+            if f in ('job.ini', 'job_h.ini', 'job_haz.ini',
+                     'job_hazard.ini'):
+                job_ini = os.path.join(cwd, f)
+                logging.info(job_ini)
+                try:
+                    reportwriter.build_report(job_ini, cwd)
+                except Exception as e:
+                    logging.error(str(e))
 
 
-# the documentation about how to use this feature can be found
-# in the file effective-realizations.rst
+choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
+           'extracts', 'parameters', 'sources', 'mfds']
+
+
 @sap.script
-def info(calculators, gsims, views, exports, extracts, parameters,
-         report, input_file=''):
+def info(what, report=False):
     """
-    Give information. You can pass the name of an available calculator,
-    a job.ini file, or a zip archive with the input files.
+    Give information about the passed keyword or filename
     """
-    if calculators:
+    if what == 'calculators':
         for calc in sorted(base.calculators):
             print(calc)
-    if gsims:
+    elif what == 'gsims':
         for gs in gsim.get_available_gsims():
             print(gs)
-    if views:
+    elif what == 'imts':
+        for im in gen_subclasses(imt.IMT):
+            print(im.__name__)
+    elif what == 'views':
         for name in sorted(view):
             print(name)
-    if exports:
+    elif what == 'exports':
         dic = groupby(export, operator.itemgetter(0),
                       lambda group: [r[1] for r in group])
         n = 0
@@ -119,7 +123,7 @@ def info(calculators, gsims, views, exports, extracts, parameters,
             print(exporter, formats)
             n += len(formats)
         print('There are %d exporters defined.' % n)
-    if extracts:
+    elif what == 'extracts':
         for key in extract:
             func = extract[key]
             if hasattr(func, '__wrapped__'):
@@ -129,7 +133,7 @@ def info(calculators, gsims, views, exports, extracts, parameters,
             else:
                 fm = FunctionMaker(func)
             print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))
-    if parameters:
+    elif what == 'parameters':
         params = []
         for val in vars(OqParam).values():
             if hasattr(val, 'name'):
@@ -137,43 +141,44 @@ def info(calculators, gsims, views, exports, extracts, parameters,
         params.sort(key=lambda x: x.name)
         for param in params:
             print(param.name)
-    if os.path.isdir(input_file) and report:
+    elif what == 'mfds':
+        for cls in gen_subclasses(BaseMFD):
+            print(cls.__name__)
+    elif what == 'sources':
+        for cls in gen_subclasses(BaseSeismicSource):
+            print(cls.__name__)
+    elif os.path.isdir(what) and report:
         with Monitor('info', measuremem=True) as mon:
             with mock.patch.object(logging.root, 'info'):  # reduce logging
-                do_build_reports(input_file)
+                do_build_reports(what)
         print(mon)
-    elif input_file.endswith('.xml'):
-        node = nrml.read(input_file)
+    elif what.endswith('.xml'):
+        node = nrml.read(what)
         if node[0].tag.endswith('sourceModel'):
-            if node['xmlns'].endswith('nrml/0.4'):
-                raise InvalidFile(
-                    '%s is in NRML 0.4 format, please run the following '
-                    'command:\noq upgrade_nrml %s' % (
-                        input_file, os.path.dirname(input_file) or '.'))
-            print(source_model_info([node[0]]))
+            print(source_model_info([node]))
         elif node[0].tag.endswith('logicTree'):
-            nodes = [nrml.read(sm_path)[0]
-                     for sm_path in logictree.collect_info(input_file).smpaths]
-            print(source_model_info(nodes))
+            sm_nodes = []
+            for smpath in logictree.collect_info(what).smpaths:
+                sm_nodes.append(nrml.read(smpath))
+            print(source_model_info(sm_nodes))
         else:
             print(node.to_str())
-    elif input_file.endswith(('.ini', '.zip')):
-        with Monitor('info', measuremem=True) as mon:
-            if report:
-                print('Generated', reportwriter.build_report(input_file))
-            else:
-                print_full_lt(input_file)
-        if mon.duration > 1:
-            print(mon)
-    elif input_file:
-        print("No info for '%s'" % input_file)
+    elif what.endswith(('.ini', '.zip')):
+        if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+            os.environ['OQ_DISTRIBUTE'] = 'processpool'
+        try:
+            with Monitor('info', measuremem=True) as mon:
+                if report:
+                    print('Generated', reportwriter.build_report(what))
+                else:
+                    print_full_lt(what)
+            if mon.duration > 1:
+                print(mon)
+        finally:
+            parallel.Starmap.shutdown()
+    elif what:
+        print("No info for '%s'" % what)
 
 
-info.flg('calculators', 'list available calculators')
-info.flg('gsims', 'list available GSIMs')
-info.flg('views', 'list available views')
-info.flg('exports', 'list available exports')
-info.flg('extracts', 'list available extracts', '-x')
-info.flg('parameters', 'list all parameters in the job.ini')
-info.flg('report', 'build short report(s) in rst format')
-info.arg('input_file', 'job.ini file or zip archive')
+info.arg('what', 'filename or one of %s' % ', '.join(choices))
+info.flg('report', 'build rst report from job.ini file or zip archive')

@@ -37,26 +37,48 @@ from collections import namedtuple
 import toml
 import numpy
 from openquake.baselib import hdf5
+from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, Node as N, context
 from openquake.baselib.general import (groupby, group_array, duplicated,
-                                       add_defaults)
-import openquake.hazardlib.source as ohs
+                                       add_defaults, AccumDict)
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.commonlib.lt import (
-    LogicTreeError, parse_uncertainty, apply_uncertainty)
-
-#: Minimum value for a seed number
-MIN_SINT_32 = -(2 ** 31)
-#: Maximum value for a seed number
-MAX_SINT_32 = (2 ** 31) - 1
+from openquake.hazardlib.lt import (
+    Branch, BranchSet, LogicTreeError, parse_uncertainty, sample)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
 SOURCE_TYPE_REGEX = re.compile(r'<(\w+Source)\b')
+
+U16 = numpy.uint16
+U32 = numpy.uint32
+I32 = numpy.int32
+F32 = numpy.float32
+
+rlz_dt = numpy.dtype([
+    ('ordinal', U32),
+    ('branch_path', hdf5.vstr),
+    ('weight', F32)
+])
+
+source_model_dt = numpy.dtype([
+    ('name', hdf5.vstr),
+    ('weight', F32),
+    ('path', hdf5.vstr),
+    ('samples', U32),
+    ('offset', U32),
+])
+
+src_group_dt = numpy.dtype(
+    [('grp_id', U32),
+     ('name', hdf5.vstr),
+     ('trti', U16),
+     ('effrup', I32),
+     ('totrup', I32),
+     ('sm_id', U32)])
 
 branch_dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
@@ -132,240 +154,6 @@ def get_effective_rlzs(rlzs):
     return effective
 
 
-def sample(weighted_objects, num_samples, seed):
-    """
-    Take random samples of a sequence of weighted objects
-
-    :param weighted_objects:
-        A finite sequence of objects with a `.weight` attribute.
-        The weights must sum up to 1.
-    :param num_samples:
-        The number of samples to return
-    :param seed:
-        A random seed
-    :return:
-        A subsequence of the original sequence with `num_samples` elements
-    """
-    weights = []
-    for obj in weighted_objects:
-        w = obj.weight
-        if isinstance(obj.weight, float):
-            weights.append(w)
-        else:
-            weights.append(w['weight'])
-    numpy.random.seed(seed)
-    idxs = numpy.random.choice(len(weights), num_samples, p=weights)
-    # NB: returning an array would break things
-    return [weighted_objects[idx] for idx in idxs]
-
-
-class Branch(object):
-    """
-    Branch object, represents a ``<logicTreeBranch />`` element.
-
-    :param bs_id:
-        BranchSetID of the branchset to which the branch belongs
-    :param branch_id:
-        Value of ``@branchID`` attribute.
-    :param weight:
-        float value of weight assigned to the branch. A text node contents
-        of ``<uncertaintyWeight />`` child node.
-    :param value:
-        The actual uncertainty parameter value. A text node contents
-        of ``<uncertaintyModel />`` child node. Type depends
-        on the branchset's uncertainty type.
-    """
-    def __init__(self, bs_id, branch_id, weight, value):
-        self.bs_id = bs_id
-        self.branch_id = branch_id
-        self.weight = weight
-        self.value = value
-        self.bset = None
-
-    def __repr__(self):
-        if self.bset:
-            return '%s%s' % (self.branch_id, self.bset)
-        else:
-            return '%s' % self.branch_id
-
-
-def tomldict(ddic):
-    out = {}
-    for key, dic in ddic.items():
-        out[key] = toml.dumps({k: v.strip() for k, v in dic.items()
-                               if k != 'uncertaintyType'}).strip()
-    return out
-
-
-class BranchSet(object):
-    """
-    Branchset object, represents a ``<logicTreeBranchSet />`` element.
-
-    :param uncertainty_type:
-        String value. According to the spec one of:
-
-        gmpeModel
-            Branches contain references to different GMPEs. Values are parsed
-            as strings and are supposed to be one of supported GMPEs. See list
-            at :class:`GMPELogicTree`.
-        sourceModel
-            Branches contain references to different PSHA source models. Values
-            are treated as file names, relatively to base path.
-        maxMagGRRelative
-            Different values to add to Gutenberg-Richter ("GR") maximum
-            magnitude. Value should be interpretable as float.
-        bGRRelative
-            Values to add to GR "b" value. Parsed as float.
-        maxMagGRAbsolute
-            Values to replace GR maximum magnitude. Values expected to be
-            lists of floats separated by space, one float for each GR MFD
-            in a target source in order of appearance.
-        abGRAbsolute
-            Values to replace "a" and "b" values of GR MFD. Lists of pairs
-            of floats, one pair for one GR MFD in a target source.
-        incrementalMFDAbsolute
-            Replaces an evenly discretized MFD with the values provided
-        simpleFaultDipRelative
-            Increases or decreases the angle of fault dip from that given
-            in the original source model
-        simpleFaultDipAbsolute
-            Replaces the fault dip in the specified source(s)
-        simpleFaultGeometryAbsolute
-            Replaces the simple fault geometry (trace, upper seismogenic depth
-            lower seismogenic depth and dip) of a given source with the values
-            provided
-        complexFaultGeometryAbsolute
-            Replaces the complex fault geometry edges of a given source with
-            the values provided
-        characteristicFaultGeometryAbsolute
-            Replaces the complex fault geometry surface of a given source with
-            the values provided
-
-    :param filters:
-        Dictionary, a set of filters to specify which sources should
-        the uncertainty be applied to. Represented as branchset element's
-        attributes in xml:
-
-        applyToSources
-            The uncertainty should be applied only to specific sources.
-            This filter is required for absolute uncertainties (also
-            only one source can be used for those). Value should be the list
-            of source ids. Can be used only in source model logic tree.
-        applyToSourceType
-            Can be used in the source model logic tree definition. Allows
-            to specify to which source type (area, point, simple fault,
-            complex fault) the uncertainty applies to.
-        applyToTectonicRegionType
-            Can be used in both the source model and GMPE logic trees. Allows
-            to specify to which tectonic region type (Active Shallow Crust,
-            Stable Shallow Crust, etc.) the uncertainty applies to. This
-            filter is required for all branchsets in GMPE logic tree.
-    """
-    def __init__(self, uncertainty_type, filters):
-        self.branches = []
-        self.uncertainty_type = uncertainty_type
-        self.filters = filters
-
-    def enumerate_paths(self):
-        """
-        Generate all possible paths starting from this branch set.
-
-        :returns:
-            Generator of two-item tuples. Each tuple contains weight
-            of the path (calculated as a product of the weights of all path's
-            branches) and list of path's :class:`Branch` objects. Total sum
-            of all paths' weights is 1.0
-        """
-        for path in self._enumerate_paths([]):
-            flat_path = []
-            weight = 1.0
-            while path:
-                path, branch = path
-                weight *= branch.weight
-                flat_path.append(branch)
-            yield weight, flat_path[::-1]
-
-    def _enumerate_paths(self, prefix_path):
-        """
-        Recursive (private) part of :func:`enumerate_paths`. Returns generator
-        of recursive lists of two items, where second item is the branch object
-        and first one is itself list of two items.
-        """
-        for branch in self.branches:
-            path = [prefix_path, branch]
-            if branch.bset is not None:
-                yield from branch.bset._enumerate_paths(path)
-            else:
-                yield path
-
-    def __getitem__(self, branch_id):
-        """
-        Return :class:`Branch` object belonging to this branch set with id
-        equal to ``branch_id``.
-        """
-        for branch in self.branches:
-            if branch.branch_id == branch_id:
-                return branch
-        raise KeyError(branch_id)
-
-    def filter_source(self, source):
-        # pylint: disable=R0911,R0912
-        """
-        Apply filters to ``source`` and return ``True`` if uncertainty should
-        be applied to it.
-        """
-        for key, value in self.filters.items():
-            if key == 'applyToTectonicRegionType':
-                if value != source.tectonic_region_type:
-                    return False
-            elif key == 'applyToSourceType':
-                if value == 'area':
-                    if not isinstance(source, ohs.AreaSource):
-                        return False
-                elif value == 'point':
-                    # area source extends point source
-                    if (not isinstance(source, ohs.PointSource)
-                            or isinstance(source, ohs.AreaSource)):
-                        return False
-                elif value == 'simpleFault':
-                    if not isinstance(source, ohs.SimpleFaultSource):
-                        return False
-                elif value == 'complexFault':
-                    if not isinstance(source, ohs.ComplexFaultSource):
-                        return False
-                elif value == 'characteristicFault':
-                    if not isinstance(source, ohs.CharacteristicFaultSource):
-                        return False
-                else:
-                    raise AssertionError("unknown source type '%s'" % value)
-            elif key == 'applyToSources':
-                if source and source.source_id not in value:
-                    return False
-            else:
-                raise AssertionError("unknown filter '%s'" % key)
-        # All filters pass, return True.
-        return True
-
-    def get_bset_values(self, ltpath):
-        """
-        :param ltpath:
-            List of branch IDs
-        :returns:
-            Pairs (bset, value)
-        """
-        bset = self
-        pairs = []
-        while ltpath:
-            brid, ltpath = ltpath[0], ltpath[1:]
-            pairs.append((bset, bset[brid].value))
-            bset = bset[brid].bset
-            if bset is None:
-                return pairs
-
-    def __repr__(self):
-        return repr(self.branches)
-
-
 # manage the legacy logicTreeBranchingLevel nodes
 def _bsnodes(fname, branchinglevel):
     if branchinglevel.tag.endswith('logicTreeBranchingLevel'):
@@ -400,7 +188,7 @@ def collect_info(smlt):
     except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
-    paths = collections.defaultdict(set)  # branchID -> paths
+    paths = set()
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
         for bset in _bsnodes(smlt, blevel):
@@ -411,8 +199,8 @@ def collect_info(smlt):
                 for br in bset:
                     with context(smlt, br):
                         fnames = unique(br.uncertaintyModel.text.split())
-                        paths[br['branchID']].update(_abs_paths(smlt, fnames))
-    return Info({k: sorted(v) for k, v in paths.items()}, applytosources)
+                        paths.update(_abs_paths(smlt, fnames))
+    return Info(sorted(paths), applytosources)
 
 
 def _abs_paths(smlt, fnames):
@@ -612,20 +400,6 @@ class SourceModelLogicTree(object):
                 "there are duplicate values in uncertaintyModel: " +
                 ' '.join(values))
 
-    def sample_path(self, seed):
-        """
-        Return a list of branches.
-
-        :param seed: the seed used for the sampling
-        """
-        branchset = self.root_branchset
-        branches = []
-        while branchset is not None:
-            [branch] = sample(branchset.branches, 1, seed)
-            branches.append(branch)
-            branchset = branch.bset
-        return branches
-
     def __iter__(self):
         """
         Yield Realization tuples. Notice that the weight is homogeneous when
@@ -636,7 +410,7 @@ class SourceModelLogicTree(object):
             # random sampling of the logic tree
             weight = 1. / self.num_samples
             for i in range(self.num_samples):
-                smlt_path = self.sample_path(self.seed + i)
+                smlt_path = self.root_branchset.sample(self.seed + i)
                 name = smlt_path[0].value
                 smlt_path_ids = [branch.branch_id for branch in smlt_path]
                 yield Realization(name, weight, None, tuple(smlt_path_ids), 1)
@@ -807,44 +581,27 @@ class SourceModelLogicTree(object):
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
-    def apply_uncertainties(self, ltpath, src_groups):
+    def collapse(self, branchset_ids):
         """
-        :param ltpath:
-            List of branch IDs
-        :param src_groups:
-            List of SourceGroups
-        :return:
-            A modified list of SourceGroups
+        Set the attribute .collapsed on the given branchsets
         """
-        pairs = self.root_branchset.get_bset_values(ltpath)[1:]
-        if pairs:
-            for sg in src_groups:
-                sg.changes = 0
-                for source in sg:
-                    changes = 0
-                    for bset, value in pairs:
-                        if bset.filter_source(source):
-                            apply_uncertainty(
-                                bset.uncertainty_type, source, value)
-                            changes += 1
-                    if changes:  # redoing count_ruptures can be slow
-                        source.num_ruptures = source.count_ruptures()
-                        sg.changes += changes
-        return src_groups
+        for bsid, bset in self.bsetdict.items():
+            if bsid in branchset_ids:
+                bset.collapsed = True
 
-    def get_trti_eri(self):
+    def bset_values(self, sm_rlz):
         """
-        :returns: a function grp_id -> (trti, eri)
+        :param sm_rlz: an effective realization
+        :returns: a list of B - 1 pairs (branchset, value)
         """
-        return lambda gid, n=len(get_effective_rlzs(self)): divmod(gid, n)
+        return self.root_branchset.get_bset_values(sm_rlz.lt_path)[1:]
 
-    def get_grp_id(self, trts):
-        """
-        :returns: a function trt, eri -> grp_id
-        """
-        trti = {trt: i for i, trt in enumerate(trts)}
-        return (lambda trt, eri, n=len(get_effective_rlzs(self)):
-                trti[trt] * n + int(eri))
+    def _tomldict(self):
+        out = {}
+        for key, dic in self.bsetdict.items():
+            out[key] = toml.dumps({k: v.strip() for k, v in dic.items()
+                                   if k != 'uncertaintyType'}).strip()
+        return out
 
     def __toh5__(self):
         tbl = []
@@ -852,7 +609,7 @@ class SourceModelLogicTree(object):
             dic = self.bsetdict[br.bs_id].copy()
             utype = dic.pop('uncertaintyType')
             tbl.append((br.bs_id, brid, utype, br.value, br.weight))
-        attrs = tomldict(self.bsetdict)
+        attrs = self._tomldict()
         attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples
         attrs['filename'] = self.filename
@@ -1006,8 +763,15 @@ class GsimLogicTree(object):
         self.bs_id_by_trt = {}
         self.branches = self._build_trts_branches(trts)  # sorted by trt
         if trts != ['*']:
-            self.values = {trt: self.values[trt] for trt in trts}
-        if tectonic_region_types and not self.branches:
+            # reduce self.values to the listed TRTs
+            values = {}
+            for trt in trts:
+                values[trt] = self.values[trt]
+                if not values[trt]:
+                    raise InvalidLogicTree('%s is missing the TRT %r' %
+                                           (fname, trt))
+            self.values = values
+        if trts and not self.branches:
             raise InvalidLogicTree(
                 '%s is missing in %s' % (set(tectonic_region_types), fname))
 
@@ -1306,3 +1070,313 @@ def taxonomy_mapping(filename, taxonomies):
                               (filename, taxo))
         lst.append([(rec['conversion'], rec['weight']) for rec in recs])
     return arr, lst
+
+
+def capitalize(words):
+    """
+    Capitalize words separated by spaces.
+    """
+    return ' '.join(w.capitalize() for w in decode(words).split(' '))
+
+
+def get_field(data, field, default):
+    """
+    :param data: a record with a field `field`, possibily missing
+    """
+    try:
+        return data[field]
+    except ValueError:  # field missing in old engines
+        return default
+
+
+class LtRealization(object):
+    """
+    Composite realization build on top of a source model realization and
+    a GSIM realization.
+    """
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+        self.ordinal = ordinal
+        self.sm_lt_path = tuple(sm_lt_path)
+        self.gsim_rlz = gsim_rlz
+        self.weight = weight
+
+    def __repr__(self):
+        return '<%d,%s,w=%s>' % (self.ordinal, self.pid, self.weight)
+
+    @property
+    def gsim_lt_path(self):
+        return self.gsim_rlz.lt_path
+
+    @property
+    def pid(self):
+        """An unique identifier for effective realizations"""
+        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.pid
+
+    def __lt__(self, other):
+        return self.ordinal < other.ordinal
+
+    def __eq__(self, other):
+        return repr(self) == repr(other)
+
+    def __ne__(self, other):
+        return repr(self) != repr(other)
+
+    def __hash__(self):
+        return hash(repr(self))
+
+
+class FullLogicTree(object):
+    """
+    The full logic tree as composition of
+
+    :param source_model_lt: :class:`SourceModelLogicTree` object
+    :param gsim_lt: :class:`GsimLogicTree` object
+    """
+    @classmethod
+    def fake(cls, gsimlt=None):
+        """
+        :returns:
+            a fake `FullLogicTree` instance with the given gsim logic tree
+            object; if None, builds automatically a fake gsim logic tree
+        """
+        gsim_lt = gsimlt or GsimLogicTree.from_('[FromFile]')
+        fakeSM = Realization(
+            'scenario', weight=1,  ordinal=0, lt_path='b1', samples=1)
+        info = object.__new__(cls)
+        info.source_model_lt = SourceModelLogicTree.fake()
+        info.gsim_lt = gsim_lt
+        info.sm_rlzs = [fakeSM]
+        return info
+
+    def __init__(self, source_model_lt, gsim_lt):
+        self.source_model_lt = source_model_lt
+        self.gsim_lt = gsim_lt
+        self.init()  # set .sm_rlzs and .trt_by_grp
+
+    def init(self):
+        # NB: the number of effective rlzs can be less than the number
+        # of realizations in case of sampling
+        sm_rlzs = get_effective_rlzs(self.source_model_lt)
+        if not self.num_samples:
+            num_gsim_rlzs = self.gsim_lt.get_num_paths()
+        offset = 0
+        for sm_rlz in sm_rlzs:
+            sm_rlz.offset = offset
+            if self.num_samples:
+                offset += sm_rlz.samples
+            else:
+                offset += num_gsim_rlzs
+        self.sm_rlzs = sm_rlzs
+        self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
+
+    @property
+    def trt_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> trt
+        """
+        trt_by_grp = []
+        n = len(self.sm_rlzs)
+        trts = list(self.gsim_lt.values)
+        for smodel in self.sm_rlzs:
+            for grp_id in self.grp_ids(smodel.ordinal):
+                trt_by_grp.append((grp_id, trts[grp_id // n]))
+        return dict(sorted(trt_by_grp))
+
+    @property
+    def seed(self):
+        """
+        :returns: the source_model_lt seed
+        """
+        return self.source_model_lt.seed
+
+    @property
+    def num_samples(self):
+        """
+        :returns: the source_model_lt ``num_samples`` parameter
+        """
+        return self.source_model_lt.num_samples
+
+    def get_trti_eri(self, grp_id):
+        """
+        :returns: (trti, eri)
+        """
+        return divmod(grp_id, len(self.sm_rlzs))
+
+    def get_grp_id(self, trt, eri):
+        """
+        :returns: grp_id
+        """
+        return self.trti[trt] * len(self.sm_rlzs) + int(eri)
+
+    def grp_ids(self, eri):
+        """
+        :param eri: effective realization index
+        :returns: array of T group IDs, being T the number of TRTs
+        """
+        nt = len(self.gsim_lt.values)
+        ns = len(self.sm_rlzs)
+        return eri + numpy.arange(nt) * ns
+
+    def get_samples_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> source_model.samples
+        """
+        return {grp_id: sm.samples for sm in self.sm_rlzs
+                for grp_id in self.grp_ids(sm.ordinal)}
+
+    def gsim_by_trt(self, rlz):
+        """
+        :returns: a dictionary trt->gsim for the given realization
+        """
+        return dict(zip(self.gsim_lt.values, rlz.gsim_rlz.value))
+
+    def get_rlzs(self, eri):
+        """
+        :returns: a list of LtRealization objects
+        """
+        rlzs = []
+        sm = self.sm_rlzs[eri]
+        if self.num_samples:
+            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+        elif hasattr(self, 'gsim_rlzs'):  # cache
+            gsim_rlzs = self.gsim_rlzs
+        else:
+            self.gsim_rlzs = gsim_rlzs = get_effective_rlzs(self.gsim_lt)
+        for i, gsim_rlz in enumerate(gsim_rlzs):
+            weight = sm.weight * gsim_rlz.weight
+            rlz = LtRealization(sm.offset + i, sm.lt_path, gsim_rlz, weight)
+            rlzs.append(rlz)
+        return rlzs
+
+    def get_realizations(self):
+        """
+        :returns: the complete list of LtRealizations
+        """
+        rlzs = sum((self.get_rlzs(sm.ordinal) for sm in self.sm_rlzs), [])
+        assert rlzs, 'No realizations found??'
+        if self.num_samples:
+            assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
+            for rlz in rlzs:
+                for k in rlz.weight.dic:
+                    rlz.weight.dic[k] = 1. / self.num_samples
+        else:
+            tot_weight = sum(rlz.weight for rlz in rlzs)
+            if not tot_weight.is_one():
+                # this may happen for rounding errors; we ensure the sum of
+                # the weights is 1
+                for rlz in rlzs:
+                    rlz.weight = rlz.weight / tot_weight
+        return rlzs
+
+    def get_rlzs_by_gsim(self, grp_id):
+        """
+        :returns: a dictionary gsim -> rlzs
+        """
+        trti, eri = divmod(grp_id, len(self.sm_rlzs))
+        rlzs_by_gsim = AccumDict(accum=[])
+        for rlz in self.get_rlzs(eri):
+            rlzs_by_gsim[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
+        return {gsim: U32(rlzs) for gsim, rlzs in sorted(rlzs_by_gsim.items())}
+
+    def get_rlzs_by_gsim_grp(self):
+        """
+        :returns: a dictionary grp_id -> gsim -> rlzs
+        """
+        dic = {}
+        for sm in self.sm_rlzs:
+            for grp_id in self.grp_ids(sm.ordinal):
+                dic[grp_id] = self.get_rlzs_by_gsim(grp_id)
+        return dic
+
+    def get_rlzs_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> [rlzis, ...]
+        """
+        dic = {}
+        for sm in self.sm_rlzs:
+            for grp_id in self.grp_ids(sm.ordinal):
+                grp = 'grp-%02d' % grp_id
+                dic[grp] = list(self.get_rlzs_by_gsim(grp_id).values())
+        return dic  # grp_id -> lists of rlzi
+
+    def __getnewargs__(self):
+        # with this FullLogicTree instances will be unpickled correctly
+        return self.seed, self.num_samples, self.sm_rlzs
+
+    def __toh5__(self):
+        # save full_lt/sm_data in the datastore
+        sm_data = []
+        for sm in self.sm_rlzs:
+            sm_data.append((sm.value, sm.weight, '_'.join(sm.lt_path),
+                            sm.samples, sm.offset))
+        return (dict(
+            source_model_lt=self.source_model_lt,
+            gsim_lt=self.gsim_lt,
+            sm_data=numpy.array(sm_data, source_model_dt)),
+                dict(seed=self.seed, num_samples=self.num_samples,
+                     trts=hdf5.array_of_vstr(self.gsim_lt.values)))
+
+    def __fromh5__(self, dic, attrs):
+        # TODO: this is called more times than needed, maybe we should cache it
+        sm_data = dic['sm_data']
+        vars(self).update(attrs)
+        self.source_model_lt = dic['source_model_lt']
+        self.gsim_lt = dic['gsim_lt']
+        self.sm_rlzs = []
+        for sm_id, rec in enumerate(sm_data):
+            path = tuple(str(decode(rec['path'])).split('_'))
+            sm = Realization(
+                rec['name'], rec['weight'], sm_id, path,
+                rec['samples'], rec['offset'])
+            self.sm_rlzs.append(sm)
+
+    def get_num_rlzs(self, sm_rlz=None):
+        """
+        :param sm_rlz: a Realization instance (or None)
+        :returns: the number of realizations per source model (or all)
+        """
+        if sm_rlz is None:
+            return sum(self.get_num_rlzs(sm) for sm in self.sm_rlzs)
+        if self.num_samples:
+            return sm_rlz.samples
+        return self.gsim_lt.get_num_paths()
+
+    @property
+    def rlzs(self):
+        """
+        :returns: an array of realizations
+        """
+        tups = [(r.ordinal, r.pid, r.weight['weight'])
+                for r in self.get_realizations()]
+        return numpy.array(tups, rlz_dt)
+
+    def get_gsims_by_trt(self):
+        """
+        :returns: a dictionary trt -> sorted gsims
+        """
+        if self.num_samples:
+            gsims_by_trt = AccumDict(accum=set())
+            for sm in self.sm_rlzs:
+                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+                for t, trt in enumerate(self.gsim_lt.values):
+                    gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
+        else:
+            gsims_by_trt = self.gsim_lt.values
+        return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
+
+    def get_sm_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> sm_id
+        """
+        return {grp_id: sm.ordinal for sm in self.sm_rlzs
+                for grp_id in self.grp_ids(sm.ordinal)}
+
+    def __repr__(self):
+        info_by_model = {}
+        for sm in self.sm_rlzs:
+            info_by_model[sm.lt_path] = (
+                '_'.join(map(decode, sm.lt_path)),
+                decode(sm.value), sm.weight, self.get_num_rlzs(sm))
+        summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
+                   for ibm in info_by_model.values()]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))

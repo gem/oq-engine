@@ -362,6 +362,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             sys.stderr.write(tb)
         raise
     finally:
+        parallel.Starmap.shutdown()
         # if there was an error in the calculation, this part may fail;
         # in such a situation, we simply log the cleanup error without
         # taking further action, so that the real error can propagate

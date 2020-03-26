@@ -501,12 +501,11 @@ def extract_rups_by_mag_dist(dstore, what):
 def extract_sources(dstore, what):
     """
     Extract information about a source model.
-    Use it as /extract/sources?sm_id=0&limit=10
-    or /extract/sources?sm_id=0&source_id=1&source_id=2
-    or /extract/sources?sm_id=0&code=A&code=B
+    Use it as /extract/sources?limit=10
+    or /extract/sources?source_id=1&source_id=2
+    or /extract/sources?code=A&code=B
     """
     qdict = parse(what)
-    sm_id = int(qdict.get('sm_id', ['0'])[0])
     limit = int(qdict.get('limit', ['100'])[0])
     source_ids = qdict.get('source_id', None)
     if source_ids is not None:
@@ -514,8 +513,9 @@ def extract_sources(dstore, what):
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
-    info = dstore['source_info'][()]
-    info = info[info['sm_id'] == sm_id]
+    fields = 'source_id code num_sources num_sites eff_ruptures'
+    info = dstore['source_info'][()][fields.split()]
+    wkt = dstore['source_wkt'][()]
     arrays = []
     if source_ids is not None:
         logging.info('Extracting sources with ids: %s', source_ids)
@@ -532,17 +532,17 @@ def extract_sources(dstore, what):
             logging.info('Code %s: extracting %d sources out of %s',
                          code, limit, len(rows))
         arrays.append(rows[:limit])
+    if not arrays:
+        raise ValueError('There  no sources')
     info = numpy.concatenate(arrays)
-    if len(info) == 0:
-        raise ValueError('There is no source model #%d' % sm_id)
-    wkt_gz = gzip.compress(';'.join(info['wkt']).encode('utf8'))
+    wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
-    oknames = [n for n in info.dtype.names if n not in ('source_id', 'wkt')]
+    oknames = [name for name in info.dtype.names  # avoid pickle issues
+               if name not in ('source_id', 'grp_ids')]
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]
-    return ArrayWrapper(
-        arr, {'sm_id': sm_id, 'wkt_gz': wkt_gz, 'src_gz': src_gz})
+    return ArrayWrapper(arr, {'wkt_gz': wkt_gz, 'src_gz': src_gz})
 
 
 @extract.add('task_info')
@@ -1163,7 +1163,7 @@ def extract_disagg(dstore, what):
 def extract_disagg_layer(dstore, what):
     """
     Extract a disaggregation output containing all sites
-    for the first realization.
+    for the first realization or the mean.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
     disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0
@@ -1175,11 +1175,11 @@ def extract_disagg_layer(dstore, what):
     grp = disagg_outputs(dstore, imt, 0, poe_id)[0]
     dset = grp[label]
     edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
-    dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz', U32),
+    dt = [('site_id', U32), ('lon', F32), ('lat', F32),
           ('poes', (dset.dtype, dset.shape))]
     sitecol = dstore['sitecol']
     out = numpy.zeros(len(sitecol), dt)
-    out[0] = (0, sitecol.lons[0], sitecol.lats[0], grp.attrs['rlzi'], dset[()])
+    out[0] = (0, sitecol.lons[0], sitecol.lats[0], dset[()])
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         if sid > 0:
@@ -1187,7 +1187,6 @@ def extract_disagg_layer(dstore, what):
             rec['site_id'] = sid
             rec['lon'] = lon
             rec['lat'] = lat
-            rec['rlz'] = grp.attrs['rlzi']
             rec['poes'] = grp[label][()]
     return ArrayWrapper(out, edges)
 

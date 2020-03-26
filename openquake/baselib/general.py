@@ -595,8 +595,8 @@ class AccumDict(dict):
 
     The multiplication has been defined::
 
-     >>> prob1 = AccumDict(a=0.4, b=0.5)
-     >>> prob2 = AccumDict(b=0.5)
+     >>> prob1 = AccumDict(dict(a=0.4, b=0.5))
+     >>> prob2 = AccumDict(dict(b=0.5))
      >>> prob1 * prob2
      {'a': 0.4, 'b': 0.25}
      >>> prob1 * 1.2
@@ -622,10 +622,11 @@ class AccumDict(dict):
     accumulator, therefore each key has a different accumulator, which
     initially is the empty list (in this case).
     """
-    def __init__(self, dic=None, accum=None, **kw):
+    def __init__(self, dic=None, accum=None, keys=()):
+        for key in keys:
+            self[key] = copy.deepcopy(accum)
         if dic:
             self.update(dic)
-        self.update(kw)
         self.accum = accum
 
     def __iadd__(self, other):
@@ -869,6 +870,45 @@ def groupby2(records, kfield, vfield):
         vgetter = operator.itemgetter(vfield)
     dic = groupby(records, kgetter, lambda rows: [vgetter(r) for r in rows])
     return list(dic.items())  # Python3 compatible
+
+
+def bin_idxs(values, nbins, key=None, minval=None, maxval=None):
+    """
+    :param values: an array of N floats (or arrays)
+    :returns: an array of N indices
+    """
+    assert len(values)
+    if key is not None:
+        values = numpy.array([key(val) for val in values])
+    if minval is None:
+        minval = values.min()
+    if maxval is None:
+        maxval = values.max()
+    if minval == maxval:
+        bins = [minval] * nbins
+    else:
+        bins = numpy.arange(minval, maxval, (maxval-minval) / nbins)
+    return numpy.searchsorted(bins, values, side='right')
+
+
+def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
+    """
+    >>> values = numpy.arange(10)
+    >>> for group in groupby_bin(values, 3):
+    ...     print(group)
+    [0, 1, 2]
+    [3, 4, 5]
+    [6, 7, 8, 9]
+    """
+    if len(values) == 0:  # do nothing
+        return values
+    idxs = bin_idxs(values, nbins, key, minval, maxval)
+    acc = AccumDict(accum=[])
+    for idx, val in zip(idxs, values):
+        if isinstance(idx, numpy.ndarray):
+            idx = tuple(idx)  # make it hashable
+        acc[idx].append(val)
+    return acc.values()
 
 
 def _reducerecords(group):
@@ -1357,3 +1397,12 @@ def get_array_nbytes(sizedict):
     nbytes = numpy.prod(list(sizedict.values())) * 8
     prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
     return nbytes, '%s * 8 bytes = %s' % (prod, humansize(nbytes))
+
+
+def gen_subclasses(cls):
+    """
+    :returns: the subclasses of `cls`, ordered by name
+    """
+    for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
+        yield subclass
+        yield from gen_subclasses(subclass)

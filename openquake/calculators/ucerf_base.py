@@ -398,7 +398,7 @@ class UCERFSource(BaseSeismicSource):
         while stop > start:
             new = copy.copy(self)
             new.id = self.id
-            new.source_id = '%s:%d:%d' % (
+            new.source_id = '%s:%d-%d' % (
                 self.source_id, self.start, self.stop)
             new.orig = self.orig
             new.start = start

@@ -153,20 +153,7 @@ How to analyze the logic tree of a calculation without running the calculation
 ------------------------------------------------------------------------------
 
 The engine provides some facilities to explore the logic tree of a
-computation without running it. The command you need is the *info* command::
-
-   $ oq info -h
-   usage: oq info [-h] [-c] [-g] [-v] [-r] [input_file]
-   
-   positional arguments:
-     input_file         job.ini file or zip archive [default: '']
-   
-   optional arguments:
-     -h, --help         show this help message and exit
-     -c, --calculators  list available calculators
-     -g, --gsims        list available GSIMs
-     -v, --views        list available views
-     -r, --report       build a report in rst format
+computation without running it. The command you need is the ``oq info`` command.
    
 Let's assume that you have a zip archive called `SHARE.zip` containing the
 SHARE source model, the SHARE source model logic tree file and the SHARE
@@ -209,7 +196,7 @@ realizations, not the potential ones. You can perform that check by
 using the `--report` flag. This will generate a report with a name
 like `report_<calc_id>.rst`::
 
-   $ oq info SHARE.zip --report
+   $ oq info --report SHARE.zip
    ...
    Generated /home/michele/report_5580.rst
 
@@ -252,7 +239,7 @@ tectonic region type, but more complex cases are possibile.  For
 instance consider our test classical/case_19, which is a reduction of
 the SHARE model with just a simplified area source model::
 
-   $ oq info classical/case_19/job.ini -r
+   $ oq info --report classical/case_19/job.ini
 
 This is a case where a lot of tectonic region types have been completely
 filtered out, so the original 160 realizations have been reduced to merely 4 for

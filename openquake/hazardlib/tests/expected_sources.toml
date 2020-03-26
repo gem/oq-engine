@@ -1,7 +1,6 @@
 [pointSource]
 _id = "2"
 _name = "point"
-_tectonicRegion = "Stable Continental Crust"
 magScaleRel = "WC1994"
 ruptAspectRatio = 0.5
 
@@ -42,7 +41,6 @@ _probability = 0.5
 [complexFaultSource]
 _id = "4"
 _name = "Cascadia Megathrust"
-_tectonicRegion = "Subduction Interface"
 magScaleRel = "WC1994"
 ruptAspectRatio = 2.0
 rake = 30.0
@@ -71,7 +69,6 @@ _maxMag = 6.5
 [areaSource]
 _id = "1"
 _name = "Quito"
-_tectonicRegion = "Active Shallow Crust"
 magScaleRel = "PeerMSR"
 ruptAspectRatio = 1.5
 
@@ -112,7 +109,6 @@ _probability = 0.5
 [simpleFaultSource]
 _id = "3"
 _name = "Mount Diablo Thrust"
-_tectonicRegion = "Active Shallow Crust"
 magScaleRel = "WC1994"
 ruptAspectRatio = 1.5
 rake = 30.0
@@ -146,7 +142,6 @@ slip = [ "90.0", "135.0",]
 [characteristicFaultSource]
 _id = "5"
 _name = "characteristic source, simple fault"
-_tectonicRegion = "Volcanic"
 rake = 30.0
 
 [characteristicFaultSource.truncGutenbergRichterMFD]
@@ -165,7 +160,6 @@ lowerSeismoDepth = 20.0
 [characteristicFaultSource]
 _id = "6"
 _name = "characteristic source, complex fault"
-_tectonicRegion = "Volcanic"
 rake = 60.0
 
 [characteristicFaultSource.incrementalMFD]
@@ -191,7 +185,6 @@ occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108287999999999
 [characteristicFaultSource]
 _id = "7"
 _name = "characteristic source, multi surface"
-_tectonicRegion = "Volcanic"
 rake = 90.0
 
 [characteristicFaultSource.truncGutenbergRichterMFD]
@@ -240,7 +233,6 @@ _depth = 80.0
 [simpleFaultSource]
 _id = "2A"
 _name = "Mount Diablo Thrust YC Characteristic Rate"
-_tectonicRegion = "Active Shallow Crust"
 magScaleRel = "WC1994"
 ruptAspectRatio = 1.5
 rake = 30.0
@@ -262,7 +254,6 @@ _binWidth = 0.1
 [characteristicFaultSource]
 _id = "1"
 _name = "characteristic source, complex fault arbitrary mfd"
-_tectonicRegion = "Subduction Interface"
 rake = 60.0
 
 [characteristicFaultSource.arbitraryMFD]
@@ -287,7 +278,6 @@ occurRates = [ 0.0005999999999999999, 0.0008, 0.0004,]
 [multiPointSource]
 _id = "mp1"
 _name = "multi point source"
-_tectonicRegion = "Stable Continental Crust"
 magScaleRel = "PeerMSR"
 ruptAspectRatio = 1.0
 
@@ -323,7 +313,6 @@ _probability = 1.0
 [multiPointSource]
 _id = "mp2"
 _name = "mps-with-GR"
-_tectonicRegion = "Stable Continental Crust"
 magScaleRel = "PeerMSR"
 ruptAspectRatio = 1.0
 

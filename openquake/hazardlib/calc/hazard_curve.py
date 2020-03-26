@@ -58,7 +58,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
@@ -106,8 +106,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     trts = set()
     for src in group:
         if not src.num_ruptures:
-            # src.num_ruptures is set when parsing the XML, but not when
-            # the source is instantiated manually, so it is set here
+            # src.num_ruptures may not be set, so it is set here
             src.num_ruptures = src.count_ruptures()
         # set the proper TOM in case of a cluster
         if cluster:
@@ -117,8 +116,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
-    pmap, rup_data, calc_times, extra = cmaker.get_pmap_by_grp(
-        src_filter, group)
+    pmap, rup_data, calc_times, extra = PmapMaker(
+        cmaker, src_filter, group).make()
     extra['task_no'] = getattr(monitor, 'task_no', 0)
     extra['trt'] = trt
 

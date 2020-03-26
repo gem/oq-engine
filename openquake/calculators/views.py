@@ -20,14 +20,13 @@ import os.path
 import numbers
 import operator
 import functools
-import itertools
 import collections
 import numpy
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg, fast_agg3)
-from openquake.baselib.performance import perf_dt
+from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -156,7 +155,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     Returns the slowest sources
     """
-    info = dstore['source_info']['source_id', 'grp_id', 'code', 'num_ruptures',
+    info = dstore['source_info']['source_id', 'code', 'num_sources',
                                  'calc_time', 'num_sites', 'eff_ruptures']
     info = info[info['eff_ruptures'] > 0]
     info.sort(order='calc_time')
@@ -210,15 +209,6 @@ def view_full_lt(token, dstore):
         row = ('_'.join(sm.lt_path), sm.weight, num_rlzs)
         rows.append(row)
     return rst_table(rows, header)
-
-
-@view.add('ruptures_per_grp')
-def view_ruptures_per_grp(token, dstore):
-    info = dstore['source_info'][()]
-    agg = fast_agg3(
-        info, 'grp_id', ['num_sites', 'num_ruptures', 'eff_ruptures'])
-    agg['num_sites'] /= agg['eff_ruptures']
-    return rst_table(agg)
 
 
 @view.add('eff_ruptures')
@@ -432,32 +422,6 @@ def view_fullreport(token, dstore):
     return ReportWriter(dstore).make_report()
 
 
-def performance_view(dstore, add_calc_id=True):
-    """
-    Returns the performance view as a numpy array.
-    """
-    pdata = dstore['performance_data']
-    pdata.refresh()
-    data = sorted(pdata[()], key=operator.itemgetter(0))
-    out = []
-    for operation, group in itertools.groupby(data, operator.itemgetter(0)):
-        counts = 0
-        time = 0
-        mem = 0
-        for rec in group:
-            counts += rec['counts']
-            time += rec['time_sec']
-            mem = max(mem, rec['memory_mb'])
-        out.append((operation, time, mem, counts))
-    out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    if add_calc_id:
-        dtlist = [('calc_%d' % dstore.calc_id, perf_dt['operation'])]
-    else:
-        dtlist = [('operation', perf_dt['operation'])]
-    dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
-    return numpy.array(out, dtlist)
-
-
 @view.add('performance')
 def view_performance(token, dstore):
     """
@@ -595,10 +559,9 @@ def view_task_hazard(token, dstore):
     eff_ruptures = dstore['by_task/eff_ruptures'][taskno]
     eff_sites = dstore['by_task/eff_sites'][taskno]
     srcids = dstore['by_task/srcids'][taskno]
-    srcs = dstore['source_info']['source_id'][srcids]
     res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
            'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
-                             ' '.join(srcs)))
+                             ' '.join(srcids)))
     return res
 
 

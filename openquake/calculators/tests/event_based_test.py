@@ -443,7 +443,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
 
     def test_case_25(self):
-        raise unittest.SkipTest
         # logic tree common + extra
         # common1.xml contains "5" "6"
         # common2.xml contains "1" "2"
@@ -456,6 +455,11 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_25.__file__, 'job2.ini')
         mean, *others = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
+
+        # test with common1.xml present into branchs and sampling
+        self.run_calc(case_25.__file__, 'job_common.ini')
+        mean, *others = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', mean)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

@@ -450,15 +450,14 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(found, 0)
         found, total = readinput.reduce_source_model(smlt, {}, remove=False)
         self.assertEqual(found, 0)
-        # TODO: add a test with two sources with the same ID and different
-        # codes
 
     def test_wrong_trts(self):
         # 'active Shallow Crust' is missing, 'Active Shallow Crust' is there
         oq = readinput.get_oqparam('job.ini', case_16)
         with self.assertRaises(logictree.InvalidLogicTree) as c:
             readinput.get_gsim_lt(oq, ['active Shallow Crust'])
-        self.assertIn("{'active Shallow Crust'} is missing", str(c.exception))
+        self.assertIn("is missing the TRT 'active Shallow Crust'",
+                      str(c.exception))
 
     def test_wrong_trts_in_reqv(self):
         # invalid TRT in job.ini [reqv]

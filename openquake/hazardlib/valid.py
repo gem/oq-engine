@@ -761,7 +761,7 @@ def intensity_measure_types_and_levels(value):
     {'SA(0.1)': [0.1, 0.2]}
     """
     dic = dictionary(value)
-    for imt_str, imls in dic.items():
+    for imt_str, imls in list(dic.items()):
         norm_imt = str(imt.from_string(imt_str))
         if norm_imt != imt_str:
             dic[norm_imt] = imls

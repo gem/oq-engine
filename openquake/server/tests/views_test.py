@@ -45,7 +45,7 @@ from openquake.commands import engine
 
 def loadnpz(lines):
     bio = io.BytesIO(b''.join(ln for ln in lines))
-    return numpy.load(bio, allow_pickle=True)
+    return numpy.load(bio)
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -223,9 +223,9 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(len(got['rlz-000']), 0)
 
         # check extract_sources
-        extract_url = '/v1/calc/%s/extract/sources?sm_id=0' % job_id
+        extract_url = '/v1/calc/%s/extract/sources?' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertEqual(list(got), ['sm_id', 'wkt_gz', 'src_gz', 'array'])
+        self.assertEqual(list(got), ['wkt_gz', 'src_gz', 'array'])
         self.assertGreater(len(got['array']), 0)
 
     def test_classical(self):

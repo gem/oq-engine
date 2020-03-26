@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array, AccumDict
+from openquake.baselib.general import group_array
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -286,10 +286,11 @@ def export_loss_maps_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
     for i, tag in enumerate(tags):
-        uid = getattr(tag, 'uid', tag)
+        if hasattr(tag, 'ordinal'):  # is a realization
+            tag = 'rlz-%d' % tag.ordinal
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
         md.update(
-            dict(kind=uid, risk_investigation_time=oq.risk_investigation_time))
+            dict(kind=tag, risk_investigation_time=oq.risk_investigation_time))
         writer.save(compose_arrays(assets, value[:, i]), fname, comment=md,
                     renamedict=dict(id='asset_id'))
     return writer.getsaved()

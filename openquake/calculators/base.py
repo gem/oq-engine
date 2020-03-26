@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import abc
 import pdb
@@ -37,7 +38,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, source, calc, util
+from openquake.commonlib import readinput, logictree, calc, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -53,6 +54,20 @@ U32 = numpy.uint32
 F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
+
+source_info_dt = numpy.dtype([
+    ('source_id', hdf5.vstr),          # 0
+    ('gidx', numpy.uint16),            # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('num_sources', numpy.uint32),     # 3
+    ('calc_time', numpy.float32),      # 4
+    ('num_sites', numpy.uint32),       # 5
+    ('eff_ruptures', numpy.uint32),    # 6
+    ('checksum', numpy.uint32),        # 7
+    ('serial', numpy.uint32),          # 8
+])
+
+NUM_SOURCES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
@@ -437,9 +452,10 @@ class HazardCalculator(BaseCalculator):
                 tmp['sitecol'] = self.sitecol
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
+            full_lt = readinput.get_full_lt(oq)
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, self.datastore.hdf5)
+                    oq, full_lt, self.datastore.hdf5)
                 srcs = [src for sg in csm.src_groups for src in sg]
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')
@@ -499,7 +515,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['poes/grp-00'] = fix_ones(readinput.pmap)
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
-            self.datastore['full_lt'] = fake = source.FullLogicTree.fake()
+            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.realizations = fake.get_realizations()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
@@ -570,7 +586,7 @@ class HazardCalculator(BaseCalculator):
             self.check_floating_spinning()
             self.realizations = self.csm.full_lt.get_realizations()
         else:  # build a fake; used by risk-from-file calculators
-            self.datastore['full_lt'] = fake = source.FullLogicTree.fake()
+            self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.realizations = fake.get_realizations()
 
     @general.cached_property
@@ -782,6 +798,7 @@ class HazardCalculator(BaseCalculator):
 
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
+                          collapse_ruptures=oq.collapse_ruptures,
                           avg_losses=oq.avg_losses, amplifier=self.amplifier)
 
         # compute exposure stats
@@ -834,18 +851,19 @@ class HazardCalculator(BaseCalculator):
 
     def store_source_info(self, calc_times):
         """
-        Save (weight, num_sites, calc_time) inside the source_info dataset
+        Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        if calc_times:
-            source_info = self.datastore['source_info']
-            arr = numpy.zeros((len(source_info), 3), F32)
-            # NB: the zip magic is needed for performance,
-            # looping would be too slow
-            ids, vals = zip(*calc_times.items())
-            arr[numpy.array(ids)] = vals
-            source_info['eff_ruptures'] += arr[:, 0]
-            source_info['num_sites'] += arr[:, 1]
-            source_info['calc_time'] += arr[:, 2]
+        for src_id, arr in calc_times.items():
+            src_id = re.sub(r':\d+$', '', src_id)
+            row = self.csm.source_info[src_id]
+            row[EFF_RUPTURES] += arr[0]
+            row[NUM_SITES] += arr[1]
+            row[CALC_TIME] += arr[2]
+        rows = self.csm.source_info.values()
+        recs = [tuple(row[:-1]) for row in rows]
+        self.datastore['source_info'] = numpy.array(recs, source_info_dt)
+        self.datastore['source_wkt'] = numpy.array([row[-1] for row in rows],
+                                                   hdf5.vstr)
 
     def post_process(self):
         """For compatibility with the engine"""
