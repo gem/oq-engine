@@ -205,7 +205,7 @@ bindi_2011scaled
 bindi_2014
 ------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.bindi_2014scaled
+.. automodule:: openquake.hazardlib.gsim.bindi_2014
     :members:
     :undoc-members:
     :show-inheritance:
