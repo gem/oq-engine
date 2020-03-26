@@ -20,10 +20,10 @@
 Module exports :class:`BindiEtAl2014RhypEC8scaled`
 """
 from openquake.hazardlib.gsim.bindi_2014 import (
-    BindiEtAl2014RjbEC8, CoeffsTable)
+    BindiEtAl2014RhypEC8, CoeffsTable)
 
 
-class BindiEtAl2014RhypEC8scaled(BindiEtAl2014RjbEC8):
+class BindiEtAl2014RhypEC8scaled(BindiEtAl2014RhypEC8):
     """
     Implements scaled European GMPE:
     D.Bindi, M. Massa, L.Luzi, G. Ameri, F. Pacor, R.Puglia and P. Augliera
