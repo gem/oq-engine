@@ -22,10 +22,10 @@ Module exports :class:`CauzziEtAl2014Eurocode8scaled`,
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014
+from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014Eurocode8
 
 
-class CauzziEtAl2014Eurocode8scaled(CauzziEtAl2014):
+class CauzziEtAl2014Eurocode8scaled(CauzziEtAl2014Eurocode8):
     """
     Implements GMPE developed by Carlo Cauzzi et al (2014) and published
     as C.Cauzzi, E. Faccioli, M. Vanini and A. Bianchini (2014) "Updated

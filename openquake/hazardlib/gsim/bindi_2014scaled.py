@@ -19,11 +19,11 @@
 """
 Module exports :class:`BindiEtAl2014RhypEC8scaled`
 """
-import numpy as np
-from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rhyp, CoeffsTable
+from openquake.hazardlib.gsim.bindi_2014 import (
+    BindiEtAl2014RjbEC8, CoeffsTable)
 
 
-class BindiEtAl2014RhypEC8scaled(BindiEtAl2014Rhyp):
+class BindiEtAl2014RhypEC8scaled(BindiEtAl2014RjbEC8):
     """
     Implements scaled European GMPE:
     D.Bindi, M. Massa, L.Luzi, G. Ameri, F. Pacor, R.Puglia and P. Augliera
@@ -44,22 +44,6 @@ class BindiEtAl2014RhypEC8scaled(BindiEtAl2014Rhyp):
     coefficients tables were taken from the Electronic Supplementary
     material of the original paper, which are indicated as being unaffected.
     """
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification given Eurocode 8 site classification
-        """
-        f_s = np.zeros_like(vs30)
-        # Site class B
-        idx = np.logical_and(vs30 < 800.0, vs30 >= 360.0)
-        f_s[idx] = C["eB"]
-        # Site Class C
-        idx = np.logical_and(vs30 < 360.0, vs30 >= 180.0)
-        f_s[idx] = C["eC"]
-        # Site Class D
-        idx = vs30 < 180.0
-        f_s[idx] = C["eD"]
-        return f_s
-
     #: Coefficients from Table 3
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt             e1             c1            c2             h             c3            b1             b2            b3            eA            eB            eC            eD           sofN           sofR           sofS          sofU           tau           phi        phis2s         sigma
