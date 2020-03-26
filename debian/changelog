@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added Bindi2011, Bindi2014 and Cauzzi2014 scaled GMPEs contributed by
+    the INGV
   * Added a check on classical calculations which are too large to run
   * Added a flag `collapse_ruptures` and a new collapsing algorithm
   * Added a check for missing TRTs in the GSIM logic tree file
