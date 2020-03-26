@@ -623,10 +623,10 @@ class AccumDict(dict):
     initially is the empty list (in this case).
     """
     def __init__(self, dic=None, accum=None, keys=()):
-        if dic:
-            self.update(dic)
         for key in keys:
             self[key] = copy.deepcopy(accum)
+        if dic:
+            self.update(dic)
         self.accum = accum
 
     def __iadd__(self, other):
