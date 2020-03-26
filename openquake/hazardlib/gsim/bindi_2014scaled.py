@@ -20,14 +20,10 @@
 Module exports :class:`BindiEtAl2014RhypEC8scaled`
 """
 import numpy as np
-from scipy.constants import g
-
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rhyp, CoeffsTable
 
 
-class BindiEtAl2014RhypEC8scaled(GMPE):
+class BindiEtAl2014RhypEC8scaled(BindiEtAl2014Rhyp):
     """
     Implements European GMPE:
     D.Bindi, M. Massa, L.Luzi, G. Ameri, F. Pacor, R.Puglia and P. Augliera
@@ -48,119 +44,6 @@ class BindiEtAl2014RhypEC8scaled(GMPE):
     coefficients tables were taken from the Electronic Supplementary
     material of the original paper, which are indicated as being unaffected.
     """
-    #: Supported tectonic region type is 'active shallow crust'
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-
-    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
-    #: this GSIM can calculate. A set should contain classes from module
-    #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
-
-    #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
-
-    #: Supported standard deviation types are inter-event, intra-event
-    #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
-
-    #: Required site parameter is only Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
-
-    #: Required rupture parameters are magnitude and rake (eq. 1).
-    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
-
-    #: Required distance measure is Rhypo
-    REQUIRES_DISTANCES = set(('rhypo', ))
-    
-    def __init__(self, adjustment_factor=1.0):
-        super().__init__()
-        self.adjustment_factor = np.log(adjustment_factor)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-
-        C = self.COEFFS[imt]
-        imean = self._get_mean(C, rup, dists, sites)
-        if imt.name in "SA PGA":
-            # Convert units to g,
-            # but only for PGA and SA (not PGV):
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
-            mean = np.log(10.0 ** imean)
-
-        istddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        return mean + self.adjustment_factor, stddevs
-
-    def _get_mean(self, C, rup, dists, sites):
-        """
-        Returns the mean value of ground motion
-        """
-        return (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists.rhypo, rup.mag) +
-                self._get_style_of_faulting_term(C, rup) +
-                self._get_site_amplification_term(C, sites.vs30))
-
-    def _get_magnitude_scaling_term(self, C, mag):
-        """
-        Returns the magnitude scaling term of the GMPE described in
-        equation 3
-        """
-        dmag = mag - self.CONSTS["Mh"]
-        if mag < self.CONSTS["Mh"]:
-            return C["e1"] + (C["b1"] * dmag) + (C["b2"] * (dmag ** 2.0))
-        else:
-            return C["e1"] + (C["b3"] * dmag)
-
-    def _get_distance_scaling_term(self, C, rval, mag):
-        """
-        Returns the distance scaling term of the GMPE described in equation 2
-        """
-        r_adj = np.sqrt(rval ** 2.0 + C["h"] ** 2.0)
-        return (
-            (C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *
-            np.log10(r_adj / self.CONSTS["Rref"]) -
-            (C["c3"] * (r_adj - self.CONSTS["Rref"])))
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the style-of-faulting term.
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal.
-        Note that the 'Unspecified' case is not considered in this class
-        as rake is required as an input variable
-        """
-        SS, NS, RS = 0.0, 0.0, 0.0
-        if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-            # strike-slip
-            SS = 1.0
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            RS = 1.0
-        else:
-            # normal
-            NS = 1.0
-        return (C["sofN"] * NS) + (C["sofR"] * RS) + (C["sofS"] * SS)
-        
     def _get_site_amplification_term(self, C, vs30):
         """
         Returns the site amplification given Eurocode 8 site classification
@@ -176,22 +59,6 @@ class BindiEtAl2014RhypEC8scaled(GMPE):
         idx = vs30 < 180.0
         f_s[idx] = C["eD"]
         return f_s
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 2.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['phi'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
 
     #: Coefficients from Table 3
     COEFFS = CoeffsTable(sa_damping=5, table="""
@@ -213,8 +80,3 @@ class BindiEtAl2014RhypEC8scaled(GMPE):
     3.00   3.319083208   -1.399740000   0.216533000   8.339210000   0.0000000000   0.552993000   -0.071343600   0.000000000   0.000000000   0.143969000   0.315187000   0.559213000   -0.146666000   -0.128655000   -0.067567300   0.000000000   0.283885000   0.320266000   0.267078000   0.427973000
     4.00   3.110535797   -1.333280000   0.203724000   8.409960000   0.0000000000   0.652840000   -0.054790600   0.000000000   0.000000000   0.124787000   0.285654000   0.532224000   -0.141040000   -0.153993000   -0.059989300   0.000000000   0.259933000   0.305458000   0.000000000   0.401086000
     """)
-    
-    CONSTS = {"Mref": 5.5,
-              "Mh": 6.75,
-              "Rref": 1.0,
-              "Vref": 800.0}
