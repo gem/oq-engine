@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rhyp, CoeffsTable
 
 class BindiEtAl2014RhypEC8scaled(BindiEtAl2014Rhyp):
     """
-    Implements European GMPE:
+    Implements scaled European GMPE:
     D.Bindi, M. Massa, L.Luzi, G. Ameri, F. Pacor, R.Puglia and P. Augliera
     (2014), "Pan-European ground motion prediction equations for the
     average horizontal component of PGA, PGV and 5 %-damped PSA at spectral

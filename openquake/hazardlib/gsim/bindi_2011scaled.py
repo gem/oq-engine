@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,15 @@ from openquake.hazardlib.gsim.bindi_2011 import BindiEtAl2011
 
 
 class BindiEtAl2011scaled(BindiEtAl2011):
-
+    """
+    Implements scaled GMPE developed by D.Bindi, F.Pacor, L.Luzi, R.Puglia,
+    M.Massa, G. Ameri, R. Paolucci and published as "Ground motion
+    prediction equations derived from the Italian strong motion data",
+    Bull Earthquake Eng, DOI 10.1007/s10518-011-9313-z.
+    SA are given up to 2 s.
+    The regressions are developed considering the geometrical mean of the
+    as-recorded horizontal components
+    """
     #: Coefficients from SA from Table 1
     #: Coefficients from PGA e PGV from Table 5
 

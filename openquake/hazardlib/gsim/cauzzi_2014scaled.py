@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,6 @@ Module exports :class:`CauzziEtAl2014Eurocode8scaled`,
 """
 import numpy as np
 # standard acceleration of gravity in m/s**2
-from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014
 
@@ -39,30 +38,11 @@ class CauzziEtAl2014Eurocode8scaled(CauzziEtAl2014):
     following formula ::
 
         SA = DSR * (2 * π / T) ** 2
-    
     """
-    #: Supported tectonic region type is active shallow crust,
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-
-    #: Supported intensity measure types are spectral acceleration, peak
-    #: ground acceleration and peak ground velocity.
-    #: The original paper provides coefficients for PGA and PGV, while SA
-    #: is obtained from displacement response spectrum values.
-    #: Coefficients for PGA are taken from the SA (0.01 s) spectral
-    #: acceleration, as indicated in Page 11 (at the time of writing)
-    #: of Cauzzi et al. (2014)
-
     def _get_site_amplification_term(self, C, vs30):
         """
         Returns the site amplification term on the basis of Eurocode 8
         site class
-        """
-        s_b, s_c, s_d = self._get_site_dummy_variables(vs30)
-        return (C["sB"] * s_b) + (C["sC"] * s_c) + (C["sD"] * s_d)
-
-    def _get_site_dummy_variables(self, vs30):
-        """
-        Returns the Eurocode 8 site class dummy variable
         """
         s_b = np.zeros_like(vs30)
         s_c = np.zeros_like(vs30)
@@ -70,10 +50,9 @@ class CauzziEtAl2014Eurocode8scaled(CauzziEtAl2014):
         s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
         s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
         s_d[vs30 < 180] = 1.0
-        return s_b, s_c, s_d
+        return C["sB"] * s_b + C["sC"] * s_c + C["sD"] * s_d
 
     #: Coefficient table constructed from the electronic suplements of the
-
     #: original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                       c1                   m1                    m2                    r1                   r2                    r3                   sB                   sC                   sD                    bV                 bV800                       VA                    fN                    fR                   fSS                    f                    t                    s                   tM                   sM
