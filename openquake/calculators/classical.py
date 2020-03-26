@@ -24,7 +24,7 @@ from datetime import datetime
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -38,10 +38,23 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO32 = 2 ** 32
 MINWEIGHT = 1000
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
+
+MAXMEMORY = '''Estimated upper memory limit per core:
+%d sites x %d levels x %d gsims x %d src_multiplicity * 8 bytes = %s'''
+
+TOOBIG = '''\
+The calculation is too big:
+num_sites = %d
+num_levels = %d
+num_gsims = %d
+src_multiplicity = %d
+The estimated memory per core is %s > 4 GB.
+You MUST reduce one or more of the listed parameters.'''
 
 
 def get_extreme_poe(array, imtls):
@@ -219,6 +232,17 @@ class ClassicalCalculator(base.HazardCalculator):
         self.totrups = 0  # total number of ruptures before collapsing
         self.gidx = {tuple(grp_ids): i
                      for i, grp_ids in enumerate(self.datastore['grp_ids'])}
+
+        # estimate max memory per core
+        max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
+        max_num_grp_ids = max(len(grp_ids) for grp_ids in self.gidx)
+        pmapbytes = self.N * num_levels * max_num_gsims * max_num_grp_ids * 8
+        if pmapbytes > TWO32:
+            logging.error(
+                TOOBIG % (self.N, num_levels, max_num_gsims, max_num_grp_ids,
+                          humansize(pmapbytes)))
+        logging.info(MAXMEMORY % (self.N, num_levels, max_num_gsims,
+                                  max_num_grp_ids, humansize(pmapbytes)))
         return zd
 
     def execute(self):
@@ -275,8 +299,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.by_task.clear()
         self.numrups = sum(arr[0] for arr in self.calc_times.values())
         numsites = sum(arr[1] for arr in self.calc_times.values())
-        logging.info('Effective number of ruptures: %d/%d',
-                     self.numrups, self.totrups)
+        logging.info('Effective number of ruptures: {:,d}/{:,d}'.format(
+            int(self.numrups), self.totrups))
         logging.info('Effective number of sites per rupture: %d',
                      numsites / self.numrups)
         self.calc_times.clear()  # save a bit of memory
@@ -333,8 +357,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     oq.maximum_distance.magdist[sg.trt].items()))
             else:
                 md = oq.maximum_distance(sg.trt)
-            logging.info('max_dist=%s, gsims=%d, ruptures=%d, blocks=%d',
-                         md, len(gsims), nr, nb)
+            logging.info('max_dist={}, gsims={}, ruptures={:,d}, blocks={}'.
+                         format(md, len(gsims), int(nr), nb))
             if oq.pointsource_distance['default']:
                 pd = ', '.join('%s->%d' % item for item in sorted(
                     oq.pointsource_distance[sg.trt].items()))
@@ -460,6 +484,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
             ampcode = pgetter.dstore['sitecol'].ampcode
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     M = len(imtls)
+    P = len(poes)
     L = len(imtls.array) if amplifier is None else len(amplifier.amplevels) * M
     R = len(weights)
     S = len(hstats)
@@ -469,7 +494,8 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     if hstats:
         pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
         if poes:
-            pmap_by_kind['hmaps-stats'] = [ProbabilityMap(L) for r in range(S)]
+            pmap_by_kind['hmaps-stats'] = [
+                ProbabilityMap(M, P) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
     for sid in pgetter.sids:

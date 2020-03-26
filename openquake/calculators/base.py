@@ -57,7 +57,7 @@ TWO32 = 2 ** 32
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('grp_ids', hdf5.vuint16),         # 1
+    ('gidx', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
     ('num_sources', numpy.uint32),     # 3
     ('calc_time', numpy.float32),      # 4
@@ -452,9 +452,10 @@ class HazardCalculator(BaseCalculator):
                 tmp['sitecol'] = self.sitecol
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
+            full_lt = readinput.get_full_lt(oq)
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, self.datastore.hdf5)
+                    oq, full_lt, self.datastore.hdf5)
                 srcs = [src for sg in csm.src_groups for src in sg]
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')
