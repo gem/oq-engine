@@ -21,14 +21,12 @@ Module exports :class:`CauzziEtAl2014Eurocode8scaled`,
 """
 import numpy as np
 # standard acceleration of gravity in m/s**2
-from scipy.constants import g
-
-from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014
 
 
-class CauzziEtAl2014Eurocode8scaled(GMPE):
+class CauzziEtAl2014Eurocode8scaled(CauzziEtAl2014):
     """
     Implements GMPE developed by Carlo Cauzzi et al (2014) and published
     as C.Cauzzi, E. Faccioli, M. Vanini and A. Bianchini (2014) "Updated
@@ -53,95 +51,6 @@ class CauzziEtAl2014Eurocode8scaled(GMPE):
     #: Coefficients for PGA are taken from the SA (0.01 s) spectral
     #: acceleration, as indicated in Page 11 (at the time of writing)
     #: of Cauzzi et al. (2014)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
-
-    #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
-
-    #: Supported standard deviation types are inter-event, intra-event and
-    #: total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-        const.StdDev.TOTAL
-    ])
-
-    #: Required site parameter is only Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
-
-    #: Required rupture parameters are magnitude and rake
-    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
-
-    #: Required distance measure is Rrup,
-    REQUIRES_DISTANCES = {'rrup'}
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
-
-        mean = self._compute_mean(C, rup, dists, sites, imt)
-
-        stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
-
-        return mean, stddevs
-
-    def _compute_mean(self, C, rup, dists, sites, imt):
-        """
-        Returns the mean ground motion acceleration and velocity
-        """
-        mean = (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, rup.mag, dists.rrup) +
-                self._get_style_of_faulting_term(C, rup.rake) +
-                self._get_site_amplification_term(C, sites.vs30))
-        # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
-        # is already in cm/s) and also convert from base 10 to base e.
-        if imt.name == "PGA":
-            mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
-                          1e-2 / g)
-        elif imt.name == "SA":
-            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
-                          1e-2 / g)
-        else:
-            mean = np.log(10 ** mean)
-
-        return mean
-
-    def _get_magnitude_scaling_term(self, C, mag):
-        """
-        Returns the magnitude term
-        """
-        return C["c1"] + (C["m1"] * mag) + (C["m2"] * (mag ** 2.))
-
-    def _get_distance_scaling_term(self, C, mag, rrup):
-        """
-        Returns the distance scaling parameter
-        """
-        return (C["r1"] + C["r2"] * mag) * np.log10(rrup + C["r3"])
-
-    def _get_style_of_faulting_term(self, C, rake):
-        """
-        Returns the style of faulting term. Cauzzi et al. determind SOF from
-        the plunge of the B-, T- and P-axes. For consistency with existing
-        GMPEs the Wells & Coppersmith model is preferred
-        """
-        if rake > -150.0 and rake <= -30.0:
-            return C['fN']
-        elif rake > 30.0 and rake <= 150.0:
-            return C['fR']
-        else:
-            return C['fSS']
 
     def _get_site_amplification_term(self, C, vs30):
         """
@@ -162,21 +71,6 @@ class CauzziEtAl2014Eurocode8scaled(GMPE):
         s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
         s_d[vs30 < 180] = 1.0
         return s_b, s_c, s_d
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.log(10.0 ** C['sM']) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.log(10.0 ** C['f']) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(np.log(10.0 ** C["tM"]) + np.zeros(num_sites))
-        return stddevs
 
     #: Coefficient table constructed from the electronic suplements of the
 
