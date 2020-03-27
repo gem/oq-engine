@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * Add 'oq-taxonomy' to docker images
+
   [Michele Simionato]
   * Improved the pointsource_distance approximation
   * Added Bindi2011, Bindi2014 and Cauzzi2014 scaled GMPEs contributed by
