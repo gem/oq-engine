@@ -418,9 +418,10 @@ class PmapMaker(object):
                             p.setdefault(sid, 0.).array += (
                                 1.-pne) * rup.weight
 
-    def _ruptures(self, src):
+    def _ruptures(self, src, filtermag=None):
         with self.cmaker.mon('iter_ruptures', measuremem=False):
-            return list(src.iter_ruptures(shift_hypo=self.shift_hypo))
+            return list(src.iter_ruptures(shift_hypo=self.shift_hypo,
+                                          mag=filtermag))
 
     def _make_src_indep(self):
         # srcs with the same source_id and grp_ids
@@ -515,16 +516,16 @@ class PmapMaker(object):
             # implements pointsource_distance: finite site effects
             # are ignored for sites over that distance, if any
             point_ruptures = list(src.point_ruptures())
-            minmag, maxmag = src.get_min_max_mag()
-            pdist = self.pointsource_distance[str(maxmag)]
-            close, far = sites.split(loc, pdist)
-            if close is None:  # all is far
-                yield point_ruptures, far
-            elif far is None:  # all is close
-                yield self._ruptures(src), close
-            else:  # some sites are far, some are close
-                yield point_ruptures, far
-                yield self._ruptures(src), close
+            for pr in point_ruptures:
+                pdist = self.pointsource_distance['%.2f' % pr.mag]
+                close, far = sites.split(pr.loc, pdist)
+                if close is None:  # all is far
+                    yield [pr], far
+                elif far is None:  # all is close
+                    yield self._ruptures(src, pr.mag), close
+                else:  # some sites are far, some are close
+                    yield [pr], far
+                    yield self._ruptures(src, pr.mag), close
         else:  # do not collapse
             yield self._ruptures(src), sites
 

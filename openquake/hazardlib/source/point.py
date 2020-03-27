@@ -158,7 +158,10 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
+        filtermag = kwargs.get('mag')
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            if filtermag and mag != filtermag:
+                continue  # yield only ruptures of magnitude filtermag
             for np_prob, np in self.nodal_plane_distribution.data:
                 for hc_prob, hc_depth in self.hypocenter_distribution.data:
                     hc = Point(latitude=self.location.latitude,

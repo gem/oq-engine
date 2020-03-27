@@ -102,7 +102,7 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         builtins.open = check_open
-        export.sanity_check = True
+        export.sanity_check = False
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
