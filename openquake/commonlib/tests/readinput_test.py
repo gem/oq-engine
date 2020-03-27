@@ -468,15 +468,6 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
             readinput.get_composite_source_model(oq)
         self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
 
-    def test_applyToSources(self):
-        oq = readinput.get_oqparam('job.ini', case_21)
-        with mock.patch('logging.info') as info:
-            with mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
-                readinput.get_composite_source_model(oq)
-        self.assertEqual(
-            info.call_args[0],
-            ('Applied %d changes to the composite source model', 81))
-
     def test_extra_large_source(self):
         raise unittest.SkipTest('Removed check on MAX_EXTENT')
         oq = readinput.get_oqparam('job.ini', case_21)
