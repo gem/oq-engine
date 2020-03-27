@@ -19,6 +19,8 @@
 import os
 import time
 import getpass
+import operator
+import itertools
 from datetime import datetime
 import psutil
 import numpy
@@ -58,6 +60,31 @@ def init_performance(hdf5file, swmr=False):
             raise ValueError('%s: %s' % (hdf5file, exc))
     if fname:
         h5.close()
+
+
+def performance_view(dstore):
+    """
+    Returns the performance view as a numpy array.
+    """
+    pdata = dstore['performance_data']
+    pdata.refresh()
+    data = sorted(pdata[()], key=operator.itemgetter(0))
+    out = []
+    for operation, group in itertools.groupby(data, operator.itemgetter(0)):
+        counts = 0
+        time = 0
+        mem = 0
+        for rec in group:
+            counts += rec['counts']
+            time += rec['time_sec']
+            mem = max(mem, rec['memory_mb'])
+        out.append((operation, time, mem, counts))
+    out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
+    operation = ('calc_%d' % dstore.calc_id if hasattr(dstore, 'calc_id')
+                 else 'operation')
+    dtlist = [(operation, perf_dt['operation'])]
+    dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
+    return numpy.array(out, dtlist)
 
 
 def _pairs(items):

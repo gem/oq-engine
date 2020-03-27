@@ -1,4 +1,35 @@
+  [Matteo Nastasi]
+  * Add 'oq-taxonomy' to docker images
+
   [Michele Simionato]
+  * Improved the pointsource_distance approximation
+  * Added Bindi2011, Bindi2014 and Cauzzi2014 scaled GMPEs contributed by
+    the INGV
+  * Added a check on classical calculations which are too large to run
+  * Added a flag `collapse_ruptures` and a new collapsing algorithm
+  * Added a check for missing TRTs in the GSIM logic tree file
+  * Reduced the storage required for site specific calculations
+    with complex logic trees by removing duplicated ruptures
+  * Restored the computation of the mean disaggregation when multiple
+    realizations are requested
+  * Slightly changed the syntax of `oq info` (see `oq info --help`) and added
+    information about the available IMTs, MFDs and source classes
+  * Optimized get_composite_source_model (in the case of a complex source
+    specific logic trees a speedup of 80x was measured)
+  * Internal: fixed `oq info source_model_logic_tree.xml`
+  * Avoided reading multiple times the source models in the case of complex
+    logic trees
+  * Moved the check on invalid TRTs earlier, before processing the source models
+  * Removed the `ucerf_classical` calculator (just use the `classical` one)
+
+  [Paolo Tormene]
+  * Added a warning in `oq reduce_sm` listing duplicate source IDs
+
+  [Michele Simionato]
+  * Improved `oq reduce_sm` to reduce also duplicated source IDs if they
+    belong to different source types
+  * Removed the `ucerf_hazard` calculator (just use the `event_based` one)
+  * Changed the seed algorithm in all event based calculators including UCERF
   * Fixed the ShakeMap code to use the formula for the median and not the mean
   * Added a check on excessive data transfer in disaggregation calculations
   * Changed back the disaggregation calculator to read the rupture data from
@@ -14,7 +45,7 @@
   * Avoided submitting too many tasks in the disaggregation calculator
   * Added a parameter `discard_trts` for manual reduction of GSIM logic tree
   * Fixed a bug in case of duplicated nodal planes affecting the Italy model
-  * Removed dynamic reduction of the gsim logic tree (i.e. now the
+  * Removed dynamic reduction of the GSIM logic tree (i.e. now the
     logic tree is known upfront, before calculating the PoES)
 
   [Paolo Tormene]

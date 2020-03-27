@@ -36,10 +36,9 @@ than 20 lines of code:
        sitecol = readinput.get_site_collection(oq)
        src_filter = SourceFilter(sitecol, oq.maximum_distance)
        csm = readinput.get_composite_source_model(oq, srcfilter=src_filter)
-       cinfo = csm.info
-       for sm in cinfo.sm_rlzs:
-           for rlz in cinfo.get_rlzs(sm.ordinal):
-               gsim_by_trt = cinfo.gsim_by_trt(rlz)
+       for sm in csm.full_lt.sm_rlzs:
+           for rlz in csm.full_lt.get_rlzs(sm.ordinal):
+               gsim_by_trt = csm.full_lt.gsim_by_trt(rlz)
                hcurves = calc_hazard_curves(
                    sm.src_groups, src_filter, oq.imtls,
                    gsim_by_trt, oq.truncation_level,
@@ -59,7 +58,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
@@ -96,7 +95,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     for ``gsims``, which is a list of GSIM instances.
 
     :returns:
-        a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
+        a dictionary with keys pmap, calc_times, rup_data, extra
     """
     if not hasattr(src_filter, 'sitecol'):  # do not filter
         src_filter = SourceFilter(src_filter, {})
@@ -107,8 +106,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     trts = set()
     for src in group:
         if not src.num_ruptures:
-            # src.num_ruptures is set when parsing the XML, but not when
-            # the source is instantiated manually, so it is set here
+            # src.num_ruptures may not be set, so it is set here
             src.num_ruptures = src.count_ruptures()
         # set the proper TOM in case of a cluster
         if cluster:
@@ -118,13 +116,14 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
-    pmap, rup_data, calc_times, extra = cmaker.get_pmap_by_grp(
-        src_filter, group)
+    pmap, rup_data, calc_times, extra = PmapMaker(
+        cmaker, src_filter, group).make()
     extra['task_no'] = getattr(monitor, 'task_no', 0)
+    extra['trt'] = trt
 
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
-        pmap[src.src_group_id] *= group_probability
+        pmap[src.grp_id] *= group_probability
 
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
@@ -177,11 +176,13 @@ def calc_hazard_curves(
         odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
-    # ensure the sources have the right src_group_id
+    # ensure the sources have the right grp_id
+    idx = 0
     for i, grp in enumerate(groups):
         for src in grp:
-            if src.src_group_id is None:
-                src.src_group_id = i
+            src.grp_id = i
+            src.id = idx
+            idx += 1
     imtls = DictArray(imtls)
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level,

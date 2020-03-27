@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2020 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+# Plotting trees with ete: see http://etetoolkit.org/
+from ete3 import Tree, TreeStyle, TextFace, add_face_to_node
+from openquake.baselib import sap
+from openquake.commonlib.logictree import SourceModelLogicTree
+
+
+def extend(tree, branchset):
+    for br in branchset.branches:
+        child = Tree()
+        child.name = br.branch_id
+        child.dist = br.weight
+        tree.add_child(child)
+        if br.bset:
+            extend(child, br.bset)
+
+
+def layout(node):
+    add_face_to_node(TextFace(node.name), node, 0, position='branch-top')
+
+
+@sap.Script
+def main(fname):
+    smlt = SourceModelLogicTree(fname)
+    tree = Tree()
+    extend(tree, smlt.root_branchset)
+    print(tree)
+    ts = TreeStyle()
+    ts.show_leaf_name = False
+    ts.layout_fn = layout
+    tree.show(tree_style=ts)
+
+main.arg('fname', 'path to a source_model_logic_tree file')
+
+
+if __name__ == '__main__':
+    main.callfunc()

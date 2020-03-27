@@ -74,14 +74,13 @@ supplemented by a dictionary of validators.
 import io
 import re
 import sys
-import logging
 import operator
 import collections.abc
 
 import numpy
 
-from openquake.baselib import hdf5, performance
-from openquake.baselib.general import CallableDict, groupby
+from openquake.baselib import hdf5
+from openquake.baselib.general import CallableDict, groupby, gettemp
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile
@@ -176,7 +175,8 @@ def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
 
-default = sourceconverter.SourceConverter()  # rupture_mesh_spacing=10
+default = sourceconverter.SourceConverter(area_source_discretization=10,
+                                          rupture_mesh_spacing=10)
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
@@ -384,6 +384,30 @@ def to_string(node):
     with io.BytesIO() as f:
         write([node], f)
         return f.getvalue().decode('utf-8')
+
+
+def get(xml, investigation_time=50., rupture_mesh_spacing=5.,
+        width_of_mfd_bin=1.0, area_source_discretization=10):
+    """
+    :param xml: the XML representation of a source
+    :param investigation_time: investigation time
+    :param rupture_mesh_spacing: rupture mesh spacing
+    :param width_of_mfd_bin: width of MFD bin
+    :param area_source_discretization: area source discretization
+    :returns: a python source object
+    """
+    text = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+%s
+</nrml>''' % xml
+    [node] = read(gettemp(text))
+    conv = sourceconverter.SourceConverter(
+        investigation_time,
+        rupture_mesh_spacing,
+        width_of_mfd_bin=width_of_mfd_bin,
+        area_source_discretization=area_source_discretization)
+    return conv.convert_node(node)
 
 
 if __name__ == '__main__':

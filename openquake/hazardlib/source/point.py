@@ -17,13 +17,14 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
-from openquake.baselib.slots import with_slots
+import numpy
 from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import (
+    ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box
 
 
@@ -68,7 +69,6 @@ def _get_rupture_dimensions(src, mag, rake, dip):
     return rup_length, rup_width
 
 
-@with_slots
 class PointSource(ParametricSeismicSource):
     """
     Point source typology represents seismicity on a single geographical
@@ -101,10 +101,6 @@ class PointSource(ParametricSeismicSource):
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
     code = b'P'
-    _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
-    lower_seismogenic_depth location nodal_plane_distribution
-    hypocenter_distribution
-    '''.split()
     MODIFICATIONS = set(())
 
     def __init__(self, source_id, name, tectonic_region_type,
@@ -163,7 +159,10 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
+        filtermag = kwargs.get('mag')
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            if filtermag and mag != filtermag:
+                continue  # yield only ruptures of magnitude filtermag
             for np_prob, np in self.nodal_plane_distribution.data:
                 for hc_prob, hc_depth in self.hypocenter_distribution.data:
                     hc = Point(latitude=self.location.latitude,
@@ -176,6 +175,18 @@ class PointSource(ParametricSeismicSource):
                         nhc if kwargs.get('shift_hypo') else hc,
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
+
+    def point_ruptures(self):
+        """
+        Generate one point rupture for each magnitude
+        """
+        weights, depths = zip(*self.hypocenter_distribution.data)
+        depth = numpy.average(depths, weights=weights)
+        hc = Point(latitude=self.location.latitude,
+                   longitude=self.location.longitude, depth=depth)
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            yield PointRupture(mag, self.tectonic_region_type, hc,
+                               mag_occ_rate, self.temporal_occurrence_model)
 
     def count_nphc(self):
         """

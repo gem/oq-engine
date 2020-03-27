@@ -3,8 +3,8 @@ scenario hazard
 
 ============== ===================
 checksum32     3_204_585_490      
-date           2020-01-16T05:30:51
-engine_version 3.8.0-git83c45f7244
+date           2020-03-13T11:20:35
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = 1
@@ -22,7 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
-pointsource_distance            None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     42                
@@ -42,18 +42,11 @@ rupture_model `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 trivial(1)      1               
-========= ======= =============== ================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)>
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b_1       1.00000 1               
+========= ======= ================
 
 Exposure model
 --------------
@@ -80,7 +73,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ========= ========= ======
-calc_43238       time_sec  memory_mb counts
+calc_66905       time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 5.407E-04 0.0       1     
+reading exposure 6.673E-04 0.0       1     
 ================ ========= ========= ======

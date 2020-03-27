@@ -390,9 +390,7 @@ def get_source_attributes(source):
     :returns:
         Dictionary of source attributes
     """
-    attrs = {"id": source.source_id,
-             "name": source.name,
-             "tectonicRegion": source.tectonic_region_type}
+    attrs = {"id": source.source_id, "name": source.name}
     if isinstance(source, NonParametricSeismicSource):
         if source.data[0][0].weight is not None:
             weights = []

@@ -68,7 +68,7 @@ def get_info(dstore):
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
     loss_types = {lt: l for l, lt in enumerate(oq.loss_dt().names)}
     imt = {imt: i for i, imt in enumerate(oq.imtls)}
-    num_rlzs = dstore['csm_info'].get_num_rlzs()
+    num_rlzs = dstore['full_lt'].get_num_rlzs()
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
@@ -198,7 +198,7 @@ def extract_realizations(dstore, dummy):
     """
     oq = dstore['oqparam']
     scenario = 'scenario' in oq.calculation_mode
-    rlzs = dstore['csm_info'].rlzs
+    rlzs = dstore['full_lt'].rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
     dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
@@ -206,7 +206,7 @@ def extract_realizations(dstore, dummy):
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
     if scenario:
-        gsims = dstore['csm_info/gsim_lt/branches']['uncertainty']
+        gsims = dstore.getitem('full_lt/gsim_lt')['uncertainty']
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
         arr['branch_path'] = ['"%s"' % repr(gsim)[1:-1].replace('"', '""')
@@ -221,7 +221,7 @@ def extract_gsims_by_trt(dstore, what):
     """
     Extract the dictionary gsims_by_trt
     """
-    return ArrayWrapper((), dstore['csm_info'].gsim_lt.values)
+    return ArrayWrapper((), dstore['full_lt'].gsim_lt.values)
 
 
 @extract.add('exposure_metadata')
@@ -501,12 +501,11 @@ def extract_rups_by_mag_dist(dstore, what):
 def extract_sources(dstore, what):
     """
     Extract information about a source model.
-    Use it as /extract/sources?sm_id=0&limit=10
-    or /extract/sources?sm_id=0&source_id=1&source_id=2
-    or /extract/sources?sm_id=0&code=A&code=B
+    Use it as /extract/sources?limit=10
+    or /extract/sources?source_id=1&source_id=2
+    or /extract/sources?code=A&code=B
     """
     qdict = parse(what)
-    sm_id = int(qdict.get('sm_id', ['0'])[0])
     limit = int(qdict.get('limit', ['100'])[0])
     source_ids = qdict.get('source_id', None)
     if source_ids is not None:
@@ -514,8 +513,9 @@ def extract_sources(dstore, what):
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
-    info = dstore['source_info'][()]
-    info = info[info['sm_id'] == sm_id]
+    fields = 'source_id code num_sources num_sites eff_ruptures'
+    info = dstore['source_info'][()][fields.split()]
+    wkt = dstore['source_wkt'][()]
     arrays = []
     if source_ids is not None:
         logging.info('Extracting sources with ids: %s', source_ids)
@@ -532,17 +532,17 @@ def extract_sources(dstore, what):
             logging.info('Code %s: extracting %d sources out of %s',
                          code, limit, len(rows))
         arrays.append(rows[:limit])
+    if not arrays:
+        raise ValueError('There  no sources')
     info = numpy.concatenate(arrays)
-    if len(info) == 0:
-        raise ValueError('There is no source model #%d' % sm_id)
-    wkt_gz = gzip.compress(';'.join(info['wkt']).encode('utf8'))
+    wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
-    oknames = [n for n in info.dtype.names if n not in ('source_id', 'wkt')]
+    oknames = [name for name in info.dtype.names  # avoid pickle issues
+               if name not in ('source_id', 'grp_ids')]
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]
-    return ArrayWrapper(
-        arr, {'sm_id': sm_id, 'wkt_gz': wkt_gz, 'src_gz': src_gz})
+    return ArrayWrapper(arr, {'wkt_gz': wkt_gz, 'src_gz': src_gz})
 
 
 @extract.add('task_info')
@@ -800,7 +800,7 @@ def extract_aggregate(dstore, what):
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
     loss_dt = dstore['oqparam'].loss_dt()
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
         losses_by_asset = dstore['losses_by_asset'][()]
@@ -924,7 +924,7 @@ def build_damage_array(data, damage_dt):
 @extract.add('dmg_by_asset')
 def extract_dmg_by_asset_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     data = dstore['dmg_by_asset']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
@@ -943,8 +943,8 @@ def extract_mfd(dstore, what):
     qdic = parse(what)
     kind_mean = 'mean' in qdic.get('kind', [])
     kind_by_group = 'by_group' in qdic.get('kind', [])
-    csm_info = dstore['csm_info']
-    weights = [sm.weight for sm in csm_info.sm_rlzs]
+    full_lt = dstore['full_lt']
+    weights = [sm.weight for sm in full_lt.sm_rlzs]
     n = len(weights)
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     dic = {'duration': duration}
@@ -972,7 +972,7 @@ def extract_mfd(dstore, what):
 # @extract.add('event_based_mfd')
 # def extract_mfd(dstore, what):
 #     oq = dstore['oqparam']
-#     rlzs = dstore['csm_info'].get_realizations()
+#     rlzs = dstore['full_lt'].get_realizations()
 #     weights = [rlz.weight['default'] for rlz in rlzs]
 #     duration = oq.investigation_time * oq.ses_per_logic_tree_path
 #     mag = dict(dstore['ruptures']['rup_id', 'mag'])
@@ -1018,7 +1018,7 @@ def extract_mean_std_curves(dstore, what):
     """
     Yield imls/IMT and poes/IMT containg mean and stddev for all sites
     """
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     w = [rlz.weight for rlz in rlzs]
     getter = getters.PmapGetter(dstore, w)
     arr = getter.get_mean().array
@@ -1070,9 +1070,9 @@ def extract_event_info(dstore, eidx):
     [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz_id']
-    csm_info = dstore['csm_info']
-    rlz = csm_info.get_realizations()[rlzi]
-    gsim = csm_info.gsim_by_trt(rlz)[rupdict['trt']]
+    full_lt = dstore['full_lt']
+    rlz = full_lt.get_realizations()[rlzi]
+    gsim = full_lt.gsim_by_trt(rlz)[rupdict['trt']]
     for key, val in rupdict.items():
         yield key, val
     yield 'rlzi', rlzi
@@ -1163,7 +1163,7 @@ def extract_disagg(dstore, what):
 def extract_disagg_layer(dstore, what):
     """
     Extract a disaggregation output containing all sites
-    for the first realization.
+    for the first realization or the mean.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
     disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0
@@ -1175,11 +1175,11 @@ def extract_disagg_layer(dstore, what):
     grp = disagg_outputs(dstore, imt, 0, poe_id)[0]
     dset = grp[label]
     edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
-    dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz', U32),
+    dt = [('site_id', U32), ('lon', F32), ('lat', F32),
           ('poes', (dset.dtype, dset.shape))]
     sitecol = dstore['sitecol']
     out = numpy.zeros(len(sitecol), dt)
-    out[0] = (0, sitecol.lons[0], sitecol.lats[0], grp.attrs['rlzi'], dset[()])
+    out[0] = (0, sitecol.lons[0], sitecol.lats[0], dset[()])
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         if sid > 0:
@@ -1187,7 +1187,6 @@ def extract_disagg_layer(dstore, what):
             rec['site_id'] = sid
             rec['lon'] = lon
             rec['lat'] = lat
-            rec['rlz'] = grp.attrs['rlzi']
             rec['poes'] = grp[label][()]
     return ArrayWrapper(out, edges)
 

@@ -194,10 +194,26 @@ bindi_2011
     :undoc-members:
     :show-inheritance:
 
+bindi_2011scaled
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bindi_2011scaled
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 bindi_2014
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bindi_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bindi_2014scaled
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bindi_2014scaled
     :members:
     :undoc-members:
     :show-inheritance:
@@ -318,6 +334,14 @@ cauzzi_2014
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.cauzzi_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+cauzzi_2014scaled
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.cauzzi_2014scaled
     :members:
     :undoc-members:
     :show-inheritance:

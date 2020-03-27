@@ -37,6 +37,7 @@ class ToroEtAl1997MblgNSHMPTestCase(BaseGSIMTestCase):
         self.check('TORO97NSHMP/T097MblgNSHMP_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
+
 class ToroEtAl1997NSHMPTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ToroEtAl1997MwNSHMP2008
 

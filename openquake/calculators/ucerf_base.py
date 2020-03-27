@@ -18,10 +18,14 @@
 import os
 import copy
 import math
+import logging
+import pickle
 from datetime import datetime
 import numpy
 import h5py
-from openquake.baselib.general import random_filter
+import zlib
+
+from openquake.baselib.general import random_filter, AccumDict
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
@@ -40,7 +44,7 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 DEFAULT_TRT = "Active Shallow Crust"
-RUPTURES_PER_BLOCK = 200  # decided by MS
+RUPTURES_PER_BLOCK = 10000  # decided by MS
 HDD = PMF([(0.2, 3.0), (0.6, 6.0), (0.2, 9.0)])
 NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
            (0.15, NodalPlane(45.0, 90.0, 0.0)),
@@ -58,7 +62,7 @@ NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
 
 def convert_UCERFSource(self, node):
     """
-    Converts the Ucerf Source node into an SES Control object
+    Converts the node into an UCERFSource object
     """
     dirname = os.path.dirname(self.fname)  # where the source_model_file is
     source_file = os.path.join(dirname, node["filename"])
@@ -253,7 +257,7 @@ class UCERFSource(BaseSeismicSource):
         """
         new = copy.copy(self)
         new.orig = new
-        new.src_group_id = grp_id
+        new.grp_id = grp_id
         new.source_id = branch_id
         new.idx_set = build_idx_set(branch_id, self.start_date)
         with h5py.File(self.source_file, "r") as hdf5:
@@ -311,18 +315,23 @@ class UCERFSource(BaseSeismicSource):
         a2 = angular_distance(maxdist, bbox[1], bbox[3])
         return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
-    def get_background_sids(self, src_filter):
+    def get_background_sids(self):
         """
         We can apply the filtering of the background sites as a pre-processing
         step - this is done here rather than in the sampling of the ruptures
         themselves
         """
         branch_key = self.idx_set["grid_key"]
-        idist = src_filter.integration_distance(DEFAULT_TRT)
         with h5py.File(self.source_file, 'r') as hdf5:
             bg_locations = hdf5["Grid/Locations"][()]
+            if hasattr(self, 'src_filter'):
+                # in event based
+                idist = self.src_filter.integration_distance(DEFAULT_TRT)
+            else:
+                # in classical
+                return range(len(bg_locations))
             distances = min_geodetic_distance(
-                src_filter.sitecol.xyz,
+                self.src_filter.sitecol.xyz,
                 (bg_locations[:, 0], bg_locations[:, 1]))
             # Add buffer equal to half of length of median area from Mmax
             mmax_areas = self.msr.get_median_area(
@@ -333,18 +342,16 @@ class UCERFSource(BaseSeismicSource):
             # get list of indices from array of booleans
             return numpy.where(ok)[0].tolist()
 
-    def get_ucerf_rupture(self, iloc, src_filter):
+    def get_ucerf_rupture(self, iloc):
         """
         :param iloc:
             Location of the rupture plane in the hdf5 file
-        :param src_filter:
-            Sites for consideration and maximum distance
         """
         trt = self.tectonic_region_type
         ridx = self.get_ridx(iloc)
         mag = self.orig.mags[iloc]
         surface_set = []
-        indices = src_filter.get_indices(self, ridx, mag)
+        indices = self.src_filter.get_indices(self, ridx, mag)
         if len(indices) == 0:
             return None
         for trace, plane in self.gen_trace_planes(ridx):
@@ -380,7 +387,7 @@ class UCERFSource(BaseSeismicSource):
         assert self.orig, '%s is not fully initialized' % self
         for ridx in range(self.start, self.stop):
             if self.orig.rate[ridx]:  # ruptures may have have zero rate
-                rup = self.get_ucerf_rupture(ridx, self.src_filter)
+                rup = self.get_ucerf_rupture(ridx)
                 if rup:
                     yield rup
 
@@ -391,6 +398,8 @@ class UCERFSource(BaseSeismicSource):
         while stop > start:
             new = copy.copy(self)
             new.id = self.id
+            new.source_id = '%s:%d-%d' % (
+                self.source_id, self.start, self.stop)
             new.orig = self.orig
             new.start = start
             new.stop = min(start + RUPTURES_PER_BLOCK, stop)
@@ -398,19 +407,17 @@ class UCERFSource(BaseSeismicSource):
             yield new
 
     def __repr__(self):
-        return '<%s %s[%d:%d]>' % (self.__class__.__name__, self.source_id,
-                                   self.start, self.stop)
+        return '<%s %s:%d:%d>' % (self.__class__.__name__, self.source_id,
+                                  self.start, self.stop)
 
-    def get_background_sources(self, src_filter, sample_factor=None):
+    def get_background_sources(self, sample_factor=None):
         """
         Turn the background model of a given branch into a set of point sources
 
-        :param src_filter:
-            SourceFilter instance
         :param sample_factor:
             Used to reduce the sources if OQ_SAMPLE_SOURCES is set
         """
-        background_sids = self.get_background_sids(src_filter)
+        background_sids = self.get_background_sids()
         if sample_factor is not None:  # hack for use in the mosaic
             background_sids = random_filter(
                 background_sids, sample_factor, seed=42)
@@ -437,14 +444,117 @@ class UCERFSource(BaseSeismicSource):
                     self.usd, self.lsd,
                     Point(locations[i, 0], locations[i, 1]),
                     self.npd, self.hdd)
+                ps.checksum = zlib.adler32(pickle.dumps(vars(ps), protocol=4))
+                ps._wkt = ps.wkt()
                 ps.id = self.id
-                ps.src_group_id = self.src_group_id
+                ps.grp_id = self.grp_id
                 ps.num_ruptures = ps.count_ruptures()
                 sources.append(ps)
         return sources
 
     def get_one_rupture(self):
         raise ValueError('Unsupported option')
+
+    def generate_event_set(self, background_sids, eff_num_ses):
+        """
+        Generates the event set corresponding to a particular branch
+        """
+        # get rates from file
+        with h5py.File(self.source_file, 'r') as hdf5:
+            occurrences = self.tom.sample_number_of_occurrences(
+                self.rate * eff_num_ses, self.serial)
+            indices, = numpy.where(occurrences)
+            logging.debug(
+                'Considering "%s", %d ruptures', self.source_id, len(indices))
+
+            # get ruptures from the indices
+            ruptures = []
+            rupture_occ = []
+            for iloc, n_occ in zip(indices, occurrences[indices]):
+                ucerf_rup = self.get_ucerf_rupture(iloc)
+                if ucerf_rup:
+                    ruptures.append(ucerf_rup)
+                    rupture_occ.append(n_occ)
+
+            # sample background sources
+            background_ruptures, background_n_occ = sample_background_model(
+                hdf5, self.idx_set["grid_key"], self.tom, eff_num_ses,
+                self.serial, background_sids, self.min_mag, self.npd,
+                self.hdd, self.usd, self.lsd, self.msr, self.aspect,
+                self.tectonic_region_type)
+            ruptures.extend(background_ruptures)
+            rupture_occ.extend(background_n_occ)
+        return ruptures, rupture_occ
+
+    def _sample_ruptures(self, eff_num_ses):
+        background_sids = self.get_background_sids()
+        n_occ = AccumDict(accum=0)
+        rups, occs = self.generate_event_set(background_sids, eff_num_ses)
+        for rup, occ in zip(rups, occs):
+            n_occ[rup] += occ
+        yield from n_occ.items()
+
+
+def sample_background_model(
+        hdf5, branch_key, tom, eff_num_ses, seed, filter_idx, min_mag, npd,
+        hdd, upper_seismogenic_depth, lower_seismogenic_depth, msr=WC1994(),
+        aspect=1.5, trt=DEFAULT_TRT):
+    """
+    Generates a rupture set from a sample of the background model
+
+    :param branch_key:
+        Key to indicate the branch for selecting the background model
+    :param tom:
+        Temporal occurrence model as instance of :class:
+        openquake.hazardlib.tom.TOM
+    :param seed:
+        Random seed to use in the call to tom.sample_number_of_occurrences
+    :param filter_idx:
+        Sites for consideration (can be None!)
+    :param float min_mag:
+        Minimim magnitude for consideration of background sources
+    :param npd:
+        Nodal plane distribution as instance of :class:
+        openquake.hazardlib.pmf.PMF
+    :param hdd:
+        Hypocentral depth distribution as instance of :class:
+        openquake.hazardlib.pmf.PMF
+    :param float aspect:
+        Aspect ratio
+    :param float upper_seismogenic_depth:
+        Upper seismogenic depth (km)
+    :param float lower_seismogenic_depth:
+        Lower seismogenic depth (km)
+    :param msr:
+        Magnitude scaling relation
+    :param float integration_distance:
+        Maximum distance from rupture to site for consideration
+    """
+    bg_magnitudes = hdf5["/".join(["Grid", branch_key, "Magnitude"])][()]
+    # Select magnitudes above the minimum magnitudes
+    mag_idx = bg_magnitudes >= min_mag
+    mags = bg_magnitudes[mag_idx]
+    rates = hdf5["/".join(["Grid", branch_key, "RateArray"])][filter_idx, :]
+    rates = rates[:, mag_idx]
+    valid_locs = hdf5["Grid/Locations"][filter_idx, :]
+    # Sample remaining rates
+    sampler = tom.sample_number_of_occurrences(rates * eff_num_ses, seed)
+    background_ruptures = []
+    background_n_occ = []
+    for i, mag in enumerate(mags):
+        rate_idx = numpy.where(sampler[:, i])[0]
+        rate_cnt = sampler[rate_idx, i]
+        occurrence = rates[rate_idx, i]
+        locations = valid_locs[rate_idx, :]
+        ruptures = generate_background_ruptures(
+            tom, locations, occurrence,
+            mag, npd, hdd, upper_seismogenic_depth,
+            lower_seismogenic_depth, msr, aspect, trt)
+        background_ruptures.extend(ruptures)
+        background_n_occ.extend(rate_cnt.tolist())
+    return background_ruptures, background_n_occ
+
+# #################################################################### #
 
 
 def build_idx_set(branch_id, start_date):

@@ -26,7 +26,7 @@ from openquake.baselib import general, datastore
 from openquake.hazardlib import InvalidFile
 from openquake.risklib import asset
 from openquake.risklib.riskmodels import ValidationError
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logictree
 from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_caracas
@@ -446,9 +446,20 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        readinput.reduce_source_model(smlt, [], False)
+        found, total = readinput.reduce_source_model(smlt, [], remove=False)
+        self.assertEqual(found, 0)
+        found, total = readinput.reduce_source_model(smlt, {}, remove=False)
+        self.assertEqual(found, 0)
 
     def test_wrong_trts(self):
+        # 'active Shallow Crust' is missing, 'Active Shallow Crust' is there
+        oq = readinput.get_oqparam('job.ini', case_16)
+        with self.assertRaises(logictree.InvalidLogicTree) as c:
+            readinput.get_gsim_lt(oq, ['active Shallow Crust'])
+        self.assertIn("is missing the TRT 'active Shallow Crust'",
+                      str(c.exception))
+
+    def test_wrong_trts_in_reqv(self):
         # invalid TRT in job.ini [reqv]
         oq = readinput.get_oqparam('job.ini', case_2)
         fname = oq.inputs['reqv'].pop('active shallow crust')

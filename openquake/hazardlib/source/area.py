@@ -22,10 +22,8 @@ from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.baselib.slots import with_slots
 
 
-@with_slots
 class AreaSource(ParametricSeismicSource):
     """
     Area source represents uniform seismicity occurring over a geographical
@@ -41,11 +39,8 @@ class AreaSource(ParametricSeismicSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
-    code = 'A'
-    _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
-    lower_seismogenic_depth nodal_plane_distribution hypocenter_distribution
-    polygon area_discretization'''.split()
-    MODIFICATIONS = set(())
+    code = b'A'
+    MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -91,7 +86,7 @@ class AreaSource(ParametricSeismicSource):
         of points the polygon discretizes to.
         """
         polygon_mesh = self.polygon.discretize(self.area_discretization)
-        rate_scaling_factor = 1.0 / len(polygon_mesh)
+        scaling_rate_factor = 1. / len(polygon_mesh)
 
         # take the very first point of the polygon mesh
         [epicenter0] = polygon_mesh[0:1]
@@ -108,7 +103,7 @@ class AreaSource(ParametricSeismicSource):
                                            longitude=epicenter0.longitude,
                                            depth=hc_depth)
                     occurrence_rate = (mag_occ_rate * np_prob * hc_prob
-                                       * rate_scaling_factor)
+                                       * scaling_rate_factor)
                     surface, nhc = PointSource._get_rupture_surface(
                         self, mag, np, hypocenter)
                     if kwargs.get('shift_hypo'):

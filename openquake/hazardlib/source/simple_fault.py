@@ -25,10 +25,8 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.baselib.slots import with_slots
 
 
-@with_slots
 class SimpleFaultSource(ParametricSeismicSource):
     """
     Simple fault source typology represents seismicity occurring on a fault
@@ -83,13 +81,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         for the lowest magnitude value.
     """
     code = b'S'
-    _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
-    lower_seismogenic_depth fault_trace dip rake hypo_list
-    slip_list'''.split()
-
-    MODIFICATIONS = set(('set_geometry',
-                         'adjust_dip',
-                         'set_dip'))
+    MODIFICATIONS = {'set_geometry', 'adjust_dip', 'set_dip'}
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -155,9 +147,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             num_rup = num_rup_along_length * num_rup_along_width
-
             occurrence_rate = mag_occ_rate / float(num_rup)
-
             for first_row in range(num_rup_along_width):
                 for first_col in range(num_rup_along_length):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,

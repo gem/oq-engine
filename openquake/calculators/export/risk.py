@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array, AccumDict
+from openquake.baselib.general import group_array
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -198,7 +198,7 @@ def export_losses_by_asset(ekey, dstore):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt(stat_dt)
     losses_by_asset = dstore[ekey[0]][()]
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
@@ -280,16 +280,17 @@ def export_loss_maps_csv(ekey, dstore):
     value = get_loss_maps(dstore, kind)
     oq = dstore['oqparam']
     if kind == 'rlzs':
-        tags = dstore['csm_info'].get_realizations()
+        tags = dstore['full_lt'].get_realizations()
     else:
         tags = oq.hazard_stats()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
     for i, tag in enumerate(tags):
-        uid = getattr(tag, 'uid', tag)
+        if hasattr(tag, 'ordinal'):  # is a realization
+            tag = 'rlz-%d' % tag.ordinal
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
         md.update(
-            dict(kind=uid, risk_investigation_time=oq.risk_investigation_time))
+            dict(kind=tag, risk_investigation_time=oq.risk_investigation_time))
         writer.save(compose_arrays(assets, value[:, i]), fname, comment=md,
                     renamedict=dict(id='asset_id'))
     return writer.getsaved()
@@ -301,7 +302,7 @@ def export_loss_maps_npz(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats
     assets = get_assets(dstore)
     value = get_loss_maps(dstore, kind)
-    R = dstore['csm_info'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_rlzs()
     if kind == 'rlzs':
         tags = ['rlz-%03d' % r for r in range(R)]
     else:
@@ -317,7 +318,7 @@ def export_loss_maps_npz(ekey, dstore):
 
 @export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     oq = dstore['oqparam']
     loss_types = oq.loss_dt().names
     assets = get_assets(dstore)
@@ -352,7 +353,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
     E = len(dstore['events'])
     oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore, mean_std=E > 1)
-    rlzs = dstore['csm_info'].get_realizations()
+    rlzs = dstore['full_lt'].get_realizations()
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)

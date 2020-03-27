@@ -68,11 +68,11 @@ You can open `/tmp/report_1644.rst` and read the informations listed there
 3. It can be invoked without a `job.ini` file, and it that case it provides
 global information about the engine and its libraries. Try, for instance::
 
-  $ oq info --calculators # list available calculators
-  $ oq info --gsims       # list available GSIMs
-  $ oq info --views       # list available views
-  $ oq info --exports     # list available exports
-  $ oq info --parameters  # list all job.ini parameters
+  $ oq info calculators # list available calculators
+  $ oq info gsims       # list available GSIMs
+  $ oq info views       # list available views
+  $ oq info exports     # list available exports
+  $ oq info parameters  # list all job.ini parameters
 
 The second most important command is `oq export`. It allows customization of
 the exports from the datastore with additional flexibility compared to
@@ -98,11 +98,11 @@ Here is the usage message::
     -d ., --export-dir .  export directory
 
 The list of available exports (i.e. the datastore keys and the available export
-formats) can be extracted with the `oq info --exports`
+formats) can be extracted with the `oq info exports`
 command; at the moment there are 52 exporters defined, but
 this number changes at each version::
 
-  $ oq info --exports
+  $ oq info exports
   agg_curves-rlzs ['csv']
   agg_curves-stats ['csv']
   agg_losses-rlzs ['csv']

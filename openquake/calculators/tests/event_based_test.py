@@ -20,6 +20,7 @@ import io
 import os
 import re
 import math
+import unittest
 
 import numpy.testing
 
@@ -239,8 +240,8 @@ class EventBasedTestCase(CalculatorTestCase):
         # check MFD
         aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
         self.assertEqual(aw.duration, 30)  # 30 years
-        aae(aw.magnitudes, [4.7, 4.8, 4.9], decimal=6)
-        aae(aw.mean_frequency, [0.006667, 0.01, 0.023333], decimal=6)
+        aae(aw.magnitudes, [4.9, 5.3], decimal=6)
+        aae(aw.mean_frequency, [0.016667, 0.006667], decimal=6)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
@@ -454,6 +455,11 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_25.__file__, 'job2.ini')
         mean, *others = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
+
+        # test with common1.xml present into branchs and sampling
+        self.run_calc(case_25.__file__, 'job_common.ini')
+        mean, *others = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', mean)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

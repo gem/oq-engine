@@ -131,8 +131,7 @@ class EbrCalculator(base.RiskCalculator):
     core_task = event_based_risk
     is_stochastic = True
     precalc = 'event_based'
-    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard',
-                      'ebrisk']
+    accept_precalc = ['event_based', 'event_based_risk', 'ebrisk']
 
     def pre_execute(self):
         oq = self.oqparam
@@ -145,7 +144,7 @@ class EbrCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.tagcol)
         self.A = len(self.assetcol)
         if parent:
-            self.datastore['csm_info'] = parent['csm_info']
+            self.datastore['full_lt'] = parent['full_lt']
             self.events = parent['events'][('id', 'rlz_id')]
             logging.info('There are %d ruptures and %d events',
                          len(parent['ruptures']), len(self.events))

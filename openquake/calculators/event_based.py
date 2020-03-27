@@ -22,15 +22,16 @@ import operator
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, get_indices, block_splitter
+from openquake.baselib.general import AccumDict, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
-from openquake.commonlib import source, calc, util, logs
+from openquake.commonlib import calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rgetters, gen_rupture_getters,
@@ -44,7 +45,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = numpy.float64(2 ** 32)
-by_grp = operator.attrgetter('src_group_id')
+by_grp = operator.attrgetter('grp_id')
 
 
 # ######################## GMF calculator ############################ #
@@ -68,7 +69,7 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
 
 
-@base.calculators.add('event_based')
+@base.calculators.add('event_based', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
@@ -77,8 +78,7 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
-    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk',
-                      'ucerf_hazard']
+    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
     build_ruptures = sample_ruptures
 
     def init(self):
@@ -87,10 +87,10 @@ class EventBasedCalculator(base.HazardCalculator):
         if not self.datastore.parent:
             self.rupser = calc.RuptureSerializer(self.datastore)
 
-    def init_logic_tree(self, csm_info):
-        self.trt_by_grp = csm_info.trt_by_grp
-        self.rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = csm_info.get_samples_by_grp()
+    def init_logic_tree(self, full_lt):
+        self.trt_by_grp = full_lt.trt_by_grp
+        self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
+        self.samples_by_grp = full_lt.get_samples_by_grp()
         self.num_rlzs_by_grp = {
             grp_id:
             sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
@@ -104,58 +104,31 @@ class EventBasedCalculator(base.HazardCalculator):
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
-    # called multiple times
-    def block_splitter(self, sources, weight=operator.attrgetter('weight'),
-                       key=lambda src: 1):
-        """
-        :param sources: a list of sources
-        :param weight: a weight function (default .weight)
-        :param key: None or 'src_group_id'
-        :returns: an iterator over blocks of sources
-        """
-        if not hasattr(self, 'maxweight'):
-            ct = self.oqparam.concurrent_tasks or 1
-            self.maxweight = sum(sum(weight(s) for s in sg)
-                                 for sm in self.csm.sm_rlzs
-                                 for sg in sm.src_groups) / ct
-            if self.maxweight < source.MINWEIGHT:
-                self.maxweight = source.MINWEIGHT
-                logging.info('Using minweight=%d', source.MINWEIGHT)
-            else:
-                logging.info('Using maxweight=%d', self.maxweight)
-        return block_splitter(sources, self.maxweight, weight, key)
-
     def build_events_from_sources(self, srcfilter):
         """
         Prefilter the composite source model and store the source_info
         """
-        oq = self.oqparam
-        gsims_by_trt = self.csm.info.get_gsims_by_trt()
+        gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         logging.info('Building ruptures')
+        maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
+            self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
-        ses_idx = 0
         allargs = []
-        for sm_id, sm in enumerate(self.csm.sm_rlzs):
-            logging.info('Sending %s', sm)
-            for sg in sm.src_groups:
-                if not sg.sources:
-                    continue
-                par = self.param.copy()
-                par['gsims'] = gsims_by_trt[sg.trt]
-                if sg.atomic:  # do not split the group
-                    allargs.append((sg, srcfilter, par))
-                else:  # traditional groups
-                    for block in self.block_splitter(sg.sources, key=by_grp):
-                        if 'ucerf' in oq.calculation_mode:
-                            for i in range(oq.ses_per_logic_tree_path):
-                                par = par.copy()  # avoid mutating the dict
-                                par['ses_seeds'] = [
-                                    (ses_idx, oq.ses_seed + i + 1)]
-                                allargs.append((block, srcfilter, par))
-                                ses_idx += 1
-                        else:
-                            allargs.append((block, srcfilter, par))
+        if self.oqparam.is_ucerf():
+            # manage the filtering in a special way
+            for sg in self.csm.src_groups:
+                for src in sg:
+                    src.src_filter = srcfilter
+            srcfilter = nofilter  # otherwise it would be ultra-slow
+        for sg in self.csm.src_groups:
+            if not sg.sources:
+                continue
+            logging.info('Sending %s', sg)
+            par = self.param.copy()
+            par['gsims'] = gsims_by_trt[sg.trt]
+            for src_group in sg.split(maxweight):
+                allargs.append((src_group, srcfilter, par))
         smap = parallel.Starmap(
             self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
@@ -174,15 +147,17 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # logic tree reduction, must be called before storing the events
         self.store_rlz_info(eff_ruptures)
-        self.init_logic_tree(self.csm.info)
+        self.init_logic_tree(self.csm.full_lt)
         with self.monitor('store source_info'):
             self.store_source_info(calc_times)
         logging.info('Reordering the ruptures and storing the events')
         sorted_ruptures = self.datastore.getitem('ruptures')[()]
         # order the ruptures by rup_id
         sorted_ruptures.sort(order='serial')
+        nr = len(sorted_ruptures)
+        assert len(numpy.unique(sorted_ruptures['serial'])) == nr  # sanity
         self.datastore['ruptures'] = sorted_ruptures
-        self.datastore['ruptures']['id'] = numpy.arange(len(sorted_ruptures))
+        self.datastore['ruptures']['id'] = numpy.arange(nr)
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
 
@@ -296,7 +271,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.crmodel.min_iml
         min_iml = oq.min_iml
-        if min_iml.sum() == 0:
+        if oq.ground_motion_fields and min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
         else:
@@ -317,7 +292,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.indices = AccumDict(accum=[])  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
-            self.init_logic_tree(self.datastore.parent['csm_info'])
+            self.init_logic_tree(self.datastore.parent['full_lt'])
         else:  # from sources
             self.build_events_from_sources(srcfilter)
             if (oq.ground_motion_fields is False and
@@ -377,7 +352,7 @@ class EventBasedCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
-            rlzs = self.datastore['csm_info'].get_realizations()
+            rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]

@@ -46,6 +46,8 @@ def maybe_encode(value):
     """
     If value is a sequence of strings, encode it
     """
+    if isinstance(value, bytes):
+        return numpy.void(value)
     if isinstance(value, (list, tuple)):
         if value and isinstance(value[0], str):
             return encode(value)
@@ -444,7 +446,9 @@ class ArrayWrapper(object):
 
     def __toh5__(self):
         arr = getattr(self, 'array', ())
-        return arr, self.to_dict()
+        if len(arr):
+            return arr, self.to_dict()
+        return self.to_dict(), {}
 
     def __fromh5__(self, array, attrs):
         self.__init__(array, attrs)

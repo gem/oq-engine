@@ -22,7 +22,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.stochastic import get_rup_array
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
-from openquake.commonlib import readinput, source, calc
+from openquake.commonlib import readinput, logictree, calc
 from openquake.calculators import base
 
 
@@ -38,9 +38,9 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer and seeds
         """
         oq = self.oqparam
-        cinfo = source.CompositionInfo.fake(readinput.get_gsim_lt(oq))
+        cinfo = logictree.FullLogicTree.fake(readinput.get_gsim_lt(oq))
         self.realizations = cinfo.get_realizations()
-        self.datastore['csm_info'] = cinfo
+        self.datastore['full_lt'] = cinfo
         if 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '

@@ -18,7 +18,6 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 import numpy
-import shapely
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -28,12 +27,10 @@ from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.geo.mesh import Mesh, point3d
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.pmf import PMF
-from openquake.baselib.slots import with_slots
 
 F32 = numpy.float32
 
 
-@with_slots
 class NonParametricSeismicSource(BaseSeismicSource):
     """
     Non Parametric Seismic Source explicitly defines earthquake ruptures in the
@@ -52,8 +49,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
         of occurrences equal to 0)
     """
     code = b'N'
-    _slots_ = BaseSeismicSource._slots_ + ['data']
-
     MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type, data):
@@ -84,7 +79,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
             src = self.__class__(source_id, self.name,
                                  self.tectonic_region_type, [rup_pmf])
             src.num_ruptures = 1
-            src.src_group_id = self.src_group_id
+            src.grp_id = self.grp_id
             yield src
 
     def count_ruptures(self):
@@ -162,13 +157,27 @@ class NonParametricSeismicSource(BaseSeismicSource):
     def __repr__(self):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
 
+    @property
+    def polygon(self):
+        """
+        The convex hull of the underlying mesh of points
+        """
+        lons = numpy.concatenate(
+            [rup.surface.mesh.lons.flatten() for rup, pmf in self.data])
+        lats = numpy.concatenate(
+            [rup.surface.mesh.lats.flatten() for rup, pmf in self.data])
+        points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
+        points['lon'] = lons
+        points['lat'] = lats
+        points = numpy.unique(points)
+        mesh = Mesh(points['lon'], points['lat'])
+        return mesh.get_convex_hull()
+
     def wkt(self):
         """
         :returns: the geometry as a WKT string
         """
-        polys = [rup.surface.mesh.get_convex_hull()._polygon2d
-                 for rup, pmf in self.data]
-        return shapely.geometry.MultiPolygon(polys).wkt
+        return self.polygon.wkt
 
     def get_one_rupture(self, rupture_mutex=False):
         """

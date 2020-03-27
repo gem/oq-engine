@@ -27,7 +27,6 @@ import itertools
 import collections
 import toml
 from openquake.baselib import general
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo, contexts
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import (
@@ -135,7 +134,6 @@ def to_checksum(cls1, cls2):
     return sum(map(ord, names)) % 256
 
 
-@with_slots
 class BaseRupture(metaclass=abc.ABCMeta):
     """
     Rupture object represents a single earthquake rupture.
@@ -163,8 +161,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
     NB: if you want to convert the rupture into XML, you should set the
     attribute surface_nodes to an appropriate value.
     """
-    _slots_ = '''mag rake tectonic_region_type hypocenter surface
-    rupture_slip_direction weight'''.split()
     rup_id = 0  # set to a value > 0 by the engine
     _code = {}
 
@@ -177,8 +173,9 @@ class BaseRupture(metaclass=abc.ABCMeta):
         This is useful when serializing the rupture to and from HDF5.
         :returns: {code: pair of classes}
         """
-        rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
-        surface_classes = list(get_subclasses(BaseSurface))
+        rupture_classes = [BaseRupture] + list(
+            general.gen_subclasses(BaseRupture))
+        surface_classes = list(general.gen_subclasses(BaseSurface))
         code2cls = {}
         for rup, sur in itertools.product(rupture_classes, surface_classes):
             chk = to_checksum(rup, sur)
@@ -297,7 +294,6 @@ class NonParametricProbabilisticRupture(BaseRupture):
         return n_occ
 
 
-@with_slots
 class ParametricProbabilisticRupture(BaseRupture):
     """
     :class:`Rupture` associated with an occurrence rate and a temporal
@@ -312,9 +308,6 @@ class ParametricProbabilisticRupture(BaseRupture):
     :raises ValueError:
         If occurrence rate is not positive.
     """
-    _slots_ = BaseRupture._slots_ + [
-        'occurrence_rate', 'temporal_occurrence_model']
-
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
                  occurrence_rate, temporal_occurrence_model,
                  rupture_slip_direction=None):
@@ -507,14 +500,44 @@ class ParametricProbabilisticRupture(BaseRupture):
         return cdpp
 
 
-def get_subclasses(cls):
+class PointSurface:
     """
-    :returns: the subclasses of `cls`, ordered by name
+    A fake surface used in PointRuptures
     """
-    for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
-        yield subclass
-        for ssc in get_subclasses(subclass):
-            yield ssc
+    def __init__(self, hypocenter):
+        self.hypocenter = hypocenter
+
+    def get_strike(self):
+        return 0
+
+    def get_dip(self):
+        return 0
+
+    def get_top_edge_depth(self):
+        return self.hypocenter.depth
+
+    def get_width(self):
+        return 0
+
+    def get_closest_points(self, mesh):
+        return mesh
+
+
+class PointRupture(ParametricProbabilisticRupture):
+    """
+    A rupture coming from a far away PointSource, so that the finite
+    size effects can be neglected.
+    """
+    def __init__(self, mag, tectonic_region_type, hypocenter,
+                 occurrence_rate, temporal_occurrence_model):
+        self.mag = mag
+        self.rake = 0
+        self.tectonic_region_type = tectonic_region_type
+        self.hypocenter = hypocenter
+        self.occurrence_rate = occurrence_rate
+        self.temporal_occurrence_model = temporal_occurrence_model
+        self.surface = PointSurface(hypocenter)
+        self.weight = None  # no mutex
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,

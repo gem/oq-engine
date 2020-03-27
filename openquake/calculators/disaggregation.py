@@ -38,7 +38,7 @@ from openquake.calculators import getters
 from openquake.calculators import base
 
 weight = operator.attrgetter('weight')
-DISAGG_RES_FMT = 'rlz-%(rlz)s-%(imt)s-%(sid)s-%(poe)s/'
+DISAGG_RES_FMT = '%(rlz)s%(imt)s-%(sid)s-%(poe)s/'
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 POE_TOO_BIG = '''\
 Site #%d: you are trying to disaggregate for poe=%s.
@@ -92,22 +92,19 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
         iml4, dict(imts=[from_string(imt) for imt in imtls], rlzs=rlzs))
 
 
-def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges,
-                   monitor):
+def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param rupdata
-        a dictionary of data corresponding to a slice of ruptures
-    :param sitecol:
-        a SiteCollection instance with the disaggregation sites
-    :param oq:
-        a :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param dstore
+        a DataStore instance
+    :param idxs:
+        an array of indices to ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param iml4:
         an ArrayWrapper of shape (N, M, P, Z)
-    :param dict trti:
+    :param trti:
         tectonic region type index
     :param bin_egdes:
         a quintet (mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
@@ -142,12 +139,17 @@ def agg_probs(*probs):
 
 
 def get_indices(dstore, concurrent_tasks):
-    grp_ids = dstore['rup/grp_id'][()]
-    blocksize = numpy.ceil(len(grp_ids) / concurrent_tasks)
+    acc = AccumDict(accum=[])  # grp_id -> indices
+    n = 0
+    grp_ids = dstore['grp_ids'][()]
+    for idx, gidx in enumerate(dstore['rup/grp_id'][()]):
+        n += len(grp_ids[gidx])
+        for grp_id in grp_ids[gidx]:
+            acc[grp_id].append(idx)
+    blocksize = numpy.ceil(n / concurrent_tasks)
     indices = []
-    for grp_id in dstore['csm_info'].trt_by_grp:
-        idxs, = numpy.where(grp_ids == grp_id)
-        blocks = list(block_splitter(idxs, blocksize))
+    for grp_id in dstore['full_lt'].trt_by_grp:
+        blocks = list(block_splitter(acc[grp_id], blocksize))
         indices.append(blocks)
     return indices
 
@@ -222,14 +224,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                 if sg.atomic:
                     raise NotImplementedError(
                         'Atomic groups are not supported yet')
-            if not self.csm.get_sources():
-                raise RuntimeError('All sources were filtered away!')
 
-        self.csm_info = self.datastore['csm_info']
+        self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
 
-        self.ws = [rlz.weight for rlz in self.csm_info.get_realizations()]
+        self.ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
         self.pgetter = getters.PmapGetter(
             self.datastore, self.ws, self.sitecol.sids)
 
@@ -272,7 +272,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
         # build trt_edges
-        trts = tuple(self.csm_info.trts)
+        trts = tuple(self.full_lt.trts)
         trt_num = {trt: i for i, trt in enumerate(trts)}
         self.trts = trts
 
@@ -321,11 +321,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         indices = get_indices(dstore, oq.concurrent_tasks or 1)
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        for grp_id, trt in self.csm_info.trt_by_grp.items():
+        for grp_id, trt in self.full_lt.trt_by_grp.items():
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
             cmaker = ContextMaker(
-                trt, self.csm_info.get_rlzs_by_gsim(grp_id),
+                trt, self.full_lt.get_rlzs_by_gsim(grp_id),
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
@@ -402,25 +402,33 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         for sid, mat9 in results.items():
             rlzs = self.rlzs[sid]
+            many_rlzs = len(rlzs) > 1
             for m, imt in enumerate(self.imts):
-                # NB: here is how to compute the stats:
-                # weights = numpy.array([self.ws[r][imt] for r in rlzs]
-                # weights /= weights.sum()  # normalize to 1
-                # mean = numpy.average(mat7, -1, weights)
+                if many_rlzs:  # rescale the weights
+                    weights = numpy.array([self.ws[r][imt] for r in rlzs])
+                    weights /= weights.sum()  # normalize to 1
                 for p, poe in enumerate(self.poes_disagg):
                     mat7 = mat9[..., m, p, :]
                     for z in range(self.Z):
                         mat6 = mat7[..., z]
                         if mat6.any():  # nonzero
                             self._save('disagg', sid, rlzs[z], poe, imt, mat6)
+                    if many_rlzs:  # compute the mean matrices
+                        mean = numpy.average(mat7, -1, weights)
+                        if mean.any():  # nonzero
+                            self._save('disagg', sid, 'mean', poe, imt, mean)
         self.datastore.set_attrs('disagg', **attrs)
 
     def _save(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
         disagg_outputs = self.oqparam.disagg_outputs
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
+        try:
+            rlz = 'rlz-%d-' % rlz_id
+        except TypeError:  # for the mean
+            rlz = ''
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
-            rlz=rlz_id, imt=imt_str, sid='sid-%d' % site_id,
+            rlz=rlz, imt=imt_str, sid='sid-%d' % site_id,
             poe='poe-%d' % self.poe_id[poe])
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
@@ -437,7 +445,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         attrs['site_id'] = site_id
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
-        attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
+        try:
+            attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
+        except KeyError:  # for the mean
+            pass
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
@@ -459,7 +470,7 @@ class DisaggregationCalculator(base.HazardCalculator):
     def build_disagg_by_src(self, rlzs):
         logging.warning('Disaggregation by source is experimental')
         oq = self.oqparam
-        groups = list(self.csm_info.get_rlzs_by_grp())
+        groups = list(self.full_lt.get_rlzs_by_grp())
         M = len(oq.imtls)
         P = len(self.poes_disagg)
         for (s, z), rlz in numpy.ndenumerate(rlzs):

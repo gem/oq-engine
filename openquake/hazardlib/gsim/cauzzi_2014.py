@@ -46,7 +46,6 @@ class CauzziEtAl2014(GMPE):
     following formula ::
 
         SA = DSR * (2 * π / T) ** 2
-    
     """
     #: Supported tectonic region type is active shallow crust,
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST

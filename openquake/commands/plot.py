@@ -22,19 +22,7 @@ import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
-from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
-
-
-def basemap(projection, sitecol):
-    from mpl_toolkits.basemap import Basemap  # costly import
-    minlon, minlat, maxlon, maxlat = get_bounding_box(sitecol, maxdist=10)
-    bmap = Basemap(projection=projection,
-                   llcrnrlon=minlon, llcrnrlat=minlat,
-                   urcrnrlon=maxlon, urcrnrlat=maxlat,
-                   lat_0=sitecol['lat'].mean(), lon_0=sitecol['lon'].mean())
-    bmap.drawcoastlines()
-    return bmap
 
 
 def make_figure_hcurves(extractors, what):
@@ -101,9 +89,8 @@ def make_figure_hmaps(extractors, what):
                           'inv_time=%dy\nmaxdiff=%s' %
                           (imt, kind, poe, ex1.calc_id, ex2.calc_id,
                            itime, maxdiff))
-            bmap = basemap('cyl', sitecol)
-            bmap.scatter(sitecol['lon'], sitecol['lat'],
-                         c=diff, cmap='jet')
+            ax.scatter(sitecol['lon'], sitecol['lat'],
+                       c=diff, cmap='jet')
     elif ncalcs == 1:  # plot the hmap
         [ex] = extractors
         oq = ex.oqparam
@@ -118,9 +105,8 @@ def make_figure_hmaps(extractors, what):
             ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
                           'inv_time=%dy' %
                           (imt, kind, poe, ex.calc_id, oq.investigation_time))
-            bmap = basemap('cyl', sitecol)
-            bmap.scatter(sitecol['lon'], sitecol['lat'],
-                         c=hmaps[kind][:, 0, j], cmap='jet')
+            ax.scatter(sitecol['lon'], sitecol['lat'],
+                       c=hmaps[kind][:, 0, j], cmap='jet')
     return plt
 
 
@@ -263,9 +249,9 @@ class PolygonPlotter():
 
 def make_figure_sources(extractors, what):
     """
-    $ oq plot sources?sm_id=0&limit=100
-    $ oq plot sources?sm_id=0source_id=1&source_id=2
-    $ oq plot sources?sm_id=0code=A&code=B
+    $ oq plot sources?limit=100
+    $ oq plot sources?source_id=1&source_id=2
+    $ oq plot sources?code=A&code=N
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -276,8 +262,6 @@ def make_figure_sources(extractors, what):
     fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
-    # bmap = basemap('cyl', sitecol)
-    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     ax.plot(sitecol['lon'], sitecol['lat'], '+')
     pp = PolygonPlotter(ax)
     n = 0
@@ -287,14 +271,16 @@ def make_figure_sources(extractors, what):
             logging.warning('No geometries for source id %s', srcid)
             continue
         if rec['eff_ruptures']:  # not filtered out
+            color = 'green'
             alpha = .3
             n += 1
         else:
+            color = 'yellow'
             alpha = .1
-        pp.add(shapely.wkt.loads(wkt), alpha=alpha)
+        pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
         tot += 1
     pp.set_lim(sitecol)
-    ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
+    ax.set_title('%d/%d sources' % (n, tot))
     return plt
 
 
@@ -308,9 +294,6 @@ def make_figure_rupture_info(extractors, what):
     info = ex.get(what)
     fig, ax = plt.subplots()
     ax.grid(True)
-    # sitecol = ex.get('sitecol')
-    # bmap = basemap('cyl', sitecol)
-    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     n = 0
     tot = 0
     pp = PolygonPlotter(ax)
@@ -340,7 +323,7 @@ def make_figure_effect(extractors, what):
     from matplotlib import cm
     [ex] = extractors
     effect = ex.get(what)
-    trts = ex.get('csm_info').trts
+    trts = ex.get('full_lt').trts
     mag_ticks = effect.mags[::-5]
     fig = plt.figure()
     cmap = cm.get_cmap('jet', 100)
@@ -372,7 +355,7 @@ def make_figure_rups_by_mag_dist(extractors, what):
     [ex] = extractors
     counts = ex.get(what)
     counts.array = numpy.log10(counts.array + 1)
-    trts = ex.get('csm_info').trts
+    trts = ex.get('full_lt').trts
     mag_ticks = counts.mags[::-5]
     fig = plt.figure()
     cmap = cm.get_cmap('jet', 100)
@@ -401,7 +384,7 @@ def make_figure_dist_by_mag(extractors, what):
     import matplotlib.pyplot as plt
     [ex] = extractors
     effect = ex.get('effect')
-    mags = ['%.3f' % mag for mag in effect.mags]
+    mags = ['%.2f' % mag for mag in effect.mags]
     fig, ax = plt.subplots()
     trti = 0
     for trt, dists in effect.dist_bins.items():

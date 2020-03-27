@@ -15,7 +15,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <multiPointSource
             id="mp1"
             name="multi point source"
-            tectonicRegion="Stable Continental Crust"
             >
                 <multiPointGeometry>
                     <gml:posList>
@@ -62,7 +61,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <multiPointSource
             id="mp2"
             name="mps-with-GR"
-            tectonicRegion="Stable Continental Crust"
             >
                 <multiPointGeometry>
                     <gml:posList>

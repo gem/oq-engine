@@ -24,7 +24,7 @@ from openquake.hazardlib import mfd
 MINWEIGHT = 100
 
 
-class RuptureCollectionSource(ParametricSeismicSource):
+class _RuptureCollectionSource(ParametricSeismicSource):
     """
     A parametric source obtained from the splitting of a ComplexFaultSource
     """
@@ -67,6 +67,6 @@ def split(src, chunksize=MINWEIGHT):
         rup = block[0]
         source_id = '%s:%d' % (src.source_id, i)
         amfd = mfd.ArbitraryMFD([rup.mag], [rup.mag_occ_rate])
-        rcs = RuptureCollectionSource(
+        rcs = _RuptureCollectionSource(
             source_id, src.name, src.tectonic_region_type, amfd, block)
         yield rcs

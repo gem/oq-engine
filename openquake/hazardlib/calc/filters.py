@@ -16,15 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import time
+import logging
 import operator
 import collections.abc
 from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree, distance
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
@@ -32,7 +34,7 @@ from openquake.hazardlib.geo.utils import (
 
 U32 = numpy.uint32
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
-src_group_id = operator.attrgetter('src_group_id')
+grp_id = operator.attrgetter('grp_id')
 
 
 @contextmanager
@@ -86,14 +88,14 @@ class IntegrationDistance(collections.abc.Mapping):
         for trt, value in dic.items():
             if isinstance(value, (list, numpy.ndarray)):
                 # assume a list of pairs (magstring, dist)
-                self.magdist[trt] = {'%.3f' % mag: dist for mag, dist in value}
+                self.magdist[trt] = {'%.2f' % mag: dist for mag, dist in value}
                 self.dic[trt] = value[-1][-1]
             else:
                 self.dic[trt] = float(value)
 
     def __call__(self, trt, mag=None):
         if mag and trt in self.magdist:
-            return self.magdist[trt]['%.3f' % mag]
+            return self.magdist[trt]['%.2f' % mag]
         elif not self.dic:
             return MAX_DISTANCE
         return getdefault(self.dic, trt)
@@ -171,14 +173,12 @@ def split_sources(srcs):
     split_time = {}  # src.id -> time
     for src in srcs:
         t0 = time.time()
+        if not src.num_ruptures:  # not set yet
+            src.num_ruptures = src.count_ruptures()
         mag_a, mag_b = src.get_min_max_mag()
         min_mag = src.min_mag
         if mag_b < min_mag:  # discard the source completely
             continue
-        has_serial = hasattr(src, 'serial')
-        if has_serial:
-            src.serial = numpy.arange(
-                src.serial, src.serial + src.num_ruptures)
         if not splittable(src):
             sources.append(src)
             split_time[src.id] = time.time() - t0
@@ -198,27 +198,25 @@ def split_sources(srcs):
         split_time[src.id] = time.time() - t0
         sources.extend(splits)
         has_samples = hasattr(src, 'samples')
+        has_scaling_rate = hasattr(src, 'scaling_rate')
         if len(splits) > 1:
-            start = 0
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
-                split.src_group_id = src.src_group_id
+                split.grp_id = src.grp_id
                 split.id = src.id
-                if has_serial:
-                    nr = split.num_ruptures
-                    split.serial = src.serial[start:start + nr]
-                    start += nr
                 if has_samples:
                     split.samples = src.samples
+                if has_scaling_rate:
+                    s.scaling_rate = src.scaling_rate
         elif splits:  # single source
             [s] = splits
             s.source_id = src.source_id
-            s.src_group_id = src.src_group_id
+            s.grp_id = src.grp_id
             s.id = src.id
-            if has_serial:
-                s.serial = src.serial
             if has_samples:
                 s.samples = src.samples
+            if has_scaling_rate:
+                s.scaling_rate = src.scaling_rate
     return sources, split_time
 
 
@@ -228,7 +226,7 @@ class SourceFilter(object):
     i.e. sources with an attribute .indices, containg the IDs of the sites
     within the given maximum distance. There is also a .new method
     that filters the sources in parallel and returns a dictionary
-    src_group_id -> filtered sources.
+    grp_id -> filtered sources.
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
@@ -299,6 +297,19 @@ class SourceFilter(object):
         for src in self.filter(sources):
             yield src, self.sitecol.filtered(src.indices)
 
+    def get_sources_sites(self, sources):
+        """
+        :yields:
+            pairs (srcs, sites) where the sources have the same source_id,
+            the same grp_ids and affect the same sites
+        """
+        acc = general.AccumDict(accum=[])  # indices -> srcs
+        for src in self.filter(sources):
+            src_id = re.sub(r':\d+$', '', src.source_id)
+            acc[(src_id, src.grp_id) + tuple(src.indices)].append(src)
+        for tup, srcs in acc.items():
+            yield srcs, self.sitecol.filtered(tup[2:])
+
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):
         """
@@ -352,6 +363,9 @@ class SourceFilter(object):
         :param sources: a sequence of sources
         :yields: sources with .indices
         """
+        if self.sitecol is None:  # nofilter
+            yield from sources
+            return
         for src in sources:
             if hasattr(src, 'indices'):   # already filtered
                 yield src
@@ -377,7 +391,11 @@ class SourceFilter(object):
         lons = []
         lats = []
         for src in srcs:
-            box = self.integration_distance.get_affected_box(src)
+            try:
+                box = self.integration_distance.get_affected_box(src)
+            except BBoxError as exc:
+                logging.error(exc)
+                continue
             lons.append(box[0])
             lats.append(box[1])
             lons.append(box[2])

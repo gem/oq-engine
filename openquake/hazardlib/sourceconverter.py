@@ -16,14 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
-import collections.abc
+import collections
 import pickle
-import time
+import copy
 import logging
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, block_splitter
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source, tom
 from openquake.hazardlib import valid, InvalidFile
@@ -35,6 +35,15 @@ F32 = numpy.float32
 EPSILON = 1E-12
 source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
+
+
+def extract_dupl(values):
+    """
+    :param values: a sequence of values
+    :returns: the duplicated values
+    """
+    c = collections.Counter(values)
+    return [value for value, counts in c.items() if counts > 1]
 
 
 def fix_dupl(dist, fname=None, lineno=None):
@@ -62,7 +71,7 @@ def fix_dupl(dist, fname=None, lineno=None):
             raise ValueError('There are repeated values in %s' % got)
         else:
             logging.warning('There were repeated values %s in %s:%s',
-                            got, fname, lineno)
+                            extract_dupl(got), fname, lineno)
             assert abs(sum(values.values()) - 1) < EPSILON  # sanity check
             newdist = sorted([(p, v) for v, p in values.items()])
             if isinstance(newdist[0][1], tuple):  # nodal planes
@@ -99,12 +108,6 @@ class SourceGroup(collections.abc.Sequence):
     :param id:
         an optional numeric ID (default 0) set by the engine and used
         when serializing SourceModels to HDF5
-    :param eff_ruptures:
-        the number of ruptures contained in the group; if -1,
-        the number is unknown and has to be computed by using
-        get_set_num_ruptures
-    :param tot_ruptures:
-        the potential maximum number of ruptures contained in the group
     :param temporal_occurrence_model:
         A temporal occurrence model controlling the source group occurrence
     :param cluster:
@@ -112,6 +115,8 @@ class SourceGroup(collections.abc.Sequence):
         to what used by the USGS for the New Madrid in the 2008 National
         Hazard Model.
     """
+    changes = 0  # set in apply_uncertainty
+
     @classmethod
     def collect(cls, sources):
         """
@@ -134,9 +139,8 @@ class SourceGroup(collections.abc.Sequence):
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', grp_probability=None,
-                 min_mag={'default': 0}, max_mag=None, id=0, eff_ruptures=-1,
-                 tot_ruptures=0, temporal_occurrence_model=None,
-                 cluster=False):
+                 min_mag={'default': 0}, max_mag=None,
+                 temporal_occurrence_model=None, cluster=False):
         # checks
         self.trt = trt
         self.sources = []
@@ -147,13 +151,10 @@ class SourceGroup(collections.abc.Sequence):
         self.grp_probability = grp_probability
         self.min_mag = min_mag
         self.max_mag = max_mag
-        self.id = id
-        self.tot_ruptures = tot_ruptures  # updated in .update(src)
         if sources:
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
-        self.source_model = None  # to be set later, in CompositionInfo
-        self.eff_ruptures = eff_ruptures  # set later
+        self.source_model = None  # to be set later, in FullLogicTree
         self.temporal_occurrence_model = temporal_occurrence_model
         self.cluster = cluster
         # check weights in case of mutually exclusive ruptures
@@ -170,6 +171,13 @@ class SourceGroup(collections.abc.Sequence):
         """
         return (self.cluster or self.src_interdep == 'mutex' or
                 self.rup_interdep == 'mutex')
+
+    @property
+    def weight(self):
+        """
+        :returns: total weight of the underlying sources
+        """
+        return sum(src.weight for src in self)
 
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
@@ -205,6 +213,8 @@ class SourceGroup(collections.abc.Sequence):
             src.tectonic_region_type, self.trt)
         if not src.min_mag:  # if not set already
             src.min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
+            if not src.get_mags():  # filtered out
+                return
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
                 self.rup_interdep == 'mutex'):
@@ -212,20 +222,30 @@ class SourceGroup(collections.abc.Sequence):
             msg += "modelled using non-parametric sources"
             raise ValueError(msg)
 
-        nr = get_set_num_ruptures(src)
-        if nr == 0:  # the minimum_magnitude filters all ruptures
-            return
-        self.tot_ruptures += nr
         self.sources.append(src)
         _, max_mag = src.get_min_max_mag()
         prev_max_mag = self.max_mag
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
 
+    def split(self, maxweight):
+        """
+        Split the group in subgroups with weight <= maxweight, unless it
+        it atomic.
+        """
+        if self.atomic:
+            return [self]
+        out = []
+        for block in block_splitter(
+                self, maxweight, operator.attrgetter('weight')):
+            sg = copy.copy(self)
+            sg.sources = block
+            out.append(sg)
+        return out
+
     def __repr__(self):
-        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
-            self.__class__.__name__, self.id, self.trt,
-            len(self.sources), self.eff_ruptures)
+        return '<%s %s, %d source(s)>' % (
+            self.__class__.__name__, self.trt, len(self.sources))
 
     def __lt__(self, other):
         """
@@ -255,10 +275,8 @@ class SourceGroup(collections.abc.Sequence):
             lst.append((src.id, src.num_ruptures,
                         numpy.frombuffer(buf, numpy.uint8)))
         attrs = dict(
-            id=self.id,
             trt=self.trt,
             name=self.name or '',
-            eff_ruptures=self.eff_ruptures,
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
             grp_probability=self.grp_probability or '')
@@ -269,34 +287,6 @@ class SourceGroup(collections.abc.Sequence):
         self.sources = []
         for row in array:
             self.sources.append(pickle.loads(memoryview(row['pik'])))
-
-
-def get_set_num_ruptures(src):
-    """
-    Extract the number of ruptures and set it
-    """
-    if not src.num_ruptures:
-        t0 = time.time()
-        src.num_ruptures = src.count_ruptures()
-        dt = time.time() - t0
-        clsname = src.__class__.__name__
-        if dt > 10:
-            if 'Area' in clsname:
-                logging.warning(
-                    '%s.count_ruptures took %d seconds, perhaps the '
-                    'area discretization is too small', src, dt)
-            elif 'ComplexFault' in clsname:
-                logging.warning(
-                    '%s.count_ruptures took %d seconds, perhaps the '
-                    'complex_fault_mesh_spacing is too small', src, dt)
-            elif 'SimpleFault' in clsname:
-                logging.warning(
-                    '%s.count_ruptures took %d seconds, perhaps the '
-                    'rupture_mesh_spacing is too small', src, dt)
-            else:
-                # multiPointSource
-                logging.warning('count_ruptures %s took %d seconds', src, dt)
-    return src.num_ruptures
 
 
 def split_coords_2d(seq):

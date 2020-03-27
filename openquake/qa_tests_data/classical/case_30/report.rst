@@ -3,8 +3,8 @@ Classical PSHA for the southern Pacific Islands reduced
 
 ============== ===================
 checksum32     1_406_686_210      
-date           2020-01-16T05:31:38
-engine_version 3.8.0-git83c45f7244
+date           2020-03-13T11:22:39
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
 num_sites = 5, num_levels = 20, num_rlzs = 12
@@ -22,7 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      50.0              
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
-pointsource_distance            None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     23                
@@ -42,11 +42,11 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b1        1.00000 complex(4,3,0)  12              
-========= ======= =============== ================
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b1        1.00000 12              
+========= ======= ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -54,25 +54,16 @@ Required parameters per tectonic region type
 grp_id gsims                                                                                   distances   siteparams                    ruptparams                  
 ====== ======================================================================================= =========== ============================= ============================
 0      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
-1      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
-2      '[AtkinsonBoore2003SInter]' '[YoungsEtAl1997SInter]' '[ZhaoEtAl2006SInter]'             rrup        vs30                          hypo_depth mag              
+1      '[AtkinsonBoore2003SInter]' '[YoungsEtAl1997SInter]' '[ZhaoEtAl2006SInter]'             rrup        vs30                          hypo_depth mag              
 ====== ======================================================================================= =========== ============================= ============================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=41, rlzs=12)>
 
 Number of ruptures per source group
 -----------------------------------
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      0.02273   3_800        1_100       
-1      0.11280   1_117        1_117       
-2      0.06929   3_536        3_536       
+0      0.06811   4_917        2_217       
+1      0.06929   3_536        3_536       
 ====== ========= ============ ============
 
 Slowest sources
@@ -80,23 +71,23 @@ Slowest sources
 ========== ====== ==== ============ ========= ========= ============
 source_id  grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========== ====== ==== ============ ========= ========= ============
-sf_85      1      S    348          0.16877   0.12931   348         
-sf_81      1      S    348          0.16868   0.12931   348         
-sf_84      1      S    262          0.15752   0.05344   262         
-sf_83      1      S    113          0.09546   0.10619   113         
-sf_82      1      S    46           0.07210   0.21739   46          
-kt         2      C    3_536        0.06375   0.06929   3_536       
-ds_4_18232 0      P    100          2.866E-04 0.03000   100         
-ds_4_464   0      P    100          2.694E-04 0.01000   100         
-ds_4_482   0      P    100          2.670E-04 0.01000   100         
-ds_4_5043  0      P    100          2.553E-04 0.02000   100         
-ds_4_6534  0      P    100          2.496E-04 0.03000   100         
-ds_4_8502  0      P    100          2.415E-04 0.04000   100         
-ds_4_8499  0      P    100          2.408E-04 0.04000   100         
-ds_4_36349 0      P    100          2.310E-04 0.01000   100         
-ds_4_19558 0      P    100          2.306E-04 0.01000   100         
-ds_4_2111  0      P    100          2.151E-04 0.01000   100         
-ds_4_15201 0      P    100          1.109E-04 0.04000   100         
+sf_85      0      S    348          0.17091   0.12931   348         
+sf_81      0      S    348          0.16530   0.12931   348         
+sf_84      0      S    262          0.13771   0.05344   262         
+sf_83      0      S    113          0.09459   0.10619   113         
+sf_82      0      S    46           0.06869   0.21739   46          
+kt         1      C    3_536        0.06501   0.06929   3_536       
+ds_4_18232 0      P    100          1.338E-04 0.03000   100         
+ds_4_5043  0      P    100          1.171E-04 0.02000   100         
+ds_4_482   0      P    100          1.161E-04 0.01000   100         
+ds_4_36349 0      P    100          1.159E-04 0.01000   100         
+ds_4_464   0      P    100          1.156E-04 0.01000   100         
+ds_4_6534  0      P    100          1.147E-04 0.03000   100         
+ds_4_15201 0      P    100          1.099E-04 0.04000   100         
+ds_4_8502  0      P    100          1.082E-04 0.04000   100         
+ds_4_8499  0      P    100          1.061E-04 0.04000   100         
+ds_4_19558 0      P    100          1.049E-04 0.01000   100         
+ds_4_2111  0      P    100          9.942E-05 0.01000   100         
 ========== ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -104,36 +95,36 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    0.06375  
-P    0.00260  
-S    0.66253  
+C    0.06501  
+P    0.00124  
+S    0.63721  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.14885 0.18449 0.01567 0.35943 3      
-preclassical       0.90433 2.61800 0.00267 8.35174 10     
+preclassical       0.90468 2.63098 0.00260 8.38924 10     
+read_source_model  0.11933 0.15832 0.01576 0.30157 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-============ =========================================== ========
-task         sent                                        received
-SourceReader apply_unc=5.56 KB ltmodel=804 B fname=359 B 70.8 KB 
-preclassical srcs=66.48 KB params=8.51 KB gsims=4.99 KB  3.87 KB 
-============ =========================================== ========
+================= ========================================== ========
+task              sent                                       received
+read_source_model converter=996 B fname=338 B srcfilter=12 B 61.21 KB
+preclassical      srcs=69.88 KB params=8.26 KB gsims=4.99 KB 3.88 KB 
+================= ========================================== ========
 
 Slowest operations
 ------------------
 =========================== ======== ========= ======
-calc_43324                  time_sec memory_mb counts
+calc_66994                  time_sec memory_mb counts
 =========================== ======== ========= ======
-total preclassical          9.04328  0.0       10    
-splitting/filtering sources 8.28893  0.0       10    
-total SourceReader          0.44654  0.35938   3     
-composite source model      0.38283  0.0       1     
-store source_info           0.00250  0.0       1     
-aggregate curves            0.00244  0.0       9     
+total preclassical          9.04680  7.53906   10    
+splitting/filtering sources 8.32419  6.54297   10    
+composite source model      0.87944  0.0       1     
+total read_source_model     0.35799  2.58203   3     
+store source_info           0.00276  0.0       1     
+aggregate curves            0.00241  0.0       9     
 =========================== ======== ========= ======

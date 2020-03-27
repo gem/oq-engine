@@ -52,7 +52,7 @@ def build_loss_tables(dstore):
     Compute the total losses by rupture
     """
     oq = dstore['oqparam']
-    R = dstore['csm_info'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_rlzs()
     lbe = dstore['losses_by_event'][()]
     loss = lbe['loss']  # shape (E, L, T...)
     shp = (R,) + lbe.dtype['loss'].shape
@@ -160,7 +160,8 @@ class PostRiskCalculator(base.RiskCalculator):
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
         logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
         builder = get_loss_builder(self.datastore)
-        self.build_datasets(builder, oq.aggregate_by, 'agg_')
+        if oq.aggregate_by:
+            self.build_datasets(builder, oq.aggregate_by, 'agg_')
         self.build_datasets(builder, [], 'app_')
         self.build_datasets(builder, [], 'tot_')
         ds = self.datastore

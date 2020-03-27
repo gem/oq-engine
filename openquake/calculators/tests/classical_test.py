@@ -220,13 +220,6 @@ class ClassicalTestCase(CalculatorTestCase):
         with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
             self.run_calc(
                 case_14.__file__, 'job.ini', calculation_mode='preclassical')
-        rpt = view('ruptures_per_grp', self.calc.datastore)
-        self.assertEqual(rpt, """\
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      0.33557   447          447         
-====== ========= ============ ============""")
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
@@ -258,7 +251,7 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
         # check deserialization of source_model_lt
-        smlt = self.calc.datastore['source_model_lt']
+        smlt = self.calc.datastore['full_lt/source_model_lt']
         exp = str(list(smlt))
         self.assertEqual('''[<Realization #0 source_model_1.xml, path=SM1, weight=0.5>, <Realization #1 source_model_2.xml, path=SM2_a3pt2b0pt8, weight=0.25>, <Realization #2 source_model_2.xml, path=SM2_a3b1, weight=0.25>]''', exp)
 
@@ -312,7 +305,7 @@ hazard_uhs-std.csv
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     def test_case_19(self):
-        # test for AvgGMPE
+        # test for AvgGMPE and pointsource_distance
         self.assert_curves_ok([
             'hazard_curve-mean_PGA.csv',
             'hazard_curve-mean_SA(0.1).csv',
@@ -340,8 +333,9 @@ hazard_uhs-std.csv
         self.assertEqual(len(sg), 7)
         tbl = []
         for src in sg:
-            tbl.append([src.source_id, src.checksum] + src.src_group_ids)
+            tbl.append((src.source_id, src.checksum) + src.grp_ids)
         tbl.sort()
+        '''
         self.assertEqual(tbl,
                          [['CHAR1', 1020111046, 2, 5, 8, 11],
                           ['CHAR1', 1117683992, 0, 3, 6, 9],
@@ -350,8 +344,15 @@ hazard_uhs-std.csv
                           ['COMFLT1', 3381942518, 0, 1, 2, 6, 7, 8],
                           ['SFLT1', 4233779789, 6, 7, 8, 9, 10, 11],
                           ['SFLT1', 4256912415, 0, 1, 2, 3, 4, 5]])
-        dupl = sum(len(src.src_group_ids) - 1 for src in sg)
+        '''
+        dupl = sum(len(src.grp_ids) - 1 for src in sg)
         self.assertEqual(dupl, 29)  # there are 29 duplicated sources
+
+        # another way to look at the duplicated sources; protects against
+        # future refactorings breaking the pandas readability of source_info
+        df = self.calc.datastore.read_df('source_info', 'source_id')
+        dic = dict(df['num_sources'])
+        self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
@@ -406,9 +407,9 @@ hazard_uhs-std.csv
             'hazard_curve-SA(0.1).csv', 'hazard_curve-SA(0.2).csv',
             'hazard_curve-SA(0.5).csv', 'hazard_curve-SA(1.0).csv',
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
-        # test that the number of ruptures is 1/3 of the the total
+        # test that the number of ruptures is ~1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['rup/rrup_']), 260)
+        self.assertEqual(len(self.calc.datastore['rup/rrup_']), 288)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
@@ -543,7 +544,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 227)  # effective #ruptures
+        self.assertEqual(self.calc.numrups, 331)  # effective ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results

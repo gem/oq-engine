@@ -3,8 +3,8 @@ applyToSources with multiple sources
 
 ============== ===================
 checksum32     3_235_130_248      
-date           2020-01-16T05:31:46
-engine_version 3.8.0-git83c45f7244
+date           2020-03-13T11:22:51
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = 9
@@ -42,13 +42,13 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-=============================================== ======= =============== ================
-smlt_path                                       weight  gsim_logic_tree num_realizations
-=============================================== ======= =============== ================
-b1_b211_b221_b231_b311_b321_b331_b341_b351_b361 0.11111 trivial(0,0,1)  1               
-b1_b212_b222_b232_b312_b322_b332_b342_b352_b362 0.11111 trivial(0,0,1)  1               
-b1_b213_b223_b233_b313_b323_b333_b343_b353_b363 0.11111 trivial(0,0,1)  1               
-=============================================== ======= =============== ================
+=============================================== ======= ================
+smlt_path                                       weight  num_realizations
+=============================================== ======= ================
+b1_b211_b221_b231_b311_b321_b331_b341_b351_b361 0.55556 5               
+b1_b212_b222_b232_b312_b322_b332_b342_b352_b362 0.11111 1               
+b1_b213_b223_b233_b313_b323_b333_b343_b353_b363 0.33333 3               
+=============================================== ======= ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -66,27 +66,20 @@ grp_id gsims              distances siteparams ruptparams
 8      '[SadighEtAl1997]' rrup      vs30       mag rake  
 ====== ================== ========= ========== ==========
 
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=3, rlzs=9)>
-
 Number of ruptures per source group
 -----------------------------------
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      NaN       80           0.0         
-1      0.01264   633          633         
-2      NaN       7_318        0.0         
-3      NaN       100          0.0         
-4      0.01372   656          656         
-5      NaN       7_545        0.0         
-6      NaN       80           0.0         
-7      0.01264   633          633         
-8      NaN       7_107        0.0         
+0      NaN       7_318        0.0         
+1      NaN       7_545        0.0         
+2      NaN       7_107        0.0         
+3      NaN       80           0.0         
+4      NaN       100          0.0         
+5      NaN       80           0.0         
+6      0.01264   633          633         
+7      0.01372   656          656         
+8      0.01264   633          633         
 ====== ========= ============ ============
 
 Slowest sources
@@ -94,9 +87,9 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
 ========= ====== ==== ============ ========= ========= ============
-1         4      C    656          0.01197   0.01372   656         
-1         1      C    633          0.01025   0.01264   633         
-1         7      C    633          0.00986   0.01264   633         
+1         7      C    656          0.01395   0.01372   656         
+1         8      C    633          0.01172   0.01264   633         
+1         6      C    633          0.01052   0.01264   633         
 ========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
@@ -105,7 +98,7 @@ Computation times by source typology
 code calc_time
 ==== =========
 A    0.0      
-C    0.03208  
+C    0.03618  
 S    0.0      
 ==== =========
 
@@ -113,27 +106,27 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.46927 0.02449 0.44325 0.49187 3      
-preclassical       0.24616 0.43455 0.01725 1.14366 15     
+preclassical       0.27093 0.48463 0.02086 1.31953 15     
+read_source_model  0.28546 NaN     0.28546 0.28546 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-============ ================================================ ========
-task         sent                                             received
-SourceReader apply_unc=10.92 KB ltmodel=753 B fname=312 B     65.21 KB
-preclassical params=112.53 KB srcs=55.23 KB srcfilter=23.1 KB 4.78 KB 
-============ ================================================ ========
+================= =============================================== ========
+task              sent                                            received
+read_source_model                                                 15.72 KB
+preclassical      srcs=60.68 KB params=10.49 KB srcfilter=4.79 KB 4.9 KB  
+================= =============================================== ========
 
 Slowest operations
 ------------------
-=========================== ========= ========= ======
-calc_43325                  time_sec  memory_mb counts
-=========================== ========= ========= ======
-total preclassical          3.69243   1.33984   15    
-splitting/filtering sources 3.38230   1.33984   15    
-total SourceReader          1.40782   0.73828   3     
-composite source model      0.52910   0.0       1     
-store source_info           0.00258   0.0       1     
-aggregate curves            8.090E-04 0.0       3     
-=========================== ========= ========= ======
+=========================== ======== ========= ======
+calc_66996                  time_sec memory_mb counts
+=========================== ======== ========= ======
+total preclassical          4.06398  3.29297   15    
+splitting/filtering sources 3.72746  3.15234   15    
+composite source model      1.04017  0.0       1     
+total read_source_model     0.28546  0.0       1     
+store source_info           0.00255  0.0       1     
+aggregate curves            0.00110  0.0       3     
+=========================== ======== ========= ======

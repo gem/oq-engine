@@ -44,7 +44,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         return out
 
     def test_case_1(self):
-        out = self.assert_curves_ok(
+        self.assert_curves_ok(
             ['rlz-0-PGA-sid-0-poe-0_Lon_Lat.csv',
              'rlz-0-PGA-sid-0-poe-0_Mag.csv',
              'rlz-0-PGA-sid-0-poe-0_Mag_Dist.csv',
@@ -61,14 +61,14 @@ class DisaggregationTestCase(CalculatorTestCase):
             fmt='csv')
 
         # check disagg_by_src, poe=0.02, 0.1, imt=PGA, SA(0.025)
-        
+
         #self.assertEqual(len(out['disagg_by_src', 'csv']), 4)
         #for fname in out['disagg_by_src', 'csv']:
         #    self.assertEqualFiles('expected_output/%s' % strip_calc_id(fname),
         #                          fname)
 
         # disaggregation by source group
-        rlzs = self.calc.datastore['csm_info'].get_realizations()
+        rlzs = self.calc.datastore['full_lt'].get_realizations()
         ws = [rlz.weight for rlz in rlzs]
         pgetter = getters.PmapGetter(self.calc.datastore, ws)
         pgetter.init()
@@ -96,7 +96,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 6)  # number of CSV files
+        self.assertEqual(len(fnames), 8)  # number of CSV files
         for fname in fnames:
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
@@ -104,8 +104,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test extract disagg_layer
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
                      'imt=SA(0.1)&poe_id=0')
-        self.assertEqual(aw.dtype.names,
-                         ('site_id', 'lon', 'lat', 'rlz', 'poes'))
+        self.assertEqual(aw.dtype.names, ('site_id', 'lon', 'lat', 'poes'))
         self.assertEqual(aw['poes'].shape, (2, 15))  # 2 rows
 
     def test_case_3(self):

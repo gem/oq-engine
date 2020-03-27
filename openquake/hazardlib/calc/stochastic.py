@@ -158,7 +158,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     """
     eb_ruptures = []
     numpy.random.seed(sources[0].serial)
-    [grp_id] = set(src.src_group_id for src in sources)
+    [grp_id] = set(src.grp_id for src in sources)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Set the parameters required to compute the number of occurrences
@@ -200,7 +200,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_counter[src.id][rup.idx] += 1
                 # Store info
                 dt = time.time() - t0
-                calc_times[src.id] += numpy.array(
+                calc_times[src.source_id] += numpy.array(
                     [len(rup_data[src.id]), len(_sites), dt])
         elif param['src_interdep'] == 'mutex':
             raise NotImplementedError('src_interdep == mutex')
@@ -234,7 +234,6 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
     num_ses = param['ses_per_logic_tree_path']
-    [grp_id] = set(src.src_group_id for src in sources)
     trt = sources[0].tectonic_region_type
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
@@ -244,35 +243,34 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
             sources, srcfilter, num_ses, param)
 
         # Yield ruptures
-        yield AccumDict(rup_array=get_rup_array(eb_ruptures, srcfilter),
-                        calc_times=calc_times,
-                        eff_ruptures={trt: len(eb_ruptures)})
+        yield AccumDict(dict(rup_array=get_rup_array(eb_ruptures, srcfilter),
+                             calc_times=calc_times,
+                             eff_ruptures={trt: len(eb_ruptures)}))
     else:
         eb_ruptures = []
         eff_ruptures = 0
         # AccumDict of arrays with 2 elements weight, calc_time
         calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         for src, _sites in srcfilter(sources):
-            eff_ruptures += 1
+            nr = src.num_ruptures
+            eff_ruptures += nr
             t0 = time.time()
             if len(eb_ruptures) > MAX_RUPTURES:
                 # yield partial result to avoid running out of memory
-                yield AccumDict(rup_array=get_rup_array(eb_ruptures,
-                                                        srcfilter),
-                                calc_times={}, eff_ruptures={})
+                yield AccumDict(dict(rup_array=get_rup_array(eb_ruptures,
+                                                             srcfilter),
+                                     calc_times={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
-            n_occ = 0
-            for rup, n_occ in src.sample_ruptures(samples * num_ses):
+            for rup, grp_id, n_occ in src.sample_ruptures(samples * num_ses):
                 ebr = EBRupture(rup, src.id, grp_id, n_occ, samples)
                 eb_ruptures.append(ebr)
-                n_occ += ebr.n_occ
             dt = time.time() - t0
             try:
                 n_sites = len(_sites)
             except (TypeError, ValueError):  # for None or a closed dataset
                 n_sites = 0
-            calc_times[src.id] += numpy.array([n_occ, n_sites, dt])
+            calc_times[src.source_id] += numpy.array([nr, n_sites, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
-        yield AccumDict(rup_array=rup_array, calc_times=calc_times,
-                        eff_ruptures={trt: eff_ruptures})
+        yield AccumDict(dict(rup_array=rup_array, calc_times=calc_times,
+                             eff_ruptures={trt: eff_ruptures}))
