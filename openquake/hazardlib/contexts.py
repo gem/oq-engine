@@ -516,8 +516,7 @@ class PmapMaker(object):
         loc = getattr(src, 'location', None)
         if loc and self.pointsource_distance == 0:
             # all finite size effects are ignored
-            for pr in src.point_ruptures():
-                yield [pr], sites
+            yield list(src.point_ruptures()), sites
         elif loc and self.pointsource_distance:
             # finite site effects are ignored only for sites over the
             # pointsource_distance from the rupture (if any)
