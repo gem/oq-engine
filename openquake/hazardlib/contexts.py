@@ -360,16 +360,15 @@ class PmapMaker(object):
 
     def _ctxs(self, rups, sites, grp_ids):
         if self.fewsites:  # do not filter, but collapse
-            with self.ctx_mon:
-                rup_parametric = not numpy.isnan(
-                    [r.occurrence_rate for r in rups]).any()
-                if self.rup_indep and rup_parametric:
-                    if self.pointsource_distance:
-                        rups = self.collapse_psd(rups, sites)
-                    if self.collapse_ruptures:
-                        rups = self.collapse_md(rups, sites)
-                ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-                self.numrups += len(ctxs)
+            rup_parametric = not numpy.isnan(
+                [r.occurrence_rate for r in rups]).any()
+            if self.rup_indep and rup_parametric:
+                if self.pointsource_distance:
+                    rups = self.collapse_psd(rups, sites)
+                if self.collapse_ruptures:
+                    rups = self.collapse_md(rups, sites)
+            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
+            self.numrups += len(ctxs)
             for rup, dctx in ctxs:
                 mask = (dctx.rrup <= self.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
@@ -381,8 +380,7 @@ class PmapMaker(object):
                 self.numsites += len(r_sites)
                 yield rup, r_sites, dctx
         else:  # many sites, do not collapse, but filter
-            with self.ctx_mon:
-                ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=True)
+            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=True)
             self.numrups += len(ctxs)
             self.numsites += sum(len(ctx[1]) for ctx in ctxs)
             yield from ctxs
@@ -433,11 +431,12 @@ class PmapMaker(object):
             self.numsites = 0
             ctxs = []
             rups = self._get_rups(srcs, sites)
-            if self.fewsites:
-                ctxs.extend(self._ctxs(rups, sites, grp_ids))
-            else:  # many sites
-                for rup in rups:
-                    ctxs.extend(self._ctxs([rup], rup.sites, grp_ids))
+            with self.ctx_mon:
+                if self.fewsites:
+                    ctxs.extend(self._ctxs(rups, sites, grp_ids))
+                else:  # many sites
+                    for rup in rups:
+                        ctxs.extend(self._ctxs([rup], rup.sites, grp_ids))
             self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
@@ -448,12 +447,13 @@ class PmapMaker(object):
         for src, sites in self.srcfilter(self.group):
             t0 = time.time()
             self.totrups += src.num_ruptures
-            rups = self._ruptures(src)
             self.numrups = 0
             self.numsites = 0
-            L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
-            pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
-            ctxs = self._ctxs(rups, sites, numpy.array(src.grp_ids))
+            rups = self._ruptures(src)
+            with self.ctx_mon:
+                L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
+                pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
+                ctxs = list(self._ctxs(rups, sites, numpy.array(src.grp_ids)))
             self._update_pmap(ctxs, pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
