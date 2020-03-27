@@ -860,10 +860,8 @@ class HazardCalculator(BaseCalculator):
             row[NUM_SITES] += arr[1]
             row[CALC_TIME] += arr[2]
         rows = self.csm.source_info.values()
-        recs = [tuple(row[:-1]) for row in rows]
+        recs = [tuple(row) for row in rows]
         self.datastore['source_info'] = numpy.array(recs, source_info_dt)
-        self.datastore['source_wkt'] = numpy.array([row[-1] for row in rows],
-                                                   hdf5.vstr)
 
     def post_process(self):
         """For compatibility with the engine"""

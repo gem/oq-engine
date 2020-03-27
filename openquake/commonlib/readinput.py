@@ -644,6 +644,7 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
         csm.init_serials(oqparam.ses_seed)
     data = {}  # src_id -> row
     mags = set()
+    wkts = []
     for sg in csm.src_groups:
         for src in sg:
             if src.source_id in data:
@@ -651,7 +652,8 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
             else:
                 num_sources = 1
             row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
-                   num_sources, 0, 0, 0, src.checksum, src.serial, src._wkt]
+                   num_sources, 0, 0, 0, src.checksum, src.serial]
+            wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
                 srcmags = ['%.2f' % mag for mag in src.mags]
@@ -662,6 +664,7 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
                            src.get_annual_occurrence_rates()]
             mags.update(srcmags)
     if h5:
+        h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         h5['source_mags'] = numpy.array(sorted(mags))
         h5['grp_ids'] = grp_ids
     csm.gsim_lt.check_imts(oqparam.imtls)
