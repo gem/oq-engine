@@ -645,8 +645,10 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
     data = {}  # src_id -> row
     mags = set()
     wkts = []
+    ns = 0
     for sg in csm.src_groups:
         for src in sg:
+            ns += 1
             if src.source_id in data:
                 num_sources = data[src.source_id][3] + 1
             else:
@@ -663,6 +665,8 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags.update(srcmags)
+
+    logging.info('There are %d sources with %d unique IDs', ns, len(data))
     if h5:
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         h5['source_mags'] = numpy.array(sorted(mags))
