@@ -433,14 +433,13 @@ class PmapMaker(object):
             grp_ids = numpy.array(srcs[0].grp_ids)
             self.numrups = 0
             self.numsites = 0
-            if self.fewsites:  # try to collapse the ruptures
-                rups = sum([self._ruptures(src) for src in srcs], [])
-                ctxs = self._ctxs(rups, sites, grp_ids)
-            else:  # many sites, do not collapse the ruptures
-                ctxs = []
-                for src in srcs:
-                    for rups, sites in self._gen_rups_sites(src, sites):
-                        ctxs.extend(self._ctxs(rups, sites, grp_ids))
+            ctxs = []
+            rups = self._get_rups(srcs, sites)
+            if self.fewsites:
+                ctxs.extend(self._ctxs(rups, sites, grp_ids))
+            else:  # many sites
+                for rup in rups:
+                    ctxs.extend(self._ctxs([rup], rup.sites, grp_ids))
             self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
@@ -512,27 +511,42 @@ class PmapMaker(object):
         out = sum(map(_collapse, groupby_bin(rups, 255, magdist)), [])
         return out
 
-    def _gen_rups_sites(self, src, sites):
-        loc = getattr(src, 'location', None)
-        if loc and self.pointsource_distance == 0:
-            # all finite size effects are ignored
-            yield list(src.point_ruptures()), sites
-        elif loc and self.pointsource_distance:
-            # finite site effects are ignored only for sites over the
-            # pointsource_distance from the rupture (if any)
-            point_ruptures = list(src.point_ruptures())
-            for pr in point_ruptures:
-                pdist = self.pointsource_distance['%.2f' % pr.mag]
-                close, far = sites.split(pr.hypocenter, pdist)
-                if close is None:  # all is far
-                    yield [pr], far
-                elif far is None:  # all is close
-                    yield self._ruptures(src, pr.mag), close
-                else:  # some sites are far, some are close
-                    yield [pr], far
-                    yield self._ruptures(src, pr.mag), close
-        else:  # just yield the ruptures
-            yield self._ruptures(src), sites
+    def _get_rups(self, srcs, sites):
+        # returns a list of ruptures, each one with a .sites attribute
+        rups = []
+
+        def add(rupiter, sites):
+            for rup in rupiter:
+                rup.sites = sites
+                rups.append(rup)
+        for src in srcs:
+            loc = getattr(src, 'location', None)
+            if loc and self.pointsource_distance == 0:
+                # all finite size effects are ignored
+                add(src.point_ruptures(), sites)
+            elif loc and self.pointsource_distance:
+                # finite site effects are ignored only for sites over the
+                # pointsource_distance from the rupture (if any)
+                for pr in src.point_ruptures():
+                    pdist = self.pointsource_distance['%.2f' % pr.mag]
+                    close, far = sites.split(pr.hypocenter, pdist)
+                    if self.fewsites:
+                        if close is None:  # all is far, common for small mag
+                            add([pr], sites)
+                        else:  # something is close
+                            add(self._ruptures(src, pr.mag), sites)
+                    else:  # many sites
+                        if close is None:  # all is far
+                            add([pr], far)
+                        elif far is None:  # all is close
+                            add(self._ruptures(src, pr.mag), close)
+                        else:  # some sites are far, some are close
+                            add([pr], far)
+                            add(self._ruptures(src, pr.mag), close)
+            else:  # just add the ruptures
+                add(self._ruptures(src), sites)
+
+        return rups
 
 
 class BaseContext(metaclass=abc.ABCMeta):
