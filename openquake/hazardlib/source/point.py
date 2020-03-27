@@ -179,11 +179,11 @@ class PointSource(ParametricSeismicSource):
         """
         Generate one point rupture for each magnitude
         """
+        _, np = self.nodal_plane_distribution.data[0]
+        _, depth = self.hypocenter_distribution.data[0]
+        hc = Point(latitude=self.location.latitude,
+                   longitude=self.location.longitude, depth=depth)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            _, np = self.nodal_plane_distribution.data[0]
-            _, depth = self.hypocenter_distribution.data[0]
-            hc = Point(latitude=self.location.latitude,
-                       longitude=self.location.longitude, depth=depth)
             yield PointRupture(mag, self.tectonic_region_type, hc,
                                mag_occ_rate, self.temporal_occurrence_model)
 
