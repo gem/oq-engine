@@ -500,6 +500,20 @@ class ParametricProbabilisticRupture(BaseRupture):
         return cdpp
 
 
+class PointRupture(ParametricProbabilisticRupture):
+    """
+    A rupture coming from a far away PointSource, so that the finite
+    size effects can be neglected.
+    """
+    def __init__(self, mag, tectonic_region_type, hypocenter,
+                 occurrence_rate, temporal_occurrence_model):
+        self.mag = mag
+        self.tectonic_region_type = tectonic_region_type
+        self.loc = hypocenter
+        self.occurrence_rate = occurrence_rate
+        self.temporal_occurrence_model = temporal_occurrence_model
+
+
 def get_geom(surface, is_from_fault_source, is_multi_surface,
              is_gridded_surface):
     """

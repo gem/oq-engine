@@ -48,7 +48,9 @@ def get_distances(rupture, sites, param):
     :param param: the kind of distance to compute (default rjb)
     :returns: an array of distances from the given sites
     """
-    if param == 'rrup':
+    if hasattr(rupture, 'loc'):  # a PointRupture
+        dist = rupture.loc.distance_to_mesh(sites)
+    elif param == 'rrup':
         dist = rupture.surface.get_min_distance(sites)
     elif param == 'rx':
         dist = rupture.surface.get_rx_distance(sites)
@@ -434,8 +436,7 @@ class PmapMaker(object):
             else:  # many sites, do not collapse the ruptures
                 ctxs = []
                 for src in srcs:
-                    rups = self._ruptures(src)
-                    for rups, sites in self._gen_rups_sites(src, sites, rups):
+                    for rups, sites in self._gen_rups_sites(src, sites):
                         ctxs.extend(self._ctxs(rups, sites, grp_ids))
             self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
@@ -508,30 +509,24 @@ class PmapMaker(object):
         out = sum(map(_collapse, groupby_bin(rups, 255, magdist)), [])
         return out
 
-    def _gen_rups_sites(self, src, sites, rups):
+    def _gen_rups_sites(self, src, sites):
         loc = getattr(src, 'location', None)
-        if loc:
+        if loc and self.pointsource_distance:
             # implements pointsource_distance: finite site effects
             # are ignored for sites over that distance, if any
-            simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
-            if simple or not self.pointsource_distance:
-                yield rups, sites  # there is nothing to collapse
-            else:
-                weights, depths = zip(*src.hypocenter_distribution.data)
-                loc = copy.copy(loc)  # average hypocenter used in sites.split
-                loc.depth = numpy.average(depths, weights=weights)
-                for mag, rups in groupby(rups, bymag).items():
-                    pdist = self.pointsource_distance.get('%.2f' % mag)
-                    close, far = sites.split(loc, pdist)
-                    if close is None:  # all is far
-                        yield _collapse(rups), far
-                    elif far is None:  # all is close
-                        yield rups, close
-                    else:  # some sites are far, some are close
-                        yield _collapse(rups), far
-                        yield rups, close
-        else:  # no point source or site-specific analysis
-            yield rups, sites
+            point_ruptures = list(src.point_ruptures())
+            minmag, maxmag = src.get_min_max_mag()
+            pdist = self.pointsource_distance[str(maxmag)]
+            close, far = sites.split(loc, pdist)
+            if close is None:  # all is far
+                yield point_ruptures, far
+            elif far is None:  # all is close
+                yield self._ruptures(src), close
+            else:  # some sites are far, some are close
+                yield point_ruptures, far
+                yield self._ruptures(src), close
+        else:  # do not collapse
+            yield self._ruptures(src), sites
 
 
 class BaseContext(metaclass=abc.ABCMeta):

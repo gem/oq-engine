@@ -22,7 +22,8 @@ from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import (
+    ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box
 
 
@@ -170,6 +171,18 @@ class PointSource(ParametricSeismicSource):
                         nhc if kwargs.get('shift_hypo') else hc,
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
+
+    def point_ruptures(self):
+        """
+        Generate one point rupture for each magnitude
+        """
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            _, np = self.nodal_plane_distribution.data[0]
+            _, depth = self.hypocenter_distribution.data[0]
+            hc = Point(latitude=self.location.latitude,
+                       longitude=self.location.longitude, depth=depth)
+            yield PointRupture(mag, self.tectonic_region_type, hc,
+                               mag_occ_rate, self.temporal_occurrence_model)
 
     def count_nphc(self):
         """
