@@ -157,7 +157,7 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
         psd = param.get('pointsource_distance', {'default': {}})
-        self.pointsource_distance = getdefault(psd, trt) or {}
+        self.pointsource_distance = getdefault(psd, trt)  # can be 0 or {}
         # NB: self.pointsource_distance is a dict mag -> pdist, possibly empty
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
@@ -514,9 +514,13 @@ class PmapMaker(object):
 
     def _gen_rups_sites(self, src, sites):
         loc = getattr(src, 'location', None)
-        if loc and self.pointsource_distance:
-            # implements pointsource_distance: finite site effects
-            # are ignored for sites over that distance, if any
+        if loc and self.pointsource_distance == 0:
+            # all finite size effects are ignored
+            for pr in src.point_ruptures():
+                yield [pr], sites
+        elif loc and self.pointsource_distance:
+            # finite site effects are ignored only for sites over the
+            # pointsource_distance from the rupture (if any)
             point_ruptures = list(src.point_ruptures())
             for pr in point_ruptures:
                 pdist = self.pointsource_distance['%.2f' % pr.mag]
@@ -528,7 +532,7 @@ class PmapMaker(object):
                 else:  # some sites are far, some are close
                     yield [pr], far
                     yield self._ruptures(src, pr.mag), close
-        else:  # do not collapse
+        else:  # do nothing
             yield self._ruptures(src), sites
 
 
