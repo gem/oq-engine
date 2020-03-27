@@ -500,6 +500,26 @@ class ParametricProbabilisticRupture(BaseRupture):
         return cdpp
 
 
+class PointSurface:
+    """
+    A fake surface used in PointRuptures
+    """
+    def __init__(self, hypocenter):
+        self.hypocenter = hypocenter
+
+    def get_strike(self):
+        return 0
+
+    def get_dip(self):
+        return 0
+
+    def get_top_edge_depth(self):
+        return self.hypocenter.depth
+
+    def get_width(self):
+        return 0
+
+
 class PointRupture(ParametricProbabilisticRupture):
     """
     A rupture coming from a far away PointSource, so that the finite
@@ -513,6 +533,7 @@ class PointRupture(ParametricProbabilisticRupture):
         self.hypocenter = hypocenter
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
+        self.surface = PointSurface(hypocenter)
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,
