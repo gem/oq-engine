@@ -531,7 +531,7 @@ class PmapMaker(object):
                 else:  # some sites are far, some are close
                     yield [pr], far
                     yield self._ruptures(src, pr.mag), close
-        else:  # do nothing
+        else:  # just yield the ruptures
             yield self._ruptures(src), sites
 
 
