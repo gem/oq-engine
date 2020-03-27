@@ -17,7 +17,7 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
-import operator
+import numpy
 from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -26,8 +26,6 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box
-
-byweight = operator.itemgetter(0)
 
 
 def _get_rupture_dimensions(src, mag, rake, dip):
@@ -182,8 +180,8 @@ class PointSource(ParametricSeismicSource):
         """
         Generate one point rupture for each magnitude
         """
-        _w, np = max(self.nodal_plane_distribution.data, key=byweight)
-        _w, depth = max(self.hypocenter_distribution.data, key=byweight)
+        weights, depths = zip(*self.hypocenter_distribution.data)
+        depth = numpy.average(depths, weights=weights)
         hc = Point(latitude=self.location.latitude,
                    longitude=self.location.longitude, depth=depth)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
