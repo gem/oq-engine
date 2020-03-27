@@ -512,6 +512,7 @@ class PmapMaker(object):
         return out
 
     def _get_rups(self, srcs, sites):
+        # returns a list of ruptures, each one with a .sites attribute
         rups = []
 
         def add(rupiter, sites):
@@ -526,12 +527,11 @@ class PmapMaker(object):
             elif loc and self.pointsource_distance:
                 # finite site effects are ignored only for sites over the
                 # pointsource_distance from the rupture (if any)
-                point_ruptures = list(src.point_ruptures())
-                for pr in point_ruptures:
+                for pr in src.point_ruptures():
                     pdist = self.pointsource_distance['%.2f' % pr.mag]
                     close, far = sites.split(pr.hypocenter, pdist)
                     if self.fewsites:
-                        if close is None:  # all is far
+                        if close is None:  # all is far, common for small mag
                             add([pr], sites)
                         else:  # something is close
                             add(self._ruptures(src, pr.mag), sites)
@@ -543,7 +543,7 @@ class PmapMaker(object):
                         else:  # some sites are far, some are close
                             add([pr], far)
                             add(self._ruptures(src, pr.mag), close)
-            else:  # just yield the ruptures
+            else:  # just add the ruptures
                 add(self._ruptures(src), sites)
 
         return rups
