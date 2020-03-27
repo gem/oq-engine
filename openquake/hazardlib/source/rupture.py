@@ -508,8 +508,9 @@ class PointRupture(ParametricProbabilisticRupture):
     def __init__(self, mag, tectonic_region_type, hypocenter,
                  occurrence_rate, temporal_occurrence_model):
         self.mag = mag
+        self.rake = 0
         self.tectonic_region_type = tectonic_region_type
-        self.loc = hypocenter
+        self.hypocenter = hypocenter
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
 

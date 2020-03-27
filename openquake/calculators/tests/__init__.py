@@ -96,13 +96,13 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = True
+    OVERWRITE_EXPECTED = False
     edir = None  # will be set to a temporary directory
 
     @classmethod
     def setUpClass(cls):
         builtins.open = check_open
-        export.sanity_check = False
+        export.sanity_check = True
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv

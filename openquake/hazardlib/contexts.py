@@ -48,8 +48,10 @@ def get_distances(rupture, sites, param):
     :param param: the kind of distance to compute (default rjb)
     :returns: an array of distances from the given sites
     """
-    if hasattr(rupture, 'loc'):  # a PointRupture
-        dist = rupture.loc.distance_to_mesh(sites)
+    # avoid a circular import
+    from openquake.hazardlib.source.rupture import PointRupture
+    if isinstance(rupture, PointRupture):
+        dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
         dist = rupture.surface.get_min_distance(sites)
     elif param == 'rx':
@@ -518,7 +520,7 @@ class PmapMaker(object):
             point_ruptures = list(src.point_ruptures())
             for pr in point_ruptures:
                 pdist = self.pointsource_distance['%.2f' % pr.mag]
-                close, far = sites.split(pr.loc, pdist)
+                close, far = sites.split(pr.hypocenter, pdist)
                 if close is None:  # all is far
                     yield [pr], far
                 elif far is None:  # all is close
