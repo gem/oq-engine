@@ -519,6 +519,9 @@ class PointSurface:
     def get_width(self):
         return 0
 
+    def get_closest_points(self, mesh):
+        return mesh
+
 
 class PointRupture(ParametricProbabilisticRupture):
     """
@@ -534,6 +537,7 @@ class PointRupture(ParametricProbabilisticRupture):
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
         self.surface = PointSurface(hypocenter)
+        self.weight = None  # no mutex
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,
