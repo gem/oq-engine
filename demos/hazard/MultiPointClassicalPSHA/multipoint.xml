@@ -1,16 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns="http://openquake.org/xmlns/nrml/0.4"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
     name="SSHARA - Smoothed Seismicity"
     >
-        <sourceGroup
-        rup_interdep="indep"
-        src_interdep="indep"
-        tectonicRegion="Tectonic_Type_C"
-        >
             <multiPointSource
             id="1500"
             name="Eastern Rift"
@@ -64,6 +59,5 @@ xmlns:gml="http://www.opengis.net/gml"
                     <hypoDepth depth="3.50000E+01" probability="1.59420E-01"/>
                 </hypoDepthDist>
             </multiPointSource>
-        </sourceGroup>
     </sourceModel>
 </nrml>

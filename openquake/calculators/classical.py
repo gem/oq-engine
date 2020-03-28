@@ -350,15 +350,15 @@ class ClassicalCalculator(base.HazardCalculator):
                                   len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
 
-            nr = sum(src.weight for src in sg)
+            w = sum(src.weight for src in sg)
             logging.info('TRT = %s', sg.trt)
             if oq.maximum_distance.magdist:
                 md = ', '.join('%s->%d' % item for item in sorted(
                     oq.maximum_distance.magdist[sg.trt].items()))
             else:
                 md = oq.maximum_distance(sg.trt)
-            logging.info('max_dist={}, gsims={}, ruptures={:,d}, blocks={}'.
-                         format(md, len(gsims), int(nr), nb))
+            logging.info('max_dist={}, gsims={}, weight={:,d}, blocks={}'.
+                         format(md, len(gsims), int(w), nb))
             if oq.pointsource_distance['default']:
                 pd = ', '.join('%s->%d' % item for item in sorted(
                     oq.pointsource_distance[sg.trt].items()))
@@ -436,8 +436,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-        ct = oq.concurrent_tasks
-        logging.info('Building hazard statistics with %d concurrent_tasks', ct)
+        ct = oq.concurrent_tasks or 1
+        logging.info('Building hazard statistics')
         weights = [rlz.weight for rlz in self.realizations]
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),

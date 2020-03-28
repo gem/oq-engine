@@ -673,6 +673,7 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
         h5['grp_ids'] = grp_ids
     csm.gsim_lt.check_imts(oqparam.imtls)
     csm.source_info = data
+    src = csm.src_groups[0].sources[0]
     return csm
 
 
