@@ -289,8 +289,8 @@ def get_effect(mags, sitecol, gsims_by_trt, oq):
     imts_with_period = [imt for imt in oq.imtls
                         if imt == 'PGA' or imt.startswith('SA')]
     imts_ok = len(imts_with_period) == len(oq.imtls)
-    effect_ok = imts_ok and (
-        oq.pointsource_distance['default'] or oq.minimum_intensity)
+    psd = oq.pointsource_distance['default']
+    effect_ok = imts_ok and (psd or oq.minimum_intensity)
     if effect_ok:
         logging.info('Computing effect of the ruptures')
         mon = performance.Monitor('rupture effect')
@@ -308,7 +308,11 @@ def get_effect(mags, sitecol, gsims_by_trt, oq):
             if minint:
                 oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
             # replace pointsource_distance with a dict trt -> mag -> dst
-            if oq.pointsource_distance['default']:
+            if psd:
                 oq.pointsource_distance[trt] = eff.dist_by_mag(
-                    eff.collapse_value(oq.pointsource_distance['default']))
+                    eff.collapse_value(psd))
+    elif psd:  # like in case_24 with PGV
+        for trt in dist_bins:
+            pdist = getdefault(oq.pointsource_distance, trt)
+            oq.pointsource_distance[trt] = {mag: pdist for mag in mags}
     return aw

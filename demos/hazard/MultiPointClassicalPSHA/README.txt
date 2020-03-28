@@ -19,11 +19,10 @@ magnitudes from 7.35 down to 4.55) the effective `pointsource_distance`
 is clearly lower than the maximum `pointsource_distance`; the engine
 computes it automatically based on the GSIMs and the site conditions.
 
-For instance for magnitude 7.25 70 km
-corresponds to 100 km for magnitude 9.35. At the minimum magnitude of
-4.55 the effective pointsource_distance is of only 17 km: it means
-that a huge number of rupture will be considered pointlike. In
-particular an analysis show that for magnitude 7.35 only 45 point
+For instance for magnitude 7.25 the effective `pointsource_distance` goes
+down to 70 km, while at the minimum magnitude of 4.55 it goes down
+to only 17 km: it means that a huge number of ruptures will be considered
+pointlike. In particular an analysis show that for magnitude 7.35 only 45 point
 sources (out of 696) will be considered finite-size, for magnitude
 7.25 only 5, and for all the other magnitudes the finite-size effects
 will be completely neglected, thus resulting in a strong reduction of

@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.contexts import ContextMaker
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs
@@ -360,9 +360,9 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('max_dist={}, gsims={}, weight={:,d}, blocks={}'.
                          format(md, len(gsims), int(w), nb))
             if oq.pointsource_distance['default']:
-                pd = ', '.join('%s->%d' % item for item in sorted(
-                    oq.pointsource_distance[sg.trt].items()))
-                logging.info('ps_dist=%s', pd)
+                psd = getdefault(oq.pointsource_distance, sg.trt)
+                msg = ', '.join('%s->%d' % it for it in sorted(psd.items()))
+                logging.info('ps_dist=%s', msg)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
