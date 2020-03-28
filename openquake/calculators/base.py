@@ -55,18 +55,6 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
-source_info_dt = numpy.dtype([
-    ('source_id', hdf5.vstr),          # 0
-    ('gidx', numpy.uint16),            # 1
-    ('code', (numpy.string_, 1)),      # 2
-    ('num_sources', numpy.uint32),     # 3
-    ('calc_time', numpy.float32),      # 4
-    ('num_sites', numpy.uint32),       # 5
-    ('eff_ruptures', numpy.uint32),    # 6
-    ('checksum', numpy.uint32),        # 7
-    ('serial', numpy.uint32),          # 8
-])
-
 NUM_SOURCES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
@@ -861,7 +849,8 @@ class HazardCalculator(BaseCalculator):
             row[CALC_TIME] += arr[2]
         rows = self.csm.source_info.values()
         recs = [tuple(row) for row in rows]
-        self.datastore['source_info'] = numpy.array(recs, source_info_dt)
+        hdf5.extend(self.datastore['source_info'],
+                    numpy.array(recs, readinput.source_info_dt))
 
     def post_process(self):
         """For compatibility with the engine"""
