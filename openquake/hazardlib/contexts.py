@@ -507,20 +507,17 @@ class PmapMaker(object):
 
     def collapse_ctxs(self, ctxs):
         """
-        Collapse contexts with similar parameters.
+        Collapse contexts with similar parameters and distances.
 
         :param ctxs: a list of pairs (rup, dctx)
         :returns: collapsed contexts
         """
-        RRP = self.REQUIRES_RUPTURE_PARAMETERS
-        RD = self.REQUIRES_DISTANCES
-
         def params(ctx):
             rup, dctx = ctx
             lst = []
-            for par in RRP:
+            for par in self.REQUIRES_RUPTURE_PARAMETERS:
                 lst.append(getattr(rup, par))
-            for dst in RD:
+            for dst in self.REQUIRES_DISTANCES:
                 lst.extend(numpy.round(getattr(dctx, dst)))
             return tuple(lst)
 
