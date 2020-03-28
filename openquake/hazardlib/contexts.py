@@ -21,6 +21,7 @@ import time
 import warnings
 import operator
 import itertools
+import collections
 import numpy
 from scipy.interpolate import interp1d
 
@@ -365,8 +366,6 @@ class PmapMaker(object):
             if self.rup_indep and rup_parametric:
                 if self.pointsource_distance != {}:
                     rups = self.collapse_point_ruptures(rups, sites)
-                if self.collapse_ruptures:
-                    rups = self.collapse_md(rups, sites)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
             self.numrups += len(ctxs)
             for rup, dctx in ctxs:
@@ -503,13 +502,6 @@ class PmapMaker(object):
                 # group together ruptures in the same distance bin
                 output.extend(_collapse(rs))
         return output
-
-    def collapse_md(self, rups, sites):
-        # collapse ruptures in the same magdist bin
-        def magdist(rup):
-            return rup.mag, get_distances(rup, sites, 'rrup').min()
-        out = sum(map(_collapse, groupby_bin(rups, 255, magdist)), [])
-        return out
 
     def _get_rups(self, srcs, sites):
         # returns a list of ruptures, each one with a .sites attribute
