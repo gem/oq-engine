@@ -367,7 +367,7 @@ class PmapMaker(object):
                 if self.pointsource_distance != {}:
                     rups = self.collapse_point_ruptures(rups, sites)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-            if self.rup_indep and rup_parametric:
+            if self.rup_indep and rup_parametric and self.collapse_ruptures:
                 ctxs = self.collapse_ctxs(ctxs)
             self.numrups += len(ctxs)
             for rup, dctx in ctxs:
