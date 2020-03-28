@@ -364,7 +364,7 @@ class PmapMaker(object):
             rup_parametric = not numpy.isnan(
                 [r.occurrence_rate for r in rups]).any()
             if self.rup_indep and rup_parametric:
-                if self.pointsource_distance != {}:
+                if len(sites) == 1 and self.pointsource_distance != {}:
                     rups = self.collapse_point_ruptures(rups, sites)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
             if self.rup_indep and rup_parametric and self.collapse_ruptures:
@@ -497,7 +497,7 @@ class PmapMaker(object):
                 output.extend(mrups)
                 continue
             coll = []
-            for rup in mrups:
+            for rup in mrups:  # called on a single site
                 rup.dist = get_distances(rup, sites, 'rrup').min()
                 coll.append(rup)
             for rs in groupby_bin(coll, 10, operator.attrgetter('dist')):
