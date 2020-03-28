@@ -363,8 +363,8 @@ class PmapMaker(object):
             rup_parametric = not numpy.isnan(
                 [r.occurrence_rate for r in rups]).any()
             if self.rup_indep and rup_parametric:
-                if self.pointsource_distance:
-                    rups = self.collapse_psd(rups, sites)
+                if self.pointsource_distance != {}:
+                    rups = self.collapse_point_ruptures(rups, sites)
                 if self.collapse_ruptures:
                     rups = self.collapse_md(rups, sites)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
@@ -480,28 +480,29 @@ class PmapMaker(object):
         rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
         return pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
 
-    def collapse_psd(self, rups, sites):
+    def collapse_point_ruptures(self, rups, sites):
         """
         Collapse ruptures more distant than the pointsource_distance
         """
-        out = []
-        for mag, mrups in groupby(rups, bymag).items():
+        from openquake.hazardlib.source.rupture import PointRupture
+        pointlike, output = [], []
+        for rup in rups:
+            if isinstance(rup, PointRupture):
+                pointlike.append(rup)
+            else:
+                output.append(rup)
+        for mag, mrups in groupby(pointlike, bymag).items():
             if len(mrups) == 1:  # nothing to do
-                out.extend(mrups)
+                output.extend(mrups)
                 continue
-            pdist = self.pointsource_distance['%.2f' % mag]
             coll = []
             for rup in mrups:
-                dist = get_distances(rup, sites, 'rrup').min()
-                if dist < pdist:  # do not collapse
-                    out.append(rup)
-                else:
-                    rup.dist = dist
-                    coll.append(rup)
+                rup.dist = get_distances(rup, sites, 'rrup').min()
+                coll.append(rup)
             for rs in groupby_bin(coll, 10, operator.attrgetter('dist')):
                 # group together ruptures in the same distance bin
-                out.extend(_collapse(rs))
-        return out
+                output.extend(_collapse(rs))
+        return output
 
     def collapse_md(self, rups, sites):
         # collapse ruptures in the same magdist bin
