@@ -367,6 +367,8 @@ class PmapMaker(object):
                 if self.pointsource_distance != {}:
                     rups = self.collapse_point_ruptures(rups, sites)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
+            if self.rup_indep and rup_parametric:
+                ctxs = self.collapse_ctxs(ctxs)
             self.numrups += len(ctxs)
             for rup, dctx in ctxs:
                 mask = (dctx.rrup <= self.maximum_distance(
@@ -502,6 +504,35 @@ class PmapMaker(object):
                 # group together ruptures in the same distance bin
                 output.extend(_collapse(rs))
         return output
+
+    def collapse_ctxs(self, ctxs):
+        """
+        Collapse contexts with similar parameters.
+
+        :param ctxs: a list of pairs (rup, dctx)
+        :returns: collapsed contexts
+        """
+        RRP = self.REQUIRES_RUPTURE_PARAMETERS
+        RD = self.REQUIRES_DISTANCES
+
+        def params(ctx):
+            rup, dctx = ctx
+            lst = []
+            for par in RRP:
+                lst.append(getattr(rup, par))
+            for dst in RD:
+                lst.extend(numpy.round(getattr(dctx, dst)))
+            return tuple(lst)
+
+        out = []
+        for values in groupby(ctxs, params).values():
+            if len(values) == 1:
+                out.append(values[0])
+            else:
+                [rup] = _collapse([rup for rup, dctx in values])
+                dctx = values[0][1]  # get the first dctx
+                out.append((rup, dctx))
+        return out
 
     def _get_rups(self, srcs, sites):
         # returns a list of ruptures, each one with a .sites attribute
