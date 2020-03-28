@@ -21,6 +21,7 @@ import time
 import warnings
 import operator
 import itertools
+import collections
 import numpy
 from scipy.interpolate import interp1d
 
@@ -365,9 +366,9 @@ class PmapMaker(object):
             if self.rup_indep and rup_parametric:
                 if self.pointsource_distance != {}:
                     rups = self.collapse_point_ruptures(rups, sites)
-                if self.collapse_ruptures:
-                    rups = self.collapse_md(rups, sites)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
+            if self.rup_indep and rup_parametric and self.collapse_ruptures:
+                ctxs = self.collapse_ctxs(ctxs)
             self.numrups += len(ctxs)
             for rup, dctx in ctxs:
                 mask = (dctx.rrup <= self.maximum_distance(
@@ -504,11 +505,30 @@ class PmapMaker(object):
                 output.extend(_collapse(rs))
         return output
 
-    def collapse_md(self, rups, sites):
-        # collapse ruptures in the same magdist bin
-        def magdist(rup):
-            return rup.mag, get_distances(rup, sites, 'rrup').min()
-        out = sum(map(_collapse, groupby_bin(rups, 255, magdist)), [])
+    def collapse_ctxs(self, ctxs):
+        """
+        Collapse contexts with similar parameters and distances.
+
+        :param ctxs: a list of pairs (rup, dctx)
+        :returns: collapsed contexts
+        """
+        def params(ctx):
+            rup, dctx = ctx
+            lst = []
+            for par in self.REQUIRES_RUPTURE_PARAMETERS:
+                lst.append(getattr(rup, par))
+            for dst in self.REQUIRES_DISTANCES:
+                lst.extend(numpy.round(getattr(dctx, dst)))
+            return tuple(lst)
+
+        out = []
+        for values in groupby(ctxs, params).values():
+            if len(values) == 1:
+                out.append(values[0])
+            else:
+                [rup] = _collapse([rup for rup, dctx in values])
+                dctx = values[0][1]  # get the first dctx
+                out.append((rup, dctx))
         return out
 
     def _get_rups(self, srcs, sites):
