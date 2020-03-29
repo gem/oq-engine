@@ -39,6 +39,7 @@ I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
+POINT_RUPTURE_BINS = 20
 
 
 def get_distances(rupture, sites, param):
@@ -337,6 +338,8 @@ class ContextMaker(object):
 
 def _collapse(rups):
     # collapse a list of ruptures into a single rupture
+    if len(rups) < 2:
+        return rups
     rup = copy.copy(rups[0])
     rup.occurrence_rate = sum(r.occurrence_rate for r in rups)
     return [rup]
@@ -495,11 +498,14 @@ class PmapMaker(object):
             if len(mrups) == 1:  # nothing to do
                 output.extend(mrups)
                 continue
+            mdist = self.maximum_distance(self.trt, mag)
             coll = []
             for rup in mrups:  # called on a single site
                 rup.dist = get_distances(rup, sites, 'rrup').min()
-                coll.append(rup)
-            for rs in groupby_bin(coll, 10, operator.attrgetter('dist')):
+                if rup.dist <= mdist:
+                    coll.append(rup)
+            for rs in groupby_bin(
+                    coll, POINT_RUPTURE_BINS, operator.attrgetter('dist')):
                 # group together ruptures in the same distance bin
                 output.extend(_collapse(rs))
         return output

@@ -38,9 +38,9 @@ ruptures to 690 (400 finite size ruptures + 290 collapsed pointlike
 ruptures). As a result, the computation time goes down from 60s to 8s
 on the same laptop.
 
-Expected runtime: < 10 seconds
+Expected runtime: < 20 seconds
 Number of sites: 1
 Number of source model logic tree realizations: 1
 GMPEs: ChiouYoungs2014, AkkarEtAlRjb2014, AtkinsonBoore2006Modified2011, PezeshkEtAl2011NEHRPBC
-IMTs: PGA, SA(0.1), SA(0.2), SA(0.5), SA(1.0), SA(2.0)
-Outputs: Hazard Curve, UHS
+IMTs: SA(2.0)
+Outputs: Hazard Curves
