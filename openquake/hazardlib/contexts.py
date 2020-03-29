@@ -144,7 +144,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.collapse_ruptures = param.get('collapse_ruptures', False)
+        self.collapse_ctxs = param.get('collapse_ctxs', False)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
@@ -376,13 +376,13 @@ class PmapMaker(object):
         if self.fewsites:  # do not filter, but collapse
             rup_parametric = not numpy.isnan(
                 [r.occurrence_rate for r in rups]).any()
-            if self.rup_indep and rup_parametric and self.collapse_ruptures:
-                if len(sites) == 1 and self.pointsource_distance != {}:
-                    rups = self.collapse_point_ruptures(rups, sites)
-                    # print_finite_size(rups)
+            if (self.rup_indep and rup_parametric and len(sites) == 1
+                    and self.pointsource_distance != {}):
+                rups = self.collapse_point_ruptures(rups, sites)
+                # print_finite_size(rups)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-            if self.rup_indep and rup_parametric and self.collapse_ruptures:
-                ctxs = self.collapse_ctxs(ctxs)
+            if self.rup_indep and rup_parametric and self.collapse_ctxs:
+                ctxs = self.collapse_the_ctxs(ctxs)
             self.numrups += len(ctxs)
             for rup, dctx in ctxs:
                 mask = (dctx.rrup <= self.maximum_distance(
@@ -522,7 +522,7 @@ class PmapMaker(object):
                 output.extend(_collapse(rs))
         return output
 
-    def collapse_ctxs(self, ctxs):
+    def collapse_the_ctxs(self, ctxs):
         """
         Collapse contexts with similar parameters and distances.
 

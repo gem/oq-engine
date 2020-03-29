@@ -786,7 +786,7 @@ class HazardCalculator(BaseCalculator):
 
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
-                          collapse_ruptures=oq.collapse_ruptures,
+                          collapse_ctxs=oq.collapse_ctxs,
                           avg_losses=oq.avg_losses, amplifier=self.amplifier)
 
         # compute exposure stats
