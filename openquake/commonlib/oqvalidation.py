@@ -101,7 +101,7 @@ class OqParam(valid.ParamSet):
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_threshold = valid.Param(valid.probability, 0.5)
-    collapse_ruptures = valid.Param(valid.boolean, False)
+    collapse_ctxs = valid.Param(valid.boolean, False)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
