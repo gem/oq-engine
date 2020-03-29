@@ -21,6 +21,7 @@ import time
 import warnings
 import operator
 import itertools
+import collections
 import numpy
 from scipy.interpolate import interp1d
 
@@ -49,9 +50,7 @@ def get_distances(rupture, sites, param):
     :param param: the kind of distance to compute (default rjb)
     :returns: an array of distances from the given sites
     """
-    # avoid a circular import
-    from openquake.hazardlib.source.rupture import PointRupture
-    if isinstance(rupture, PointRupture):
+    if not rupture.surface:  # PointRupture
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
         dist = rupture.surface.get_min_distance(sites)
@@ -345,6 +344,18 @@ def _collapse(rups):
     return [rup]
 
 
+def print_finite_size(rups):
+    """
+    Used to print the number of finite-size ruptures
+    """
+    c = collections.Counter()
+    for rup in rups:
+        if rup.surface:
+            c['%.2f' % rup.mag] += 1
+    print(c)
+    print('total finite size ruptures = ', sum(c.values()))
+
+
 class PmapMaker(object):
     """
     A class to compute the PoEs from a given source
@@ -368,6 +379,7 @@ class PmapMaker(object):
             if self.rup_indep and rup_parametric and self.collapse_ruptures:
                 if len(sites) == 1 and self.pointsource_distance != {}:
                     rups = self.collapse_point_ruptures(rups, sites)
+                    # print_finite_size(rups)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
             if self.rup_indep and rup_parametric and self.collapse_ruptures:
                 ctxs = self.collapse_ctxs(ctxs)
@@ -434,6 +446,7 @@ class PmapMaker(object):
             self.numsites = 0
             ctxs = []
             rups = self._get_rups(srcs, sites)
+            # print_finite_size(rups)
             with self.ctx_mon:
                 if self.fewsites:
                     ctxs.extend(self._ctxs(rups, sites, grp_ids))
@@ -487,10 +500,9 @@ class PmapMaker(object):
         """
         Collapse ruptures more distant than the pointsource_distance
         """
-        from openquake.hazardlib.source.rupture import PointRupture
         pointlike, output = [], []
         for rup in rups:
-            if isinstance(rup, PointRupture):
+            if not rup.surface:
                 pointlike.append(rup)
             else:
                 output.append(rup)

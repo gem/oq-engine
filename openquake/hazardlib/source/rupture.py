@@ -522,6 +522,9 @@ class PointSurface:
     def get_closest_points(self, mesh):
         return mesh
 
+    def __bool__(self):
+        return False
+
 
 class PointRupture(ParametricProbabilisticRupture):
     """
