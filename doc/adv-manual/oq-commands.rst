@@ -107,13 +107,10 @@ this number changes at each version::
   agg_curves-stats ['csv']
   agg_losses-rlzs ['csv']
   agg_losses-stats ['csv']
-  agg_maps-rlzs ['csv']
-  agg_maps-stats ['csv']
   agg_risk ['csv']
   agglosses ['csv']
   aggregate_by ['csv']
   asset_risk ['csv']
-  avg_losses ['csv']
   avg_losses-rlzs ['csv']
   avg_losses-stats ['csv']
   bcr-rlzs ['csv']
@@ -137,12 +134,14 @@ this number changes at each version::
   loss_maps-stats ['csv', 'npz']
   losses_by_asset ['npz', 'csv']
   losses_by_event ['csv']
-  losses_by_tag ['csv']
   realizations ['csv']
-  rup_loss_table ['xml']
   ruptures ['xml', 'csv']
+  tot_curves-rlzs ['csv']
+  tot_curves-stats ['csv']
+  tot_losses-rlzs ['csv']
+  tot_losses-stats ['csv']
   uhs ['csv', 'xml', 'npz']
-  There are 52 exporters defined.
+  There are 51 exporters defined.
 
 At the present the supported export types are `xml`, `csv`, `rst`, `npz` and 
 `hdf5`. `xml` has been deprecated for some outputs and is not the recommended 
