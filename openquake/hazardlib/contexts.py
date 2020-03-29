@@ -21,7 +21,6 @@ import time
 import warnings
 import operator
 import itertools
-import collections
 import numpy
 from scipy.interpolate import interp1d
 
@@ -363,7 +362,7 @@ class PmapMaker(object):
         if self.fewsites:  # do not filter, but collapse
             rup_parametric = not numpy.isnan(
                 [r.occurrence_rate for r in rups]).any()
-            if self.rup_indep and rup_parametric:
+            if self.rup_indep and rup_parametric and self.collapse_ruptures:
                 if len(sites) == 1 and self.pointsource_distance != {}:
                     rups = self.collapse_point_ruptures(rups, sites)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
