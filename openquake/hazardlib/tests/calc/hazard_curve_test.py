@@ -20,19 +20,20 @@ import numpy
 import openquake.hazardlib
 from openquake.baselib.parallel import Starmap, sequential_apply
 from openquake.hazardlib import const
-from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.scalerel.wc1994 import WC1994
-from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
-from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.scalerel import WC1994, PeerMSR
+from openquake.hazardlib.mfd import TruncatedGRMFD, ArbitraryMFD
+from openquake.hazardlib.source import PointSource, SimpleFaultSource
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.akkar_bommer_2010 import AkkarBommer2010
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
+from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014PEER
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
@@ -199,3 +200,42 @@ class AvgGMPETestCase(unittest.TestCase):
             'Active Shallow Crust': ag})['PGA']
         # the AvgGMPE is not producing real means!!
         numpy.testing.assert_almost_equal(hc, hcm, decimal=3)
+
+
+class MixtureModelGMPETestCase(unittest.TestCase):
+    """
+    Test the Mixture Model using the 2018 PEER Test Set 2 Case 5,
+    as described in Hale et al. (2018)
+    """
+    def test(self):
+        sitecol = SiteCollection([Site(Point(-65.13490, 0.0),
+                                  vs30=760., z1pt0=48.0, z2pt5=0.607,
+                                  vs30measured=True)])
+        mfd = ArbitraryMFD([6.0], [0.01604252])
+        trace = Line([Point(-65.0000, -0.11240), Point(-65.000, 0.11240)])
+        # 1.0 km Mesh Spacing
+        mesh_spacing = 1.0
+        msr = PeerMSR()
+        sources = [SimpleFaultSource("001", "PEER Fault Set 2.5",
+                                     "Active Shallow Crust", mfd,
+                                     mesh_spacing,  msr, 2.0, PoissonTOM(1.0),
+                                     0.0, 12., trace, 90., 0.)]
+        imtls = {"PGA": [0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0,
+                         1.25, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.0]}
+        gmpe = ChiouYoungs2014PEER(mixture_model={"factors": [0.8, 1.2],
+                                                  "weights": [0.5, 0.5]})
+        hcm = calc_hazard_curves(sources, sitecol, imtls,
+                                 {"Active Shallow Crust": gmpe})
+        # Match against the benchmark is not exact - but differences in the
+        # log space should be on the order of less than 0.04 % in log space
+        expected = numpy.array([-4.140470001, -4.140913368, -4.259457496,
+                                -4.724733842, -5.900747959, -7.734816415,
+                                -9.019329629, -10.03864778, -10.90333404,
+                                -11.83885783, -12.65826442, -14.05429951,
+                                -15.22535996, -16.23988897, -17.94685518,
+                                -19.36079032, -20.57460101, -21.64201335])
+        expected = numpy.around(expected, 5)
+        hcm_lnpga = numpy.around(numpy.log(hcm["PGA"].flatten()), 5)
+        perc_diff = 100.0 * ((hcm_lnpga / expected) - 1.0)
+        numpy.testing.assert_allclose(perc_diff, numpy.zeros(len(perc_diff)),
+                                      atol=0.04)
