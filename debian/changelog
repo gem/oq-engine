@@ -1,3 +1,7 @@
+
+  [Marco Pagani]
+  * Fixed a bug in the coeff table of YEA97
+  
   [Michele Simionato]
   * Added a check on classical calculations which are too large to run
   * Added a flag `collapse_ruptures` and a new collapsing algorithm
