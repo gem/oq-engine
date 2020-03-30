@@ -279,9 +279,10 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types_and_levels')
             lens = set(map(len, self.hazard_imtls.values()))
             if len(lens) > 1:
-                warnings.warn('Each IMT must have the same number of levels'
-                              ', instead you have %s' % self.hazard_imtls,
-                              DeprecationWarning)
+                dic = {imt: len(ls) for imt, ls in self.hazard_imtls.items()}
+                warnings.warn(
+                    'Each IMT must have the same number of levels, instead '
+                    'you have %s' % dic, DeprecationWarning)
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
