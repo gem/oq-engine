@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.contexts import ContextMaker
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs
@@ -299,7 +299,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.by_task.clear()
         self.numrups = sum(arr[0] for arr in self.calc_times.values())
         numsites = sum(arr[1] for arr in self.calc_times.values())
-        logging.info('Effective number of ruptures: {:,d}/{:,d}'.format(
+        logging.info('Effective number of ruptures: {:_d}/{:_d}'.format(
             int(self.numrups), self.totrups))
         logging.info('Effective number of sites per rupture: %d',
                      numsites / self.numrups)
@@ -328,7 +328,7 @@ class ClassicalCalculator(base.HazardCalculator):
             maximum_distance=oq.maximum_distance,
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
-            collapse_ruptures=oq.collapse_ruptures,
+            collapse_ctxs=oq.collapse_ctxs,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
@@ -350,19 +350,19 @@ class ClassicalCalculator(base.HazardCalculator):
                                   len(block), block.weight)
                     yield f2, (block, srcfilter, gsims, param)
 
-            nr = sum(src.weight for src in sg)
+            w = sum(src.weight for src in sg)
             logging.info('TRT = %s', sg.trt)
             if oq.maximum_distance.magdist:
                 md = ', '.join('%s->%d' % item for item in sorted(
                     oq.maximum_distance.magdist[sg.trt].items()))
             else:
                 md = oq.maximum_distance(sg.trt)
-            logging.info('max_dist={}, gsims={}, ruptures={:,d}, blocks={}'.
-                         format(md, len(gsims), int(nr), nb))
+            logging.info('max_dist={}, gsims={}, weight={:,d}, blocks={}'.
+                         format(md, len(gsims), int(w), nb))
             if oq.pointsource_distance['default']:
-                pd = ', '.join('%s->%d' % item for item in sorted(
-                    oq.pointsource_distance[sg.trt].items()))
-                logging.info('ps_dist=%s', pd)
+                psd = getdefault(oq.pointsource_distance, sg.trt)
+                msg = ', '.join('%s->%d' % it for it in sorted(psd.items()))
+                logging.info('ps_dist=%s', msg)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
@@ -436,8 +436,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-        ct = oq.concurrent_tasks
-        logging.info('Building hazard statistics with %d concurrent_tasks', ct)
+        ct = oq.concurrent_tasks or 1
+        logging.info('Building hazard statistics')
         weights = [rlz.weight for rlz in self.realizations]
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),

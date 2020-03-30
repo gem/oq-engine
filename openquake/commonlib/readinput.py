@@ -59,6 +59,18 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
 
+source_info_dt = numpy.dtype([
+    ('source_id', hdf5.vstr),          # 0
+    ('gidx', numpy.uint16),            # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('num_sources', numpy.uint32),     # 3
+    ('calc_time', numpy.float32),      # 4
+    ('num_sites', numpy.uint32),       # 5
+    ('eff_ruptures', numpy.uint32),    # 6
+    ('checksum', numpy.uint32),        # 7
+    ('serial', numpy.uint32),          # 8
+])
+
 
 class DuplicatedPoint(Exception):
     """
@@ -644,14 +656,18 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
         csm.init_serials(oqparam.ses_seed)
     data = {}  # src_id -> row
     mags = set()
+    wkts = []
+    ns = 0
     for sg in csm.src_groups:
         for src in sg:
+            ns += 1
             if src.source_id in data:
                 num_sources = data[src.source_id][3] + 1
             else:
                 num_sources = 1
             row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
-                   num_sources, 0, 0, 0, src.checksum, src.serial, src._wkt]
+                   num_sources, 0, 0, 0, src.checksum, src.serial]
+            wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
                 srcmags = ['%.2f' % mag for mag in src.mags]
@@ -661,7 +677,11 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags.update(srcmags)
+
+    logging.info('There are %d sources with %d unique IDs', ns, len(data))
     if h5:
+        hdf5.create(h5, 'source_info', source_info_dt)  # avoid hdf5 damned bug
+        h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         h5['source_mags'] = numpy.array(sorted(mags))
         h5['grp_ids'] = grp_ids
     csm.gsim_lt.check_imts(oqparam.imtls)
