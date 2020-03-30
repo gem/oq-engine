@@ -24,7 +24,8 @@ from datetime import datetime
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, block_splitter, humansize
+from openquake.baselib.general import (
+    AccumDict, block_splitter, groupby, humansize)
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -48,13 +49,13 @@ MAXMEMORY = '''Estimated upper memory limit per core:
 %d sites x %d levels x %d gsims x %d src_multiplicity * 8 bytes = %s'''
 
 TOOBIG = '''\
-The calculation is too big:
+The calculation is too big and will likely fail:
 num_sites = %d
 num_levels = %d
 num_gsims = %d
 src_multiplicity = %d
 The estimated memory per core is %s > 4 GB.
-You MUST reduce one or more of the listed parameters.'''
+You should reduce one or more of the listed parameters.'''
 
 
 def get_extreme_poe(array, imtls):
@@ -153,6 +154,12 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError('You ran out of memory!')
         if not dic['pmap']:
             return acc
+        if self.oqparam.disagg_by_src:
+            # store the pmaps for the given source
+            for grp_id, pmap in dic['pmap'].items():
+                name = 'poes_by_src/%s/grp-%02d' % (
+                    dic['extra']['source_id'], grp_id)
+                self.datastore[name] = pmap
         trt = dic['extra'].pop('trt')
         with self.monitor('aggregate curves'):
             extra = dic['extra']
@@ -238,7 +245,7 @@ class ClassicalCalculator(base.HazardCalculator):
         max_num_grp_ids = max(len(grp_ids) for grp_ids in self.gidx)
         pmapbytes = self.N * num_levels * max_num_gsims * max_num_grp_ids * 8
         if pmapbytes > TWO32:
-            logging.error(
+            logging.warning(
                 TOOBIG % (self.N, num_levels, max_num_gsims, max_num_grp_ids,
                           humansize(pmapbytes)))
         logging.info(MAXMEMORY % (self.N, num_levels, max_num_gsims,
@@ -333,6 +340,8 @@ class ClassicalCalculator(base.HazardCalculator):
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
+        elif oq.disagg_by_src:  # do not split the sources
+            f1, f2 = classical, classical
         else:
             f1, f2 = classical, classical_split_filter
         C = oq.concurrent_tasks or 1
@@ -343,11 +352,14 @@ class ClassicalCalculator(base.HazardCalculator):
                 nb = 1
                 yield f1, (sg, srcfilter, gsims, param)
             else:  # regroup the sources in blocks
-                blocks = list(block_splitter(sg, totweight/C, srcweight))
+                blks = (groupby(sg, operator.attrgetter('source_id')).values()
+                        if oq.disagg_by_src
+                        else block_splitter(sg, totweight/C, srcweight))
+                blocks = list(blks)
                 nb = len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
-                                  len(block), block.weight)
+                                  len(block), sum(src.weight for src in block))
                     yield f2, (block, srcfilter, gsims, param)
 
             w = sum(src.weight for src in sg)
