@@ -18,11 +18,12 @@
 
 import os
 import logging
+import warnings
 import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib.general import DictArray, AccumDict
+from openquake.baselib.general import DictArray, AccumDict, DeprecationWarning
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
@@ -276,6 +277,11 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
+            lens = set(map(len, self.hazard_imtls.values()))
+            if len(lens) > 1:
+                warnings.warn('Each IMT must have the same number of levels'
+                              ', instead you have %s' % self.hazard_imtls,
+                              DeprecationWarning)
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
@@ -880,7 +886,7 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(msg)
             else:
                 getattr(logging, action)(msg)
-        
+
     def hazard_precomputed(self):
         """
         :returns: True if the hazard is precomputed
