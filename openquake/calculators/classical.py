@@ -157,7 +157,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.oqparam.disagg_by_src:
             # store the pmaps for the given source
             for grp_id, pmap in dic['pmap'].items():
-                name = 'disagg_by_src/%s/grp-%02d' % (
+                name = 'poes_by_src/%s/grp-%02d' % (
                     dic['extra']['source_id'], grp_id)
                 self.datastore[name] = pmap
         trt = dic['extra'].pop('trt')
