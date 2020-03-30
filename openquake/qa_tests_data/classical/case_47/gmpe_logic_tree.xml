@@ -7,7 +7,6 @@
                 applyToTectonicRegionType="Active Shallow Crust">
             <logicTreeBranch branchID="b1">
                 <uncertaintyModel>
-                    [ChiouYoungs2014PEER]
                     [ChiouYoungs2014PEER.mixture_model]
                     factors = [0.8, 1.2]
                     weights = [0.5, 0.5]
