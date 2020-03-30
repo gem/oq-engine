@@ -120,7 +120,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         cmaker, src_filter, group).make()
     extra['task_no'] = getattr(monitor, 'task_no', 0)
     extra['trt'] = trt
-
+    extra['source_id'] = src.source_id
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
         pmap[src.grp_id] *= group_probability
