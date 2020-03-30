@@ -121,7 +121,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges, monitor):
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=True)
-    gmf_mon = monitor('computing mean_std', measuremem=False)
+    gmf_mon = monitor('disagg mean_std', measuremem=False)
     for sid, mat in disagg.build_matrices(
             rupdata, sitecol, cmaker, iml4, oq.num_epsilon_bins,
             bin_edges, pne_mon, mat_mon, gmf_mon):

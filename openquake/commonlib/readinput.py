@@ -31,7 +31,7 @@ import collections
 import numpy
 import requests
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import decode, zip
@@ -58,6 +58,18 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
+
+source_info_dt = numpy.dtype([
+    ('source_id', hdf5.vstr),          # 0
+    ('gidx', numpy.uint16),            # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('num_sources', numpy.uint32),     # 3
+    ('calc_time', numpy.float32),      # 4
+    ('num_sites', numpy.uint32),       # 5
+    ('eff_ruptures', numpy.uint32),    # 6
+    ('checksum', numpy.uint32),        # 7
+    ('serial', numpy.uint32),          # 8
+])
 
 
 class DuplicatedPoint(Exception):
@@ -644,14 +656,18 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
         csm.init_serials(oqparam.ses_seed)
     data = {}  # src_id -> row
     mags = set()
+    wkts = []
+    ns = 0
     for sg in csm.src_groups:
         for src in sg:
+            ns += 1
             if src.source_id in data:
                 num_sources = data[src.source_id][3] + 1
             else:
                 num_sources = 1
             row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
-                   num_sources, 0, 0, 0, src.checksum, src.serial, src._wkt]
+                   num_sources, 0, 0, 0, src.checksum, src.serial]
+            wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
                 srcmags = ['%.2f' % mag for mag in src.mags]
@@ -661,7 +677,11 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags.update(srcmags)
+
+    logging.info('There are %d sources with %d unique IDs', ns, len(data))
     if h5:
+        hdf5.create(h5, 'source_info', source_info_dt)  # avoid hdf5 damned bug
+        h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         h5['source_mags'] = numpy.array(sorted(mags))
         h5['grp_ids'] = grp_ids
     csm.gsim_lt.check_imts(oqparam.imtls)
@@ -868,16 +888,7 @@ tag2code = {'ar': b'A',
             'no': b'N'}
 
 
-# used in oq reduce_sm and utils/extract_source
-def reduce_source_model(smlt_file, source_ids, remove=True):
-    """
-    Extract sources from the composite source model.
-
-    :param smlt_file: path to a source model logic tree file
-    :param source_ids: dictionary source_id -> records (src_id, code)
-    :param remove: if True, remove sm.xml files containing no sources
-    :returns: the number of sources satisfying the filter vs the total
-    """
+def reduce_sm(paths, source_ids):
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
             code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
@@ -888,10 +899,9 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     else:  # list of source IDs, in extract_source
         def ok(src_node):
             return src_node['id'] in source_ids
-
-    good, total = 0, 0
-    to_remove = set()
-    for path in logictree.collect_info(smlt_file).smpaths:
+    for path in paths:
+        good = 0
+        total = 0
         logging.info('Reading %s', path)
         root = nrml.read(path)
         model = Node('sourceModel', root[0].attrib)
@@ -919,19 +929,41 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                         sg.nodes.append(src_node)
                         reduced_weigths.append(weight)
                         src_node.attrib.pop('tectonicRegion', None)
-                if set(reduced_weigths) != {1}:
-                    src_group['srcs_weights'] = reduced_weigths
+                src_group['srcs_weights'] = reduced_weigths
                 if sg.nodes:
                     model.nodes.append(sg)
+        yield dict(good=good, total=total, model=model, path=path,
+                   xmlns=root['xmlns'])
+
+
+# used in oq reduce_sm and utils/extract_source
+def reduce_source_model(smlt_file, source_ids, remove=True):
+    """
+    Extract sources from the composite source model.
+
+    :param smlt_file: path to a source model logic tree file
+    :param source_ids: dictionary source_id -> records (src_id, code)
+    :param remove: if True, remove sm.xml files containing no sources
+    :returns: the number of sources satisfying the filter vs the total
+    """
+    total = good = 0
+    to_remove = set()
+    paths = logictree.collect_info(smlt_file).smpaths
+    for dic in parallel.Starmap.apply(reduce_sm, (paths, source_ids)):
+        path = dic['path']
+        model = dic['model']
+        good += dic['good']
+        total += dic['total']
         shutil.copy(path, path + '.bak')
         if model:
             with open(path, 'wb') as f:
-                nrml.write([model], f, xmlns=root['xmlns'])
+                nrml.write([model], f, xmlns=dic['xmlns'])
         elif remove:  # remove the files completely reduced
             to_remove.add(path)
     if good:
         for path in to_remove:
             os.remove(path)
+    parallel.Starmap.shutdown()
     return good, total
 
 

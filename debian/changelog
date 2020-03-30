@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Enhanced `oq reduce_sm` to read the source models in parallel
+  * Deprecated the usage of a different number of intensity levels per IMT
+
+  [Matteo Nastasi]
+  * Internal: added 'oq-taxonomy' to docker images
+
+  [Michele Simionato]
+  * Extended the `pointsource_distance` approximation to work on single site
+    calculations, with a spectacular performance benefit in most calculations
+  * Added Bindi2011, Bindi2014 and Cauzzi2014 scaled GMPEs contributed by
+    the INGV
   * Added a check on classical calculations which are too large to run
   * Added a flag `collapse_ruptures` and a new collapsing algorithm
   * Added a check for missing TRTs in the GSIM logic tree file

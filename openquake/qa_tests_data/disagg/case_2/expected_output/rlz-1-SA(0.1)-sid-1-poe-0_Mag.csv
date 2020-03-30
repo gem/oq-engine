@@ -1,4 +1,4 @@
-#,"generated_by='OpenQuake engine 3.8.0-git1517e280e8', start_date='2019-10-29T06:12:26', checksum=869570826, smlt_path='source_model_1', gsimlt_path='ChiouYoungs2008_YoungsEtAl1997SSlab', imt='SA', investigation_time=1.0, lon=0.0, lat=0.0, poe='0.0223811', iml='1.0000000e-01', rlz=1"
+#,"generated_by='OpenQuake engine 3.9.0-git710a31b578', start_date='2020-03-29T09:26:40', checksum=869570826, smlt_path='source_model_1', gsimlt_path='ChiouYoungs2008_YoungsEtAl1997SSlab', imt='SA', investigation_time=1.0, lon=0.0, lat=0.0, poe='0.0223811', iml='1.0000000e-01', rlz=1"
 mag,poe
 5.05000E+00,2.98992E-03
 5.15000E+00,2.70406E-03

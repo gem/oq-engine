@@ -85,18 +85,21 @@ fatalities, given the right multiplicative coefficient.
 
 By default the engine allows to compute economic losses; in that case the
 coefficients depends on the taxonomy and the consequence model can be
-represented as a CSV file like the following::
+represented as a CSV file like the following:
 
- taxonomy,cname,loss_type,slight,moderate,extensive,complete
- CR_LFINF-DUH_H2,losses,structural,0.05,0.25,0.6,1
- CR_LFINF-DUH_H4,losses,structural,0.05,0.25,0.6,1
- MCF_LWAL-DNO_H3,losses,structural,0.05,0.25,0.6,1
- MR_LWAL-DNO_H1,losses,structural,0.05,0.25,0.6,1
- MR_LWAL-DNO_H2,losses,structural,0.05,0.25,0.6,1
- MUR_LWAL-DNO_H1,losses,structural,0.05,0.25,0.6,1
- W-WS_LPB-DNO_H1,losses,structural,0.05,0.25,0.6,1
- W-WWD_LWAL-DNO_H1,losses,structural,0.05,0.25,0.6,1
- MR_LWAL-DNO_H3,losses,structural,0.05,0.25,0.6,1
+===================	========	============	========	==========	===========	==========	
+ taxonomy          	 cname  	 loss_type  	 slight 	 moderate 	 extensive 	 complete 	
+-------------------	--------	------------	--------	----------	-----------	----------	
+ CR_LFINF-DUH_H2   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
+ CR_LFINF-DUH_H4   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
+ MCF_LWAL-DNO_H3   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
+ MR_LWAL-DNO_H1    	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
+ MR_LWAL-DNO_H2    	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
+ MUR_LWAL-DNO_H1   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
+ W-WS_LPB-DNO_H1   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
+ W-WWD_LWAL-DNO_H1 	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
+ MR_LWAL-DNO_H3    	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
+===================	========	============	========	==========	===========	==========	
 
 The first field in the header is the name of a tag in the exposure; in
 this case it is the taxonomy but it can be something else; for instance

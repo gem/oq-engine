@@ -280,22 +280,23 @@ def get_effect(mags, sitecol, gsims_by_trt, oq):
     """
     dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                  for trt in gsims_by_trt}
+    aw = hdf5.ArrayWrapper((), dist_bins)
+    if sitecol is None:
+        return aw
     # computing the effect make sense only if all IMTs have the same
     # unity of measure; for simplicity we will consider only PGA and SA
     effect = {}
     imts_with_period = [imt for imt in oq.imtls
                         if imt == 'PGA' or imt.startswith('SA')]
     imts_ok = len(imts_with_period) == len(oq.imtls)
-    aw = hdf5.ArrayWrapper((), dist_bins)
-    if sitecol is None:
-        return aw
-    if len(sitecol) >= oq.max_sites_disagg and imts_ok:
+    psd = oq.pointsource_distance['default']
+    effect_ok = imts_ok and (psd or oq.minimum_intensity)
+    if effect_ok:
         logging.info('Computing effect of the ruptures')
-        mon = performance.Monitor('rupture effect')
         eff_by_mag = parallel.Starmap.apply(
-            get_effect_by_mag,
-            (mags, sitecol.one(), gsims_by_trt,
-             oq.maximum_distance, oq.imtls, mon)).reduce()
+            get_effect_by_mag, (mags, sitecol.one(), gsims_by_trt,
+                                oq.maximum_distance, oq.imtls)
+        ).reduce()
         aw.array = eff_by_mag
         effect.update({
             trt: Effect({mag: eff_by_mag[mag][:, t] for mag in eff_by_mag},
@@ -306,15 +307,11 @@ def get_effect(mags, sitecol, gsims_by_trt, oq):
             if minint:
                 oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
             # replace pointsource_distance with a dict trt -> mag -> dst
-            if oq.pointsource_distance['default']:
+            if psd:
                 oq.pointsource_distance[trt] = eff.dist_by_mag(
-                    eff.collapse_value(oq.pointsource_distance['default']))
-    elif oq.pointsource_distance['default']:
-        # replace pointsource_distance with a dict trt -> mag -> dst
-        for trt in gsims_by_trt:
-            try:
-                dst = getdefault(oq.pointsource_distance, trt)
-            except TypeError:  # 'NoneType' object is not subscriptable
-                dst = getdefault(oq.maximum_distance, trt)
-            oq.pointsource_distance[trt] = {mag: dst for mag in mags}
+                    eff.collapse_value(psd))
+    elif psd:  # like in case_24 with PGV
+        for trt in dist_bins:
+            pdist = getdefault(oq.pointsource_distance, trt)
+            oq.pointsource_distance[trt] = {mag: pdist for mag in mags}
     return aw

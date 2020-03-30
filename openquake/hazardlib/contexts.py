@@ -21,6 +21,7 @@ import time
 import warnings
 import operator
 import itertools
+import collections
 import numpy
 from scipy.interpolate import interp1d
 
@@ -39,6 +40,7 @@ I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
+POINT_RUPTURE_BINS = 20
 
 
 def get_distances(rupture, sites, param):
@@ -48,7 +50,9 @@ def get_distances(rupture, sites, param):
     :param param: the kind of distance to compute (default rjb)
     :returns: an array of distances from the given sites
     """
-    if param == 'rrup':
+    if not rupture.surface:  # PointRupture
+        dist = rupture.hypocenter.distance_to_mesh(sites)
+    elif param == 'rrup':
         dist = rupture.surface.get_min_distance(sites)
     elif param == 'rx':
         dist = rupture.surface.get_rx_distance(sites)
@@ -140,7 +144,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.collapse_ruptures = param.get('collapse_ruptures', False)
+        self.collapse_ctxs = param.get('collapse_ctxs', False)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
@@ -153,7 +157,7 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
         psd = param.get('pointsource_distance', {'default': {}})
-        self.pointsource_distance = getdefault(psd, trt) or {}
+        self.pointsource_distance = getdefault(psd, trt)  # can be 0 or {}
         # NB: self.pointsource_distance is a dict mag -> pdist, possibly empty
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
@@ -333,9 +337,23 @@ class ContextMaker(object):
 
 def _collapse(rups):
     # collapse a list of ruptures into a single rupture
+    if len(rups) < 2:
+        return rups
     rup = copy.copy(rups[0])
     rup.occurrence_rate = sum(r.occurrence_rate for r in rups)
     return [rup]
+
+
+def print_finite_size(rups):
+    """
+    Used to print the number of finite-size ruptures
+    """
+    c = collections.Counter()
+    for rup in rups:
+        if rup.surface:
+            c['%.2f' % rup.mag] += 1
+    print(c)
+    print('total finite size ruptures = ', sum(c.values()))
 
 
 class PmapMaker(object):
@@ -356,17 +374,16 @@ class PmapMaker(object):
 
     def _ctxs(self, rups, sites, grp_ids):
         if self.fewsites:  # do not filter, but collapse
-            with self.ctx_mon:
-                self.totrups += len(rups)
-                rup_parametric = not numpy.isnan(
-                    [r.occurrence_rate for r in rups]).any()
-                if self.rup_indep and rup_parametric:
-                    if self.pointsource_distance:
-                        rups = self.collapse_psd(rups, sites)
-                    if self.collapse_ruptures:
-                        rups = self.collapse_md(rups, sites)
-                ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-                self.numrups += len(ctxs)
+            rup_parametric = not numpy.isnan(
+                [r.occurrence_rate for r in rups]).any()
+            if (self.rup_indep and rup_parametric and len(sites) == 1
+                    and self.pointsource_distance != {}):
+                rups = self.collapse_point_ruptures(rups, sites)
+                # print_finite_size(rups)
+            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
+            if self.rup_indep and rup_parametric and self.collapse_ctxs:
+                ctxs = self.collapse_the_ctxs(ctxs)
+            self.numrups += len(ctxs)
             for rup, dctx in ctxs:
                 mask = (dctx.rrup <= self.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
@@ -378,9 +395,7 @@ class PmapMaker(object):
                 self.numsites += len(r_sites)
                 yield rup, r_sites, dctx
         else:  # many sites, do not collapse, but filter
-            with self.ctx_mon:
-                ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=True)
-            self.totrups += len(ctxs)
+            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=True)
             self.numrups += len(ctxs)
             self.numsites += sum(len(ctx[1]) for ctx in ctxs)
             yield from ctxs
@@ -416,9 +431,10 @@ class PmapMaker(object):
                             p.setdefault(sid, 0.).array += (
                                 1.-pne) * rup.weight
 
-    def _ruptures(self, src):
+    def _ruptures(self, src, filtermag=None):
         with self.cmaker.mon('iter_ruptures', measuremem=False):
-            return list(src.iter_ruptures(shift_hypo=self.shift_hypo))
+            return list(src.iter_ruptures(shift_hypo=self.shift_hypo,
+                                          mag=filtermag))
 
     def _make_src_indep(self):
         # srcs with the same source_id and grp_ids
@@ -428,15 +444,15 @@ class PmapMaker(object):
             grp_ids = numpy.array(srcs[0].grp_ids)
             self.numrups = 0
             self.numsites = 0
-            if self.fewsites:  # try to collapse the ruptures
-                rups = sum([self._ruptures(src) for src in srcs], [])
-                ctxs = self._ctxs(rups, sites, grp_ids)
-            else:  # many sites, do not collapse the ruptures
-                ctxs = []
-                for src in srcs:
-                    rups = self._ruptures(src)
-                    for rups, sites in self._gen_rups_sites(src, sites, rups):
-                        ctxs.extend(self._ctxs(rups, sites, grp_ids))
+            ctxs = []
+            rups = self._get_rups(srcs, sites)
+            # print_finite_size(rups)
+            with self.ctx_mon:
+                if self.fewsites:
+                    ctxs.extend(self._ctxs(rups, sites, grp_ids))
+                else:  # many sites
+                    for rup in rups:
+                        ctxs.extend(self._ctxs([rup], rup.sites, grp_ids))
             self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
@@ -446,12 +462,14 @@ class PmapMaker(object):
     def _make_src_mutex(self):
         for src, sites in self.srcfilter(self.group):
             t0 = time.time()
-            rups = self._ruptures(src)
+            self.totrups += src.num_ruptures
             self.numrups = 0
             self.numsites = 0
-            L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
-            pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
-            ctxs = self._ctxs(rups, sites, numpy.array(src.grp_ids))
+            rups = self._ruptures(src)
+            with self.ctx_mon:
+                L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
+                pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
+                ctxs = list(self._ctxs(rups, sites, numpy.array(src.grp_ids)))
             self._update_pmap(ctxs, pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
@@ -478,60 +496,94 @@ class PmapMaker(object):
         rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
         return pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
 
-    def collapse_psd(self, rups, sites):
+    def collapse_point_ruptures(self, rups, sites):
         """
         Collapse ruptures more distant than the pointsource_distance
         """
-        out = []
-        for mag, mrups in groupby(rups, bymag).items():
-            if len(mrups) == 1:  # nothing to do
-                out.extend(mrups)
-                continue
-            pdist = self.pointsource_distance['%.2f' % mag]
-            coll = []
-            for rup in mrups:
-                dist = get_distances(rup, sites, 'rrup').min()
-                if dist < pdist:  # do not collapse
-                    out.append(rup)
-                else:
-                    rup.dist = dist
-                    coll.append(rup)
-            for rs in groupby_bin(coll, 10, operator.attrgetter('dist')):
-                # group together ruptures in the same distance bin
-                out.extend(_collapse(rs))
-        return out
-
-    def collapse_md(self, rups, sites):
-        # collapse ruptures in the same magdist bin
-        def magdist(rup):
-            return rup.mag, get_distances(rup, sites, 'rrup').min()
-        out = sum(map(_collapse, groupby_bin(rups, 255, magdist)), [])
-        return out
-
-    def _gen_rups_sites(self, src, sites, rups):
-        loc = getattr(src, 'location', None)
-        if loc:
-            # implements pointsource_distance: finite site effects
-            # are ignored for sites over that distance, if any
-            simple = src.count_nphc() == 1  # no nodal plane/hypocenter distrib
-            if simple or not self.pointsource_distance:
-                yield rups, sites  # there is nothing to collapse
+        pointlike, output = [], []
+        for rup in rups:
+            if not rup.surface:
+                pointlike.append(rup)
             else:
-                weights, depths = zip(*src.hypocenter_distribution.data)
-                loc = copy.copy(loc)  # average hypocenter used in sites.split
-                loc.depth = numpy.average(depths, weights=weights)
-                for mag, rups in groupby(rups, bymag).items():
-                    pdist = self.pointsource_distance.get('%.2f' % mag)
-                    close, far = sites.split(loc, pdist)
-                    if close is None:  # all is far
-                        yield _collapse(rups), far
-                    elif far is None:  # all is close
-                        yield rups, close
-                    else:  # some sites are far, some are close
-                        yield _collapse(rups), far
-                        yield rups, close
-        else:  # no point source or site-specific analysis
-            yield rups, sites
+                output.append(rup)
+        for mag, mrups in groupby(pointlike, bymag).items():
+            if len(mrups) == 1:  # nothing to do
+                output.extend(mrups)
+                continue
+            mdist = self.maximum_distance(self.trt, mag)
+            coll = []
+            for rup in mrups:  # called on a single site
+                rup.dist = get_distances(rup, sites, 'rrup').min()
+                if rup.dist <= mdist:
+                    coll.append(rup)
+            for rs in groupby_bin(
+                    coll, POINT_RUPTURE_BINS, operator.attrgetter('dist')):
+                # group together ruptures in the same distance bin
+                output.extend(_collapse(rs))
+        return output
+
+    def collapse_the_ctxs(self, ctxs):
+        """
+        Collapse contexts with similar parameters and distances.
+
+        :param ctxs: a list of pairs (rup, dctx)
+        :returns: collapsed contexts
+        """
+        def params(ctx):
+            rup, dctx = ctx
+            lst = []
+            for par in self.REQUIRES_RUPTURE_PARAMETERS:
+                lst.append(getattr(rup, par))
+            for dst in self.REQUIRES_DISTANCES:
+                lst.extend(numpy.round(getattr(dctx, dst)))
+            return tuple(lst)
+
+        out = []
+        for values in groupby(ctxs, params).values():
+            if len(values) == 1:
+                out.append(values[0])
+            else:
+                [rup] = _collapse([rup for rup, dctx in values])
+                dctx = values[0][1]  # get the first dctx
+                out.append((rup, dctx))
+        return out
+
+    def _get_rups(self, srcs, sites):
+        # returns a list of ruptures, each one with a .sites attribute
+        rups = []
+
+        def add(rupiter, sites):
+            for rup in rupiter:
+                rup.sites = sites
+                rups.append(rup)
+        for src in srcs:
+            self.totrups += src.num_ruptures
+            loc = getattr(src, 'location', None)
+            if loc and self.pointsource_distance == 0:
+                # all finite size effects are ignored
+                add(src.point_ruptures(), sites)
+            elif loc and self.pointsource_distance:
+                # finite site effects are ignored only for sites over the
+                # pointsource_distance from the rupture (if any)
+                for pr in src.point_ruptures():
+                    pdist = self.pointsource_distance['%.2f' % pr.mag]
+                    close, far = sites.split(pr.hypocenter, pdist)
+                    if self.fewsites:
+                        if close is None:  # all is far, common for small mag
+                            add([pr], sites)
+                        else:  # something is close
+                            add(self._ruptures(src, pr.mag), sites)
+                    else:  # many sites
+                        if close is None:  # all is far
+                            add([pr], far)
+                        elif far is None:  # all is close
+                            add(self._ruptures(src, pr.mag), close)
+                        else:  # some sites are far, some are close
+                            add([pr], far)
+                            add(self._ruptures(src, pr.mag), close)
+            else:  # just add the ruptures
+                add(self._ruptures(src), sites)
+        return rups
 
 
 class BaseContext(metaclass=abc.ABCMeta):
