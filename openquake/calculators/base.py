@@ -999,7 +999,7 @@ class RiskCalculator(HazardCalculator):
             return
         res = parallel.Starmap.apply(
             self.core_task.__func__,
-            (self.riskinputs, self.crmodel, self.param, self.monitor()),
+            (self.riskinputs, self.crmodel, self.param),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
             weight=get_weight, h5=self.datastore.hdf5
         ).reduce(self.combine)

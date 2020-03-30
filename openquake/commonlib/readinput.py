@@ -888,7 +888,7 @@ tag2code = {'ar': b'A',
             'no': b'N'}
 
 
-def _reduce_sm(paths, source_ids):
+def reduce_sm(paths, source_ids):
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
             code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
@@ -950,7 +950,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     total = good = 0
     to_remove = set()
     paths = logictree.collect_info(smlt_file).smpaths
-    for dic in parallel.Starmap.apply(_reduce_sm, (paths, source_ids)):
+    for dic in parallel.Starmap.apply(reduce_sm, (paths, source_ids)):
         path = dic['path']
         model = dic['model']
         good += dic['good']
@@ -964,6 +964,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     if good:
         for path in to_remove:
             os.remove(path)
+    parallel.Starmap.shutdown()
     return good, total
 
 

@@ -697,15 +697,14 @@ class Starmap(object):
         :param num_cores: the number of available cores
         :returns: an :class:`IterResult` object
         """
-        arg0 = args[0]  # this is assumed to be a sequence
-        args = args[1:-1]
+        arg0, *args = args
         if maxweight:  # block_splitter is lazy
-            taskargs = ((blk,) + args for blk in block_splitter(
+            taskargs = ([blk] + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
             if concurrent_tasks is None:
                 concurrent_tasks = CT
-            taskargs = [(blk,) + args for blk in split_in_blocks(
+            taskargs = [[blk] + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(
             task, taskargs, distribute, progress, h5, num_cores
