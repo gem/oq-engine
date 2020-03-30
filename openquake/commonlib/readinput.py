@@ -929,8 +929,7 @@ def reduce_sm(paths, source_ids):
                         sg.nodes.append(src_node)
                         reduced_weigths.append(weight)
                         src_node.attrib.pop('tectonicRegion', None)
-                if set(reduced_weigths) != {1}:
-                    src_group['srcs_weights'] = reduced_weigths
+                src_group['srcs_weights'] = reduced_weigths
                 if sg.nodes:
                     model.nodes.append(sg)
         yield dict(good=good, total=total, model=model, path=path,
