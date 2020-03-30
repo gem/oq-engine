@@ -16,9 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
-import collections.abc
+import collections
 import pickle
-import time
 import copy
 import logging
 import numpy
@@ -36,6 +35,15 @@ F32 = numpy.float32
 EPSILON = 1E-12
 source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
+
+
+def extract_dupl(values):
+    """
+    :param values: a sequence of values
+    :returns: the duplicated values
+    """
+    c = collections.Counter(values)
+    return [value for value, counts in c.items() if counts > 1]
 
 
 def fix_dupl(dist, fname=None, lineno=None):
@@ -63,7 +71,7 @@ def fix_dupl(dist, fname=None, lineno=None):
             raise ValueError('There are repeated values in %s' % got)
         else:
             logging.warning('There were repeated values %s in %s:%s',
-                            got, fname, lineno)
+                            extract_dupl(got), fname, lineno)
             assert abs(sum(values.values()) - 1) < EPSILON  # sanity check
             newdist = sorted([(p, v) for v, p in values.items()])
             if isinstance(newdist[0][1], tuple):  # nodal planes

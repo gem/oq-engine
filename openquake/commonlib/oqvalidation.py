@@ -18,11 +18,12 @@
 
 import os
 import logging
+import warnings
 import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib.general import DictArray, AccumDict
+from openquake.baselib.general import DictArray, AccumDict, DeprecationWarning
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
@@ -101,7 +102,7 @@ class OqParam(valid.ParamSet):
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_threshold = valid.Param(valid.probability, 0.5)
-    collapse_ruptures = valid.Param(valid.boolean, False)
+    collapse_ctxs = valid.Param(valid.boolean, False)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -276,6 +277,12 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
+            lens = set(map(len, self.hazard_imtls.values()))
+            if len(lens) > 1:
+                dic = {imt: len(ls) for imt, ls in self.hazard_imtls.items()}
+                warnings.warn(
+                    'Each IMT must have the same number of levels, instead '
+                    'you have %s' % dic, DeprecationWarning)
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
@@ -880,7 +887,7 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(msg)
             else:
                 getattr(logging, action)(msg)
-        
+
     def hazard_precomputed(self):
         """
         :returns: True if the hazard is precomputed

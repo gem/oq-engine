@@ -352,7 +352,7 @@ class SiteCollection(object):
     @property
     def mesh(self):
         """Return a mesh with the given lons, lats, and depths"""
-        return Mesh(self.lons, self.lats, self.depths)
+        return Mesh(self['lon'], self['lat'], self['depth'])
 
     def at_sea_level(self):
         """True if all depths are zero"""
@@ -387,9 +387,12 @@ class SiteCollection(object):
         one at a time.
         """
         params = self.array.dtype.names[4:]  # except sids, lons, lats, depths
+        sids = self.sids
         for i, location in enumerate(self.mesh):
             kw = {p: self.array[i][p] for p in params}
-            yield Site(location, **kw)
+            s = Site(location, **kw)
+            s.id = sids[i]
+            yield s
 
     def filter(self, mask):
         """
@@ -459,7 +462,7 @@ class SiteCollection(object):
             site IDs within the bounding box
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self.array['lon'], self.array['lat']
+        lons, lats = self['lon'], self['lat']
         if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
             lons = lons % 360
             min_lon, max_lon = min_lon % 360, max_lon % 360
@@ -473,7 +476,7 @@ class SiteCollection(object):
         :returns: an array of N geohashes, one per site
         """
         lst = [geohash(lon, lat, length)
-               for lon, lat in zip(self.lons, self.lats)]
+               for lon, lat in zip(self['lon'], self['lat'])]
         return numpy.array(lst, (numpy.string_, length))
 
     def num_geohashes(self, length):

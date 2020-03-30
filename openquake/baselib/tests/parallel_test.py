@@ -76,15 +76,14 @@ class StarmapTestCase(unittest.TestCase):
 
     def test_apply(self):
         res = parallel.Starmap.apply(
-            get_length, (numpy.arange(10), self.monitor),
-            concurrent_tasks=3).reduce()
+            get_length, (numpy.arange(10),), concurrent_tasks=3).reduce()
         self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
 
     # this case is non-trivial since there is a key, so two groups are
     # generated even if everything is run in a single core
     def test_apply_no_tasks(self):
         res = parallel.Starmap.apply(
-            get_length, ('aaabb', self.monitor),
+            get_length, ('aaabb',),
             concurrent_tasks=0, key=lambda char: char)
         # chunks [['a', 'a', 'a'], ['b', 'b']]
         partial_sums = sorted(dic['n'] for dic in res)
@@ -92,7 +91,7 @@ class StarmapTestCase(unittest.TestCase):
 
     def test_apply_maxweight(self):
         res = parallel.Starmap.apply(
-            get_length, ('aaabb', self.monitor), maxweight=2,
+            get_length, ('aaabb',), maxweight=2,
             key=lambda char: char)
         # chunks ['aa', 'ab', 'b']
         partial_sums = sorted(dic['n'] for dic in res)
@@ -156,12 +155,11 @@ class StarmapTestCase(unittest.TestCase):
 
 class ThreadPoolTestCase(unittest.TestCase):
     def test(self):
-        monitor = parallel.Monitor()
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'threadpool'}):
             parallel.Starmap.init()
             try:
                 res = parallel.Starmap.apply(
-                    get_length, (numpy.arange(10), monitor),
+                    get_length, (numpy.arange(10),),
                     concurrent_tasks=3).reduce()
                 self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
             finally:

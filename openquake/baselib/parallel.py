@@ -191,9 +191,9 @@ import pickle
 import inspect
 import logging
 import operator
-import itertools
 import traceback
 import collections
+from unittest import mock
 import multiprocessing.dummy
 import psutil
 import numpy
@@ -697,15 +697,14 @@ class Starmap(object):
         :param num_cores: the number of available cores
         :returns: an :class:`IterResult` object
         """
-        arg0 = args[0]  # this is assumed to be a sequence
-        args = args[1:-1]
+        arg0, *args = args
         if maxweight:  # block_splitter is lazy
-            taskargs = ((blk,) + args for blk in block_splitter(
+            taskargs = ([blk] + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
             if concurrent_tasks is None:
                 concurrent_tasks = CT
-            taskargs = [(blk,) + args for blk in split_in_blocks(
+            taskargs = [[blk] + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(
             task, taskargs, distribute, progress, h5, num_cores
@@ -877,13 +876,15 @@ class Starmap(object):
 
 
 def sequential_apply(task, args, concurrent_tasks=CT,
-                     weight=lambda item: 1, key=lambda item: 'Unspecified'):
+                     maxweight=None, weight=lambda item: 1,
+                     key=lambda item: 'Unspecified',
+                     progress=logging.info):
     """
     Apply sequentially task to args by splitting args[0] in blocks
     """
-    chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
-    task_args = [(ch,) + args[1:] for ch in chunks]
-    return itertools.starmap(task, task_args)
+    with mock.patch.dict('os.environ', {'OQ_DISTRIBUTE': 'no'}):
+        return Starmap.apply(task, args, concurrent_tasks, maxweight, weight,
+                             key, progress=progress)
 
 
 def count(word):
