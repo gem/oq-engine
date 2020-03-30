@@ -191,9 +191,9 @@ import pickle
 import inspect
 import logging
 import operator
-import itertools
 import traceback
 import collections
+from unittest import mock
 import multiprocessing.dummy
 import psutil
 import numpy
@@ -876,13 +876,15 @@ class Starmap(object):
 
 
 def sequential_apply(task, args, concurrent_tasks=CT,
-                     weight=lambda item: 1, key=lambda item: 'Unspecified'):
+                     maxweight=None, weight=lambda item: 1,
+                     key=lambda item: 'Unspecified',
+                     progress=logging.info):
     """
     Apply sequentially task to args by splitting args[0] in blocks
     """
-    chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
-    task_args = [(ch,) + args[1:] for ch in chunks]
-    return itertools.starmap(task, task_args)
+    with mock.patch.dict('os.environ', {'OQ_DISTRIBUTE': 'no'}):
+        return Starmap.apply(task, args, concurrent_tasks, maxweight, weight,
+                             key, progress=progress)
 
 
 def count(word):
