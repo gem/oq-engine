@@ -197,7 +197,7 @@ def calc_hazard_curves(
             it = [classical(group, srcfilter, [gsim], param, mon)]
         else:  # split the group and apply `classical` in parallel
             it = apply(
-                classical, (group.sources, srcfilter, [gsim], param, mon),
+                classical, (group.sources, srcfilter, [gsim], param),
                 weight=operator.attrgetter('weight'))
         for dic in it:
             for grp_id, pval in dic['pmap'].items():

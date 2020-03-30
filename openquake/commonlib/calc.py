@@ -293,11 +293,10 @@ def get_effect(mags, sitecol, gsims_by_trt, oq):
     effect_ok = imts_ok and (psd or oq.minimum_intensity)
     if effect_ok:
         logging.info('Computing effect of the ruptures')
-        mon = performance.Monitor('rupture effect')
         eff_by_mag = parallel.Starmap.apply(
-            get_effect_by_mag,
-            (mags, sitecol.one(), gsims_by_trt,
-             oq.maximum_distance, oq.imtls, mon)).reduce()
+            get_effect_by_mag, (mags, sitecol.one(), gsims_by_trt,
+                                oq.maximum_distance, oq.imtls)
+        ).reduce()
         aw.array = eff_by_mag
         effect.update({
             trt: Effect({mag: eff_by_mag[mag][:, t] for mag in eff_by_mag},

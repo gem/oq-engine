@@ -338,13 +338,14 @@ class ClassicalCalculator(base.HazardCalculator):
             collapse_ctxs=oq.collapse_ctxs,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
+        C = oq.concurrent_tasks or 1
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
+            C *= 4  # use more tasks because there will be slow tasks
         elif oq.disagg_by_src:  # do not split the sources
             f1, f2 = classical, classical
         else:
             f1, f2 = classical, classical_split_filter
-        C = oq.concurrent_tasks or 1
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
             if sg.atomic:

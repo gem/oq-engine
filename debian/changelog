@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Enhanced `oq reduce_sm` to read the source models in parallel
   * Deprecated the usage of a different number of intensity levels per IMT
 
   [Matteo Nastasi]
