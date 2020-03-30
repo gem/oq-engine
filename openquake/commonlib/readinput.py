@@ -31,7 +31,7 @@ import collections
 import numpy
 import requests
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import decode, zip
@@ -888,16 +888,7 @@ tag2code = {'ar': b'A',
             'no': b'N'}
 
 
-# used in oq reduce_sm and utils/extract_source
-def reduce_source_model(smlt_file, source_ids, remove=True):
-    """
-    Extract sources from the composite source model.
-
-    :param smlt_file: path to a source model logic tree file
-    :param source_ids: dictionary source_id -> records (src_id, code)
-    :param remove: if True, remove sm.xml files containing no sources
-    :returns: the number of sources satisfying the filter vs the total
-    """
+def _reduce_sm(paths, source_ids):
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
             code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
@@ -908,10 +899,9 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     else:  # list of source IDs, in extract_source
         def ok(src_node):
             return src_node['id'] in source_ids
-
-    good, total = 0, 0
-    to_remove = set()
-    for path in logictree.collect_info(smlt_file).smpaths:
+    for path in paths:
+        good = 0
+        total = 0
         logging.info('Reading %s', path)
         root = nrml.read(path)
         model = Node('sourceModel', root[0].attrib)
@@ -943,10 +933,32 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                     src_group['srcs_weights'] = reduced_weigths
                 if sg.nodes:
                     model.nodes.append(sg)
+        yield dict(good=good, total=total, model=model, path=path,
+                   xmlns=root['xmlns'])
+
+
+# used in oq reduce_sm and utils/extract_source
+def reduce_source_model(smlt_file, source_ids, remove=True):
+    """
+    Extract sources from the composite source model.
+
+    :param smlt_file: path to a source model logic tree file
+    :param source_ids: dictionary source_id -> records (src_id, code)
+    :param remove: if True, remove sm.xml files containing no sources
+    :returns: the number of sources satisfying the filter vs the total
+    """
+    total = good = 0
+    to_remove = set()
+    paths = logictree.collect_info(smlt_file).smpaths
+    for dic in parallel.Starmap.apply(_reduce_sm, (paths, source_ids)):
+        path = dic['path']
+        model = dic['model']
+        good += dic['good']
+        total += dic['total']
         shutil.copy(path, path + '.bak')
         if model:
             with open(path, 'wb') as f:
-                nrml.write([model], f, xmlns=root['xmlns'])
+                nrml.write([model], f, xmlns=dic['xmlns'])
         elif remove:  # remove the files completely reduced
             to_remove.add(path)
     if good:
