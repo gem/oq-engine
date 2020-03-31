@@ -138,7 +138,8 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
     if not rups:
         return ()
     dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes)
-    # TODO: PMFs for nonparametric ruptures are not converted
+    # NB: PMFs for nonparametric ruptures are not saved since they
+    # are useless for the GMF computation
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
