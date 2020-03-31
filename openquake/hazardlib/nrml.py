@@ -255,6 +255,7 @@ validators = {
     'probability': valid.probability,
     'occurRates': valid.positivefloats,  # they can be > 1
     'weight': valid.probability,
+    'uncertaintyModel': valid.uncertainty_model,
     'uncertaintyWeight': float,
     'alongStrike': valid.probability,
     'downDip': valid.probability,

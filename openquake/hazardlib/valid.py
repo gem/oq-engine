@@ -1090,6 +1090,13 @@ def simple_slice(value):
     return (start, stop)
 
 
+def uncertainty_model(value):
+    """
+    Format whitespace in XML nodes of kind uncertaintyModel
+    """
+    return ' '.join(value.split())
+
+
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
                    'business_interruption')
