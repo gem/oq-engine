@@ -193,8 +193,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_names}
         logging.info('minimum_asset_loss=%s', mal)
-        if oq.aggregate_by and self.E * A > oq.max_potential_gmfs and any(
-                val == 0 for val in mal.values()):
+        if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
+                any(val == 0 for val in mal.values()) and not
+                oq.minimum_asset_loss):
             logging.warning('The calculation is really big; you should set '
                             'minimum_asset_loss')
         self.param['minimum_asset_loss'] = mal
