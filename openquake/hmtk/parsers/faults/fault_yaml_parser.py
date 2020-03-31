@@ -131,7 +131,7 @@ class FaultYmltoSource(object):
         :param str filename:
             Name of input file (in yml format)
         '''
-        self.data = yaml.load(open(filename, 'rt'))
+        self.data = yaml.safe_load(open(filename, 'rt'))
         if 'Fault_Model' not in self.data:
             raise ValueError('Fault Model not defined in input file!')
 

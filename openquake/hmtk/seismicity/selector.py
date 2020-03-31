@@ -211,7 +211,7 @@ class CatalogueSelector(object):
             containing only selected events
         '''
 
-        if kwargs['distance_type'] is 'epicentral':
+        if kwargs['distance_type'] == 'epicentral':
             locations = Mesh(
                 self.catalogue.data['longitude'],
                 self.catalogue.data['latitude'],
