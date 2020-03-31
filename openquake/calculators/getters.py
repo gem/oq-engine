@@ -502,7 +502,7 @@ def gen_rupture_getters(dstore, srcfilter, ct):
         trt = trt_by_grp[grp_id]
         proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
         if not maxweight:
-            maxweight = sum(p.weight for p in proxies) / (ct or 1)
+            maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
         blocks = list(general.block_splitter(
             proxies, maxweight, operator.attrgetter('weight')))
         logging.info('Group %d: %d ruptures -> %d task(s)',
