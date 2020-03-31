@@ -232,7 +232,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
-        for rgetter in getters.gen_rupture_getters(self.datastore, srcfilter):
+        for rgetter in getters.gen_rupture_getters(
+                self.datastore, srcfilter, oq.concurrent_tasks):
             smap.submit((rgetter, srcfilter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
