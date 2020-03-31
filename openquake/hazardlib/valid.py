@@ -1094,7 +1094,9 @@ def uncertainty_model(value):
     """
     Format whitespace in XML nodes of kind uncertaintyModel
     """
-    return ' '.join(value.split())
+    if value.lstrip().startswith('['):  # TOML, do not mess with newlines
+        return value.strip()
+    return ' '.join(value.split())  # remove newlines too
 
 
 # used for the exposure validation
