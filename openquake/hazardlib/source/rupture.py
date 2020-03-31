@@ -786,8 +786,13 @@ class EBRupture(object):
 
 
 class RuptureProxy(object):
-    weight = 1  # overridden in calculators.getters
+    """
+    A proxy for a rupture record.
 
+    :param rec: a record with the rupture parameters
+    :param sids: IDs of the sites affected by the rupture
+    :param samples: how many times the rupture is sampled
+    """
     def __init__(self, rec, sids=None, samples=1):
         self.rec = rec
         self.sids = sids
@@ -795,6 +800,11 @@ class RuptureProxy(object):
 
     @property
     def weight(self):
+        """
+        :returns:
+            heuristic weight for the underlying rupture, depending on the
+            number of occurrences, number of samples and number of sites
+        """
         return self.samples * self['n_occ'] * (
             100 if self.sids is None else max(len(self.sids), 100))
 
@@ -802,6 +812,9 @@ class RuptureProxy(object):
         return self.rec[name]
 
     def to_ebr(self, geom, trt, samples):
+        """
+        :returns: EBRupture instance associated to the underlying rupture
+        """
         # not implemented: rupture_slip_direction
         rupture = get_rupture(self.rec, geom, trt)
         ebr = EBRupture(rupture, self.rec['srcidx'], self.rec['grp_id'],

@@ -193,8 +193,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_names}
         logging.info('minimum_asset_loss=%s', mal)
-        if oq.aggregate_by and self.E * A > oq.max_potential_gmfs and any(
-                val == 0 for val in mal.values()):
+        if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
+                any(val == 0 for val in mal.values()) and not
+                oq.minimum_asset_loss):
             logging.warning('The calculation is really big; you should set '
                             'minimum_asset_loss')
         self.param['minimum_asset_loss'] = mal
@@ -232,7 +233,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
-        for rgetter in getters.gen_rupture_getters(self.datastore, srcfilter):
+        for rgetter in getters.gen_rupture_getters(
+                self.datastore, srcfilter, oq.concurrent_tasks):
             smap.submit((rgetter, srcfilter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:

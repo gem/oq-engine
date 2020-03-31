@@ -320,7 +320,7 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in gen_rupture_getters(
-                            self.datastore, srcfilter))
+                            self.datastore, srcfilter, oq.concurrent_tasks))
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores

@@ -478,18 +478,20 @@ def _gen(arr, srcfilter, trt, samples):
             yield RuptureProxy(rec, sids, samples)
 
 
-def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
+def gen_rupture_getters(dstore, srcfilter, ct):
     """
+    :param dstore: a :class:`openquake.baselib.datastore.DataStore`
+    :param srcfilter: a :class:`openquake.hazardlib.calc.filters.SourceFilter`
+    :param ct: number of concurrent tasks
     :yields: filtered RuptureGetters
     """
     full_lt = dstore['full_lt']
     trt_by_grp = full_lt.trt_by_grp
     samples = full_lt.get_samples_by_grp()
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
-    rup_array = dstore['ruptures'][slc]
-    ct = dstore['oqparam'].concurrent_tasks or 1
+    rup_array = dstore['ruptures'][()]
     items = list(general.group_array(rup_array, 'grp_id').items())
-    items.sort(key=lambda it: len(it[1]))
+    items.sort(key=lambda item: item[1]['n_occ'].sum() * samples[item[0]])
     maxweight = None
     while items:
         grp_id, rups = items.pop()  # from the largest group
@@ -500,7 +502,7 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
         trt = trt_by_grp[grp_id]
         proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
         if not maxweight:
-            maxweight = sum(p.weight for p in proxies) / ct
+            maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
         blocks = list(general.block_splitter(
             proxies, maxweight, operator.attrgetter('weight')))
         logging.info('Group %d: %d ruptures -> %d task(s)',
