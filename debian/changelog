@@ -1,3 +1,9 @@
+  [Michele Simionato]
+  * Added a warning against magnitude-dependent maximum_distance
+
+  [Marco Pagani]
+  * Fixed a bug in the coeff table of YEA97
+  
   [Graeme Weatherill]
   * Implements support for Gaussian Mixture Model approach to characterise
     ground motion model uncertainty

@@ -228,10 +228,9 @@ class WorkerPool(object):
         self.workers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.task_server_url, z.zmq.PULL, 'connect')
-            proc = multiprocessing.Process(
+            sock.proc = multiprocessing.Process(
                 target=worker, args=(sock, self.executing))
-            proc.start()
-            sock.pid = proc.pid
+            sock.proc.start()
             self.workers.append(sock)
 
         # start control loop accepting the commands stop and kill
@@ -242,7 +241,7 @@ class WorkerPool(object):
                     ctrlsock.send(msg)
                     break
                 elif cmd == 'getpid':
-                    ctrlsock.send(self.pid)
+                    ctrlsock.send(self.proc.pid)
                 elif cmd == 'get_num_workers':
                     ctrlsock.send(self.num_workers)
                 elif cmd == 'get_executing':
@@ -254,7 +253,9 @@ class WorkerPool(object):
         Send a SIGTERM to all worker processes
         """
         for sock in self.workers:
-            os.kill(sock.pid, signal.SIGTERM)
+            os.kill(sock.proc.pid, signal.SIGTERM)
+        for sock in self.workers:
+            sock.proc.join()
         return 'WorkerPool %s stopped' % self.ctrl_url
 
     def kill(self):
@@ -262,7 +263,9 @@ class WorkerPool(object):
         Send a SIGKILL to all worker processes
         """
         for sock in self.workers:
-            os.kill(sock.pid, signal.SIGKILL)
+            os.kill(sock.proc.pid, signal.SIGKILL)
+        for sock in self.workers:
+            sock.proc.join()
         return 'WorkerPool %s killed' % self.ctrl_url
 
 

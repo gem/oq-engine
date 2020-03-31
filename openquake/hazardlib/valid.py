@@ -893,10 +893,15 @@ def maximum_distance(value):
     """
     dic = floatdict(value)
     for trt, magdists in dic.items():
-        if isinstance(magdists, list):  # could be a scalar otherwise
+        if isinstance(magdists, list):
             magdists.sort()  # make sure the list is sorted by magnitude
             for mag, dist in magdists:  # validate the magnitudes
                 magnitude(mag)
+            dic[trt] = dist  # keep only the maximum distance
+            logging.warning(
+                'The engine does not accept magnitude-dependent '
+                'maximum_distances anymore; please replace %s with %s' %
+                (magdists, dist))
     return IntegrationDistance(dic)
 
 
@@ -1088,6 +1093,15 @@ def simple_slice(value):
     except Exception:
         raise ValueError('invalid slice: %s' % value)
     return (start, stop)
+
+
+def uncertainty_model(value):
+    """
+    Format whitespace in XML nodes of kind uncertaintyModel
+    """
+    if value.lstrip().startswith('['):  # TOML, do not mess with newlines
+        return value.strip()
+    return ' '.join(value.split())  # remove newlines too
 
 
 # used for the exposure validation
