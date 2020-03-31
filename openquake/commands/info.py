@@ -22,7 +22,7 @@ import operator
 import collections
 import numpy
 from decorator import FunctionMaker
-from openquake.baselib import sap, parallel
+from openquake.baselib import sap
 from openquake.baselib.general import groupby, gen_subclasses
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
@@ -166,16 +166,13 @@ def info(what, report=False):
     elif what.endswith(('.ini', '.zip')):
         if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
             os.environ['OQ_DISTRIBUTE'] = 'processpool'
-        try:
-            with Monitor('info', measuremem=True) as mon:
-                if report:
-                    print('Generated', reportwriter.build_report(what))
-                else:
-                    print_full_lt(what)
-            if mon.duration > 1:
-                print(mon)
-        finally:
-            parallel.Starmap.shutdown()
+        with Monitor('info', measuremem=True) as mon:
+            if report:
+                print('Generated', reportwriter.build_report(what))
+            else:
+                print_full_lt(what)
+        if mon.duration > 1:
+            print(mon)
     elif what:
         print("No info for '%s'" % what)
 
