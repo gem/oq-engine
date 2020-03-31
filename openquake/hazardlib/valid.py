@@ -893,10 +893,15 @@ def maximum_distance(value):
     """
     dic = floatdict(value)
     for trt, magdists in dic.items():
-        if isinstance(magdists, list):  # could be a scalar otherwise
+        if isinstance(magdists, list):
             magdists.sort()  # make sure the list is sorted by magnitude
             for mag, dist in magdists:  # validate the magnitudes
                 magnitude(mag)
+            dic[trt] = dist  # keep only the maximum distance
+            logging.warning(
+                'The engine does not accept magnitude-dependent '
+                'maximum_distances anymore; please replace %s with %s' %
+                (magdists, dist))
     return IntegrationDistance(dic)
 
 

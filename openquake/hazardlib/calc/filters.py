@@ -78,20 +78,13 @@ class IntegrationDistance(collections.abc.Mapping):
 
     >>> maxdist = IntegrationDistance({'default': 400})
     >>> maxdist('Some TRT')
-    400.0
+    400
     >>> maxdist('Some TRT', mag=2.5)
-    400.0
+    400
     """
     def __init__(self, dic):
-        self.dic = {}  # TRT -> float or list of pairs
+        self.dic = dic  # TRT -> float
         self.magdist = {}  # TRT -> (magnitudes, distances), set by the engine
-        for trt, value in dic.items():
-            if isinstance(value, (list, numpy.ndarray)):
-                # assume a list of pairs (magstring, dist)
-                self.magdist[trt] = {'%.2f' % mag: dist for mag, dist in value}
-                self.dic[trt] = value[-1][-1]
-            else:
-                self.dic[trt] = float(value)
 
     def __call__(self, trt, mag=None):
         if mag and trt in self.magdist:
