@@ -3,8 +3,8 @@ Hazard South Africa
 
 ============== ===================
 checksum32     2_508_160_232      
-date           2020-03-13T11:21:26
-engine_version 3.9.0-gitfb3ef3a732
+date           2020-03-31T07:29:22
+engine_version 3.9.0-git805a678d6e
 ============== ===================
 
 num_sites = 10, num_levels = 1, num_rlzs = 3
@@ -59,63 +59,50 @@ grp_id gsims                                      distances siteparams ruptparam
 1      '[AkkarEtAlRjb2014]' '[BooreAtkinson2008]' rjb       vs30       mag rake  
 ====== ========================================== ========= ========== ==========
 
-Number of ruptures per source group
------------------------------------
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      0.13115   36_461       488         
-1      0.14789   19_539       426         
-====== ========= ============ ============
-
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
-========= ====== ==== ============ ========= ========= ============
-18        0      A    480          0.00470   0.16667   282         
-18        1      A    320          0.00464   0.25000   188         
-21        0      A    84           0.00118   0.16667   66          
-21        1      A    168          0.00118   0.08333   132         
-20        0      A    23_199       4.611E-04 0.03030   132         
-20        1      A    12_654       2.794E-04 0.05556   54          
-22        1      A    52           2.387E-04 0.03846   52          
-22        0      A    8            2.038E-04 0.25000   8.00000     
-========= ====== ==== ============ ========= ========= ============
+========= ==== =========== ========= ========= ============
+source_id code num_sources calc_time num_sites eff_ruptures
+========= ==== =========== ========= ========= ============
+18        A    2           0.00957   0.20000   470         
+22        A    2           0.00365   0.06667   60          
+21        A    2           0.00239   0.11111   198         
+20        A    2           8.078E-04 0.03763   186         
+========= ==== =========== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== =========
 code calc_time
 ==== =========
-A    0.01289  
+A    0.01642  
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-preclassical       0.12492 0.08313 0.01453 0.22230 6      
-read_source_model  0.04668 0.05624 0.00358 0.13294 5      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+preclassical       0.07949 0.09271   0.00354 0.23176 10     
+read_source_model  0.00247 1.507E-04 0.00230 0.00271 5      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================= ============================================ ========
 task              sent                                         received
-read_source_model converter=1.62 KB fname=495 B srcfilter=20 B 12.76 KB
-preclassical      srcs=18.83 KB params=3.63 KB gsims=2.3 KB    2.27 KB 
+read_source_model converter=1.62 KB fname=495 B srcfilter=20 B 9.54 KB 
+preclassical      srcs=23.56 KB params=6.22 KB gsims=3.84 KB   8.83 KB 
 ================= ============================================ ========
 
 Slowest operations
 ------------------
 =========================== ======== ========= ======
-calc_66941                  time_sec memory_mb counts
+calc_41331                  time_sec memory_mb counts
 =========================== ======== ========= ======
-composite source model      1.01091  0.0       1     
-total preclassical          0.74950  2.25781   6     
-splitting/filtering sources 0.52598  0.75391   6     
-total read_source_model     0.23339  0.46875   5     
-store source_info           0.00219  0.0       1     
-aggregate curves            0.00150  0.0       4     
+composite source model      0.82970  1.48438   1     
+total preclassical          0.79490  2.12500   10    
+splitting/filtering sources 0.54452  1.01172   10    
+total read_source_model     0.01234  0.64844   5     
+aggregate curves            0.00269  0.00781   8     
+store source_info           0.00121  0.0       1     
 =========================== ======== ========= ======

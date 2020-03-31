@@ -460,7 +460,8 @@ class HazardCalculator(BaseCalculator):
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
 
-        if not oq.hazard_calculation_id:
+        if (not oq.hazard_calculation_id and
+                oq.calculation_mode != 'preclassical'):
             self.gzip_inputs()
 
     def save_multi_peril(self):
