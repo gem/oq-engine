@@ -34,26 +34,16 @@ class AngularDistanceTestCase(unittest.TestCase):
 
 class IntegrationDistanceTestCase(unittest.TestCase):
     def test_bounding_box(self):
-        maxdist = IntegrationDistance({'default': [
-            (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
+        maxdist = IntegrationDistance({'default': 400})
 
         aae(maxdist('ANY_TRT'), 400)
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
         aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
 
-        aae(maxdist('ANY_TRT', mag=7), 400)
-        bb = maxdist.get_bounding_box(0, 10, 'default', mag=7)
-        aae(bb, [-2.7395804, 7.30204,  2.7395804, 12.69796])
-
-        aae(maxdist('default', mag=6), 200)
-        bb = maxdist.get_bounding_box(0, 10, 'default', mag=6)
-        aae(bb, [-1.8263869, 8.20136, 1.8263869, 11.79864])
-
 
 class SourceFilterTestCase(unittest.TestCase):
     def test_get_bounding_boxes(self):
-        maxdist = IntegrationDistance({'default': [
-            (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
+        maxdist = IntegrationDistance({'default': 40})
         sitecol = SiteCollection([
             Site(location=Point(10, 20, 30),
                  vs30=1.2, vs30measured=True,
@@ -62,14 +52,13 @@ class SourceFilterTestCase(unittest.TestCase):
                  vs30=55.4, vs30measured=False,
                  z1pt0=66.7, z2pt5=88.9, backarc=False)])
         srcfilter = SourceFilter(sitecol, maxdist)
-        bb1, bb2 = srcfilter.get_bounding_boxes(mag=4)
+        bb1, bb2 = srcfilter.get_bounding_boxes()
         # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
         aae(bb1, (9.6171855, 19.640272, 10.3828145, 20.359728))
         aae(bb2, (-1.5603623, -3.759728, -0.8396377, -3.040272))
 
     def test_international_date_line(self):
-        maxdist = IntegrationDistance({'default': [
-            (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
+        maxdist = IntegrationDistance({'default': 40})
         sitecol = SiteCollection([
             Site(location=Point(179, 80),
                  vs30=1.2, vs30measured=True,
