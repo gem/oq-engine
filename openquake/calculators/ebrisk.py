@@ -224,7 +224,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         srcfilter = self.src_filter(self.datastore.tempname)
-        logging.info('Sending %d ruptures', len(self.datastore['ruptures']))
+        logging.info(
+            'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
         self.numlosses = 0
         self.datastore.swmr_on()
