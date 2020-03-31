@@ -78,9 +78,9 @@ class IntegrationDistance(collections.abc.Mapping):
 
     >>> maxdist = IntegrationDistance({'default': 400})
     >>> maxdist('Some TRT')
-    400.0
+    400
     >>> maxdist('Some TRT', mag=2.5)
-    400.0
+    400
     """
     def __init__(self, dic):
         self.dic = dic  # TRT -> float
