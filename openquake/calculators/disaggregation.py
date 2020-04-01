@@ -166,8 +166,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         few = self.oqparam.max_sites_disagg
         if self.N > few:
             raise ValueError(
-                'The max number of sites for disaggregation set in '
-                'openquake.cfg is %d, but you have %s' % (few, self.N))
+                'The number of sites is to disaggregate is %d, but you have '
+                'max_sites_disagg=%d' % (self.N, few))
         super().init()
 
     def execute(self):
