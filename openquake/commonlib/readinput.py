@@ -670,7 +670,8 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
-                srcmags = ['%.2f' % mag for mag in src.mags]
+                srcmags = numpy.unique(numpy.round(src.mags, 2))
+                srcmags = ['%.2f' % mag for mag in srcmags]
             elif hasattr(src, 'data'):  # nonparametric
                 srcmags = ['%.2f' % item[0].mag for item in src.data]
             else:

@@ -92,10 +92,10 @@ def get_csm(oq, full_lt, h5=None):
             src.samples = sm_rlz.samples
             if classical:
                 src.ruptures_per_block = oq.ruptures_per_block
-                sg.sources = []
-                if not sample:
-                    # split the sources upfront
-                    sg.sources.extend(src)
+                if sample:
+                    sg.sources = [list(src)[0]]  # take the first source
+                else:
+                    sg.sources = list(src)
                 # add background point sources
                 sg.sources.extend(src.get_background_sources(sample))
             else:  # event_based, use one source
