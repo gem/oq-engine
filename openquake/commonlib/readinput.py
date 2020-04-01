@@ -659,6 +659,8 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
     wkts = []
     ns = 0
     for sg in csm.src_groups:
+        if hasattr(sg, 'mags'):  # UCERF
+            mags.update('%.2f' % mag for mag in sg.mags)
         for src in sg:
             ns += 1
             if src.source_id in data:
@@ -670,8 +672,7 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
-                srcmags = numpy.unique(numpy.round(src.mags, 2))
-                srcmags = ['%.2f' % mag for mag in srcmags]
+                continue  # already accounted for in sg.mags
             elif hasattr(src, 'data'):  # nonparametric
                 srcmags = ['%.2f' % item[0].mag for item in src.data]
             else:
