@@ -84,7 +84,7 @@ To uninstall the OpenQuake development environment remove the folder where it ha
 It is possible to install, as an example, the [Silx HDF5 viewer](http://www.silx.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands via the `oq-console.bat` prompt:
 
 ```cmd
-pip install PyQt5==5.14.1 silx==0.12
+pip install PyQt5==5.7.1 silx==0.10
 ```
 
 Silx viewer can be then run as
