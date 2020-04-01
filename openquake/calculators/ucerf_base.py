@@ -106,7 +106,7 @@ class UcerfFilter(SourceFilter):
                 ridx = set()
                 for arr in src.all_ridx:
                     ridx.update(arr)
-                mag = src.mags[src.start:src.stop].max()
+                mag = src.mags.max()
                 src.indices = self.get_indices(src, ridx, mag)
                 if len(src.indices):
                     yield src
@@ -186,9 +186,8 @@ class UCERFSource(BaseSeismicSource):
         self.msr = msr
         self.mesh_spacing = mesh_spacing
         self.tectonic_region_type = trt
-        self.stop = 0
-        self.start = -1
-        self.orig = None  # set by .new()
+        self.stop = None
+        self.start = None
 
     @property
     def num_ruptures(self):
@@ -201,29 +200,20 @@ class UCERFSource(BaseSeismicSource):
     @property
     def mags(self):
         # read from FM0_0/MEANFS/MEANMSR/Magnitude
-        if hasattr(self.orig, '_mags'):
-            return self.orig._mags
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._mags = hdf5[self.idx_set["mag"]][()]
-            return self.orig._mags
+            return hdf5[self.idx_set["mag"]][self.start: self.stop]
 
     @property
     def rate(self):
         # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
-        if hasattr(self.orig, '_rate'):
-            return self.orig._rate
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._rate = hdf5[self.idx_set["rate"]][()]
-            return self.orig._rate
+            return hdf5[self.idx_set["rate"]][self.start: self.stop]
 
     @property
     def rake(self):
         # read from FM0_0/MEANFS/Rake
-        if hasattr(self.orig, '_rake'):
-            return self.orig._rake
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._rake = hdf5[self.idx_set["rake"]][()]
-            return self.orig._rake
+            return hdf5[self.idx_set["rake"]][self.start:self.stop]
 
     def wkt(self):
         return ''
@@ -242,7 +232,6 @@ class UCERFSource(BaseSeismicSource):
         :returns: a new UCERFSource associated to the branch_id
         """
         new = copy.copy(self)
-        new.orig = new
         new.grp_id = grp_id
         new.source_id = branch_id
         new.idx_set = build_idx_set(branch_id, self.start_date)
@@ -340,7 +329,7 @@ class UCERFSource(BaseSeismicSource):
             ridx = self.all_ridx[iloc - self.start]
         else:
             ridx = self.get_ridx(iloc)
-        mag = self.orig.mags[iloc]
+        mag = self.mags[iloc - self.start]
         surface_set = []
         indices = self.src_filter.get_indices(self, ridx, mag)
         if len(indices) == 0:
@@ -365,9 +354,9 @@ class UCERFSource(BaseSeismicSource):
                                      bottom_right, bottom_left)
 
         rupture = ParametricProbabilisticRupture(
-            mag, self.orig.rake[iloc], trt,
+            mag, self.rake[iloc - self.start], trt,
             surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set), self.orig.rate[iloc], self.tom)
+            MultiSurface(surface_set), self.rate[iloc - self.start], self.tom)
 
         return rupture
 
@@ -375,16 +364,14 @@ class UCERFSource(BaseSeismicSource):
         """
         Yield ruptures for the current set of indices
         """
-        assert self.orig, '%s is not fully initialized' % self
         for ridx in range(self.start, self.stop):
-            if self.orig.rate[ridx]:  # ruptures may have have zero rate
+            if self.rate[ridx - self.start]:  # may have have zero rate
                 rup = self.get_ucerf_rupture(ridx)
                 if rup:
                     yield rup
 
     # called upfront, before classical_split_filter
     def __iter__(self):
-        assert self.orig, '%s is not fully initialized' % self
         if self.stop - self.start <= self.ruptures_per_block:  # already split
             yield self
             return
