@@ -491,7 +491,7 @@ def gen_rupture_getters(dstore, srcfilter, ct):
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][()]
     items = list(general.group_array(rup_array, 'grp_id').items())
-    items.sort(key=lambda item: item[1]['n_occ'].sum() * samples[item[0]])
+    items.sort(key=lambda item: len(item[1]))  # other weights were much worse
     maxweight = None
     while items:
         grp_id, rups = items.pop()  # from the largest group
