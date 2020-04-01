@@ -176,7 +176,7 @@ class UCERFSource(BaseSeismicSource):
     code = b'U'
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
-    ruptures_per_block = None  # overridden by the job.ini
+    ruptures_per_block = None  # overridden by the source_reader
     checksum = 0
     _wkt = ''
 
