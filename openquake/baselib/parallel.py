@@ -851,6 +851,7 @@ class Starmap(object):
         isocket = iter(self.socket)
         self.todo = len(self.tasks)
         while self.todo:
+            self.log_percent()
             res = next(isocket)
             if self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
@@ -860,7 +861,6 @@ class Starmap(object):
                 self._submit_many(1)
                 logging.debug('%d tasks todo, %d in queue',
                               self.todo, len(self.task_queue))
-                self.log_percent()
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
