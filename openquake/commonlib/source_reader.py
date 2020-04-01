@@ -88,15 +88,17 @@ def get_csm(oq, full_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
+            sg.mags = numpy.unique(numpy.round(src.mags))
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
             if classical:
                 src.ruptures_per_block = oq.ruptures_per_block
-                # split the sources upfront to improve the task distribution
-                sg.sources = src.get_background_sources(sample)
-                if not sample:
-                    for s in src:
-                        sg.sources.append(s)
+                if sample:
+                    sg.sources = [list(src)[0]]  # take the first source
+                else:
+                    sg.sources = list(src)
+                # add background point sources
+                sg.sources.extend(src.get_background_sources(sample))
             else:  # event_based, use one source
                 sg.sources = [src]
         return CompositeSourceModel(full_lt, src_groups)
