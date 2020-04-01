@@ -342,7 +342,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
             C *= 50  # use more tasks because there will be slow tasks
-        elif oq.disagg_by_src:  # do not split the sources
+        elif oq.disagg_by_src or oq.is_ucerf():  # do not split the sources
             f1, f2 = classical, classical
         else:
             f1, f2 = classical, classical_split_filter
