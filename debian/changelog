@@ -3,7 +3,7 @@
 
   [Marco Pagani]
   * Fixed a bug in the coeff table of YEA97
-  
+
   [Graeme Weatherill]
   * Implements support for Gaussian Mixture Model approach to characterise
     ground motion model uncertainty
