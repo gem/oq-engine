@@ -25,7 +25,7 @@ import numpy
 import h5py
 import zlib
 
-from openquake.baselib.general import random_filter, AccumDict
+from openquake.baselib.general import random_filter, AccumDict, cached_property
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
@@ -197,19 +197,19 @@ class UCERFSource(BaseSeismicSource):
     def num_ruptures(self, value):  # hack to make the sourceconverter happy
         pass
 
-    @property
+    @cached_property
     def mags(self):
         # read from FM0_0/MEANFS/MEANMSR/Magnitude
         with h5py.File(self.source_file, "r") as hdf5:
             return hdf5[self.idx_set["mag"]][self.start: self.stop]
 
-    @property
+    @cached_property
     def rate(self):
         # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
         with h5py.File(self.source_file, "r") as hdf5:
             return hdf5[self.idx_set["rate"]][self.start: self.stop]
 
-    @property
+    @cached_property
     def rake(self):
         # read from FM0_0/MEANFS/Rake
         with h5py.File(self.source_file, "r") as hdf5:
