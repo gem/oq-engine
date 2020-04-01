@@ -44,7 +44,6 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 DEFAULT_TRT = "Active Shallow Crust"
-RUPTURES_PER_BLOCK = 10000  # decided by MS
 HDD = PMF([(0.2, 3.0), (0.6, 6.0), (0.2, 9.0)])
 NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
            (0.15, NodalPlane(45.0, 90.0, 0.0)),
@@ -177,6 +176,7 @@ class UCERFSource(BaseSeismicSource):
     code = b'U'
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
+    ruptures_per_block = None  # overridden by the source_reader
     checksum = 0
     _wkt = ''
 
@@ -391,24 +391,23 @@ class UCERFSource(BaseSeismicSource):
                 if rup:
                     yield rup
 
+    # called upfront, before classical_split_filter
     def __iter__(self):
         assert self.orig, '%s is not fully initialized' % self
-        start = self.start
-        stop = self.stop
-        while stop > start:
+        if self.stop - self.start <= self.ruptures_per_block:  # already split
+            yield self
+            return
+        for start in range(self.start, self.stop, self.ruptures_per_block):
+            stop = min(start + self.ruptures_per_block, self.stop)
             new = copy.copy(self)
             new.id = self.id
-            new.source_id = '%s:%d-%d' % (
-                self.source_id, self.start, self.stop)
-            new.orig = self.orig
+            new.source_id = '%s:%d-%d' % (self.source_id, start, stop)
             new.start = start
-            new.stop = min(start + RUPTURES_PER_BLOCK, stop)
-            start += RUPTURES_PER_BLOCK
+            new.stop = stop
             yield new
 
     def __repr__(self):
-        return '<%s %s:%d:%d>' % (self.__class__.__name__, self.source_id,
-                                  self.start, self.stop)
+        return '<%s %s>' % (self.__class__.__name__, self.source_id)
 
     def get_background_sources(self, sample_factor=None):
         """

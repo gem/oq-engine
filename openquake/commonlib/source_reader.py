@@ -91,6 +91,7 @@ def get_csm(oq, full_lt, h5=None):
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
             if classical:
+                src.ruptures_per_block = oq.ruptures_per_block
                 # split the sources upfront to improve the task distribution
                 sg.sources = src.get_background_sources(sample)
                 if not sample:
