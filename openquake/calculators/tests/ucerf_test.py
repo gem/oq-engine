@@ -66,9 +66,8 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hmap.rst', got)
 
     def test_classical(self):
-        ucerf_base.RUPTURES_PER_BLOCK = 50  # check splitting
-        self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
-        ucerf_base.RUPTURES_PER_BLOCK = 1000  # resume default
+        self.run_calc(ucerf.__file__, 'job_classical_redux.ini',
+                      ruptures_per_block='50', exports='csv')
         fnames = export(('hcurves/', 'csv'), self.calc.datastore)
         expected = ['hazard_curve-0-PGA.csv', 'hazard_curve-0-SA(0.1).csv',
                     'hazard_curve-1-PGA.csv', 'hazard_curve-1-SA(0.1).csv']
