@@ -277,13 +277,13 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)
-        smap.task_queue = list(self.gen_task_queue())  # really fast
+        self.submit(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
-            acc = smap.get_results().reduce(self.agg_dicts, acc0)
+            acc = smap.reduce(self.agg_dicts, acc0)
             self.store_rlz_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info'):
@@ -313,9 +313,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times.clear()  # save a bit of memory
         return acc
 
-    def gen_task_queue(self):
+    def submit(self, smap):
         """
-        Build a task queue to be attached to the Starmap instance
+        Submit tasks via the passed Starmap
         """
         oq = self.oqparam
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -351,7 +351,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic:
                 # do not split atomic groups
                 nb = 1
-                yield f1, (sg, srcfilter, gsims, param)
+                smap.submit((sg, srcfilter, gsims, param), f1)
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
@@ -361,7 +361,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
-                    yield f2, (block, srcfilter, gsims, param)
+                    smap.submit((block, srcfilter, gsims, param), f2)
 
             w = sum(src.weight for src in sg)
             logging.info('TRT = %s', sg.trt)
