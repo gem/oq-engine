@@ -579,10 +579,10 @@ class RectangularMesh(Mesh):
         """
         assert 1 not in self.lons.shape, (
             "inclination and azimuth are only defined for mesh of more than "
-            "one row and more than one column of points")
+            "one row and more than one column of points ")
         assert ((self.depths[1:] - self.depths[:-1]) >= 0).all(), (
             "get_mean_inclination_and_azimuth() requires next mesh row "
-            "to be not shallower than the previous one")
+            "to be not shallower than the previous one ")
 
         points, along_azimuth, updip, diag = self.triangulate()
 
