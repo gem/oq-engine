@@ -90,7 +90,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield {'pmap': {}}
         return
     totw = sum(src.weight for src in sources)
-    if totw < MINWEIGHT:  # avoid resubmitting tasks too small
+    if totw < MINWEIGHT:  # avoid resubmitting too small tasks
         yield classical(sources, srcfilter, gsims, params, monitor)
         return
     tm = params['task_multiplier']
