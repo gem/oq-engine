@@ -89,7 +89,6 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     if not sources:
         yield {'pmap': {}}
         return
-    totw = sum(src.weight for src in srcs)  # before filtering
     realw = sum(src.weight for src in sources)  # after filtering
     if realw < MINWEIGHT:  # avoid resubmitting too small tasks
         yield classical(sources, srcfilter, gsims, params, monitor)
@@ -97,7 +96,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     tm = params['task_multiplier']
     # the task multiplier is ceil(concurrent_tasks / num_sources)
     # for instance 640 / 10 = 64 or 640 / 100_000 = 1
-    maxw = min(totw / tm, params['max_weight'])
+    maxw = min(realw / tm, params['max_weight'])
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
