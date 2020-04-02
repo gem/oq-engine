@@ -40,6 +40,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
+MINWEIGHT = 5000
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -89,7 +90,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield {'pmap': {}}
         return
     totw = sum(src.weight for src in sources)
-    if totw < 3000:  # minimum weight; avoids generating small tasks
+    if totw < MINWEIGHT:  # avoid resubmitting tasks too small
         yield classical(sources, srcfilter, gsims, params, monitor)
         return
     tm = params['task_multiplier']
