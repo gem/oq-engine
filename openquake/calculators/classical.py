@@ -40,7 +40,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-MINWEIGHT = 5000
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -93,9 +92,6 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     # the task multiplier is ceil(concurrent_tasks / num_sources)
     # for instance 640 / 10 = 64 or 640 / 100_000 = 1
     maxw = min(sum(src.weight for src in sources) / tm, params['max_weight'])
-    if maxw < MINWEIGHT:  # task too small to be resubmitted
-        yield classical(sources, srcfilter, gsims, params, monitor)
-        return
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
