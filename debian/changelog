@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Enhanced `oq check_input` to check complex fault geometries
   * Added a warning against magnitude-dependent maximum_distance
 
   [Marco Pagani]

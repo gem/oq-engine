@@ -61,6 +61,7 @@ def check_input(job_ini_or_zip_or_nrmls):
                           if src.code == b'C']
                 for err in parallel.Starmap(check_complex_fault, faults):
                     logging.error(err)
+                parallel.Starmap.shutdown()
 
 
 check_input.arg('job_ini_or_zip_or_nrmls', 'Check the input', nargs='+')
