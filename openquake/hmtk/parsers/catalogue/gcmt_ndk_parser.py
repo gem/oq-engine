@@ -323,6 +323,7 @@ class ParseNDKtoGCMT(object):
         hypo.time = _read_time_from_string(linestring[16:26])
         hypo.latitude = float(linestring[27:33])
         hypo.longitude = float(linestring[34:41])
+
         hypo.depth = float(linestring[42:47])
         magnitudes = [float(x) for x in linestring[48:55].split(' ')]
         if magnitudes[0] > 0.:
@@ -366,7 +367,7 @@ class ParseNDKtoGCMT(object):
         centroid.time_error = float(ndk_string[19:22])
         centroid.latitude = float(ndk_string[22:29])
         centroid.latitude_error = float(ndk_string[31:34])
-        centroid.longitude = float(ndk_string[36:42])
+        centroid.longitude = float(ndk_string[35:42])
         centroid.latitude_error = float(ndk_string[44:47])
         centroid.depth = float(ndk_string[48:53])
         centroid.depth_error = float(ndk_string[54:58])

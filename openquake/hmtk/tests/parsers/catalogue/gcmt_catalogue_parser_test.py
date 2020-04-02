@@ -47,11 +47,12 @@
 
 import unittest
 import os
+import datetime
 import numpy as np
 
-from openquake.hmtk.seismicity.gcmt_catalogue import GCMTCatalogue
+
+from openquake.hmtk.seismicity.gcmt_catalogue import GCMTHypocentre
 from openquake.hmtk.parsers.catalogue.gcmt_ndk_parser import ParseNDKtoGCMT
-#from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import CsvGCMTCatalogueParser
 
 
 class GCMTCatalogueParserTestCase(unittest.TestCase):
@@ -169,13 +170,24 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
             self.cat.end_year, np.max(self.cat.data['year']))
 
     def test_read_centroid_from_ndk_string(self):
-        import datetime
-        from openquake.hmtk.seismicity.gcmt_catalogue import GCMTHypocentre
-
         tmps = """CENTROID:      1.060.0  10.47 0.03  127.42 0.03  15.0  0.0 BDY  O-00000000000000"""
-
         prs = ParseNDKtoGCMT('pippo')
         hypo = GCMTHypocentre()
         hypo.date = datetime.date(2000, 1, 2)
         hypo.time = datetime.time(1, 2, 3)
-        prs._read_centroid_from_ndk_string(tmps, hypo)
+        centroid = prs._read_centroid_from_ndk_string(tmps, hypo)
+        self.assertEqual(127.42, centroid.longitude, 'Wrong longitude')
+        self.assertEqual(10.47, centroid.latitude, 'Wrong latitude')
+
+    def test_read_centroid_from_ndk_string_02(self):
+        # First event in the .ndk catalogue downloadable from
+        # https://www.globalcmt.org/
+        # This is the third line in the .ndk format
+        tmps = """CENTROID:     13.8 0.2 -29.25 0.02 -176.96 0.01  47.8  0.6 FREE O-00000000000000"""
+        prs = ParseNDKtoGCMT('goofy')
+        hypo = GCMTHypocentre()
+        hypo.date = datetime.date(2000, 1, 2)
+        hypo.time = datetime.time(1, 2, 3)
+        centroid = prs._read_centroid_from_ndk_string(tmps, hypo)
+        self.assertEqual(-176.96, centroid.longitude)
+        self.assertEqual(-29.25, centroid.latitude)
