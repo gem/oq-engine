@@ -338,11 +338,14 @@ class GmfGetter(object):
         """
         Yield a GmfComputer instance for each non-discarded rupture
         """
+        trt, samples = self.rupgetter.trt, self.rupgetter.samples
         with mon:
-            ebrs = self.rupgetter.get_ruptures()
-        for ebr in ebrs:
+            proxies = self.rupgetter.get_proxies()
+        for proxy in proxies:
             with mon:
-                sitecol = self.sitecol.filtered(ebr.sids)
+                ebr = proxy.to_ebr(trt, samples)
+                sids = self.srcfilter.close_sids(proxy, trt)
+                sitecol = self.sitecol.filtered(sids)
                 try:
                     computer = calc.gmf.GmfComputer(
                         ebr, sitecol, self.oqparam.imtls, self.cmaker,
@@ -475,7 +478,7 @@ def _gen(arr, srcfilter, trt, samples):
     for rec in arr:
         sids = srcfilter.close_sids(rec, trt)
         if len(sids):
-            yield RuptureProxy(rec, sids, samples)
+            yield RuptureProxy(rec, len(sids), samples)
 
 
 def gen_rupture_getters(dstore, srcfilter, ct):
@@ -587,21 +590,20 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, min_mag=0):
+    def get_proxies(self, min_mag=0):
         """
-        :returns: a list of EBRuptures filtered by bounding box
+        :returns: a list of RuptureProxies
         """
-        ebrs = []
+        proxies = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             for proxy in self.proxies:
                 if proxy['mag'] < min_mag:
                     continue
-                geom = rupgeoms[proxy['gidx1']:proxy['gidx2']].reshape(
+                proxy.geom = rupgeoms[proxy['gidx1']:proxy['gidx2']].reshape(
                     proxy['sx'], proxy['sy'])
-                ebr = proxy.to_ebr(geom, self.trt, self.samples)
-                ebrs.append(ebr)
-        return ebrs
+                proxies.append(proxy)
+        return proxies
 
     def __len__(self):
         return len(self.proxies)
