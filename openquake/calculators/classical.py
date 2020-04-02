@@ -335,7 +335,7 @@ class ClassicalCalculator(base.HazardCalculator):
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
         S = len(self.csm.get_sources())
-        task_multiplier = max(C / S, 5)  # try to split in 5 subtasks
+        task_multiplier = max(C / S, 1.9)  # try to split in 2 subtasks
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
