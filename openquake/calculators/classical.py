@@ -344,6 +344,8 @@ class ClassicalCalculator(base.HazardCalculator):
             collapse_ctxs=oq.collapse_ctxs,
             task_multiplier=numpy.ceil(C / self.num_sources),
             max_sites_disagg=oq.max_sites_disagg)
+        if param['task_multiplier'] > 1:
+            logging.info('task_multiplier = %s', param['task_multiplier'])
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
