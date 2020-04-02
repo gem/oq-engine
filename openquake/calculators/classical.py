@@ -376,7 +376,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 psd = getdefault(oq.pointsource_distance, sg.trt)
                 it = sorted(psd.items())
                 msg = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                logging.info('ps_dist=%s', msg)
+                logging.info('pointsource_distance=%s', msg)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
