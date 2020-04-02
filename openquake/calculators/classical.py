@@ -277,11 +277,9 @@ class ClassicalCalculator(base.HazardCalculator):
             aw = calc.get_effect(mags, self.sitecol, gsims_by_trt, oq)
             if hasattr(aw, 'array'):
                 self.datastore['effect_by_mag_dst_trt'] = aw
-        self.num_sources = len(self.csm.get_sources())
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores,
-            distribute='no' if self.num_sources == 1 else None)
+            num_cores=oq.num_cores)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
@@ -335,6 +333,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
+        S = len(self.csm.get_sources())
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -342,10 +341,8 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
             collapse_ctxs=oq.collapse_ctxs,
-            task_multiplier=numpy.ceil(C / self.num_sources),
+            task_multiplier=numpy.ceil(C / S),
             max_sites_disagg=oq.max_sites_disagg)
-        if param['task_multiplier'] > 1:
-            logging.info('task_multiplier = %s', param['task_multiplier'])
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
@@ -382,7 +379,8 @@ class ClassicalCalculator(base.HazardCalculator):
                          format(md, len(gsims), int(w), nb))
             if oq.pointsource_distance['default']:
                 psd = getdefault(oq.pointsource_distance, sg.trt)
-                msg = ', '.join('%s->%d' % it for it in sorted(psd.items()))
+                it = sorted(psd.items())
+                msg = '%s->%d ... %s->%d' % (it[0] + it[-1])
                 logging.info('ps_dist=%s', msg)
 
     def save_hazard(self, acc, pmap_by_kind):
