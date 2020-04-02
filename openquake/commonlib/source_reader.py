@@ -274,12 +274,12 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(grp_ids, numpy.uint32) for grp_ids in sorted(keys)]
 
-    def get_nonparametric_sources(self):
+    def get_sources(self):
         """
-        :returns: list of non parametric sources in the composite source model
+        :returns: list of sources in the composite source model
         """
         return [src for src_group in self.src_groups
-                for src in src_group if hasattr(src, 'data')]
+                for src in src_group]
 
     def get_floating_spinning_factors(self):
         """
