@@ -329,6 +329,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
+        C = oq.concurrent_tasks or 1
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
