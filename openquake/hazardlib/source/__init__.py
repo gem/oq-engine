@@ -18,6 +18,8 @@ Package :mod:`openquake.hazardlib.source` deals with various types
 of seismic sources.
 """
 import copy
+import logging
+from openquake.baselib import parallel
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.rupture import BaseRupture, \
 ParametricProbabilisticRupture, NonParametricProbabilisticRupture
@@ -38,3 +40,25 @@ def splittable(src):
     """
     return (src.__class__.__iter__ is not BaseSeismicSource.__iter__
             and getattr(src, 'mutex_weight', 1) == 1 and src.splittable)
+
+
+def check_complex_fault(src):
+    """
+    Make sure all the underlying rupture surfaces are valid
+    """
+    for rup in src.iter_ruptures():
+        try:
+            rup.surface.get_dip()
+        except Exception as exc:
+            yield '%s: %s' % (src.source_id, exc)
+            break
+
+
+def check_complex_faults(srcs):
+    """
+    Check the geometries of the passed complex fault sources
+    """
+    sources = [(src,) for src in srcs if src.code == b'C']
+    for err in parallel.Starmap(check_complex_fault, sources):
+        logging.error(err)
+    parallel.Starmap.shutdown()
