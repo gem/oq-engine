@@ -89,8 +89,9 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     if not sources:
         yield {'pmap': {}}
         return
-    totw = sum(src.weight for src in sources)
-    if totw < MINWEIGHT:  # avoid resubmitting too small tasks
+    totw = sum(src.weight for src in srcs)  # before filtering
+    realw = sum(src.weight for src in sources)  # after filtering
+    if realw < MINWEIGHT:  # avoid resubmitting too small tasks
         yield classical(sources, srcfilter, gsims, params, monitor)
         return
     tm = params['task_multiplier']
@@ -335,6 +336,7 @@ class ClassicalCalculator(base.HazardCalculator):
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
         S = len(self.csm.get_sources())
+        task_multiplier = max(C / S, 5)  # try to split in 5 subtasks
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -342,7 +344,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
             collapse_ctxs=oq.collapse_ctxs,
-            task_multiplier=numpy.ceil(C / S),
+            task_multiplier=task_multiplier,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
