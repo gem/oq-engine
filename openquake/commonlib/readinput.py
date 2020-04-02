@@ -39,7 +39,7 @@ from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+    source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
@@ -688,6 +688,8 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
         h5['grp_ids'] = grp_ids
     csm.gsim_lt.check_imts(oqparam.imtls)
     csm.source_info = data
+    if os.environ.get('OQ_CHECK_INPUT'):
+        source.check_complex_faults(csm.get_sources())
     return csm
 
 
