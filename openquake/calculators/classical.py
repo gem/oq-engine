@@ -89,7 +89,10 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     if not sources:
         yield {'pmap': {}}
         return
-    maxw = min(sum(src.weight for src in sources)/10, params['max_weight'])
+    tm = params['task_multiplier']
+    # the task multiplier is ceil(concurrent_tasks / num_sources)
+    # for instance 640 / 10 = 64 or 640 / 100_000 = 1
+    maxw = min(sum(src.weight for src in sources) / tm, params['max_weight'])
     if maxw < MINWEIGHT:  # task too small to be resubmitted
         yield classical(sources, srcfilter, gsims, params, monitor)
         return
@@ -274,10 +277,12 @@ class ClassicalCalculator(base.HazardCalculator):
             aw = calc.get_effect(mags, self.sitecol, gsims_by_trt, oq)
             if hasattr(aw, 'array'):
                 self.datastore['effect_by_mag_dst_trt'] = aw
+        self.num_sources = len(self.csm.get_sources())
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores)
-        self.submit(smap)
+            num_cores=oq.num_cores,
+            distribute='no' if self.num_sources == 1 else None)
+        self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -313,9 +318,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times.clear()  # save a bit of memory
         return acc
 
-    def submit(self, smap):
+    def submit_tasks(self, smap):
         """
-        Submit tasks via the passed Starmap
+        Submit tasks to the passed Starmap
         """
         oq = self.oqparam
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -329,6 +334,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
+        C = oq.concurrent_tasks or 1
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -336,9 +342,9 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
             collapse_ctxs=oq.collapse_ctxs,
+            task_multiplier=numpy.ceil(C / self.num_sources),
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
-        C = oq.concurrent_tasks or 1
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
             C *= 50  # use more tasks because there will be slow tasks
