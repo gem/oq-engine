@@ -17,12 +17,24 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import logging
-from openquake.baselib import sap
+from openquake.baselib import sap, parallel
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import readinput, logs
 from openquake.calculators import base
 from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # this is necessary
+
+
+def check_complex_fault(src):
+    """
+    Make sure all the underlying rupture surfaces are valid
+    """
+    for rup in src.iter_ruptures():
+        try:
+            rup.surface.get_dip()
+        except Exception as exc:
+            yield '%s: %s' % (src.source_id, exc)
+            break
 
 
 @sap.script
@@ -41,7 +53,15 @@ def check_input(job_ini_or_zip_or_nrmls):
                 sys.exit(exc)
         else:
             oq = readinput.get_oqparam(job_ini_or_zip_or_nrml)
-            base.calculators(oq, logs.init()).read_inputs()
+            calc = base.calculators(oq, logs.init())
+            base.BaseCalculator.gzip_inputs = lambda self: None  # disable
+            calc.read_inputs()
+            if hasattr(calc, 'csm'):
+                faults = [(src,) for src in calc.csm.get_sources()
+                          if src.code == b'C']
+                for err in parallel.Starmap(check_complex_fault, faults):
+                    logging.error(err)
+                parallel.Starmap.shutdown()
 
 
 check_input.arg('job_ini_or_zip_or_nrmls', 'Check the input', nargs='+')
