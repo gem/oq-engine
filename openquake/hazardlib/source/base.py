@@ -60,7 +60,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             nr = self.num_ruptures / rescale
         else:
             nr = self.num_ruptures
-        return nr * (self.nsites + 100) / 100
+        return nr
 
     @property
     def nsites(self):
