@@ -89,17 +89,14 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     if not sources:
         yield {'pmap': {}}
         return
-    maxw = min(sum(src.weight for src in sources)/10, params['max_weight'])
-    if maxw < MINWEIGHT:  # task too small to be resubmitted
-        yield classical(sources, srcfilter, gsims, params, monitor)
-        return
+    maxw = params['max_weight']
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
         yield classical, block, srcfilter, gsims, params
     if monitor.calc_id and subtasks:
-        msg = 'produced %d subtask(s) with max weight=%d' % (
-            subtasks, max(b.weight for b in blocks))
+        msg = 'produced %d subtask(s) with weight(s) %s' % (
+            subtasks, [int(b.weight) for b in blocks[:-1]])
         try:
             logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
                        'classical_split_filter#%d' % monitor.task_no, msg)
@@ -330,12 +327,14 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
+        max_weight = max(min(totweight / (5 * C), oq.max_weight), MINWEIGHT)
+        logging.info('Using max_weight=%d', max_weight)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             maximum_distance=oq.maximum_distance,
             pointsource_distance=oq.pointsource_distance,
-            shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
+            shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_ctxs=oq.collapse_ctxs,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
@@ -343,6 +342,7 @@ class ClassicalCalculator(base.HazardCalculator):
             f1 = f2 = preclassical
             C *= 50  # use more tasks because there will be slow tasks
         elif oq.disagg_by_src or oq.is_ucerf():  # do not split the sources
+            C *= 5  # use more tasks, especially in UCERF
             f1, f2 = classical, classical
         else:
             f1, f2 = classical, classical_split_filter
@@ -366,8 +366,8 @@ class ClassicalCalculator(base.HazardCalculator):
             w = sum(src.weight for src in sg)
             logging.info('TRT = %s', sg.trt)
             if oq.maximum_distance.magdist:
-                md = ', '.join('%s->%d' % item for item in sorted(
-                    oq.maximum_distance.magdist[sg.trt].items()))
+                it = sorted(oq.maximum_distance.magdist[sg.trt].items())
+                md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             else:
                 md = oq.maximum_distance(sg.trt)
             logging.info('max_dist={}, gsims={}, weight={:,d}, blocks={}'.
