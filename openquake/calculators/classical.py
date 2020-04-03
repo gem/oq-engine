@@ -328,6 +328,7 @@ class ClassicalCalculator(base.HazardCalculator):
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
         max_weight = max(min(totweight / (5 * C), oq.max_weight), MINWEIGHT)
+        logging.info('Using max_weight=%d', max_weight)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
