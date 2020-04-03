@@ -90,9 +90,6 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield {'pmap': {}}
         return
     maxw = params['max_weight']
-    if maxw < MINWEIGHT:  # avoid resubmitting small tasks
-        yield classical(sources, srcfilter, gsims, params, monitor)
-        return
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
@@ -330,7 +327,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
-        max_weight = min(totweight / (5 * C), oq.max_weight)
+        max_weight = max(min(totweight / (5 * C), oq.max_weight), MINWEIGHT)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -368,8 +365,8 @@ class ClassicalCalculator(base.HazardCalculator):
             w = sum(src.weight for src in sg)
             logging.info('TRT = %s', sg.trt)
             if oq.maximum_distance.magdist:
-                md = ', '.join('%s->%d' % item for item in sorted(
-                    oq.maximum_distance.magdist[sg.trt].items()))
+                it = sorted(oq.maximum_distance.magdist[sg.trt].items())
+                md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             else:
                 md = oq.maximum_distance(sg.trt)
             logging.info('max_dist={}, gsims={}, weight={:,d}, blocks={}'.
