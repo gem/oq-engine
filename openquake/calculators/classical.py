@@ -95,8 +95,8 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     for block in blocks[:-1]:
         yield classical, block, srcfilter, gsims, params
     if monitor.calc_id and subtasks:
-        msg = 'produced %d subtask(s) with weight(s) %s' % (
-            subtasks, [int(b.weight) for b in blocks[:-1]])
+        msg = 'produced %d subtask(s) with mean weight %d' % (
+            subtasks, numpy.mean([b.weight for b in blocks[:-1]]))
         try:
             logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
                        'classical_split_filter#%d' % monitor.task_no, msg)
