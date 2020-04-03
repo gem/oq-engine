@@ -89,14 +89,10 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     if not sources:
         yield {'pmap': {}}
         return
-    realw = sum(src.weight for src in sources)  # after filtering
-    if realw < MINWEIGHT:  # avoid resubmitting too small tasks
+    maxw = params['max_weight']
+    if maxw < MINWEIGHT:  # avoid resubmitting small tasks
         yield classical(sources, srcfilter, gsims, params, monitor)
         return
-    tm = params['task_multiplier']
-    # the task multiplier is ceil(concurrent_tasks / num_sources)
-    # for instance 640 / 10 = 64 or 640 / 100_000 = 1
-    maxw = min(realw / tm, params['max_weight'])
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
@@ -334,16 +330,14 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
-        S = len(self.csm.get_sources())
-        task_multiplier = max(C / S, 1.9)  # try to split in 2 subtasks
+        max_weight = min(totweight / (5 * C), oq.max_weight)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             maximum_distance=oq.maximum_distance,
             pointsource_distance=oq.pointsource_distance,
-            shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
+            shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_ctxs=oq.collapse_ctxs,
-            task_multiplier=task_multiplier,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
