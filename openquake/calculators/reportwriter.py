@@ -20,11 +20,11 @@
 """
 Utilities to build a report writer generating a .rst report for a calculation
 """
-from openquake.baselib.python3compat import decode
 import os
 import sys
 import logging
-from openquake.baselib.python3compat import encode
+from openquake.baselib import parallel
+from openquake.baselib.python3compat import encode, decode
 from openquake.commonlib import readinput, logs
 from openquake.calculators import views
 
@@ -143,7 +143,10 @@ def build_report(job_ini, output_dir=None):
         calc.execute()
     logging.info('Making the .rst report')
     rw = ReportWriter(calc.datastore)
-    rw.make_report()
+    try:
+        rw.make_report()
+    finally:
+        parallel.Starmap.shutdown()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
               else calc.datastore.export_path('report.rst'))
     try:

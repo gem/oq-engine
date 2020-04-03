@@ -170,6 +170,23 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
                 ms = mean_std[:, :, :, g]
                 arr[:, :, g] = _get_poes(ms, loglevels, tl, squeeze=1)
         return arr
+    elif any("mixture_model" in gsim.kwargs for gsim in gsims):
+        shp = list(mean_std[0].shape)  # (N, M, G)
+        shp[1] = len(loglevels.array)  # L
+        arr = numpy.zeros(shp)
+        for g, gsim in enumerate(gsims):
+            if "mixture_model" in gsim.kwargs:
+                for fact, wgt in zip(
+                    gsim.kwargs["mixture_model"]["factors"],
+                    gsim.kwargs["mixture_model"]["weights"]):
+                    mean_stdi = numpy.copy(mean_std)
+                    mean_stdi[1, :, :, :] *= fact
+                    arr[:, :, g] += (wgt * _get_poes(mean_stdi, loglevels, tl,
+                                                     squeeze=1))
+            else:
+                ms = mean_std[:, :, :, g]
+                arr[:, :, g] = _get_poes(ms, loglevels, tl, squeeze=1)
+        return arr
     else:
         # regular case
         return _get_poes(mean_std, loglevels, truncation_level)

@@ -25,17 +25,15 @@ import numpy
 import h5py
 import zlib
 
-from openquake.baselib.general import random_filter, AccumDict
+from openquake.baselib.general import random_filter, AccumDict, cached_property
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.utils import KM_TO_DEGREES, angular_distance
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
-from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -44,20 +42,6 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 DEFAULT_TRT = "Active Shallow Crust"
-RUPTURES_PER_BLOCK = 10000  # decided by MS
-HDD = PMF([(0.2, 3.0), (0.6, 6.0), (0.2, 9.0)])
-NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
-           (0.15, NodalPlane(45.0, 90.0, 0.0)),
-           (0.15, NodalPlane(90.0, 90.0, 0.0)),
-           (0.15, NodalPlane(135.0, 90.0, 0.0)),
-           (0.05, NodalPlane(0.0, 45.0, 90.)),
-           (0.05, NodalPlane(45.0, 45.0, 90.)),
-           (0.05, NodalPlane(90.0, 45.0, 90.)),
-           (0.05, NodalPlane(135.0, 45.0, 90.)),
-           (0.05, NodalPlane(180.0, 45.0, 90.)),
-           (0.05, NodalPlane(225.0, 45.0, 90.)),
-           (0.05, NodalPlane(270.0, 45.0, 90.)),
-           (0.05, NodalPlane(325.0, 45.0, 90.))])
 
 
 def convert_UCERFSource(self, node):
@@ -118,11 +102,11 @@ class UcerfFilter(SourceFilter):
         for src in srcs:
             if hasattr(src, 'start'):  # fault sources
                 src.src_filter = self  # hack: needed for .iter_ruptures
+                src.all_ridx = src.get_ridx()
                 ridx = set()
-                for idx in range(src.start, src.stop):
-                    ridx.update(src.get_ridx(idx))
-                mag = src.mags[src.start:src.stop].max()
-                src.indices = self.get_indices(src, ridx, mag)
+                for arr in src.all_ridx:
+                    ridx.update(arr)
+                src.indices = self.get_indices(src, ridx, src.mags.max())
                 if len(src.indices):
                     yield src
             else:  # background sources
@@ -177,12 +161,13 @@ class UCERFSource(BaseSeismicSource):
     code = b'U'
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
+    ruptures_per_block = None  # overridden by the source_reader
     checksum = 0
     _wkt = ''
 
     def __init__(
             self, source_file, investigation_time, start_date, min_mag,
-            npd=NPD, hdd=HDD, aspect=1.5, upper_seismogenic_depth=0.0,
+            npd, hdd, aspect=1.5, upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=15.0, msr=WC1994(), mesh_spacing=1.0,
             trt="Active Shallow Crust", integration_distance=1000):
         assert os.path.exists(source_file), source_file
@@ -200,9 +185,8 @@ class UCERFSource(BaseSeismicSource):
         self.msr = msr
         self.mesh_spacing = mesh_spacing
         self.tectonic_region_type = trt
-        self.stop = 0
-        self.start = -1
-        self.orig = None  # set by .new()
+        self.stop = None
+        self.start = None
 
     @property
     def num_ruptures(self):
@@ -212,32 +196,23 @@ class UCERFSource(BaseSeismicSource):
     def num_ruptures(self, value):  # hack to make the sourceconverter happy
         pass
 
-    @property
+    @cached_property
     def mags(self):
         # read from FM0_0/MEANFS/MEANMSR/Magnitude
-        if hasattr(self.orig, '_mags'):
-            return self.orig._mags
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._mags = hdf5[self.idx_set["mag"]][()]
-            return self.orig._mags
+            return hdf5[self.idx_set["mag"]][self.start: self.stop]
 
-    @property
+    @cached_property
     def rate(self):
         # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
-        if hasattr(self.orig, '_rate'):
-            return self.orig._rate
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._rate = hdf5[self.idx_set["rate"]][()]
-            return self.orig._rate
+            return hdf5[self.idx_set["rate"]][self.start: self.stop]
 
-    @property
+    @cached_property
     def rake(self):
         # read from FM0_0/MEANFS/Rake
-        if hasattr(self.orig, '_rake'):
-            return self.orig._rake
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._rake = hdf5[self.idx_set["rake"]][()]
-            return self.orig._rake
+            return hdf5[self.idx_set["rake"]][self.start:self.stop]
 
     def wkt(self):
         return ''
@@ -256,7 +231,6 @@ class UCERFSource(BaseSeismicSource):
         :returns: a new UCERFSource associated to the branch_id
         """
         new = copy.copy(self)
-        new.orig = new
         new.grp_id = grp_id
         new.source_id = branch_id
         new.idx_set = build_idx_set(branch_id, self.start_date)
@@ -277,9 +251,11 @@ class UCERFSource(BaseSeismicSource):
         """
         return PoissonTOM(self.inv_time)
 
-    def get_ridx(self, iloc):
+    def get_ridx(self, iloc=None):
         """List of rupture indices for the given iloc"""
         with h5py.File(self.source_file, "r") as hdf5:
+            if iloc is None:
+                iloc = slice(self.start, self.stop)
             return hdf5[self.idx_set["geol"] + "/RuptureIndex"][iloc]
 
     def get_centroids(self, ridx):
@@ -348,8 +324,11 @@ class UCERFSource(BaseSeismicSource):
             Location of the rupture plane in the hdf5 file
         """
         trt = self.tectonic_region_type
-        ridx = self.get_ridx(iloc)
-        mag = self.orig.mags[iloc]
+        if hasattr(self, 'all_ridx'):  # already computed by the UcerfFilter
+            ridx = self.all_ridx[iloc - self.start]
+        else:
+            ridx = self.get_ridx(iloc)
+        mag = self.mags[iloc - self.start]
         surface_set = []
         indices = self.src_filter.get_indices(self, ridx, mag)
         if len(indices) == 0:
@@ -374,9 +353,9 @@ class UCERFSource(BaseSeismicSource):
                                      bottom_right, bottom_left)
 
         rupture = ParametricProbabilisticRupture(
-            mag, self.orig.rake[iloc], trt,
+            mag, self.rake[iloc - self.start], trt,
             surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set), self.orig.rate[iloc], self.tom)
+            MultiSurface(surface_set), self.rate[iloc - self.start], self.tom)
 
         return rupture
 
@@ -384,31 +363,28 @@ class UCERFSource(BaseSeismicSource):
         """
         Yield ruptures for the current set of indices
         """
-        assert self.orig, '%s is not fully initialized' % self
         for ridx in range(self.start, self.stop):
-            if self.orig.rate[ridx]:  # ruptures may have have zero rate
+            if self.rate[ridx - self.start]:  # may have have zero rate
                 rup = self.get_ucerf_rupture(ridx)
                 if rup:
                     yield rup
 
+    # called upfront, before classical_split_filter
     def __iter__(self):
-        assert self.orig, '%s is not fully initialized' % self
-        start = self.start
-        stop = self.stop
-        while stop > start:
+        if self.stop - self.start <= self.ruptures_per_block:  # already split
+            yield self
+            return
+        for start in range(self.start, self.stop, self.ruptures_per_block):
+            stop = min(start + self.ruptures_per_block, self.stop)
             new = copy.copy(self)
             new.id = self.id
-            new.source_id = '%s:%d-%d' % (
-                self.source_id, self.start, self.stop)
-            new.orig = self.orig
+            new.source_id = '%s:%d-%d' % (self.source_id, start, stop)
             new.start = start
-            new.stop = min(start + RUPTURES_PER_BLOCK, stop)
-            start += RUPTURES_PER_BLOCK
+            new.stop = stop
             yield new
 
     def __repr__(self):
-        return '<%s %s:%d:%d>' % (self.__class__.__name__, self.source_id,
-                                  self.start, self.stop)
+        return '<%s %s>' % (self.__class__.__name__, self.source_id)
 
     def get_background_sources(self, sample_factor=None):
         """

@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.pmf` implements :class:`PMF`.
 """
 import numpy as np
 
-PRECISION = 1E-12  # precision used when comparing sum(probs) to 1
+PRECISION = 1E-7  # precision used when comparing sum(probs) to 1
 
 
 class PMF(object):

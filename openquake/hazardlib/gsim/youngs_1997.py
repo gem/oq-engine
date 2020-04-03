@@ -142,7 +142,7 @@ class YoungsEtAl1997SInter(GMPE):
     #: taken from table 2, p. 67
     COEFFS_SOIL = CoeffsTable(sa_damping=5, table="""\
     IMT       C1        C2         C3       C4       C5
-    pga       0.000    -0.0019    -2.329    1.45    -0.1
+    pga       0.000     0.0000    -2.329    1.45    -0.1
     0.075     2.400    -0.0019    -2.697    1.45    -0.1
     0.100     2.516    -0.0019    -2.697    1.45    -0.1
     0.200     1.549    -0.0020    -2.464    1.45    -0.1

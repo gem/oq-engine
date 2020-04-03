@@ -88,14 +88,17 @@ def get_csm(oq, full_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
+            sg.mags = numpy.unique(numpy.round(src.mags))
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
             if classical:
-                # split the sources upfront to improve the task distribution
-                sg.sources = src.get_background_sources(sample)
-                if not sample:
-                    for s in src:
-                        sg.sources.append(s)
+                src.ruptures_per_block = oq.ruptures_per_block
+                if sample:
+                    sg.sources = [list(src)[0]]  # take the first source
+                else:
+                    sg.sources = list(src)
+                # add background point sources
+                sg.sources.extend(src.get_background_sources(sample))
             else:  # event_based, use one source
                 sg.sources = [src]
         return CompositeSourceModel(full_lt, src_groups)
@@ -271,12 +274,12 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(grp_ids, numpy.uint32) for grp_ids in sorted(keys)]
 
-    def get_nonparametric_sources(self):
+    def get_sources(self):
         """
-        :returns: list of non parametric sources in the composite source model
+        :returns: list of sources in the composite source model
         """
         return [src for src_group in self.src_groups
-                for src in src_group if hasattr(src, 'data')]
+                for src in src_group]
 
     def get_floating_spinning_factors(self):
         """

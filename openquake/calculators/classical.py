@@ -24,9 +24,10 @@ from datetime import datetime
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, block_splitter, humansize
+from openquake.baselib.general import (
+    AccumDict, block_splitter, groupby, humansize)
 from openquake.hazardlib.contexts import ContextMaker
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs
@@ -39,7 +40,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-MINWEIGHT = 1000
+MINWEIGHT = 5000
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -48,13 +49,13 @@ MAXMEMORY = '''Estimated upper memory limit per core:
 %d sites x %d levels x %d gsims x %d src_multiplicity * 8 bytes = %s'''
 
 TOOBIG = '''\
-The calculation is too big:
+The calculation is too big and will likely fail:
 num_sites = %d
 num_levels = %d
 num_gsims = %d
 src_multiplicity = %d
 The estimated memory per core is %s > 4 GB.
-You MUST reduce one or more of the listed parameters.'''
+You should reduce one or more of the listed parameters.'''
 
 
 def get_extreme_poe(array, imtls):
@@ -88,17 +89,14 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     if not sources:
         yield {'pmap': {}}
         return
-    maxw = min(sum(src.weight for src in sources)/5, params['max_weight'])
-    if maxw < MINWEIGHT*5:  # task too small to be resubmitted
-        yield classical(sources, srcfilter, gsims, params, monitor)
-        return
+    maxw = params['max_weight']
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
         yield classical, block, srcfilter, gsims, params
     if monitor.calc_id and subtasks:
-        msg = 'produced %d subtask(s) with max weight=%d' % (
-            subtasks, max(b.weight for b in blocks))
+        msg = 'produced %d subtask(s) with mean weight %d' % (
+            subtasks, numpy.mean([b.weight for b in blocks[:-1]]))
         try:
             logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
                        'classical_split_filter#%d' % monitor.task_no, msg)
@@ -153,6 +151,12 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError('You ran out of memory!')
         if not dic['pmap']:
             return acc
+        if self.oqparam.disagg_by_src:
+            # store the pmaps for the given source
+            for grp_id, pmap in dic['pmap'].items():
+                name = 'poes_by_src/%s/grp-%02d' % (
+                    dic['extra']['source_id'], grp_id)
+                self.datastore[name] = pmap
         trt = dic['extra'].pop('trt')
         with self.monitor('aggregate curves'):
             extra = dic['extra']
@@ -238,7 +242,7 @@ class ClassicalCalculator(base.HazardCalculator):
         max_num_grp_ids = max(len(grp_ids) for grp_ids in self.gidx)
         pmapbytes = self.N * num_levels * max_num_gsims * max_num_grp_ids * 8
         if pmapbytes > TWO32:
-            logging.error(
+            logging.warning(
                 TOOBIG % (self.N, num_levels, max_num_gsims, max_num_grp_ids,
                           humansize(pmapbytes)))
         logging.info(MAXMEMORY % (self.N, num_levels, max_num_gsims,
@@ -270,13 +274,13 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)
-        smap.task_queue = list(self.gen_task_queue())  # really fast
+        self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
-            acc = smap.get_results().reduce(self.agg_dicts, acc0)
+            acc = smap.reduce(self.agg_dicts, acc0)
             self.store_rlz_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info'):
@@ -299,16 +303,16 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.by_task.clear()
         self.numrups = sum(arr[0] for arr in self.calc_times.values())
         numsites = sum(arr[1] for arr in self.calc_times.values())
-        logging.info('Effective number of ruptures: {:,d}/{:,d}'.format(
+        logging.info('Effective number of ruptures: {:_d}/{:_d}'.format(
             int(self.numrups), self.totrups))
         logging.info('Effective number of sites per rupture: %d',
                      numsites / self.numrups)
         self.calc_times.clear()  # save a bit of memory
         return acc
 
-    def gen_task_queue(self):
+    def submit_tasks(self, smap):
         """
-        Build a task queue to be attached to the Starmap instance
+        Submit tasks to the passed Starmap
         """
         oq = self.oqparam
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -322,47 +326,58 @@ class ClassicalCalculator(base.HazardCalculator):
 
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
+        C = oq.concurrent_tasks or 1
+        max_weight = max(min(totweight / (5 * C), oq.max_weight), MINWEIGHT)
+        logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
+            int(totweight), int(max_weight)))
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             maximum_distance=oq.maximum_distance,
             pointsource_distance=oq.pointsource_distance,
-            shift_hypo=oq.shift_hypo, max_weight=oq.max_weight,
-            collapse_ruptures=oq.collapse_ruptures,
+            shift_hypo=oq.shift_hypo, max_weight=max_weight,
+            collapse_ctxs=oq.collapse_ctxs,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
+            C *= 50  # use more tasks because there will be slow tasks
+        elif oq.disagg_by_src or oq.is_ucerf():  # do not split the sources
+            C *= 5  # use more tasks, especially in UCERF
+            f1, f2 = classical, classical
         else:
             f1, f2 = classical, classical_split_filter
-        C = oq.concurrent_tasks or 1
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
             if sg.atomic:
                 # do not split atomic groups
                 nb = 1
-                yield f1, (sg, srcfilter, gsims, param)
+                smap.submit((sg, srcfilter, gsims, param), f1)
             else:  # regroup the sources in blocks
-                blocks = list(block_splitter(sg, totweight/C, srcweight))
+                blks = (groupby(sg, operator.attrgetter('source_id')).values()
+                        if oq.disagg_by_src
+                        else block_splitter(sg, totweight/C, srcweight))
+                blocks = list(blks)
                 nb = len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
-                                  len(block), block.weight)
-                    yield f2, (block, srcfilter, gsims, param)
+                                  len(block), sum(src.weight for src in block))
+                    smap.submit((block, srcfilter, gsims, param), f2)
 
-            nr = sum(src.weight for src in sg)
+            w = sum(src.weight for src in sg)
             logging.info('TRT = %s', sg.trt)
             if oq.maximum_distance.magdist:
-                md = ', '.join('%s->%d' % item for item in sorted(
-                    oq.maximum_distance.magdist[sg.trt].items()))
+                it = sorted(oq.maximum_distance.magdist[sg.trt].items())
+                md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             else:
                 md = oq.maximum_distance(sg.trt)
-            logging.info('max_dist={}, gsims={}, ruptures={:,d}, blocks={}'.
-                         format(md, len(gsims), int(nr), nb))
+            logging.info('max_dist={}, gsims={}, weight={:,d}, blocks={}'.
+                         format(md, len(gsims), int(w), nb))
             if oq.pointsource_distance['default']:
-                pd = ', '.join('%s->%d' % item for item in sorted(
-                    oq.pointsource_distance[sg.trt].items()))
-                logging.info('ps_dist=%s', pd)
+                psd = getdefault(oq.pointsource_distance, sg.trt)
+                it = sorted(psd.items())
+                msg = '%s->%d ... %s->%d' % (it[0] + it[-1])
+                logging.info('pointsource_distance=%s', msg)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
@@ -436,8 +451,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-        ct = oq.concurrent_tasks
-        logging.info('Building hazard statistics with %d concurrent_tasks', ct)
+        ct = oq.concurrent_tasks or 1
+        logging.info('Building hazard statistics')
         weights = [rlz.weight for rlz in self.realizations]
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),

@@ -55,18 +55,6 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
-source_info_dt = numpy.dtype([
-    ('source_id', hdf5.vstr),          # 0
-    ('gidx', numpy.uint16),            # 1
-    ('code', (numpy.string_, 1)),      # 2
-    ('num_sources', numpy.uint32),     # 3
-    ('calc_time', numpy.float32),      # 4
-    ('num_sites', numpy.uint32),       # 5
-    ('eff_ruptures', numpy.uint32),    # 6
-    ('checksum', numpy.uint32),        # 7
-    ('serial', numpy.uint32),          # 8
-])
-
 NUM_SOURCES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
@@ -472,7 +460,8 @@ class HazardCalculator(BaseCalculator):
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
 
-        if not oq.hazard_calculation_id:
+        if (not oq.hazard_calculation_id and
+                oq.calculation_mode != 'preclassical'):
             self.gzip_inputs()
 
     def save_multi_peril(self):
@@ -798,7 +787,7 @@ class HazardCalculator(BaseCalculator):
 
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
-                          collapse_ruptures=oq.collapse_ruptures,
+                          collapse_ctxs=oq.collapse_ctxs,
                           avg_losses=oq.avg_losses, amplifier=self.amplifier)
 
         # compute exposure stats
@@ -861,7 +850,8 @@ class HazardCalculator(BaseCalculator):
             row[CALC_TIME] += arr[2]
         rows = self.csm.source_info.values()
         recs = [tuple(row) for row in rows]
-        self.datastore['source_info'] = numpy.array(recs, source_info_dt)
+        hdf5.extend(self.datastore['source_info'],
+                    numpy.array(recs, readinput.source_info_dt))
 
     def post_process(self):
         """For compatibility with the engine"""
@@ -1010,7 +1000,7 @@ class RiskCalculator(HazardCalculator):
             return
         res = parallel.Starmap.apply(
             self.core_task.__func__,
-            (self.riskinputs, self.crmodel, self.param, self.monitor()),
+            (self.riskinputs, self.crmodel, self.param),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
             weight=get_weight, h5=self.datastore.hdf5
         ).reduce(self.combine)

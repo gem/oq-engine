@@ -21,6 +21,7 @@ import time
 import warnings
 import operator
 import itertools
+import collections
 import numpy
 from scipy.interpolate import interp1d
 
@@ -39,6 +40,7 @@ I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
+POINT_RUPTURE_BINS = 20
 
 
 def get_distances(rupture, sites, param):
@@ -48,9 +50,7 @@ def get_distances(rupture, sites, param):
     :param param: the kind of distance to compute (default rjb)
     :returns: an array of distances from the given sites
     """
-    # avoid a circular import
-    from openquake.hazardlib.source.rupture import PointRupture
-    if isinstance(rupture, PointRupture):
+    if not rupture.surface:  # PointRupture
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
         dist = rupture.surface.get_min_distance(sites)
@@ -144,7 +144,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.collapse_ruptures = param.get('collapse_ruptures', False)
+        self.collapse_ctxs = param.get('collapse_ctxs', False)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
@@ -337,9 +337,23 @@ class ContextMaker(object):
 
 def _collapse(rups):
     # collapse a list of ruptures into a single rupture
+    if len(rups) < 2:
+        return rups
     rup = copy.copy(rups[0])
     rup.occurrence_rate = sum(r.occurrence_rate for r in rups)
     return [rup]
+
+
+def print_finite_size(rups):
+    """
+    Used to print the number of finite-size ruptures
+    """
+    c = collections.Counter()
+    for rup in rups:
+        if rup.surface:
+            c['%.2f' % rup.mag] += 1
+    print(c)
+    print('total finite size ruptures = ', sum(c.values()))
 
 
 class PmapMaker(object):
@@ -362,12 +376,13 @@ class PmapMaker(object):
         if self.fewsites:  # do not filter, but collapse
             rup_parametric = not numpy.isnan(
                 [r.occurrence_rate for r in rups]).any()
-            if self.rup_indep and rup_parametric:
-                if self.pointsource_distance:
-                    rups = self.collapse_psd(rups, sites)
-                if self.collapse_ruptures:
-                    rups = self.collapse_md(rups, sites)
+            if (self.rup_indep and rup_parametric and len(sites) == 1
+                    and self.pointsource_distance != {}):
+                rups = self.collapse_point_ruptures(rups, sites)
+                # print_finite_size(rups)
             ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
+            if self.rup_indep and rup_parametric and self.collapse_ctxs:
+                ctxs = self.collapse_the_ctxs(ctxs)
             self.numrups += len(ctxs)
             for rup, dctx in ctxs:
                 mask = (dctx.rrup <= self.maximum_distance(
@@ -431,6 +446,7 @@ class PmapMaker(object):
             self.numsites = 0
             ctxs = []
             rups = self._get_rups(srcs, sites)
+            # print_finite_size(rups)
             with self.ctx_mon:
                 if self.fewsites:
                     ctxs.extend(self._ctxs(rups, sites, grp_ids))
@@ -480,34 +496,56 @@ class PmapMaker(object):
         rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
         return pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
 
-    def collapse_psd(self, rups, sites):
+    def collapse_point_ruptures(self, rups, sites):
         """
         Collapse ruptures more distant than the pointsource_distance
         """
-        out = []
-        for mag, mrups in groupby(rups, bymag).items():
+        pointlike, output = [], []
+        for rup in rups:
+            if not rup.surface:
+                pointlike.append(rup)
+            else:
+                output.append(rup)
+        for mag, mrups in groupby(pointlike, bymag).items():
             if len(mrups) == 1:  # nothing to do
-                out.extend(mrups)
+                output.extend(mrups)
                 continue
-            pdist = self.pointsource_distance['%.2f' % mag]
+            mdist = self.maximum_distance(self.trt, mag)
             coll = []
-            for rup in mrups:
-                dist = get_distances(rup, sites, 'rrup').min()
-                if dist < pdist:  # do not collapse
-                    out.append(rup)
-                else:
-                    rup.dist = dist
+            for rup in mrups:  # called on a single site
+                rup.dist = get_distances(rup, sites, 'rrup').min()
+                if rup.dist <= mdist:
                     coll.append(rup)
-            for rs in groupby_bin(coll, 10, operator.attrgetter('dist')):
+            for rs in groupby_bin(
+                    coll, POINT_RUPTURE_BINS, operator.attrgetter('dist')):
                 # group together ruptures in the same distance bin
-                out.extend(_collapse(rs))
-        return out
+                output.extend(_collapse(rs))
+        return output
 
-    def collapse_md(self, rups, sites):
-        # collapse ruptures in the same magdist bin
-        def magdist(rup):
-            return rup.mag, get_distances(rup, sites, 'rrup').min()
-        out = sum(map(_collapse, groupby_bin(rups, 255, magdist)), [])
+    def collapse_the_ctxs(self, ctxs):
+        """
+        Collapse contexts with similar parameters and distances.
+
+        :param ctxs: a list of pairs (rup, dctx)
+        :returns: collapsed contexts
+        """
+        def params(ctx):
+            rup, dctx = ctx
+            lst = []
+            for par in self.REQUIRES_RUPTURE_PARAMETERS:
+                lst.append(getattr(rup, par))
+            for dst in self.REQUIRES_DISTANCES:
+                lst.extend(numpy.round(getattr(dctx, dst)))
+            return tuple(lst)
+
+        out = []
+        for values in groupby(ctxs, params).values():
+            if len(values) == 1:
+                out.append(values[0])
+            else:
+                [rup] = _collapse([rup for rup, dctx in values])
+                dctx = values[0][1]  # get the first dctx
+                out.append((rup, dctx))
         return out
 
     def _get_rups(self, srcs, sites):

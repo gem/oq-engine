@@ -522,6 +522,9 @@ class PointSurface:
     def get_closest_points(self, mesh):
         return mesh
 
+    def __bool__(self):
+        return False
+
 
 class PointRupture(ParametricProbabilisticRupture):
     """
@@ -783,27 +786,40 @@ class EBRupture(object):
 
 
 class RuptureProxy(object):
-    weight = 1  # overridden in calculators.getters
+    """
+    A proxy for a rupture record.
 
-    def __init__(self, rec, sids=None, samples=1):
+    :param rec: a record with the rupture parameters
+    :param nsites: approx number of sites affected by the rupture
+    :param samples: how many times the rupture is sampled
+    """
+    def __init__(self, rec, nsites=None, samples=1):
         self.rec = rec
-        self.sids = sids
+        self.nsites = nsites
         self.samples = samples
 
     @property
     def weight(self):
+        """
+        :returns:
+            heuristic weight for the underlying rupture, depending on the
+            number of occurrences, number of samples and number of sites
+        """
         return self.samples * self['n_occ'] * (
-            100 if self.sids is None else max(len(self.sids), 100))
+            100 if self.nsites is None else max(self.nsites, 100))
 
     def __getitem__(self, name):
         return self.rec[name]
 
-    def to_ebr(self, geom, trt, samples):
+    # NB: requires the .geom attribute to be set
+    def to_ebr(self, trt, samples):
+        """
+        :returns: EBRupture instance associated to the underlying rupture
+        """
         # not implemented: rupture_slip_direction
-        rupture = get_rupture(self.rec, geom, trt)
+        rupture = get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self.rec['srcidx'], self.rec['grp_id'],
                         self.rec['n_occ'], samples)
-        ebr.sids = self.sids
         ebr.id = self.rec['id']
         ebr.e0 = self.rec['e0']
         return ebr

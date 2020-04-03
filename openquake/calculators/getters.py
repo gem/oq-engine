@@ -323,7 +323,7 @@ class GmfGetter(object):
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
-        M32 = (F32, len(oqparam.imtls))
+        M32 = (F32, (len(oqparam.imtls),))
         self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U32)])
         md = (calc.filters.IntegrationDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
@@ -338,11 +338,14 @@ class GmfGetter(object):
         """
         Yield a GmfComputer instance for each non-discarded rupture
         """
+        trt, samples = self.rupgetter.trt, self.rupgetter.samples
         with mon:
-            ebrs = self.rupgetter.get_ruptures()
-        for ebr in ebrs:
+            proxies = self.rupgetter.get_proxies()
+        for proxy in proxies:
             with mon:
-                sitecol = self.sitecol.filtered(ebr.sids)
+                ebr = proxy.to_ebr(trt, samples)
+                sids = self.srcfilter.close_sids(proxy, trt)
+                sitecol = self.sitecol.filtered(sids)
                 try:
                     computer = calc.gmf.GmfComputer(
                         ebr, sitecol, self.oqparam.imtls, self.cmaker,
@@ -475,21 +478,23 @@ def _gen(arr, srcfilter, trt, samples):
     for rec in arr:
         sids = srcfilter.close_sids(rec, trt)
         if len(sids):
-            yield RuptureProxy(rec, sids, samples)
+            yield RuptureProxy(rec, len(sids), samples)
 
 
-def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
+def gen_rupture_getters(dstore, srcfilter, ct):
     """
+    :param dstore: a :class:`openquake.baselib.datastore.DataStore`
+    :param srcfilter: a :class:`openquake.hazardlib.calc.filters.SourceFilter`
+    :param ct: number of concurrent tasks
     :yields: filtered RuptureGetters
     """
     full_lt = dstore['full_lt']
     trt_by_grp = full_lt.trt_by_grp
     samples = full_lt.get_samples_by_grp()
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
-    rup_array = dstore['ruptures'][slc]
-    ct = dstore['oqparam'].concurrent_tasks or 1
+    rup_array = dstore['ruptures'][()]
     items = list(general.group_array(rup_array, 'grp_id').items())
-    items.sort(key=lambda it: len(it[1]))
+    items.sort(key=lambda item: len(item[1]))  # other weights were much worse
     maxweight = None
     while items:
         grp_id, rups = items.pop()  # from the largest group
@@ -500,7 +505,7 @@ def gen_rupture_getters(dstore, srcfilter, slc=slice(None)):
         trt = trt_by_grp[grp_id]
         proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
         if not maxweight:
-            maxweight = sum(p.weight for p in proxies) / ct
+            maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
         blocks = list(general.block_splitter(
             proxies, maxweight, operator.attrgetter('weight')))
         logging.info('Group %d: %d ruptures -> %d task(s)',
@@ -585,21 +590,20 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, min_mag=0):
+    def get_proxies(self, min_mag=0):
         """
-        :returns: a list of EBRuptures filtered by bounding box
+        :returns: a list of RuptureProxies
         """
-        ebrs = []
+        proxies = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             for proxy in self.proxies:
                 if proxy['mag'] < min_mag:
                     continue
-                geom = rupgeoms[proxy['gidx1']:proxy['gidx2']].reshape(
+                proxy.geom = rupgeoms[proxy['gidx1']:proxy['gidx2']].reshape(
                     proxy['sx'], proxy['sy'])
-                ebr = proxy.to_ebr(geom, self.trt, self.samples)
-                ebrs.append(ebr)
-        return ebrs
+                proxies.append(proxy)
+        return proxies
 
     def __len__(self):
         return len(self.proxies)

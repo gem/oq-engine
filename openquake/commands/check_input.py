@@ -15,8 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import sys
 import logging
+from unittest import mock
 from openquake.baselib import sap
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import readinput, logs
@@ -41,7 +43,10 @@ def check_input(job_ini_or_zip_or_nrmls):
                 sys.exit(exc)
         else:
             oq = readinput.get_oqparam(job_ini_or_zip_or_nrml)
-            base.calculators(oq, logs.init()).read_inputs()
+            calc = base.calculators(oq, logs.init())
+            base.BaseCalculator.gzip_inputs = lambda self: None  # disable
+            with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
+                calc.read_inputs()
 
 
 check_input.arg('job_ini_or_zip_or_nrmls', 'Check the input', nargs='+')

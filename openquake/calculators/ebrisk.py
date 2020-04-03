@@ -23,7 +23,6 @@ import numpy
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.baselib.python3compat import zip
-from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import getdefault
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import LossesByAsset
@@ -193,10 +192,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_names}
         logging.info('minimum_asset_loss=%s', mal)
-        if oq.aggregate_by and self.E * A > oq.max_potential_gmfs and any(
-                val == 0 for val in mal.values()):
-            raise InvalidFile('%s: the calculation is too big to run without '
-                              'minimum_asset_loss' % oq.inputs['job_ini'])
+        if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
+                any(val == 0 for val in mal.values()) and not
+                sum(oq.minimum_asset_loss.values())):
+            logging.warning('The calculation is really big; you should set '
+                            'minimum_asset_loss')
         self.param['minimum_asset_loss'] = mal
 
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
@@ -224,14 +224,16 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         srcfilter = self.src_filter(self.datastore.tempname)
-        logging.info('Sending %d ruptures', len(self.datastore['ruptures']))
+        logging.info(
+            'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
         self.numlosses = 0
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
-        for rgetter in getters.gen_rupture_getters(self.datastore, srcfilter):
+        for rgetter in getters.gen_rupture_getters(
+                self.datastore, srcfilter, oq.concurrent_tasks):
             smap.submit((rgetter, srcfilter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:

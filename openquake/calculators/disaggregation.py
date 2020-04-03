@@ -121,7 +121,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges, monitor):
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=True)
-    gmf_mon = monitor('computing mean_std', measuremem=False)
+    gmf_mon = monitor('disagg mean_std', measuremem=False)
     for sid, mat in disagg.build_matrices(
             rupdata, sitecol, cmaker, iml4, oq.num_epsilon_bins,
             bin_edges, pne_mon, mat_mon, gmf_mon):
@@ -166,8 +166,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         few = self.oqparam.max_sites_disagg
         if self.N > few:
             raise ValueError(
-                'The max number of sites for disaggregation set in '
-                'openquake.cfg is %d, but you have %s' % (few, self.N))
+                'The number of sites is to disaggregate is %d, but you have '
+                'max_sites_disagg=%d' % (self.N, few))
         super().init()
 
     def execute(self):

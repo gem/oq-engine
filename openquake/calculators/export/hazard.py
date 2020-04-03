@@ -60,8 +60,10 @@ def export_ruptures_xml(ekey, dstore):
     num_ses = oq.ses_per_logic_tree_path
     ruptures_by_grp = AccumDict(accum=[])
     for rgetter in gen_rgetters(dstore):
-        ebrs = [ebr.export(rgetter.rlzs_by_gsim, num_ses)
-                for ebr in rgetter.get_ruptures()]
+        ebrs = []
+        for proxy in rgetter.get_proxies():
+            ebr = proxy.to_ebr(rgetter.trt, rgetter.samples)
+            ebrs.append(ebr.export(rgetter.rlzs_by_gsim, num_ses))
         ruptures_by_grp[rgetter.grp_id].extend(ebrs)
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)

@@ -280,7 +280,6 @@ class EventBasedCalculator(base.HazardCalculator):
             oqparam=oq,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
-            ruptures_per_block=oq.ruptures_per_block,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path, **kw)
 
@@ -320,7 +319,7 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in gen_rupture_getters(
-                            self.datastore, srcfilter))
+                            self.datastore, srcfilter, oq.concurrent_tasks))
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores

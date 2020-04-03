@@ -60,7 +60,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             nr = self.num_ruptures / rescale
         else:
             nr = self.num_ruptures
-        return nr * (self.nsites + 100) / 100
+        return nr
 
     @property
     def nsites(self):
@@ -120,7 +120,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         tom = getattr(self, 'temporal_occurrence_model', None)
         if tom:  # time-independent source
             yield from self.sample_ruptures_poissonian(eff_num_ses)
-        else:  # time-dependent source
+        else:  # time-dependent source (nonparametric)
             mutex_weight = getattr(self, 'mutex_weight', 1)
             for rup in self.iter_ruptures():
                 occurs = rup.sample_number_of_occurrences(eff_num_ses)
