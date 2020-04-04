@@ -43,6 +43,7 @@ code2cls = BaseRupture.init()
 # ############## utilities for the classical calculator ############### #
 
 
+# used only in the view global_hcurves
 def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     """
     Convert the probability map into a composite array with header
@@ -57,14 +58,14 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
     for imt, imls in imtls.items():
         for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), F32))
+            lst.append(('%s-%.3f' % (imt, iml), F32))
     curves = numpy.zeros(nsites, numpy.dtype(lst))
     for sid, pcurve in pmap.items():
         curve = curves[sid]
         idx = 0
         for imt, imls in imtls.items():
             for iml in imls:
-                curve['%s-%s' % (imt, iml)] = pcurve.array[idx, inner_idx]
+                curve['%s-%.3f' % (imt, iml)] = pcurve.array[idx, inner_idx]
                 idx += 1
     return curves
 
