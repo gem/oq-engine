@@ -371,7 +371,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             else:
                 md = oq.maximum_distance(sg.trt)
-            logging.info('max_dist={}, gsims={}, weight={:,d}, blocks={}'.
+            logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.
                          format(md, len(gsims), int(w), nb))
             if oq.pointsource_distance['default']:
                 psd = getdefault(oq.pointsource_distance, sg.trt)
