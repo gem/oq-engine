@@ -68,7 +68,10 @@ def get_info(dstore):
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
     loss_types = {lt: l for l, lt in enumerate(oq.loss_dt().names)}
     imt = {imt: i for i, imt in enumerate(oq.imtls)}
-    num_rlzs = dstore['full_lt'].get_num_rlzs()
+    try:
+        num_rlzs = dstore['full_lt'].get_num_rlzs()
+    except KeyError:  # engine version < 3.9
+        num_rlzs = dstore['csm_info'].get_num_rlzs()
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
