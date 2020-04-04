@@ -71,7 +71,7 @@ def get_info(dstore):
     try:
         num_rlzs = dstore['full_lt'].get_num_rlzs()
     except KeyError:  # engine version < 3.9
-        num_rlzs = dstore['csm_info'].get_num_rlzs()
+        num_rlzs = len(dstore['weights'])
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
