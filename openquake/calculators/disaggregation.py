@@ -25,7 +25,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes)
+    AccumDict, block_splitter, get_array_nbytes, humansize)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -306,7 +306,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         shapedic['concurrent_tasks'] = oq.concurrent_tasks
         nbytes, msg = get_array_nbytes(shapedic)
         if nbytes > oq.max_data_transfer:
-            raise ValueError('Estimated data transfer too big\n%s' % msg)
+            raise ValueError(
+                'Estimated data transfer too big\n%s > max_data_transfer=%s' %
+                (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer: %s', msg)
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
