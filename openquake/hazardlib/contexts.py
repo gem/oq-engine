@@ -111,7 +111,7 @@ class RupData(object):
                 self.add(rup, sites)
         return {k: numpy.array(v) for k, v in self.data.items()}
 
-    def add(self, rup, sctx, dctx=None):
+    def add(self, rup, sctx, dctx):
         rate = rup.occurrence_rate
         if numpy.isnan(rate):  # for nonparametric ruptures
             probs_occur = rup.probs_occur
@@ -125,11 +125,8 @@ class RupData(object):
 
         self.data['sid_'].append(numpy.int16(sctx.sids))
         for dst_param in (self.cmaker.REQUIRES_DISTANCES | {'rrup'}):
-            if dctx is None:  # compute the distances
-                dists = get_distances(rup, sctx, dst_param)
-            else:  # reuse already computed distances
-                dists = getattr(dctx, dst_param)
-            self.data[dst_param + '_'].append(F32(dists))
+            dists = F32(getattr(dctx, dst_param))
+            self.data[dst_param + '_'].append(dists)
         closest = rup.surface.get_closest_points(sctx)
         self.data['lon_'].append(F32(closest.lons))
         self.data['lat_'].append(F32(closest.lats))
