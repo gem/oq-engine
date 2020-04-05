@@ -385,12 +385,12 @@ class PmapMaker(object):
                 ctxs = self.collapse_the_ctxs(ctxs)
             self.numrups += len(ctxs)
             for rup, dctx in ctxs:
+                self.rupdata.add(rup, sites, dctx)
                 mask = (dctx.rrup <= self.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
                 r_sites = sites.filter(mask)
                 for name in self.REQUIRES_DISTANCES:
                     setattr(dctx, name, getattr(dctx, name)[mask])
-                self.rupdata.add(rup, r_sites, dctx)
                 self.rupdata.data['grp_id'].append(grp_ids)
                 self.numsites += len(r_sites)
                 yield rup, r_sites, dctx
