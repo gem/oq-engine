@@ -230,7 +230,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.create_dset('rup/' + k, hdf5.vfloat32)
             elif k.endswith('_'):  # array of shape (U, N)
                 self.datastore.create_dset(
-                    'rup/' + k, F32, shape=(None, self.N))
+                    'rup/' + k, F32, shape=(None, self.N), compression='gzip')
             else:
                 self.datastore.create_dset('rup/' + k, F32)
         self.by_task = {}  # task_no => src_ids
