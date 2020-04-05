@@ -113,10 +113,11 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges, monitor):
     :returns:
         a dictionary sid -> 8D-array
     """
-    dstore.open('r')
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
+    with monitor('reading rupdata', measuremem=True):
+        dstore.open('r')
+        oq = dstore['oqparam']
+        sitecol = dstore['sitecol']
+        rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
