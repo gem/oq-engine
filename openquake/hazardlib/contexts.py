@@ -111,25 +111,31 @@ class RupData(object):
                 self.add(rup, sites)
         return {k: numpy.array(v) for k, v in self.data.items()}
 
-    def add(self, rup, sctx, dctx):
-        rate = rup.occurrence_rate
-        if numpy.isnan(rate):  # for nonparametric ruptures
-            probs_occur = rup.probs_occur
-        else:
-            probs_occur = numpy.zeros(0, numpy.float64)
-        self.data['occurrence_rate'].append(rate)
-        self.data['weight'].append(rup.weight or numpy.nan)
-        self.data['probs_occur'].append(probs_occur)
-        for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
-            self.data[rup_param].append(getattr(rup, rup_param))
-
-        self.data['sid_'].append(numpy.int16(sctx.sids))
-        for dst_param in (self.cmaker.REQUIRES_DISTANCES | {'rrup'}):
-            dists = F32(getattr(dctx, dst_param))
-            self.data[dst_param + '_'].append(dists)
-        closest = rup.surface.get_closest_points(sctx)
-        self.data['lon_'].append(F32(closest.lons))
-        self.data['lat_'].append(F32(closest.lats))
+    def add(self, ctxs, grp_ids):
+        U, N = len(ctxs), len(ctxs[0][0].sites.complete)
+        params = (sorted(self.cmaker.REQUIRES_DISTANCES | {'rrup'}) +
+                  ['lon', 'lat'])
+        data = {par + '_': numpy.zeros((U, N), F32) for par in params}
+        for par in data:
+            self.data[par].append(data[par])
+        for r, (rup, dctx) in enumerate(ctxs):
+            if numpy.isnan(rup.occurrence_rate):  # for nonparametric ruptures
+                probs_occur = rup.probs_occur
+            else:
+                probs_occur = numpy.zeros(0, numpy.float64)
+            self.data['occurrence_rate'].append(rup.occurrence_rate)
+            self.data['probs_occur'].append(probs_occur)
+            self.data['weight'].append(rup.weight or numpy.nan)
+            self.data['grp_id'].append(grp_ids)
+            for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
+                self.data[rup_param].append(getattr(rup, rup_param))
+            for dst_param in params[:-2]:  # except lon, lat
+                for s, dst in zip(rup.sites.sids, getattr(dctx, dst_param)):
+                    data[dst_param + '_'][r, s] = dst
+            closest = rup.surface.get_closest_points(rup.sites)
+            for s, lon, lat in zip(rup.sites.sids, closest.lons, closest.lats):
+                data['lon_'][r, s] = lon
+                data['lat_'][r, s] = lat
 
 
 class ContextMaker(object):
@@ -381,14 +387,14 @@ class PmapMaker(object):
             if self.rup_indep and rup_parametric and self.collapse_ctxs:
                 ctxs = self.collapse_the_ctxs(ctxs)
             self.numrups += len(ctxs)
+            if ctxs:
+                self.rupdata.add(ctxs, grp_ids)
             for rup, dctx in ctxs:
-                self.rupdata.add(rup, sites, dctx)
                 mask = (dctx.rrup <= self.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
                 r_sites = sites.filter(mask)
                 for name in self.REQUIRES_DISTANCES:
                     setattr(dctx, name, getattr(dctx, name)[mask])
-                self.rupdata.data['grp_id'].append(grp_ids)
                 self.numsites += len(r_sites)
                 yield rup, r_sites, dctx
         else:  # many sites, do not collapse, but filter
@@ -490,7 +496,12 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        rdata = {k: numpy.array(v) for k, v in self.rupdata.data.items()}
+        rdata = {}
+        for k, v in self.rupdata.data.items():
+            if k.endswith('_'):
+                rdata[k] = numpy.concatenate(v)
+            else:
+                rdata[k] = numpy.array(v)
         return pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
 
     def collapse_point_ruptures(self, rups, sites):
@@ -549,7 +560,7 @@ class PmapMaker(object):
         # returns a list of ruptures, each one with a .sites attribute
         rups = []
 
-        def add(rupiter, sites):
+        def _add(rupiter, sites):
             for rup in rupiter:
                 rup.sites = sites
                 rups.append(rup)
@@ -558,7 +569,7 @@ class PmapMaker(object):
             loc = getattr(src, 'location', None)
             if loc and self.pointsource_distance == 0:
                 # all finite size effects are ignored
-                add(src.point_ruptures(), sites)
+                _add(src.point_ruptures(), sites)
             elif loc and self.pointsource_distance:
                 # finite site effects are ignored only for sites over the
                 # pointsource_distance from the rupture (if any)
@@ -567,19 +578,19 @@ class PmapMaker(object):
                     close, far = sites.split(pr.hypocenter, pdist)
                     if self.fewsites:
                         if close is None:  # all is far, common for small mag
-                            add([pr], sites)
+                            _add([pr], sites)
                         else:  # something is close
-                            add(self._ruptures(src, pr.mag), sites)
+                            _add(self._ruptures(src, pr.mag), sites)
                     else:  # many sites
                         if close is None:  # all is far
-                            add([pr], far)
+                            _add([pr], far)
                         elif far is None:  # all is close
-                            add(self._ruptures(src, pr.mag), close)
+                            _add(self._ruptures(src, pr.mag), close)
                         else:  # some sites are far, some are close
-                            add([pr], far)
-                            add(self._ruptures(src, pr.mag), close)
+                            _add([pr], far)
+                            _add(self._ruptures(src, pr.mag), close)
             else:  # just add the ruptures
-                add(self._ruptures(src), sites)
+                _add(self._ruptures(src), sites)
         return rups
 
 

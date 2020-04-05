@@ -46,17 +46,8 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
-def _site_indices(sids_by_rup, N):
-    # an array of indices of shape (N, U)
-    U = len(sids_by_rup)
-    mat = -numpy.ones((N, U), numpy.int16)
-    for ridx, sids in enumerate(sids_by_rup):
-        for sidx, sid in enumerate(sids):
-            mat[sid, ridx] = sidx
-    return mat
-
-
-def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
+# this is inside an inner loop
+def _disaggregate(cmaker, sitecol, rupdata, iml2, eps3,
                   pne_mon=performance.Monitor(),
                   gmf_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
@@ -68,23 +59,21 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
     except KeyError:
         return pack(acc, 'mags dists lons lats pnes'.split())
     maxdist = cmaker.maximum_distance(cmaker.trt)
-    fildist = rupdata[cmaker.filter_distance + '_']
-    for ridx, sidx in enumerate(indices):
-        if sidx == -1:  # no contribution for this site
-            continue
-        dist = fildist[ridx][sidx]
+    fildist = rupdata[cmaker.filter_distance + '_'][:, sid]
+    for ridx, dist in enumerate(fildist):
         if dist >= maxdist:
             continue
         elif gsim.minimum_distance and dist < gsim.minimum_distance:
             dist = gsim.minimum_distance
         rctx = contexts.RuptureContext(
-            (par, val[ridx]) for par, val in rupdata.items())
+            (par, rupdata[par][ridx])
+            for par in rupdata if not par.endswith('_'))
         dctx = contexts.DistancesContext(
-            (param, getattr(rctx, param + '_')[[sidx]])
-            for param in cmaker.REQUIRES_DISTANCES)
+            (par[:-1], rupdata[par][ridx, [sid]])
+            for par in rupdata if par.endswith('_'))
         acc['mags'].append(rctx.mag)
-        acc['lons'].append(rctx.lon_[sidx])
-        acc['lats'].append(rctx.lat_[sidx])
+        acc['lons'].append(dctx.lon)
+        acc['lats'].append(dctx.lat)
         acc['dists'].append(dist)
         with gmf_mon:
             mean_std = get_mean_std(
@@ -219,11 +208,10 @@ def build_matrices(rupdata, sitecol, cmaker, iml4,
     """
     if len(sitecol) >= 32768:
         raise ValueError('You can disaggregate at max 32,768 sites')
-    indices = _site_indices(rupdata['sid_'], len(sitecol))
     eps3 = _eps3(cmaker.trunclevel, num_epsilon_bins)  # this is slow
     M, P, Z = iml4.shape[1:]
     for sid, iml3 in zip(sitecol.sids, iml4):
-        singlesitecol = sitecol.filtered([sid])
+        singlesite = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
         arr = numpy.zeros([len(b) - 1 for b in bins] + [M, P, Z])
         for z in range(Z):
@@ -232,8 +220,7 @@ def build_matrices(rupdata, sitecol, cmaker, iml4,
                 iml3[:, :, z], dict(rlzi=rlz, imts=iml4.imts))
             try:
                 bdata = _disaggregate(
-                    cmaker, singlesitecol, rupdata,
-                    indices[sid], iml2, eps3, pne_mon, gmf_mon)
+                    cmaker, singlesite, rupdata, iml2, eps3, pne_mon, gmf_mon)
                 if bdata.pnes.sum():
                     with mat_mon:
                         arr[..., z] = _build_disagg_matrix(bdata, bins)
@@ -358,8 +345,7 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rdata = contexts.RupData(cmaker).from_srcs(srcs, sitecol)
-        idxs = _site_indices(rdata['sid_'], 1)[0]
-        bdata[trt] = _disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
+        bdata[trt] = _disaggregate(cmaker, sitecol, rdata, iml2, eps3)
 
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(

@@ -181,15 +181,17 @@ class ClassicalCalculator(base.HazardCalculator):
             rup_data = dic['rup_data']
             nr = len(rup_data.get('grp_id', []))
             if nr:
-                default = (numpy.ones(nr, F32) * numpy.nan,
-                           [numpy.zeros(0, F32)] * nr)
                 for k in self.rparams:
-                    vlen = k.endswith('_') or k == 'probs_occur'
                     try:
                         v = rup_data[k]
                     except KeyError:
-                        v = default[vlen]
-                    if vlen:  # variable lenght arrays
+                        if k == 'probs_occur':
+                            v = [numpy.zeros(0, F32)] * nr
+                        elif k.endswith('_'):
+                            v = numpy.ones((nr, self.N), F32) * numpy.nan
+                        else:
+                            v = numpy.ones(nr, F32) * numpy.nan
+                    if k == 'probs_occur':  # variable lenght arrays
                         self.datastore.hdf5.save_vlen('rup/' + k, v)
                         continue
                     if k == 'grp_id':
@@ -205,7 +207,7 @@ class ClassicalCalculator(base.HazardCalculator):
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'occurrence_rate',
-                   'weight', 'probs_occur', 'sid_', 'lon_', 'lat_', 'rrup_'}
+                   'weight', 'probs_occur', 'lon_', 'lat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         n = len(self.full_lt.sm_rlzs)
         trts = list(self.full_lt.gsim_lt.values)
@@ -222,16 +224,15 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rparams = sorted(rparams)
         for k in self.rparams:
             # variable length arrays
-            vlen = k.endswith('_') or k == 'probs_occur'
             if k == 'grp_id':
-                dt = U16
-            elif k == 'sid_':
-                dt = hdf5.vuint16
-            elif vlen:
-                dt = hdf5.vfloat32
+                self.datastore.create_dset('rup/' + k, U16)
+            elif k == 'probs_occur':  # vlen
+                self.datastore.create_dset('rup/' + k, hdf5.vfloat32)
+            elif k.endswith('_'):  # array of shape (U, N)
+                self.datastore.create_dset(
+                    'rup/' + k, F32, shape=(None, self.N))
             else:
-                dt = F32
-            self.datastore.create_dset('rup/' + k, dt)
+                self.datastore.create_dset('rup/' + k, F32)
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.gidx = {tuple(grp_ids): i
