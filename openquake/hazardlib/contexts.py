@@ -105,17 +105,20 @@ class RupData(object):
         """
         :returns: param -> array
         """
+        grp_ids = [0]
         for src in srcs:
-            for rup in src.iter_ruptures(shift_hypo=self.cmaker.shift_hypo):
+            rups = list(src.iter_ruptures(shift_hypo=self.cmaker.shift_hypo))
+            for rup in rups:
                 self.cmaker.add_rup_params(rup)
-                self.add(rup, sites)
-        return {k: numpy.array(v) for k, v in self.data.items()}
+            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, False)
+            self.add(ctxs, sites, grp_ids)
+        return self.dictarray()
 
-    def add(self, ctxs, grp_ids):
-        U, N = len(ctxs), len(ctxs[0][0].sites.complete)
+    def add(self, ctxs, sites, grp_ids):
+        U, N = len(ctxs), len(sites.complete)
         params = (sorted(self.cmaker.REQUIRES_DISTANCES | {'rrup'}) +
                   ['lon', 'lat'])
-        data = {par + '_': numpy.zeros((U, N), F32) for par in params}
+        data = {par + '_': numpy.ones((U, N), F32) * 9999 for par in params}
         for par in data:
             self.data[par].append(data[par])
         for r, (rup, dctx) in enumerate(ctxs):
@@ -130,12 +133,24 @@ class RupData(object):
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
                 self.data[rup_param].append(getattr(rup, rup_param))
             for dst_param in params[:-2]:  # except lon, lat
-                for s, dst in zip(rup.sites.sids, getattr(dctx, dst_param)):
+                for s, dst in zip(sites.sids, getattr(dctx, dst_param)):
                     data[dst_param + '_'][r, s] = dst
-            closest = rup.surface.get_closest_points(rup.sites)
-            for s, lon, lat in zip(rup.sites.sids, closest.lons, closest.lats):
+            closest = rup.surface.get_closest_points(sites)
+            for s, lon, lat in zip(sites.sids, closest.lons, closest.lats):
                 data['lon_'][r, s] = lon
                 data['lat_'][r, s] = lat
+
+    def dictarray(self):
+        """
+        :returns: key -> array
+        """
+        dic = {}
+        for k, v in self.data.items():
+            if k.endswith('_'):
+                dic[k] = numpy.concatenate(v)
+            else:
+                dic[k] = numpy.array(v)
+        return dic
 
 
 class ContextMaker(object):
@@ -388,7 +403,7 @@ class PmapMaker(object):
                 ctxs = self.collapse_the_ctxs(ctxs)
             self.numrups += len(ctxs)
             if ctxs:
-                self.rupdata.add(ctxs, grp_ids)
+                self.rupdata.add(ctxs, sites, grp_ids)
             for rup, dctx in ctxs:
                 mask = (dctx.rrup <= self.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
@@ -496,13 +511,8 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        rdata = {}
-        for k, v in self.rupdata.data.items():
-            if k.endswith('_'):
-                rdata[k] = numpy.concatenate(v)
-            else:
-                rdata[k] = numpy.array(v)
-        return pmap, rdata, self.calc_times,  dict(totrups=self.totrups)
+        return (pmap, self.rupdata.dictarray(), self.calc_times,
+                dict(totrups=self.totrups))
 
     def collapse_point_ruptures(self, rups, sites):
         """

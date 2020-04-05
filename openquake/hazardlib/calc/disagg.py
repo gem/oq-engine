@@ -59,9 +59,8 @@ def _disaggregate(cmaker, sitecol, rupdata, iml2, eps3,
     except KeyError:
         return pack(acc, 'mags dists lons lats pnes'.split())
     maxdist = cmaker.maximum_distance(cmaker.trt)
-    fildist = rupdata[cmaker.filter_distance + '_'][:, sid]
-    for ridx, dist in enumerate(fildist):
-        if dist >= maxdist:
+    for ridx, dist in enumerate(rupdata['rrup_'][:, sid]):
+        if dist >= maxdist:  # discard the rupture
             continue
         elif gsim.minimum_distance and dist < gsim.minimum_distance:
             dist = gsim.minimum_distance
@@ -80,8 +79,8 @@ def _disaggregate(cmaker, sitecol, rupdata, iml2, eps3,
                 sitecol, rctx, dctx, iml2.imts, [gsim])[..., 0]  # (2, N, M)
         with pne_mon:
             iml = numpy.array(
-                [to_distribution_values(lvl, imt) for imt, lvl in zip(
-                    iml2.imts, iml2)])  # shape (M, P)
+                [to_distribution_values(lvl, imt)
+                 for imt, lvl in zip(iml2.imts, iml2)])  # shape (M, P)
             pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)
             acc['pnes'].append(pne)
     return pack(acc, 'mags dists lons lats pnes'.split())
