@@ -101,19 +101,6 @@ class RupData(object):
         self.cmaker = cmaker
         self.data = AccumDict(accum=[]) if data is None else data
 
-    def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
-        """
-        :returns: param -> array
-        """
-        grp_ids = [0]
-        for src in srcs:
-            rups = list(src.iter_ruptures(shift_hypo=self.cmaker.shift_hypo))
-            for rup in rups:
-                self.cmaker.add_rup_params(rup)
-            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, False)
-            self.add(ctxs, sites, grp_ids)
-        return self.dictarray()
-
     def add(self, ctxs, sites, grp_ids):
         U, N = len(ctxs), len(sites.complete)
         params = (sorted(self.cmaker.REQUIRES_DISTANCES | {'rrup'}) +
@@ -132,13 +119,9 @@ class RupData(object):
             self.data['grp_id'].append(grp_ids)
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
                 self.data[rup_param].append(getattr(rup, rup_param))
-            for dst_param in params[:-2]:  # except lon, lat
+            for dst_param in params:  # including lon, lat
                 for s, dst in zip(sites.sids, getattr(dctx, dst_param)):
                     data[dst_param + '_'][r, s] = dst
-            closest = rup.surface.get_closest_points(sites)
-            for s, lon, lat in zip(sites.sids, closest.lons, closest.lats):
-                data['lon_'][r, s] = lon
-                data['lat_'][r, s] = lat
 
     def dictarray(self):
         """
@@ -201,6 +184,19 @@ class ContextMaker(object):
             for imt, imls in self.imtls.items():
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
+
+    def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
+        """
+        :returns: a list of pairs (rctx, dctx)
+        """
+        grp_ids = [0]
+        ctxs = []
+        for src in srcs:
+            rups = list(src.iter_ruptures(shift_hypo=self.shift_hypo))
+            for rup in rups:
+                self.add_rup_params(rup)  # make the rupture context-like
+            ctxs.extend(self.make_ctxs(rups, sites, grp_ids, False))
+        return ctxs
 
     def filter(self, sites, rup):
         """
@@ -318,6 +314,9 @@ class ContextMaker(object):
             if filt:
                 ctxs.append((rup, sctx, dctx))
             else:
+                closest = rup.surface.get_closest_points(sites)
+                dctx.lon = closest.lons
+                dctx.lat = closest.lats
                 ctxs.append((rup, dctx))
         return ctxs
 
