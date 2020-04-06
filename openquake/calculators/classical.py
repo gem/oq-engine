@@ -40,7 +40,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-MINWEIGHT = 1000
+MINWEIGHT = 5000
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -221,18 +221,22 @@ class ClassicalCalculator(base.HazardCalculator):
                     rparams.add(dparam + '_')
                 zd[grp_id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
-        self.rparams = sorted(rparams)
-        for k in self.rparams:
-            # variable length arrays
-            if k == 'grp_id':
-                self.datastore.create_dset('rup/' + k, U16)
-            elif k == 'probs_occur':  # vlen
-                self.datastore.create_dset('rup/' + k, hdf5.vfloat32)
-            elif k.endswith('_'):  # array of shape (U, N)
-                self.datastore.create_dset(
-                    'rup/' + k, F32, shape=(None, self.N), compression='gzip')
-            else:
-                self.datastore.create_dset('rup/' + k, F32)
+        if self.few_sites:
+            self.rparams = sorted(rparams)
+            for k in self.rparams:
+                # variable length arrays
+                if k == 'grp_id':
+                    self.datastore.create_dset('rup/' + k, U16)
+                elif k == 'probs_occur':  # vlen
+                    self.datastore.create_dset('rup/' + k, hdf5.vfloat32)
+                elif k.endswith('_'):  # array of shape (U, N)
+                    self.datastore.create_dset(
+                        'rup/' + k, F32, shape=(None, self.N),
+                        compression='gzip')
+                else:
+                    self.datastore.create_dset('rup/' + k, F32)
+        else:
+            self.rparams = {}
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.gidx = {tuple(grp_ids): i
@@ -347,8 +351,6 @@ class ClassicalCalculator(base.HazardCalculator):
             C *= 5  # use more tasks, especially in UCERF
             f1, f2 = classical, classical
         else:
-            if self.N <= oq.max_sites_disagg:  # few sites, more tasks
-                C *= 5
             f1, f2 = classical, classical_split_filter
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
@@ -462,7 +464,7 @@ class ClassicalCalculator(base.HazardCalculator):
              N, hstats, oq.individual_curves, oq.max_sites_disagg,
              self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
-        if N <= oq.max_sites_disagg:  # few sites
+        if self.few_sites:
             dist = 'no'
         else:
             dist = None  # parallelize as usual

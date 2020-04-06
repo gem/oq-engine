@@ -417,6 +417,13 @@ class HazardCalculator(BaseCalculator):
         """
         return len(self.sitecol.complete) if self.sitecol else None
 
+    @property
+    def few_sites(self):
+        """
+        :returns: True if there are less than max_sites_disagg
+        """
+        return len(self.sitecol.complete) <= self.oqparam.max_sites_disagg
+
     def check_overflow(self):
         """Overridden in event based"""
 
