@@ -1,7 +1,5 @@
 ============= ===== =====
 return_period kind  value
-30            rlz-0 NaN  
-30            rlz-1 NaN  
 60            rlz-0 239  
 60            rlz-1 210  
 120           rlz-0 869  

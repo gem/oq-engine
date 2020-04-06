@@ -1,7 +1,5 @@
 ============= ============= ====== ======== =====
 return_period kind          policy taxonomy value
-30            mean          A      RC       NaN  
-30            quantile-0.25 A      RC       NaN  
 240           mean          A      RC       90   
 240           quantile-0.25 A      RC       86   
 480           mean          A      RC       719  

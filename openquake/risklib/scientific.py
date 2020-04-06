@@ -1317,13 +1317,14 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
-    array([ nan,  nan,  0. ,  3.5,  8. , 13. , 23. ])
+    array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])
 
     If num_events is not passed, it is inferred from the number of losses;
     if eff_time is not passed, it is inferred from the longest return period.
     """
+    P = len(return_periods)
     if len(losses) == 0:  # zero-curve
-        return numpy.zeros(len(return_periods))
+        return numpy.zeros(P)
     if num_events is None:
         num_events = len(losses)
     elif num_events < len(losses):
@@ -1338,9 +1339,13 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
         losses = numpy.concatenate(
             [numpy.zeros(num_zeros, losses.dtype), losses])
     periods = eff_time / numpy.arange(num_events, 0., -1)
-    rperiods = [rp if periods[0] <= rp <= periods[-1] else numpy.nan
-                for rp in return_periods]
-    curve = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
+    num_left = sum(1 for rp in return_periods if rp < periods[0])
+    num_right = sum(1 for rp in return_periods if rp > periods[-1])
+    rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
+    curve = numpy.zeros(len(return_periods))
+    c = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
+    curve[num_left:P-num_right] = c
+    curve[P-num_right:] = numpy.nan
     return curve
 
 
