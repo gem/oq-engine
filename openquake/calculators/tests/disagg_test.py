@@ -83,6 +83,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
+        # site #0 is partially discarded
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok(
