@@ -347,6 +347,8 @@ class ClassicalCalculator(base.HazardCalculator):
             C *= 5  # use more tasks, especially in UCERF
             f1, f2 = classical, classical
         else:
+            if self.N <= oq.max_sites_disagg:  # few sites, more tasks
+                C *= 5
             f1, f2 = classical, classical_split_filter
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
