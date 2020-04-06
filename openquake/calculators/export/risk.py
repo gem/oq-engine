@@ -80,7 +80,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     else:  # tot_curves
         aggregate_by = []
 
-    name = '_'.join(['agg'] + oq.aggregate_by)
+    name = '_'.join(['agg'] + aggregate_by)
     aggvalue = dstore['exposed_values/' + name][()]
 
     lti = tag2idx(oq.loss_names)
