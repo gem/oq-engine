@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Fixed the tot_curves exporter in ebrisk calculations
+  * Fixed the tot_curves and tot_losses exporters in ebrisk calculations
   * Reduced the rupture storage in classical calculations by using compression
   * Improved the task distribution in the classical calculator, avoiding
     generating too few or too many tasks
