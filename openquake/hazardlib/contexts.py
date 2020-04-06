@@ -102,6 +102,13 @@ class RupData(object):
         self.data = AccumDict(accum=[]) if data is None else data
 
     def add(self, ctxs, sites, grp_ids):
+        """
+        Populate the inner AccumDict
+
+        :param ctxs: a list of pairs (rctx, dctx) associated to U ruptures
+        :param sites: a filtered site collection with N'<=N sites
+        :param grp_ids: a tuple of indices associated to the ruptures
+        """
         U, N = len(ctxs), len(sites.complete)
         params = (sorted(self.cmaker.REQUIRES_DISTANCES | {'rrup'}) +
                   ['lon', 'lat'])
