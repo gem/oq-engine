@@ -1273,7 +1273,7 @@ def return_periods(eff_time, num_losses):
     >>> return_periods(1, 1)
     Traceback (most recent call last):
        ...
-    AssertionError: eff_time too small: 1
+    ValueError: eff_time too small: 1
     >>> return_periods(2, 2)
     array([1, 2], dtype=uint32)
     >>> return_periods(2, 10)
@@ -1284,8 +1284,10 @@ def return_periods(eff_time, num_losses):
     array([   1,    2,    5,   10,   20,   50,  100,  200,  500, 1000],
           dtype=uint32)
     """
-    assert eff_time >= 2, 'eff_time too small: %s' % eff_time
-    assert num_losses >= 2, 'num_losses too small: %s' % num_losses
+    if eff_time < 2:
+        raise ValueError('eff_time too small: %s' % eff_time)
+    if num_losses < 2:
+        raise ValueError('num_losses too small: %s' % num_losses)
     min_time = eff_time / num_losses
     period = 1
     periods = []
