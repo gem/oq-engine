@@ -470,7 +470,7 @@ class PmapMaker(object):
                     ctxs.extend(self._ctxs(rups, sites, grp_ids))
                 else:  # many sites
                     for rup in rups:
-                        ctxs.extend(self._ctxs([rup], rup.sites, grp_ids))
+                        ctxs.extend(self._ctxs([rup], sites, grp_ids))
             self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
@@ -572,7 +572,6 @@ class PmapMaker(object):
 
         def _add(rupiter, sites):
             for rup in rupiter:
-                rup.sites = sites
                 rups.append(rup)
         for src in srcs:
             self.totrups += src.num_ruptures
