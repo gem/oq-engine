@@ -31,6 +31,7 @@ oq engine --lhc
 MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' -1
 MPLBACKEND=Agg oq plot 'hmaps?kind=mean&imt=PGA' -1
 MPLBACKEND=Agg oq plot 'uhs?kind=stats' -1
+MPLBACKEND=Agg oq plot 'disagg?kind=Mag&imt=PGA&poe_id=1' 14
 MPLBACKEND=Agg oq plot 'task_info?kind=classical_split_filter' 16
 MPLBACKEND=Agg oq plot_sites -1
 MPLBACKEND=Agg oq plot memory?
