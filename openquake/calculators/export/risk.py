@@ -162,14 +162,14 @@ def export_agg_losses(ekey, dstore):
     """
     dskey = ekey[0]
     oq = dstore['oqparam']
+    aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assetcol = dstore['assetcol']
-    aggname = '_'.join(['agg'] + (oq.aggregate_by if dskey.startswith(
-        'agg_') else []))
+    aggname = '_'.join(['agg'] + aggregate_by)
     expvalue = dstore['exposed_values/' + aggname][()]
     # shape (T1, T2, ..., L)
-    tagnames = tuple(dstore['oqparam'].aggregate_by)
+    tagnames = tuple(aggregate_by)
     header = ('loss_type',) + tagnames + (
         'loss_value', 'exposed_value', 'loss_ratio')
     md = dstore.metadata
