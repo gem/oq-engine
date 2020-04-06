@@ -452,8 +452,7 @@ hazard_uhs-std.csv
                  ('lat_', 3202), ('lon_', 3202), ('mag', 3202),
                  ('occurrence_rate', 3202), ('probs_occur', 3202),
                  ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
-                 ('rx_', 3202), ('sid_', 3202),
-                 ('weight', 3202), ('ztor', 3202)])
+                 ('rx_', 3202), ('weight', 3202), ('ztor', 3202)])
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling by cheating
@@ -517,7 +516,7 @@ hazard_uhs-std.csv
                               case_38.__file__)
 
     def test_case_39(self):
-        # IMT weights == 0
+        # 0-IMT-weights, pointsource_distance=0 and point_ruptures collapsing
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
             'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',

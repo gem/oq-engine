@@ -89,6 +89,7 @@ def get_csm(oq, full_lt, h5=None):
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             sg.mags = numpy.unique(numpy.round(src.mags))
+            del src.__dict__['mags']  # remove cache
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
             if classical:
@@ -274,12 +275,12 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(grp_ids, numpy.uint32) for grp_ids in sorted(keys)]
 
-    def get_nonparametric_sources(self):
+    def get_sources(self):
         """
-        :returns: list of non parametric sources in the composite source model
+        :returns: list of sources in the composite source model
         """
         return [src for src_group in self.src_groups
-                for src in src_group if hasattr(src, 'data')]
+                for src in src_group]
 
     def get_floating_spinning_factors(self):
         """

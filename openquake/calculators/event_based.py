@@ -79,7 +79,6 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
     accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
-    build_ruptures = sample_ruptures
 
     def init(self):
         if hasattr(self, 'csm'):
@@ -130,7 +129,7 @@ class EventBasedCalculator(base.HazardCalculator):
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, srcfilter, par))
         smap = parallel.Starmap(
-            self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5)
+            sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
         for dic in smap:
             if dic['calc_times']:

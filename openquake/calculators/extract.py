@@ -68,7 +68,10 @@ def get_info(dstore):
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
     loss_types = {lt: l for l, lt in enumerate(oq.loss_dt().names)}
     imt = {imt: i for i, imt in enumerate(oq.imtls)}
-    num_rlzs = dstore['full_lt'].get_num_rlzs()
+    try:
+        num_rlzs = dstore['full_lt'].get_num_rlzs()
+    except KeyError:  # engine version < 3.9
+        num_rlzs = len(dstore['weights'])
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
@@ -1054,7 +1057,8 @@ def extract_rupture(dstore, rup_id):
     """
     ridx = list(dstore['ruptures']['id']).index(int(rup_id))
     [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
-    [ebr] = getter.get_ruptures()
+    [proxy] = getter.get_proxies()
+    ebr = proxy.to_ebr(getter.trt, getter.samples)
     return ArrayWrapper((), ebr.rupture.todict())
 
 
@@ -1198,8 +1202,9 @@ class RuptureData(object):
     Container for information about the ruptures of a given
     tectonic region type.
     """
-    def __init__(self, trt, gsims):
+    def __init__(self, trt, samples, gsims):
         self.trt = trt
+        self.samples = samples
         self.cmaker = ContextMaker(trt, gsims)
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
@@ -1211,12 +1216,13 @@ class RuptureData(object):
             ('boundaries', hdf5.vfloat32)] +
             [(param, F32) for param in self.params])
 
-    def to_array(self, ebruptures):
+    def to_array(self, proxies):
         """
-        Convert a list of ebruptures into an array of dtype RuptureRata.dt
+        Convert a list of rupture proxies into an array of dtype RuptureRata.dt
         """
         data = []
-        for ebr in ebruptures:
+        for proxy in proxies:
+            ebr = proxy.to_ebr(self.trt, self.samples)
             rup = ebr.rupture
             self.cmaker.add_rup_params(rup)
             ruptparams = tuple(getattr(rup, param) for param in self.params)
@@ -1253,9 +1259,10 @@ def extract_rupture_info(dstore, what):
     rows = []
     boundaries = []
     for rgetter in getters.gen_rgetters(dstore):
-        rups = rgetter.get_ruptures(min_mag)
-        rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
-        for r, rup in zip(rup_data.to_array(rups), rups):
+        proxies = rgetter.get_proxies(min_mag)
+        rup_data = RuptureData(
+            rgetter.trt, rgetter.samples, rgetter.rlzs_by_gsim)
+        for r in rup_data.to_array(proxies):
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             coordset = sorted(set(coords))
             if len(coordset) < 4:   # degenerate to line

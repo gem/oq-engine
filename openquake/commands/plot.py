@@ -503,7 +503,7 @@ def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
         raise SystemExit('Invalid IMT in %r' % what)
     elif prefix in 'hcurves uhs disagg' and 'site_id=' not in rest:
         what += '&site_id=0'
-    if prefix == 'disagg' and 'poe=' not in rest:
+    if prefix == 'disagg' and 'poe_id=' not in rest:
         what += '&poe_id=0'
     if local:
         xs = [WebExtractor(calc_id, 'http://localhost:8800', '')]
