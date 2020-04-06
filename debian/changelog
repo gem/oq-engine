@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed NaNs in the low return period part of the loss curves
   * Fixed the tot_curves and tot_losses exporters in ebrisk calculations
   * Reduced the rupture storage in classical calculations by using compression
   * Improved the task distribution in the classical calculator, avoiding

@@ -1,7 +1,5 @@
 ============= ============= =====
 return_period kind          value
-30            mean          NaN  
-30            quantile-0.25 NaN  
 60            mean          225  
 60            quantile-0.25 210  
 120           mean          809  
