@@ -95,7 +95,7 @@ def get_num_distances(gsims):
 
 class RupData(object):
     """
-    A class to collect rupture information into an array
+    A class to collect rupture information into an AccumDict
     """
     def __init__(self, cmaker, data=None):
         self.cmaker = cmaker
