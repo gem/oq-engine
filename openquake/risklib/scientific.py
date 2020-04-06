@@ -1312,8 +1312,8 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
-    where min_time = eff_time /num_events. Outside the interval they
-    have NaN values. Here is an example:
+    where min_time = eff_time /num_events. On the right of the interval they
+    have NaN values and on the left zero values. Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
