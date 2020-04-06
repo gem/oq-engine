@@ -188,21 +188,21 @@ def build_matrix(cmaker, singlesite, ctxs, iml3, imts, rlzs,
                  num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon):
     """
     :param cmaker: a ContextMaker
-    :param singlesite: a site collection of 1 element
+    :param singlesite: a site collection with a single site
     :param ctxs: a list of pairs (rctx, dctx)
     :param iml3: an array of shape (M, P, Z)
-    :param imts: intensity measure types
+    :param imts: a list of intensity measure types
     :param rlzs: Z realizations for the given site
     :param num_epsilon_bins: number of epsilons bins
-    :param bins: disaggregation bins
-    :yield: 8D disaggregation matrix
+    :param bins: bin edges for the given site
+    :returns: 8D disaggregation matrix
     """
     eps3 = _eps3(cmaker.trunclevel, num_epsilon_bins)
     arr = numpy.zeros([len(b) - 1 for b in bins] + list(iml3.shape))
     for z, rlz in enumerate(rlzs):
         iml2 = hdf5.ArrayWrapper(iml3[:, :, z], dict(rlzi=rlz, imts=imts))
-        bdata = _disaggregate(
-            cmaker, singlesite, ctxs, iml2, eps3, pne_mon, gmf_mon)
+        bdata = _disaggregate(cmaker, singlesite, ctxs, iml2, eps3,
+                              pne_mon, gmf_mon)
         if bdata.pnes.sum():
             with mat_mon:
                 arr[..., z] = _build_disagg_matrix(bdata, bins)

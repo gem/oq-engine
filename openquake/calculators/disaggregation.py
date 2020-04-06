@@ -130,17 +130,17 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges, monitor):
         ctxs = []
         ok, = numpy.where(
             rupdata['rrup_'][:, sid] <= cmaker.maximum_distance(cmaker.trt))
-        for ridx in ok:
+        for ridx in ok:  # consider only the ruptures close to the site
             rctx = RuptureContext((par, rupdata[par][ridx])
                                   for par in rupdata if not par.endswith('_'))
             dctx = DistancesContext((par[:-1], rupdata[par][ridx, [sid]])
                                     for par in rupdata if par.endswith('_'))
             ctxs.append((rctx, dctx))
-        mat = disagg.build_matrix(
+        matrix = disagg.build_matrix(
             cmaker, singlesite, ctxs, iml3, iml4.imts, rlzs,
             oq.num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon)
-        if mat.any():
-            yield {'trti': trti, sid: mat}
+        if matrix.any():
+            yield {'trti': trti, sid: matrix}
 
 
 def agg_probs(*probs):
