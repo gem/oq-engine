@@ -13,7 +13,7 @@ https://wheelhouse.openquake.org/v3/linux/py38/scipy-1.4.1-cp38-cp38-manylinux1_
 https://wheelhouse.openquake.org/v3/linux/py38/pandas-1.0.3-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/pyzmq-18.1.0-cp38-cp38-manylinux1_x86_64.whl 
 https://wheelhouse.openquake.org/v3/linux/py38/psutil-5.6.7-cp38-cp38-manylinux1_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py38/Shapely-1.6.4.post2-cp38-cp38-linux_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py38/Shapely-1.7.0-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py/docutils-0.14-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pbr-5.2.0-py2.py3-none-any.whl
