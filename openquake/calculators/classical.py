@@ -40,7 +40,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
@@ -89,6 +88,9 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield {'pmap': {}}
         return
     maxw = params['max_weight']
+
+    def weight(src):
+        return src.weight * params['rescale_weight']
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
@@ -354,6 +356,8 @@ class ClassicalCalculator(base.HazardCalculator):
             f1, f2 = classical, classical_split_filter
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
+            param['rescale_weight'] = len(gsims) * (
+                oq.maximum_distance(sg.trt) / 300) ** 2
             if sg.atomic:
                 # do not split atomic groups
                 nb = 1
@@ -366,10 +370,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 nb = len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
-                                  len(block), sum(src.weight for src in block))
+                                  len(block),
+                                  sum(srcweight(src) for src in block))
                     smap.submit((block, srcfilter, gsims, param), f2)
 
-            w = sum(src.weight for src in sg)
+            w = sum(srcweight(src) for src in sg)
             logging.info('TRT = %s', sg.trt)
             if oq.maximum_distance.magdist:
                 it = sorted(oq.maximum_distance.magdist[sg.trt].items())
