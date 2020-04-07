@@ -229,9 +229,8 @@ def export_losses_by_event(ekey, dstore):
     events = dstore['events'][()]
     columns = dict(rlz_id=lambda rec: events[rec.event_id]['rlz_id'])
     if oq.investigation_time:  # not scenario
-        year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
         columns['rup_id'] = lambda rec: events[rec.event_id]['rup_id']
-        columns['year'] = lambda rec: year_of[rec.event_id]
+        columns['year'] = lambda rec: events[rec.event_id]['year']
     lbe = dstore['losses_by_event'][()]
     lbe.sort(order='event_id')
     dic = dict(shape_descr=['event_id'])
@@ -253,12 +252,6 @@ def _compact(array):
     for name in dt.names:
         lst.append((name, (dt[name], e)))
     return array.view(numpy.dtype(lst)).reshape(a)
-
-
-def year_dict(eids, investigation_time, ses_seed):
-    numpy.random.seed(ses_seed)
-    years = numpy.random.choice(int(investigation_time), len(eids)) + 1
-    return dict(zip(numpy.sort(eids), years))  # eid -> year
 
 
 # this is used by classical_risk
