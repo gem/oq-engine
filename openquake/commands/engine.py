@@ -31,6 +31,7 @@ from openquake.server import dbserver
 from openquake.commands.abort import abort
 
 
+DEFAULT_EXPORTS = 'csv,xml,rst'
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 ZMQ = os.environ.get(
@@ -240,14 +241,15 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         dskey, calc_id, datadir = logs.dbcmd('get_output', int(output_id))
         for line in core.export_output(
                 dskey, calc_id, datadir, os.path.expanduser(target_dir),
-                exports or 'csv,xml'):
+                exports or DEFAULT_EXPORTS):
             safeprint(line)
 
     elif export_outputs is not None:
         job_id, target_dir = export_outputs
         hc_id = get_job_id(job_id)
         for line in core.export_outputs(
-                hc_id, os.path.expanduser(target_dir), exports or 'csv,xml'):
+                hc_id, os.path.expanduser(target_dir),
+                exports or DEFAULT_EXPORTS):
             safeprint(line)
 
     elif delete_uncompleted_calculations:
