@@ -369,7 +369,7 @@ class ClassicalCalculator(base.HazardCalculator):
                                   len(block), sum(src.weight for src in block))
                     smap.submit((block, srcfilter, gsims, param), f2)
 
-            w = sum(src.weight for src in sg)
+            w = sum(srcweight(src) for src in sg)
             logging.info('TRT = %s', sg.trt)
             if oq.maximum_distance.magdist:
                 it = sorted(oq.maximum_distance.magdist[sg.trt].items())
