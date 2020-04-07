@@ -49,7 +49,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1"
                     >
-                        0
+                        1
                     </SES>
                 </stochasticEventSets>
                 <magnitude>

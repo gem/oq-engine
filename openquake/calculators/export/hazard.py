@@ -57,13 +57,15 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    num_ses = oq.ses_per_logic_tree_path
+    events = dstore['events'][()]
     ruptures_by_grp = AccumDict(accum=[])
     for rgetter in gen_rgetters(dstore):
         ebrs = []
         for proxy in rgetter.get_proxies():
+            evs = events[events['rup_id'] == proxy['id']]
+            events_by_ses = group_array(evs, 'ses')
             ebr = proxy.to_ebr(rgetter.trt, rgetter.samples)
-            ebrs.append(ebr.export(rgetter.rlzs_by_gsim, num_ses))
+            ebrs.append(ebr.export(events_by_ses))
         ruptures_by_grp[rgetter.grp_id].extend(ebrs)
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
