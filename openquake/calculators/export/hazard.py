@@ -57,13 +57,12 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    events = dstore['events'][()]
+    events = group_array(dstore['events'][()], 'rup_id')
     ruptures_by_grp = AccumDict(accum=[])
     for rgetter in gen_rgetters(dstore):
         ebrs = []
         for proxy in rgetter.get_proxies():
-            evs = events[events['rup_id'] == proxy['id']]
-            events_by_ses = group_array(evs, 'ses_id')
+            events_by_ses = group_array(events[proxy['id']], 'ses_id')
             ebr = proxy.to_ebr(rgetter.trt, rgetter.samples)
             ebrs.append(ebr.export(events_by_ses))
         ruptures_by_grp[rgetter.grp_id].extend(ebrs)
