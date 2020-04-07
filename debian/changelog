@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed `oq engine --eo output_id output_dir` for the Full Report output
   * Added year and ses_id to the events table
   * Removed NaNs in the low return period part of the loss curves
   * Fixed the tot_curves and tot_losses exporters in ebrisk calculations
