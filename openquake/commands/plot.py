@@ -465,7 +465,7 @@ def make_figure_agg_curves(extractors, what):
 
 def make_figure_tot_curves(extractors, what):
     """
-    $ oq plot 'tot_curves?loss_type=structural' -1
+    $ oq plot 'tot_curves?loss_type=structural&kind=rlz-000&absolute=1'
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
