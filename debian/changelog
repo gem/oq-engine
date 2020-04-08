@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed an ordering bug in /extract/rupture_info affecting the QGIS plugin
   * Fixed `oq engine --eo output_id output_dir` for the Full Report output
   * Added year and ses_id to the events table
   * Removed NaNs in the low return period part of the loss curves
