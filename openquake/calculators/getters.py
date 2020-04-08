@@ -520,7 +520,7 @@ def gen_rupture_getters(dstore, srcfilter, ct):
             yield rgetter
 
 
-def get_ruptures(dstore, srcfilter=calc.filters.nofilter, min_mag=0):
+def get_ebruptures(dstore, srcfilter=calc.filters.nofilter, min_mag=0):
     """
     Extract EBRuptures from the datastore
     """
