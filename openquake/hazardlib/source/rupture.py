@@ -24,7 +24,6 @@ import abc
 import numpy
 import math
 import itertools
-import collections
 import toml
 from openquake.baselib import general
 from openquake.hazardlib import geo, contexts
@@ -47,12 +46,9 @@ events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
 code2cls = {}
 
 
-def get_rupture(dic, geom=None, trt=None):
-    """
-    :param dic: a dictionary or a record
-    :param geom: if any, an array with fields lon, lat, depth
-    :returns: a rupture instance
-    """
+def _get_rupture(dic, geom=None, trt=None):
+    # dic: a dictionary or a record
+    # geom: if any, an array with fields lon, lat, depth
     if not code2cls:
         code2cls.update(BaseRupture.init())
     if geom is None:
@@ -99,7 +95,7 @@ def from_toml(toml_str):
     :param toml_str: a string in TOML format
     :returns: a rupture instance
     """
-    return get_rupture(toml.loads(toml_str))
+    return _get_rupture(toml.loads(toml_str))
 
 
 def float5(x):
@@ -784,7 +780,7 @@ class RuptureProxy(object):
         :returns: EBRupture instance associated to the underlying rupture
         """
         # not implemented: rupture_slip_direction
-        rupture = get_rupture(self.rec, self.geom, trt)
+        rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self.rec['srcidx'], self.rec['grp_id'],
                         self.rec['n_occ'], samples)
         ebr.id = self.rec['id']

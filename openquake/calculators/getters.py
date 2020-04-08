@@ -503,7 +503,10 @@ def gen_rupture_getters(dstore, srcfilter, ct):
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
+        if srcfilter.sitecol is None:  # no filter
+            proxies = list(map(RuptureProxy, rups))
+        else:
+            proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
         if not maxweight:
             maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
         blocks = list(general.block_splitter(
@@ -515,6 +518,17 @@ def gen_rupture_getters(dstore, srcfilter, ct):
                 block, dstore.filename, grp_id,
                 trt, samples[grp_id], rlzs_by_gsim[grp_id])
             yield rgetter
+
+
+def get_ruptures(dstore, srcfilter=calc.filters.nofilter, min_mag=0):
+    """
+    Extract EBRuptures from the datastore
+    """
+    ebrs = []
+    for rgetter in gen_rupture_getters(dstore, srcfilter, ct=1):
+        for proxy in rgetter.get_proxies(min_mag):
+            ebrs.append(proxy.to_ebr(rgetter.trt, rgetter.samples))
+    return ebrs
 
 
 # this is never called directly; gen_rupture_getters is used instead
