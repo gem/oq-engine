@@ -120,3 +120,32 @@ say so::
 
 You can combine as many kinds of curves as you want. Clearly if your are
 specifying a kind that is not available you will get an error.
+
+Extracting ruptures
+-------------------
+
+Here is an example for the event based demo::
+
+  $ cd oq-engine/demos/hazard/EventBasedPSHA/
+  $ oq engine --run job.ini
+  $ oq shell
+  IPython shell with a global object "o"
+  In [1]: from openquake.calculators.extract import Extractor
+  In [2]: extractor = Extractor(calc_id=-1)
+  In [3]: aw = extractor.get('rupture_info?min_mag=5')
+  In [4]: aw
+  Out[4]: <ArrayWrapper(1511,)>
+  In [5]: aw.array                                                   
+  Out[5]:
+  array([(   0, 1, 5.05, 0.08456118,  0.15503392, 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
+         (   1, 1, 5.05, 0.08456119,  0.15503392, 5., b'Active Shallow Crust', 4.4999969e+01, 90.      , 0.),
+         (   2, 1, 5.05, 0.08456118,  0.15503392, 5., b'Active Shallow Crust', 3.5999997e+02, 49.999985, 0.),
+         ...,
+         (1508, 2, 6.15, 0.26448786, -0.7442877 , 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
+         (1509, 1, 6.15, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 2.2499924e+02, 50.000004, 0.),
+         (1510, 1, 6.85, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 4.9094699e-04, 50.000046, 0.)],
+        dtype=[('rup_id', '<u4'), ('multiplicity', '<u2'), ('mag', '<f4'), ('centroid_lon', '<f4'),
+               ('centroid_lat', '<f4'), ('centroid_depth', '<f4'), ('trt', 'S50'), ('strike', '<f4'),
+               ('dip', '<f4'), ('rake', '<f4')])
+  In [6]: extractor.close()
+
