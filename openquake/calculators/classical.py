@@ -342,6 +342,7 @@ class ClassicalCalculator(base.HazardCalculator):
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             maximum_distance=oq.maximum_distance,
             pointsource_distance=oq.pointsource_distance,
+            point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_ctxs=oq.collapse_ctxs,
             max_sites_disagg=oq.max_sites_disagg)

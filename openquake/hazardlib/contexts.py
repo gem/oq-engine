@@ -40,7 +40,6 @@ I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
-POINT_RUPTURE_BINS = 20
 
 
 def get_distances(rupture, sites, param):
@@ -153,6 +152,7 @@ class ContextMaker(object):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_ctxs = param.get('collapse_ctxs', False)
+        self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
@@ -541,7 +541,7 @@ class PmapMaker(object):
                 if rup.dist <= mdist:
                     coll.append(rup)
             for rs in groupby_bin(
-                    coll, POINT_RUPTURE_BINS, operator.attrgetter('dist')):
+                    coll, self.point_rupture_bins, operator.attrgetter('dist')):
                 # group together ruptures in the same distance bin
                 output.extend(_collapse(rs))
         return output
