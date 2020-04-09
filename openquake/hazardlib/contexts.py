@@ -400,7 +400,7 @@ class PmapMaker(object):
         if self.fewsites:  # do not filter, but collapse
             rup_parametric = not numpy.isnan(
                 [r.occurrence_rate for r in rups]).any()
-            if (self.rup_indep and rup_parametric and len(sites) == 1
+            if (self.rup_indep and rup_parametric and len(sites.complete) == 1
                     and self.pointsource_distance != {}):
                 rups = self.collapse_point_ruptures(rups, sites)
                 # print_finite_size(rups)
