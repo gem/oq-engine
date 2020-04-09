@@ -1274,7 +1274,6 @@ def extract_rupture_info(dstore, what):
                  r['lon'], r['lat'], r['depth'],
                  rgetter.trt, r['strike'], r['dip'], r['rake']))
     arr = numpy.array(rows, dtlist)
-    arr.sort(order='rup_id')
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
     return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
                                   boundaries=geoms))

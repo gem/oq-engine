@@ -90,6 +90,7 @@ def export_ruptures_csv(ekey, dstore):
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+    arr.array.sort(order='rup_id')
     writers.write_csv(dest, arr, comment=comment)
     return [dest]
 
