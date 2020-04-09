@@ -882,11 +882,14 @@ class GsimLogicTree(object):
                 gsims.append(br.gsim)
                 weights.append(br.weight)
             if len(gsims) > 1 and bs_id in branchset_ids:
-                gsim = object.__new__(AvgGMPE)
-                gsim.kwargs = {brid: {gsim.__class__.__name__: gsim.kwargs}
-                               for brid, gsim in zip(brs, gsims)}
-                gsim.gsims = gsims
-                gsim.weights = numpy.array([w['weight'] for w in weights])
+                kwargs = {}
+                for brid, gsim, weight in zip(brs, gsims, weights):
+                    kw = gsim.kwargs.copy()
+                    kw['weight'] = weight.dic['weight']
+                    kwargs[brid] = {gsim.__class__.__name__: kw}
+                _toml = toml.dumps({'AvgGMPE': kwargs})
+                gsim = AvgGMPE(**kwargs)
+                gsim._toml = _toml
                 branch = BranchTuple(trt, bs_id, gsim, sum(weights), True)
                 new.branches.append(branch)
             else:
