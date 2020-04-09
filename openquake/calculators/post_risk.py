@@ -113,7 +113,7 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         stats = oq.hazard_stats().items()
-        S = self.S = len(stats)
+        S = len(stats)
         P = len(builder.return_periods)
         loss_types = oq.loss_names
         aggby = {'aggregate_by': aggregate_by}
