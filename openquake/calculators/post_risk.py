@@ -204,6 +204,7 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity check on tot_losses
         """
+        logging.info('Applying a sanity check on agg_losses/tot_losses')
         for kind in 'rlzs', 'stats':
             agg = 'agg_losses-' + kind
             tot = 'tot_losses-' + kind
