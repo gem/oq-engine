@@ -204,7 +204,7 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity check on tot_losses
         """
-        logging.info('Applying a sanity check on agg_losses/tot_losses')
+        logging.info('Sanity check on agg_losses/tot_losses')
         for kind in 'rlzs', 'stats':
             agg = 'agg_losses-' + kind
             tot = 'tot_losses-' + kind
@@ -214,7 +214,6 @@ class PostRiskCalculator(base.RiskCalculator):
                 kinds = ['rlz-%d' % rlz for rlz in range(self.R)]
             else:
                 kinds = self.oqparam.hazard_stats()
-            # sanity check on tot_losses
             for l in range(self.L):
                 for r, k in enumerate(kinds):
                     tot_losses = self.datastore[tot][l, r]
