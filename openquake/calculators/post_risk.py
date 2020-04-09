@@ -113,7 +113,7 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         stats = oq.hazard_stats().items()
-        S = len(stats)
+        S = self.S = len(stats)
         P = len(builder.return_periods)
         loss_types = oq.loss_names
         aggby = {'aggregate_by': aggregate_by}
@@ -201,17 +201,28 @@ class PostRiskCalculator(base.RiskCalculator):
         return oq.aggregate_by
 
     def post_execute(self, aggregate_by):
-        if 'agg_losses-rlzs' not in self.datastore:
-            return
-        # sanity check on tot_losses
-        for l in range(self.L):
-            for r in range(self.R):
-                tot_losses = self.datastore['tot_losses-rlzs'][l, r]
-                agg_losses = self.datastore['agg_losses-rlzs'][l, r].sum()
-                msg = 'Inconsistent total losses for l=%s, r=%d: %s != %s' % (
-                    l, r, agg_losses, tot_losses)
-                numpy.testing.assert_allclose(
-                    agg_losses, tot_losses, rtol=.001, err_msg=msg)
+        """
+        Sanity check on tot_losses
+        """
+        for kind in 'rlzs', 'stats':
+            agg = 'agg_losses-' + kind
+            tot = 'tot_losses-' + kind
+            if agg not in self.datastore:
+                return
+            if kind == 'rlzs':
+                kinds = ['rlz-%d' % rlz for rlz in range(self.R)]
+            else:
+                kinds = self.oqparam.hazard_stats()
+            # sanity check on tot_losses
+            for l in range(self.L):
+                for r, k in enumerate(kinds):
+                    tot_losses = self.datastore[tot][l, r]
+                    agg_losses = self.datastore[agg][l, r].sum()
+                    msg = ('Inconsistent total losses for l=%s, k=%s: %s != %s'
+                           % (l, k, agg_losses, tot_losses))
+                    if kind == 'rlzs' or k == 'mean':
+                        numpy.testing.assert_allclose(
+                            agg_losses, tot_losses, rtol=.001, err_msg=msg)
 
     def get_shape(self, *sizes, aggregate_by=None):
         """
