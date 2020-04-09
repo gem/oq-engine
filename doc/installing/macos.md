@@ -23,7 +23,7 @@ Make sure to run the script located under `/Applications/Python 3.6/Install Cert
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.7.1-2.run using any browser
+Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.7.1-3.run using any browser
 
 From the Terminal app (or using iTerm) run
 
