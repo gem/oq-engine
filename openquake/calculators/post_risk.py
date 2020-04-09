@@ -198,9 +198,20 @@ class PostRiskCalculator(base.RiskCalculator):
             if oq.aggregate_by:
                 set_rlzs_stats(self.datastore, 'agg_curves')
                 set_rlzs_stats(self.datastore, 'agg_losses')
+        return oq.aggregate_by
 
-    def post_execute(self, dummy):
-        pass
+    def post_execute(self, aggregate_by):
+        if 'agg_losses-rlzs' not in self.datastore:
+            return
+        # sanity check on tot_losses
+        for l in range(self.L):
+            for r in range(self.R):
+                tot_losses = self.datastore['tot_losses-rlzs'][l, r]
+                agg_losses = self.datastore['agg_losses-rlzs'][l, r].sum()
+                msg = 'Inconsistent total losses for l=%s, r=%d: %s != %s' % (
+                    l, r, agg_losses, tot_losses)
+                numpy.testing.assert_allclose(
+                    agg_losses, tot_losses, rtol=.001, err_msg=msg)
 
     def get_shape(self, *sizes, aggregate_by=None):
         """
