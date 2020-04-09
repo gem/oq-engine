@@ -18,6 +18,20 @@
                 </logicTreeBranch>
 
             </logicTreeBranchSet>
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                    applyToTectonicRegionType="Subduction Interface">
+
+                <logicTreeBranch branchID="BA">
+ <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="TA">
+ <uncertaintyModel>ToroEtAl2002</uncertaintyModel>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
 
     </logicTree>
 </nrml>
