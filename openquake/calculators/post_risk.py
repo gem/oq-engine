@@ -222,7 +222,7 @@ class PostRiskCalculator(base.RiskCalculator):
                     if kind == 'rlzs' or k == 'mean':
                         ok = numpy.allclose(agg_losses, tot_losses, rtol=.001)
                         if not ok:
-                            logging.error(
+                            logging.warning(
                                 'Inconsistent total losses for %s, %s: '
                                 '%s != %s', ln, k, agg_losses, tot_losses)
 
