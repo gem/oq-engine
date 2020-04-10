@@ -327,8 +327,7 @@ class ClassicalCalculator(base.HazardCalculator):
         def srcweight(src):
             trt = src.tectonic_region_type
             g = len(gsims_by_trt[trt])
-            m = (oq.maximum_distance(trt) / 300) ** 2
-            return src.weight * g * m
+            return src.weight * g
 
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
@@ -357,8 +356,7 @@ class ClassicalCalculator(base.HazardCalculator):
             f1, f2 = classical, classical_split_filter
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
-            param['rescale_weight'] = len(gsims) * (
-                oq.maximum_distance(sg.trt) / 300) ** 2
+            param['rescale_weight'] = len(gsims)
             if sg.atomic:
                 # do not split atomic groups
                 nb = 1
