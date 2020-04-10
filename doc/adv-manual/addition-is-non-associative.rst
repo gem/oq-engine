@@ -78,5 +78,5 @@ You are warned now.
 
 Mandatory readings:
 
-https://en.wikipedia.org/wiki/Single-precision_floating-point_format
-https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+- https://en.wikipedia.org/wiki/Single-precision_floating-point_format
+- https://en.wikipedia.org/wiki/Double-precision_floating-point_format
