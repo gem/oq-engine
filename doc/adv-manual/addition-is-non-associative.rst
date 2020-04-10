@@ -65,7 +65,7 @@ out inconsistencies in the sums when computing loss curves.
 For a real-life calculation that was run today, producing 196,830
 aggregate loss curves, one for each possible combination of the tags
 in the exposure, the engine found an inconsistency between the total
-sum of the aggregate loss curves and the total loss curve computed
+sum of the aggregate losses and the total losses computed
 with a different ordering of the losses of 0.43362%: that means over
 4 million euros over 1 billion!
 
