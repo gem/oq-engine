@@ -1,5 +1,5 @@
-#,,,"generated_by='OpenQuake engine 3.9.0-gitca5771995e', start_date='2020-03-12T14:53:43', checksum=2856676237, investigation_time=1.0, risk_investigation_time=50.0"
-loss_type,id,loss_value,exposed_value,loss_ratio
+#,,,"generated_by='OpenQuake engine 3.9.0-git0aeea7c55f', start_date='2020-04-06T10:23:15', checksum=2856676237, investigation_time=1.0, risk_investigation_time=50.0"
+loss_type,loss_value,exposed_value,loss_ratio
 business_interruption,4.17183E+03,1.40000E+04,2.97988E-01
 contents,3.03626E+04,3.50000E+04,8.67502E-01
 nonstructural,4.20796E+04,1.05000E+05,4.00758E-01

@@ -14,11 +14,11 @@ You can see the full list of commands by running `oq help`::
 
   $ oq help
   usage: oq [--version]
-  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,plot_lc,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
+  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
            ...
 
   positional arguments:
-  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,plot_lc,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
+  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
                         available subcommands; use oq help <subcmd>
 
   optional arguments:

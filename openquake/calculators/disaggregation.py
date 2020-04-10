@@ -25,12 +25,12 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes)
+    AccumDict, block_splitter, get_array_nbytes, humansize)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, DistancesContext
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import util
@@ -113,19 +113,34 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, bin_edges, monitor):
     :returns:
         a dictionary sid -> 8D-array
     """
-    dstore.open('r')
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
+    with monitor('reading rupdata', measuremem=True):
+        dstore.open('r')
+        oq = dstore['oqparam']
+        sitecol = dstore['sitecol']
+        rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=True)
     gmf_mon = monitor('disagg mean_std', measuremem=False)
-    for sid, mat in disagg.build_matrices(
-            rupdata, sitecol, cmaker, iml4, oq.num_epsilon_bins,
-            bin_edges, pne_mon, mat_mon, gmf_mon):
-        yield {'trti': trti, sid: mat}
+    for sid, iml3 in zip(sitecol.sids, iml4):
+        singlesite = sitecol.filtered([sid])
+        bins = disagg.get_bins(bin_edges, sid)
+        rlzs = [iml4.rlzs[sid, z] for z in range(iml4.shape[-1])]
+        ctxs = []
+        ok, = numpy.where(
+            rupdata['rrup_'][:, sid] <= cmaker.maximum_distance(cmaker.trt))
+        for ridx in ok:  # consider only the ruptures close to the site
+            rctx = RuptureContext((par, rupdata[par][ridx])
+                                  for par in rupdata if not par.endswith('_'))
+            dctx = DistancesContext((par[:-1], rupdata[par][ridx, [sid]])
+                                    for par in rupdata if par.endswith('_'))
+            ctxs.append((rctx, dctx))
+        matrix = disagg.build_matrix(
+            cmaker, singlesite, ctxs, iml3, iml4.imts, rlzs,
+            oq.num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon)
+        if matrix.any():
+            yield {'trti': trti, sid: matrix}
 
 
 def agg_probs(*probs):
@@ -163,6 +178,8 @@ class DisaggregationCalculator(base.HazardCalculator):
     accept_precalc = ['classical', 'disaggregation']
 
     def init(self):
+        if self.N >= 32768:
+            raise ValueError('You can disaggregate at max 32,768 sites')
         few = self.oqparam.max_sites_disagg
         if self.N > few:
             raise ValueError(
@@ -306,7 +323,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         shapedic['concurrent_tasks'] = oq.concurrent_tasks
         nbytes, msg = get_array_nbytes(shapedic)
         if nbytes > oq.max_data_transfer:
-            raise ValueError('Estimated data transfer too big\n%s' % msg)
+            raise ValueError(
+                'Estimated data transfer too big\n%s > max_data_transfer=%s' %
+                (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer: %s', msg)
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:

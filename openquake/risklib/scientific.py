@@ -1273,7 +1273,7 @@ def return_periods(eff_time, num_losses):
     >>> return_periods(1, 1)
     Traceback (most recent call last):
        ...
-    AssertionError: eff_time too small: 1
+    ValueError: eff_time too small: 1
     >>> return_periods(2, 2)
     array([1, 2], dtype=uint32)
     >>> return_periods(2, 10)
@@ -1284,8 +1284,10 @@ def return_periods(eff_time, num_losses):
     array([   1,    2,    5,   10,   20,   50,  100,  200,  500, 1000],
           dtype=uint32)
     """
-    assert eff_time >= 2, 'eff_time too small: %s' % eff_time
-    assert num_losses >= 2, 'num_losses too small: %s' % num_losses
+    if eff_time < 2:
+        raise ValueError('eff_time too small: %s' % eff_time)
+    if num_losses < 2:
+        raise ValueError('num_losses too small: %s' % num_losses)
     min_time = eff_time / num_losses
     period = 1
     periods = []
@@ -1312,18 +1314,19 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
-    where min_time = eff_time /num_events. Outside the interval they
-    have NaN values. Here is an example:
+    where min_time = eff_time /num_events. On the right of the interval they
+    have NaN values and on the left zero values. Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
-    array([ nan,  nan,  0. ,  3.5,  8. , 13. , 23. ])
+    array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])
 
     If num_events is not passed, it is inferred from the number of losses;
     if eff_time is not passed, it is inferred from the longest return period.
     """
+    P = len(return_periods)
     if len(losses) == 0:  # zero-curve
-        return numpy.zeros(len(return_periods))
+        return numpy.zeros(P)
     if num_events is None:
         num_events = len(losses)
     elif num_events < len(losses):
@@ -1338,9 +1341,13 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
         losses = numpy.concatenate(
             [numpy.zeros(num_zeros, losses.dtype), losses])
     periods = eff_time / numpy.arange(num_events, 0., -1)
-    rperiods = [rp if periods[0] <= rp <= periods[-1] else numpy.nan
-                for rp in return_periods]
-    curve = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
+    num_left = sum(1 for rp in return_periods if rp < periods[0])
+    num_right = sum(1 for rp in return_periods if rp > periods[-1])
+    rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
+    curve = numpy.zeros(len(return_periods))
+    c = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
+    curve[num_left:P-num_right] = c
+    curve[P-num_right:] = numpy.nan
     return curve
 
 

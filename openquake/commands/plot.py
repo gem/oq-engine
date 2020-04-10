@@ -465,7 +465,7 @@ def make_figure_agg_curves(extractors, what):
 
 def make_figure_tot_curves(extractors, what):
     """
-    $ oq plot 'tot_curves?loss_type=structural' -1
+    $ oq plot 'tot_curves?loss_type=structural&kind=rlz-000&absolute=1'
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -503,7 +503,7 @@ def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
         raise SystemExit('Invalid IMT in %r' % what)
     elif prefix in 'hcurves uhs disagg' and 'site_id=' not in rest:
         what += '&site_id=0'
-    if prefix == 'disagg' and 'poe=' not in rest:
+    if prefix == 'disagg' and 'poe_id=' not in rest:
         what += '&poe_id=0'
     if local:
         xs = [WebExtractor(calc_id, 'http://localhost:8800', '')]

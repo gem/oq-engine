@@ -16,7 +16,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <stochasticEventSets>
                     <SES
-                    id="2"
+                    id="3"
                     >
                         0 1
                     </SES>
@@ -47,14 +47,14 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <stochasticEventSets>
                     <SES
-                    id="3"
+                    id="1"
                     >
-                        0
+                        3
                     </SES>
                     <SES
                     id="2"
                     >
-                        1
+                        2
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -83,19 +83,19 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <stochasticEventSets>
                     <SES
-                    id="3"
-                    >
-                        0
-                    </SES>
-                    <SES
                     id="1"
                     >
-                        1
+                        4
                     </SES>
                     <SES
                     id="2"
                     >
-                        2
+                        6
+                    </SES>
+                    <SES
+                    id="3"
+                    >
+                        5
                     </SES>
                 </stochasticEventSets>
                 <magnitude>

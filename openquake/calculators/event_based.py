@@ -79,7 +79,6 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
     accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
-    build_ruptures = sample_ruptures
 
     def init(self):
         if hasattr(self, 'csm'):
@@ -130,7 +129,7 @@ class EventBasedCalculator(base.HazardCalculator):
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, srcfilter, par))
         smap = parallel.Starmap(
-            self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5)
+            sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
         for dic in smap:
             if dic['calc_times']:
@@ -229,7 +228,14 @@ class EventBasedCalculator(base.HazardCalculator):
         n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
         events['id'] = numpy.arange(len(events))
-        self.datastore['events'] = events
+        # set event year and event ses starting from 1
+        itime = int(self.oqparam.investigation_time)
+        nses = self.oqparam.ses_per_logic_tree_path
+        extra = numpy.zeros(len(events), [('year', U16), ('ses_id', U16)])
+        numpy.random.seed(self.oqparam.ses_seed)
+        extra['year'] = numpy.random.choice(itime, len(events)) + 1
+        extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
+        self.datastore['events'] = util.compose_arrays(events, extra)
         eindices = get_indices(events['rup_id'])
         arr = numpy.array(list(eindices.values()))[:, 0, :]
         self.datastore['ruptures']['e0'] = arr[:, 0]

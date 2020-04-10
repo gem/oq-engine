@@ -25,7 +25,6 @@ environment:
 - [Introduction](../installing/docker.md)
 - [Single node deployment](single.md)
 - [Cluster deployment](cluster.md)
-- [Build from sources](../../docker.md#build-openquake-docker-images)
 
 ***
 

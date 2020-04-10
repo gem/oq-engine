@@ -1,4 +1,13 @@
+  [Paolo Tormene]
+  * Added a second tectonic region type to the EventBasedPSHA demo
+
   [Michele Simionato]
+  * Fixed an ordering bug in /extract/rupture_info affecting the QGIS plugin
+  * Fixed `oq engine --eo output_id output_dir` for the Full Report output
+  * Added year and ses_id to the events table
+  * Removed NaNs in the low return period part of the loss curves
+  * Fixed the tot_curves and tot_losses exporters in ebrisk calculations
+  * Reduced the rupture storage in classical calculations by using compression
   * Improved the task distribution in the classical calculator, avoiding
     generating too few or too many tasks
   * Enhanced `oq check_input` to check complex fault geometries

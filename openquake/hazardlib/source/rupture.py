@@ -24,7 +24,6 @@ import abc
 import numpy
 import math
 import itertools
-import collections
 import toml
 from openquake.baselib import general
 from openquake.hazardlib import geo, contexts
@@ -47,12 +46,9 @@ events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
 code2cls = {}
 
 
-def get_rupture(dic, geom=None, trt=None):
-    """
-    :param dic: a dictionary or a record
-    :param geom: if any, an array with fields lon, lat, depth
-    :returns: a rupture instance
-    """
+def _get_rupture(dic, geom=None, trt=None):
+    # dic: a dictionary or a record
+    # geom: if any, an array with fields lon, lat, depth
     if not code2cls:
         code2cls.update(BaseRupture.init())
     if geom is None:
@@ -99,7 +95,7 @@ def from_toml(toml_str):
     :param toml_str: a string in TOML format
     :returns: a rupture instance
     """
-    return get_rupture(toml.loads(toml_str))
+    return _get_rupture(toml.loads(toml_str))
 
 
 def float5(x):
@@ -696,18 +692,6 @@ class EBRupture(object):
                 j += n
         return dic
 
-    def get_events(self, rlzs_by_gsim, e0=None):
-        """
-        :returns: an array of events with fields eid, rlz
-        """
-        all_eids, rlzs = [], []
-        for rlz, eids in self.get_eids_by_rlz(rlzs_by_gsim).items():
-            all_eids.extend(eids)
-            rlzs.extend([rlz] * len(eids))
-        evs = U32(all_eids) + (e0 if e0 is not None else self.e0)
-        rupids = [self.rup_id] * len(evs)
-        return numpy.fromiter(zip(evs, rupids, rlzs), events_dt)
-
     def get_eids(self, num_rlzs):
         """
         :param num_rlzs: the number of realizations for the given group
@@ -716,33 +700,12 @@ class EBRupture(object):
         num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
         return numpy.arange(num_events, dtype=U32)
 
-    def get_events_by_ses(self, events, num_ses):
-        """
-        :returns: a dictionary ses index -> events array
-        """
-        numpy.random.seed(self.rup_id)
-        sess = numpy.random.choice(num_ses, len(events)) + 1
-        events_by_ses = collections.defaultdict(list)
-        for ses, event in zip(sess, events):
-            events_by_ses[ses].append(event)
-        for ses in events_by_ses:
-            events_by_ses[ses] = numpy.array(events_by_ses[ses])
-        return events_by_ses
-
-    def get_ses_by_eid(self, rlzs_by_gsim, num_ses):
-        events = self.get_events(rlzs_by_gsim)
-        numpy.random.seed(self.rup_id)
-        sess = numpy.random.choice(num_ses, len(events)) + 1
-        return dict(zip(events['id'], sess))
-
-    def export(self, rlzs_by_gsim, num_ses):
+    def export(self, events_by_ses):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        events = self.get_events(rlzs_by_gsim, e0=TWO32 * self.rup_id)
-        events_by_ses = self.get_events_by_ses(events, num_ses)
         new = ExportedRupture(self.id, self.n_occ, events_by_ses)
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
@@ -817,7 +780,7 @@ class RuptureProxy(object):
         :returns: EBRupture instance associated to the underlying rupture
         """
         # not implemented: rupture_slip_direction
-        rupture = get_rupture(self.rec, self.geom, trt)
+        rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self.rec['srcidx'], self.rec['grp_id'],
                         self.rec['n_occ'], samples)
         ebr.id = self.rec['id']
