@@ -218,11 +218,12 @@ class PostRiskCalculator(base.RiskCalculator):
                 for r, k in enumerate(kinds):
                     tot_losses = self.datastore[tot][l, r]
                     agg_losses = self.datastore[agg][l, r].sum()
-                    msg = ('Inconsistent total losses for l=%s, k=%s: %s != %s'
-                           % (l, k, agg_losses, tot_losses))
                     if kind == 'rlzs' or k == 'mean':
-                        numpy.testing.assert_allclose(
-                            agg_losses, tot_losses, rtol=.001, err_msg=msg)
+                        ok = numpy.allclose(agg_losses, tot_losses, rtol=.001)
+                        if not ok:
+                            msg = ('Inconsistent total losses for l=%s, k=%s: '
+                                   '%s != %s' % (l, k, agg_losses, tot_losses))
+                            logging.error(msg)
 
     def get_shape(self, *sizes, aggregate_by=None):
         """
