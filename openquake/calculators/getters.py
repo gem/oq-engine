@@ -462,12 +462,11 @@ def gen_rgetters(dstore, slc=slice(None)):
     samples = full_lt.get_samples_by_grp()
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    ct = dstore['oqparam'].concurrent_tasks or 1
     nr = len(dstore['ruptures'])
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim.get(grp_id, []):  # the model has no sources
             continue
-        for block in general.split_in_blocks(arr, len(arr) / nr * ct):
+        for block in general.split_in_blocks(arr, len(arr) / nr):
             rgetter = RuptureGetter(
                 [RuptureProxy(rec) for rec in block], dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
@@ -503,10 +502,7 @@ def gen_rupture_getters(dstore, srcfilter, ct):
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        if srcfilter.sitecol is None:  # no filter
-            proxies = list(map(RuptureProxy, rups))
-        else:
-            proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
+        proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
         if not maxweight:
             maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
         blocks = list(general.block_splitter(
@@ -520,15 +516,28 @@ def gen_rupture_getters(dstore, srcfilter, ct):
             yield rgetter
 
 
-def get_ebruptures(dstore, srcfilter=calc.filters.nofilter, min_mag=0):
+def get_ebruptures(dstore):
     """
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    for rgetter in gen_rupture_getters(dstore, srcfilter, ct=1):
-        for proxy in rgetter.get_proxies(min_mag):
+    for rgetter in gen_rgetters(dstore):
+        for proxy in rgetter.get_proxies():
             ebrs.append(proxy.to_ebr(rgetter.trt, rgetter.samples))
     return ebrs
+
+
+def get_rupdict(dstore):
+    """
+    :returns: a dictionary rup_id->rup_dict
+    """
+    dic = {}
+    for ebr in get_ebruptures(dstore):
+        dic['rup_%s' % ebr.rup_id] = d = ebr.rupture.todict()
+        d.pop('serial')
+        for attr in ['srcidx', 'grp_id', 'n_occ', 'samples']:
+            d[attr] = int(getattr(ebr, attr))
+    return dic
 
 
 # this is never called directly; gen_rupture_getters is used instead
