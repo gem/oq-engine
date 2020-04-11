@@ -532,9 +532,8 @@ def get_rupdict(dstore):
     :returns: a dictionary rup_id->rup_dict
     """
     dic = {}
-    for ebr in get_ebruptures(dstore):
-        dic['rup_%s' % ebr.rup_id] = d = ebr.rupture.todict()
-        d.pop('serial')
+    for i, ebr in enumerate(get_ebruptures(dstore)):
+        dic['rup_%s' % i] = d = ebr.rupture.todict()
         for attr in ['srcidx', 'grp_id', 'n_occ', 'samples']:
             d[attr] = int(getattr(ebr, attr))
     return dic
