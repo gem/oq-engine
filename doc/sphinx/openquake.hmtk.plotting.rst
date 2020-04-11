@@ -20,14 +20,6 @@ openquake.hmtk.plotting.beachball module
     :undoc-members:
     :show-inheritance:
 
-openquake.hmtk.plotting.mapping module
---------------------------------------
-
-.. automodule:: openquake.hmtk.plotting.mapping
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 openquake.hmtk.plotting.plotting_utils module
 ---------------------------------------------
 
