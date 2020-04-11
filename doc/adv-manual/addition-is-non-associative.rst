@@ -48,9 +48,9 @@ First of all, the engine does not use 64 bit floats to do the additions,
 because for saving memory (both RAM and disk space) it stores 32 bit
 floats, so the precision is a lot less. 64 bit floats have 53 bits
 of precision, and this why the relative error in the previous calculation was
-around 1.11 × 10−16 (i.e. 2^−53); 32 bit floats have only 24 bits of
-precision, so we should expect a relative error around 6E-8 (2^-24) which means
-60 euros.
+around 1.11E-16 (i.e. 2 to the power -53); 32 bit floats have only 24 bits
+of precision, so we should expect a relative error around 6E-8 (i.e.
+2 to the power -24) which means 60 euros.
 
 It may not seem much, compared to 1 billion euros, but it gets
 worse. Much worse. The error cumulates and the more tasks there are,
