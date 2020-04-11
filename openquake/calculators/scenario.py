@@ -38,9 +38,9 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer and seeds
         """
         oq = self.oqparam
-        cinfo = logictree.FullLogicTree.fake(readinput.get_gsim_lt(oq))
-        self.realizations = cinfo.get_realizations()
-        self.datastore['full_lt'] = cinfo
+        full_lt = logictree.FullLogicTree.fake(readinput.get_gsim_lt(oq))
+        self.realizations = full_lt.get_realizations()
+        self.datastore['full_lt'] = full_lt
         if 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
@@ -56,7 +56,7 @@ class ScenarioCalculator(base.HazardCalculator):
         super().pre_execute()
         self.datastore['oqparam'] = oq
         self.store_rlz_info({})
-        rlzs_by_gsim = cinfo.get_rlzs_by_gsim(0)
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         E = oq.number_of_ground_motion_fields
         n_occ = numpy.array([E])
         ebr = EBRupture(self.rup, 0, 0, n_occ)
