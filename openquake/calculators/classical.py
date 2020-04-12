@@ -88,9 +88,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield {'pmap': {}}
         return
     maxw = params['max_weight']
+    N = len(srcfilter.sitecol.complete)
 
     def weight(src):
-        return src.weight * params['rescale_weight']
+        n = numpy.sqrt(len(src.indices) / N)
+        return src.weight * params['rescale_weight'] * n
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
