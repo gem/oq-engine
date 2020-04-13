@@ -88,9 +88,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield {'pmap': {}}
         return
     maxw = params['max_weight']
+    N = len(srcfilter.sitecol.complete)
 
     def weight(src):
-        return src.weight * params['rescale_weight']
+        n = 10 * numpy.sqrt(len(src.indices) / N)
+        return src.weight * params['rescale_weight'] * n
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
@@ -332,8 +334,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
-        max_weight = max(min(totweight / (5 * C), oq.max_weight),
-                         oq.min_weight)
+        max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
         param = dict(
