@@ -190,9 +190,9 @@ def calc_hazard_curves(
                  cluster=grp.cluster, shift_hypo=shift_hypo)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
-    gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
     mon = Monitor()
     for group in groups:
+        gsim = gsim_by_trt[group[0].tectonic_region_type]
         if group.atomic:  # do not split
             it = [classical(group, srcfilter, [gsim], param, mon)]
         else:  # split the group and apply `classical` in parallel
