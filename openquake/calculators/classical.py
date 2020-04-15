@@ -334,7 +334,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
-        max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
+        min_weight = oq.min_weight * (10 if self.few_sites else 1)
+        max_weight = max(min(totweight / C, oq.max_weight), min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
         param = dict(
