@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed how AvgGMPE was stored and made it applicable with correlation models
+    if all underlying GMPEs are such
+
   [Paolo Tormene]
   * Added a second tectonic region type to the EventBasedPSHA demo
 
