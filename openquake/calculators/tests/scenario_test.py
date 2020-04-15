@@ -142,4 +142,6 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_12(self):
         # test for DowrickRhoades2005Asc IPE with MMI
         out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
-        self.assertEqualFiles('gmf.csv', out['gmf_data', 'csv'][0])
+        gmf_data, sig_eps, sitemesh = out['gmf_data', 'csv']
+        self.assertEqualFiles('gmf.csv', gmf_data)
+        self.assertEqualFiles('sig_eps.csv', sig_eps)
