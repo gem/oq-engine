@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed an export bug with modal_damage_state=true in scenario_damage
+    calculations
   * Fixed a bug in calc_hazard_curves with multiple TRTs
   * Fixed how AvgGMPE was stored and made it applicable with correlation models
     if all underlying GMPEs are such
