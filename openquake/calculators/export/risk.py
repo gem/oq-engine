@@ -345,6 +345,7 @@ def modal_damage_array(data, damage_dt):
 def export_dmg_by_asset_csv(ekey, dstore):
     E = len(dstore['events'])
     oq = dstore['oqparam']
+    dmg_dt = build_damage_dt(dstore, mean_std=False)
     damage_dt = build_damage_dt(dstore, mean_std=E > 1)
     rlzs = dstore['full_lt'].get_realizations()
     data = dstore[ekey[0]]
@@ -352,7 +353,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
     assets = get_assets(dstore)
     for rlz in rlzs:
         if oq.modal_damage_state:
-            dmg_by_asset = modal_damage_array(data[:, rlz.ordinal], damage_dt)
+            dmg_by_asset = modal_damage_array(data[:, rlz.ordinal], dmg_dt)
         else:
             dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
