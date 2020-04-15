@@ -479,10 +479,9 @@ REGION_SET = ["USNZ", "JP", "TW", "CH", "WA", "TRGR", "WMT", "NWE"]
 class SandikkayaDinsever2018(GMPE):
     """
     Implements the nonlinear site amplification model of Sandikkaya &
-    Dinsever (2018)
-    Sandikkaya, M. A. and Dinsever, L. D. (2018) "A Site Amplification Model
-        for Crustal Earthquakes", Geosciences, 264(8),
-        doi:10.3390/geosciences8070264
+    Dinsever (2018), see Sandikkaya, M. A. and Dinsever, L. D. (2018)
+    "A Site Amplification Model for Crustal Earthquakes", Geosciences, 264(8),
+    doi:10.3390/geosciences8070264
 
     Note that the nonlinear amplification model has its own standard deviation,
     which should be applied with the phi0 model of the original GMPE. This

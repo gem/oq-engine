@@ -31,3 +31,4 @@ Contents:
    developing
    architecture
    oq-commands
+   addition-is-non-associative

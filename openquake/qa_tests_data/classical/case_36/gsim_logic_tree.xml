@@ -26,7 +26,15 @@
                     applyToTectonicRegionType="Active Shallow Crust">
                 <logicTreeBranch branchID="b3">
                     <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                    <uncertaintyWeight>.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
+                    <uncertaintyWeight>.3</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b5">
+                    <uncertaintyModel>CauzziFaccioli2008</uncertaintyModel>
+                    <uncertaintyWeight>.2</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>

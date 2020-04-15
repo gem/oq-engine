@@ -32,9 +32,9 @@ F64 = numpy.float64
 def floats_in(numbers):
     """
     :param numbers: an array of numbers
-    :returns: True if there is at least one non-uint32 number
+    :returns: number of non-uint32 number
     """
-    return (U32(numbers) != numbers).any()
+    return (U32(numbers) != numbers).sum()
 
 
 def bin_ddd(fractions, n, seed):
@@ -149,16 +149,17 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        float_algo = floats_in(self.assetcol['number'])
-        if float_algo:
-            logging.warning('The exposure contains non-integer asset numbers: '
-                            'using floating point damage distributions')
+        num_floats = floats_in(self.assetcol['number'])
+        if num_floats:
+            logging.warning(
+                'The exposure contains %d non-integer asset numbers: '
+                'using floating point damage distributions', num_floats)
         bad = self.assetcol['number'] > 2**32 - 1
         for ass in self.assetcol[bad]:
             aref = self.assetcol.tagcol.id[ass['id']]
             logging.error("The asset %s has number=%s > 2^32-1!",
                           aref, ass['number'])
-        self.param['approx_ddd'] = self.oqparam.approx_ddd or float_algo
+        self.param['approx_ddd'] = self.oqparam.approx_ddd or num_floats
         self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
         self.param['master_seed'] = self.oqparam.master_seed
         A = len(self.assetcol)

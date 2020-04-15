@@ -1,4 +1,14 @@
   [Michele Simionato]
+  * Fixed an export bug with modal_damage_state=true in scenario_damage
+    calculations
+  * Fixed a bug in calc_hazard_curves with multiple TRTs
+  * Fixed how AvgGMPE was stored and made it applicable with correlation models
+    if all underlying GMPEs are such
+
+  [Paolo Tormene]
+  * Added a second tectonic region type to the EventBasedPSHA demo
+
+  [Michele Simionato]
   * Fixed an ordering bug in /extract/rupture_info affecting the QGIS plugin
   * Fixed `oq engine --eo output_id output_dir` for the Full Report output
   * Added year and ses_id to the events table
