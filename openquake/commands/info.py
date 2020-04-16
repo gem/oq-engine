@@ -87,7 +87,7 @@ def do_build_reports(directory):
             if f in ('job.ini', 'job_h.ini', 'job_haz.ini',
                      'job_hazard.ini'):
                 job_ini = os.path.join(cwd, f)
-                logging.info(job_ini)
+                logging.warning(job_ini)
                 try:
                     reportwriter.build_report(job_ini, cwd)
                 except Exception as e:
