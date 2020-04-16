@@ -1125,15 +1125,7 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
     exposed_values/agg_occupancy          # shape (T2, L)
     exposed_values/agg                    # shape (L,)
     """
-    aval = numpy.zeros((len(assetcol), len(lossnames)), F32)  # (A, L)
-    array = assetcol.array
-    for lti, lt in enumerate(lossnames):
-        if lt == 'occupants':
-            aval[array['ordinal'], lti] = array[lt + '_None']
-        elif lt.endswith('_ins'):
-            aval[array['ordinal'], lti] = array['value-' + lt[:-4]]
-        elif lt in assetcol.fields:
-            aval[array['ordinal'], lti] = array['value-' + lt]
+    aval = assetcol.arr_value(lossnames)  # shape (A, L)
     for n in range(len(tagnames) + 1, -1, -1):
         for names in itertools.combinations(tagnames, n):
             name = 'exposed_values/' + '_'.join(('agg',) + names)
