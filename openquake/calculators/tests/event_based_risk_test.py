@@ -300,6 +300,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         self.check_multi_tag(self.calc.datastore)
 
+        # check curves-rlzs and curves-stats are readable
+        df1 = self.calc.datastore.read_df('curves-rlzs', 'assets')
+        aae(df1.columns, ['rlzs', 'return_periods', 'loss_types', 'value'])
+
+        df2 = self.calc.datastore.read_df('curves-stats', 'assets')
+        aae(df2.columns, ['stats', 'return_periods', 'loss_types', 'value'])
+
     def test_case_master_eb(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',

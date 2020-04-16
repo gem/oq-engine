@@ -160,7 +160,7 @@ def compose_arrays(a1, a2, firstfield='etag'):
 def get_assets(dstore):
     """
     :param dstore: a datastore with keys 'assetcol'
-    :returns: an array of records (asset_ref, tag1, ..., tagN, lon, lat)
+    :returns: an array of records (tag1, ..., tagN, lon, lat)
     """
     assetcol = dstore['assetcol']
     tagnames = sorted(assetcol.tagnames)
