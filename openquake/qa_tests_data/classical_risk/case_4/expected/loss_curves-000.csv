@@ -1,4 +1,4 @@
-#,,,,"kind='rlz-000', risk_investigation_time=None"
+#,,,,"kind='rlz-000', risk_investigation_time=50.0"
 asset_id,loss_type,loss_value,loss_ratio,poe
 a1,structural,0.00000E+00,0.00000E+00,2.35634E-03
 a1,structural,6.31641E+00,6.79852E-08,2.35634E-03
