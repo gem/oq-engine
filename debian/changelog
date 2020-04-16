@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Implemented Pitilakis et al. (2020) Site Amplification Model
+
   [Michele Simionato]
   * Fixed an export bug with modal_damage_state=true in scenario_damage
     calculations
@@ -24,7 +27,7 @@
   * Fixed a bug in the coeff table of YEA97
 
   [Graeme Weatherill]
-  * Implements support for Gaussian Mixture Model approach to characterise
+  * Implemented support for Gaussian Mixture Model approach to characterise
     ground motion model uncertainty
 
   [Michele Simionato]

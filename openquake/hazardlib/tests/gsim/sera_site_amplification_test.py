@@ -18,8 +18,8 @@
 
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.sera_amplification_models import (
-    PitilakisEtAl2018, Eurocode8Amplification, Eurocode8AmplificationDefault,
-    SandikkayaDinsever2018)
+    PitilakisEtAl2018, PitilakisEtAl2020, Eurocode8Amplification,
+    Eurocode8AmplificationDefault, SandikkayaDinsever2018)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -31,6 +31,15 @@ class PitilakisEtAl2018TestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check("sera_site/Pitilakis2018Amplification_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   gmpe_name="BindiEtAl2014Rjb")
+
+
+class PitilakisEtAl2020TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = PitilakisEtAl2020
+
+    def test_mean(self):
+        self.check("sera_site/Pitilakis2020Amplification_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
 
