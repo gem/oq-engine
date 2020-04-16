@@ -118,11 +118,14 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     with monitor("splitting/filtering sources"):
         splits, _stime = split_sources(srcs)
     totrups = 0
+    maxradius = 0
     for src in splits:
         t0 = time.time()
         totrups += src.num_ruptures
         if srcfilter.get_close_sites(src) is None:
             continue
+        if hasattr(src, 'radius'):  # for point sources
+            maxradius = max(maxradius, src.radius)
         dt = time.time() - t0
         calc_times[src.source_id] += F32(
             [src.num_ruptures, src.nsites, dt])
@@ -130,7 +133,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
                 extra=dict(task_no=monitor.task_no, totrups=totrups,
-                           trt=src.tectonic_region_type))
+                           trt=src.tectonic_region_type, maxradius=maxradius))
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -161,6 +164,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dic['extra']['source_id'], grp_id)
                 self.datastore[name] = pmap
         trt = dic['extra'].pop('trt')
+        self.maxradius = max(self.maxradius, dic['extra'].pop('maxradius'))
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
@@ -242,6 +246,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.rparams = {}
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
+        self.maxradius = 0
         self.gidx = {tuple(grp_ids): i
                      for i, grp_ids in enumerate(self.datastore['grp_ids'])}
 
@@ -315,6 +320,11 @@ class ClassicalCalculator(base.HazardCalculator):
             int(self.numrups), self.totrups))
         logging.info('Effective number of sites per rupture: %d',
                      numsites / self.numrups)
+        psdist = oq.pointsource_distance['default']
+        if psdist and self.maxradius >= psdist / 2:
+            logging.warning('The pointsource_distance of %d km is too small '
+                            'compared to a maxradius of %d km', psdist,
+                            self.maxradius)
         self.calc_times.clear()  # save a bit of memory
         return acc
 

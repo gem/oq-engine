@@ -879,7 +879,7 @@ def floatdict(value):
     value = ast.literal_eval(value)
     if isinstance(value, (int, float, list)):
         return {'default': value}
-    dic = {'default': value[next(iter(value))]}
+    dic = {'default': max(value.values())}
     dic.update(value)
     return dic
 

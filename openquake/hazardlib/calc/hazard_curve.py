@@ -104,6 +104,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
     cluster = getattr(group, 'cluster', None)
     trts = set()
+    maxradius = 0
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures may not be set, so it is set here
@@ -112,6 +113,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         if cluster:
             src.temporal_occurrence_model = FatedTOM(time_span=1)
         trts.add(src.tectonic_region_type)
+        if hasattr(src, 'radius'):  # for prefiltered point sources
+            maxradius = max(maxradius, src.radius)
 
     param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
@@ -121,6 +124,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     extra['task_no'] = getattr(monitor, 'task_no', 0)
     extra['trt'] = trt
     extra['source_id'] = src.source_id
+    extra['maxradius'] = maxradius
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
         pmap[src.grp_id] *= group_probability
