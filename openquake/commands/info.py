@@ -103,6 +103,8 @@ def info(what, report=False):
     """
     Give information about the passed keyword or filename
     """
+    if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+        os.environ['OQ_DISTRIBUTE'] = 'processpool'
     if what == 'calculators':
         for calc in sorted(base.calculators):
             print(calc)
@@ -164,8 +166,6 @@ def info(what, report=False):
         else:
             print(node.to_str())
     elif what.endswith(('.ini', '.zip')):
-        if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
-            os.environ['OQ_DISTRIBUTE'] = 'processpool'
         with Monitor('info', measuremem=True) as mon:
             if report:
                 print('Generated', reportwriter.build_report(what))
