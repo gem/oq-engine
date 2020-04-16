@@ -36,6 +36,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
 bymag = operator.attrgetter('mag')
+bydist = operator.attrgetter('dist')
 I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
@@ -540,8 +541,7 @@ class PmapMaker(object):
                 rup.dist = get_distances(rup, sites, 'rrup').min()
                 if rup.dist <= mdist:
                     coll.append(rup)
-            for rs in groupby_bin(
-                    coll, self.point_rupture_bins, operator.attrgetter('dist')):
+            for rs in groupby_bin(coll, self.point_rupture_bins, bydist):
                 # group together ruptures in the same distance bin
                 output.extend(_collapse(rs))
         return output
