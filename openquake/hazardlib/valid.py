@@ -911,6 +911,18 @@ class MagDist(dict):
     """
     @classmethod
     def new(cls, value):
+        """
+        :param value: string to be converted
+        :returns: MagDist dictionary
+
+        >>> md = MagDist.new('50')
+        >>> md
+        {'default': [(1, 50), (10, 50)]}
+        >>> md.max()
+        {'default': 50}
+        >>> md.interp(['5.0', '5.1', '5.2'])
+        {'default': {'5.0': 50.0, '5.1': 50.0, '5.2': 50.0}}
+        """
         items_by_trt = floatdict(value)
         self = cls()
         for trt, items in items_by_trt.items():
