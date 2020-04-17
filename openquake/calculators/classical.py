@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
     AccumDict, block_splitter, groupby, humansize)
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -288,8 +288,8 @@ class ClassicalCalculator(base.HazardCalculator):
             mags_by_trt = {}
             for trt in gsims_by_trt:
                 mags_by_trt[trt] = mags[trt][()]
-            aw, self.psd = calc.get_effect(
-                mags_by_trt, self.sitecol, gsims_by_trt, oq)
+            aw, self.psd = get_effect(
+                mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
             if hasattr(aw, 'array'):
                 self.datastore['effect_by_mag_dst_trt'] = aw
         smap = parallel.Starmap(

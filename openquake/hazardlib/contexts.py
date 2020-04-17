@@ -18,6 +18,8 @@
 import abc
 import copy
 import time
+import pprint
+import logging
 import warnings
 import operator
 import itertools
@@ -25,13 +27,13 @@ import collections
 import numpy
 from scipy.interpolate import interp1d
 
-
+from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim import base
-from openquake.hazardlib.calc.filters import IntegrationDistance, getdefault
+from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -862,3 +864,52 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
                 di = nbins - 1
             dic['%.2f' % rup.mag][di] += 1
     return {trt: AccumDict(dic)}
+
+
+# used in calculators/classical.py
+def get_effect(mags, sitecol1, gsims_by_trt, oq):
+    """
+    :returns: an ArrayWrapper effect_by_mag_dst_trt and psd dictionary
+
+    Updates oq.maximum_distance.magdist
+    """
+    dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
+                 for trt in gsims_by_trt}
+    aw = hdf5.ArrayWrapper((), dist_bins)
+    # computing the effect make sense only if all IMTs have the same
+    # unity of measure; for simplicity we will consider only PGA and SA
+    effect = {}
+    imts_with_period = [imt for imt in oq.imtls
+                        if imt == 'PGA' or imt.startswith('SA')]
+    imts_ok = len(imts_with_period) == len(oq.imtls)
+    psd = {}
+    if oq.pointsource_distance is not None:
+        psd = oq.pointsource_distance.interp(mags)
+    effect_ok = imts_ok and (psd or oq.minimum_intensity)
+    if effect_ok:
+        logging.info('Computing effect of the ruptures')
+        allmags = set()
+        for trt in mags:
+            allmags.update(mags[trt])
+        eff_by_mag = parallel.Starmap.apply(
+            get_effect_by_mag, (sorted(allmags), sitecol1, gsims_by_trt,
+                                oq.maximum_distance, oq.imtls)
+        ).reduce()
+        aw.array = eff_by_mag
+        effect.update({
+            trt: Effect({mag: eff_by_mag[mag][:, t]
+                         for mag in mags[trt]}, dist_bins[trt])
+            for t, trt in enumerate(gsims_by_trt)})
+        minint = oq.minimum_intensity.get('default', 0)
+        for trt, eff in effect.items():
+            if minint:
+                oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
+            # build a dict trt -> mag -> dst
+            if psd and set(psd[trt].values()) == {-1}:
+                maxdist = oq.maximum_distance[trt]
+                psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
+    if psd:
+        dic = {trt: [(float(mag), int(dst)) for mag, dst in psd[trt].items()]
+               for trt in psd if trt != 'default'}
+        logging.info('Using pointsource_distance=\n%s', pprint.pformat(dic))
+    return aw, psd
