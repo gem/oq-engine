@@ -67,10 +67,10 @@ def get_csm(oq, full_lt, h5=None):
     Build source models from the logic tree and to store
     them inside the `source_full_lt` dataset.
     """
-    if oq.pointsource_distance['default'] == {}:
+    if oq.pointsource_distance is None:
         spinning_off = False
     else:
-        spinning_off = sum(oq.pointsource_distance.values()) == 0
+        spinning_off = sum(oq.pointsource_distance.max().values()) == 0
     if spinning_off:
         logging.info('Removing nodal plane and hypocenter distributions')
     converter = sourceconverter.SourceConverter(

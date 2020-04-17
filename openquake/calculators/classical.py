@@ -279,9 +279,15 @@ class ClassicalCalculator(base.HazardCalculator):
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
+        if oq.pointsource_distance is not None:
+            for trt in gsims_by_trt:
+                oq.pointsource_distance[trt] = getdefault(
+                    oq.pointsource_distance, trt)
+        self.psd = {}  # trt->mag->dst
         if 'source_mags' in self.datastore and oq.imtls:
             mags = self.datastore['source_mags'][()]
-            aw = calc.get_effect(mags, self.sitecol, gsims_by_trt, oq)
+            aw, self.psd = calc.get_effect(
+                mags, self.sitecol, gsims_by_trt, oq)
             if hasattr(aw, 'array'):
                 self.datastore['effect_by_mag_dst_trt'] = aw
         smap = parallel.Starmap(
@@ -320,11 +326,12 @@ class ClassicalCalculator(base.HazardCalculator):
             int(self.numrups), self.totrups))
         logging.info('Effective number of sites per rupture: %d',
                      numsites / self.numrups)
-        psdist = oq.pointsource_distance['default']
-        if psdist and self.maxradius >= psdist / 2:
-            logging.warning('The pointsource_distance of %d km is too small '
-                            'compared to a maxradius of %d km', psdist,
-                            self.maxradius)
+        if oq.pointsource_distance:
+            psdist = max(oq.pointsource_distance.max().values())
+            if psdist and self.maxradius >= psdist / 2:
+                logging.warning('The pointsource_distance of %d km is too '
+                                'small compared to a maxradius of %d km',
+                                psdist, self.maxradius)
         self.calc_times.clear()  # save a bit of memory
         return acc
 
@@ -352,7 +359,7 @@ class ClassicalCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             maximum_distance=oq.maximum_distance,
-            pointsource_distance=oq.pointsource_distance,
+            pointsource_distance=self.psd,
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_ctxs=oq.collapse_ctxs,
@@ -394,11 +401,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 md = oq.maximum_distance(sg.trt)
             logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.
                          format(md, len(gsims), int(w), nb))
-            if oq.pointsource_distance['default']:
-                psd = getdefault(oq.pointsource_distance, sg.trt)
-                it = sorted(psd.items())
-                msg = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                logging.info('pointsource_distance=%s', msg)
 
     def save_hazard(self, acc, pmap_by_kind):
         """

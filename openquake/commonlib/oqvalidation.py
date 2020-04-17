@@ -166,7 +166,7 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, 1)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.floatdict, {'default': {}})
+    pointsource_distance = valid.Param(valid.MagDist.new, None)
     point_rupture_bins = valid.Param(valid.positiveint, 20)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -759,10 +759,7 @@ class OqParam(valid.ParamSet):
                           'not in %s' % (unknown, gsim_lt))
             return False
         for trt, val in self.maximum_distance.items():
-            if val <= 0:
-                self.error = '%s=%r < 0' % (trt, val)
-                return False
-            elif trt not in self._gsims_by_trt and trt != 'default':
+            if trt not in self._gsims_by_trt and trt != 'default':
                 self.error = 'tectonic region %r not in %s' % (trt, gsim_lt)
                 return False
         if 'default' not in trts and trts < set(self._gsims_by_trt):
