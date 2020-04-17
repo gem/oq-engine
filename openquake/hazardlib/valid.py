@@ -920,7 +920,7 @@ class MagDist(dict):
         {'default': [(1, 50), (10, 50)]}
         >>> md.max()
         {'default': 50}
-        >>> md.interp(['5.0', '5.1', '5.2'])
+        >>> md.interp(dict(default=['5.0', '5.1', '5.2']))
         {'default': {'5.0': 50.0, '5.1': 50.0, '5.2': 50.0}}
         """
         items_by_trt = floatdict(value.replace('*', '-1'))
