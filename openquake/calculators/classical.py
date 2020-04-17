@@ -281,7 +281,8 @@ class ClassicalCalculator(base.HazardCalculator):
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         if 'source_mags' in self.datastore and oq.imtls:
             mags = self.datastore['source_mags'][()]
-            aw = calc.get_effect(mags, self.sitecol, gsims_by_trt, oq)
+            aw, psd = calc.get_effect(mags, self.sitecol, gsims_by_trt, oq)
+            oq.pointsource_distance.update(psd)
             if hasattr(aw, 'array'):
                 self.datastore['effect_by_mag_dst_trt'] = aw
         smap = parallel.Starmap(
