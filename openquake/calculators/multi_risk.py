@@ -66,7 +66,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
                  if name.startswith('occupants') and
                  not name.endswith('_None')]
     for name, dt in assetcol.array.dtype.descr:
-        if name not in {'area', 'occupants_None', 'ordinal'}:
+        if name not in {'area', 'occupants_None', 'ordinal', 'asset_id'}:
             dtlist.append((name, dt))
     dtlist.sort()
     if not loss_types:  # missing ASH
