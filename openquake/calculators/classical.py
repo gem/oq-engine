@@ -326,9 +326,9 @@ class ClassicalCalculator(base.HazardCalculator):
             int(self.numrups), self.totrups))
         logging.info('Effective number of sites per rupture: %d',
                      numsites / self.numrups)
-        if oq.pointsource_distance:
-            psdist = max(oq.pointsource_distance.max().values())
-            if psdist and self.maxradius >= psdist / 2:
+        if self.psd:
+            psdist = max(max(self.psd[trt].values()) for trt in self.psd)
+            if self.maxradius >= psdist / 2:
                 logging.warning('The pointsource_distance of %d km is too '
                                 'small compared to a maxradius of %d km',
                                 psdist, self.maxradius)
