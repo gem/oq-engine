@@ -433,6 +433,11 @@ class HazardCalculator(BaseCalculator):
             logging.info('Rupture floating factor = %s', f)
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
+        if f * s > 1.2 and self.oqparam.pointsource_distance is None:
+            logging.warning(
+                'Your calculation will be slower than needed because you are '
+                'not using the pointsource_distance approximation:\n'
+                'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
 
     def read_inputs(self):
         """

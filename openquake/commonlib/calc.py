@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import pprint
 import warnings
 import logging
 import numpy
@@ -289,28 +290,34 @@ def get_effect(mags, sitecol, gsims_by_trt, oq):
     imts_with_period = [imt for imt in oq.imtls
                         if imt == 'PGA' or imt.startswith('SA')]
     imts_ok = len(imts_with_period) == len(oq.imtls)
-    if oq.pointsource_distance is None:
-        psd = {}
-    else:
+    psd = {}
+    if oq.pointsource_distance is not None:
         psd = oq.pointsource_distance.interp(mags)
     effect_ok = imts_ok and (psd or oq.minimum_intensity)
     if effect_ok:
         logging.info('Computing effect of the ruptures')
+        allmags = set()
+        for trt in mags:
+            allmags.update(mags[trt])
         eff_by_mag = parallel.Starmap.apply(
-            get_effect_by_mag, (mags, sitecol.one(), gsims_by_trt,
+            get_effect_by_mag, (sorted(allmags), sitecol.one(), gsims_by_trt,
                                 oq.maximum_distance, oq.imtls)
         ).reduce()
         aw.array = eff_by_mag
         effect.update({
-            trt: Effect({mag: eff_by_mag[mag][:, t] for mag in eff_by_mag},
-                        dist_bins[trt])
+            trt: Effect({mag: eff_by_mag[mag][:, t]
+                         for mag in mags[trt]}, dist_bins[trt])
             for t, trt in enumerate(gsims_by_trt)})
         minint = oq.minimum_intensity.get('default', 0)
         for trt, eff in effect.items():
             if minint:
                 oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
             # build a dict trt -> mag -> dst
-            if psd:
-                cdist = sorted(psd[trt].values())[-1]  # greater cdist
-                psd[trt] = eff.dist_by_mag(eff.collapse_value(cdist))
+            if psd and set(psd[trt].values()) == {-1}:
+                maxdist = oq.maximum_distance[trt]
+                psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
+    if psd:
+        dic = {trt: [(float(mag), int(dst)) for mag, dst in psd[trt].items()]
+               for trt in psd if trt != 'default'}
+        logging.info('Using pointsource_distance=\n%s', pprint.pformat(dic))
     return aw, psd

@@ -923,7 +923,7 @@ class MagDist(dict):
         >>> md.interp(['5.0', '5.1', '5.2'])
         {'default': {'5.0': 50.0, '5.1': 50.0, '5.2': 50.0}}
         """
-        items_by_trt = floatdict(value)
+        items_by_trt = floatdict(value.replace('*', '-1'))
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):
@@ -931,17 +931,17 @@ class MagDist(dict):
                 for mag, dist in self[trt]:
                     magnitude(mag)  # check valid magnitude
             else:  # assume scalar distance
-                assert items >= 0, items
+                assert items == -1 or items >= 0, items
                 self[trt] = [(1, items), (10, items)]
         return self
 
-    def interp(self, mags):
+    def interp(self, mags_by_trt):
         """
-        :param mags: a list of magnitudes as strings
+        :param mags_by_trt: a dictionary trt -> magnitudes as strings
         :returns: a dictionary trt->mag->dist
         """
         dic = {}
-        for trt in self:
+        for trt, mags in mags_by_trt.items():
             xs, ys = zip(*self[trt])
             dists = numpy.interp(numpy.float64(mags), xs, ys)
             dic[trt] = dict(zip(mags, dists))

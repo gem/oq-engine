@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the logic underlying the pointsource_distance approximation
   * Logged a warning when the pointsource_distance is too small
 
   [Graeme Weatherill]
