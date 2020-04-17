@@ -294,7 +294,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.trts = trts
 
         # build mag_edges
-        mags = [float(mag) for mag in self.datastore['source_mags']]
+        mags = set()
+        for trt, dset in self.datastore['source_mags'].items():
+            mags.update(float(mag) for mag in dset[()])
+        mags = sorted(mags)
         mag_edges = oq.mag_bin_width * numpy.arange(
             int(numpy.floor(min(mags) / oq.mag_bin_width)),
             int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
