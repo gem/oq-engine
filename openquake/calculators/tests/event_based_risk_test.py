@@ -73,6 +73,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected/%s' % strip_calc_id(fname), fname)
 
+        # checking curves-stats
+        fnames = export(('loss_curves-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
+
         # make sure the tot_curves-stats has the right attrs
         self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
         self.check_attr('units', [b'EUR', b'EUR'])
