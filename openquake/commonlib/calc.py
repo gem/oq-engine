@@ -21,7 +21,6 @@ import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib import calc, probability_map
 
@@ -290,8 +289,10 @@ def get_effect(mags, sitecol, gsims_by_trt, oq):
     imts_with_period = [imt for imt in oq.imtls
                         if imt == 'PGA' or imt.startswith('SA')]
     imts_ok = len(imts_with_period) == len(oq.imtls)
-    psdist = oq.pointsource_distance['default']
-    psd = {}
+    if oq.pointsource_distance is None:
+        psd = {}
+    else:
+        psd = oq.pointsource_distance.interp(mags)
     effect_ok = imts_ok and (psd or oq.minimum_intensity)
     if effect_ok:
         logging.info('Computing effect of the ruptures')
@@ -308,11 +309,8 @@ def get_effect(mags, sitecol, gsims_by_trt, oq):
         for trt, eff in effect.items():
             if minint:
                 oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
-            # replace pointsource_distance with a dict trt -> mag -> dst
-            if psdist:
-                psd[trt] = eff.dist_by_mag(eff.collapse_value(psd))
-    elif psdist:  # like in case_24 with PGV
-        for trt in dist_bins:
-            pdist = getdefault(oq.pointsource_distance, trt)
-            psd[trt] = {mag: pdist for mag in mags}
+            # build a dict trt -> mag -> dst
+            if psd:
+                cdist = sorted(psd[trt].values())[-1]  # greater cdist
+                psd[trt] = eff.dist_by_mag(eff.collapse_value(cdist))
     return aw, psd

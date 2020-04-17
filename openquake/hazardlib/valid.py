@@ -891,18 +891,55 @@ def maximum_distance(value):
     :returns:
         a IntegrationDistance mapping
     """
-    dic = floatdict(value)
-    for trt, magdists in dic.items():
-        if isinstance(magdists, list):
-            magdists.sort()  # make sure the list is sorted by magnitude
-            for mag, dist in magdists:  # validate the magnitudes
-                magnitude(mag)
-            dic[trt] = dist  # keep only the maximum distance
-            logging.warning(
-                'The engine does not accept magnitude-dependent '
-                'maximum_distances anymore; please replace %s with %s' %
-                (magdists, dist))
-    return IntegrationDistance(dic)
+    return IntegrationDistance(MagDist.new(value).max())
+
+
+def unique_sorted(items):
+    """
+    Check that the items are unique and sorted
+    """
+    if len(set(items)) < len(items):
+        raise ValueError('Found duplicates in %s' % items)
+    elif items != sorted(items):
+        raise ValueError('%s is not ordered' % items)
+    return items
+
+
+class MagDist(dict):
+    """
+    A dictionary trt -> [(mag, dist), ...]
+    """
+    @classmethod
+    def new(cls, value):
+        items_by_trt = floatdict(value)
+        self = cls()
+        for trt, items in items_by_trt.items():
+            if isinstance(items, list):
+                self[trt] = unique_sorted(items)
+                for mag, dist in self[trt]:
+                    magnitude(mag)  # check valid magnitude
+            else:  # assume scalar distance
+                assert items >= 0, items
+                self[trt] = [(1, items), (10, items)]
+        return self
+
+    def interp(self, mags):
+        """
+        :param mags: a list of magnitudes as strings
+        :returns: a dictionary trt->mag->dist
+        """
+        dic = {}
+        for trt in self:
+            xs, ys = zip(*self[trt])
+            dists = numpy.interp(numpy.float64(mags), xs, ys)
+            dic[trt] = dict(zip(mags, dists))
+        return dic
+
+    def max(self):
+        """
+        :returns: a dictionary trt -> maxdist
+        """
+        return {trt: self[trt][-1][1] for trt in self}
 
 
 # ########################### SOURCES/RUPTURES ############################# #
