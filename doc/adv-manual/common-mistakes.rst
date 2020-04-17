@@ -130,7 +130,7 @@ changed the result in the hazard maps only by 0.1% and gained an order of
 magnitude of speedup. You have to check on a case by case basis.
 
 NB: the ``pointsource_distance`` approximation has changed a lot
-across engine releases and you should not expect it to give the same
+across engine releases and you should not expect it to give always the same
 results. For instance in engine 3.8 it has been
 extended to take into account the fact that small magnitudes will have
 a smaller collapse distance. For instance, if you
@@ -149,7 +149,7 @@ by default. However, you will not get the same results than in engine
 picking one nodal plane/hypocenter from the distribution, now the
 approximation neglects completely the finite size effects by replacing
 planar ruptures with point ruptures of zero lenght. This is the reason
-why in engine 3.9 one must use larger pointsource_distances than
+why in engine 3.9 one should use larger pointsource_distances than
 before, since the approximation is cruder.  On the other hand, it
 collapses more than before and it makes the engine much faster for
 single site analysis.
