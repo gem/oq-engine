@@ -935,13 +935,13 @@ class MagDist(dict):
                 self[trt] = [(1, items), (10, items)]
         return self
 
-    def interp(self, mags):
+    def interp(self, mags_by_trt):
         """
-        :param mags: a list of magnitudes as strings
+        :param mags_by_trt: a dictionary trt -> magnitudes as strings
         :returns: a dictionary trt->mag->dist
         """
         dic = {}
-        for trt in self:
+        for trt, mags in mags_by_trt.items():
             xs, ys = zip(*self[trt])
             dists = numpy.interp(numpy.float64(mags), xs, ys)
             dic[trt] = dict(zip(mags, dists))

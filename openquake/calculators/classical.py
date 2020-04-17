@@ -275,7 +275,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
-        mags = self.datastore['source_mags'][()]
+        mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -285,9 +285,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     oq.pointsource_distance, trt)
         self.psd = {}  # trt->mag->dst
         if 'source_mags' in self.datastore and oq.imtls:
-            mags = self.datastore['source_mags'][()]
+            mags_by_trt = {}
+            for trt in gsims_by_trt:
+                mags_by_trt[trt] = mags[trt][()]
             aw, self.psd = calc.get_effect(
-                mags, self.sitecol, gsims_by_trt, oq)
+                mags_by_trt, self.sitecol, gsims_by_trt, oq)
             if hasattr(aw, 'array'):
                 self.datastore['effect_by_mag_dst_trt'] = aw
         smap = parallel.Starmap(
