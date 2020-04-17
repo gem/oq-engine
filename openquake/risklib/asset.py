@@ -435,6 +435,22 @@ class AssetCollection(object):
             arr[tuple(i - 1 for i in tag)] = aval
         return arr
 
+    def arr_value(self, loss_types):
+        """
+        :param loss_types: the relevant loss types
+        :returns: an array of shape (A, L) with the values of the assets
+        """
+        array = self.array
+        aval = numpy.zeros((len(self), len(loss_types)), F32)  # (A, L)
+        for lti, lt in enumerate(loss_types):
+            if lt == 'occupants':
+                aval[array['ordinal'], lti] = array[lt + '_None']
+            elif lt.endswith('_ins'):
+                aval[array['ordinal'], lti] = array['value-' + lt[:-4]]
+            elif lt in self.fields:
+                aval[array['ordinal'], lti] = array['value-' + lt]
+        return aval
+
     def agg_value(self, loss_types, *tagnames):
         """
         :param loss_types:
@@ -445,17 +461,8 @@ class AssetCollection(object):
             the values of the exposure aggregated by tagnames as an array
             of shape (T1, T2, ..., L)
         """
-        aval = numpy.zeros((len(self), len(loss_types)), F32)  # (A, L)
-        for asset in self:
-            for lti, lt in enumerate(loss_types):
-                if lt == 'occupants':
-                    aval[asset['ordinal'], lti] = asset[lt + '_None']
-                elif lt.endswith('_ins'):
-                    aval[asset['ordinal'], lti] = asset['value-' + lt[:-4]]
-                elif lt in self.fields:
-                    aval[asset['ordinal'], lti] = asset['value-' + lt]
-        res = self.aggregate_by(list(tagnames), aval)
-        return res
+        aval = self.arr_value(loss_types)
+        return self.aggregate_by(list(tagnames), aval)
 
     def reduce(self, sitecol):
         """
