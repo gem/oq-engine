@@ -332,14 +332,14 @@ class ContextMaker(object):
                 ctxs.append((rup, dctx))
         return ctxs
 
-    def max_intensity(self, onesite, mags, dists):
+    def max_intensity(self, sitecol1, mags, dists):
         """
-        :param onesite: a SiteCollection instance with a single site
+        :param sitecol1: a SiteCollection instance with a single site
         :param mags: a sequence of magnitudes
         :param dists: a sequence of distances
         :returns: an array of GMVs of shape (#mags, #dists)
         """
-        assert len(onesite) == 1, onesite
+        assert len(sitecol1) == 1, sitecol1
         nmags, ndists = len(mags), len(dists)
         gmv = numpy.zeros((nmags, ndists))
         for m, d in itertools.product(range(nmags), range(ndists)):
@@ -355,7 +355,7 @@ class ContextMaker(object):
             for gsim in self.gsims:
                 try:
                     mean = base.get_mean_std(  # shape (2, N, M, G) -> M
-                        onesite, rup, dctx, self.imts, [gsim])[0, 0, :, 0]
+                        sitecol1, rup, dctx, self.imts, [gsim])[0, 0, :, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())
@@ -822,11 +822,13 @@ class Effect(object):
         return dst
 
 
-# used in calculators/classical.py
-def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
-                      monitor):
+def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     """
-    :param mag: an ordered list of magnitude strings with format %.2f
+    :param mags: an ordered list of magnitude strings with format %.2f
+    :param sitecol1: a SiteCollection with a single site
+    :param gsims_by_trt: a dictionary trt -> gsims
+    :param maximum_distance: an IntegrationDistance object
+    :param imtls: a DictArray with intensity measure types and levels
     :returns: a dict magnitude-string -> array(#dists, #trts)
     """
     trts = list(gsims_by_trt)
@@ -837,39 +839,25 @@ def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
         gmv[:, :, t] = cmaker.max_intensity(
-            onesite, [float(mag) for mag in mags], dist_bins)
+            sitecol1, [float(mag) for mag in mags], dist_bins)
     return dict(zip(mags, gmv))
-
-
-# used in calculators/classical.py
-def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
-    """
-    :returns: a dictionary trt -> mag string -> counts by distance
-    """
-    assert len(srcfilter.sitecol) == 1
-    trt = sources[0].tectonic_region_type
-    dist_bins = srcfilter.integration_distance.get_dist_bins(trt)
-    nbins = len(dist_bins)
-    mags = set('%.2f' % mag for src in sources for mag in src.get_mags())
-    dic = {mag: numpy.zeros(len(dist_bins), int) for mag in sorted(mags)}
-    cmaker = ContextMaker(trt, gsims, params, monitor)
-    for src, sites in srcfilter(sources):
-        for rup in src.iter_ruptures(shift_hypo=cmaker.shift_hypo):
-            try:
-                sctx, dctx = cmaker.make_contexts(sites, rup)
-            except FarAwayRupture:
-                continue
-            di = numpy.searchsorted(dist_bins, dctx.rrup[0])
-            if di == nbins:
-                di = nbins - 1
-            dic['%.2f' % rup.mag][di] += 1
-    return {trt: AccumDict(dic)}
 
 
 # used in calculators/classical.py
 def get_effect(mags, sitecol1, gsims_by_trt, oq):
     """
-    :returns: an ArrayWrapper effect_by_mag_dst_trt and psd dictionary
+    :params mags:
+       a dictionary trt -> magnitudes
+    :param sitecol1:
+       a SiteCollection with a single site
+    :param gsims_by_trt:
+       a dictionary trt -> gsims
+    :param oq:
+       an object with attributes imtls, minimum_intensity,
+       maximum_distance and pointsource_distance
+    :returns:
+       an ArrayWrapper trt -> effect_by_mag_dst and a nested dictionary
+       trt -> mag -> dist with the effective pointsource_distance
 
     Updates oq.maximum_distance.magdist
     """
@@ -913,3 +901,28 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
                for trt in psd if trt != 'default'}
         logging.info('Using pointsource_distance=\n%s', pprint.pformat(dic))
     return aw, psd
+
+
+# not used right now
+def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
+    """
+    :returns: a dictionary trt -> mag string -> counts by distance
+    """
+    assert len(srcfilter.sitecol) == 1
+    trt = sources[0].tectonic_region_type
+    dist_bins = srcfilter.integration_distance.get_dist_bins(trt)
+    nbins = len(dist_bins)
+    mags = set('%.2f' % mag for src in sources for mag in src.get_mags())
+    dic = {mag: numpy.zeros(len(dist_bins), int) for mag in sorted(mags)}
+    cmaker = ContextMaker(trt, gsims, params, monitor)
+    for src, sites in srcfilter(sources):
+        for rup in src.iter_ruptures(shift_hypo=cmaker.shift_hypo):
+            try:
+                sctx, dctx = cmaker.make_contexts(sites, rup)
+            except FarAwayRupture:
+                continue
+            di = numpy.searchsorted(dist_bins, dctx.rrup[0])
+            if di == nbins:
+                di = nbins - 1
+            dic['%.2f' % rup.mag][di] += 1
+    return {trt: AccumDict(dic)}

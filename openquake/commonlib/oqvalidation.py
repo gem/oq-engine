@@ -190,6 +190,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
     ruptures_per_block = valid.Param(valid.positiveint, 500)  # for UCERF
+    save_disk_space = valid.Param(valid.boolean, False)
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
