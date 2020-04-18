@@ -286,7 +286,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.psd = {}  # trt->mag->dst
         if 'source_mags' in self.datastore and oq.imtls:
             mags_by_trt = {}
-            for trt in gsims_by_trt:
+            for trt in mags:
                 mags_by_trt[trt] = mags[trt][()]
             aw, self.psd = calc.get_effect(
                 mags_by_trt, self.sitecol, gsims_by_trt, oq)
