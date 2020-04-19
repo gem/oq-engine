@@ -991,8 +991,8 @@ class Exposure(object):
             area = asset['area']
         except ValueError:
             area = 1
-        ass = Asset(asset_id, idx, idxs, number, location, values, area,
-                    retrofitted, self.cost_calculator)
+        ass = Asset(prefix + asset_id, idx, idxs, number, location, values,
+                    area, retrofitted, self.cost_calculator)
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):
