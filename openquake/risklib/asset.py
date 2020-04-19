@@ -415,7 +415,7 @@ class AssetCollection(object):
         :param array: an array with the same length as the asset collection
         :returns: an array of aggregate values with the proper shape
         """
-        missing = set(tagnames) - set(self.tagcol.tagnames) - {'site_id'}
+        missing = set(tagnames) - set(self.tagcol.tagnames)
         if missing:
             raise ValueError('Unknown tagname(s) %s' % missing)
         A, *shp = array.shape
@@ -434,13 +434,7 @@ class AssetCollection(object):
             tags = [(i + 1,) for i in range(len(avalues))]
         else:  # multi-tag aggregation
             tags, avalues = general.fast_agg2(self.array[tagnames], array)
-        shape = []
-        for tagname in tagnames:
-            if tagname == 'site_id':
-                s = self.tot_sites
-            else:
-                s = len(getattr(self.tagcol, tagname)) - 1
-            shape.append(s)
+        shape = [len(getattr(self.tagcol, tagname))-1 for tagname in tagnames]
         arr = numpy.zeros(shape, (F32, tuple(shp)) if shp else F32)
         for tag, aval in zip(tags, avalues):
             arr[tuple(i - 1 for i in tag)] = aval
