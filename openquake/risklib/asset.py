@@ -343,6 +343,7 @@ class TagCollection(object):
 class AssetCollection(object):
     def __init__(self, exposure, assets_by_site, time_event):
         self.tagcol = exposure.tagcol
+        self.tagcol.site_id = ['?'] + list(range(len(assets_by_site)))
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
@@ -414,8 +415,7 @@ class AssetCollection(object):
         :param array: an array with the same length as the asset collection
         :returns: an array of aggregate values with the proper shape
         """
-        missing = set(tagnames) - set(self.tagcol.tagnames) - {
-            'asset_id', 'site_id'}
+        missing = set(tagnames) - set(self.tagcol.tagnames) - {'site_id'}
         if missing:
             raise ValueError('Unknown tagname(s) %s' % missing)
         A, *shp = array.shape

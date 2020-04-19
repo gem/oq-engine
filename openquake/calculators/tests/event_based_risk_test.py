@@ -188,18 +188,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_losses.csv', fname)
         os.remove(fname)
 
-    def test_case_12(self):
-        # 2 assets, 2 samples, aggregate_by=id
-        self.run_calc(case_master.__file__, 'job12.ini', exports='csv')
-        # check size of the event_loss_table
-        arr = self.calc.datastore['losses_by_event'][()]
-        self.assertEqual(len(arr), 15)
-        self.assertEqual(arr['event_id'].nbytes, 60)
-        self.assertEqual(arr['rlzi'].nbytes, 30)
-        self.assertEqual(arr['loss'].nbytes, 60)
-        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_loss_12.csv', fname)
-
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
 
@@ -316,7 +304,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master_eb(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
-                      concurrent_tasks='4', aggregate_by='id')
+                      concurrent_tasks='4')
 
         # tot_losses-rlzs has shape (L=5, R=9)
         # tot_losses-stats has shape (L=5, S=4)
