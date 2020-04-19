@@ -190,6 +190,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
     ruptures_per_block = valid.Param(valid.positiveint, 500)  # for UCERF
+    save_disk_space = valid.Param(valid.boolean, False)
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -205,7 +206,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     ebrisk_maxsize = valid.Param(valid.positivefloat, 1E8)  # used in ebrisk
-    min_weight = valid.Param(valid.positiveint, 500)  # used in classical
+    min_weight = valid.Param(valid.positiveint, 3000)  # used in classical
     max_weight = valid.Param(valid.positiveint, 300_000)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
