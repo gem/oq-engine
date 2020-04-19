@@ -259,6 +259,7 @@ def extract_assets(dstore, what):
     dic.update(dic1)
     dic.update(dic2)
     arr = dstore['assetcol/array'][()]
+    arr = arr[list(arr.dtype.names[1:])]  # strip asset_id
     for tag, vals in qdict.items():
         cond = numpy.zeros(len(arr), bool)
         for val in vals:

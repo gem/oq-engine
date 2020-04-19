@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * When exporting the loss curves per asset now we also export the loss ratio
+    and the inverse return period, for consistency with the other exporters
+  * Fixed the exporter of the loss curves per asset: due to an ordering bug
+    in some cases it was exporting wrong losses
   * Added a flag save_disk_space to avoid storing the inputs
   * Changed the logic underlying the pointsource_distance approximation
   * Logged a warning when the pointsource_distance is too small

@@ -143,6 +143,7 @@ class Asset(object):
     a risk analysis (e.g. occupants).
     """
     def __init__(self,
+                 asset_id,
                  ordinal,
                  tagidxs,
                  number,
@@ -152,6 +153,8 @@ class Asset(object):
                  retrofitted=None,
                  calc=costcalculator):
         """
+        :param asset_id:
+            a short string identifier
         :param ordinal:
             an integer identifier for the asset, used to order them
         :param tagidxs:
@@ -169,6 +172,7 @@ class Asset(object):
         :param ordinal:
             asset collection ordinal
         """
+        self.asset_id = asset_id
         self.ordinal = ordinal
         self.tagidxs = tagidxs
         self.number = number
@@ -365,7 +369,7 @@ class AssetCollection(object):
         """
         :returns: array of asset ids as strings
         """
-        return self.tagcol.id[1:]
+        return self.array['asset_id']
 
     def num_taxonomies_by_site(self):
         """
@@ -565,8 +569,8 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     int_fields = [(str(name), U32) for name in tagnames]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
-        [('ordinal', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
-         ('number', F32), ('area', F32)] + [
+        [('asset_id', hdf5.vstr), ('ordinal', U32), ('lon', F32), ('lat', F32),
+         ('site_id', U32), ('number', F32), ('area', F32)] + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
@@ -578,7 +582,9 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in fields:
-                if field == 'ordinal':
+                if field == 'asset_id':
+                    value = asset.asset_id
+                elif field == 'ordinal':
                     value = asset.ordinal
                 elif field == 'number':
                     value = asset.number
@@ -985,8 +991,8 @@ class Exposure(object):
             area = asset['area']
         except ValueError:
             area = 1
-        ass = Asset(idx, idxs, number, location, values, area,
-                    retrofitted, self.cost_calculator)
+        ass = Asset(prefix + asset_id, idx, idxs, number, location, values,
+                    area, retrofitted, self.cost_calculator)
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):
