@@ -887,7 +887,7 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
         effect.update({
             trt: Effect({mag: eff_by_mag[mag][:, t]
                          for mag in mags[trt]}, dist_bins[trt])
-            for t, trt in enumerate(gsims_by_trt)})
+            for t, trt in enumerate(mags)})
         minint = oq.minimum_intensity.get('default', 0)
         for trt, eff in effect.items():
             if minint:
