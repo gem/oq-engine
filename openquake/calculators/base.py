@@ -1140,5 +1140,8 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
             attrs = dict(shape_descr=names + ('loss_name',),
                          loss_name=lossnames)
             for tagname in tagnames:
-                attrs[tagname] = getattr(assetcol.tagcol, tagname)[1:]
+                if tagname == 'site_id':
+                    attrs[tagname] = numpy.unique(assetcol['site_id'])
+                else:
+                    attrs[tagname] = getattr(assetcol.tagcol, tagname)[1:]
             dstore.set_attrs(name, **attrs)

@@ -414,7 +414,8 @@ class AssetCollection(object):
         :param array: an array with the same length as the asset collection
         :returns: an array of aggregate values with the proper shape
         """
-        missing = set(tagnames) - set(self.tagcol.tagnames)
+        missing = set(tagnames) - set(self.tagcol.tagnames) - {
+            'asset_id', 'site_id'}
         if missing:
             raise ValueError('Unknown tagname(s) %s' % missing)
         A, *shp = array.shape
@@ -433,7 +434,13 @@ class AssetCollection(object):
             tags = [(i + 1,) for i in range(len(avalues))]
         else:  # multi-tag aggregation
             tags, avalues = general.fast_agg2(self.array[tagnames], array)
-        shape = [len(getattr(self.tagcol, tagname))-1 for tagname in tagnames]
+        shape = []
+        for tagname in tagnames:
+            if tagname == 'site_id':
+                s = self.tot_sites
+            else:
+                s = len(getattr(self.tagcol, tagname)) - 1
+            shape.append(s)
         arr = numpy.zeros(shape, (F32, tuple(shp)) if shp else F32)
         for tag, aval in zip(tags, avalues):
             arr[tuple(i - 1 for i in tag)] = aval
@@ -650,7 +657,7 @@ def _get_exposure(fname, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-    tagnames = ['id'] + (~tagNames or [])
+    tagnames = ~tagNames or []
     if set(tagnames) & {'taxonomy', 'exposure', 'country'}:
         raise InvalidFile('taxonomy, exposure and country are reserved names '
                           'you cannot use it in <tagNames>: %s' % fname)
@@ -959,7 +966,6 @@ class Exposure(object):
                if tagname not in ('country', 'exposure') and
                asset[tagname] != '?'}
         dic['taxonomy'] = taxonomy
-        dic['id'] = prefix + asset_id
         idxs = self.tagcol.add_tags(dic, prefix)
         tot_occupants = 0
         num_occupancies = 0
