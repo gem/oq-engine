@@ -343,6 +343,7 @@ class TagCollection(object):
 class AssetCollection(object):
     def __init__(self, exposure, assets_by_site, time_event):
         self.tagcol = exposure.tagcol
+        self.tagcol.site_id = ['?'] + list(range(len(assets_by_site)))
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
@@ -650,7 +651,7 @@ def _get_exposure(fname, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-    tagnames = ['id'] + (~tagNames or [])
+    tagnames = ~tagNames or []
     if set(tagnames) & {'taxonomy', 'exposure', 'country'}:
         raise InvalidFile('taxonomy, exposure and country are reserved names '
                           'you cannot use it in <tagNames>: %s' % fname)
@@ -959,7 +960,6 @@ class Exposure(object):
                if tagname not in ('country', 'exposure') and
                asset[tagname] != '?'}
         dic['taxonomy'] = taxonomy
-        dic['id'] = prefix + asset_id
         idxs = self.tagcol.add_tags(dic, prefix)
         tot_occupants = 0
         num_occupancies = 0

@@ -532,7 +532,7 @@ def export_asset_risk_csv(ekey, dstore):
     lossnames = sorted(name for name in arr.dtype.names if 'loss' in name)
     expnames = [name for name in arr.dtype.names if name not in md.tagnames
                 and 'loss' not in name and name not in 'lon lat']
-    colnames = ['id'] + tagnames + ['lon', 'lat'] + expnames + lossnames
+    colnames = tagnames + ['lon', 'lat'] + expnames + lossnames
     # sanity check
     assert len(colnames) == len(arr.dtype.names)
     for rec in arr:
@@ -544,8 +544,7 @@ def export_asset_risk_csv(ekey, dstore):
             except KeyError:
                 row.append(value)
         rows.append(row)
-    writer.save(rows, fname, colnames,
-                renamedict=dict(id='asset_id'))
+    writer.save(rows, fname, colnames)
     return [fname]
 
 

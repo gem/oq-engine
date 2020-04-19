@@ -160,19 +160,19 @@ def compose_arrays(a1, a2, firstfield='etag'):
 def get_assets(dstore):
     """
     :param dstore: a datastore with keys 'assetcol'
-    :returns: an array of records (tag1, ..., tagN, lon, lat)
+    :returns: an array of records (asset_id, tag1, ..., tagN, lon, lat)
     """
     assetcol = dstore['assetcol']
     tagnames = sorted(assetcol.tagnames)
     tag = {t: getattr(assetcol.tagcol, t) for t in tagnames}
-    dtlist = []
+    dtlist = [('asset_id', '<S100')]
     for tagname in tagnames:
-        dtlist.append((tagname, (bytes, 100)))
+        dtlist.append((tagname, '<S100'))
     dtlist.extend([('lon', F32), ('lat', F32)])
     asset_data = []
     for a in assetcol.array:
         tup = tuple(b'"%s"' % tag[t][a[t]].encode('utf-8') for t in tagnames)
-        asset_data.append(tup + (a['lon'], a['lat']))
+        asset_data.append((a['asset_id'],) + tup + (a['lon'], a['lat']))
     return numpy.array(asset_data, dtlist)
 
 

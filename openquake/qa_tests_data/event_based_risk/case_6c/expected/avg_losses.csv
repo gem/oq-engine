@@ -1,9 +1,9 @@
-#,,,,,"generated_by='OpenQuake engine 3.9.0-gitc9a4f7bc4f', start_date='2020-03-05T07:08:35', checksum=1631201394, investigation_time=1.0, risk_investigation_time=1.0"
-NAME_1,asset_id,taxonomy,lon,lat,structural
-"RegionB","a3","tax1",-122.57000,38.11300,1.01310E+00
-"Region A","a2","tax1",-122.11400,38.11300,1.04236E+01
-"RegionB","a5","tax1",-122.00000,37.91000,8.30842E+00
-"RegionB","a4","tax1",-122.00000,38.00000,2.32974E+01
-"Region A","a1","tax1",-122.00000,38.11300,3.89907E+01
-"RegionB","a6","tax1",-122.00000,38.22500,1.80266E+01
-"RegionB","a7","tax1",-121.88600,38.11300,1.15618E+01
+#,,,,,"generated_by='OpenQuake engine 3.9.0-git324fe792bf', start_date='2020-04-19T07:55:43', checksum=1631201394, investigation_time=1.0, risk_investigation_time=1.0"
+asset_id,NAME_1,taxonomy,lon,lat,structural
+a3,"RegionB","tax1",-122.57000,38.11300,1.01310E+00
+a2,"Region A","tax1",-122.11400,38.11300,1.04236E+01
+a5,"RegionB","tax1",-122.00000,37.91000,8.30842E+00
+a4,"RegionB","tax1",-122.00000,38.00000,2.32974E+01
+a1,"Region A","tax1",-122.00000,38.11300,3.89907E+01
+a6,"RegionB","tax1",-122.00000,38.22500,1.80266E+01
+a7,"RegionB","tax1",-121.88600,38.11300,1.15618E+01
