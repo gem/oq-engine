@@ -689,7 +689,7 @@ def _get_exposure(fname, stop=None):
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
-        area.attrib, [], [], cc, TagCollection(tagnames))
+        area.attrib, [], cc, TagCollection(tagnames))
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -767,17 +767,16 @@ class Exposure(object):
     """
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'retrofitted',
-              'area', 'assets', 'asset_refs',
-              'cost_calculator', 'tagcol']
+              'area', 'assets', 'cost_calculator', 'tagcol']
 
     @staticmethod
     def check(fname):
         exp = Exposure.read([fname])
         err = []
-        for asset, aref in zip(exp.assets, exp.asset_refs):
+        for asset in exp.assets:
             if asset.number > 65535:
                 err.append('Asset %s has number %s > 65535' %
-                           (aref, asset.number))
+                           (asset.asset_id, asset.number))
         return '\n'.join(err)
 
     @staticmethod
@@ -785,9 +784,9 @@ class Exposure(object):
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
              tagcol=None, by_country=False):
         """
-        Call `Exposure.read(fname)` to get an :class:`Exposure` instance
+        Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
-        `Exposure.read(fname, asset_nodes=True)` to get an iterator over
+        `Exposure.read(fnames, asset_nodes=True)` to get an iterator over
         Node objects (one Node for each asset).
         """
         if by_country:  # E??_ -> countrycode
@@ -818,10 +817,11 @@ class Exposure(object):
                 assert exposure.retrofitted == exp.retrofitted
                 assert exposure.area == exp.area
                 exp.assets.extend(exposure.assets)
-                exp.asset_refs.extend(exposure.asset_refs)
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
+        for ass, tax in zip(exp.assets, exposure.tagcol.taxonomy[1:]):
+            ass.taxonomy = tax  # used by the GED4ALL importer
         return exp
 
     @staticmethod
@@ -948,7 +948,6 @@ class Exposure(object):
         prefix = param['asset_prefix']
         # FIXME: in case of an exposure split in CSV files the line number
         # is None because param['fname'] points to the .xml file :-(
-        self.asset_refs.append(prefix + asset_id)
         taxonomy = asset['taxonomy']
         number = asset['number']
         location = asset['lon'], asset['lat']
