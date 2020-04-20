@@ -820,6 +820,8 @@ class Exposure(object):
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
+        for ass, tax in zip(exp.assets, exposure.tagcol.taxonomy[1:]):
+            ass.taxonomy = tax  # used by the GED4ALL importer
         return exp
 
     @staticmethod
