@@ -377,7 +377,7 @@ class AssetCollection(object):
         """
         :returns: array of asset ids as strings
         """
-        return self.array['asset_id']
+        return self.array['id']
 
     def num_taxonomies_by_site(self):
         """
@@ -577,7 +577,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     int_fields = [(str(name), U32) for name in tagnames]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
-        [('asset_id', '<S20'), ('ordinal', U32), ('lon', F32), ('lat', F32),
+        [('id', '<S20'), ('ordinal', U32), ('lon', F32), ('lat', F32),
          ('site_id', U32), ('number', F32), ('area', F32)] + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
@@ -590,7 +590,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in fields:
-                if field == 'asset_id':
+                if field == 'id':
                     value = asset.asset_id
                 elif field == 'ordinal':
                     value = asset.ordinal

@@ -22,7 +22,6 @@ import logging
 import gzip
 import ast
 import io
-import os
 
 import requests
 from h5py._hl.dataset import Dataset
