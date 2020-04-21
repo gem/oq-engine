@@ -781,13 +781,11 @@ class Exposure(object):
 
     @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
-             ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+             ignore_missing_costs=(), check_dupl=True,
              tagcol=None, by_country=False):
         """
         Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
-        keeping all the assets in memory or
-        `Exposure.read(fnames, asset_nodes=True)` to get an iterator over
-        Node objects (one Node for each asset).
+        keeping all the assets in memory.
         """
         if by_country:  # E??_ -> countrycode
             prefix2cc = countries.from_exposures(
@@ -804,8 +802,7 @@ class Exposure(object):
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, region_constraint,
-                            ignore_missing_costs, asset_nodes, check_dupl,
-                            prefix, tagcol))
+                            ignore_missing_costs, check_dupl, prefix, tagcol))
         exp = None
         for exposure in itertools.starmap(Exposure.read_exp, allargs):
             if exp is None:  # first time
@@ -826,7 +823,7 @@ class Exposure(object):
 
     @staticmethod
     def read_exp(fname, calculation_mode='', region_constraint='',
-                 ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+                 ignore_missing_costs=(), check_dupl=True,
                  asset_prefix='', tagcol=None, monitor=None):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
