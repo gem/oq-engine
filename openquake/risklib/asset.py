@@ -904,7 +904,7 @@ class Exposure(object):
         """
         expected_header = set(self._csv_header('', ''))
         for fname in self.datafiles:
-            with open(fname, encoding='utf-8') as f:
+            with open(fname, encoding='utf-8-sig') as f:
                 fields = next(csv.reader(f))
                 header = set(fields)
                 missing = expected_header - header - {'exposure', 'country'}
