@@ -452,12 +452,15 @@ Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
         # test a call used in the GEM4ALL importer, XML + CSV
         fname = os.path.join(os.path.dirname(ebr2.__file__),
                              'exposure.xml')
-        a0, a1, a2, a3, a4 = asset.Exposure.read([fname]).assets
-        self.assertEqual(a0.tags, {'taxonomy': 'RM'})
-        self.assertEqual(a1.tags, {'taxonomy': 'RC+'})
-        self.assertEqual(a2.tags, {'taxonomy': 'W/1'})
-        self.assertEqual(a3.tags, {'taxonomy': 'RM'})
-        self.assertEqual(a4.tags, {'taxonomy': 'RM'})
+        for ass in asset.Exposure.read([fname]).assets:
+            # make sure all the attributes exist
+            ass.asset_id
+            ass.tags['taxonomy']
+            ass.number
+            ass.area
+            ass.location[0]
+            ass.location[1]
+            ass.tags.get('geometry')
 
 
 class GetCompositeSourceModelTestCase(unittest.TestCase):
