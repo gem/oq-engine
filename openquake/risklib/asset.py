@@ -817,8 +817,11 @@ class Exposure(object):
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
-        for ass, tax in zip(exp.assets, exposure.tagcol.taxonomy[1:]):
-            ass.taxonomy = tax  # used by the GED4ALL importer
+        for i, ass in enumerate(exp.assets):
+            tags = {}
+            for tagname in exp.tagcol.tagnames:
+                tags[tagname] = getattr(exp.tagcol, tagname)[i + 1]
+            ass.tags = tags  # used by the GED4ALL importer
         return exp
 
     @staticmethod
