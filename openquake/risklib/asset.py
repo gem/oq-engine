@@ -297,6 +297,13 @@ class TagCollection(object):
                        for tagidx, tagname in zip(tagidxs, tagnames))
         return values
 
+    def get_tagdict(self, tagidxs):
+        """
+        :returns: dictionary {tagname: tag}
+        """
+        return {tagname: getattr(self, tagname)[tagidx]
+                for tagidx, tagname in zip(tagidxs, self.tagnames)}
+
     def gen_tags(self, tagname):
         """
         :yields: the tags associated to the given tagname
@@ -817,8 +824,9 @@ class Exposure(object):
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
-        for ass, tax in zip(exp.assets, exposure.tagcol.taxonomy[1:]):
-            ass.taxonomy = tax  # used by the GED4ALL importer
+        for i, ass in enumerate(exp.assets):
+            # used by the GED4ALL importer
+            ass.tags = exp.tagcol.get_tagdict(ass.tagidxs)
         return exp
 
     @staticmethod
