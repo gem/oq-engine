@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, block_splitter
-from openquake.baselib.node import context, striptag, Node
+from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
@@ -35,6 +35,8 @@ F32 = numpy.float32
 EPSILON = 1E-12
 source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
+KNOWN_MFDS = ('incrementalMFD', 'truncGutenbergRichterMFD',
+              'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD')
 
 
 def extract_dupl(values):
@@ -599,10 +601,7 @@ class SourceConverter(RuptureConverter):
         """
         with context(self.fname, node):
             [mfd_node] = [subnode for subnode in node
-                          if subnode.tag.endswith(
-                              ('incrementalMFD', 'truncGutenbergRichterMFD',
-                               'arbitraryMFD', 'YoungsCoppersmithMFD',
-                               'multiMFD'))]
+                          if subnode.tag.endswith(KNOWN_MFDS)]
             if mfd_node.tag.endswith('incrementalMFD'):
                 return mfd.EvenlyDiscretizedMFD(
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
@@ -648,7 +647,7 @@ class SourceConverter(RuptureConverter):
                 npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
 
-    def convert_hpdist(self, node):
+    def convert_hddist(self, node):
         """
         Convert the given node into a probability mass function for the
         hypo depth distribution.
@@ -694,7 +693,7 @@ class SourceConverter(RuptureConverter):
             upper_seismogenic_depth=~geom.upperSeismoDepth,
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             nodal_plane_distribution=self.convert_npdist(node),
-            hypocenter_distribution=self.convert_hpdist(node),
+            hypocenter_distribution=self.convert_hddist(node),
             polygon=polygon,
             area_discretization=area_discretization,
             temporal_occurrence_model=self.get_tom(node))
@@ -721,7 +720,7 @@ class SourceConverter(RuptureConverter):
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             location=geo.Point(*lon_lat),
             nodal_plane_distribution=self.convert_npdist(node),
-            hypocenter_distribution=self.convert_hpdist(node),
+            hypocenter_distribution=self.convert_hddist(node),
             temporal_occurrence_model=self.get_tom(node))
 
     def convert_multiPointSource(self, node):
@@ -744,7 +743,7 @@ class SourceConverter(RuptureConverter):
             upper_seismogenic_depth=~geom.upperSeismoDepth,
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             nodal_plane_distribution=self.convert_npdist(node),
-            hypocenter_distribution=self.convert_hpdist(node),
+            hypocenter_distribution=self.convert_hddist(node),
             mesh=geo.Mesh(F32(lons), F32(lats)),
             temporal_occurrence_model=self.get_tom(node))
 
@@ -929,12 +928,111 @@ class SourceConverter(RuptureConverter):
             raise ValueError(msg)
         return sg
 
+
+Row = collections.namedtuple(
+    'Row', 'id name tectonicregion mfd magscalerel ruptaspectratio '
+    'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist wkt')
+
+
+# used in sm_to_csv
+class JsonConverter(SourceConverter):
+    def convert_node(self, node):
+        """
+        Convert the given source node into a Row object
+        """
+        trt = node.attrib.get('tectonicRegion')
+        if trt and trt in self.discard_trts:
+            return
+        return getattr(self, 'convert_' + striptag(node.tag))(node)
+
+    def convert_mfdist(self, node):
+        with context(self.fname, node):
+            [mfd_node] = [subnode for subnode in node
+                          if subnode.tag.endswith(KNOWN_MFDS)]
+        return str(node_to_dict(mfd_node))
+
+    def convert_npdist(self, node):
+        lst = []
+        for w, np in super().convert_npdist(node).data:
+            dic = {'weight': w, 'dip': np.dip, 'rake': np.rake,
+                   'strike': np.strike}
+            lst.append(dic)
+        return str(lst)
+
+    def convert_hddist(self, node):
+        lst = []
+        for w, hd in super().convert_hddist(node).data:
+            lst.append(dict(weight=w, hypodepth=hd))
+        return str(lst)
+
+    def convert_areaSource(self, node):
+        geom = node.areaGeometry
+        coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
+        wkt = 'POLYGON((%s))' % ', '.join('%s %s' % xy for xy in coords)
+        # TODO: area_discretization = geom.attrib.get('discretization')
+        return Row(
+            node['id'],
+            node['name'],
+            node['tectonicRegion'],
+            self.convert_mfdist(node),
+            ~node.magScaleRel,
+            ~node.ruptAspectRatio,
+            ~geom.upperSeismoDepth,
+            ~geom.lowerSeismoDepth,
+            self.convert_npdist(node),
+            self.convert_hddist(node),
+            wkt)
+
+    def convert_pointSource(self, node):
+        geom = node.pointGeometry
+        return Row(
+            node['id'],
+            node['name'],
+            node['tectonicRegion'],
+            self.convert_mfdist(node),
+            ~node.magScaleRel,
+            ~node.ruptAspectRatio,
+            ~geom.upperSeismoDepth,
+            ~geom.lowerSeismoDepth,
+            self.convert_npdist(node),
+            self.convert_hddist(node),
+            'POINT(%s %s)' % ~geom.Point.pos)
+
+    def convert_multiPointSource(self, node):
+        geom = node.multiPointGeometry
+        coords = split_coords_2d(~geom.posList)
+        wkt = 'MULTIPOINT((%s))' % ', '.join('%s %s' % xy for xy in coords)
+        return Row(
+            node['id'],
+            node['name'],
+            node['tectonicRegion'],
+            self.convert_mfdist(node),
+            ~node.magScaleRel,
+            ~node.ruptAspectRatio,
+            ~geom.upperSeismoDepth,
+            ~geom.lowerSeismoDepth,
+            self.convert_npdist(node),
+            self.convert_hddist(node),
+            wkt)
+
+    def convert_simpleFaultSource(self, node):
+        raise NotImplementedError
+
+    def convert_complexFaultSource(self, node):
+        raise NotImplementedError
+
+    def convert_characteristicFaultSource(self, node):
+        raise NotImplementedError
+
+    def convert_nonParametricSeismicSource(self, node):
+        raise NotImplementedError
+
 # ################### MultiPointSource conversion ######################## #
 
 
 def dists(node):
     """
-    :returns: hpdist, npdist and magScaleRel from the given pointSource node
+    :returns: hddist, npdist and magScaleRel from the given pointSource node
     """
     hd = tuple((node['probability'], node['depth'])
                for node in node.hypoDepthDist)
@@ -983,7 +1081,7 @@ def mfds2multimfd(mfds):
 
 
 def _pointsources2multipoints(srcs, i):
-    # converts pointSources with the same hpdist, npdist and msr into a
+    # converts pointSources with the same hddist, npdist and msr into a
     # single multiPointSource.
     allsources = []
     for (hd, npd, msr), sources in groupby(srcs, dists).items():
