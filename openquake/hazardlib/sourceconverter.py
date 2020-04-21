@@ -934,8 +934,11 @@ Row = collections.namedtuple(
     'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist wkt')
 
 
-# used in sm_to_csv
-class JsonConverter(SourceConverter):
+class RowConverter(SourceConverter):
+    """
+    Used in the command oq sm_to_csv to convert source models into
+    Row objects.
+    """
     def convert_node(self, node):
         """
         Convert the given source node into a Row object
@@ -968,7 +971,6 @@ class JsonConverter(SourceConverter):
     def convert_areaSource(self, node):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
-        wkt = 'POLYGON((%s))' % ', '.join('%s %s' % xy for xy in coords)
         # TODO: area_discretization = geom.attrib.get('discretization')
         return Row(
             node['id'],
@@ -981,7 +983,7 @@ class JsonConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            wkt)
+            'POLYGON((%s))' % ', '.join('%s %s' % xy for xy in coords))
 
     def convert_pointSource(self, node):
         geom = node.pointGeometry
@@ -1001,7 +1003,6 @@ class JsonConverter(SourceConverter):
     def convert_multiPointSource(self, node):
         geom = node.multiPointGeometry
         coords = split_coords_2d(~geom.posList)
-        wkt = 'MULTIPOINT((%s))' % ', '.join('%s %s' % xy for xy in coords)
         return Row(
             node['id'],
             node['name'],
@@ -1013,7 +1014,7 @@ class JsonConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            wkt)
+            'MULTIPOINT((%s))' % ', '.join('%s %s' % xy for xy in coords))
 
     def convert_simpleFaultSource(self, node):
         raise NotImplementedError
