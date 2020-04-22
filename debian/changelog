@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Restored the flag `split_sources` for testing purposes
   * Fixed a BOM bug in CSV exposures
   * When exporting the loss curves per asset now we also export the loss ratio
     and the inverse return period, for consistency with the other exporters
