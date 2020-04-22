@@ -289,8 +289,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.pointsource_distance and oq.pointsource_distance.has_star():
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
-            if hasattr(aw, 'array'):
-                self.datastore['effect_by_mag_dst_trt'] = aw
+            self.datastore['effect_by_mag_dst_trt'] = aw
         elif oq.pointsource_distance:
             self.psd = oq.pointsource_distance.interp(mags_by_trt)
         else:

@@ -436,8 +436,7 @@ class HazardCalculator(BaseCalculator):
         if (f * s > 1.2 and self.oqparam.pointsource_distance is None
                 and 'classical' in self.oqparam.calculation_mode):
             logging.warning(
-                'Your calculation will be slower than needed because you are '
-                'not using the pointsource_distance approximation:\n'
+                'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
 
     def read_inputs(self):
