@@ -292,9 +292,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
             if hasattr(aw, 'array'):
                 self.datastore['effect_by_mag_dst_trt'] = aw
-        smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores)
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
+                                num_cores=oq.num_cores)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
