@@ -187,7 +187,7 @@ class ContextMaker(object):
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
         self.mon = monitor
-        self.ctx_mon = monitor('make_contexts', measuremem=True)
+        self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls)
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -474,12 +474,14 @@ class PmapMaker(object):
             self.numrups = 0
             self.numsites = 0
             if self.fewsites:
+                # we can afford using a lot of memory to store the ruptures
                 rups = self._get_rups(srcs, sites)
                 # print_finite_size(rups)
                 with self.ctx_mon:
                     ctxs = self._ctxs(rups, sites, grp_ids)
                 self._update_pmap(ctxs)
-            else:  # many sites
+            else:
+                # many sites: keep in memory less ruptures
                 for src in srcs:
                     rups = self._get_rups([src], sites)
                     for rup in rups:
