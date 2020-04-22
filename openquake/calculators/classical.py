@@ -286,7 +286,8 @@ class ClassicalCalculator(base.HazardCalculator):
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = mags[trt][()]
-        if oq.pointsource_distance and oq.pointsource_distance.has_star():
+        if (oq.pointsource_distance and oq.pointsource_distance.has_star()
+                or oq.minimum_intensity):
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
             self.datastore['effect_by_mag_dst_trt'] = aw
