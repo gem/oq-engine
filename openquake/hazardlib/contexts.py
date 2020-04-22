@@ -473,16 +473,19 @@ class PmapMaker(object):
             grp_ids = numpy.array(srcs[0].grp_ids)
             self.numrups = 0
             self.numsites = 0
-            ctxs = []
-            rups = self._get_rups(srcs, sites)
-            # print_finite_size(rups)
-            with self.ctx_mon:
-                if self.fewsites:
-                    ctxs.extend(self._ctxs(rups, sites, grp_ids))
-                else:  # many sites
+            if self.fewsites:
+                rups = self._get_rups(srcs, sites)
+                # print_finite_size(rups)
+                with self.ctx_mon:
+                    ctxs = self._ctxs(rups, sites, grp_ids)
+                self._update_pmap(ctxs)
+            else:  # many sites
+                for src in srcs:
+                    rups = self._get_rups([src], sites)
                     for rup in rups:
-                        ctxs.extend(self._ctxs([rup], rup.sites, grp_ids))
-            self._update_pmap(ctxs)
+                        with self.ctx_mon:
+                            ctxs = self._ctxs([rup], rup.sites, grp_ids)
+                        self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
