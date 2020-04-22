@@ -279,6 +279,11 @@ def extract_asset_risk(dstore, what):
     dic.update(dic1)
     dic.update(dic2)
     arr = dstore['asset_risk'][()]
+    names = list(arr.dtype.names)
+    for i, name in enumerate(names):
+        if name == 'id':
+            names[i] = 'asset_id'  # for backward compatibility
+    arr.dtype.names = names
     for tag, vals in qdict.items():
         cond = numpy.zeros(len(arr), bool)
         for val in vals:
