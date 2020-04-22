@@ -353,6 +353,15 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
+        if oq.calculation_mode == 'preclassical':
+            f1 = f2 = preclassical
+            C *= 50  # use more tasks because there will be slow tasks
+        elif oq.disagg_by_src or oq.is_ucerf() or oq.split_sources is False:
+            # do not split the sources
+            C *= 5  # use more tasks, especially in UCERF
+            f1, f2 = classical, classical
+        else:
+            f1, f2 = classical, classical_split_filter
         min_weight = oq.min_weight * (10 if self.few_sites else 1)
         max_weight = max(min(totweight / C, oq.max_weight), min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
@@ -367,15 +376,6 @@ class ClassicalCalculator(base.HazardCalculator):
             collapse_ctxs=oq.collapse_ctxs,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
-        if oq.calculation_mode == 'preclassical':
-            f1 = f2 = preclassical
-            C *= 50  # use more tasks because there will be slow tasks
-        elif oq.disagg_by_src or oq.is_ucerf() or oq.split_sources is False:
-            # do not split the sources
-            C *= 5  # use more tasks, especially in UCERF
-            f1, f2 = classical, classical
-        else:
-            f1, f2 = classical, classical_split_filter
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
             param['rescale_weight'] = len(gsims)
