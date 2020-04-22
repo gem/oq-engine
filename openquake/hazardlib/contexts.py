@@ -187,7 +187,7 @@ class ContextMaker(object):
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
         self.mon = monitor
-        self.ctx_mon = monitor('make_contexts', measuremem=False)
+        self.ctx_mon = monitor('make_contexts', measuremem=True)
         self.loglevels = DictArray(self.imtls)
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
