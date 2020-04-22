@@ -888,7 +888,7 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
             get_effect_by_mag, (sorted(allmags), sitecol1, gsims_by_trt,
                                 oq.maximum_distance, oq.imtls)
         ).reduce()
-        aw.array = eff_by_mag
+        vars(aw).update(eff_by_mag)
         effect.update({
             trt: Effect({mag: eff_by_mag[mag][:, t]
                          for mag in mags[trt]}, dist_bins[trt])

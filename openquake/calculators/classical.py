@@ -283,15 +283,18 @@ class ClassicalCalculator(base.HazardCalculator):
             for trt in gsims_by_trt:
                 oq.pointsource_distance[trt] = getdefault(
                     oq.pointsource_distance, trt)
-        self.psd = {}  # trt->mag->dst
-        if 'source_mags' in self.datastore and oq.imtls:
-            mags_by_trt = {}
-            for trt in mags:
-                mags_by_trt[trt] = mags[trt][()]
+        mags_by_trt = {}
+        for trt in mags:
+            mags_by_trt[trt] = mags[trt][()]
+        if (oq.pointsource_distance and oq.pointsource_distance.has_star()
+                or oq.minimum_intensity):
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
-            if hasattr(aw, 'array'):
-                self.datastore['effect_by_mag_dst_trt'] = aw
+            self.datastore['effect_by_mag_dst_trt'] = aw
+        elif oq.pointsource_distance:
+            self.psd = oq.pointsource_distance.interp(mags_by_trt)
+        else:
+            self.psd = {}
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
                                 num_cores=oq.num_cores)
         self.submit_tasks(smap)

@@ -953,6 +953,12 @@ class MagDist(dict):
         """
         return {trt: self[trt][-1][1] for trt in self}
 
+    def has_star(self):
+        """
+        :returns: True if there is a * for any TRT
+        """
+        return any(self[trt][-1][1] == -1 for trt in self)
+
 
 # ########################### SOURCES/RUPTURES ############################# #
 
