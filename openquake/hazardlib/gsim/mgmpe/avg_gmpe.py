@@ -76,6 +76,7 @@ class AvgGMPE(GMPE):
         rrp = set()
         rd = set()
         rsp = set()
+        def_for_stddevs = []
         for branchid, branchparams in kwargs.items():
             [(gsim_name, params)] = branchparams.items()
             weights.append(params.pop('weight'))
@@ -83,10 +84,15 @@ class AvgGMPE(GMPE):
             rd.update(gsim.REQUIRES_DISTANCES)
             rsp.update(gsim.REQUIRES_SITES_PARAMETERS)
             rrp.update(gsim.REQUIRES_RUPTURE_PARAMETERS)
+            def_for_stddevs.append(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
             self.gsims.append(gsim)
         self.REQUIRES_DISTANCES = frozenset(rd)
         self.REQUIRES_SITES_PARAMETERS = frozenset(rsp)
         self.REQUIRES_RUPTURE_PARAMETERS = frozenset(rrp)
+        # if the sets DEFINED_FOR_STANDARD_DEVIATION_TYPES of the underlying
+        # gsims are all the same, then the AvgGMPE should use the same
+        if all(d == def_for_stddevs[0] for d in def_for_stddevs[1:]):
+            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = def_for_stddevs[0]
         self.weights = numpy.array(weights)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):

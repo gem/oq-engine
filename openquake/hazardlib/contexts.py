@@ -18,6 +18,8 @@
 import abc
 import copy
 import time
+import pprint
+import logging
 import warnings
 import operator
 import itertools
@@ -25,17 +27,18 @@ import collections
 import numpy
 from scipy.interpolate import interp1d
 
-
+from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim import base
-from openquake.hazardlib.calc.filters import IntegrationDistance, getdefault
+from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
 bymag = operator.attrgetter('mag')
+bydist = operator.attrgetter('dist')
 I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
@@ -164,9 +167,11 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        psd = param.get('pointsource_distance', {'default': {}})
-        self.pointsource_distance = getdefault(psd, trt)  # can be 0 or {}
-        # NB: self.pointsource_distance is a dict mag -> pdist, possibly empty
+        # self.pointsource_distance is a dict mag -> dist, possibly empty
+        if param.get('pointsource_distance'):
+            self.pointsource_distance = param['pointsource_distance'][trt]
+        else:
+            self.pointsource_distance = {}
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
@@ -182,7 +187,7 @@ class ContextMaker(object):
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
         self.mon = monitor
-        self.ctx_mon = monitor('make_contexts', measuremem=False)
+        self.ctx_mon = monitor('make_contexts', measuremem=True)
         self.loglevels = DictArray(self.imtls)
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -327,14 +332,14 @@ class ContextMaker(object):
                 ctxs.append((rup, dctx))
         return ctxs
 
-    def max_intensity(self, onesite, mags, dists):
+    def max_intensity(self, sitecol1, mags, dists):
         """
-        :param onesite: a SiteCollection instance with a single site
+        :param sitecol1: a SiteCollection instance with a single site
         :param mags: a sequence of magnitudes
         :param dists: a sequence of distances
         :returns: an array of GMVs of shape (#mags, #dists)
         """
-        assert len(onesite) == 1, onesite
+        assert len(sitecol1) == 1, sitecol1
         nmags, ndists = len(mags), len(dists)
         gmv = numpy.zeros((nmags, ndists))
         for m, d in itertools.product(range(nmags), range(ndists)):
@@ -350,7 +355,7 @@ class ContextMaker(object):
             for gsim in self.gsims:
                 try:
                     mean = base.get_mean_std(  # shape (2, N, M, G) -> M
-                        onesite, rup, dctx, self.imts, [gsim])[0, 0, :, 0]
+                        sitecol1, rup, dctx, self.imts, [gsim])[0, 0, :, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())
@@ -540,8 +545,7 @@ class PmapMaker(object):
                 rup.dist = get_distances(rup, sites, 'rrup').min()
                 if rup.dist <= mdist:
                     coll.append(rup)
-            for rs in groupby_bin(
-                    coll, self.point_rupture_bins, operator.attrgetter('dist')):
+            for rs in groupby_bin(coll, self.point_rupture_bins, bydist):
                 # group together ruptures in the same distance bin
                 output.extend(_collapse(rs))
         return output
@@ -818,11 +822,13 @@ class Effect(object):
         return dst
 
 
-# used in calculators/classical.py
-def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
-                      monitor):
+def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     """
-    :param mag: an ordered list of magnitude strings with format %.2f
+    :param mags: an ordered list of magnitude strings with format %.2f
+    :param sitecol1: a SiteCollection with a single site
+    :param gsims_by_trt: a dictionary trt -> gsims
+    :param maximum_distance: an IntegrationDistance object
+    :param imtls: a DictArray with intensity measure types and levels
     :returns: a dict magnitude-string -> array(#dists, #trts)
     """
     trts = list(gsims_by_trt)
@@ -833,11 +839,71 @@ def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
         gmv[:, :, t] = cmaker.max_intensity(
-            onesite, [float(mag) for mag in mags], dist_bins)
+            sitecol1, [float(mag) for mag in mags], dist_bins)
     return dict(zip(mags, gmv))
 
 
 # used in calculators/classical.py
+def get_effect(mags, sitecol1, gsims_by_trt, oq):
+    """
+    :params mags:
+       a dictionary trt -> magnitudes
+    :param sitecol1:
+       a SiteCollection with a single site
+    :param gsims_by_trt:
+       a dictionary trt -> gsims
+    :param oq:
+       an object with attributes imtls, minimum_intensity,
+       maximum_distance and pointsource_distance
+    :returns:
+       an ArrayWrapper trt -> effect_by_mag_dst and a nested dictionary
+       trt -> mag -> dist with the effective pointsource_distance
+
+    Updates oq.maximum_distance.magdist
+    """
+    dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
+                 for trt in gsims_by_trt}
+    aw = hdf5.ArrayWrapper((), dist_bins)
+    # computing the effect make sense only if all IMTs have the same
+    # unity of measure; for simplicity we will consider only PGA and SA
+    effect = {}
+    imts_with_period = [imt for imt in oq.imtls
+                        if imt == 'PGA' or imt.startswith('SA')]
+    imts_ok = len(imts_with_period) == len(oq.imtls)
+    psd = {}
+    if oq.pointsource_distance is not None:
+        psd = oq.pointsource_distance.interp(mags)
+    effect_ok = imts_ok and (psd or oq.minimum_intensity)
+    if effect_ok:
+        logging.info('Computing effect of the ruptures')
+        allmags = set()
+        for trt in mags:
+            allmags.update(mags[trt])
+        eff_by_mag = parallel.Starmap.apply(
+            get_effect_by_mag, (sorted(allmags), sitecol1, gsims_by_trt,
+                                oq.maximum_distance, oq.imtls)
+        ).reduce()
+        aw.array = eff_by_mag
+        effect.update({
+            trt: Effect({mag: eff_by_mag[mag][:, t]
+                         for mag in mags[trt]}, dist_bins[trt])
+            for t, trt in enumerate(mags)})
+        minint = oq.minimum_intensity.get('default', 0)
+        for trt, eff in effect.items():
+            if minint:
+                oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
+            # build a dict trt -> mag -> dst
+            if psd and set(psd[trt].values()) == {-1}:
+                maxdist = oq.maximum_distance[trt]
+                psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
+    if psd:
+        dic = {trt: [(float(mag), int(dst)) for mag, dst in psd[trt].items()]
+               for trt in psd if trt != 'default'}
+        logging.info('Using pointsource_distance=\n%s', pprint.pformat(dic))
+    return aw, psd
+
+
+# not used right now
 def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     """
     :returns: a dictionary trt -> mag string -> counts by distance

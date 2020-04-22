@@ -81,8 +81,12 @@ RM       4_000
     def test_case_1c(self):
         # this is a case with more hazard sites than exposure sites
         # it is also a case with asset numbers > 65535 and < 1
+        # and also a case with modal_damage_state
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
+        [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 

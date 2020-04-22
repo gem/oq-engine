@@ -22,7 +22,6 @@ import logging
 import gzip
 import ast
 import io
-import os
 
 import requests
 from h5py._hl.dataset import Dataset
@@ -280,6 +279,11 @@ def extract_asset_risk(dstore, what):
     dic.update(dic1)
     dic.update(dic2)
     arr = dstore['asset_risk'][()]
+    names = list(arr.dtype.names)
+    for i, name in enumerate(names):
+        if name == 'id':
+            names[i] = 'asset_id'  # for backward compatibility
+    arr.dtype.names = names
     for tag, vals in qdict.items():
         cond = numpy.zeros(len(arr), bool)
         for val in vals:
@@ -1098,20 +1102,19 @@ def get_ruptures_within(dstore, bbox):
     return dstore['ruptures'][mask]
 
 
-def disagg_outputs(dstore, imt, sid, poe_id, rlz=None):
+# the disagg datagroup may contain
+# PGA-sid-0-poe-0
+# rlz-0-PGA-sid-0-poe-0
+# rlz-1-PGA-sid-0-poe-0
+def disagg_output(dstore, imt, sid, poe_id, rlz=None):
     """
     :returns:
-        a list of output keys (one per realization) unless rlz is specified,
-        then returns a list with a single element corresponding to the rlz
+        a datagroup
     """
     key = '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
     if rlz is not None:
         key = 'rlz-%d-%s' % (rlz, key)
-    outs = []
-    for name, out in dstore['disagg'].items():
-        if name.endswith(key):
-            outs.append(out)
-    return outs
+    return dstore['disagg'][key]
 
 
 @extract.add('disagg')
@@ -1128,39 +1131,29 @@ def extract_disagg(dstore, what):
     poe_idx = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
     rlz = int(qdict['rlz'][0]) if 'rlz' in qdict else None
-    allnames = []
-    allvalues = []
-    for dset in disagg_outputs(dstore, imt, sid, poe_idx, rlz):
-        matrix = dset[label][()]
+    dset = disagg_output(dstore, imt, sid, poe_idx, rlz)
+    matrix = dset[label][()]
 
-        # adapted from the nrml_converters
-        disag_tup = tuple(label.split('_'))
-        if disag_tup == ('Mag', 'Lon', 'Lat'):
-            matrix = numpy.swapaxes(matrix, 0, 1)
-            matrix = numpy.swapaxes(matrix, 1, 2)
-            disag_tup = ('Lon', 'Lat', 'Mag')
+    # adapted from the nrml_converters
+    disag_tup = tuple(label.split('_'))
+    if disag_tup == ('Mag', 'Lon', 'Lat'):
+        matrix = numpy.swapaxes(matrix, 0, 1)
+        matrix = numpy.swapaxes(matrix, 1, 2)
+        disag_tup = ('Lon', 'Lat', 'Mag')
 
-        axis = [dset.attrs[v.lower() + '_bin_edges'] for v in disag_tup]
-        # compute axis mid points
-        axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
-                else ax for ax in axis]
-        values = None
-        if len(axis) == 1:
-            values = numpy.array([axis[0], matrix.flatten()]).T
-        else:
-            grids = numpy.meshgrid(*axis, indexing='ij')
-            values = [g.flatten() for g in grids]
-            values.append(matrix.flatten())
-            values = numpy.array(values).T
-        allnames.append(os.path.basename(dset.name))
-        allvalues.append(values)
-    if not allnames:
-        raise KeyError('No data for ' + what)
-    elif len(allnames) == 1:
-        return ArrayWrapper(values, qdict)
+    axis = [dset.attrs[v.lower() + '_bin_edges'] for v in disag_tup]
+    # compute axis mid points
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
+            else ax for ax in axis]
+    values = None
+    if len(axis) == 1:
+        values = numpy.array([axis[0], matrix.flatten()]).T
     else:
-        qdict['names'] = allnames
-        return ArrayWrapper(numpy.array(allvalues), qdict)
+        grids = numpy.meshgrid(*axis, indexing='ij')
+        values = [g.flatten() for g in grids]
+        values.append(matrix.flatten())
+        values = numpy.array(values).T
+    return ArrayWrapper(values, qdict)
 
 
 @extract.add('disagg_layer')
@@ -1176,7 +1169,7 @@ def extract_disagg_layer(dstore, what):
     [label] = qdict['kind']
     [imt] = qdict['imt']
     poe_id = int(qdict['poe_id'][0])
-    grp = disagg_outputs(dstore, imt, 0, poe_id)[0]
+    grp = disagg_output(dstore, imt, 0, poe_id)
     dset = grp[label]
     edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
     dt = [('site_id', U32), ('lon', F32), ('lat', F32),
@@ -1187,7 +1180,7 @@ def extract_disagg_layer(dstore, what):
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         if sid > 0:
-            grp = disagg_outputs(dstore, imt, sid, poe_id)[0]
+            grp = disagg_output(dstore, imt, sid, poe_id)
             rec['site_id'] = sid
             rec['lon'] = lon
             rec['lat'] = lat

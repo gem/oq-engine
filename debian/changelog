@@ -1,3 +1,24 @@
+  [Michele Simionato]
+  * Restored the flag `split_sources` for testing purposes
+  * Fixed a BOM bug in CSV exposures
+  * When exporting the loss curves per asset now we also export the loss ratio
+    and the inverse return period, for consistency with the other exporters
+  * Fixed the exporter of the loss curves per asset: due to an ordering bug
+    in some cases it was exporting wrong losses
+  * Added a flag save_disk_space to avoid storing the inputs
+  * Changed the logic underlying the pointsource_distance approximation
+  * Logged a warning when the pointsource_distance is too small
+
+  [Graeme Weatherill]
+  * Implemented Pitilakis et al. (2020) Site Amplification Model
+
+  [Michele Simionato]
+  * Fixed an export bug with modal_damage_state=true in scenario_damage
+    calculations
+  * Fixed a bug in calc_hazard_curves with multiple TRTs
+  * Fixed how AvgGMPE was stored and made it applicable with correlation models
+    if all underlying GMPEs are such
+
   [Paolo Tormene]
   * Added a second tectonic region type to the EventBasedPSHA demo
 
@@ -17,7 +38,7 @@
   * Fixed a bug in the coeff table of YEA97
 
   [Graeme Weatherill]
-  * Implements support for Gaussian Mixture Model approach to characterise
+  * Implemented support for Gaussian Mixture Model approach to characterise
     ground motion model uncertainty
 
   [Michele Simionato]

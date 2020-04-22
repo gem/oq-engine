@@ -1,0 +1,4 @@
+#,,,,,"kind='quantile-0.85', risk_investigation_time=50.0"
+asset_id,loss_type,loss_value,loss_ratio,return_period,annual_frequency_of_exceedence
+a1,structural,8.39571E+01,8.39571E-03,1,1.00000E+00
+a1,structural,9.56590E+01,9.56590E-03,2,5.00000E-01
