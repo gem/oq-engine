@@ -478,7 +478,7 @@ class PmapMaker(object):
                 rups = self._get_rups(srcs, sites)
                 # print_finite_size(rups)
                 with self.ctx_mon:
-                    ctxs = self._ctxs(rups, sites, grp_ids)
+                    ctxs = list(self._ctxs(rups, sites, grp_ids))
                 self._update_pmap(ctxs)
             else:
                 # many sites: keep in memory less ruptures
@@ -486,7 +486,7 @@ class PmapMaker(object):
                     rups = self._get_rups([src], sites)
                     for rup in rups:
                         with self.ctx_mon:
-                            ctxs = self._ctxs([rup], rup.sites, grp_ids)
+                            ctxs = list(self._ctxs([rup], rup.sites, grp_ids))
                         self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
