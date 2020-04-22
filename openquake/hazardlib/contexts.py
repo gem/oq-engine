@@ -187,7 +187,7 @@ class ContextMaker(object):
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
         self.mon = monitor
-        self.ctx_mon = monitor('make_contexts', measuremem=True)
+        self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls)
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -473,16 +473,21 @@ class PmapMaker(object):
             grp_ids = numpy.array(srcs[0].grp_ids)
             self.numrups = 0
             self.numsites = 0
-            ctxs = []
-            rups = self._get_rups(srcs, sites)
-            # print_finite_size(rups)
-            with self.ctx_mon:
-                if self.fewsites:
-                    ctxs.extend(self._ctxs(rups, sites, grp_ids))
-                else:  # many sites
+            if self.fewsites:
+                # we can afford using a lot of memory to store the ruptures
+                rups = self._get_rups(srcs, sites)
+                # print_finite_size(rups)
+                with self.ctx_mon:
+                    ctxs = list(self._ctxs(rups, sites, grp_ids))
+                self._update_pmap(ctxs)
+            else:
+                # many sites: keep in memory less ruptures
+                for src in srcs:
+                    rups = self._get_rups([src], sites)
                     for rup in rups:
-                        ctxs.extend(self._ctxs([rup], rup.sites, grp_ids))
-            self._update_pmap(ctxs)
+                        with self.ctx_mon:
+                            ctxs = list(self._ctxs([rup], rup.sites, grp_ids))
+                        self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
