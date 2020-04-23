@@ -20,9 +20,9 @@ import os
 import unittest
 import unittest.mock as mock
 import numpy
-from openquake.baselib import parallel
+from openquake.baselib import parallel, general
 from openquake.hazardlib import InvalidFile
-from openquake.calculators.views import view
+from openquake.calculators.views import view, rst_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
@@ -32,7 +32,7 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42, case_43, case_44, case_45, case_46, case_47)
+    case_42, case_43, case_44, case_45, case_46, case_47, case_48)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -566,3 +566,15 @@ hazard_uhs-std.csv
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
         self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv"],
                               case_47.__file__)
+
+    def test_case_48(self):
+        # pointsource_distance effects on a simple point source
+        self.run_calc(case_48.__file__, 'job.ini')
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+                                        ['sid0', 'sid1']))
+        self.assertEqualFiles('expected/exact_dists.txt', tmp)
+
+        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='*')
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+                                        ['sid0', 'sid1']))
+        self.assertEqualFiles('expected/approx_dists.txt', tmp)
