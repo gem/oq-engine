@@ -165,16 +165,15 @@ def split_sources(srcs):
     sources = []
     split_time = {}  # src.id -> time
     for src in srcs:
+        if not splittable(src):
+            sources.append(src)
+            continue
         t0 = time.time()
         if not src.num_ruptures:  # not set yet
             src.num_ruptures = src.count_ruptures()
         mag_a, mag_b = src.get_min_max_mag()
         min_mag = src.min_mag
         if mag_b < min_mag:  # discard the source completely
-            continue
-        if not splittable(src):
-            sources.append(src)
-            split_time[src.id] = time.time() - t0
             continue
         if min_mag:
             splits = []
@@ -297,7 +296,8 @@ class SourceFilter(object):
             the same grp_ids and affect the same sites
         """
         acc = general.AccumDict(accum=[])  # indices -> srcs
-        for src in self.filter(sources):
+        srcs, _split_time = split_sources(sources)
+        for src in self.filter(srcs):
             src_id = re.sub(r':\d+$', '', src.source_id)
             acc[(src_id, src.grp_id) + tuple(src.indices)].append(src)
         for tup, srcs in acc.items():
