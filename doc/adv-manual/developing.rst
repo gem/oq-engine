@@ -104,3 +104,22 @@ There a lot of `oq` commands: if you are doing development you should study
 all of them. They are documented here_.
 
 .. _here: oq-commands.md
+
+
+Running calculations programmatically
+-------------------------------------
+
+Starting from engine 3.9 the recommended way to run a calculation
+programmaticaly is the following:
+
+>>> from openquake.commonlib import logs
+>>> from openquake.calculators.base import get_calc
+>>> calc_id = logs.init()  # initialize logs
+>>> calc = get_calc('job.ini', calc_id)  # instantiate calculator
+>>> calc.run()  # run the calculation
+
+Then the results can be read from the datastore attribute `calc.datastore`
+by using the extract API:
+
+>>> from openquake.calculators.extract import extract
+>>> extract(calc.datastore, 'something')
