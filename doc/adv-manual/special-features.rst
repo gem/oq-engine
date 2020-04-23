@@ -179,18 +179,21 @@ disaggregate 100 sites will likely succeed, trying to disaggregate
 out of disk space, and the calculation will be terribly slow.
 If you have a really large number of sites to disaggregate, you will
 have to split the calculation and it will be challenging to complete
-all calculations
+all the subcalculations.
 
 The parameter ``max_sites_disagg`` is extremely important not only for
 disaggregation, but also for classical calculations. Depending on its
-value your calculation and be in the few sites regime or many sites regime.
+value and then number of sites (``N``) your calculation can be in the
+*few sites* regime or the *many sites regime*.
 
-In the *few sites regime* (``n <= max_sites_disagg``) the engine stores
+In the *few sites regime* (``N <= max_sites_disagg``) the engine stores
 information for each rupture in the model (in particular the distances
 for each site) and therefore uses more disk space. The problem is mitigated
-since the engine uses a relatively aggressive strategy to collapse ruptures.
+since the engine uses a relatively aggressive strategy to collapse ruptures,
+but that requires more RAM available.
 
-In the *many sites regime* (``n > max_sites_disagg``) the engine does not store
+In the *many sites regime* (``N > max_sites_disagg``) the engine does not store
 rupture information (otherwise it would immediately run out of disk space,
 since typical hazard models have tens of millions of ruptures) and uses
-a much less aggressive strategy to collapse ruptures.
+a much less aggressive strategy to collapse ruptures, which has the advantage
+of requiring less RAM.
