@@ -118,8 +118,7 @@ programmaticaly is the following:
 >>> calc = get_calc('job.ini', calc_id)  # instantiate calculator
 >>> calc.run()  # run the calculation
 
-Then the results can be read from the datastore attribute `calc.datastore`
-by using the extract API:
+Then the results can be read from the datastore by using the extract API:
 
 >>> from openquake.calculators.extract import extract
 >>> extract(calc.datastore, 'something')
