@@ -151,7 +151,7 @@ class ZalachorisRathje2019(GMPE):
 
     def _get_path_scaling(self, C, dists, mag):
         """
-        Returns the path scaling term given by equation (3)
+        Returns the path scaling term given by equation (3).
         """
         rval = np.sqrt((dists.rjb ** 2.0) + (C["h"] ** 2.0))
         scaling = (C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *\
