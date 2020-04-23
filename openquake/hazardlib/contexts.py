@@ -871,15 +871,9 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
     aw = hdf5.ArrayWrapper((), dist_bins)
     # computing the effect make sense only if all IMTs have the same
     # unity of measure; for simplicity we will consider only PGA and SA
-    effect = {}
-    imts_with_period = [imt for imt in oq.imtls
-                        if imt == 'PGA' or imt.startswith('SA')]
-    imts_ok = len(imts_with_period) == len(oq.imtls)
-    psd = {}
-    if oq.pointsource_distance is not None:
-        psd = oq.pointsource_distance.interp(mags)
-    effect_ok = imts_ok and (psd or oq.minimum_intensity)
-    if effect_ok:
+    psd = (oq.pointsource_distance.interp(mags)
+           if oq.pointsource_distance is not None else {})
+    if psd:
         logging.info('Computing effect of the ruptures')
         allmags = set()
         for trt in mags:
@@ -889,10 +883,10 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
                                 oq.maximum_distance, oq.imtls)
         ).reduce()
         vars(aw).update(eff_by_mag)
-        effect.update({
+        effect = {
             trt: Effect({mag: eff_by_mag[mag][:, t]
                          for mag in mags[trt]}, dist_bins[trt])
-            for t, trt in enumerate(mags)})
+            for t, trt in enumerate(mags)}
         minint = oq.minimum_intensity.get('default', 0)
         for trt, eff in effect.items():
             if minint:
@@ -901,7 +895,6 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
             if psd and set(psd[trt].values()) == {-1}:
                 maxdist = oq.maximum_distance[trt]
                 psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
-    if psd:
         dic = {trt: [(float(mag), int(dst)) for mag, dst in psd[trt].items()]
                for trt in psd if trt != 'default'}
         logging.info('Using pointsource_distance=\n%s', pprint.pformat(dic))

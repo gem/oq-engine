@@ -286,8 +286,12 @@ class ClassicalCalculator(base.HazardCalculator):
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = mags[trt][()]
-        if (oq.pointsource_distance and oq.pointsource_distance.has_star()
-                or oq.minimum_intensity):
+        imts_with_period = [imt for imt in oq.imtls
+                            if imt == 'PGA' or imt.startswith('SA')]
+        imts_ok = len(imts_with_period) == len(oq.imtls)
+        if (imts_ok and oq.pointsource_distance and
+                oq.pointsource_distance.has_star()) or (
+                    imts_ok and oq.minimum_intensity):
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
             self.datastore['effect_by_mag_dst_trt'] = aw
@@ -332,7 +336,7 @@ class ClassicalCalculator(base.HazardCalculator):
                      numsites / self.numrups)
         if self.psd:
             psdist = max(max(self.psd[trt].values()) for trt in self.psd)
-            if self.maxradius >= psdist / 2:
+            if psdist != -1 and self.maxradius >= psdist / 2:
                 logging.warning('The pointsource_distance of %d km is too '
                                 'small compared to a maxradius of %d km',
                                 psdist, self.maxradius)
