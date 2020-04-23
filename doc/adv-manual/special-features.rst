@@ -164,3 +164,33 @@ in the ``job.ini`` file. There is an example in the test
 ``openquake.qa_tests_data.event_based.case_15``.
 
 .. _TOML: https://github.com/toml-lang/toml
+
+
+``max_sites_disagg``
+--------------------------------
+
+There is a parameter in the `job.ini` called ``max_sites_disagg``, with a
+default value of 10. This parameter controls the maximum number of sites
+on which it is possible to run a disaggregation. If you need to run a
+disaggregation on a large number of sites you will have to increase
+that parameter. Notice that there are technical limits: trying to
+disaggregate 100 sites will likely succeed, trying to disaggregate
+100,000 sites will most likely cause your system to go out of memory or
+out of disk space, and the calculation will be terribly slow.
+If you have a really large number of sites to disaggregate, you will
+have to split the calculation and it will be challenging to complete
+all calculations
+
+The parameter ``max_sites_disagg`` is extremely important not only for
+disaggregation, but also for classical calculations. Depending on its
+value your calculation and be in the few sites regime or many sites regime.
+
+In the *few sites regime* (``n <= max_sites_disagg``) the engine stores
+information for each rupture in the model (in particular the distances
+for each site) and therefore uses more disk space. The problem is mitigated
+since the engine uses a relatively aggressive strategy to collapse ruptures.
+
+In the *many sites regime* (``n > max_sites_disagg``) the engine does not store
+rupture information (otherwise it would immediately run out of disk space,
+since typical hazard models have tens of millions of ruptures) and uses
+a much less aggressive strategy to collapse ruptures.
