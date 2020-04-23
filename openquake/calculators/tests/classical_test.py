@@ -20,9 +20,9 @@ import os
 import unittest
 import unittest.mock as mock
 import numpy
-from openquake.baselib import parallel
+from openquake.baselib import parallel, general
 from openquake.hazardlib import InvalidFile
-from openquake.calculators.views import view
+from openquake.calculators.views import view, rst_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
@@ -32,7 +32,7 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42, case_43, case_44, case_45, case_46, case_47)
+    case_42, case_43, case_44, case_45, case_46, case_47, case_48)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -566,3 +566,33 @@ hazard_uhs-std.csv
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
         self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv"],
                               case_47.__file__)
+
+    def test_case_48(self):
+        # pointsource_distance effects on a simple point source
+        self.run_calc(case_48.__file__, 'job.ini')
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+                                        ['sid0', 'sid1']))
+        self.assertEqualFiles('expected/exact_dists.txt', tmp)
+
+        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='*')
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+                                        ['sid0', 'sid1']))
+        self.assertEqualFiles('expected/approx_dists.txt', tmp)
+        # this test shows in detail what happens to the distances in presence
+        # of a magnitude-dependent pointsource_distance: just look at the
+        # files expected/exact_dists.txt and expected/approx_dists.txt
+        # the exact distances for the first site are 54, 53, 53, ... 38, 32 km
+        # they decrease with the magnitude, since big magnitude -> big size ->
+        # smaller distance from the site.
+        # When the pointsource_distance is on, the approximated distances are
+        # 55, 55, 55, ..., 38, 32 km: the difference is in the first three
+        # values, corresponding to the small magnitudes.
+        # For small magnitudes the planar ruptures are replaced by points
+        # and thus the distances become larger (and constant).
+        # The maximum_distance here is 110 km and the second site
+        # was chosen very carefully, so that the exact distance for the highest
+        # magnitude is 109 km (within) while the approx distance is 111 km
+        # (outside): still the rupture is not discarded because we are in the
+        # few-sites regime.
+        # In the many-sites regime, small magnitude ruptures at distance close
+        # to the maximum_distance may be discarded, instead.
