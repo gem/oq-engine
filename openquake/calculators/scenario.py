@@ -23,7 +23,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.stochastic import get_rup_array
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.commonlib import readinput, logictree, calc
-from openquake.calculators import base
+from openquake.calculators import base, getters
 
 
 @base.calculators.add('scenario')
@@ -38,9 +38,9 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer and seeds
         """
         oq = self.oqparam
-        cinfo = logictree.FullLogicTree.fake(readinput.get_gsim_lt(oq))
-        self.realizations = cinfo.get_realizations()
-        self.datastore['full_lt'] = cinfo
+        full_lt = logictree.FullLogicTree.fake(readinput.get_gsim_lt(oq))
+        self.realizations = full_lt.get_realizations()
+        self.datastore['full_lt'] = full_lt
         if 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
@@ -56,7 +56,7 @@ class ScenarioCalculator(base.HazardCalculator):
         super().pre_execute()
         self.datastore['oqparam'] = oq
         self.store_rlz_info({})
-        rlzs_by_gsim = cinfo.get_rlzs_by_gsim(0)
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         E = oq.number_of_ground_motion_fields
         n_occ = numpy.array([E])
         ebr = EBRupture(self.rup, 0, 0, n_occ)
@@ -78,8 +78,7 @@ class ScenarioCalculator(base.HazardCalculator):
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
             oq.correl_model, self.amplifier)
-        M32 = (numpy.float32, (len(self.oqparam.imtls),))
-        self.sig_eps_dt = [('eid', numpy.uint64), ('sig', M32), ('eps', M32)]
+        self.sig_eps_dt = getters.sig_eps_dt(self.oqparam.imtls)
 
     def init(self):
         pass
@@ -94,11 +93,11 @@ class ScenarioCalculator(base.HazardCalculator):
         n = self.oqparam.number_of_ground_motion_fields
         with self.monitor('computing gmfs'):
             ei = 0
-            for gsim in self.gsims:
+            for g, gsim in enumerate(self.gsims):
                 gmfa, sig, eps = self.computer.compute(gsim, n)
                 lst = []
                 for s, e in zip(sig.T, eps.T):  # shape (M, E) -> (E, M)
-                    lst.append((ei, s, e))
+                    lst.append((ei, g) + tuple(s) + tuple(e))
                     ei += 1
                 arrays.append(gmfa.transpose(1, 2, 0))  # shape (N, n, I)
         self.datastore['gmf_data/sigma_epsilon'] = numpy.array(

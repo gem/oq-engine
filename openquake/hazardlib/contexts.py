@@ -18,6 +18,8 @@
 import abc
 import copy
 import time
+import pprint
+import logging
 import warnings
 import operator
 import itertools
@@ -25,17 +27,18 @@ import collections
 import numpy
 from scipy.interpolate import interp1d
 
-
+from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim import base
-from openquake.hazardlib.calc.filters import IntegrationDistance, getdefault
+from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
 bymag = operator.attrgetter('mag')
+bydist = operator.attrgetter('dist')
 I16 = numpy.int16
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
@@ -164,9 +167,11 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
-        psd = param.get('pointsource_distance', {'default': {}})
-        self.pointsource_distance = getdefault(psd, trt)  # can be 0 or {}
-        # NB: self.pointsource_distance is a dict mag -> pdist, possibly empty
+        # self.pointsource_distance is a dict mag -> dist, possibly empty
+        if param.get('pointsource_distance'):
+            self.pointsource_distance = param['pointsource_distance'][trt]
+        else:
+            self.pointsource_distance = {}
         self.filter_distance = 'rrup'
         self.imtls = param.get('imtls', {})
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
@@ -327,14 +332,14 @@ class ContextMaker(object):
                 ctxs.append((rup, dctx))
         return ctxs
 
-    def max_intensity(self, onesite, mags, dists):
+    def max_intensity(self, sitecol1, mags, dists):
         """
-        :param onesite: a SiteCollection instance with a single site
+        :param sitecol1: a SiteCollection instance with a single site
         :param mags: a sequence of magnitudes
         :param dists: a sequence of distances
         :returns: an array of GMVs of shape (#mags, #dists)
         """
-        assert len(onesite) == 1, onesite
+        assert len(sitecol1) == 1, sitecol1
         nmags, ndists = len(mags), len(dists)
         gmv = numpy.zeros((nmags, ndists))
         for m, d in itertools.product(range(nmags), range(ndists)):
@@ -350,7 +355,7 @@ class ContextMaker(object):
             for gsim in self.gsims:
                 try:
                     mean = base.get_mean_std(  # shape (2, N, M, G) -> M
-                        onesite, rup, dctx, self.imts, [gsim])[0, 0, :, 0]
+                        sitecol1, rup, dctx, self.imts, [gsim])[0, 0, :, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())
@@ -396,33 +401,28 @@ class PmapMaker(object):
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
 
-    def _ctxs(self, rups, sites, grp_ids):
-        if self.fewsites:  # do not filter, but collapse
-            rup_parametric = not numpy.isnan(
-                [r.occurrence_rate for r in rups]).any()
-            if (self.rup_indep and rup_parametric and len(sites.complete) == 1
-                    and self.pointsource_distance != {}):
-                rups = self.collapse_point_ruptures(rups, sites)
-                # print_finite_size(rups)
-            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-            if self.rup_indep and rup_parametric and self.collapse_ctxs:
-                ctxs = self.collapse_the_ctxs(ctxs)
-            self.numrups += len(ctxs)
-            if ctxs:
-                self.rupdata.add(ctxs, sites, grp_ids)
-            for rup, dctx in ctxs:
-                mask = (dctx.rrup <= self.maximum_distance(
-                    rup.tectonic_region_type, rup.mag))
-                r_sites = sites.filter(mask)
-                for name in self.REQUIRES_DISTANCES:
-                    setattr(dctx, name, getattr(dctx, name)[mask])
-                self.numsites += len(r_sites)
-                yield rup, r_sites, dctx
-        else:  # many sites, do not collapse, but filter
-            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=True)
-            self.numrups += len(ctxs)
-            self.numsites += sum(len(ctx[1]) for ctx in ctxs)
-            yield from ctxs
+    def _gen_ctxs(self, rups, sites, grp_ids):
+        # generate triples (rup, sites, dctx)
+        rup_parametric = not numpy.isnan(
+            [r.occurrence_rate for r in rups]).any()
+        if (self.rup_indep and rup_parametric and len(sites.complete) == 1
+                and self.pointsource_distance != {}):
+            rups = self.collapse_point_ruptures(rups, sites)
+            # print_finite_size(rups)
+        ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
+        if self.rup_indep and rup_parametric and self.collapse_ctxs:
+            ctxs = self.collapse_the_ctxs(ctxs)
+        self.numrups += len(ctxs)
+        if ctxs:
+            self.rupdata.add(ctxs, sites, grp_ids)
+        for rup, dctx in ctxs:
+            mask = (dctx.rrup <= self.maximum_distance(
+                rup.tectonic_region_type, rup.mag))
+            r_sites = sites.filter(mask)
+            for name in self.REQUIRES_DISTANCES:
+                setattr(dctx, name, getattr(dctx, name)[mask])
+            self.numsites += len(r_sites)
+            yield rup, r_sites, dctx
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
@@ -468,16 +468,23 @@ class PmapMaker(object):
             grp_ids = numpy.array(srcs[0].grp_ids)
             self.numrups = 0
             self.numsites = 0
-            ctxs = []
-            rups = self._get_rups(srcs, sites)
-            # print_finite_size(rups)
-            with self.ctx_mon:
-                if self.fewsites:
-                    ctxs.extend(self._ctxs(rups, sites, grp_ids))
-                else:  # many sites
-                    for rup in rups:
-                        ctxs.extend(self._ctxs([rup], rup.sites, grp_ids))
-            self._update_pmap(ctxs)
+            if self.fewsites:
+                # we can afford using a lot of memory to store the ruptures
+                rups = self._get_rups(srcs, sites)
+                # print_finite_size(rups)
+                with self.ctx_mon:
+                    ctxs = list(self._gen_ctxs(rups, sites, grp_ids))
+                self._update_pmap(ctxs)
+            else:
+                # many sites: keep in memory less ruptures
+                for src in srcs:
+                    for rup in self._get_rups([src], sites):
+                        with self.ctx_mon:
+                            ctxs = self.cmaker.make_ctxs(
+                                [rup], rup.sites, grp_ids, filt=True)
+                        self.numrups += len(ctxs)
+                        self.numsites += sum(len(ctx[1]) for ctx in ctxs)
+                        self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
@@ -493,7 +500,10 @@ class PmapMaker(object):
             with self.ctx_mon:
                 L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
                 pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
-                ctxs = list(self._ctxs(rups, sites, numpy.array(src.grp_ids)))
+                ctxs = self.cmaker.make_ctxs(
+                    rups, sites, numpy.array(src.grp_ids), filt=True)
+                self.numrups += len(ctxs)
+                self.numsites += sum(len(ctx[1]) for ctx in ctxs)
             self._update_pmap(ctxs, pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
@@ -540,8 +550,7 @@ class PmapMaker(object):
                 rup.dist = get_distances(rup, sites, 'rrup').min()
                 if rup.dist <= mdist:
                     coll.append(rup)
-            for rs in groupby_bin(
-                    coll, self.point_rupture_bins, operator.attrgetter('dist')):
+            for rs in groupby_bin(coll, self.point_rupture_bins, bydist):
                 # group together ruptures in the same distance bin
                 output.extend(_collapse(rs))
         return output
@@ -818,11 +827,13 @@ class Effect(object):
         return dst
 
 
-# used in calculators/classical.py
-def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
-                      monitor):
+def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     """
-    :param mag: an ordered list of magnitude strings with format %.2f
+    :param mags: an ordered list of magnitude strings with format %.2f
+    :param sitecol1: a SiteCollection with a single site
+    :param gsims_by_trt: a dictionary trt -> gsims
+    :param maximum_distance: an IntegrationDistance object
+    :param imtls: a DictArray with intensity measure types and levels
     :returns: a dict magnitude-string -> array(#dists, #trts)
     """
     trts = list(gsims_by_trt)
@@ -833,11 +844,64 @@ def get_effect_by_mag(mags, onesite, gsims_by_trt, maximum_distance, imtls,
         dist_bins = maximum_distance.get_dist_bins(trt, ndists)
         cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
         gmv[:, :, t] = cmaker.max_intensity(
-            onesite, [float(mag) for mag in mags], dist_bins)
+            sitecol1, [float(mag) for mag in mags], dist_bins)
     return dict(zip(mags, gmv))
 
 
 # used in calculators/classical.py
+def get_effect(mags, sitecol1, gsims_by_trt, oq):
+    """
+    :params mags:
+       a dictionary trt -> magnitudes
+    :param sitecol1:
+       a SiteCollection with a single site
+    :param gsims_by_trt:
+       a dictionary trt -> gsims
+    :param oq:
+       an object with attributes imtls, minimum_intensity,
+       maximum_distance and pointsource_distance
+    :returns:
+       an ArrayWrapper trt -> effect_by_mag_dst and a nested dictionary
+       trt -> mag -> dist with the effective pointsource_distance
+
+    Updates oq.maximum_distance.magdist
+    """
+    dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
+                 for trt in gsims_by_trt}
+    aw = hdf5.ArrayWrapper((), dist_bins)
+    # computing the effect make sense only if all IMTs have the same
+    # unity of measure; for simplicity we will consider only PGA and SA
+    psd = (oq.pointsource_distance.interp(mags)
+           if oq.pointsource_distance is not None else {})
+    if psd:
+        logging.info('Computing effect of the ruptures')
+        allmags = set()
+        for trt in mags:
+            allmags.update(mags[trt])
+        eff_by_mag = parallel.Starmap.apply(
+            get_effect_by_mag, (sorted(allmags), sitecol1, gsims_by_trt,
+                                oq.maximum_distance, oq.imtls)
+        ).reduce()
+        vars(aw).update(eff_by_mag)
+        effect = {
+            trt: Effect({mag: eff_by_mag[mag][:, t]
+                         for mag in mags[trt]}, dist_bins[trt])
+            for t, trt in enumerate(mags)}
+        minint = oq.minimum_intensity.get('default', 0)
+        for trt, eff in effect.items():
+            if minint:
+                oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
+            # build a dict trt -> mag -> dst
+            if psd and set(psd[trt].values()) == {-1}:
+                maxdist = oq.maximum_distance[trt]
+                psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
+        dic = {trt: [(float(mag), int(dst)) for mag, dst in psd[trt].items()]
+               for trt in psd if trt != 'default'}
+        logging.info('Using pointsource_distance=\n%s', pprint.pformat(dic))
+    return aw, psd
+
+
+# not used right now
 def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     """
     :returns: a dictionary trt -> mag string -> counts by distance

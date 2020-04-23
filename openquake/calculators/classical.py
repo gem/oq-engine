@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
     AccumDict, block_splitter, groupby, humansize)
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -118,11 +118,14 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     with monitor("splitting/filtering sources"):
         splits, _stime = split_sources(srcs)
     totrups = 0
+    maxradius = 0
     for src in splits:
         t0 = time.time()
         totrups += src.num_ruptures
         if srcfilter.get_close_sites(src) is None:
             continue
+        if hasattr(src, 'radius'):  # for point sources
+            maxradius = max(maxradius, src.radius)
         dt = time.time() - t0
         calc_times[src.source_id] += F32(
             [src.num_ruptures, src.nsites, dt])
@@ -130,7 +133,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
                 extra=dict(task_no=monitor.task_no, totrups=totrups,
-                           trt=src.tectonic_region_type))
+                           trt=src.tectonic_region_type, maxradius=maxradius))
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -161,6 +164,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dic['extra']['source_id'], grp_id)
                 self.datastore[name] = pmap
         trt = dic['extra'].pop('trt')
+        self.maxradius = max(self.maxradius, dic['extra'].pop('maxradius'))
         with self.monitor('aggregate curves'):
             extra = dic['extra']
             self.totrups += extra['totrups']
@@ -242,6 +246,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.rparams = {}
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
+        self.maxradius = 0
         self.gidx = {tuple(grp_ids): i
                      for i, grp_ids in enumerate(self.datastore['grp_ids'])}
 
@@ -270,18 +275,32 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
-        mags = self.datastore['source_mags'][()]
+        mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
-        if 'source_mags' in self.datastore and oq.imtls:
-            mags = self.datastore['source_mags'][()]
-            aw = calc.get_effect(mags, self.sitecol, gsims_by_trt, oq)
-            if hasattr(aw, 'array'):
-                self.datastore['effect_by_mag_dst_trt'] = aw
-        smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores)
+        if oq.pointsource_distance is not None:
+            for trt in gsims_by_trt:
+                oq.pointsource_distance[trt] = getdefault(
+                    oq.pointsource_distance, trt)
+        mags_by_trt = {}
+        for trt in mags:
+            mags_by_trt[trt] = mags[trt][()]
+        imts_with_period = [imt for imt in oq.imtls
+                            if imt == 'PGA' or imt.startswith('SA')]
+        imts_ok = len(imts_with_period) == len(oq.imtls)
+        if (imts_ok and oq.pointsource_distance and
+                oq.pointsource_distance.has_star()) or (
+                    imts_ok and oq.minimum_intensity):
+            aw, self.psd = get_effect(
+                mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
+            self.datastore['effect_by_mag_dst_trt'] = aw
+        elif oq.pointsource_distance:
+            self.psd = oq.pointsource_distance.interp(mags_by_trt)
+        else:
+            self.psd = {}
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
+                                num_cores=oq.num_cores)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
@@ -315,6 +334,12 @@ class ClassicalCalculator(base.HazardCalculator):
             int(self.numrups), self.totrups))
         logging.info('Effective number of sites per rupture: %d',
                      numsites / self.numrups)
+        if self.psd:
+            psdist = max(max(self.psd[trt].values()) for trt in self.psd)
+            if psdist != -1 and self.maxradius >= psdist / 2:
+                logging.warning('The pointsource_distance of %d km is too '
+                                'small compared to a maxradius of %d km',
+                                psdist, self.maxradius)
         self.calc_times.clear()  # save a bit of memory
         return acc
 
@@ -334,27 +359,29 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
-        max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
+        if oq.calculation_mode == 'preclassical':
+            f1 = f2 = preclassical
+            C *= 50  # use more tasks because there will be slow tasks
+        elif oq.disagg_by_src or oq.is_ucerf() or oq.split_sources is False:
+            # do not split the sources
+            C *= 5  # use more tasks, especially in UCERF
+            f1, f2 = classical, classical
+        else:
+            f1, f2 = classical, classical_split_filter
+        min_weight = oq.min_weight * (10 if self.few_sites else 1)
+        max_weight = max(min(totweight / C, oq.max_weight), min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             maximum_distance=oq.maximum_distance,
-            pointsource_distance=oq.pointsource_distance,
+            pointsource_distance=self.psd,
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_ctxs=oq.collapse_ctxs,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
-        if oq.calculation_mode == 'preclassical':
-            f1 = f2 = preclassical
-            C *= 50  # use more tasks because there will be slow tasks
-        elif oq.disagg_by_src or oq.is_ucerf():  # do not split the sources
-            C *= 5  # use more tasks, especially in UCERF
-            f1, f2 = classical, classical
-        else:
-            f1, f2 = classical, classical_split_filter
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
             param['rescale_weight'] = len(gsims)
@@ -383,11 +410,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 md = oq.maximum_distance(sg.trt)
             logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.
                          format(md, len(gsims), int(w), nb))
-            if oq.pointsource_distance['default']:
-                psd = getdefault(oq.pointsource_distance, sg.trt)
-                it = sorted(psd.items())
-                msg = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                logging.info('pointsource_distance=%s', msg)
 
     def save_hazard(self, acc, pmap_by_kind):
         """

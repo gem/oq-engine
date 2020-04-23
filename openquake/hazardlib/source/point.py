@@ -152,7 +152,8 @@ class PointSource(ParametricSeismicSource):
             rup_width = rup_width * math.cos(math.radians(np.dip))
             # the projection radius is half of the rupture diagonal
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
-        return max(radius)
+        self.radius = max(radius)
+        return self.radius
 
     def iter_ruptures(self, **kwargs):
         """

@@ -33,7 +33,7 @@ import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates)
+    random_filter, countby, group_array, get_duplicates, AccumDict)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -655,12 +655,12 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
     if oqparam.is_event_based():
         csm.init_serials(oqparam.ses_seed)
     data = {}  # src_id -> row
-    mags = set()
+    mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
     ns = 0
     for sg in csm.src_groups:
         if hasattr(sg, 'mags'):  # UCERF
-            mags.update('%.2f' % mag for mag in sg.mags)
+            mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
             ns += 1
             if src.source_id in data:
@@ -678,13 +678,14 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
             else:
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
-            mags.update(srcmags)
+            mags[sg.trt].update(srcmags)
 
     logging.info('There are %d sources with %d unique IDs', ns, len(data))
     if h5:
         hdf5.create(h5, 'source_info', source_info_dt)  # avoid hdf5 damned bug
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['source_mags'] = numpy.array(sorted(mags))
+        for trt in mags:
+            h5['source_mags/' + trt] = numpy.array(sorted(mags[trt]))
         h5['grp_ids'] = grp_ids
     csm.gsim_lt.check_imts(oqparam.imtls)
     csm.source_info = data
@@ -807,8 +808,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         sitecol, assets_by, discarded = geo.utils.assoc(
-            exposure.assets_by_site, haz_sitecol,
-            haz_distance, 'filter', exposure.asset_refs)
+            exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):

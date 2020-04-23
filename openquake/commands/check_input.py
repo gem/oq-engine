@@ -29,6 +29,8 @@ from openquake.risklib import read_nrml  # this is necessary
 
 @sap.script
 def check_input(job_ini_or_zip_or_nrmls):
+    if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+        os.environ['OQ_DISTRIBUTE'] = 'processpool'
     for job_ini_or_zip_or_nrml in job_ini_or_zip_or_nrmls:
         if job_ini_or_zip_or_nrml.endswith('.xml'):
             try:

@@ -17,9 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Implements SERA site amplification models classes `PitilakisEtAl2018`,
-`Eurocode8Amplification`, `Eurocode8AmplificationDefault`,
-`SandikkayaDinsever2018`
+Implements SERA site amplification models class: `PitilakisEtAl2018`,
+                                                 `PitilakisEtAl2020`,
+                                                 `Eurocode8Amplification`,
+                                                 `Eurocode8AmplificationDefault`,
+                                                 `SandikkayaDinsever2018`
 """
 import numpy as np
 import copy
@@ -28,35 +30,6 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import (GMPE, CoeffsTable, registry)
 from openquake.hazardlib.imt import PGA, SA, from_string
 from openquake.hazardlib import const
-
-
-imls = [0., 0.25, 0.5, 0.75, 1., 1.25]
-
-
-# Short period amplification factors defined by Pitilakis et al., (2018)
-FS = {
-    "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-    "B1": [1.3, 1.3, 1.2, 1.2, 1.2, 1.2],
-    "B2": [1.4, 1.3, 1.3, 1.2, 1.1, 1.1],
-    "C1": [1.7, 1.6, 1.4, 1.3, 1.3, 1.2],
-    "C2": [1.6, 1.5, 1.3, 1.2, 1.1, 1.0],
-    "C3": [1.8, 1.6, 1.4, 1.2, 1.1, 1.0],
-    "D":  [2.2, 1.9, 1.6, 1.4, 1.2, 1.0],
-    "E":  [1.7, 1.6, 1.6, 1.5, 1.5, 1.5]
-}
-
-
-# Long period amplification factors defined by Pitilakis et al., (2018)
-F1 = {
-    "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-    "B1": [1.4, 1.4, 1.4, 1.4, 1.3, 1.3],
-    "B2": [1.6, 1.5, 1.5, 1.5, 1.4, 1.3],
-    "C1": [1.7, 1.6, 1.5, 1.5, 1.4, 1.3],
-    "C2": [2.1, 2.0, 1.9, 1.8, 1.8, 1.7],
-    "C3": [3.2, 3.0, 2.7, 2.5, 2.4, 2.3],
-    "D":  [4.1, 3.8, 3.3, 3.0, 2.8, 2.7],
-    "E":  [1.3, 1.3, 1.2, 1.2, 1.2, 1.2]
-}
 
 
 # Pitilakis GMPE Wrapper
@@ -190,21 +163,21 @@ class PitilakisEtAl2018(GMPE):
                 f_ls = np.ones(np.sum(idx))
                 lb = s_ss < 0.25
                 ub = s_ss > 1.25
-                f_ss[lb] = FS[ec8][0]
-                f_ls[lb] = F1[ec8][0]
-                f_ss[ub] = FS[ec8][-1]
-                f_ls[ub] = F1[ec8][-1]
-                for j in range(1, len(imls) - 1):
-                    jdx = np.logical_and(s_ss >= imls[j],
-                                         s_ss < imls[j + 1])
+                f_ss[lb] = self.FS[ec8][0]
+                f_ls[lb] = self.F1[ec8][0]
+                f_ss[ub] = self.FS[ec8][-1]
+                f_ls[ub] = self.F1[ec8][-1]
+                for j in range(1, len(self.IMLS) - 1):
+                    jdx = np.logical_and(s_ss >= self.IMLS[j],
+                                         s_ss < self.IMLS[j + 1])
                     if not np.any(jdx):
                         continue
-                    dfs = FS[ec8][j + 1] - FS[ec8][j]
-                    dfl = F1[ec8][j + 1] - F1[ec8][j]
-                    diml = imls[j + 1] - imls[j]
-                    f_ss[jdx] = FS[ec8][j] + (s_ss[jdx] - imls[j]) *\
+                    dfs = self.FS[ec8][j + 1] - self.FS[ec8][j]
+                    dfl = self.F1[ec8][j + 1] - self.F1[ec8][j]
+                    diml = self.IMLS[j + 1] - self.IMLS[j]
+                    f_ss[jdx] = self.FS[ec8][j] + (s_ss[jdx] - self.IMLS[j]) *\
                         (dfs / diml)
-                    f_ls[jdx] = F1[ec8][j] + (s_ss[jdx] - imls[j]) * \
+                    f_ls[jdx] = self.F1[ec8][j] + (s_ss[jdx] - self.IMLS[j]) *\
                         (dfl / diml)
                 f_s[idx] = f_ss
                 f_l[idx] = f_ls
@@ -245,8 +218,67 @@ class PitilakisEtAl2018(GMPE):
     CONSTANTS = {
         "F0": 2.5,
         "kappa": 5.0,
-        "TA": 0.03,
-    }
+        "TA": 0.03}
+
+    IMLS = [0., 0.25, 0.5, 0.75, 1., 1.25]
+
+    # Short period amplification factors defined by Pitilakis et al., (2018)
+    FS = {
+        "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "B1": [1.3, 1.3, 1.2, 1.2, 1.2, 1.2],
+        "B2": [1.4, 1.3, 1.3, 1.2, 1.1, 1.1],
+        "C1": [1.7, 1.6, 1.4, 1.3, 1.3, 1.2],
+        "C2": [1.6, 1.5, 1.3, 1.2, 1.1, 1.0],
+        "C3": [1.8, 1.6, 1.4, 1.2, 1.1, 1.0],
+        "D":  [2.2, 1.9, 1.6, 1.4, 1.2, 1.0],
+        "E":  [1.7, 1.6, 1.6, 1.5, 1.5, 1.5]}
+
+    # Long period amplification factors defined by Pitilakis et al., (2018)
+    F1 = {
+        "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "B1": [1.4, 1.4, 1.4, 1.4, 1.3, 1.3],
+        "B2": [1.6, 1.5, 1.5, 1.5, 1.4, 1.3],
+        "C1": [1.7, 1.6, 1.5, 1.5, 1.4, 1.3],
+        "C2": [2.1, 2.0, 1.9, 1.8, 1.8, 1.7],
+        "C3": [3.2, 3.0, 2.7, 2.5, 2.4, 2.3],
+        "D":  [4.1, 3.8, 3.3, 3.0, 2.8, 2.7],
+        "E":  [1.3, 1.3, 1.2, 1.2, 1.2, 1.2]}
+
+
+class PitilakisEtAl2020(PitilakisEtAl2018):
+    """
+    Adaptation of the Pitilakis et al. (2018) amplification model adopting
+    the revised FS and F1 factors proposed by Pitilakis et al., (2020)
+
+    Pitilakis, K., Riga, E. and Anastasiadis, A. (2020), Towards the Revision
+    of EC8: Proposal for an Alternative Site Classification Scheme and
+    Associated Intensity-Dependent Amplification Factors. In the Proceedings
+    of the 17th World Conference on Earthquake Engineering, 17WCEE, Sendai,
+    Japan, September 13th to 18th 2020. Paper No. C002895.
+    """
+    experimental = True
+
+    # Short period amplification factors defined by Pitilakis et al., (2020)
+    FS = {
+        "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "B1": [1.3, 1.3, 1.3, 1.2, 1.2, 1.2],
+        "B2": [1.3, 1.3, 1.2, 1.2, 1.2, 1.1],
+        "C1": [1.7, 1.7, 1.6, 1.5, 1.5, 1.4],
+        "C2": [1.6, 1.5, 1.3, 1.2, 1.1, 1.0],
+        "C3": [1.7, 1.6, 1.4, 1.2, 1.2, 1.1],
+        "D":  [1.8, 1.7, 1.5, 1.4, 1.3, 1.2],
+        "E":  [1.7, 1.6, 1.6, 1.5, 1.5, 1.4]}
+
+    # Long period amplification factors defined by Pitilakis et al., (2020)
+    F1 = {
+        "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "B1": [1.1, 1.1, 1.1, 1.1, 1.1, 1.1],
+        "B2": [1.4, 1.4, 1.3, 1.3, 1.3, 1.3],
+        "C1": [1.5, 1.5, 1.4, 1.4, 1.4, 1.4],
+        "C2": [2.3, 2.2, 2.0, 1.9, 1.9, 1.8],
+        "C3": [2.4, 2.3, 2.1, 2.0, 2.0, 1.9],
+        "D":  [4.0, 3.5, 3.0, 2.7, 2.4, 2.3],
+        "E":  [1.2, 1.1, 1.1, 1.1, 1.1, 1.1]}
 
 
 class Eurocode8Amplification(PitilakisEtAl2018):

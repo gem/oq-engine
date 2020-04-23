@@ -254,7 +254,7 @@ def _compact(array):
     return array.view(numpy.dtype(lst)).reshape(a)
 
 
-# this is used by classical_risk
+# this is used by classical_risk and event_based_risk
 @export.add(('loss_curves-rlzs', 'csv'), ('loss_curves-stats', 'csv'),
             ('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
@@ -345,6 +345,7 @@ def modal_damage_array(data, damage_dt):
 def export_dmg_by_asset_csv(ekey, dstore):
     E = len(dstore['events'])
     oq = dstore['oqparam']
+    dmg_dt = build_damage_dt(dstore, mean_std=False)
     damage_dt = build_damage_dt(dstore, mean_std=E > 1)
     rlzs = dstore['full_lt'].get_realizations()
     data = dstore[ekey[0]]
@@ -352,7 +353,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
     assets = get_assets(dstore)
     for rlz in rlzs:
         if oq.modal_damage_state:
-            dmg_by_asset = modal_damage_array(data[:, rlz.ordinal], damage_dt)
+            dmg_by_asset = modal_damage_array(data[:, rlz.ordinal], dmg_dt)
         else:
             dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
@@ -531,7 +532,7 @@ def export_asset_risk_csv(ekey, dstore):
     lossnames = sorted(name for name in arr.dtype.names if 'loss' in name)
     expnames = [name for name in arr.dtype.names if name not in md.tagnames
                 and 'loss' not in name and name not in 'lon lat']
-    colnames = ['id'] + tagnames + ['lon', 'lat'] + expnames + lossnames
+    colnames = tagnames + ['lon', 'lat'] + expnames + lossnames
     # sanity check
     assert len(colnames) == len(arr.dtype.names)
     for rec in arr:
@@ -543,8 +544,7 @@ def export_asset_risk_csv(ekey, dstore):
             except KeyError:
                 row.append(value)
         rows.append(row)
-    writer.save(rows, fname, colnames,
-                renamedict=dict(id='asset_id'))
+    writer.save(rows, fname, colnames)
     return [fname]
 
 

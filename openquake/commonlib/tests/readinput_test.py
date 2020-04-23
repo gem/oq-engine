@@ -29,7 +29,8 @@ from openquake.risklib.riskmodels import ValidationError
 from openquake.commonlib import readinput, logictree
 from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
-from openquake.qa_tests_data.event_based_risk import case_caracas
+from openquake.qa_tests_data.event_based_risk import (
+    case_2 as ebr2, case_caracas)
 
 
 TMP = tempfile.gettempdir()
@@ -439,6 +440,27 @@ Missing: {'lon'}''', str(ctx.exception))
             asset.Exposure.read([fname])
         self.assertIn('''\
 Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
+
+    def test_GEM4ALL(self):
+        # test a call used in the GEM4ALL importer, pure XML
+        fname = os.path.join(os.path.dirname(case_caracas.__file__),
+                             'exposure_caracas.xml')
+        a0, a1 = asset.Exposure.read([fname]).assets
+        self.assertEqual(a0.tags, {'taxonomy': 'MUR+ADO_H1'})
+        self.assertEqual(a1.tags, {'taxonomy': 'S1M_MC'})
+
+        # test a call used in the GEM4ALL importer, XML + CSV
+        fname = os.path.join(os.path.dirname(ebr2.__file__),
+                             'exposure.xml')
+        for ass in asset.Exposure.read([fname]).assets:
+            # make sure all the attributes exist
+            ass.asset_id
+            ass.tags['taxonomy']
+            ass.number
+            ass.area
+            ass.location[0]
+            ass.location[1]
+            ass.tags.get('geometry')
 
 
 class GetCompositeSourceModelTestCase(unittest.TestCase):

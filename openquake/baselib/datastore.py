@@ -140,7 +140,7 @@ def read(calc_id, mode='r', datadir=None):
 def dset2df(dset, index):
     """
     Converts an HDF5 dataset with an attribute shape_descr into a Pandas
-    dataframe.
+    dataframe. NB: this is very slow for large datasets.
     """
     shape_descr = [v.decode('utf-8') for v in dset.attrs['shape_descr']]
     out = []
@@ -157,9 +157,8 @@ def dset2df(dset, index):
         tags.append(values)
         idxs.append(range(len(values)))
     dtlist.append(('value', dset.dtype))
-    for idx, values in zip(itertools.product(*idxs),
-                           itertools.product(*tags)):
-        out.append(values + (dset[idx],))
+    for idx, vals in zip(itertools.product(*idxs), itertools.product(*tags)):
+        out.append(vals + (dset[idx],))
     return pandas.DataFrame.from_records(numpy.array(out, dtlist), index)
 
 

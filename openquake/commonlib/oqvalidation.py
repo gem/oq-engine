@@ -166,7 +166,7 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, 1)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.floatdict, {'default': {}})
+    pointsource_distance = valid.Param(valid.MagDist.new, None)
     point_rupture_bins = valid.Param(valid.positiveint, 20)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -190,6 +190,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
     ruptures_per_block = valid.Param(valid.positiveint, 500)  # for UCERF
+    save_disk_space = valid.Param(valid.boolean, False)
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -204,9 +205,10 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
+    split_sources = valid.Param(valid.boolean, True)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 1E8)  # used in ebrisk
-    min_weight = valid.Param(valid.positiveint, 500)  # used in classical
-    max_weight = valid.Param(valid.positiveint, 500_000)  # used in classical
+    min_weight = valid.Param(valid.positiveint, 3000)  # used in classical
+    max_weight = valid.Param(valid.positiveint, 300_000)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
@@ -759,10 +761,7 @@ class OqParam(valid.ParamSet):
                           'not in %s' % (unknown, gsim_lt))
             return False
         for trt, val in self.maximum_distance.items():
-            if val <= 0:
-                self.error = '%s=%r < 0' % (trt, val)
-                return False
-            elif trt not in self._gsims_by_trt and trt != 'default':
+            if trt not in self._gsims_by_trt and trt != 'default':
                 self.error = 'tectonic region %r not in %s' % (trt, gsim_lt)
                 return False
         if 'default' not in trts and trts < set(self._gsims_by_trt):
