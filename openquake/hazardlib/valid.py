@@ -943,7 +943,11 @@ class MagDist(dict):
         dic = {}
         for trt, mags in mags_by_trt.items():
             xs, ys = zip(*self[trt])
-            dists = numpy.interp(numpy.float64(mags), xs, ys)
+            if len(mags) == 1:
+                ms = [numpy.float64(mags)]
+            else:
+                ms = numpy.float64(mags)
+            dists = numpy.interp(ms, xs, ys)
             dic[trt] = dict(zip(mags, dists))
         return dic
 
