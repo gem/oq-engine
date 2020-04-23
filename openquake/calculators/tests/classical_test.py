@@ -578,3 +578,18 @@ hazard_uhs-std.csv
         tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/approx_dists.txt', tmp)
+        # this test shows in detail what happens to the distances in presence
+        # of a magnitude-dependent pointsource_distance: just look at the
+        # files expected/exact_dists.txt and expected/approx_dists.txt
+        # the exact distances for the first site are 54, 53, 53, ... 38, 32 km
+        # they decrease with the magnitude, since big magnitude -> big size ->
+        # smaller distance from the site
+        # when the pointsource_distance is on the approximated distances are
+        # 55, 55, 55, ..., 38, 32 km: the difference is in the first three
+        # values, corresponding to the small magnitudes. The reason is that
+        # for small magnitudes the planar ruptures are replaced by points
+        # and thus the distances become larger (and magnitude-independent)
+        # notice that the maximum_distance here is 110 km and the second site
+        # was chosen very carefully, so that the exact distance for the highest
+        # magnitude is 109 km (within) while the approx distance is 111 km
+        # (outside): still the rupture is not discarded: it must not be!
