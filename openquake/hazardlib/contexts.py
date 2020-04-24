@@ -403,14 +403,14 @@ class PmapMaker(object):
 
     def _gen_ctxs(self, rups, sites, grp_ids):
         # generate triples (rup, sites, dctx)
-        rup_parametric = not numpy.isnan(
-            [r.occurrence_rate for r in rups]).any()
-        if (self.rup_indep and rup_parametric and len(sites.complete) == 1
-                and self.pointsource_distance != {}):
+        rup_param = not numpy.isnan([r.occurrence_rate for r in rups]).any()
+        collapse_ctxs = self.rup_indep and rup_param and self.collapse_ctxs
+        if (collapse_ctxs and len(sites.complete) == 1 and
+                self.pointsource_distance != {}):
             rups = self.collapse_point_ruptures(rups, sites)
             # print_finite_size(rups)
         ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-        if self.rup_indep and rup_parametric and self.collapse_ctxs:
+        if collapse_ctxs:
             ctxs = self.collapse_the_ctxs(ctxs)
         self.numrups += len(ctxs)
         if ctxs:
