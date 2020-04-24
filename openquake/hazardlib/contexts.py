@@ -154,7 +154,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.collapse_ctxs = param.get('collapse_ctxs', False)
+        self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
         self.gsims = gsims
@@ -404,13 +404,13 @@ class PmapMaker(object):
     def _gen_ctxs(self, rups, sites, grp_ids):
         # generate triples (rup, sites, dctx)
         rup_param = not numpy.isnan([r.occurrence_rate for r in rups]).any()
-        collapse_ctxs = self.rup_indep and rup_param and self.collapse_ctxs
-        if (collapse_ctxs and len(sites.complete) == 1 and
+        collapse_level = self.rup_indep and rup_param and self.collapse_level
+        if (collapse_level >0 and len(sites.complete) == 1 and
                 self.pointsource_distance != {}):
             rups = self.collapse_point_ruptures(rups, sites)
             # print_finite_size(rups)
         ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-        if collapse_ctxs:
+        if collapse_level > 1:
             ctxs = self.collapse_the_ctxs(ctxs)
         self.numrups += len(ctxs)
         if ctxs:
