@@ -205,7 +205,7 @@ Starting from engine 3.9 there is a new feature in the source model
 logic tree: the ability to define new branches by adding sources
 to a base model. An example will explain it all:
 
-.. code-block: xml
+.. code-block:: xml
 
   <?xml version="1.0" encoding="UTF-8"?>
   <nrml xmlns:gml="http://www.opengis.net/gml"
