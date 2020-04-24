@@ -96,6 +96,7 @@ export_dir = %s
                 'complex_fault_mesh_spacing': 5.0,
                 'truncation_level': 3.0,
                 'random_seed': 5,
+                'collapse_level': 0,
                 'maximum_distance': {'default': 1.0},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},

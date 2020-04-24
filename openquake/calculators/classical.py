@@ -379,7 +379,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=self.psd,
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
-            collapse_ctxs=oq.collapse_ctxs,
+            collapse_level=oq.collapse_level,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         for sg in src_groups:
