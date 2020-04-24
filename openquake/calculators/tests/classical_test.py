@@ -351,7 +351,7 @@ hazard_uhs-std.csv
         # another way to look at the duplicated sources; protects against
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
-        dic = dict(df['num_sources'])
+        dic = dict(df['multiplicity'])
         self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
 
     def test_case_21(self):

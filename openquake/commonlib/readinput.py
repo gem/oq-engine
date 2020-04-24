@@ -63,7 +63,7 @@ source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('gidx', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
-    ('num_sources', numpy.uint32),     # 3
+    ('multiplicity', numpy.uint32),     # 3
     ('calc_time', numpy.float32),      # 4
     ('num_sites', numpy.uint32),       # 5
     ('eff_ruptures', numpy.uint32),    # 6
