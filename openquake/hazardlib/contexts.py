@@ -405,7 +405,7 @@ class PmapMaker(object):
         # generate triples (rup, sites, dctx)
         rup_param = not numpy.isnan([r.occurrence_rate for r in rups]).any()
         collapse_level = self.rup_indep and rup_param and self.collapse_level
-        if (collapse_level >0 and len(sites.complete) == 1 and
+        if (collapse_level and len(sites.complete) == 1 and
                 self.pointsource_distance != {}):
             rups = self.collapse_point_ruptures(rups, sites)
             # print_finite_size(rups)
