@@ -798,11 +798,15 @@ class Effect(object):
 
     def collapse_value(self, collapse_dist):
         """
-        :returns: intensity at the maximum magnitude and collapse distance
+        :returns: intensity at collapse distance
         """
-        effectmax = self.effect_by_mag[max(self.effect_by_mag)]
+        # get the maximum magnitude with a cutoff at 7
+        for mag in self.effect_by_mag:
+            if mag > '7.00':
+                break
+        effect = self.effect_by_mag[mag]
         idx = numpy.searchsorted(self.dists, collapse_dist)
-        return effectmax[idx-1 if idx == self.nbins else idx]
+        return effect[idx-1 if idx == self.nbins else idx]
 
     def __call__(self, mag, dist):
         di = numpy.searchsorted(self.dists, dist)
@@ -811,8 +815,8 @@ class Effect(object):
         eff = self.effect_by_mag['%.2f' % mag][di]
         return eff
 
-    # this is useful to compute the collapse_distance and minimum_distance
-    def dist_by_mag(self, intensity=0):
+    # this is used to compute the magnitude-dependent pointsource_distance
+    def dist_by_mag(self, intensity):
         """
         :returns: a dict magstring -> distance
         """
