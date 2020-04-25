@@ -25,6 +25,8 @@ from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.commonlib import readinput, logictree, calc
 from openquake.calculators import base, getters
 
+U16 = numpy.uint16
+
 
 @base.calculators.add('scenario')
 class ScenarioCalculator(base.HazardCalculator):
@@ -61,7 +63,8 @@ class ScenarioCalculator(base.HazardCalculator):
         n_occ = numpy.array([E])
         ebr = EBRupture(self.rup, 0, 0, n_occ)
         ebr.e0 = 0
-        events = numpy.zeros(E * R, events_dt)
+        dtlist = events_dt.descr + [('ses_id', U16), ('year', U16)]
+        events = numpy.zeros(E * R, dtlist)
         for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             events[rlz * E: rlz * E + E]['id'] = eids
             events[rlz * E: rlz * E + E]['rlz_id'] = rlz
