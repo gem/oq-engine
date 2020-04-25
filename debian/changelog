@@ -6,7 +6,8 @@
   * Fixed the exporter of the loss curves per asset: due to an ordering bug
     in some cases it was exporting wrong losses
   * Added a flag save_disk_space to avoid storing the inputs
-  * Changed the logic underlying the pointsource_distance approximation
+  * Changed the logic underlying the pointsource_distance approximation and
+    added the syntax pointsource_distance=?
   * Logged a warning when the pointsource_distance is too small
 
   [Graeme Weatherill]

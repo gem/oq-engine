@@ -923,7 +923,7 @@ class MagDist(dict):
         >>> md.interp(dict(default=['5.0', '5.1', '5.2']))
         {'default': {'5.0': 50.0, '5.1': 50.0, '5.2': 50.0}}
         """
-        items_by_trt = floatdict(value.replace('*', '-1'))
+        items_by_trt = floatdict(value.replace('?', '-1'))
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):
@@ -957,7 +957,7 @@ class MagDist(dict):
         """
         return {trt: self[trt][-1][1] for trt in self}
 
-    def has_star(self):
+    def suggested(self):
         """
         :returns: True if there is a * for any TRT
         """

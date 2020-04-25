@@ -18,7 +18,7 @@ Users can define their own magnitude-dependent pointsource_distance
 approximation, or can leave the decision to the engine. Here we demonstrate
 the automagic pointsource_distance feature, enabled by the line
 
-pointsource_distance = *
+pointsource_distance = ?
 
 If you run the demo the following line will be logged:
 
@@ -63,9 +63,9 @@ starts collapsing the pointlike ruptures which are in the same
 magnitude-distance bin and that reduces the number of effective
 ruptures further. The log will print this information:
 
-Effective number of ruptures: 22_098/150_336
+Effective number of ruptures: 33_818/150_336
 
-There are nearly 7 times less ruptures thanks to the collapsing, which
+There are over 4 times less ruptures thanks to the collapsing, which
 means a large speedup.
 
 A surprising feature to the non-initiated is that the collapsing
