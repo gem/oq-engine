@@ -290,7 +290,7 @@ class ClassicalCalculator(base.HazardCalculator):
                             if imt == 'PGA' or imt.startswith('SA')]
         imts_ok = len(imts_with_period) == len(oq.imtls)
         if (imts_ok and oq.pointsource_distance and
-                oq.pointsource_distance.has_star()) or (
+                oq.pointsource_distance.suggested()) or (
                     imts_ok and oq.minimum_intensity):
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)

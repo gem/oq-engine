@@ -18,7 +18,7 @@ Users can define their own magnitude-dependent pointsource_distance
 approximation, or can leave the decision to the engine. Here we demonstrate
 the automagic pointsource_distance feature, enabled by the line
 
-pointsource_distance = *
+pointsource_distance = ?
 
 If you run the demo the following line will be logged:
 

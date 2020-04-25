@@ -574,7 +574,7 @@ hazard_uhs-std.csv
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/exact_dists.txt', tmp)
 
-        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='*')
+        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
         tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/approx_dists.txt', tmp)
