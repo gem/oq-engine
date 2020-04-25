@@ -294,7 +294,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     imts_ok and oq.minimum_intensity):
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
-            self.datastore['effect_by_mag_dst_trt'] = aw
+            self.datastore['effect_by_mag_dst'] = aw
         elif oq.pointsource_distance:
             self.psd = oq.pointsource_distance.interp(mags_by_trt)
         else:

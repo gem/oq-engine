@@ -866,9 +866,10 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
 
     Updates oq.maximum_distance.magdist
     """
+    assert list(mags) == list(gsims_by_trt), 'Missing TRTs!'
     dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                  for trt in gsims_by_trt}
-    aw = hdf5.ArrayWrapper((), dist_bins)
+    aw = hdf5.ArrayWrapper((), {})
     # computing the effect make sense only if all IMTs have the same
     # unity of measure; for simplicity we will consider only PGA and SA
     psd = (oq.pointsource_distance.interp(mags)
@@ -882,11 +883,12 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
             get_effect_by_mag, (sorted(allmags), sitecol1, gsims_by_trt,
                                 oq.maximum_distance, oq.imtls)
         ).reduce()
-        vars(aw).update(eff_by_mag)
-        effect = {
-            trt: Effect({mag: eff_by_mag[mag][:, t]
-                         for mag in mags[trt]}, dist_bins[trt])
-            for t, trt in enumerate(mags)}
+        effect = {}
+        for t, trt in enumerate(mags):
+            arr = numpy.array([eff_by_mag[mag][:, t] for mag in mags[trt]])
+            setattr(aw, trt, arr)  # shape (#mags, #dists)
+            setattr(aw, trt + '_dist_bins', dist_bins[trt])
+            effect[trt] = Effect(dict(zip(mags[trt], arr)), dist_bins[trt])
         minint = oq.minimum_intensity.get('default', 0)
         for trt, eff in effect.items():
             if minint:
