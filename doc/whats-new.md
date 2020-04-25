@@ -55,10 +55,14 @@ automatically which are the irrelevant TRTs, even without running a
 full calculation.
 
 There is a new (and much requested) feature, the ability to add sources
-to a source model as a special kind of uncertainty.  The feature is
+to a source model as a special kind of uncertainty. The feature is
 called `extendModel` and is documented here:
 
 https://github.com/gem/oq-engine/blob/engine-3.9/doc/adv-manual/special-features.rst#extendmodel
+
+A substantial amount of work made it possible collapse logic trees
+programmatically. The feature is implemented but it is not exposed to the
+final users (yet).
 
 Even if the engine does not offer any built-in way to plot logic trees, an
 example of how you can do it yourself by using the
