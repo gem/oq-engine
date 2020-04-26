@@ -191,8 +191,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     else:
         hc_id = None
     if run:
-        params = oqvalidation.OqParam.check(
-            dict(p.split('=', 1) for p in param.split(','))) if param else {}
+        params = dict(p.split('=', 1) for p in param.split(','))
+        oqvalidation.OqParam.check(params)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
