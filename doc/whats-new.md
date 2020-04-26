@@ -380,6 +380,9 @@ depended on the library basemap, which has been abandoned years ago by its
 authors and it is basically impossible to install on many platforms, including
 macOS.
 
+The usage of .yml files in the HMTK has been deprecated. In the next release
+they will be replaced with .toml files.
+
 There was a lot of activity to make the engine work with Python 3.8 and the
 latest versions of the scientific libraries. Currently the engine works
 perfectly with Python 3.6, 3.7 and 3.8; we are using 3.7 for production and
