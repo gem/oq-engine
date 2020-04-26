@@ -113,7 +113,7 @@ def get_scaling_relation_tuple(msr_dict):
 
     # Convert MSR string name to openquake.hazardlib.scalerel object
     for iloc, value in enumerate(msr_dict['Value']):
-        if value not in SCALE_REL_MAP.keys():
+        if value not in SCALE_REL_MAP:
             raise ValueError('Scaling relation %s not supported!' % value)
         msr_dict['Value'][iloc] = SCALE_REL_MAP[value]()
     return weight_list_to_tuple(msr_dict,
@@ -193,7 +193,7 @@ class FaultYmltoSource(object):
         Processes the tectonic regionalisation from the yaml file
         '''
 
-        if 'tectonic_regionalisation' in self.data.keys():
+        if 'tectonic_regionalisation' in self.data:
             tectonic_reg = TectonicRegionalisation()
             tectonic_reg.populate_regions(
                 parse_tect_region_dict_to_tuples(
