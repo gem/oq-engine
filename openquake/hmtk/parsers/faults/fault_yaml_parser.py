@@ -113,7 +113,7 @@ def get_scaling_relation_tuple(msr_dict):
 
     # Convert MSR string name to openquake.hazardlib.scalerel object
     for iloc, value in enumerate(msr_dict['Value']):
-        if not value in SCALE_REL_MAP.keys():
+        if value not in SCALE_REL_MAP.keys():
             raise ValueError('Scaling relation %s not supported!' % value)
         msr_dict['Value'][iloc] = SCALE_REL_MAP[value]()
     return weight_list_to_tuple(msr_dict,
