@@ -1,5 +1,5 @@
 This is a major release featuring several new optimizations, features and bug
-fixes. Over 300 pull requests were merged.
+fixes. Over 320 pull requests were merged.
 
 For the complete list of changes, see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.9/debian/changelog
@@ -11,12 +11,11 @@ There are a couple of important changes in engine 3.9 that *must* be signaled:
 1. there is no automatic reduction of the GMPE logic tree anymore: potentially,
    this can cause the generation of redundant outputs
 2. the `pointsource_distance` approximation now replaces planar ruptures
-   with pointlike ruptures: this can cause differences in the hazard curves
+   with pointlike ruptures: this can produce differences in the hazard curves
 
 In both cases the engine raises warnings asking the user to take
 action if problems are identified. Both changes were motivated by the request of
-making the engine less magic and giving more control to the user. They
-are fully documented here
+making the engine less magic. They are fully documented here
 
 https://github.com/gem/oq-engine/blob/engine-3.9/doc/adv-manual/effective-realizations.html
 
@@ -28,15 +27,15 @@ https://github.com/gem/oq-engine/blob/engine-3.9/doc/adv-manual/common-mistakes.
 
 Most of the work on this release went into a deep refactoring of the
 logic tree code. From the user perspective the most notable change is
-that the time needed to parse and manage the source models has been
+the time needed to parse and manage the source models, which has been
 substantially reduced. This is particularly visible in the case of the
 complex logic trees used for site specific analysis (we are talking
 about orders of magnitude speedups). For continental scale
 calculations the speedup is very sensible when running in preclassical
-mode or in single site calculations, while it is insignificant
-compared to the total runtime in the other cases.
+mode or for single site calculations, while it is insignificant
+- compared to the total runtime - in the other cases.
 
-Internally, the basic logic tree classes, as well as the code to
+The basic logic tree classes, as well as the code to
 manage the uncertainties, have been moved into hazardlib. The change
 makes it possible for a power user to introduce new custom
 uncertainties with a little Python coding, while before
@@ -47,7 +46,7 @@ contact us and we can give some guidance.
 The removal of the *automatic* reduction of the GMPE logic tree
 feature allowed substantial simplifications and made it possible to
 infer in advance the size of a calculation, thus giving early warnings
-in the case of calculations too big to run. It is still possible to
+in the case of calculations too big to run. It is possible to
 reduce the GMPE logic tree *manually*, by discarding irrelevant
 tectonic region types (a TRT is irrelevant if there are no sources for
 that TRT within the integration distance). The engine will tell you
@@ -61,16 +60,17 @@ called `extendModel` and is documented here:
 https://github.com/gem/oq-engine/blob/engine-3.9/doc/adv-manual/special-features.rst#extendmodel
 
 A substantial amount of work made it possible collapse logic trees
-programmatically. The feature is implemented but it is not exposed to the
+programmatically. The feature is implemented but not exposed to the
 final users (yet).
 
 Even if the engine does not offer any built-in way to plot logic trees, an
 example of how you can do it yourself by using the
-[ete3](http://etetoolkit.org/) library has been added.
+[ete3](http://etetoolkit.org/) library has been added in
+https://github.com/gem/oq-engine/blob/engine-3.9/utils/plot_lt
 
 # New optimizations
 
-There were *lots* of optimizations and improvements.
+There several new optimizations and improvements.
 
 The most impressive optimization is the enhancement of the point
 source collapsing mechanism for *site specific classical
@@ -117,9 +117,9 @@ before (say 10-20% faster).
 
 # New features
 
-The disaggregation calculator can compute the mean disaggregation,
-if multiple realizations are specified by the user in the job.ini. This
-is useful in order to assess the stability of the disaggregation results.
+The disaggregation calculator can now compute the mean disaggregation,
+if multiple realizations are specified by the user in the `job.ini`. This
+is useful to assess the stability of the disaggregation results.
 
 The ebrisk calculator accepts a new parameter called
 `minimum_asset_loss`: by specifying it, losses below the threshold are
@@ -127,28 +127,27 @@ discarded in the computation of the aggregate loss curves. This does
 not improve the speed of the calculation much, but saves a substantial
 amount of memory. Notice that in the calculation of
 average losses and total losses the parameter
-`minimum_asset_loss` is ignored: losses are not discarded and the
-results you get are correct. It is only the aggregate loss curves that
+`minimum_asset_loss` is ignored and losses are not discarded: the
+results are exact. It is only the aggregate loss curves that
 are approximated. The parameter is experimental and it is there for
-testing purposes; it may go away in the future.
+testing purposes.
 
 There is a new `event_based_damage` calculator which for the moment
 should be considered experimental. It is like a `scenario_damage`
-calculator working on a set of ruptures instead of a
-single rupture. It has the same features of a `scenario_damage`, including
-the ability to compute consequences given a consequence model.
-If you are interested in using it you should contact us.
+calculator working on a set of ruptures instead of a single
+rupture. It has the same features of a `scenario_damage`, including
+the ability to compute consequences given a consequence model.  If you
+are interested in using it you should contact us.
 
 In order to support the `event_based_damage` calculator, the
 `scenario_damage` calculator has been changed and now uses a different
 algorithm if the field `number` in the exposure is an integer for all
 assets. In that case the damage state distribution is an array of
-integers and not of floats as it was in the past. The
-models in the global risk mosaic use fractional numbers for the `number` field,
-so they will keep using the old algorithm, but you will get a
-warning.
+integers and not of floats as it was in the past. The models in the
+global risk mosaic use fractional numbers for the `number` field, so
+they will keep using the old algorithm, but you will get a warning.
 
-Finally, there are a couple of new experimental features:
+Finally, there was work on a couple of new experimental features:
 
 - amplification of hazard curves
 - amplification of ground motion fields
@@ -158,7 +157,7 @@ We will add information in due course.
 
 # hazardlib
 
-Graeme Weatherill extended hazardlib so that it is now possible to
+Graeme Weatherill extended hazardlib so that it is possible to
 compute gaussian mixture models in the standard deviation
 (see https://github.com/gem/oq-engine/pull/5688).
 
@@ -195,10 +194,10 @@ The header of the exported file `sigma_epsilon_XXX.csv` has changed,
 to indicate  that the values correspond to inter event sigma.
 
 `.rst` has been added to the list of default formats: this means that
-now the .rst report of a calculation can be exported directly.
+now the `.rst` report of a calculation can be exported directly.
 
 The `dmg_by_asset` exporter for `modal_damage_state=true` was buggy, causing
-a wrong header to be exported. It has been fixed.
+a stddev column to be exported incorrectly. It has been fixed.
 
 There were a few bugs in the `tot_losses` and `tot_curves` exporters in
 event based risk calculations which have been fixed (a wrong header and
@@ -224,15 +223,15 @@ We fixed an encoding issue on Windows, so that the calculation descriptions
 where incorrectly displayed on the WebUI for UTF8 characters.
 
 We fixed a memory issue in calculations using the `nrcan15_site_term`
-GMPE: unnecessary deep copies of large arrays were made.
+GMPE: unnecessary deep copies of large arrays were made and large
+calculations could fail with an out of memory error.
 
-There was a fix to the Hazard Modeller Toolkit, notably
-the `bin_width parameter` was not passed to
-`openquake.hmtk.faults.mtkActiveFaultModel.build_fault_model` (thanks
-to Avinash Singh who pointed out the issue).
+Avinash Singh pointed out that `bin_width parameter` was not passed to
+`openquake.hmtk.faults.mtkActiveFaultModel.build_fault_model` in
+the Hazard Modeller Toolkit. Graeme Weatherill fixed the issue.
 
 There was a bug when converting USGS ShakeMap files into numpy arrays, since
-the wrong formula was used. The effect on the risk is small.
+the wrong formula was used. Fortunately he effect on the risk is small.
 
 The zip exporter for the input files was incorrectly flattening the tree
 structure: it has been fixed.
@@ -254,7 +253,7 @@ We fixed a type error in the command `oq engine --run job.ini --param`.
 # New checks
 
 We added a limit on the maximum data transfer in disaggregation, to avoid
-running out of memory.
+running out of memory in large calculations.
 
 We added a limit of 1000 sources when `disagg_by_src=true`, to avoid
 disastrous performance effects.
@@ -274,26 +273,23 @@ a string field exceeds its expected size.
 
 Instead of magically inferring the levels
 from the vulnerability functions now the engine raises a clear error
-message suggesting to the user the levels to use.
-
-We lowered the limit on the maximum disagg matrix size to 1E6, to avoid
-running out of memory.
+suggesting to the user the levels to use.
 
 Case-similar field names in the exposure are now an error: for instance
 a header like `id,lon,lat,taxonomy,number,ID,structural` would be an
 error since `id` and `ID` are the same field apart from the case.
 
-There is now a clear error when instantiating `hazardlib.geo.mesh.Mesh` with
+There is a clear error when instantiating `hazardlib.geo.mesh.Mesh` with
 arrays of incorrect shape.
 
-There is now a clear error message if the enlarged bounding box of the
+There is a clear error message if the enlarged bounding box of the
 sources does not intersect the sites, which is common in case of
 mistakes like inverting longitude with latitude or using the exposure
 for the wrong country.
 
 # Warnings
 
-We raise a warning when there is a different number of levels per IMT.
+No we raise a warning when there is a different number of levels per IMT.
 This helps finding accidental inconsistencies. In the future the warning
 could be turned into an error.
 
@@ -304,9 +300,6 @@ We added a warning on classical calculations too big to be run,
 based on the product (number of sites) x (number of levels) x 
 (max number of gsims) x (max source multiplicity).
 
-We added a warning for calculations using a now obsolete
-magnitude-dependent maximum_distance.
-
 We improved the error message for duplicated sites, as well as the
 error message for duplicated nodal planes.
 
@@ -314,12 +307,12 @@ We improved the error message in case of CSV exposures with wrong headers.
 
 # oq commands
 
-`oq check_input` was enhanced to accept multiple files. Moreover it
+`oq check_input` was enhanced to accept multiple files. Moreover, it
 checks complex fault geometries and prints an error if it discovers
 issues, such as the error "get_mean_inclination_and_azimuth() requires
-next mesh row to be not shallower than the previous one". Moreover,
-when applied to exposures, warns about assets with field number
->= 65536.
+next mesh row to be not shallower than the previous one". Finally,
+when applied to exposures, `oq check_input` warns about assets with field
+number >= 65536.
 
 `oq reduce_sm` has been parallelized, so it is much faster when there
 are multiple files in the source model.
@@ -357,8 +350,7 @@ poe_id parameters).
 should be used instead of completely bypassing the server. This is useful
 when debugging the web API.
 
-`oq workerpool` immediately starts an oq-zworkerpool process. This is
-for internal usage only.
+`oq workerpool` immediately starts an oq-zworkerpool process.
 
 # Other
 
@@ -379,18 +371,18 @@ a couple of obsolete parameters.
 
 The module `openquake.hmtk.mapping` has been removed. The reason is that it
 depended on the library basemap, which has been abandoned years ago by its
-authors and it is basically impossible to install on many platforms, including
+authors and it is basically impossible to install on some platforms, notably
 macOS.
 
 The usage of .yml files in the HMTK has been deprecated. In the next release
 they will be replaced with .toml files.
 
-There was a lot of activity to make the engine work with Python 3.8 and the
-latest versions of the scientific libraries. Currently the engine works
-perfectly with Python 3.6, 3.7 and 3.8; we are using 3.7 for production and
-3.8 for testing. The Linux packages that we are distributing are still using
-Python 3.6, but in the next version of the engine we will switch to
-Python 3.8 even in the packages.
+There was a lot of activity to make the engine work with Python 3.8
+and the latest versions of the scientific libraries. Currently the
+engine works perfectly with Python 3.6, 3.7 and 3.8; internally we are
+using 3.7 for production and 3.8 for testing. The Linux packages that
+we are distributing are still using Python 3.6, but in the next
+version of the engine we will fully switch to Python 3.8.
 
-The QGIS plugin can now interact even with an engine server using a
+The QGIS plugin can now interact with an engine server using a
 version of Python with a different pickle protocol, like Python 3.8.
