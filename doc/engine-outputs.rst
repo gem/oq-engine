@@ -23,9 +23,6 @@ classical_damage:
 Event Based calculators
 -----------------------
 
-event_based_rupture:
-  ruptures, events, rup_data
-
 event_based:
   gmf_data, sigma_epsilon
   hcurves
