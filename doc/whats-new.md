@@ -249,6 +249,8 @@ The extract API for extracting ruptures was affected by an ordering bug,
 causing the QGIS plugin to display the ruptures incorrectly in same
 cases.
 
+We fixed a type error in the command `oq engine --run job.ini --param`.
+
 # New checks
 
 We added a limit on the maximum data transfer in disaggregation, to avoid
