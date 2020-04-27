@@ -30,11 +30,11 @@ Most of the work on this release went into a deep refactoring of the
 logic tree code. From the user perspective the most notable change is
 that the time needed to parse and manage the source models has been
 substantially reduced. This is particularly visible in the case of the
-complex logic trees used for power plant hazard analysis and similar
-studies (we are talking about orders of magnitude speedups). For continental
-scale calculations the speedup is very sensible when running in preclassical
-mode or in single site calculations, while it is insignificant compared
-to the total runtime in the other cases.
+complex logic trees used for site specific analysis (we are talking
+about orders of magnitude speedups). For continental scale
+calculations the speedup is very sensible when running in preclassical
+mode or in single site calculations, while it is insignificant
+compared to the total runtime in the other cases.
 
 Internally, the basic logic tree classes, as well as the code to
 manage the uncertainties, have been moved into hazardlib. The change
@@ -146,15 +146,15 @@ assets. In that case the damage state distribution is an array of
 integers and not of floats as it was in the past. The
 models in the global risk mosaic use fractional numbers for the `number` field,
 so they will keep using the old algorithm, but you will get a
-warning. The documentation is here XXX.
+warning.
 
 Finally, there are a couple of new experimental features:
 
 - amplification of hazard curves
 - amplification of ground motion fields
 
-These features are not documented yet, because they are not ready, but 
-interested people are encouraged to contact us.
+These features are not documented yet, because they are not ready.
+We will add information in due course.
 
 # hazardlib
 
@@ -175,7 +175,7 @@ scaled, Bindi (2014) scaled and Bindi (2011) scaled.
 Kendra Johnson added the new scaling relationships Allen and Hayes (2017)
 (see https://github.com/gem/oq-engine/pull/5535).
 
-Kris van Neste discovered a bug in the function 
+Kris Vanneste discovered a bug in the function 
 `calc_hazard_curves` that was not working correctly in presence of multiple
 tectonic region types. It has been fixed.
 
