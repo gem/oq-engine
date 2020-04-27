@@ -191,8 +191,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     else:
         hc_id = None
     if run:
-        params = dict(p.split('=', 1) for p in param.split(','))
-        oqvalidation.OqParam.check(params)
+        pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
+        oqvalidation.OqParam.check(pars)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
@@ -202,12 +202,12 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             # not using logs.handle that logs on the db
             oq = readinput.get_oqparam(job_inis[0])
             smart_run(job_inis[0], oq, log_level, log_file,
-                      exports, reuse_hazard, **params)
+                      exports, reuse_hazard, **pars)
             return
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
             job_id = run_job(job_ini, log_level, log_file,
-                             exports, hazard_calculation_id=hc_id, **params)
+                             exports, hazard_calculation_id=hc_id, **pars)
             if not hc_id:  # use the first calculation as base for the others
                 hc_id = job_id
     # hazard
