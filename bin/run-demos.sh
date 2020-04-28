@@ -26,6 +26,9 @@ oq engine --eos -1 /tmp
 # test generation of statistical hazard curves from previous calculation
 oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --reuse-hazard
 
+# extract disaggregation data
+oq extract "disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0" 14
+
 # do something with the generated data
 oq engine --lhc
 MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' -1

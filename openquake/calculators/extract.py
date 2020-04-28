@@ -1102,6 +1102,11 @@ def get_ruptures_within(dstore, bbox):
     return dstore['ruptures'][mask]
 
 
+def _getkey(names, key):
+    match = [name for name in names if name.endswith(key)]
+    return match[0]
+
+
 # the disagg datagroup may contain
 # PGA-sid-0-poe-0
 # rlz-0-PGA-sid-0-poe-0
@@ -1114,6 +1119,8 @@ def disagg_output(dstore, imt, sid, poe_id, rlz=None):
     key = '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
     if rlz is not None:
         key = 'rlz-%d-%s' % (rlz, key)
+    else:
+        key = _getkey(sorted(dstore['disagg']), key)
     return dstore['disagg'][key]
 
 
@@ -1130,7 +1137,8 @@ def extract_disagg(dstore, what):
     imt = qdict['imt'][0]
     poe_idx = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    rlz = int(qdict['rlz'][0]) if 'rlz' in qdict else None
+    rlz = (int(qdict['rlz'][0]) if 'rlz' in qdict else
+           0 if len(dstore['weights']) == 1 else None)
     dset = disagg_output(dstore, imt, sid, poe_idx, rlz)
     matrix = dset[label][()]
 
@@ -1169,7 +1177,8 @@ def extract_disagg_layer(dstore, what):
     [label] = qdict['kind']
     [imt] = qdict['imt']
     poe_id = int(qdict['poe_id'][0])
-    grp = disagg_output(dstore, imt, 0, poe_id)
+    rlz = 0 if len(dstore['weights']) == 1 else None
+    grp = disagg_output(dstore, imt, 0, poe_id, rlz)
     dset = grp[label]
     edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
     dt = [('site_id', U32), ('lon', F32), ('lat', F32),
@@ -1180,7 +1189,7 @@ def extract_disagg_layer(dstore, what):
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         if sid > 0:
-            grp = disagg_output(dstore, imt, sid, poe_id)
+            grp = disagg_output(dstore, imt, sid, poe_id, rlz)
             rec['site_id'] = sid
             rec['lon'] = lon
             rec['lat'] = lat
