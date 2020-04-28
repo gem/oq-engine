@@ -283,18 +283,25 @@ class ClassicalCalculator(base.HazardCalculator):
             for trt in gsims_by_trt:
                 oq.pointsource_distance[trt] = getdefault(
                     oq.pointsource_distance, trt)
-        self.psd = {}  # trt->mag->dst
-        if 'source_mags' in self.datastore and oq.imtls:
-            mags_by_trt = {}
-            for trt in mags:
-                mags_by_trt[trt] = mags[trt][()]
+        mags_by_trt = {}
+        for trt in mags:
+            mags_by_trt[trt] = mags[trt][()]
+        imts_with_period = [imt for imt in oq.imtls
+                            if imt == 'PGA' or imt.startswith('SA')]
+        imts_ok = len(imts_with_period) == len(oq.imtls)
+        if (imts_ok and oq.pointsource_distance and
+                oq.pointsource_distance.suggested()) or (
+                    imts_ok and oq.minimum_intensity):
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
-            if hasattr(aw, 'array'):
-                self.datastore['effect_by_mag_dst_trt'] = aw
-        smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores)
+            if len(vars(aw)) > 1:  # more than _extra
+                self.datastore['effect_by_mag_dst'] = aw
+        elif oq.pointsource_distance:
+            self.psd = oq.pointsource_distance.interp(mags_by_trt)
+        else:
+            self.psd = {}
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
+                                num_cores=oq.num_cores)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
@@ -330,7 +337,7 @@ class ClassicalCalculator(base.HazardCalculator):
                      numsites / self.numrups)
         if self.psd:
             psdist = max(max(self.psd[trt].values()) for trt in self.psd)
-            if self.maxradius >= psdist / 2:
+            if psdist != -1 and self.maxradius >= psdist / 2:
                 logging.warning('The pointsource_distance of %d km is too '
                                 'small compared to a maxradius of %d km',
                                 psdist, self.maxradius)
@@ -353,6 +360,15 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Weighting the sources')
         totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
         C = oq.concurrent_tasks or 1
+        if oq.calculation_mode == 'preclassical':
+            f1 = f2 = preclassical
+            C *= 50  # use more tasks because there will be slow tasks
+        elif oq.disagg_by_src or oq.is_ucerf() or oq.split_sources is False:
+            # do not split the sources
+            C *= 5  # use more tasks, especially in UCERF
+            f1, f2 = classical, classical
+        else:
+            f1, f2 = classical, classical_split_filter
         min_weight = oq.min_weight * (10 if self.few_sites else 1)
         max_weight = max(min(totweight / C, oq.max_weight), min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
@@ -364,17 +380,9 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=self.psd,
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
-            collapse_ctxs=oq.collapse_ctxs,
+            collapse_level=oq.collapse_level,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
-        if oq.calculation_mode == 'preclassical':
-            f1 = f2 = preclassical
-            C *= 50  # use more tasks because there will be slow tasks
-        elif oq.disagg_by_src or oq.is_ucerf():  # do not split the sources
-            C *= 5  # use more tasks, especially in UCERF
-            f1, f2 = classical, classical
-        else:
-            f1, f2 = classical, classical_split_filter
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
             param['rescale_weight'] = len(gsims)

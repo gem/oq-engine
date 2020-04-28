@@ -156,11 +156,11 @@ single site analysis.
 
 Starting from engine 3.9 you can set
 
-pointsource_distance = *
+pointsource_distance = ?
 
 and the engine will automagically define a magnitude-dependent magnitude
 pointsource_distance, but it is recommended that you use your own distance,
-because in the next version the algorithm used with `pointsource_distance = *`
+because in the next version the algorithm used with `pointsource_distance = ?`
 may change again.
 
 

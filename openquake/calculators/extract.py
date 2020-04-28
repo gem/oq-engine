@@ -22,7 +22,6 @@ import logging
 import gzip
 import ast
 import io
-import os
 
 import requests
 from h5py._hl.dataset import Dataset
@@ -280,6 +279,11 @@ def extract_asset_risk(dstore, what):
     dic.update(dic1)
     dic.update(dic2)
     arr = dstore['asset_risk'][()]
+    names = list(arr.dtype.names)
+    for i, name in enumerate(names):
+        if name == 'id':
+            names[i] = 'asset_id'  # for backward compatibility
+    arr.dtype.names = names
     for tag, vals in qdict.items():
         cond = numpy.zeros(len(arr), bool)
         for val in vals:
@@ -516,7 +520,7 @@ def extract_sources(dstore, what):
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
-    fields = 'source_id code num_sources num_sites eff_ruptures'
+    fields = 'source_id code multiplicity num_sites eff_ruptures'
     info = dstore['source_info'][()][fields.split()]
     wkt = dstore['source_wkt'][()]
     arrays = []

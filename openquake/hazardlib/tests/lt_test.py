@@ -93,7 +93,7 @@ class CollapseTestCase(unittest.TestCase):
             src.id = i
         res = classical(srcs, self.srcfilter, self.gsims,
                         dict(imtls=self.imtls, truncation_level2=2,
-                             collapse_ctxs=True))
+                             collapse_level=2))
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
         curves = [pmap[grp_id].array[0, :, 0] for grp_id in sorted(pmap)]

@@ -102,7 +102,7 @@ class OqParam(valid.ParamSet):
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_threshold = valid.Param(valid.probability, 0.5)
-    collapse_ctxs = valid.Param(valid.boolean, False)
+    collapse_level = valid.Param(valid.Choice('0', '1', '2'), 0)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -205,6 +205,7 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
+    split_sources = valid.Param(valid.boolean, True)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 1E8)  # used in ebrisk
     min_weight = valid.Param(valid.positiveint, 3000)  # used in classical
     max_weight = valid.Param(valid.positiveint, 300_000)  # used in classical
@@ -262,6 +263,7 @@ class OqParam(valid.ParamSet):
                 names_vals.pop('region_constraint'))
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
+        self.collapse_level = int(self.collapse_level)
         if ('intensity_measure_types_and_levels' in names_vals and
                 'intensity_measure_types' in names_vals):
             logging.warning('Ignoring intensity_measure_types since '

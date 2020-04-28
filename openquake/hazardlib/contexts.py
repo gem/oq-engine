@@ -154,7 +154,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.collapse_ctxs = param.get('collapse_ctxs', False)
+        self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
         self.gsims = gsims
@@ -401,33 +401,28 @@ class PmapMaker(object):
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
 
-    def _ctxs(self, rups, sites, grp_ids):
-        if self.fewsites:  # do not filter, but collapse
-            rup_parametric = not numpy.isnan(
-                [r.occurrence_rate for r in rups]).any()
-            if (self.rup_indep and rup_parametric and len(sites.complete) == 1
-                    and self.pointsource_distance != {}):
-                rups = self.collapse_point_ruptures(rups, sites)
-                # print_finite_size(rups)
-            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-            if self.rup_indep and rup_parametric and self.collapse_ctxs:
-                ctxs = self.collapse_the_ctxs(ctxs)
-            self.numrups += len(ctxs)
-            if ctxs:
-                self.rupdata.add(ctxs, sites, grp_ids)
-            for rup, dctx in ctxs:
-                mask = (dctx.rrup <= self.maximum_distance(
-                    rup.tectonic_region_type, rup.mag))
-                r_sites = sites.filter(mask)
-                for name in self.REQUIRES_DISTANCES:
-                    setattr(dctx, name, getattr(dctx, name)[mask])
-                self.numsites += len(r_sites)
-                yield rup, r_sites, dctx
-        else:  # many sites, do not collapse, but filter
-            ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=True)
-            self.numrups += len(ctxs)
-            self.numsites += sum(len(ctx[1]) for ctx in ctxs)
-            yield from ctxs
+    def _gen_ctxs(self, rups, sites, grp_ids):
+        # generate triples (rup, sites, dctx)
+        rup_param = not numpy.isnan([r.occurrence_rate for r in rups]).any()
+        collapse_level = self.rup_indep and rup_param and self.collapse_level
+        if (collapse_level and len(sites.complete) == 1 and
+                self.pointsource_distance != {}):
+            rups = self.collapse_point_ruptures(rups, sites)
+            # print_finite_size(rups)
+        ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
+        if collapse_level > 1:
+            ctxs = self.collapse_the_ctxs(ctxs)
+        self.numrups += len(ctxs)
+        if ctxs:
+            self.rupdata.add(ctxs, sites, grp_ids)
+        for rup, dctx in ctxs:
+            mask = (dctx.rrup <= self.maximum_distance(
+                rup.tectonic_region_type, rup.mag))
+            r_sites = sites.filter(mask)
+            for name in self.REQUIRES_DISTANCES:
+                setattr(dctx, name, getattr(dctx, name)[mask])
+            self.numsites += len(r_sites)
+            yield rup, r_sites, dctx
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
@@ -473,16 +468,23 @@ class PmapMaker(object):
             grp_ids = numpy.array(srcs[0].grp_ids)
             self.numrups = 0
             self.numsites = 0
-            ctxs = []
-            rups = self._get_rups(srcs, sites)
-            # print_finite_size(rups)
-            with self.ctx_mon:
-                if self.fewsites:
-                    ctxs.extend(self._ctxs(rups, sites, grp_ids))
-                else:  # many sites
-                    for rup in rups:
-                        ctxs.extend(self._ctxs([rup], rup.sites, grp_ids))
-            self._update_pmap(ctxs)
+            if self.fewsites:
+                # we can afford using a lot of memory to store the ruptures
+                rups = self._get_rups(srcs, sites)
+                # print_finite_size(rups)
+                with self.ctx_mon:
+                    ctxs = list(self._gen_ctxs(rups, sites, grp_ids))
+                self._update_pmap(ctxs)
+            else:
+                # many sites: keep in memory less ruptures
+                for src in srcs:
+                    for rup in self._get_rups([src], sites):
+                        with self.ctx_mon:
+                            ctxs = self.cmaker.make_ctxs(
+                                [rup], rup.sites, grp_ids, filt=True)
+                        self.numrups += len(ctxs)
+                        self.numsites += sum(len(ctx[1]) for ctx in ctxs)
+                        self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
@@ -498,7 +500,10 @@ class PmapMaker(object):
             with self.ctx_mon:
                 L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
                 pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
-                ctxs = list(self._ctxs(rups, sites, numpy.array(src.grp_ids)))
+                ctxs = self.cmaker.make_ctxs(
+                    rups, sites, numpy.array(src.grp_ids), filt=True)
+                self.numrups += len(ctxs)
+                self.numsites += sum(len(ctx[1]) for ctx in ctxs)
             self._update_pmap(ctxs, pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
@@ -793,11 +798,15 @@ class Effect(object):
 
     def collapse_value(self, collapse_dist):
         """
-        :returns: intensity at the maximum magnitude and collapse distance
+        :returns: intensity at collapse distance
         """
-        effectmax = self.effect_by_mag[max(self.effect_by_mag)]
+        # get the maximum magnitude with a cutoff at 7
+        for mag in self.effect_by_mag:
+            if mag > '7.00':
+                break
+        effect = self.effect_by_mag[mag]
         idx = numpy.searchsorted(self.dists, collapse_dist)
-        return effectmax[idx-1 if idx == self.nbins else idx]
+        return effect[idx-1 if idx == self.nbins else idx]
 
     def __call__(self, mag, dist):
         di = numpy.searchsorted(self.dists, dist)
@@ -806,8 +815,8 @@ class Effect(object):
         eff = self.effect_by_mag['%.2f' % mag][di]
         return eff
 
-    # this is useful to compute the collapse_distance and minimum_distance
-    def dist_by_mag(self, intensity=0):
+    # this is used to compute the magnitude-dependent pointsource_distance
+    def dist_by_mag(self, intensity):
         """
         :returns: a dict magstring -> distance
         """
@@ -861,20 +870,15 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
 
     Updates oq.maximum_distance.magdist
     """
+    assert list(mags) == list(gsims_by_trt), 'Missing TRTs!'
     dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                  for trt in gsims_by_trt}
-    aw = hdf5.ArrayWrapper((), dist_bins)
+    aw = hdf5.ArrayWrapper((), {})
     # computing the effect make sense only if all IMTs have the same
     # unity of measure; for simplicity we will consider only PGA and SA
-    effect = {}
-    imts_with_period = [imt for imt in oq.imtls
-                        if imt == 'PGA' or imt.startswith('SA')]
-    imts_ok = len(imts_with_period) == len(oq.imtls)
-    psd = {}
-    if oq.pointsource_distance is not None:
-        psd = oq.pointsource_distance.interp(mags)
-    effect_ok = imts_ok and (psd or oq.minimum_intensity)
-    if effect_ok:
+    psd = (oq.pointsource_distance.interp(mags)
+           if oq.pointsource_distance is not None else {})
+    if psd:
         logging.info('Computing effect of the ruptures')
         allmags = set()
         for trt in mags:
@@ -883,11 +887,12 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
             get_effect_by_mag, (sorted(allmags), sitecol1, gsims_by_trt,
                                 oq.maximum_distance, oq.imtls)
         ).reduce()
-        aw.array = eff_by_mag
-        effect.update({
-            trt: Effect({mag: eff_by_mag[mag][:, t]
-                         for mag in mags[trt]}, dist_bins[trt])
-            for t, trt in enumerate(mags)})
+        effect = {}
+        for t, trt in enumerate(mags):
+            arr = numpy.array([eff_by_mag[mag][:, t] for mag in mags[trt]])
+            setattr(aw, trt, arr)  # shape (#mags, #dists)
+            setattr(aw, trt + '_dist_bins', dist_bins[trt])
+            effect[trt] = Effect(dict(zip(mags[trt], arr)), dist_bins[trt])
         minint = oq.minimum_intensity.get('default', 0)
         for trt, eff in effect.items():
             if minint:
@@ -896,7 +901,6 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
             if psd and set(psd[trt].values()) == {-1}:
                 maxdist = oq.maximum_distance[trt]
                 psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
-    if psd:
         dic = {trt: [(float(mag), int(dst)) for mag, dst in psd[trt].items()]
                for trt in psd if trt != 'default'}
         logging.info('Using pointsource_distance=\n%s', pprint.pformat(dic))
