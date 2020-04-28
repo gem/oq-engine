@@ -53,7 +53,7 @@ Bird et al. 2010) for calculating seismic moment rate from Geodetic Strain
 
 import numpy as np
 from math import fabs
-import yaml
+import toml
 from openquake.hmtk.strain.strain_utils import (
     moment_function, calculate_taper_function)
 
@@ -224,7 +224,7 @@ class Shift(object):
 
         :param str region_parameter_file:
             To overwrite the default Bird et al (2007) classifcations the
-            regionalisation can be defined in a separate Yaml file
+            regionalisation can be defined in a separate TOML file
         '''
         base_params = base_params or IPL_PARAMS
         self.strain = None
@@ -244,8 +244,7 @@ class Shift(object):
         # If a regionalisation parameter file is defined then read
         # regionalisation from there - otherwise use Bird regionalisation
         if region_parameter_file:
-            self.regionalisation = yaml.safe_load(
-                open(region_parameter_file, 'rt'))
+            self.regionalisation = toml.load(open(region_parameter_file, 'rt'))
         else:
             self.regionalisation = BIRD_GLOBAL_PARAMETERS
 
