@@ -1102,6 +1102,11 @@ def get_ruptures_within(dstore, bbox):
     return dstore['ruptures'][mask]
 
 
+def _getkey(names, key):
+    match = [name for name in names if name.endswith(key)]
+    return match[0]
+
+
 # the disagg datagroup may contain
 # PGA-sid-0-poe-0
 # rlz-0-PGA-sid-0-poe-0
@@ -1114,6 +1119,8 @@ def disagg_output(dstore, imt, sid, poe_id, rlz=None):
     key = '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
     if rlz is not None:
         key = 'rlz-%d-%s' % (rlz, key)
+    else:
+        key = _getkey(sorted(dstore['disagg']), key)
     return dstore['disagg'][key]
 
 
