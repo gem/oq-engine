@@ -1,0 +1,64 @@
+Fault_Model_ID = 1
+Fault_Model_Name = "Template Simple Fault"
+[[tectonic_regionalisation]]
+Name = "Active Shallow Crust"
+Code = 1
+
+[tectonic_regionalisation.Magnitude_Scaling_Relation]
+Value = [ "WC1994",]
+Weight = [ 1.0,]
+[tectonic_regionalisation.Shear_Modulus]
+Value = [ 30.0,]
+Weight = [ 1.0,]
+[tectonic_regionalisation.Displacement_Length_Ratio]
+Value = [ 1.25e-5,]
+Weight = [ 1.0,]
+[[Fault_Model]]
+ID = 1
+Tectonic_Region = "Active Shallow Crust"
+Fault_Name = "A Simple Fault"
+Rake = -90.0
+Slip_Type = "Thrust"
+Slip_Completeness_Factor = 1
+Aseismic = 0.0
+Aspect_Ratio = 1.5
+[[Fault_Model.MFD_Model]]
+Model_Name = "Characteristic"
+MFD_spacing = 0.1
+Model_Weight = 0.5
+Maximum_Magnitude = 7.0
+Sigma = 0.12
+Lower_Bound = -3.0
+Upper_Bound = 3.0
+
+[[Fault_Model.MFD_Model]]
+Model_Name = "AndersonLucoArbitrary"
+Model_Type = "First"
+MFD_spacing = 0.1
+Model_Weight = 0.5
+Maximum_Magnitude = 7.0
+Minimum_Magnitude = 4.5
+b_value = [ 0.8, 0.05,]
+
+
+[Fault_Model.Fault_Geometry]
+Fault_Typology = "Simple"
+Fault_Trace = [ 30.0, 30.0, 30.0, 31.0,]
+Upper_Depth = 0.0
+Lower_Depth = 20.0
+Dip = 30.0
+[Fault_Model.Slip]
+Value = [ 5.0, 7.0,]
+Weight = [ 0.5, 0.5,]
+[Fault_Model.Shear_Modulus]
+Value = [ 30.0,]
+Weight = [ 1.0,]
+[Fault_Model.Magnitude_Scaling_Relation]
+Value = [ "WC1994",]
+Weight = [ 1.0,]
+[Fault_Model.Scaling_Relation_Sigma]
+Value = [ 0.0,]
+Weight = [ 1.0,]
+[Fault_Model.Displacement_Length_Ratio]
+Value = [ 1.25e-5,]
+Weight = [ 1.0,]

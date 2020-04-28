@@ -1,0 +1,15 @@
+Fault_Model_ID = 1
+Fault_Model_Name = "Template Simple Fault"
+[[tectonic_regionalisation]]
+Name = "Active Shallow Crust"
+Code = 1
+
+[tectonic_regionalisation.Magnitude_Scaling_Relation]
+Value = [ "WC1994",]
+Weight = [ 1.0,]
+[tectonic_regionalisation.Shear_Modulus]
+Value = [ 30.0,]
+Weight = [ 1.0,]
+[tectonic_regionalisation.Displacement_Length_Ratio]
+Value = [ 1.25e-5,]
+Weight = [ 1.0,]

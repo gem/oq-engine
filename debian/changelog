@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Removed the dependency from PyYAML, replaced the .yml files in the HMTK with
+    .toml files and added an utility `utils/yaml2toml`
+
 python3-oq-engine (3.9.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]

@@ -4,7 +4,7 @@
 
 # GEM Mirror
 # We also provide pre-compiled manylinux1 wheels for
-# h5py, Shapely, psutil, PyYAML, Basemap
+# h5py, Shapely, psutil
 
 https://wheelhouse.openquake.org/v2/linux/py/pytz-2018.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/setuptools-39.0.1-py2.py3-none-any.whl
@@ -28,7 +28,6 @@ https://wheelhouse.openquake.org/v2/linux/py/chardet-3.0.4-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/idna-2.6-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/requests-2.20.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/pyshp-1.2.3-py3-none-any.whl
-https://wheelhouse.openquake.org/v2/linux/py36/PyYAML-3.12-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py/toml-0.10.0-py2.py3-none-any.whl
 
 ### setproctitle ###

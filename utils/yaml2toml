@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2020 GEM Foundation
+# Copyright (C) 2020, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,21 +16,31 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import numpy
-from openquake.baselib import sap, performance
-from openquake.hazardlib.shakemap import download_array
+import os
+import toml
+from openquake.baselib import sap
 
 
-@sap.script
-def download_shakemap(id):
+@sap.Script
+def main(dirname):
     """
-    Example of usage: utils/shakemap usp000fjta
+    Convert all .yml files in the given directory into .toml files,
+    recursively.
     """
-    with performance.Monitor('shakemap', measuremem=True) as mon:
-        dest = '%s.npy' % id
-        numpy.save(dest, download_array(id))
-    print(mon)
-    print('Saved %s' % dest)
+    import yaml
+    for cwd, dir_, fnames in os.walk(dirname):
+        for fname in fnames:
+            if fname.endswith('.yml'):
+                path = os.path.join(cwd, fname)
+                with open(path) as source:
+                    dic = yaml.safe_load(source.read())
+                with open(path[:-3] + 'toml', 'w') as target:
+                    toml.dump(dic, target)
+                print('Saved %s' % target.name)
 
 
-download_shakemap.arg('id', 'USGS Shakemap ID')
+main.arg('dirname', 'directory')
+
+
+if __name__ == '__main__':
+    main.callfunc()
