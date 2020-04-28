@@ -1279,19 +1279,17 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     @classmethod
     def check(cls, dic):
         """
-        Convert a dictionary name->string into a dictionary name->value
-        by converting the string. If the name does not correspond to a
-        known parameter, just ignore it and print a warning.
+        Check if a dictionary name->string can be converted into a dictionary
+        name->value. If the name does not correspond to a known parameter,
+        print a warning.
         """
-        res = {}
         for name, text in dic.items():
             try:
                 p = getattr(cls, name)
             except AttributeError:
                 logging.warning('Ignored unknown parameter %s', name)
             else:
-                res[name] = p.validator(text)
-        return res
+                p.validator(text)
 
     @classmethod
     def from_(cls, dic):
