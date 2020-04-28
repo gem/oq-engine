@@ -3,7 +3,7 @@
 
 # GEM Mirror
 # We also provide pre-compiled manylinux1 wheels for
-# h5py, Shapely, psutil, PyYAML
+# h5py, Shapely, psutil
 
 https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/setuptools-41.0.1-py2.py3-none-any.whl
@@ -26,7 +26,6 @@ https://wheelhouse.openquake.org/v3/linux/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/urllib3-1.25.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pyshp-1.2.3-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py38/PyYAML-5.1.2-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py/toml-0.10.0-py2.py3-none-any.whl
 
 ### Celery ###
