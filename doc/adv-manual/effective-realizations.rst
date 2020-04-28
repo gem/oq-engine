@@ -48,7 +48,7 @@ Here is an example of trivial GMPE logic tree, in its XML input representation:
 The logic tree is trivial since there is a single branch
 ("b1") and GMPE ("SadighEtAl1997") for each tectonic region
 type ("active shallow crust").  A logic tree with multiple branches
-can be simple, complex, or even trivial if the tectonic region type
+can be simple, or even trivial if the tectonic region type
 with multiple branches is not present in the underlying source
 model. This is the key to the logic tree reduction concept.
 
@@ -57,9 +57,9 @@ Reduction of the logic tree
 
 The simplest case of logic tree reduction is when the actual
 sources do not span the full range of tectonic region types in the
-GMPE logic tree file. This happens very often in SHARE calculations.
-The GMPE logic tree (actually there are three of them, one for each
-source model) potentially contains 1280 realizations
+GMPE logic tree file. This happens very often.
+FOr instance, in the SHARE calculation for Europe
+the GMPE logic tree potentially contains 1280 realizations
 coming from 7 different tectonic region types:
 
 Active_Shallow:
@@ -122,12 +122,20 @@ have only 2 effective realizations corresponding to the GMPEs in the
 second tectonic region type. The weight of each effective realizations
 will be three times the weight of a regular representation, since
 three different paths in the first tectonic region type will produce
-exactly the same result.  It is not important which GMPE was chosen
+exactly the same result. It is not important which GMPE was chosen
 for the first tectonic region type because there are no sources of
-kind T1. In such a situation there will be 2 effective realization
+kind T1. In such a situation there will be 2 effective realizations
 coming from a total of 6 total realizations. It means that there will
 be three copies of the outputs, i.e. three identical outputs for each
 effective realization.
+
+Starting from engine 3.9 *the logic tree reduction must be performed
+manually*, by discarding the irrelevant tectonic region types; in
+this example the user must add in the `job.ini` a line
+
+``discard_trts = Shield, Subduction_Interface, Subduction_InSlab, Volcanic, Deep``
+
+If not, multiple copies of the same outputs will appear.
 
 How to analyze the logic tree of a calculation without running the calculation
 ------------------------------------------------------------------------------
@@ -191,6 +199,6 @@ or more submodels could be completely filtered out and could produce
 zero effective realizations, so the reduction effect could be even
 stronger.
 
-In any case the warnings tells the user what she should do in order to
+In any case *the warning tells the user what she should do* in order to
 remove the duplication and reduce the calculation only to the effective
 realizations, i.e. which are the TRTs to discard in the `job.ini` file.

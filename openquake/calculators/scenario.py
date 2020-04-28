@@ -25,6 +25,8 @@ from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.commonlib import readinput, logictree, calc
 from openquake.calculators import base, getters
 
+U16 = numpy.uint16
+
 
 @base.calculators.add('scenario')
 class ScenarioCalculator(base.HazardCalculator):
@@ -38,9 +40,9 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer and seeds
         """
         oq = self.oqparam
-        cinfo = logictree.FullLogicTree.fake(readinput.get_gsim_lt(oq))
-        self.realizations = cinfo.get_realizations()
-        self.datastore['full_lt'] = cinfo
+        full_lt = logictree.FullLogicTree.fake(readinput.get_gsim_lt(oq))
+        self.realizations = full_lt.get_realizations()
+        self.datastore['full_lt'] = full_lt
         if 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
@@ -56,12 +58,13 @@ class ScenarioCalculator(base.HazardCalculator):
         super().pre_execute()
         self.datastore['oqparam'] = oq
         self.store_rlz_info({})
-        rlzs_by_gsim = cinfo.get_rlzs_by_gsim(0)
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         E = oq.number_of_ground_motion_fields
         n_occ = numpy.array([E])
         ebr = EBRupture(self.rup, 0, 0, n_occ)
         ebr.e0 = 0
-        events = numpy.zeros(E * R, events_dt)
+        dtlist = events_dt.descr + [('ses_id', U16), ('year', U16)]
+        events = numpy.zeros(E * R, dtlist)
         for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             events[rlz * E: rlz * E + E]['id'] = eids
             events[rlz * E: rlz * E + E]['rlz_id'] = rlz

@@ -433,10 +433,10 @@ class HazardCalculator(BaseCalculator):
             logging.info('Rupture floating factor = %s', f)
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
-        if f * s > 1.2 and self.oqparam.pointsource_distance is None:
+        if (f * s >= 1.5 and self.oqparam.pointsource_distance is None
+                and 'classical' in self.oqparam.calculation_mode):
             logging.warning(
-                'Your calculation will be slower than needed because you are '
-                'not using the pointsource_distance approximation:\n'
+                'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
 
     def read_inputs(self):
@@ -472,8 +472,9 @@ class HazardCalculator(BaseCalculator):
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
 
-        if (not oq.hazard_calculation_id and
-                oq.calculation_mode != 'preclassical'):
+        if (not oq.hazard_calculation_id
+                and oq.calculation_mode != 'preclassical'
+                and not oq.save_disk_space):
             self.gzip_inputs()
 
     def save_multi_peril(self):
@@ -799,7 +800,7 @@ class HazardCalculator(BaseCalculator):
 
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
-                          collapse_ctxs=oq.collapse_ctxs,
+                          collapse_level=oq.collapse_level,
                           avg_losses=oq.avg_losses, amplifier=self.amplifier)
 
         # compute exposure stats

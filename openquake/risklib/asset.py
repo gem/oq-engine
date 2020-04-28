@@ -143,6 +143,7 @@ class Asset(object):
     a risk analysis (e.g. occupants).
     """
     def __init__(self,
+                 asset_id,
                  ordinal,
                  tagidxs,
                  number,
@@ -152,6 +153,8 @@ class Asset(object):
                  retrofitted=None,
                  calc=costcalculator):
         """
+        :param asset_id:
+            a short string identifier
         :param ordinal:
             an integer identifier for the asset, used to order them
         :param tagidxs:
@@ -169,6 +172,7 @@ class Asset(object):
         :param ordinal:
             asset collection ordinal
         """
+        self.asset_id = asset_id
         self.ordinal = ordinal
         self.tagidxs = tagidxs
         self.number = number
@@ -293,6 +297,13 @@ class TagCollection(object):
                        for tagidx, tagname in zip(tagidxs, tagnames))
         return values
 
+    def get_tagdict(self, tagidxs):
+        """
+        :returns: dictionary {tagname: tag}
+        """
+        return {tagname: getattr(self, tagname)[tagidx]
+                for tagidx, tagname in zip(tagidxs, self.tagnames)}
+
     def gen_tags(self, tagname):
         """
         :yields: the tags associated to the given tagname
@@ -339,6 +350,7 @@ class TagCollection(object):
 class AssetCollection(object):
     def __init__(self, exposure, assets_by_site, time_event):
         self.tagcol = exposure.tagcol
+        self.tagcol.site_id = ['?'] + list(range(len(assets_by_site)))
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
@@ -365,7 +377,7 @@ class AssetCollection(object):
         """
         :returns: array of asset ids as strings
         """
-        return self.tagcol.id[1:]
+        return self.array['id']
 
     def num_taxonomies_by_site(self):
         """
@@ -565,8 +577,8 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     int_fields = [(str(name), U32) for name in tagnames]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
-        [('ordinal', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
-         ('number', F32), ('area', F32)] + [
+        [('id', '<S20'), ('ordinal', U32), ('lon', F32), ('lat', F32),
+         ('site_id', U32), ('number', F32), ('area', F32)] + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
@@ -578,7 +590,9 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in fields:
-                if field == 'ordinal':
+                if field == 'id':
+                    value = asset.asset_id
+                elif field == 'ordinal':
                     value = asset.ordinal
                 elif field == 'number':
                     value = asset.number
@@ -644,7 +658,7 @@ def _get_exposure(fname, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-    tagnames = ['id'] + (~tagNames or [])
+    tagnames = ~tagNames or []
     if set(tagnames) & {'taxonomy', 'exposure', 'country'}:
         raise InvalidFile('taxonomy, exposure and country are reserved names '
                           'you cannot use it in <tagNames>: %s' % fname)
@@ -682,7 +696,7 @@ def _get_exposure(fname, stop=None):
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
-        area.attrib, [], [], cc, TagCollection(tagnames))
+        area.attrib, [], cc, TagCollection(tagnames))
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -760,28 +774,25 @@ class Exposure(object):
     """
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'retrofitted',
-              'area', 'assets', 'asset_refs',
-              'cost_calculator', 'tagcol']
+              'area', 'assets', 'cost_calculator', 'tagcol']
 
     @staticmethod
     def check(fname):
         exp = Exposure.read([fname])
         err = []
-        for asset, aref in zip(exp.assets, exp.asset_refs):
+        for asset in exp.assets:
             if asset.number > 65535:
                 err.append('Asset %s has number %s > 65535' %
-                           (aref, asset.number))
+                           (asset.asset_id, asset.number))
         return '\n'.join(err)
 
     @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
-             ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+             ignore_missing_costs=(), check_dupl=True,
              tagcol=None, by_country=False):
         """
-        Call `Exposure.read(fname)` to get an :class:`Exposure` instance
-        keeping all the assets in memory or
-        `Exposure.read(fname, asset_nodes=True)` to get an iterator over
-        Node objects (one Node for each asset).
+        Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
+        keeping all the assets in memory.
         """
         if by_country:  # E??_ -> countrycode
             prefix2cc = countries.from_exposures(
@@ -798,8 +809,7 @@ class Exposure(object):
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, region_constraint,
-                            ignore_missing_costs, asset_nodes, check_dupl,
-                            prefix, tagcol))
+                            ignore_missing_costs, check_dupl, prefix, tagcol))
         exp = None
         for exposure in itertools.starmap(Exposure.read_exp, allargs):
             if exp is None:  # first time
@@ -811,15 +821,17 @@ class Exposure(object):
                 assert exposure.retrofitted == exp.retrofitted
                 assert exposure.area == exp.area
                 exp.assets.extend(exposure.assets)
-                exp.asset_refs.extend(exposure.asset_refs)
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
+        for i, ass in enumerate(exp.assets):
+            # used by the GED4ALL importer
+            ass.tags = exp.tagcol.get_tagdict(ass.tagidxs)
         return exp
 
     @staticmethod
     def read_exp(fname, calculation_mode='', region_constraint='',
-                 ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+                 ignore_missing_costs=(), check_dupl=True,
                  asset_prefix='', tagcol=None, monitor=None):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
@@ -892,7 +904,7 @@ class Exposure(object):
         """
         expected_header = set(self._csv_header('', ''))
         for fname in self.datafiles:
-            with open(fname, encoding='utf-8') as f:
+            with open(fname, encoding='utf-8-sig') as f:
                 fields = next(csv.reader(f))
                 header = set(fields)
                 missing = expected_header - header - {'exposure', 'country'}
@@ -941,7 +953,6 @@ class Exposure(object):
         prefix = param['asset_prefix']
         # FIXME: in case of an exposure split in CSV files the line number
         # is None because param['fname'] points to the .xml file :-(
-        self.asset_refs.append(prefix + asset_id)
         taxonomy = asset['taxonomy']
         number = asset['number']
         location = asset['lon'], asset['lat']
@@ -953,7 +964,6 @@ class Exposure(object):
                if tagname not in ('country', 'exposure') and
                asset[tagname] != '?'}
         dic['taxonomy'] = taxonomy
-        dic['id'] = prefix + asset_id
         idxs = self.tagcol.add_tags(dic, prefix)
         tot_occupants = 0
         num_occupancies = 0
@@ -985,8 +995,8 @@ class Exposure(object):
             area = asset['area']
         except ValueError:
             area = 1
-        ass = Asset(idx, idxs, number, location, values, area,
-                    retrofitted, self.cost_calculator)
+        ass = Asset(prefix + asset_id, idx, idxs, number, location, values,
+                    area, retrofitted, self.cost_calculator)
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):

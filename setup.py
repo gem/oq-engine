@@ -69,7 +69,6 @@ install_requires = [
     'matplotlib >=1.5, <3.2',
     'requests >=2.20, <2.23',
     'pyshp ==1.2.3',
-    'PyYAML',
     'toml',
 ]
 

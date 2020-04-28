@@ -197,7 +197,7 @@ class EbrCalculator(base.RiskCalculator):
             shape_descr = ['assets', 'rlzs', 'return_periods', 'loss_types']
             self.datastore.set_attrs(
                 'curves-rlzs', shape_descr=shape_descr,
-                assets=self.assetcol.tagcol.id[1:],
+                assets=self.assetcol['id'],
                 return_periods=builder.return_periods,
                 rlzs=numpy.arange(R),
                 loss_types=oq.loss_names)
@@ -209,7 +209,7 @@ class EbrCalculator(base.RiskCalculator):
             shape_descr = ['assets', 'stats', 'return_periods', 'loss_types']
             self.datastore.set_attrs(
                 'curves-stats', shape_descr=shape_descr,
-                assets=self.assetcol.tagcol.id[1:],
+                assets=self.assetcol['id'],
                 stats=[encode(name) for (name, func) in stats],
                 return_periods=builder.return_periods,
                 loss_types=oq.loss_names

@@ -65,11 +65,8 @@ class LossCurveExporter(object):
         if spec and not spec.startswith(('ref-', 'sid-')):
             raise ValueError('Wrong specification in %s' % what)
         elif spec == '':  # export losses for all assets
-            aids = []
-            arefs = []
-            for aid, rec in enumerate(self.assetcol.array):
-                aids.append(aid)
-                arefs.append(self.asset_refs[aid])
+            aids = range(len(self.assetcol.array))
+            arefs = self.asset_refs
         elif spec.startswith('sid-'):  # passed the site ID
             sid = int(spec[4:])
             aids = []
@@ -87,7 +84,7 @@ class LossCurveExporter(object):
 
     def export_csv(self, spec, asset_refs, curves_dict):
         """
-        :param asset_ref: name of the asset
+        :param asset_refs: names of the asset
         :param curves_dict: a dictionary tag -> loss curves
         """
         aval = self.assetcol.arr_value(self.loss_types)
@@ -105,16 +102,16 @@ class LossCurveExporter(object):
                 if ebr:  # event_based_risk
                     array = recs[:, :, li]  # shape (A, P, LI)
                     periods = self.builder.return_periods
-                    for aref, losses, val in zip(
-                            asset_refs, array, aval[:, li]):
+                    for aref, losses, val in sorted(zip(
+                            asset_refs, array, aval[:, li])):
                         for period, loss in zip(periods, losses):
                             data.append((aref, lt, loss, loss/val,
                                          period, 1. / period))
                 else:  # classical_risk
                     array = recs[lt]  # shape (A,) loss_curve_dt
-                    for aref, losses, poes, val in zip(
+                    for aref, losses, poes, val in sorted(zip(
                             asset_refs, array['losses'],
-                            array['poes'], aval[:, li]):
+                            array['poes'], aval[:, li])):
                         for loss, poe in zip(losses, poes):
                             data.append((aref, lt, loss, loss/val, poe))
             dest = self.dstore.build_fname(

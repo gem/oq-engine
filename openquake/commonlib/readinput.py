@@ -63,7 +63,7 @@ source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('gidx', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
-    ('num_sources', numpy.uint32),     # 3
+    ('multiplicity', numpy.uint32),    # 3
     ('calc_time', numpy.float32),      # 4
     ('num_sites', numpy.uint32),       # 5
     ('eff_ruptures', numpy.uint32),    # 6
@@ -808,8 +808,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         sitecol, assets_by, discarded = geo.utils.assoc(
-            exposure.assets_by_site, haz_sitecol,
-            haz_distance, 'filter', exposure.asset_refs)
+            exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
