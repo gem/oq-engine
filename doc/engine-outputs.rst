@@ -45,8 +45,7 @@ event_based_risk:
 
 event_based_damage:
   damages_by_event
-  *avg_damages-rlzs, *(avg_losses-stats)
-  (tot_damages-rlzs), (tot_damages-stats)
+  avg_damages-rlzs
   
 
 Scenario calculators
@@ -58,9 +57,9 @@ scenario:
 
 scenario_risk:
   losses_by_event
-  losses_by_asset-rlzs, (losses_by_asset-stats)
+  losses_by_asset-rlzs
   agglosses-rlzs
 
 scenario_damage:
   dmg_by_event
-  dmg_by_asset-rlzs, (dmg_by_asset-stats)
+  dmg_by_asset-rlzs
