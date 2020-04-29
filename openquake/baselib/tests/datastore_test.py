@@ -99,7 +99,8 @@ class DataStoreTestCase(unittest.TestCase):
         print(self.dstore.get_file(name))
 
     def test_hdf5_to_npz(self):
-        # test an encoding error with h5py 2.10.0
+        # test a metadata bug with h5py 2.10.0
+        # https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
         dt = [('id', '<S20'), ('ordinal', numpy.uint32)]
         arr0 = numpy.array([(b'a11', 1), (b'a12', 2)], dt)
         self.dstore['assets'] = arr0
