@@ -936,7 +936,7 @@ Row = collections.namedtuple(
 
 class RowConverter(SourceConverter):
     """
-    Used in the command oq sm_to_csv to convert source models into
+    Used in the command oq nrml_to_csv to convert source models into
     Row objects.
     """
     def convert_node(self, node):
