@@ -135,7 +135,7 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
     return success
 
 
-def array_of_strings_to_bytes(arr, key):
+def fix_array(arr, key):
     """
     :param arr: array or array-like object
     :param key: string associated to the error (appear in the error message)

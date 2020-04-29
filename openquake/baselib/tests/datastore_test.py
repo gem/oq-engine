@@ -97,3 +97,13 @@ class DataStoreTestCase(unittest.TestCase):
         for name, data in self.dstore.retrieve_files():
             print(name)
         print(self.dstore.get_file(name))
+
+    def test_hdf5_to_npz(self):
+        dt = [('id', '<S20'), ('ordinal', numpy.uint32)]
+        arr = numpy.array([(b'a11', 1), (b'a12', 2)], dt)
+        self.dstore['assets'] = arr
+        arr = self.dstore['assets']
+        fd, fname = tempfile.mkstemp(suffix='.npz')
+        os.close(fd)
+        numpy.savez_compressed(fname, array=arr)
+        arr1 = numpy.load(fname)['array']
