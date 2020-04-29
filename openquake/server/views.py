@@ -744,7 +744,7 @@ def extract(request, calc_id, what):
                     # this is hack: we are losing the values
                     a[key] = list(val)
                 else:
-                    a[key] = utils.array_of_strings_to_bytes(val, key)
+                    a[key] = utils.fix_array(val, key)
             numpy.savez_compressed(fname, **a)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
