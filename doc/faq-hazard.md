@@ -31,6 +31,17 @@ $ oq engine --run job.ini --reuse-hazard --exports csv
 Hazard maps and UHS can be regenerated from an existing calculation
 quite efficiently.
 
+## disaggregation calculations
+
+### I am getting an error "disaggregation matrix is too large"!
+
+This means that you have too many disaggregation bins. Please act on the
+binning parameters, i.e. on `mag_bin_width`, `distance_bin_width`,
+`coordinate_bin_width`, `num_epsilon_bins`. The most relevant parameter is
+`coordinate_bin_width` which is quadratic: for instance by changing from
+`coordinate_bin_width=0.1` to `coordinate_bin_width=1.0` the size of your
+disaggregation matrix will be reduced by 100 times.
+
 ## event based calculations
 
 ### What is the relation between sources, ruptures, events and realizations?
