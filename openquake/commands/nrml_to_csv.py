@@ -58,7 +58,7 @@ def appendrow(row, rows):
 
 
 @sap.Script
-def sm_to_csv(fnames, outdir='.'):
+def nrml_to_csv(fnames, outdir='.'):
     for fname in fnames:
         name = os.path.basename(fname)[:-4]  # strip .xml
         root = nrml.read(fname)
@@ -78,5 +78,5 @@ def sm_to_csv(fnames, outdir='.'):
             write_csv(dest, rows, header=rows[0]._fields)
 
 
-sm_to_csv.arg('fnames', 'source model files in XML', nargs='+')
-sm_to_csv.arg('outdir', 'output directory')
+nrml_to_csv.arg('fnames', 'source model files in XML', nargs='+')
+nrml_to_csv.arg('outdir', 'output directory')

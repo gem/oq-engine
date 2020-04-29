@@ -936,7 +936,7 @@ Row = collections.namedtuple(
 
 class RowConverter(SourceConverter):
     """
-    Used in the command oq sm_to_csv to convert source models into
+    Used in the command oq nrml_to_csv to convert source models into
     Row objects.
     """
     def convert_node(self, node):
@@ -1017,10 +1017,41 @@ class RowConverter(SourceConverter):
             'MULTIPOINT((%s))' % ', '.join('%s %s' % xy for xy in coords))
 
     def convert_simpleFaultSource(self, node):
-        raise NotImplementedError
+        geom = node.simpleFaultGeometry
+        wkt = 'LINESTRING(%s)' % ', '.join(
+            '%s %s' % (point.x, point.y) for point in self.geo_line(geom))
+        return Row(
+            node['id'],
+            node['name'],
+            node['tectonicRegion'],
+            self.convert_mfdist(node),
+            ~node.magScaleRel,
+            ~node.ruptAspectRatio,
+            ~geom.upperSeismoDepth,
+            ~geom.lowerSeismoDepth,
+            [{'dip': ~geom.dip, 'rake': ~node.rake}],
+            [],
+            wkt)
 
     def convert_complexFaultSource(self, node):
-        raise NotImplementedError
+        geom = node.complexFaultGeometry  # 1005
+        edges = []
+        for line in self.geo_lines(geom):
+            edges.append('(%s)' % ', '.join('%s %s %s' % (p.x, p.y, p.z)
+                                            for p in line))
+        wkt = 'MULTILINESTRING Z(%s)' % ', '.join(edges)
+        return Row(
+            node['id'],
+            node['name'],
+            node['tectonicRegion'],
+            self.convert_mfdist(node),
+            ~node.magScaleRel,
+            ~node.ruptAspectRatio,
+            numpy.nan,
+            numpy.nan,
+            [{'rake': ~node.rake}],
+            [],
+            wkt)
 
     def convert_characteristicFaultSource(self, node):
         raise NotImplementedError
