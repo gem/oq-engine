@@ -147,7 +147,16 @@ def fix_array(arr, key):
     """
     if arr is None:
         return ()
-    if not isinstance(arr, numpy.ndarray) or arr.dtype != numpy.dtype('O'):
+    if not isinstance(arr, numpy.ndarray):
+        return arr
+    if arr.dtype != numpy.dtype('O'):
+        d = arr.dtype.descr
+        if len(d) > 1 and isinstance(d[0][1], tuple):
+            # for extract_assets d[0] is the pair
+            # ('id', ('|S20', {'h5py_encoding': 'ascii'}))
+            # this is a horrible workaround for the h5py 2.10.0 issue
+            # https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
+            arr.dtype = [(n, str(arr.dtype[n])) for n in arr.dtype.names]
         return arr
     if arr.ndim == 1:
         return numpy.array([s.encode('utf8') for s in arr])
