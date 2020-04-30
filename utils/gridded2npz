@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2020, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import numpy
+from openquake.baselib import sap
+from openquake.hazardlib import nrml
+
+
+@sap.Script
+def gridded2npz(fnames):
+    """
+    Convert a gridded source from XML to NPZ format
+    """
+    for fname in fnames:
+        try:
+            [[src]] = nrml.to_python(fname).src_groups
+            assert src.is_gridded()
+        except:
+            logging.warning('Ignored non-gridded %s', fname)
+        dic = dict(id=src.source_id, name=src.name,
+                   tectonicregion=src.tectonic_region_type)
+        mags = []
+        rakes = []
+        hypos = []
+        probs = []
+        for i, (rup, pmf) in enumerate(src.data):
+            hc = rup.hypocenter
+            mags.append(rup.mag)
+            rakes.append(rup.rake)
+            hypos.append((hc.x, hc.y, hc.z))
+            probs.append([p for p, i in pmf.data])
+            dic['surface%d' % i] = rup.surface.mesh.array.astype('f4')
+        dic['mag'] = numpy.array(mags)
+        dic['rake'] = numpy.array(rakes)
+        dic['hypo'] = numpy.array(hypos)
+        dic['probs_occur'] = numpy.array(probs)
+        name, ext = os.path.splitext(fname)
+        numpy.savez_compressed(name + '.npz', **dic)
+
+
+gridded2npz.arg('fnames', 'source model file in XML format', nargs='+')
+
+
+if __name__ == '__main__':
+    gridded2npz.callfunc()
