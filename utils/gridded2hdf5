@@ -27,35 +27,11 @@ from openquake.hazardlib import nrml
 def convert_gridded(fname):
     try:
         [[src]] = nrml.to_python(fname).src_groups
-        assert src.is_gridded()
+        dic = src.todict()
     except:
-        logging.warning('Ignored non-gridded %s', fname)
+        raise
+        print('Ignored non-gridded %s' % fname)
         return dict(before=0, after=0)
-    dic = dict(id=src.source_id, name=src.name,
-               tectonicregion=src.tectonic_region_type)
-    mags = []
-    rakes = []
-    hypos = []
-    probs = []
-    slices = []
-    start = 0
-    meshes = []
-    for i, (rup, pmf) in enumerate(src.data):
-        hc = rup.hypocenter
-        mags.append(rup.mag)
-        rakes.append(rup.rake)
-        hypos.append((hc.x, hc.y, hc.z))
-        probs.append([p for p, i in pmf.data])
-        mesh = rup.surface.mesh.array.astype('f4').T   # shape (n, 3)
-        meshes.append(mesh)
-        slices.append((start, start + len(mesh)))
-        start += len(mesh)
-    dic['slice']= numpy.array(slices, numpy.uint32)
-    dic['mesh'] = numpy.concatenate(meshes)
-    dic['mag'] = numpy.array(mags)
-    dic['rake'] = numpy.array(rakes)
-    dic['hypo'] = numpy.array(hypos)
-    dic['probs_occur'] = numpy.array(probs)
     name, ext = os.path.splitext(fname)
     h5name = name + '.hdf5'
     print('Saving %d ruptures on %s' % (len(src.data), h5name))

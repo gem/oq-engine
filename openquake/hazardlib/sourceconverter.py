@@ -860,10 +860,9 @@ class SourceConverter(RuptureConverter):
                                  % (po, len(probs.data), num_probs))
             rup = RuptureConverter.convert_node(self, rupnode)
             rup.tectonic_region_type = trt
-            rup.weight = None if rups_weights is None else rups_weights[i]
             rup_pmf_data.append((rup, probs))
         nps = source.NonParametricSeismicSource(
-            node['id'], node['name'], trt, rup_pmf_data)
+            node['id'], node['name'], trt, rup_pmf_data, rups_weights)
         nps.splittable = 'rup_weights' not in node.attrib
         return nps
 
