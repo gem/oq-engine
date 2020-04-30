@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2020, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import h5py
+import numpy
+from openquake.baselib import sap, general, parallel
+from openquake.hazardlib import nrml
+
+
+def convert_gridded(fname):
+    try:
+        [[src]] = nrml.to_python(fname).src_groups
+        assert src.is_gridded()
+    except:
+        logging.warning('Ignored non-gridded %s', fname)
+        return dict(before=0, after=0)
+    dic = dict(id=src.source_id, name=src.name,
+               tectonicregion=src.tectonic_region_type)
+    mags = []
+    rakes = []
+    hypos = []
+    probs = []
+    startstop = []
+    start = 0
+    meshes = []
+    for i, (rup, pmf) in enumerate(src.data):
+        hc = rup.hypocenter
+        mags.append(rup.mag)
+        rakes.append(rup.rake)
+        hypos.append((hc.x, hc.y, hc.z))
+        probs.append([p for p, i in pmf.data])
+        mesh = rup.surface.mesh.array.astype('f4').T   # shape (n, 3)
+        meshes.append(mesh)
+        startstop.append((start, start + len(mesh)))
+        start += len(mesh)
+    dic['startstop']= numpy.array(startstop)
+    dic['mesh'] = numpy.concatenate(meshes)
+    dic['mag'] = numpy.array(mags)
+    dic['rake'] = numpy.array(rakes)
+    dic['hypo'] = numpy.array(hypos)
+    dic['probs_occur'] = numpy.array(probs)
+    name, ext = os.path.splitext(fname)
+    h5name = name + '.hdf5'
+    print('Saving %d ruptures on %s' % (len(src.data), h5name))
+    with h5py.File(h5name, 'w') as h:
+        for k, v in dic.items():
+            if k == 'mesh':
+                dset = h.create_dataset(k, v.shape, v.dtype,
+                                        compression='gzip')
+                dset[:] = v
+            else:
+                h[k] = v
+    return dict(before=os.path.getsize(fname), after=os.path.getsize(h5name))
+
+    
+@sap.Script
+def gridded2hdf5(fnames):
+    """
+    Convert a gridded source from XML to HDF5 format
+    """
+    try:
+        acc = parallel.Starmap(convert_gridded, [(f,) for f in fnames],
+                               distribute='processpool').reduce()
+    finally:
+        parallel.Starmap.shutdown()
+    before = general.humansize(acc['before'])
+    after = general.humansize(acc['after'])
+    factor = acc['before'] / acc['after']
+    print('Reduced size %s -> %s, %dx' % (before, after, factor))
+    
+
+gridded2hdf5.arg('fnames', 'source model file in XML format', nargs='+')
+
+
+if __name__ == '__main__':
+    gridded2hdf5.callfunc()
