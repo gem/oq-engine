@@ -32,6 +32,7 @@ from openquake.hazardlib.source import NonParametricSeismicSource
 
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 EPSILON = 1E-12
 source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
@@ -846,7 +847,7 @@ class SourceConverter(RuptureConverter):
         rup_pmf_data = []
         rups_weights = None
         if 'rup_weights' in node.attrib:
-            rups_weights = F32(node['rup_weights'].split())
+            rups_weights = F64(node['rup_weights'].split())
         num_probs = None
         for i, rupnode in enumerate(node):
             po = rupnode['probs_occur']
