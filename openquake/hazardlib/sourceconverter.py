@@ -846,8 +846,7 @@ class SourceConverter(RuptureConverter):
         rup_pmf_data = []
         rups_weights = None
         if 'rup_weights' in node.attrib:
-            tmp = node.attrib.get('rup_weights')
-            rups_weights = numpy.array([float(s) for s in tmp.split()])
+            rups_weights = U32(node['rup_weights'].split())
         for i, rupnode in enumerate(node):
             probs = pmf.PMF(valid.pmf(rupnode['probs_occur']))
             rup = RuptureConverter.convert_node(self, rupnode)
