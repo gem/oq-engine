@@ -846,7 +846,7 @@ class SourceConverter(RuptureConverter):
         rup_pmf_data = []
         rups_weights = None
         if 'rup_weights' in node.attrib:
-            rups_weights = U32(node['rup_weights'].split())
+            rups_weights = F32(node['rup_weights'].split())
         num_probs = None
         for i, rupnode in enumerate(node):
             po = rupnode['probs_occur']
