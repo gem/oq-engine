@@ -73,7 +73,7 @@ def convert_gridded(fname):
 @sap.Script
 def gridded2hdf5(fnames):
     """
-    Convert a gridded source from XML to HDF5 format
+    Convert gridded sources from XML to HDF5 format
     """
     try:
         acc = parallel.Starmap(convert_gridded, [(f,) for f in fnames],
