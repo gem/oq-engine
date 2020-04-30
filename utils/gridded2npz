@@ -19,41 +19,56 @@
 
 import os
 import numpy
-from openquake.baselib import sap
+from openquake.baselib import sap, general, parallel
 from openquake.hazardlib import nrml
 
 
+def convert_gridded(fname):
+    try:
+        [[src]] = nrml.to_python(fname).src_groups
+        assert src.is_gridded()
+    except:
+        logging.warning('Ignored non-gridded %s', fname)
+        return dict(before=0, after=0)
+    dic = dict(id=src.source_id, name=src.name,
+               tectonicregion=src.tectonic_region_type)
+    mags = []
+    rakes = []
+    hypos = []
+    probs = []
+    for i, (rup, pmf) in enumerate(src.data):
+        hc = rup.hypocenter
+        mags.append(rup.mag)
+        rakes.append(rup.rake)
+        hypos.append((hc.x, hc.y, hc.z))
+        probs.append([p for p, i in pmf.data])
+        dic['surface%d' % i] = rup.surface.mesh.array.astype('f4')
+    dic['mag'] = numpy.array(mags)
+    dic['rake'] = numpy.array(rakes)
+    dic['hypo'] = numpy.array(hypos)
+    dic['probs_occur'] = numpy.array(probs)
+    name, ext = os.path.splitext(fname)
+    npzname = name + '.npz'
+    print('Saving %d ruptures on %s' % (len(src.data), npzname))
+    numpy.savez_compressed(npzname, **dic)
+    return dict(before=os.path.getsize(fname), after=os.path.getsize(npzname))
+
+    
 @sap.Script
 def gridded2npz(fnames):
     """
     Convert a gridded source from XML to NPZ format
     """
-    for fname in fnames:
-        try:
-            [[src]] = nrml.to_python(fname).src_groups
-            assert src.is_gridded()
-        except:
-            logging.warning('Ignored non-gridded %s', fname)
-        dic = dict(id=src.source_id, name=src.name,
-                   tectonicregion=src.tectonic_region_type)
-        mags = []
-        rakes = []
-        hypos = []
-        probs = []
-        for i, (rup, pmf) in enumerate(src.data):
-            hc = rup.hypocenter
-            mags.append(rup.mag)
-            rakes.append(rup.rake)
-            hypos.append((hc.x, hc.y, hc.z))
-            probs.append([p for p, i in pmf.data])
-            dic['surface%d' % i] = rup.surface.mesh.array.astype('f4')
-        dic['mag'] = numpy.array(mags)
-        dic['rake'] = numpy.array(rakes)
-        dic['hypo'] = numpy.array(hypos)
-        dic['probs_occur'] = numpy.array(probs)
-        name, ext = os.path.splitext(fname)
-        numpy.savez_compressed(name + '.npz', **dic)
-
+    try:
+        acc = parallel.Starmap(convert_gridded, [(f,) for f in fnames],
+                               distribute='processpool').reduce()
+    finally:
+        parallel.Starmap.shutdown()
+    before = general.humansize(acc['before'])
+    after = general.humansize(acc['after'])
+    factor = acc['before'] / acc['after']
+    print('Reduced size %s -> %s, %dx' % (before, after, factor))
+    
 
 gridded2npz.arg('fnames', 'source model file in XML format', nargs='+')
 
