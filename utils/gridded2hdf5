@@ -37,7 +37,7 @@ def convert_gridded(fname):
     rakes = []
     hypos = []
     probs = []
-    startstop = []
+    slices = []
     start = 0
     meshes = []
     for i, (rup, pmf) in enumerate(src.data):
@@ -48,9 +48,9 @@ def convert_gridded(fname):
         probs.append([p for p, i in pmf.data])
         mesh = rup.surface.mesh.array.astype('f4').T   # shape (n, 3)
         meshes.append(mesh)
-        startstop.append((start, start + len(mesh)))
+        slices.append((start, start + len(mesh)))
         start += len(mesh)
-    dic['startstop']= numpy.array(startstop)
+    dic['slice']= numpy.array(slices, numpy.uint32)
     dic['mesh'] = numpy.concatenate(meshes)
     dic['mag'] = numpy.array(mags)
     dic['rake'] = numpy.array(rakes)
@@ -61,9 +61,9 @@ def convert_gridded(fname):
     print('Saving %d ruptures on %s' % (len(src.data), h5name))
     with h5py.File(h5name, 'w') as h:
         for k, v in dic.items():
-            if k == 'mesh':
+            if isinstance(v, numpy.ndarray):
                 dset = h.create_dataset(k, v.shape, v.dtype,
-                                        compression='gzip')
+                                        compression='gzip', compression_opts=9)
                 dset[:] = v
             else:
                 h[k] = v
