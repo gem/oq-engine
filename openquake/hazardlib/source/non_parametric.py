@@ -29,6 +29,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.pmf import PMF
 
 F32 = numpy.float32
+U32 = numpy.uint32
 
 
 class NonParametricSeismicSource(BaseSeismicSource):
@@ -134,21 +135,26 @@ class NonParametricSeismicSource(BaseSeismicSource):
         Convert a GriddedSource into a dictionary of arrays
         """
         assert self.is_gridded(), '%s is not gridded' % self
-        dic = {'probs_occur': [], 'magnitude': [], 'rake': [],
-               'hypocenter': [], 'mesh3d': [], 'slice': []}
+        n = len(self.data)
+        m = sum(len(rup.surface.mesh) for rup, pmf in self.data)
+        p = len(self.data[0][1].data)
+        dic = {'probs_occur': numpy.zeros((n, p)),
+               'magnitude': numpy.zeros(n),
+               'rake': numpy.zeros(n),
+               'hypocenter': numpy.zeros((n, 3), F32),
+               'mesh3d': numpy.zeros((m, 3), F32),
+               'slice': numpy.zeros((n, 2), U32)}
         start = 0
-        for rup, pmf in self.data:
-            dic['probs_occur'].append([prob for (prob, _) in pmf.data])
-            dic['magnitude'].append(rup.mag)
-            dic['rake'].append(rup.rake)
-            dic['hypocenter'].append((rup.hypocenter.x, rup.hypocenter.y,
-                                      rup.hypocenter.z))
-            mesh = rup.surface.mesh.array.T  # shape (n, 3)
-            dic['mesh3d'].append(mesh)
-            dic['slice'].append((start, start + len(mesh)))
+        for i, (rup, pmf) in enumerate(self.data):
+            dic['probs_occur'][i] = [prob for (prob, _) in pmf.data]
+            dic['magnitude'][i] = rup.mag
+            dic['rake'][i] = rup.rake
+            dic['hypocenter'][i] = (rup.hypocenter.x, rup.hypocenter.y,
+                                    rup.hypocenter.z)
+            mesh = rup.surface.mesh.array.T  # shape (npoints, 3)
+            dic['mesh3d'][start: start + len(mesh)] = mesh
+            dic['slice'][i] = start, start + len(mesh)
             start += len(mesh)
-        dic['hypocenter'] = numpy.array(dic['hypocenter']).astype('f4')
-        dic['mesh3d'] = numpy.concatenate(dic['mesh3d']).astype('f4')
         return dic
 
     def fromdict(self, dic, weights=None):

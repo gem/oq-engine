@@ -25,24 +25,26 @@ from openquake.hazardlib import nrml
 
 
 def convert_gridded(fname):
-    try:
-        [[src]] = nrml.to_python(fname).src_groups
-        dic = src.todict()
-    except:
-        raise
-        print('Ignored non-gridded %s' % fname)
-        return dict(before=0, after=0)
-    name, ext = os.path.splitext(fname)
-    h5name = name + '.hdf5'
-    print('Saving %d ruptures on %s' % (len(src.data), h5name))
+    h5name = os.path.splitext(fname)[0] + '.hdf5'
     with h5py.File(h5name, 'w') as h:
-        for k, v in dic.items():
-            if isinstance(v, numpy.ndarray):
-                dset = h.create_dataset(k, v.shape, v.dtype,
-                                        compression='gzip', compression_opts=9)
-                dset[:] = v
-            else:
-                h[k] = v
+        for src_group in nrml.to_python(fname).src_groups:
+            for src in src_group:
+                try:
+                    dic = src.todict()
+                except:
+                    raise
+                    print('Ignored non-gridded %s' % fname)
+                    continue
+            print('Saving %d ruptures on %s' % (len(src.data), h5name))
+            for k, v in dic.items():
+                key = '%s/%s' % (src.source_id, k)
+                if isinstance(v, numpy.ndarray):
+                    dset = h.create_dataset(
+                        key, v.shape, v.dtype,
+                        compression='gzip', compression_opts=9)
+                    dset[:] = v
+                else:
+                    h[key] = v
     return dict(before=os.path.getsize(fname), after=os.path.getsize(h5name))
 
     
