@@ -432,6 +432,11 @@ def build_characteristic_fault_source_node(source):
 
 @obj_to_node.add('NonParametricSeismicSource')
 def build_nonparametric_source_node(source):
+    if source.is_gridded():
+        import pdb; pdb.set_trace()
+        attrs = get_source_attributes(source)
+        attrs['hdf5_file'] = '%(id)s.hdf5' % attrs
+        return Node('nonParametricSeismicSource', attrs)
     rup_nodes = []
     for rup, p in source.data:
         probs = [prob for (prob, no) in p.data]
