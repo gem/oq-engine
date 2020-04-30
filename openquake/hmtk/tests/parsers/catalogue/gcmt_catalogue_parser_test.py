@@ -72,6 +72,22 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         self.cat = parser.read_file()
         self.cat_cent = parser_cent.read_file(use_centroid='True')
 
+    def test_locations(self):
+        """ test locations """
+        fname = os.path.join(self.BASE_DATA_PATH, 'test_gcmt_catalogue_01.txt')
+        prs = ParseNDKtoGCMT(fname)
+        cat = prs.read_file()
+        cat = prs.read_file(use_centroid=False)
+        self.assertAlmostEqual(cat.data['longitude'][0], 111.72)
+        self.assertAlmostEqual(cat.data['latitude'][0], -10.80)
+        self.assertAlmostEqual(cat.data['longitude'][1], -113.12)
+        self.assertAlmostEqual(cat.data['latitude'][1], 28.74)
+        cat = prs.read_file(use_centroid=True)
+        self.assertAlmostEqual(cat.data['longitude'][0], 112.44)
+        self.assertAlmostEqual(cat.data['latitude'][0], -10.60)
+        self.assertAlmostEqual(cat.data['longitude'][1], -113.12)
+        self.assertAlmostEqual(cat.data['latitude'][1], 28.81)
+
     def test_read_catalogue(self):
         """
         Check that the some fields in the first row of the catalogue are read
