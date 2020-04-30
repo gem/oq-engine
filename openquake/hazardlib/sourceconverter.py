@@ -847,8 +847,15 @@ class SourceConverter(RuptureConverter):
         rups_weights = None
         if 'rup_weights' in node.attrib:
             rups_weights = U32(node['rup_weights'].split())
+        num_probs = None
         for i, rupnode in enumerate(node):
-            probs = pmf.PMF(valid.pmf(rupnode['probs_occur']))
+            po = rupnode['probs_occur']
+            probs = pmf.PMF(valid.pmf(po))
+            if num_probs is None:  # first time
+                num_probs = len(probs.data)
+            elif len(probs.data) != num_probs:
+                raise ValueError('prob_occurs=%s has %d elements, expected %s'
+                                 % (po, len(probs.data), num_probs))
             rup = RuptureConverter.convert_node(self, rupnode)
             rup.tectonic_region_type = trt
             rup.weight = None if rups_weights is None else rups_weights[i]
