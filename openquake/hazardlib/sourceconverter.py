@@ -854,6 +854,7 @@ class SourceConverter(RuptureConverter):
             if num_probs is None:  # first time
                 num_probs = len(probs.data)
             elif len(probs.data) != num_probs:
+                # probs_occur must have uniform length for all ruptures
                 raise ValueError('prob_occurs=%s has %d elements, expected %s'
                                  % (po, len(probs.data), num_probs))
             rup = RuptureConverter.convert_node(self, rupnode)
