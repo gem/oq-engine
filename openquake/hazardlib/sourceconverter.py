@@ -32,6 +32,7 @@ from openquake.hazardlib.source import NonParametricSeismicSource
 
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 EPSILON = 1E-12
 source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
@@ -846,16 +847,22 @@ class SourceConverter(RuptureConverter):
         rup_pmf_data = []
         rups_weights = None
         if 'rup_weights' in node.attrib:
-            tmp = node.attrib.get('rup_weights')
-            rups_weights = numpy.array([float(s) for s in tmp.split()])
+            rups_weights = F64(node['rup_weights'].split())
+        num_probs = None
         for i, rupnode in enumerate(node):
-            probs = pmf.PMF(valid.pmf(rupnode['probs_occur']))
+            po = rupnode['probs_occur']
+            probs = pmf.PMF(valid.pmf(po))
+            if num_probs is None:  # first time
+                num_probs = len(probs.data)
+            elif len(probs.data) != num_probs:
+                # probs_occur must have uniform length for all ruptures
+                raise ValueError('prob_occurs=%s has %d elements, expected %s'
+                                 % (po, len(probs.data), num_probs))
             rup = RuptureConverter.convert_node(self, rupnode)
             rup.tectonic_region_type = trt
-            rup.weight = None if rups_weights is None else rups_weights[i]
             rup_pmf_data.append((rup, probs))
         nps = source.NonParametricSeismicSource(
-            node['id'], node['name'], trt, rup_pmf_data)
+            node['id'], node['name'], trt, rup_pmf_data, rups_weights)
         nps.splittable = 'rup_weights' not in node.attrib
         return nps
 
