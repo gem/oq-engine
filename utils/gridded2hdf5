@@ -21,31 +21,15 @@ import os
 import h5py
 import numpy
 from openquake.baselib import sap, general, parallel
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, sourcewriter
 
 
 def convert_gridded(fname):
-    h5name = os.path.splitext(fname)[0] + '.hdf5'
-    with h5py.File(h5name, 'w') as h:
-        for src_group in nrml.to_python(fname).src_groups:
-            for src in src_group:
-                try:
-                    dic = src.todict()
-                except:
-                    raise
-                    print('Ignored non-gridded %s' % fname)
-                    continue
-            print('Saving %d ruptures on %s' % (len(src.data), h5name))
-            for k, v in dic.items():
-                key = '%s/%s' % (src.source_id, k)
-                if isinstance(v, numpy.ndarray):
-                    dset = h.create_dataset(
-                        key, v.shape, v.dtype,
-                        compression='gzip', compression_opts=9)
-                    dset[:] = v
-                else:
-                    h[key] = v
-    return dict(before=os.path.getsize(fname), after=os.path.getsize(h5name))
+    before = os.path.getsize(fname)
+    smodel = nrml.to_python(fname)
+    hdf5 = sourcewriter.write_source_model(fname, smodel)[1]
+    after = os.path.getsize(fname) + os.path.getsize(hdf5)
+    return dict(before=before, after=after)
 
     
 @sap.Script

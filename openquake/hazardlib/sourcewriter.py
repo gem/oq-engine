@@ -24,6 +24,7 @@ import os
 import toml
 import operator
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
@@ -614,6 +615,18 @@ def build_source_model(csm):
 
 # ##################### generic source model writer ####################### #
 
+def extract_ddict(src_groups):
+    """
+    :returns: a dictionary source_id -> attr -> value
+    """
+    ddict = {}
+    for src_group in src_groups:
+        for src in src_group:
+            if src.is_gridded():
+                ddict[src.source_id] = src.todict()
+    return ddict
+
+
 def write_source_model(dest, sources_or_groups, name=None,
                        investigation_time=None):
     """
@@ -627,25 +640,50 @@ def write_source_model(dest, sources_or_groups, name=None,
         Name of the source model (if missing, extracted from the filename)
     """
     if isinstance(sources_or_groups, nrml.SourceModel):
-        with open(dest, 'wb') as f:
-            nrml.write([obj_to_node(sources_or_groups)], f, '%s')
-        return
-    if isinstance(sources_or_groups[0], sourceconverter.SourceGroup):
+        groups = sources_or_groups.src_groups
+        attrs = dict(name=sources_or_groups.name,
+                     investigation_time=sources_or_groups.investigation_time)
+    elif isinstance(sources_or_groups[0], sourceconverter.SourceGroup):
         groups = sources_or_groups
+        attrs = dict(investigation_time=investigation_time)
     else:  # passed a list of sources
         srcs_by_trt = groupby(
             sources_or_groups, operator.attrgetter('tectonic_region_type'))
         groups = [sourceconverter.SourceGroup(trt, srcs_by_trt[trt])
                   for trt in srcs_by_trt]
-    name = name or os.path.splitext(os.path.basename(dest))[0]
-    nodes = list(map(obj_to_node, sorted(groups)))
-    attrs = {"name": name}
-    if investigation_time is not None:
-        attrs['investigation_time'] = investigation_time
+        attrs = dict(investigation_time=investigation_time)
+    if name or 'name' not in attrs:
+        attrs['name'] = name or os.path.splitext(os.path.basename(dest))[0]
+    if attrs['investigation_time'] is None:
+        del attrs['investigation_time']
+    nodes = list(map(obj_to_node, groups))
+    ddict = extract_ddict(groups)
+    if ddict:
+        # remove duplicate content from nodes
+        for grp_node in nodes:
+            for src_node in grp_node:
+                src_node.nodes = []
+        # save HDF5 file
+        dest5 = os.path.splitext(dest)[0] + '.hdf5'
+        with hdf5.File(dest5, 'w') as h:
+            for src_id, dic in ddict.items():
+                for k, v in dic.items():
+                    key = '%s/%s' % (src_id, k)
+                    if isinstance(v, numpy.ndarray):
+                        h.create_dataset(key, v.shape, v.dtype,
+                                         compression='gzip',
+                                         compression_opts=9)
+                        h[key][:] = v
+                    else:
+                        h[key] = v
+
     source_model = Node("sourceModel", attrs, nodes=nodes)
     with open(dest, 'wb') as f:
         nrml.write([source_model], f, '%s')
-    return dest
+    if ddict:
+        return [dest, dest5]
+    else:
+        return [dest]
 
 
 def tomldump(obj, fileobj=None):

@@ -490,11 +490,15 @@ class ArrayWrapper(object):
         with File(path, 'w') as f:
             for key, val in vars(self).items():
                 assert val is not None, key  # sanity check
-                try:
-                    f[key] = maybe_encode(val)
-                except ValueError as err:
-                    if 'Object header message is too large' in str(err):
-                        logging.error(str(err))
+                if isinstance(val, numpy.ndarray):
+                    f.create_dataset(key, val.shape, val.dtype)
+                    f[key][:] = val
+                else:
+                    try:
+                        f[key] = maybe_encode(val)
+                    except ValueError as err:
+                        if 'Object header message is too large' in str(err):
+                            logging.error(str(err))
             for k, v in extra.items():
                 f.attrs[k] = maybe_encode(v)
 
