@@ -27,8 +27,6 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, block_splitter
 from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
-from openquake.hazardlib.source.rupture import \
-    NonParametricProbabilisticRupture
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
 
@@ -563,12 +561,12 @@ class SourceConverter(RuptureConverter):
         self.discard_trts = discard_trts
 
     @property
-    def hname(self):
+    def hdf5_file(self):
         """
         :returns: the associated hdf5 file or None
         """
-        hname = os.path.splitext(self.fname)[0] + '.hdf5'
-        return hname if os.path.exists(hname) else None
+        path = os.path.splitext(self.fname)[0] + '.hdf5'
+        return hdf5.File(path, 'r') if os.path.exists(path) else None
 
     def convert_node(self, node):
         """
@@ -860,11 +858,10 @@ class SourceConverter(RuptureConverter):
         nps = source.NonParametricSeismicSource(
             node['id'], node['name'], trt, [], [])
         nps.splittable = 'rup_weights' not in node.attrib
-        if self.hname:
+        if self.hdf5_file:
             # read the rupture data from the HDF5 file
             assert node.text is None, node.text
-            with hdf5.File(self.hname, 'r') as h5:
-                dic = {k: d[:] for k, d in h5[node['id']].items()}
+            dic = {k: d[:] for k, d in self.hdf5_file[node['id']].items()}
             nps.fromdict(dic, rups_weights)
         else:
             # read the rupture data from the XML nodes
