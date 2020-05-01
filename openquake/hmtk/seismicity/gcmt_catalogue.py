@@ -449,7 +449,7 @@ class GCMTCatalogue(Catalogue):
 
     def serialise_to_hmtk_csv(self, filename, centroid_location=True):
         '''
-        Serialise the catalogue to a simple csv format, designed for 
+        Serialise the catalogue to a simple csv format, designed for
         comptibility with the GEM Hazard Modeller's Toolkit
         '''
         header_list = ['eventID', 'Agency', 'year', 'month', 'day', 'hour',
@@ -482,7 +482,7 @@ class GCMTCatalogue(Catalogue):
                     cmt_dict['minute'] = tensor.centroid.time.minute
                     cmt_dict['second'] = np.round(
                         np.float(tensor.centroid.time.second) +
-                        np.float(tensor.centroid.time.microsecond) / 1000000., 2)
+                        np.float(tensor.centroid.time.microsecond) / 1.0e6, 2)
                     cmt_dict['timeError'] = tensor.centroid.time_error
                     cmt_dict['longitude'] = tensor.centroid.longitude
                     cmt_dict['latitude'] = tensor.centroid.latitude
