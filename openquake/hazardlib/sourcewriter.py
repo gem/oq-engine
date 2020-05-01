@@ -640,17 +640,17 @@ def write_source_model(dest, sources_or_groups, name=None,
                      investigation_time=sources_or_groups.investigation_time)
     elif isinstance(sources_or_groups[0], sourceconverter.SourceGroup):
         groups = sources_or_groups
-        attrs = {}
+        attrs = dict(investigation_time=investigation_time)
     else:  # passed a list of sources
         srcs_by_trt = groupby(
             sources_or_groups, operator.attrgetter('tectonic_region_type'))
         groups = [sourceconverter.SourceGroup(trt, srcs_by_trt[trt])
                   for trt in srcs_by_trt]
-        attrs = {}
+        attrs = dict(investigation_time=investigation_time)
     if name or 'name' not in attrs:
         attrs['name'] = name or os.path.splitext(os.path.basename(dest))[0]
-    if investigation_time:
-        attrs['investigation_time'] = investigation_time
+    if attrs['investigation_time'] is None:
+        del attrs['investigation_time']
     nodes = list(map(obj_to_node, groups))
     ddict = extract_ddict(groups)
     if ddict:
@@ -661,7 +661,17 @@ def write_source_model(dest, sources_or_groups, name=None,
         # save HDF5 file
         dest5 = os.path.splitext(dest)[0] + '.hdf5'
         with hdf5.File(dest5, 'w') as h:
-            h['/'] = ddict
+            for src_id, dic in ddict.items():
+                for k, v in dic.items():
+                    key = '%s/%s' % (src_id, k)
+                    if isinstance(v, numpy.ndarray):
+                        h.create_dataset(key, v.shape, v.dtype,
+                                         compression='gzip',
+                                         compression_opts=9)
+                        h[key][:] = v
+                    else:
+                        h[key] = v
+
     source_model = Node("sourceModel", attrs, nodes=nodes)
     with open(dest, 'wb') as f:
         nrml.write([source_model], f, '%s')
