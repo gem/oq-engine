@@ -562,6 +562,14 @@ class SourceConverter(RuptureConverter):
         self.source_id = source_id
         self.discard_trts = discard_trts
 
+    @property
+    def hname(self):
+        """
+        :returns: the associated hdf5 file or None
+        """
+        hname = os.path.splitext(self.fname)[0] + '.hdf5'
+        return hname if os.path.exists(hname) else None
+
     def convert_node(self, node):
         """
         Convert the given source node into a hazardlib source, depending
@@ -849,32 +857,15 @@ class SourceConverter(RuptureConverter):
         rups_weights = None
         if 'rup_weights' in node.attrib:
             rups_weights = F64(node['rup_weights'].split())
-        rup_pmf_data = []
-        if 'hdf5_file' in node.attrib:
+        nps = source.NonParametricSeismicSource(
+            node['id'], node['name'], trt, [], [])
+        nps.splittable = 'rup_weights' not in node.attrib
+        if self.hname:
             # read the rupture data from the HDF5 file
-            assert node.text.strip() == '', node.text
-            path = os.path.join(os.path.dirname(self.fname), node['hdf5_file'])
-            with hdf5.File(path) as h5:
-                mags = h5['magnitude']
-                hypos = h5['hypocenter']
-                slices = h5['slice']
-                rakes = h5['rake']
-                meshes = h5['mesh3d']
-                probs = h5['probs_occur']
-            i = 0
-            for mag, hypo, (start, stop), rake, prob in zip(
-                    mags, hypos, slices, rakes, probs):
-                hp = geo.Point(*hypocenter)
-                lons = meshes[start:stop, 0]
-                lats = meshes[start:stop, 1]
-                deps = meshes[start:stop, 2]
-                surface = geo.GriddedSurface(geo.Mesh(lons, lats, deps))
-                prob = pmf.PMF(prob)
-                weight = None if rups_weights is None else rups_weights[i]
-                rup = NonParametricProbabilisticRupture(
-                    mag, rake, trt, hp, surface, prob, weight=weight)
-                rup_pmf_data.append((rup, prob))
-                i += 1
+            assert node.text is None, node.text
+            with hdf5.File(self.hname, 'r') as h5:
+                dic = {k: d[:] for k, d in h5[node['id']].items()}
+            nps.fromdict(dic, rups_weights)
         else:
             # read the rupture data from the XML nodes
             num_probs = None
@@ -890,10 +881,7 @@ class SourceConverter(RuptureConverter):
                         % (po, len(probs.data), num_probs))
                 rup = RuptureConverter.convert_node(self, rupnode)
                 rup.tectonic_region_type = trt
-                rup_pmf_data.append((rup, probs))
-        nps = source.NonParametricSeismicSource(
-            node['id'], node['name'], trt, rup_pmf_data, rups_weights)
-        nps.splittable = 'rup_weights' not in node.attrib
+                nps.data.append((rup, probs))
         return nps
 
     def convert_sourceModel(self, node):
