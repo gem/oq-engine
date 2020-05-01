@@ -175,7 +175,8 @@ Info = collections.namedtuple('Info', 'smpaths, applytosources')
 def collect_info(smlt):
     """
     Given a path to a source model logic tree, collect all of the
-    path names to the source models it contains and build
+    path names to the source models it contains and build:
+
     1. a dictionary source model branch ID -> paths
     2. a dictionary source model branch ID -> source IDs in applyToSources
 
@@ -271,6 +272,7 @@ class SourceModelLogicTree(object):
         self.previous_branches = []
         self.tectonic_region_types = set()
         self.source_types = set()
+        self.hdf5_files = set()
         self.root_branchset = None
         root = nrml.read(filename)
         try:
@@ -574,9 +576,12 @@ class SourceModelLogicTree(object):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        # using regular expressions is a lot faster than using the
+        # using regular expressions is a lot faster than parsing
         with self._get_source_model(source_model) as sm:
             xml = sm.read()
+        if 'hdf5_file="true"' in xml:
+            hdf5_file = os.path.splitext(source_model)[0] + '.hdf5'
+            self.hdf5_files.update(hdf5_file)
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
