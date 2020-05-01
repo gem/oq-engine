@@ -24,11 +24,12 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
-from openquake.hazardlib.geo.mesh import Mesh, point3d
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.pmf import PMF
 
 F32 = numpy.float32
+U32 = numpy.uint32
 
 
 class NonParametricSeismicSource(BaseSeismicSource):
@@ -51,9 +52,14 @@ class NonParametricSeismicSource(BaseSeismicSource):
     code = b'N'
     MODIFICATIONS = set()
 
-    def __init__(self, source_id, name, tectonic_region_type, data):
+    def __init__(self, source_id, name, tectonic_region_type, data,
+                 weights=None):
         super().__init__(source_id, name, tectonic_region_type)
         self.data = data
+        if weights is not None:
+            assert len(weights) == len(data)
+            for (rup, pmf), weight in zip(data, weights):
+                rup.weight = weight
 
     def iter_ruptures(self, **kwargs):
         """
@@ -124,35 +130,53 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 return False
         return True
 
-    def __toh5__(self):
+    def todict(self):
+        """
+        Convert a GriddedSource into a dictionary of arrays
+        """
         assert self.is_gridded(), '%s is not gridded' % self
-        attrs = {'source_id': self.source_id, 'name': self.name,
-                 'tectonic_region_type': self.tectonic_region_type}
-        dic = {'probs_occur': [], 'magnitude': [], 'rake': [],
-               'hypocenter': [], 'points': []}
-        for rup, pmf in self.data:
-            dic['probs_occur'].append([prob for (prob, _) in pmf.data])
-            dic['magnitude'].append(rup.mag)
-            dic['rake'].append(rup.rake)
-            dic['hypocenter'].append((rup.hypocenter.x, rup.hypocenter.y,
-                                      rup.hypocenter.z))
-            dic['points'].append(rup.surface.mesh.array)
-        dic['hypocenter'] = numpy.array(dic['hypocenter'], point3d)
-        return dic, attrs
+        n = len(self.data)
+        m = sum(len(rup.surface.mesh) for rup, pmf in self.data)
+        p = len(self.data[0][1].data)
+        dic = {'probs_occur': numpy.zeros((n, p)),
+               'magnitude': numpy.zeros(n),
+               'rake': numpy.zeros(n),
+               'hypocenter': numpy.zeros((n, 3), F32),
+               'mesh3d': numpy.zeros((m, 3), F32),
+               'slice': numpy.zeros((n, 2), U32)}
+        start = 0
+        for i, (rup, pmf) in enumerate(self.data):
+            dic['probs_occur'][i] = [prob for (prob, _) in pmf.data]
+            dic['magnitude'][i] = rup.mag
+            dic['rake'][i] = rup.rake
+            dic['hypocenter'][i] = (rup.hypocenter.x, rup.hypocenter.y,
+                                    rup.hypocenter.z)
+            mesh = rup.surface.mesh.array.T  # shape (npoints, 3)
+            dic['mesh3d'][start: start + len(mesh)] = mesh
+            dic['slice'][i] = start, start + len(mesh)
+            start += len(mesh)
+        return dic
 
-    def __fromh5__(self, dic, attrs):
-        vars(self).update(attrs)
-        self.data = []
-        for mag, rake, hp, probs, points in zip(
+    def fromdict(self, dic, weights=None):
+        """
+        Populate a GriddedSource with ruptures
+        """
+        assert not self.data, '%s is not empty' % self
+        i = 0
+        for mag, rake, hp, probs, (start, stop), mesh3d in zip(
                 dic['magnitude'], dic['rake'], dic['hypocenter'],
-                dic['probs_occur'], dic['points']):
-            mesh = Mesh(points[0], points[1], points[2])
+                dic['probs_occur'], dic['slice'], dic['mesh3d']):
+            mesh = Mesh(mesh3d[start:stop, 0],
+                        mesh3d[start:stop, 1],
+                        mesh3d[start:stop, 2])
             surface = GriddedSurface(mesh)
             pmf = PMF([(prob, i) for i, prob in enumerate(probs)])
-            hypocenter = Point(hp['lon'], hp['lat'], hp['depth'])
+            hypocenter = Point(hp[0], hp[1], hp[2])
             rup = NonParametricProbabilisticRupture(
-                mag, rake, self.tectonic_region_type, hypocenter, surface, pmf)
+                mag, rake, self.tectonic_region_type, hypocenter, surface, pmf,
+                weight=None if weights is None else weights[i])
             self.data.append((rup, pmf))
+            i += 1
 
     def __repr__(self):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())

@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2020, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import h5py
+import numpy
+from openquake.baselib import sap, general, parallel
+from openquake.hazardlib import nrml
+
+
+def convert_gridded(fname):
+    h5name = os.path.splitext(fname)[0] + '.hdf5'
+    with h5py.File(h5name, 'w') as h:
+        for src_group in nrml.to_python(fname).src_groups:
+            for src in src_group:
+                try:
+                    dic = src.todict()
+                except:
+                    raise
+                    print('Ignored non-gridded %s' % fname)
+                    continue
+            print('Saving %d ruptures on %s' % (len(src.data), h5name))
+            for k, v in dic.items():
+                key = '%s/%s' % (src.source_id, k)
+                if isinstance(v, numpy.ndarray):
+                    dset = h.create_dataset(
+                        key, v.shape, v.dtype,
+                        compression='gzip', compression_opts=9)
+                    dset[:] = v
+                else:
+                    h[key] = v
+    return dict(before=os.path.getsize(fname), after=os.path.getsize(h5name))
+
+    
+@sap.Script
+def gridded2hdf5(fnames):
+    """
+    Convert gridded sources from XML to HDF5 format
+    """
+    try:
+        acc = parallel.Starmap(convert_gridded, [(f,) for f in fnames],
+                               distribute='processpool').reduce()
+    finally:
+        parallel.Starmap.shutdown()
+    before = general.humansize(acc['before'])
+    after = general.humansize(acc['after'])
+    factor = acc['before'] / acc['after']
+    print('Reduced size %s -> %s, %dx' % (before, after, factor))
+    
+
+gridded2hdf5.arg('fnames', 'source model file in XML format', nargs='+')
+
+
+if __name__ == '__main__':
+    gridded2hdf5.callfunc()
