@@ -127,8 +127,6 @@ xmlns:gml="http://www.opengis.net/gml"
                     </griddedSurface>
                 </griddedRupture>
             </nonParametricSeismicSource>
-            <nonParametricSeismicSource
-                id="2" name="gridded_source" hdf5_file="2.hdf5" />
         </sourceGroup>
     </sourceModel>
 </nrml>

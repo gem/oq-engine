@@ -878,6 +878,7 @@ class SourceConverter(RuptureConverter):
                         % (po, len(probs.data), num_probs))
                 rup = RuptureConverter.convert_node(self, rupnode)
                 rup.tectonic_region_type = trt
+                rup.weight = None if rups_weights is None else rups_weights[i]
                 nps.data.append((rup, probs))
         return nps
 

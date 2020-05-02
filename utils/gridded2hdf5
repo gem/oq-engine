@@ -27,8 +27,11 @@ from openquake.hazardlib import nrml, sourcewriter
 def convert_gridded(fname):
     before = os.path.getsize(fname)
     smodel = nrml.to_python(fname)
-    hdf5 = sourcewriter.write_source_model(fname, smodel)[1]
-    after = os.path.getsize(fname) + os.path.getsize(hdf5)
+    out = sourcewriter.write_source_model(fname, smodel)
+    if len(out) == 1:  # non-gridded
+        after = os.path.getsize(fname)
+    else:  # gridded, returns fname + hdf5 fname
+        after = os.path.getsize(fname) + os.path.getsize(out[1])
     return dict(before=before, after=after)
 
     
