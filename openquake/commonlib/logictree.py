@@ -579,8 +579,8 @@ class SourceModelLogicTree(object):
         # using regular expressions is a lot faster than parsing
         with self._get_source_model(source_model) as sm:
             xml = sm.read()
-        if 'hdf5_file="true"' in xml:
-            hdf5_file = os.path.splitext(source_model)[0] + '.hdf5'
+        hdf5_file = os.path.splitext(source_model)[0] + '.hdf5'
+        if os.path.exists(hdf5_file):
             self.hdf5_files.update(hdf5_file)
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
