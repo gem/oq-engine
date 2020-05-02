@@ -83,14 +83,15 @@ def check_unique(array, kfields, fname):
 
 class Amplifier(object):
     """
-    :param imtls: intensity measure types and levels DictArray M x I
-    :param ampl_funcs: an ArrayWrapper containing amplification functions
-    :param vs30: an array of vs30 values, one per site
-    :param amplevels: A levels used for the amplified curves
-    :attr periods: array of M periods
-    :attr midlevels: array of I-1 levels
-    :attr alpha: dict code, imt-> I-1 amplification coefficients
-    :attr sigma: dict code, imt-> I-1 amplification sigmas
+    Amplification class with methods .amplify and .amplify_gmfs.
+
+    :param imtls:
+        intensity measure types and levels DictArray M x I
+    :param ampl_funcs:
+        an ArrayWrapper containing amplification functions
+    :param amplevels:
+        intensity levels used for the amplified curves (if None, use the
+        levels from the imtls dictionary)
     """
     def __init__(self, imtls, ampl_funcs, amplevels=None):
         fname = getattr(ampl_funcs, 'fname', None)
