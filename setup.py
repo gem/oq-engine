@@ -60,7 +60,7 @@ install_requires = [
     'numpy >=1.16, <1.19',
     'scipy >=1.3, <1.5',
     'pandas >=0.25, <1.1',
-    'pyzmq <18.2',
+    'pyzmq <20.0',
     'psutil >=2.0, <5.7',
     'shapely >=1.3, <1.8',
     'docutils >=0.11, <0.15',
