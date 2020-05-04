@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import operator
 import collections
 import pickle
@@ -25,8 +26,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, block_splitter
 from openquake.baselib.node import context, striptag, Node, node_to_dict
-from openquake.hazardlib import geo, mfd, pmf, source, tom
-from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
 
@@ -560,6 +560,14 @@ class SourceConverter(RuptureConverter):
         self.source_id = source_id
         self.discard_trts = discard_trts
 
+    @property
+    def hdf5_fname(self):
+        """
+        :returns: the associated hdf5 file name or None
+        """
+        path = os.path.splitext(self.fname)[0] + '.hdf5'
+        return path if os.path.exists(path) else None
+
     def convert_node(self, node):
         """
         Convert the given source node into a hazardlib source, depending
@@ -844,26 +852,35 @@ class SourceConverter(RuptureConverter):
             instance
         """
         trt = node.attrib.get('tectonicRegion')
-        rup_pmf_data = []
         rups_weights = None
         if 'rup_weights' in node.attrib:
             rups_weights = F64(node['rup_weights'].split())
-        num_probs = None
-        for i, rupnode in enumerate(node):
-            po = rupnode['probs_occur']
-            probs = pmf.PMF(valid.pmf(po))
-            if num_probs is None:  # first time
-                num_probs = len(probs.data)
-            elif len(probs.data) != num_probs:
-                # probs_occur must have uniform length for all ruptures
-                raise ValueError('prob_occurs=%s has %d elements, expected %s'
-                                 % (po, len(probs.data), num_probs))
-            rup = RuptureConverter.convert_node(self, rupnode)
-            rup.tectonic_region_type = trt
-            rup_pmf_data.append((rup, probs))
         nps = source.NonParametricSeismicSource(
-            node['id'], node['name'], trt, rup_pmf_data, rups_weights)
+            node['id'], node['name'], trt, [], [])
         nps.splittable = 'rup_weights' not in node.attrib
+        if self.hdf5_fname:
+            # read the rupture data from the HDF5 file
+            assert node.text is None, node.text
+            with hdf5.File(self.hdf5_fname, 'r') as h:
+                dic = {k: d[:] for k, d in h[node['id']].items()}
+            nps.fromdict(dic, rups_weights)
+        else:
+            # read the rupture data from the XML nodes
+            num_probs = None
+            for i, rupnode in enumerate(node):
+                po = rupnode['probs_occur']
+                probs = pmf.PMF(valid.pmf(po))
+                if num_probs is None:  # first time
+                    num_probs = len(probs.data)
+                elif len(probs.data) != num_probs:
+                    # probs_occur must have uniform length for all ruptures
+                    raise ValueError(
+                        'prob_occurs=%s has %d elements, expected %s'
+                        % (po, len(probs.data), num_probs))
+                rup = RuptureConverter.convert_node(self, rupnode)
+                rup.tectonic_region_type = trt
+                rup.weight = None if rups_weights is None else rups_weights[i]
+                nps.data.append((rup, probs))
         return nps
 
     def convert_sourceModel(self, node):

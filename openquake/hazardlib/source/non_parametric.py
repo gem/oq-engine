@@ -163,12 +163,12 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         assert not self.data, '%s is not empty' % self
         i = 0
-        for mag, rake, hp, probs, (start, stop), mesh3d in zip(
+        for mag, rake, hp, probs, (start, stop) in zip(
                 dic['magnitude'], dic['rake'], dic['hypocenter'],
-                dic['probs_occur'], dic['slice'], dic['mesh3d']):
-            mesh = Mesh(mesh3d[start:stop, 0],
-                        mesh3d[start:stop, 1],
-                        mesh3d[start:stop, 2])
+                dic['probs_occur'], dic['slice']):
+            mesh = Mesh(dic['mesh3d'][start:stop, 0],
+                        dic['mesh3d'][start:stop, 1],
+                        dic['mesh3d'][start:stop, 2])
             surface = GriddedSurface(mesh)
             pmf = PMF([(prob, i) for i, prob in enumerate(probs)])
             hypocenter = Point(hp[0], hp[1], hp[2])
