@@ -83,7 +83,7 @@ def check_unique(array, kfields, fname):
 
 class Amplifier(object):
     """
-    Amplification class with methods .amplify and .amplify_gmfs.
+    Amplification class with methods .amplify and .amplify_log_gmfs.
 
     :param imtls:
         intensity measure types and levels DictArray M x I
@@ -187,7 +187,7 @@ class Amplifier(object):
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
 
-    def amplify_gmvs(self, ampl_code, means, imt):
+    def amplify_log_gmvs(self, ampl_code, means, imt):
         """
         :param ampl_code: 2-letter code for the amplification function
         :param means: ground motion logarithms on the given site
@@ -199,9 +199,9 @@ class Amplifier(object):
             return means + numpy.log(ialphas)
         return means + numpy.log(alphas[0])  # there is a single alpha
 
-    def amplify_gmfs(self, ampcodes, gmvs, imt):
+    def amplify_log_gmfs(self, ampcodes, gmvs, imt):
         """
         Amplify in-place the gmvs array of shape (N, E)
         """
         for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs)):
-            gmvs[i] = self.amplify_gmvs(ampcode, arr, imt)
+            gmvs[i] = self.amplify_log_gmvs(ampcode, arr, imt)
