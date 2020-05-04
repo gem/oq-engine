@@ -216,12 +216,13 @@ class GmfComputer(object):
                                  'no correlation model')
             mean, _stddevs = gsim.get_mean_and_stddevs(
                 self.sctx, rctx, dctx, imt, stddev_types=[])
-            mean = to_imt_unit_values(mean, imt)
-            mean.shape += (1, )
-            mean = mean.repeat(num_events, axis=1)
+            gmf = to_imt_unit_values(mean, imt)
+            gmf.shape += (1, )
+            gmf = gmf.repeat(num_events, axis=1)
             if self.amplifier:
-                self.amplifier.amplify_gmfs(self.sctx.ampcode, mean, str(imt))
-            return (mean,
+                self.amplifier.amplify_log_gmfs(
+                    self.sctx.ampcode, gmf, str(imt))
+            return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
         elif self.truncation_level is None:
@@ -276,7 +277,7 @@ class GmfComputer(object):
                 mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
         if self.amplifier:
-            self.amplifier.amplify_gmfs(self.sctx.ampcode, gmf, str(imt))
+            self.amplifier.amplify_log_gmfs(self.sctx.ampcode, gmf, str(imt))
         return gmf, stdi, epsilons
 
 
