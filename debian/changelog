@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Introduced a mixed XML+HDF5 format for gridded sources
   * Internal: added a check on gridded sources: the arrays prob_occurs must
     have homogeneous length across ruptures
   * Removed the dependency from PyYAML, replaced the .yml files in the HMTK with
