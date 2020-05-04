@@ -581,7 +581,7 @@ class SourceModelLogicTree(object):
             xml = sm.read()
         hdf5_file = os.path.splitext(source_model)[0] + '.hdf5'
         if os.path.exists(hdf5_file):
-            self.hdf5_files.update(hdf5_file)
+            self.hdf5_files.add(hdf5_file)
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))

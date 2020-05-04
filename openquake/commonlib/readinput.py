@@ -1010,8 +1010,9 @@ def get_input_files(oqparam, hazard=False):
                                       (oqparam.inputs['job_ini'], key))
             fnames.update(fname)
         elif key == 'source_model_logic_tree':
-            for smpath in logictree.collect_info(fname).smpaths:
-                fnames.add(smpath)
+            smlt = logictree.SourceModelLogicTree(fname)
+            fnames.update(smlt.hdf5_files)
+            fnames.update(smlt.info.smpaths)
             fnames.add(fname)
         else:
             fnames.add(fname)
