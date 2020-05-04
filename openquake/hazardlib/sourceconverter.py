@@ -561,12 +561,12 @@ class SourceConverter(RuptureConverter):
         self.discard_trts = discard_trts
 
     @property
-    def hdf5_file(self):
+    def hdf5_fname(self):
         """
-        :returns: the associated hdf5 file or None
+        :returns: the associated hdf5 file name or None
         """
         path = os.path.splitext(self.fname)[0] + '.hdf5'
-        return hdf5.File(path, 'r') if os.path.exists(path) else None
+        return path if os.path.exists(path) else None
 
     def convert_node(self, node):
         """
@@ -858,10 +858,11 @@ class SourceConverter(RuptureConverter):
         nps = source.NonParametricSeismicSource(
             node['id'], node['name'], trt, [], [])
         nps.splittable = 'rup_weights' not in node.attrib
-        if self.hdf5_file:
+        if self.hdf5_fname:
             # read the rupture data from the HDF5 file
             assert node.text is None, node.text
-            dic = {k: d[:] for k, d in self.hdf5_file[node['id']].items()}
+            with hdf5.File(self.hdf5_fname, 'r') as h:
+                dic = {k: d[:] for k, d in h[node['id']].items()}
             nps.fromdict(dic, rups_weights)
         else:
             # read the rupture data from the XML nodes
