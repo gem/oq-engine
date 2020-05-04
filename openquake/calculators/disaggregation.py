@@ -33,6 +33,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import ContextMaker, DistancesContext
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.geo.utils import (
+    KM_TO_DEGREES, angular_distance, cross_idl)
 from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -311,11 +313,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
         # build lon_edges, lat_edges per sid
-        bbs = src_filter.get_bounding_boxes(mag=max(mags))
         lon_edges, lat_edges = {}, {}  # by sid
-        for sid, bb in zip(self.sitecol.sids, bbs):
-            lon_edges[sid], lat_edges[sid] = disagg.lon_lat_bins(
-                bb, oq.coordinate_bin_width)
+        for site in self.sitecol:
+            loc = site.location
+            lon_edges[site.id], lat_edges[site.id] = disagg.lon_lat_bins(
+                loc.x, loc.y, maxdist, oq.coordinate_bin_width)
         self.bin_edges = mag_edges, dist_edges, lon_edges, lat_edges, eps_edges
         shapedic = self.save_bin_edges()
         del shapedic['trt']
