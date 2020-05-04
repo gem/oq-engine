@@ -64,8 +64,6 @@ class TestGCMTCatalogue(unittest.TestCase):
     BASE_DATA_PATH = os.path.join(FILE_PATH, rel_path)
 
     def setUp(self):
-        # Create a temporary director
-        self.test_dir = tempfile.gettempdir()
 
         # Parse catalogue
         fname = os.path.join(self.BASE_DATA_PATH, "test_gcmt_catalogue_01.txt")
