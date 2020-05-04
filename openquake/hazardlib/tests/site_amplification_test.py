@@ -121,8 +121,8 @@ class AmplifierTestCase(unittest.TestCase):
                    0.889958, 0.79, 0.690037], atol=1E-6)
 
         # amplify GMFs
-        gmvs = a.amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
-        numpy.testing.assert_allclose(gmvs, [0.00505, 0.010233, 0.01575],
+        mean = a.amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
+        numpy.testing.assert_allclose(mean, [0.005, 0.01 , 0.015],
                                       atol=1E-5)
 
     def test_double(self):
@@ -145,7 +145,8 @@ class AmplifierTestCase(unittest.TestCase):
                    0.69, 0.09, 0.09], atol=1E-6)
 
         # amplify GMFs
-        gmvs = a.amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
+        mean = numpy.log([.1, .2, .3])
+        gmvs = numpy.exp(a.amplify_gmvs(b'A', mean, 'SA(0.5)'))
         numpy.testing.assert_allclose(gmvs, [.2, .4, .6])
 
     def test_long_code(self):
