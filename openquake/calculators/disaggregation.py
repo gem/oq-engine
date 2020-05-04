@@ -171,6 +171,15 @@ def get_indices(dstore, concurrent_tasks):
     return indices
 
 
+def assert_same_shape(arrays):
+    """
+    Raises an AssertionError if the shapes are not consistent
+    """
+    shape = arrays[0].shape
+    for arr in arrays[1:]:
+        assert arr.shape == shape, (arr.shape, shape)
+
+
 @base.calculators.add('disaggregation')
 class DisaggregationCalculator(base.HazardCalculator):
     """
@@ -318,6 +327,11 @@ class DisaggregationCalculator(base.HazardCalculator):
             loc = site.location
             lon_edges[site.id], lat_edges[site.id] = disagg.lon_lat_bins(
                 loc.x, loc.y, maxdist, oq.coordinate_bin_width)
+
+        # sanity check: the shapes of the lon lat edges are consistent
+        assert_same_shape(list(lon_edges.values()))
+        assert_same_shape(list(lat_edges.values()))
+
         self.bin_edges = mag_edges, dist_edges, lon_edges, lat_edges, eps_edges
         shapedic = self.save_bin_edges()
         del shapedic['trt']
