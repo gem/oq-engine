@@ -27,14 +27,14 @@ oq engine --eos -1 /tmp
 oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --reuse-hazard
 
 # extract disaggregation data
-oq extract "disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0" 14
+oq extract "disagg_layer?kind=Lon_Lat&imt=PGA&poe_id=0" 14
 
 # do something with the generated data
 oq engine --lhc
 MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' -1
 MPLBACKEND=Agg oq plot 'hmaps?kind=mean&imt=PGA' -1
 MPLBACKEND=Agg oq plot 'uhs?kind=stats' -1
-MPLBACKEND=Agg oq plot 'disagg?kind=Lon_Lat&imt=PGA&poe_id=1&rlz=0' 14
+MPLBACKEND=Agg oq plot 'disagg?kind=Mag&imt=PGA&poe_id=1&rlz=0' 14
 MPLBACKEND=Agg oq plot 'task_info?kind=classical_split_filter' 16
 MPLBACKEND=Agg oq plot_sites -1
 MPLBACKEND=Agg oq plot memory?

@@ -342,16 +342,10 @@ def disaggregation(
     dist_bins = dist_bin_width * numpy.arange(
         int(numpy.floor(min_dist / dist_bin_width)),
         int(numpy.ceil(max_dist / dist_bin_width) + 1))
-
-    bb = (min(bd.lons.min() for bd in bdata.values()),
-          min(bd.lats.min() for bd in bdata.values()),
-          max(bd.lons.max() for bd in bdata.values()),
-          max(bd.lats.max() for bd in bdata.values()))
-    lon_bins, lat_bins = lon_lat_bins(bb, coord_bin_width)
-
+    lon_bins, lat_bins = lon_lat_bins(site.location.x, site.location.y,
+                                      max_dist, coord_bin_width)
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
-
     bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
     matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
                           len(lon_bins) - 1, len(lat_bins) - 1,
