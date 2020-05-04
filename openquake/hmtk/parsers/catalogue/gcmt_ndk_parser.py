@@ -37,13 +37,14 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
+
 
 '''
 Parser for moment tensor catalogue in GCMT format into a set of GCMT classes
@@ -142,7 +143,7 @@ class ParseNDKtoGCMT(object):
         self.filename = filename
         self.catalogue = GCMTCatalogue()
 
-    def read_file(self, start_year=None, end_year=None, use_centroid=None):
+    def read_file(self, start_year=None, end_year=None, use_centroid=False):
         """
         Reads the file
         """
@@ -221,7 +222,6 @@ class ParseNDKtoGCMT(object):
         self._preallocate_data_dict()
         for iloc, gcmt in enumerate(self.catalogue.gcmts):
             self.catalogue.data['eventID'][iloc] = iloc
-
             if use_centroid:
                 self.catalogue.data['year'][iloc] = \
                     gcmt.centroid.date.year
@@ -366,7 +366,7 @@ class ParseNDKtoGCMT(object):
         centroid.time_error = float(ndk_string[19:22])
         centroid.latitude = float(ndk_string[22:29])
         centroid.latitude_error = float(ndk_string[31:34])
-        centroid.longitude = float(ndk_string[36:42])
+        centroid.longitude = float(ndk_string[35:42])
         centroid.latitude_error = float(ndk_string[44:47])
         centroid.depth = float(ndk_string[48:53])
         centroid.depth_error = float(ndk_string[54:58])
