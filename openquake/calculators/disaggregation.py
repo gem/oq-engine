@@ -33,8 +33,6 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import ContextMaker, DistancesContext
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, cross_idl)
 from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -178,6 +176,18 @@ def assert_same_shape(arrays):
     shape = arrays[0].shape
     for arr in arrays[1:]:
         assert arr.shape == shape, (arr.shape, shape)
+
+
+def get_outputs_size(shapedic, disagg_outputs):
+    """
+    :returns: the total size of the outputs
+    """
+    tot = AccumDict(accum=0)
+    for out in disagg_outputs:
+        tot[out] = 8
+        for key in out.lower().split('_'):
+            tot[out] *= shapedic[key]
+    return tot * shapedic['N'] * shapedic['M'] * shapedic['P'] * shapedic['Z']
 
 
 @base.calculators.add('disaggregation')
@@ -334,18 +344,21 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         self.bin_edges = mag_edges, dist_edges, lon_edges, lat_edges, eps_edges
         shapedic = self.save_bin_edges()
-        del shapedic['trt']
         shapedic['N'] = self.N
         shapedic['M'] = len(oq.imtls)
         shapedic['P'] = len(oq.poes_disagg)
         shapedic['Z'] = Z
         shapedic['concurrent_tasks'] = oq.concurrent_tasks
-        nbytes, msg = get_array_nbytes(shapedic)
+        sd = shapedic.copy()
+        sd.pop('trt')
+        nbytes, msg = get_array_nbytes(sd)
         if nbytes > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer: %s', msg)
+        tot = get_outputs_size(shapedic, oq.disagg_outputs or disagg.pmf_map)
+        logging.info('Total output size: %s', humansize(sum(tot.values())))
         self.imldict = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
             for z, rlz in enumerate(rlzs[s]):
