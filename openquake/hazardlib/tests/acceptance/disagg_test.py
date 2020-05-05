@@ -75,15 +75,18 @@ class DisaggTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(
             dist_bins, [0., 10., 20., 30., 40., 50., 60., 70., 80.])
         numpy.testing.assert_almost_equal(
-            lat_bins, [-0.3277212, -0.1638606, 0., 0.1638606, 0.3277212])
-
+            lat_bins, [-6.5544231e-01, -4.9158173e-01, -3.2772115e-01,
+                       -1.6386058e-01, 1.1102230e-16, 1.6386058e-01,
+                       3.2772115e-01,  4.9158173e-01, 6.5544231e-01])
         numpy.testing.assert_almost_equal(
-            lon_bins, [-0.3277212, -0.1638606, 0., 0.1638606, 0.3277212])
+            lon_bins, [-6.5544231e-01, -4.9158173e-01, -3.2772115e-01,
+                       -1.6386058e-01, 1.1102230e-16, 1.6386058e-01,
+                       3.2772115e-01, 4.9158173e-01, 6.5544231e-01])
         numpy.testing.assert_almost_equal(eps_bins, [-3., -1., 1., 3.])
         self.assertEqual(trt_bins, ['Active Shallow Crust'])
 
-        self.assertEqual(diss_matrix.shape, (8, 8, 4, 4, 3, 1))
-        expected = [0.0245487, 0.02312748, 0.02107009, 0.01851944,
-                    0.0156999, 0.01301737, 0.01070975, 0.00454887]
+        self.assertEqual(diss_matrix.shape, (8, 8, 8, 8, 3, 1))
+        expected = [0.0245487, 0.0231275, 0.0210702, 0.0185196, 0.0157001,
+                    0.0130175, 0.0107099, 0.0045489]
         numpy.testing.assert_almost_equal(
             diss_matrix.sum(axis=(1, 2, 3, 4, 5)), expected)

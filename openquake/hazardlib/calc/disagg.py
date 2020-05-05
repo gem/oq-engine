@@ -128,9 +128,10 @@ def lon_lat_bins(lon, lat, size_km, coord_bin_width):
     nbins = numpy.ceil(size_km * KM_TO_DEGREES / coord_bin_width)
     delta_lon = min(angular_distance(size_km, lat), 180)
     delta_lat = min(size_km * KM_TO_DEGREES, 90)
-    lon_bins = lon + numpy.arange(-delta_lon/2, delta_lon/2 + .001,
+    EPS = .001  # avoid discarding the last edge
+    lon_bins = lon + numpy.arange(-delta_lon, delta_lon + EPS,
                                   delta_lon / nbins)
-    lat_bins = lat + numpy.arange(-delta_lat/2, delta_lat/2 + .001,
+    lat_bins = lat + numpy.arange(-delta_lat, delta_lat + EPS,
                                   delta_lat / nbins)
     if cross_idl(*lon_bins):
         lon_bins %= 360
