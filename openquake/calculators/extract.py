@@ -1181,19 +1181,18 @@ def extract_disagg_layer(dstore, what):
     grp = disagg_output(dstore, imt, 0, poe_id, rlz)
     dset = grp[label]
     edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
-    dt = [('site_id', U32), ('lon', F32), ('lat', F32),
+    dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz_id', U16),
           ('poes', (dset.dtype, dset.shape))]
     sitecol = dstore['sitecol']
     out = numpy.zeros(len(sitecol), dt)
-    out[0] = (0, sitecol.lons[0], sitecol.lats[0], dset[()])
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
-        if sid > 0:
-            grp = disagg_output(dstore, imt, sid, poe_id, rlz)
-            rec['site_id'] = sid
-            rec['lon'] = lon
-            rec['lat'] = lat
-            rec['poes'] = grp[label][()]
+        grp = disagg_output(dstore, imt, sid, poe_id, rlz)
+        rec['site_id'] = sid
+        rec['lon'] = lon
+        rec['lat'] = lat
+        rec['rlz_id'] = 0 if grp.attrs['rlzi'] == 'mean' else grp.attrs['rlzi']
+        rec['poes'] = grp[label][()]
     return ArrayWrapper(out, edges)
 
 # ######################### extracting ruptures ##############################
