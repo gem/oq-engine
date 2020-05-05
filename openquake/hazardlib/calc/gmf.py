@@ -179,7 +179,6 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        numpy.random.seed(self.rupture.rup_id)
         result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
@@ -190,7 +189,7 @@ class GmfComputer(object):
                 gs = gsim  # regular GMPE
             try:
                 result[imti], sig[imti], eps[imti] = self._compute(
-                    None, gs, num_events, imt)
+                    self.rupture.rup_id, gs, num_events, imt)
             except Exception as exc:
                 raise exc.__class__(
                     '%s for %s, %s, srcidx=%s' % (exc, gs, imt, self.srcidx)
@@ -199,7 +198,7 @@ class GmfComputer(object):
 
     def _compute(self, seed, gsim, num_events, imt):
         """
-        :param seed: a random seed or None if the seed is already set
+        :param seed: rupture random seed
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
         :param imt: an IMT instance
