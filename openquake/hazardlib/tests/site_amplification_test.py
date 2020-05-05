@@ -120,9 +120,10 @@ class AmplifierTestCase(unittest.TestCase):
             poes, [0.985002, 0.979996, 0.969991, 0.940012,
                    0.889958, 0.79, 0.690037], atol=1E-6)
 
-        # amplify GMFs
-        gmvs = a.amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
-        numpy.testing.assert_allclose(gmvs, [0.00505, 0.010233, 0.01575],
+        # amplify GMFs with sigmas
+        numpy.random.seed(42)
+        gmvs = a._amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
+        numpy.testing.assert_allclose(gmvs, [0.005307, 0.010093, 0.016804],
                                       atol=1E-5)
 
     def test_double(self):
@@ -144,8 +145,8 @@ class AmplifierTestCase(unittest.TestCase):
             poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
                    0.69, 0.09, 0.09], atol=1E-6)
 
-        # amplify GMFs
-        gmvs = a.amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
+        # amplify GMFs without sigmas
+        gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
         numpy.testing.assert_allclose(gmvs, [.2, .4, .6])
 
     def test_long_code(self):

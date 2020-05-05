@@ -207,8 +207,7 @@ class GmfComputer(object):
                    epsilons(num_events))
         """
         rctx = getattr(self.rupture, 'rupture', self.rupture)
-        if seed is not None:
-            numpy.random.seed(seed)
+        numpy.random.seed(seed)
         dctx = self.dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
             if self.correlation_model:
@@ -220,7 +219,8 @@ class GmfComputer(object):
             gmf.shape += (1, )
             gmf = gmf.repeat(num_events, axis=1)
             if self.amplifier:
-                self.amplifier.amplify_gmfs(self.sctx.ampcode, gmf, str(imt))
+                self.amplifier.amplify_gmfs(
+                    self.sctx.ampcode, gmf, str(imt), seed)
             return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
@@ -276,7 +276,7 @@ class GmfComputer(object):
                 mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
         if self.amplifier:
-            self.amplifier.amplify_gmfs(self.sctx.ampcode, gmf, str(imt))
+            self.amplifier.amplify_gmfs(self.sctx.ampcode, gmf, str(imt), seed)
         return gmf, stdi, epsilons
 
 

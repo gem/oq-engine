@@ -187,20 +187,29 @@ class Amplifier(object):
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
 
-    def amplify_gmvs(self, ampl_code, gmvs, imt):
-        """
-        :param ampl_code: 2-letter code for the amplification function
-        :param gmvs: ground motion values on the given site
-        :param imt: intensity measure type string
-        """
-        alphas = self.alpha[ampl_code, self.imtdict[imt]]
-        if len(self.imls):
-            return numpy.interp(gmvs, self.midlevels, alphas) * gmvs
-        return alphas[0] * gmvs  # there is a single alpha
+    def _amplify_gmvs(self, ampl_code, gmvs, imt):
+        # gmvs is an array of shape E
+        im = self.imtdict[imt]
+        alphas = self.alpha[ampl_code, im]  # shape A
+        sigmas = self.sigma[ampl_code, im]  # shape A
+        if len(self.imls):  # there are multiple alphas, sigmas
+            ialphas = numpy.interp(gmvs, self.midlevels, alphas)  # shape E
+            isigmas = numpy.interp(gmvs, self.midlevels, sigmas)  # shape E
+        else:  # there is a single alpha, sigma
+            ialphas = alphas[0]
+            isigmas = sigmas[0]
+        uncert = numpy.random.normal(numpy.zeros_like(gmvs), isigmas)
+        return numpy.exp(numpy.log(ialphas * gmvs) + uncert)
 
-    def amplify_gmfs(self, ampcodes, gmvs, imt):
+    def amplify_gmfs(self, ampcodes, gmvs, imt, seed=0):
         """
-        Amplify in-place the gmvs array of shape (N, E)
+        Amplify in-place the gmfs array.
+
+        :param ampcodes: N codes for the amplification functions
+        :param gmvs: ground motion values on shape (N, E)
+        :param imt: intensity measure type string
+        :param seed: seed used when adding the uncertainty
         """
+        numpy.random.seed(seed)
         for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs)):
-            gmvs[i] = self.amplify_gmvs(ampcode, arr, imt)
+            gmvs[i] = self._amplify_gmvs(ampcode, arr, imt)
