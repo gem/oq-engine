@@ -17,6 +17,16 @@
 #
 # DISCLAIMER
 #
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
+#
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -37,22 +47,20 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
+
 import unittest
 import os
 import numpy as np
 
-from openquake.hmtk.seismicity.gcmt_catalogue import GCMTCatalogue
 from openquake.hmtk.parsers.catalogue.gcmt_ndk_parser import ParseNDKtoGCMT
-#from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import CsvGCMTCatalogueParser
-
 
 class GCMTCatalogueParserTestCase(unittest.TestCase):
     """
@@ -71,6 +79,21 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         parser_cent = ParseNDKtoGCMT(filename)
         self.cat = parser.read_file()
         self.cat_cent = parser_cent.read_file(use_centroid='True')
+
+    def test_locations(self):
+        """ test locations """
+        fname = os.path.join(self.BASE_DATA_PATH, 'test_gcmt_catalogue_01.txt')
+        prs = ParseNDKtoGCMT(fname)
+        cat = prs.read_file(use_centroid=False)
+        self.assertAlmostEqual(cat.data['longitude'][0], 111.72)
+        self.assertAlmostEqual(cat.data['latitude'][0], -10.80)
+        self.assertAlmostEqual(cat.data['longitude'][1], -113.12)
+        self.assertAlmostEqual(cat.data['latitude'][1], 28.74)
+        cat = prs.read_file(use_centroid=True)
+        self.assertAlmostEqual(cat.data['longitude'][0], 112.44)
+        self.assertAlmostEqual(cat.data['latitude'][0], -10.60)
+        self.assertAlmostEqual(cat.data['longitude'][1], -113.12)
+        self.assertAlmostEqual(cat.data['latitude'][1], 28.81)
 
     def test_read_catalogue(self):
         """
@@ -135,10 +158,9 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         fdepth = np.logical_and(self.cat.data['depth'] >= 100.,
                                 self.cat.data['depth'] <= 200.)
         self.cat.select_catalogue_events(np.where(fdepth)[0])
-        t1 = self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
-        t2 = self.assertAlmostEqual(self.cat.data['centroidID'][0],
+        self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
+        self.assertAlmostEqual(self.cat.data['centroidID'][0],
                                     'S199004281929A  ')
-        self.assertAlmostEqual(t1, t2)
 
     def test_select_events_mag(self):
         """
@@ -149,10 +171,9 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
                               self.cat.data['magnitude'] <= 8.)
         self.cat.select_catalogue_events(np.where(fmag)[0])
         self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
-        t1 = self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
-        t2 = self.assertAlmostEqual(self.cat.data['centroidID'][0],
+        self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
+        self.assertAlmostEqual(self.cat.data['centroidID'][0],
                                     'C201001122153A  ')
-        self.assertAlmostEqual(t1, t2)
 
     def test_without_specifying_years(self):
         """
