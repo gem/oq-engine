@@ -27,7 +27,7 @@ oq engine --eos -1 /tmp
 oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --reuse-hazard
 
 # extract disaggregation data
-oq extract "disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0" 14
+oq extract "disagg_layer?kind=Lon_Lat&imt=PGA&poe_id=0" 14
 
 # do something with the generated data
 oq engine --lhc

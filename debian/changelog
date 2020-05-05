@@ -1,8 +1,10 @@
-
+  [Michele Simionato]
+  * Changed the binning algorithm for lon, lat in disaggregation, to make
+    sure that the number of bins is homogeneous across sites
 
   [Marco Pagani]
   * Fixed a bug in the ParseNDKtoGCMT parser + updated tests.
-  * Ported the method serialise_to_hmtk_csv implemented in the corresponding 
+  * Ported the method serialise_to_hmtk_csv implemented in the corresponding
     class of the catalogue toolkit + added a test into the GCMTCatalogue class.
 
   [Michele Simionato]
