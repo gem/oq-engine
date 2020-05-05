@@ -30,9 +30,9 @@ from openquake.hazardlib import pmf, contexts
 from openquake.baselib import hdf5, performance
 from openquake.baselib.general import pack, groupby
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
+                                           cross_idl)
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import (
     ContextMaker, get_mean_std, to_distribution_values)
@@ -114,23 +114,25 @@ def _disaggregate_pne(rupture, mean_std, imls, truncnorm, epsilons, eps_bands):
     return rupture.get_probability_no_exceedance(poes)
 
 
-def lon_lat_bins(bb, coord_bin_width):
+# used in calculators/disaggregation
+def lon_lat_bins(lon, lat, size_km, coord_bin_width):
     """
     Define lon, lat bin edges for disaggregation histograms.
 
-    :param bb: bounding box west, south, east, north
-    :param coord_bin_width: bin width
+    :param lon: longitude of the site
+    :param lat: latitude of the site
+    :param size_km: total size of the bins in km
+    :param coord_bin_width: bin width in degrees
+    :returns: two arrays lon bins, lat bins
     """
-    west, south, east, north = bb
-    west = numpy.floor(west / coord_bin_width) * coord_bin_width
-    east = numpy.ceil(east / coord_bin_width) * coord_bin_width
-    lon_extent = get_longitudinal_extent(west, east)
-    lon_bins, _, _ = npoints_between(
-        west, 0, 0, east, 0, 0,
-        numpy.round(lon_extent / coord_bin_width + 1))
-    lat_bins = coord_bin_width * numpy.arange(
-        int(numpy.floor(south / coord_bin_width)),
-        int(numpy.ceil(north / coord_bin_width) + 1))
+    nbins = numpy.ceil(size_km * KM_TO_DEGREES / coord_bin_width)
+    delta_lon = min(angular_distance(size_km, lat), 180)
+    delta_lat = min(size_km * KM_TO_DEGREES, 90)
+    EPS = .001  # avoid discarding the last edge
+    lon_bins = lon + numpy.arange(-delta_lon, delta_lon + EPS,
+                                  delta_lon / nbins)
+    lat_bins = lat + numpy.arange(-delta_lat, delta_lat + EPS,
+                                  delta_lat / nbins)
     if cross_idl(*lon_bins):
         lon_bins %= 360
     return lon_bins, lat_bins
@@ -341,16 +343,10 @@ def disaggregation(
     dist_bins = dist_bin_width * numpy.arange(
         int(numpy.floor(min_dist / dist_bin_width)),
         int(numpy.ceil(max_dist / dist_bin_width) + 1))
-
-    bb = (min(bd.lons.min() for bd in bdata.values()),
-          min(bd.lats.min() for bd in bdata.values()),
-          max(bd.lons.max() for bd in bdata.values()),
-          max(bd.lats.max() for bd in bdata.values()))
-    lon_bins, lat_bins = lon_lat_bins(bb, coord_bin_width)
-
+    lon_bins, lat_bins = lon_lat_bins(site.location.x, site.location.y,
+                                      max_dist, coord_bin_width)
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
-
     bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
     matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
                           len(lon_bins) - 1, len(lat_bins) - 1,
