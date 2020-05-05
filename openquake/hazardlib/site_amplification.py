@@ -190,8 +190,8 @@ class Amplifier(object):
     def _amplify_gmvs(self, ampl_code, gmvs, imt_str):
         # gmvs is an array of shape E
         imt = self.imtdict[imt_str]
-        alphas = self.alpha[ampl_code, imt]  # shape A
-        sigmas = self.sigma[ampl_code, imt]  # shape A
+        alphas = self.alpha[ampl_code, imt]  # shape L
+        sigmas = self.sigma[ampl_code, imt]  # shape L
         if len(self.imls):  # there are multiple alphas, sigmas
             ialphas = numpy.interp(gmvs, self.midlevels, alphas)  # shape E
             isigmas = numpy.interp(gmvs, self.midlevels, sigmas)  # shape E
