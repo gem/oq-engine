@@ -102,10 +102,11 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
 
-        # test extract disagg_layer
+        # test extract disagg_layer for Mag
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
                      'imt=SA(0.1)&poe_id=0')
-        self.assertEqual(aw.dtype.names, ('site_id', 'lon', 'lat', 'poes'))
+        self.assertEqual(aw.dtype.names,
+                         ('site_id', 'lon', 'lat', 'rlz_id', 'poes'))
         self.assertEqual(aw['poes'].shape, (2, 15))  # 2 rows
 
     def test_case_3(self):
@@ -139,6 +140,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        # test extract disagg_layer for Lon_Lat
+        aw = extract(self.calc.datastore, 'disagg_layer?kind=Lon_Lat&'
+                     'imt=PGA&poe_id=0')
+        self.assertEqual(aw['poes'].shape, (1, 12, 12))
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also
