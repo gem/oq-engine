@@ -201,15 +201,16 @@ class Amplifier(object):
         uncert = numpy.random.normal(numpy.zeros_like(gmvs), isigmas)
         return numpy.exp(numpy.log(ialphas * gmvs) + uncert)
 
-    def amplify_gmfs(self, ampcodes, gmvs, imt, seed=0):
+    def amplify_gmfs(self, ampcodes, gmvs, imts, seed=0):
         """
-        Amplify in-place the gmfs array.
+        Amplify in-place the gmvs array of shape (M, N, E)
 
         :param ampcodes: N codes for the amplification functions
-        :param gmvs: ground motion values on shape (N, E)
-        :param imt: intensity measure type string
+        :param gmvs: ground motion values
+        :param imts: intensity measure types
         :param seed: seed used when adding the uncertainty
         """
         numpy.random.seed(seed)
-        for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs)):
-            gmvs[i] = self._amplify_gmvs(ampcode, arr, imt)
+        for m, imt in enumerate(imts):
+            for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs[m])):
+                gmvs[m, i] = self._amplify_gmvs(ampcode, arr, imt)
