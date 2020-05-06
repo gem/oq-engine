@@ -208,3 +208,25 @@ def calc_hazard_curves(
                 pmap |= pval
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
     return pmap.convert(imtls, len(sitecol.complete))
+
+
+def calc_hazard_curve(site1, src, gsims_by_trt, oqparam):
+    """
+    :param site1: site collection with a single site
+    :param src: a seismic source object
+    :param gsims_by_trt: a dictionary trt -> gsims
+    :param oqparam: an object with attributes .maximum_distance, .imtls
+    :returns: a ProbabilityCurve object
+    """
+    assert len(site1) == 1, site1
+    trt = src.tectonic_region_type
+    params = dict(imtls=oqparam.imtls,
+                  maximum_distance=oqparam.maximum_distance,
+                  pointsource_distance=oqparam.pointsource_distance)
+    gsims = gsims_by_trt['*'] if '*' in gsims_by_trt else gsims_by_trt[trt]
+    cmaker = ContextMaker(trt, gsims, params)
+    srcfilter = SourceFilter(site1, oqparam.maximum_distance)
+    pmap_by_grp, rup_data, calc_times, extra = PmapMaker(
+        cmaker, srcfilter, [src]).make()
+    pmap = pmap_by_grp[src.grp_ids[0]]
+    return pmap[0]  # pcurve with shape (L, G)
