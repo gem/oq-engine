@@ -1164,6 +1164,16 @@ def extract_disagg(dstore, what):
     return ArrayWrapper(values, qdict)
 
 
+def build_disagg_output_dt(shapedic, disagg_outputs):
+    dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz_id', U16),
+          ('lon_bins', (F32, shapedic['lons'])),
+          ('lat_bins', (F32, shapedic['lats']))]
+    for out in disagg_outputs:
+        shp = tuple(shapedic[key] for key in out.lower().split('_'))
+        dt.append((F32, shp))
+    return dt
+
+
 @extract.add('disagg_layer')
 def extract_disagg_layer(dstore, what):
     """

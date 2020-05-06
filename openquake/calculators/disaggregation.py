@@ -39,7 +39,6 @@ from openquake.calculators import base
 
 weight = operator.attrgetter('weight')
 DISAGG_RES_FMT = '%(rlz)s%(imt)s-%(sid)s-%(poe)s/'
-BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 POE_TOO_BIG = '''\
 Site #%d: you are trying to disaggregate for poe=%s.
 However the source model produces at most probabilities
@@ -169,15 +168,6 @@ def get_indices(dstore, concurrent_tasks):
     return indices
 
 
-def assert_same_shape(arrays):
-    """
-    Raises an AssertionError if the shapes are not consistent
-    """
-    shape = arrays[0].shape
-    for arr in arrays[1:]:
-        assert arr.shape == shape, (arr.shape, shape)
-
-
 def get_outputs_size(shapedic, disagg_outputs):
     """
     :returns: the total size of the outputs
@@ -255,7 +245,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         Run the disaggregation phase.
         """
         oq = self.oqparam
-        tl = oq.truncation_level
+        mags_by_trt = self.datastore['source_mags']
+        all_edges, shapedic = disagg.get_edges_shapedic(
+            oq, self.sitecol, mags_by_trt)
+        *self.bin_edges, self.trts = all_edges
         src_filter = self.src_filter()
         if hasattr(self, 'csm'):
             for sg in self.csm.src_groups:
@@ -307,48 +300,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         if oq.disagg_by_src:
             self.build_disagg_by_src(rlzs)
 
-        eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
-
-        # build trt_edges
-        trts = tuple(self.full_lt.trts)
-        trt_num = {trt: i for i, trt in enumerate(trts)}
-        self.trts = trts
-
-        # build mag_edges
-        mags = set()
-        for trt, dset in self.datastore['source_mags'].items():
-            mags.update(float(mag) for mag in dset[()])
-        mags = sorted(mags)
-        mag_edges = oq.mag_bin_width * numpy.arange(
-            int(numpy.floor(min(mags) / oq.mag_bin_width)),
-            int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
-
-        # build dist_edges
-        maxdist = max(oq.maximum_distance(trt) for trt in trts)
-        dist_edges = oq.distance_bin_width * numpy.arange(
-            0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
-
-        # build eps_edges
-        eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
-
-        # build lon_edges, lat_edges per sid
-        lon_edges, lat_edges = {}, {}  # by sid
-        for site in self.sitecol:
-            loc = site.location
-            lon_edges[site.id], lat_edges[site.id] = disagg.lon_lat_bins(
-                loc.x, loc.y, maxdist, oq.coordinate_bin_width)
-
-        # sanity check: the shapes of the lon lat edges are consistent
-        assert_same_shape(list(lon_edges.values()))
-        assert_same_shape(list(lat_edges.values()))
-
-        self.bin_edges = mag_edges, dist_edges, lon_edges, lat_edges, eps_edges
-        shapedic = self.save_bin_edges()
-        shapedic['N'] = self.N
-        shapedic['M'] = len(oq.imtls)
-        shapedic['P'] = len(oq.poes_disagg)
-        shapedic['Z'] = Z
-        shapedic['concurrent_tasks'] = oq.concurrent_tasks
+        self.save_bin_edges()
         sd = shapedic.copy()
         sd.pop('trt')
         nbytes, msg = get_array_nbytes(sd)
@@ -372,6 +324,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         indices = get_indices(dstore, oq.concurrent_tasks or 1)
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
+        trt_num = {trt: i for i, trt in enumerate(self.trts)}
         for grp_id, trt in self.full_lt.trt_by_grp.items():
             logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
             trti = trt_num[trt]
@@ -405,24 +358,18 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         b = self.bin_edges
         T = len(self.trts)
-        for sid in self.sitecol.sids:
-            bins = disagg.get_bins(b, sid)
-            shape = [len(bin) - 1 for bin in bins] + [T]
-            shape_dic = dict(zip(BIN_NAMES, shape))
-            if sid == 0:
-                logging.info('nbins=%s for site=#%d', shape_dic, sid)
-            matrix_size = numpy.prod(shape)  # 6D
-            if matrix_size > 1E6:
-                raise ValueError(
-                    'The disaggregation matrix for site #%d is too large '
-                    '(%d elements): fix the binning!' % (sid, matrix_size))
+        shape = [len(bin) - 1 for bin in disagg.get_bins(b, 0)] + [T]
+        matrix_size = numpy.prod(shape)  # 6D
+        if matrix_size > 1E6:
+            raise ValueError(
+                'The disaggregation matrix is too large '
+                '(%d elements): fix the binning!' % matrix_size)
         self.datastore['disagg-bins/mags'] = b[0]
         self.datastore['disagg-bins/dists'] = b[1]
         for sid in self.sitecol.sids:
             self.datastore['disagg-bins/lons/sid-%d' % sid] = b[2][sid]
             self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
         self.datastore['disagg-bins/eps'] = b[4]
-        return shape_dic
 
     def post_execute(self, results):
         """
