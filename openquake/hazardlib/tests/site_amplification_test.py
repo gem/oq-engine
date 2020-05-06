@@ -62,6 +62,12 @@ A,2,2,2,2,2
 A,1,2,2,2,2
 '''
 
+gmf_ampl_func = '''#,,,,,,"vs30_ref=760"
+ampcode,PGA,sigma_PGA
+A,1,0.3
+'''
+
+
 
 class AmplifierTestCase(unittest.TestCase):
     vs30 = numpy.array([760])
@@ -161,3 +167,20 @@ class AmplifierTestCase(unittest.TestCase):
         aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
         with self.assertRaises(ValueError):
             Amplifier(self.imtls, aw)
+
+    def test_gmf_with_uncertainty(self):
+        fname = gettemp(gmf_ampl_func)
+        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
+        imtls = {'PGA': self.imls}
+        a = Amplifier(imtls, aw, self.soil_levels)
+        res = []
+        nsim = 10000
+        for i in range(nsim):
+            gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'PGA')
+            res.append(list(gmvs))
+        res = numpy.array(res)
+        dat = numpy.reshape(numpy.tile([.1, .2, .3], nsim), (nsim, 3))
+        computed = numpy.std(numpy.log(res/dat), axis=0)
+        expected = numpy.array([0.3, 0.3, 0.3])
+        msg = "Computed and expected std do not match"
+        numpy.testing.assert_almost_equal(computed, expected, 2, err_msg=msg)
