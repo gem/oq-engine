@@ -1220,7 +1220,7 @@ def extract_disagg_layer(dstore, what):
                             rlz, imt, sid, p, kind)
                         rec[key] = dstore[label][()]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1],
-                                  eps=edges[-2], trt=edges[-1]))
+                                  eps=edges[-2], trt=encode(edges[-1])))
 
 # ######################### extracting ruptures ##############################
 
