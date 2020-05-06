@@ -156,7 +156,7 @@ class DisaggregationTestCase(CalculatorTestCase):
                       225., 250., 275., 300.])
         aae(aw.eps, [-3., -2.14285714, -1.28571429, -0.42857143,  0.42857143,
                      1.28571429, 2.14285714, 3.])
-        self.assertEqual(aw.trt, ['Active Shallow Crust'])
+        self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also

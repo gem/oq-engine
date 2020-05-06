@@ -1181,11 +1181,9 @@ def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
 @extract.add('disagg_layer')
 def extract_disagg_layer(dstore, what):
     """
-    Extract a disaggregation output containing all sites
-    for the first realization or the mean.
+    Extract a disaggregation layer containing all sites and outputs
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0
+    http://127.0.0.1:8800/v1/calc/30/extract/disagg_layer?
     """
     qdict = parse(what)
     oq = dstore['oqparam']
