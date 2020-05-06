@@ -872,6 +872,7 @@ class OqParam(valid.ParamSet):
                 'scenario')):
             return
         if ('source_model_logic_tree' not in self.inputs and
+                self.inputs['job_ini'] != '<in-memory>' and
                 not self.hazard_calculation_id):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %
