@@ -32,6 +32,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.calc import disagg
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
 
@@ -1164,36 +1165,60 @@ def extract_disagg(dstore, what):
     return ArrayWrapper(values, qdict)
 
 
+def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
+    dt = [('site_id', U32), ('lon', F32), ('lat', F32),
+          ('rlz_id', (U16, shapedic['Z'])),
+          ('lon_bins', (F32, shapedic['lon'] + 1)),
+          ('lat_bins', (F32, shapedic['lat'] + 1))]
+    for out in disagg_outputs:
+        shp = tuple(shapedic[key] for key in out.lower().split('_'))
+        for imt in imts:
+            for poe in poes_disagg:
+                dt.append(('%s-%s-%s' % (out, imt, poe), (F32, shp)))
+    return dt
+
+
 @extract.add('disagg_layer')
 def extract_disagg_layer(dstore, what):
     """
-    Extract a disaggregation output containing all sites
-    for the first realization or the mean.
+    Extract a disaggregation layer containing all sites and outputs
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0
+    http://127.0.0.1:8800/v1/calc/30/extract/disagg_layer?
     """
     qdict = parse(what)
-    [label] = qdict['kind']
-    [imt] = qdict['imt']
-    poe_id = int(qdict['poe_id'][0])
-    rlz = 0 if len(dstore['weights']) == 1 else None
-    grp = disagg_output(dstore, imt, 0, poe_id, rlz)
-    dset = grp[label]
-    edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
-    dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz_id', U16),
-          ('poes', (dset.dtype, dset.shape))]
+    oq = dstore['oqparam']
+    if 'kind' in qdict:
+        kinds = qdict['kind']
+    else:
+        kinds = list(oq.disagg_outputs or disagg.pmf_map)
     sitecol = dstore['sitecol']
+    poes_disagg = oq.poes_disagg or (None,)
+    edges, shapedic = disagg.get_edges_shapedic(
+        oq, sitecol, dstore['source_mags'])
+    dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
+    try:
+        best_rlzs = dstore['best_rlzs']
+    except KeyError:
+        best_rlzs = numpy.zeros((len(sitecol), shapedic['Z']), U16)
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
-        grp = disagg_output(dstore, imt, sid, poe_id, rlz)
         rec['site_id'] = sid
         rec['lon'] = lon
         rec['lat'] = lat
-        rec['rlz_id'] = 0 if grp.attrs['rlzi'] == 'mean' else grp.attrs['rlzi']
-        rec['poes'] = grp[label][()]
-    return ArrayWrapper(out, edges)
+        rec['rlz_id'] = rlzs = best_rlzs[sid]
+        rec['lon_bins'] = edges[2][sid]
+        rec['lat_bins'] = edges[3][sid]
+        for kind in kinds:
+            for imt in oq.imtls:
+                for p, poe in enumerate(poes_disagg):
+                    for rlz in rlzs:
+                        key = '%s-%s-%s' % (kind, imt, poe)
+                        label = 'disagg/rlz-%d-%s-sid-%d-poe-%s/%s' % (
+                            rlz, imt, sid, p, kind)
+                        rec[key] = dstore[label][()]
+    return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1],
+                                  eps=edges[-2], trt=encode(edges[-1])))
 
 # ######################### extracting ruptures ##############################
 

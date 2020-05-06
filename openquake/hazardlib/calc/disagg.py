@@ -37,6 +37,66 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import (
     ContextMaker, get_mean_std, to_distribution_values)
 
+BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
+
+
+def assert_same_shape(arrays):
+    """
+    Raises an AssertionError if the shapes are not consistent
+    """
+    shape = arrays[0].shape
+    for arr in arrays[1:]:
+        assert arr.shape == shape, (arr.shape, shape)
+
+
+def get_edges_shapedic(oq, sitecol, mags_by_trt):
+    """
+    :returns: (mag dist lon lat eps trt) edges and shape dictionary
+    """
+    tl = oq.truncation_level
+    Z = oq.num_rlzs_disagg if oq.rlz_index is None else len(oq.rlz_index)
+    eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
+
+    # build mag_edges
+    mags = set()
+    trts = []
+    for trt, _mags in mags_by_trt.items():
+        mags.update(float(mag) for mag in _mags)
+        trts.append(trt)
+    mags = sorted(mags)
+    mag_edges = oq.mag_bin_width * numpy.arange(
+        int(numpy.floor(min(mags) / oq.mag_bin_width)),
+        int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
+
+    # build dist_edges
+    maxdist = max(filters.getdefault(oq.maximum_distance, trt) for trt in trts)
+    dist_edges = oq.distance_bin_width * numpy.arange(
+        0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
+
+    # build eps_edges
+    eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
+
+    # build lon_edges, lat_edges per sid
+    lon_edges, lat_edges = {}, {}  # by sid
+    for site in sitecol:
+        loc = site.location
+        lon_edges[site.id], lat_edges[site.id] = lon_lat_bins(
+            loc.x, loc.y, maxdist, oq.coordinate_bin_width)
+
+    # sanity check: the shapes of the lon lat edges are consistent
+    assert_same_shape(list(lon_edges.values()))
+    assert_same_shape(list(lat_edges.values()))
+
+    bin_edges = [mag_edges, dist_edges, lon_edges, lat_edges, eps_edges]
+    shape = [len(bin) - 1 for bin in get_bins(bin_edges, 0)] + [len(trts)]
+    shapedic = dict(zip(BIN_NAMES, shape))
+    shapedic['N'] = len(sitecol)
+    shapedic['M'] = len(oq.imtls)
+    shapedic['P'] = len(oq.poes_disagg or (None,))
+    shapedic['Z'] = Z
+    shapedic['concurrent_tasks'] = oq.concurrent_tasks
+    return bin_edges + [trts], shapedic
+
 
 def _eps3(truncation_level, n_epsilons):
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
