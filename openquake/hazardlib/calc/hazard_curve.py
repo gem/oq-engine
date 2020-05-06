@@ -220,11 +220,8 @@ def calc_hazard_curve(site1, src, gsims_by_trt, oqparam):
     """
     assert len(site1) == 1, site1
     trt = src.tectonic_region_type
-    params = dict(imtls=oqparam.imtls,
-                  maximum_distance=oqparam.maximum_distance,
-                  pointsource_distance=oqparam.pointsource_distance)
     gsims = gsims_by_trt['*'] if '*' in gsims_by_trt else gsims_by_trt[trt]
-    cmaker = ContextMaker(trt, gsims, params)
+    cmaker = ContextMaker(trt, gsims, vars(oqparam))
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
     pmap_by_grp, rup_data, calc_times, extra = PmapMaker(
         cmaker, srcfilter, [src]).make()
