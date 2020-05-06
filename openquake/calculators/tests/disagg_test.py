@@ -106,8 +106,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
                      'imt=SA(0.1)&poe_id=0')
         self.assertEqual(aw.dtype.names,
-                         ('site_id', 'lon', 'lat', 'rlz_id', 'poes'))
-        self.assertEqual(aw['poes'].shape, (2, 15))  # 2 rows
+                         ('site_id', 'lon', 'lat', 'rlz_id',
+                          'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None'))
 
     def test_case_3(self):
         # a case with poes_disagg too large
@@ -144,7 +144,10 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test extract disagg_layer for Lon_Lat
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Lon_Lat&'
                      'imt=PGA&poe_id=0')
-        self.assertEqual(aw['poes'].shape, (1, 12, 12))
+        self.assertEqual(
+            aw.dtype.names,
+            ('site_id', 'lon', 'lat', 'rlz_id', 'lon_bins', 'lat_bins',
+             'Lon_Lat-PGA-0.002105'))
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also
