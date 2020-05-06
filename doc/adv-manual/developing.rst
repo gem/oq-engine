@@ -147,7 +147,6 @@ Ground Accelation (PGA) of 0.1g by using the ToroEtAl2002SHARE GMPE:
 ... reference_vs30_value = 600.0
 ... intensity_measure_types_and_levels = {'PGA': [0.1]}
 ... gsim = ToroEtAl2002SHARE
-... area_source_discretization = 10.0
 ... maximum_distance = 200.0
 ... ''')
 
@@ -159,7 +158,7 @@ Then we need to specify the source:
 ...         id="126"
 ...         name="HRAS195"
 ...         >
-...             <areaGeometry>
+...             <areaGeometry discretization="10">
 ...                 <gml:Polygon>
 ...                     <gml:exterior>
 ...                         <gml:LinearRing>
