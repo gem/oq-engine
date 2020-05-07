@@ -303,7 +303,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.save_bin_edges()
         sd = shapedic.copy()
         sd.pop('trt')
-        sd.pop('M')
         nbytes, msg = get_array_nbytes(sd)
         if nbytes > oq.max_data_transfer:
             raise ValueError(
