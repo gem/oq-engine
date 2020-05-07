@@ -303,12 +303,13 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.save_bin_edges()
         sd = shapedic.copy()
         sd.pop('trt')
+        sd.pop('M')
         nbytes, msg = get_array_nbytes(sd)
         if nbytes > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (msg, humansize(oq.max_data_transfer)))
-        logging.info('Estimated data transfer: %s', msg)
+        logging.info('Estimated data transfer:\n%s', msg)
         tot = get_outputs_size(shapedic, oq.disagg_outputs or disagg.pmf_map)
         logging.info('Total output size: %s', humansize(sum(tot.values())))
         self.imldic = {}  # sid, rlz, poe, imt -> iml
