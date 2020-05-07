@@ -175,6 +175,7 @@ class AmplifierTestCase(unittest.TestCase):
         a = Amplifier(imtls, aw, self.soil_levels)
         res = []
         nsim = 10000
+        numpy.random.seed(42)  # must be fixed
         for i in range(nsim):
             gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'PGA')
             res.append(list(gmvs))
