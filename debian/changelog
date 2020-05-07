@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Changed the disaggregation calculator to distribute by IMT, thus reducing
+    a lot the data transfer in calculations with many IMTs
+  * Changed /extract/disagg_layer to produce a single big layer
   * Changed the binning algorithm for lon, lat in disaggregation, to make
     sure that the number of bins is homogeneous across sites
 

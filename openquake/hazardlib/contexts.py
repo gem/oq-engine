@@ -173,7 +173,12 @@ class ContextMaker(object):
         else:
             self.pointsource_distance = {}
         self.filter_distance = 'rrup'
-        self.imtls = param.get('imtls', {})
+        if 'imtls' in param:
+            self.imtls = param['imtls']
+        elif 'hazard_imtls' in param:
+            self.imtls = DictArray(param['hazard_imtls'])
+        else:
+            self.imtls = {}
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
         self.reqv = param.get('reqv')
         if self.reqv is not None:
