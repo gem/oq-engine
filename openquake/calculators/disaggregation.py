@@ -237,7 +237,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         if len(ok_sites) == 0:
             raise SystemExit('Cannot do any disaggregation')
         elif len(ok_sites) < self.N:
-            logging.warning('Doing the disaggregation on' % self.sitecol)
+            logging.warning('Doing the disaggregation on %s', self.sitecol)
         return ok_sites
 
     def full_disaggregation(self):
