@@ -133,14 +133,15 @@ def _disaggregate(cmaker, sitecol, ctxs, iml1, eps3,
         bdata.dists[u] = dist
         with gmf_mon:
             mean_std = get_mean_std(
-                sitecol, rctx, dctx, [iml1.imt], [gsim])[..., 0, 0]  # (2, N)
+                sitecol, rctx, dctx, [iml1.imt], [gsim])[..., 0, 0]  # (2, 1)
         with pne_mon:
             imls = to_distribution_values(iml1, iml1.imt)  # shape P
-            bdata.pnes[u] = _disaggregate_pne(rctx, mean_std, imls, *eps3)
+            poes = _disagg(mean_std, imls, *eps3)
+            bdata.pnes[u] = rctx.get_probability_no_exceedance(poes)
     return bdata
 
 
-def _disaggregate_pne(rupture, mean_std, imls, truncnorm, epsilons, eps_bands):
+def _disagg(mean_std, imls, truncnorm, epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
     each coming from ``epsilons`` distribution bins.
@@ -174,7 +175,7 @@ def _disaggregate_pne(rupture, mean_std, imls, truncnorm, epsilons, eps_bands):
                 [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
                 # ... and all bins on the right go unchanged.
                 eps_bands[bin:]])
-    return rupture.get_probability_no_exceedance(poes)
+    return poes
 
 
 # used in calculators/disaggregation
