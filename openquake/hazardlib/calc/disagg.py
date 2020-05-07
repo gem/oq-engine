@@ -107,14 +107,14 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def _disaggregate(cmaker, sitecol, ctxs, iml2, eps3,
+def _disaggregate(cmaker, sitecol, ctxs, iml1, eps3,
                   pne_mon=performance.Monitor(),
                   gmf_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
     # returns AccumDict with keys (poe, imt) and mags, dists, lons, lats
     acc = dict(pnes=[], mags=[], dists=[], lons=[], lats=[])
     try:
-        gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
+        gsim = cmaker.gsim_by_rlzi[iml1.rlzi]
     except KeyError:
         return pack(acc, 'mags dists lons lats pnes'.split())
     for rctx, dctx in ctxs:
@@ -127,12 +127,10 @@ def _disaggregate(cmaker, sitecol, ctxs, iml2, eps3,
         acc['dists'].append(dist)
         with gmf_mon:
             mean_std = get_mean_std(
-                sitecol, rctx, dctx, iml2.imts, [gsim])[..., 0]  # (2, N, M)
+                sitecol, rctx, dctx, [iml1.imt], [gsim])[..., 0, 0]  # (2, N)
         with pne_mon:
-            iml = numpy.array(
-                [to_distribution_values(lvl, imt)
-                 for imt, lvl in zip(iml2.imts, iml2)])  # shape (M, P)
-            pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)
+            imls = to_distribution_values(iml1, iml1.imt)  # shape P
+            pne = _disaggregate_pne(rctx, mean_std, imls, *eps3)  # shape P
             acc['pnes'].append(pne)
     return pack(acc, 'mags dists lons lats pnes'.split())
 
@@ -148,20 +146,20 @@ def _disaggregate_pne(rupture, mean_std, imls, truncnorm, epsilons, eps_bands):
     """
     n_epsilons = len(epsilons) - 1
     poes = numpy.zeros(imls.shape + (n_epsilons,))
-    for (m, p), iml in numpy.ndenumerate(imls):
+    for p, iml in numpy.ndenumerate(imls):
         # compute iml value with respect to standard (mean=0, std=1)
         # normal distributions
-        [lvl] = (iml - mean_std[0, :, m]) / mean_std[1, :, m]
+        [lvl] = (iml - mean_std[0]) / mean_std[1]
         # take the minimum epsilon larger than standard_iml
         bin = numpy.searchsorted(epsilons, lvl)
         if bin == 0:
-            poes[m, p] = eps_bands
+            poes[p] = eps_bands
         elif bin > n_epsilons:
-            poes[m, p] = numpy.zeros(n_epsilons)
+            poes[p] = numpy.zeros(n_epsilons)
         else:
             # for other cases (when ``lvl`` falls somewhere in the
             # histogram):
-            poes[m, p] = numpy.concatenate([
+            poes[p] = numpy.concatenate([
                 # take zeros for bins that are on the left hand side
                 # from the bin ``lvl`` falls into,
                 numpy.zeros(bin - 1),
@@ -211,8 +209,8 @@ def _build_disagg_matrix(bdata, bins):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
-    :returns: a 7D-matrix of shape (#magbins, #distbins, #lonbins,
-                                    #latbins, #epsbins, #imts, #poes)
+    :returns: a 6D-matrix of shape (#magbins, #distbins, #lonbins,
+                                    #latbins, #epsbins, #poes)
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
     dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
@@ -236,34 +234,35 @@ def _build_disagg_matrix(bdata, bins):
     dists_idx[dists_idx == dim2] = dim2 - 1
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
-
-    U, M, P, E = bdata.pnes.shape
-    mat7D = numpy.ones(shape + [M, P])
+    U, P, E = bdata.pnes.shape
+    mat6D = numpy.ones(shape + [P])
     for i_mag, i_dist, i_lon, i_lat, pne in zip(
             mags_idx, dists_idx, lons_idx, lats_idx, bdata.pnes):
-        mat7D[i_mag, i_dist, i_lon, i_lat] *= pne.transpose(2, 0, 1)  # E, M, P
-    return 1. - mat7D
+        mat6D[i_mag, i_dist, i_lon, i_lat] *= pne.T  # shape E, P
+    return 1. - mat6D
 
 
 # called by the engine
-def build_matrix(cmaker, singlesite, ctxs, iml3, imts, rlzs,
+def build_matrix(cmaker, singlesite, ctxs, imt, iml2, rlzs,
                  num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon):
     """
     :param cmaker: a ContextMaker
     :param singlesite: a site collection with a single site
     :param ctxs: a list of pairs (rctx, dctx)
-    :param iml3: an array of shape (M, P, Z)
-    :param imts: a list of intensity measure types
+    :param imt: an intensity measure type
+    :param iml2: an array of shape (P, Z)
     :param rlzs: Z realizations for the given site
     :param num_epsilon_bins: number of epsilons bins
     :param bins: bin edges for the given site
-    :returns: 8D disaggregation matrix
+    :returns:
+        7D disaggregation matrix of shape (#magbins, #distbins, #lonbins,
+                                           #latbins, #epsbins, P, Z)
     """
     eps3 = _eps3(cmaker.trunclevel, num_epsilon_bins)
-    arr = numpy.zeros([len(b) - 1 for b in bins] + list(iml3.shape))
+    arr = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
     for z, rlz in enumerate(rlzs):
-        iml2 = hdf5.ArrayWrapper(iml3[:, :, z], dict(rlzi=rlz, imts=imts))
-        bdata = _disaggregate(cmaker, singlesite, ctxs, iml2, eps3,
+        iml1 = hdf5.ArrayWrapper(iml2[:, z], dict(rlzi=rlz, imt=imt))
+        bdata = _disaggregate(cmaker, singlesite, ctxs, iml1, eps3,
                               pne_mon, gmf_mon)
         if bdata.pnes.sum():
             with mat_mon:
@@ -372,8 +371,8 @@ def disaggregation(
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
-    iml2 = hdf5.ArrayWrapper(numpy.array([[iml]]),
-                             dict(imts=[imt], poes_disagg=[None], rlzi=0))
+    imls = hdf5.ArrayWrapper(
+        numpy.array([iml]), dict(imt=imt, poes_disagg=[None], rlzi=0))
     eps3 = _eps3(truncation_level, n_epsilons)
     for trt, srcs in by_trt.items():
         cmaker = ContextMaker(
@@ -384,7 +383,7 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         ctxs = cmaker.from_srcs(srcs, sitecol)
-        bdata[trt] = _disaggregate(cmaker, sitecol, ctxs, iml2, eps3)
+        bdata[trt] = _disaggregate(cmaker, sitecol, ctxs, imls, eps3)
 
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
@@ -412,8 +411,8 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        mat7 = _build_disagg_matrix(bdata[trt], bin_edges)  # shape (..., M, P)
-        matrix[..., trt_num[trt]] = mat7[..., 0, 0]
+        mat6 = _build_disagg_matrix(bdata[trt], bin_edges)  # shape (..., P)
+        matrix[..., trt_num[trt]] = mat6[..., 0]
     return bin_edges + (trts,), matrix
 
 
