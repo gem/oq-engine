@@ -94,7 +94,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     shapedic['M'] = M = len(oq.imtls)
     shapedic['P'] = len(oq.poes_disagg or (None,))
     shapedic['Z'] = Z
-    shapedic['tasks_per_IMT'] = (oq.concurrent_tasks // M) or 1
+    shapedic['tasks_per_IMT'] = numpy.ceil(oq.concurrent_tasks / M) or 1
     return bin_edges + [trts], shapedic
 
 

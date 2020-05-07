@@ -322,7 +322,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         M = len(oq.imtls)
-        indices = get_indices(dstore, (oq.concurrent_tasks // M) or 1)
+        indices = get_indices(dstore, numpy.ceil(oq.concurrent_tasks/M) or 1)
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         trt_num = {trt: i for i, trt in enumerate(self.trts)}
