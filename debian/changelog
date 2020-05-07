@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Do not perform the disaggregation by epsilon when not required
+  * Introduced management of uncertainty in the GMF amplifi
   * Changed the disaggregation calculator to distribute by IMT, thus reducing
     a lot the data transfer in calculations with many IMTs
   * Changed /extract/disagg_layer to produce a single big layer
