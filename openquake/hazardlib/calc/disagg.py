@@ -23,12 +23,13 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 """
 import warnings
 import operator
+import collections
 import numpy
 import scipy.stats
 
 from openquake.hazardlib import pmf, contexts
 from openquake.baselib import hdf5, performance
-from openquake.baselib.general import pack, groupby
+from openquake.baselib.general import groupby
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
@@ -38,6 +39,7 @@ from openquake.hazardlib.gsim.base import (
     ContextMaker, get_mean_std, to_distribution_values)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
+BinData = collections.namedtuple('BinData', 'mags, dists, lons, lats, pnes')
 
 
 def assert_same_shape(arrays):
@@ -111,28 +113,31 @@ def _disaggregate(cmaker, sitecol, ctxs, iml1, eps3,
                   pne_mon=performance.Monitor(),
                   gmf_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
-    # returns AccumDict with keys (poe, imt) and mags, dists, lons, lats
-    acc = dict(pnes=[], mags=[], dists=[], lons=[], lats=[])
+    U, P, E = len(ctxs), len(iml1), len(eps3[1]) - 1
     try:
         gsim = cmaker.gsim_by_rlzi[iml1.rlzi]
     except KeyError:
-        return pack(acc, 'mags dists lons lats pnes'.split())
-    for rctx, dctx in ctxs:
+        U = 0
+    bdata = BinData(mags=numpy.zeros(U), dists=numpy.zeros(U),
+                    lons=numpy.zeros(U), lats=numpy.zeros(U),
+                    pnes=numpy.zeros((U, P, E)))
+    if U == 0:
+        return bdata
+    for u, (rctx, dctx) in enumerate(ctxs):
         [dist] = dctx.rrup
         if gsim.minimum_distance and dist < gsim.minimum_distance:
             dist = gsim.minimum_distance
-        acc['mags'].append(rctx.mag)
-        acc['lons'].append(dctx.lon)
-        acc['lats'].append(dctx.lat)
-        acc['dists'].append(dist)
+        bdata.mags[u] = rctx.mag
+        bdata.lons[u] = dctx.lon
+        bdata.lats[u] = dctx.lat
+        bdata.dists[u] = dist
         with gmf_mon:
             mean_std = get_mean_std(
                 sitecol, rctx, dctx, [iml1.imt], [gsim])[..., 0, 0]  # (2, N)
         with pne_mon:
             imls = to_distribution_values(iml1, iml1.imt)  # shape P
-            pne = _disaggregate_pne(rctx, mean_std, imls, *eps3)  # shape P
-            acc['pnes'].append(pne)
-    return pack(acc, 'mags dists lons lats pnes'.split())
+            bdata.pnes[u] = _disaggregate_pne(rctx, mean_std, imls, *eps3)
+    return bdata
 
 
 def _disaggregate_pne(rupture, mean_std, imls, truncnorm, epsilons, eps_bands):
@@ -142,7 +147,7 @@ def _disaggregate_pne(rupture, mean_std, imls, truncnorm, epsilons, eps_bands):
     :returns:
         Contribution to probability of exceedance of ``iml`` coming
         from different sigma bands in the form of a 2D numpy array of
-        probabilities with shape (n_sites, n_epsilons)
+        probabilities with shape (n_poes, n_epsilons)
     """
     n_epsilons = len(epsilons) - 1
     poes = numpy.zeros(imls.shape + (n_epsilons,))
