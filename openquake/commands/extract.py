@@ -38,7 +38,7 @@ def extract(what, calc_id=-1, webapi=True, local=False):
             fname = '%s_%d.txt' % (w, calc_id)
             open(fname, 'w').write(obj.toml())
         else:  # a regular ArrayWrapper
-            fname = '%s_%d.hdf5' % (w, calc_id)
+            fname = '%s_%d.npz' % (w, calc_id)
             obj.save(fname)
         print('Saved', fname)
     if mon.duration > 1:
