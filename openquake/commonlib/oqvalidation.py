@@ -341,6 +341,9 @@ class OqParam(valid.ParamSet):
                       'coordinate_bin_width', 'num_epsilon_bins'):
                 if k not in vars(self):
                     raise InvalidFile('%s must be set in %s' % (k, job_ini))
+            if self.disagg_outputs and not any(
+                    'Eps' in out for out in self.disagg_outputs):
+                self.num_epsilon_bins = 1
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':

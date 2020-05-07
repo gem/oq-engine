@@ -154,8 +154,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(aw.mag, [6.5, 6.75, 7., 7.25])
         aae(aw.dist, [0., 25., 50., 75., 100., 125., 150., 175., 200.,
                       225., 250., 275., 300.])
-        aae(aw.eps, [-3., -2.14285714, -1.28571429, -0.42857143,  0.42857143,
-                     1.28571429, 2.14285714, 3.])
+        aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
     def test_case_master(self):

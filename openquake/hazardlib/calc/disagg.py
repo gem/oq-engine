@@ -133,48 +133,47 @@ def _disaggregate(cmaker, sitecol, ctxs, iml1, eps3,
         bdata.dists[u] = dist
         with gmf_mon:
             mean_std = get_mean_std(
-                sitecol, rctx, dctx, [iml1.imt], [gsim])[..., 0, 0]  # (2, N)
+                sitecol, rctx, dctx, [iml1.imt], [gsim])[..., 0, 0]  # (2, 1)
         with pne_mon:
             imls = to_distribution_values(iml1, iml1.imt)  # shape P
-            bdata.pnes[u] = _disaggregate_pne(rctx, mean_std, imls, *eps3)
+            poes = numpy.zeros((P, E))
+            for p, iml in enumerate(imls):
+                [lvl] = (iml - mean_std[0]) / mean_std[1]
+                poes[p] = _disagg_eps(mean_std, lvl, *eps3)
+            bdata.pnes[u] = rctx.get_probability_no_exceedance(poes)
     return bdata
 
 
-def _disaggregate_pne(rupture, mean_std, imls, truncnorm, epsilons, eps_bands):
-    """
-    Disaggregate (separate) PoE of ``iml`` in different contributions
-    each coming from ``epsilons`` distribution bins.
-    :returns:
-        Contribution to probability of exceedance of ``iml`` coming
-        from different sigma bands in the form of a 2D numpy array of
-        probabilities with shape (n_poes, n_epsilons)
-    """
-    n_epsilons = len(epsilons) - 1
-    poes = numpy.zeros(imls.shape + (n_epsilons,))
-    for p, iml in numpy.ndenumerate(imls):
-        # compute iml value with respect to standard (mean=0, std=1)
-        # normal distributions
-        [lvl] = (iml - mean_std[0]) / mean_std[1]
-        # take the minimum epsilon larger than standard_iml
-        bin = numpy.searchsorted(epsilons, lvl)
-        if bin == 0:
-            poes[p] = eps_bands
-        elif bin > n_epsilons:
-            poes[p] = numpy.zeros(n_epsilons)
+def _disagg_eps(mean_std, lvl, truncnorm, epsilons, eps_bands):
+    # disaggregate PoE of `iml` in different contributions,
+    # each coming from ``epsilons`` distribution bins
+    E = len(eps_bands)
+    if E == 1:  # shortcut
+        if lvl < epsilons[0]:
+            return 1.
+        elif lvl > epsilons[1]:
+            return 0.
         else:
-            # for other cases (when ``lvl`` falls somewhere in the
-            # histogram):
-            poes[p] = numpy.concatenate([
-                # take zeros for bins that are on the left hand side
-                # from the bin ``lvl`` falls into,
-                numpy.zeros(bin - 1),
-                # ... area of the portion of the bin containing ``lvl``
-                # (the portion is limited on the left hand side by
-                # ``lvl`` and on the right hand side by the bin edge),
-                [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
-                # ... and all bins on the right go unchanged.
-                eps_bands[bin:]])
-    return rupture.get_probability_no_exceedance(poes)
+            return truncnorm.sf(lvl)
+    # E > 1
+    bin = numpy.searchsorted(epsilons, lvl)
+    if bin == 0:
+        return eps_bands
+    elif bin > E:
+        return numpy.zeros(E)
+    else:
+        # for other cases (when `lvl` falls somewhere in the
+        # histogram):
+        return numpy.concatenate([
+            # take zeros for bins that are on the left hand side
+            # from the bin `lvl` falls into,
+            numpy.zeros(bin - 1),
+            # ... area of the portion of the bin containing ``lvl`
+            # (the portion is limited on the left hand side by
+            # ``lvl`` and on the right hand side by the bin edge),
+            [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
+            # ... and all bins on the right go unchanged.
+            eps_bands[bin:]])
 
 
 # used in calculators/disaggregation
