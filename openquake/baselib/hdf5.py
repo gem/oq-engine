@@ -397,6 +397,41 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
+def fix_array(arr, key):
+    """
+    :param arr: array or array-like object
+    :param key: string associated to the error (appear in the error message)
+
+    If `arr` is a numpy array with dtype object containing strings, convert
+    it into a numpy array containing bytes, unless it has more than 2
+    dimensions or contains non-strings (these are errors). Return `arr`
+    unchanged in the other cases.
+    """
+    if arr is None:
+        return ()
+    if not isinstance(arr, numpy.ndarray):
+        return arr
+    if arr.dtype != numpy.dtype('O'):
+        d = arr.dtype.descr
+        if len(d) > 1 and isinstance(d[0][1], tuple):
+            # for extract_assets d[0] is the pair
+            # ('id', ('|S20', {'h5py_encoding': 'ascii'}))
+            # this is a horrible workaround for the h5py 2.10.0 issue
+            # https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
+            arr.dtype = [(n, str(arr.dtype[n])) for n in arr.dtype.names]
+        return arr
+    if arr.ndim == 1:
+        return numpy.array([s.encode('utf8') for s in arr])
+    elif arr.ndim == 2:
+        return numpy.array([[col.encode('utf8') for col in row]
+                            for row in arr])
+    else:
+        raise NotImplementedError('The array for %s has shape %s' %
+                                  (key, arr.shape))
+
+    return arr
+
+
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
@@ -482,25 +517,23 @@ class ArrayWrapper(object):
                if not k.startswith('_')}
         return toml.dumps(dic)
 
-    def save(self, path, **extra):
+    def save(self, path):
         """
-        :param path: an .hdf5 pathname
-        :param extra: extra attributes to be saved in the file
+        :param path: an .npz pathname
         """
-        with File(path, 'w') as f:
-            for key, val in vars(self).items():
-                assert val is not None, key  # sanity check
-                if isinstance(val, numpy.ndarray):
-                    f.create_dataset(key, val.shape, val.dtype)
-                    f[key][:] = val
-                else:
-                    try:
-                        f[key] = maybe_encode(val)
-                    except ValueError as err:
-                        if 'Object header message is too large' in str(err):
-                            logging.error(str(err))
-            for k, v in extra.items():
-                f.attrs[k] = maybe_encode(v)
+        a = {}
+        for key, val in vars(self).items():
+            if key.startswith('_'):
+                continue
+            elif isinstance(val, str):
+                # without this oq extract would fail
+                a[key] = numpy.array(val.encode('utf-8'))
+            elif isinstance(val, dict):
+                # this is hack: we are losing the values
+                a[key] = list(val)
+            else:
+                a[key] = fix_array(val, key)
+        numpy.savez_compressed(path, **a)
 
     def to_table(self):
         """

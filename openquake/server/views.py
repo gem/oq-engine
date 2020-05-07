@@ -30,7 +30,6 @@ import zlib
 import pickle
 import urllib.parse as urlparse
 import re
-import numpy
 import psutil
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
@@ -733,19 +732,7 @@ def extract(request, calc_id, what):
             n = len(request.path_info)
             query_string = unquote_plus(request.get_full_path()[n:])
             aw = _extract(ds, what + query_string)
-            a = {}
-            for key, val in vars(aw).items():
-                if key.startswith('_'):
-                    continue
-                elif isinstance(val, str):
-                    # without this oq extract would fail
-                    a[key] = numpy.array(val.encode('utf-8'))
-                elif isinstance(val, dict):
-                    # this is hack: we are losing the values
-                    a[key] = list(val)
-                else:
-                    a[key] = utils.fix_array(val, key)
-            numpy.savez_compressed(fname, **a)
+            aw.save(fname)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
