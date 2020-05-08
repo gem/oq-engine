@@ -290,11 +290,12 @@ class ClassicalCalculator(base.HazardCalculator):
                             if imt == 'PGA' or imt.startswith('SA')]
         imts_ok = len(imts_with_period) == len(oq.imtls)
         if (imts_ok and oq.pointsource_distance and
-                oq.pointsource_distance.has_star()) or (
+                oq.pointsource_distance.suggested()) or (
                     imts_ok and oq.minimum_intensity):
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
-            self.datastore['effect_by_mag_dst_trt'] = aw
+            if len(vars(aw)) > 1:  # more than _extra
+                self.datastore['effect_by_mag_dst'] = aw
         elif oq.pointsource_distance:
             self.psd = oq.pointsource_distance.interp(mags_by_trt)
         else:
@@ -379,7 +380,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=self.psd,
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
-            collapse_ctxs=oq.collapse_ctxs,
+            collapse_level=oq.collapse_level,
             max_sites_disagg=oq.max_sites_disagg)
         srcfilter = self.src_filter(self.datastore.tempname)
         for sg in src_groups:

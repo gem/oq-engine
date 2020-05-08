@@ -142,8 +142,8 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
     """
     dbserver.ensure_on()
     if param:
-        params = oqvalidation.OqParam.check(
-            dict(p.split('=', 1) for p in param.split(',')))
+        params = dict(p.split('=', 1) for p in param.split(','))
+        oqvalidation.OqParam.check(params)
     else:
         params = {}
     if slowest:

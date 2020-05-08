@@ -351,7 +351,7 @@ hazard_uhs-std.csv
         # another way to look at the duplicated sources; protects against
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
-        dic = dict(df['num_sources'])
+        dic = dict(df['multiplicity'])
         self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
 
     def test_case_21(self):
@@ -543,7 +543,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 522)  # effective ruptures
+        self.assertEqual(self.calc.numrups, 499)  # effective ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
@@ -574,7 +574,7 @@ hazard_uhs-std.csv
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/exact_dists.txt', tmp)
 
-        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='*')
+        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
         tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/approx_dists.txt', tmp)

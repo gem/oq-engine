@@ -154,7 +154,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.collapse_ctxs = param.get('collapse_ctxs', False)
+        self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
         self.gsims = gsims
@@ -403,14 +403,14 @@ class PmapMaker(object):
 
     def _gen_ctxs(self, rups, sites, grp_ids):
         # generate triples (rup, sites, dctx)
-        rup_parametric = not numpy.isnan(
-            [r.occurrence_rate for r in rups]).any()
-        if (self.rup_indep and rup_parametric and len(sites.complete) == 1
-                and self.pointsource_distance != {}):
+        rup_param = not numpy.isnan([r.occurrence_rate for r in rups]).any()
+        collapse_level = self.rup_indep and rup_param and self.collapse_level
+        if (collapse_level and len(sites.complete) == 1 and
+                self.pointsource_distance != {}):
             rups = self.collapse_point_ruptures(rups, sites)
             # print_finite_size(rups)
         ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-        if self.rup_indep and rup_parametric and self.collapse_ctxs:
+        if collapse_level > 1:
             ctxs = self.collapse_the_ctxs(ctxs)
         self.numrups += len(ctxs)
         if ctxs:
@@ -798,11 +798,15 @@ class Effect(object):
 
     def collapse_value(self, collapse_dist):
         """
-        :returns: intensity at the maximum magnitude and collapse distance
+        :returns: intensity at collapse distance
         """
-        effectmax = self.effect_by_mag[max(self.effect_by_mag)]
+        # get the maximum magnitude with a cutoff at 7
+        for mag in self.effect_by_mag:
+            if mag > '7.00':
+                break
+        effect = self.effect_by_mag[mag]
         idx = numpy.searchsorted(self.dists, collapse_dist)
-        return effectmax[idx-1 if idx == self.nbins else idx]
+        return effect[idx-1 if idx == self.nbins else idx]
 
     def __call__(self, mag, dist):
         di = numpy.searchsorted(self.dists, dist)
@@ -811,8 +815,8 @@ class Effect(object):
         eff = self.effect_by_mag['%.2f' % mag][di]
         return eff
 
-    # this is useful to compute the collapse_distance and minimum_distance
-    def dist_by_mag(self, intensity=0):
+    # this is used to compute the magnitude-dependent pointsource_distance
+    def dist_by_mag(self, intensity):
         """
         :returns: a dict magstring -> distance
         """
@@ -866,9 +870,10 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
 
     Updates oq.maximum_distance.magdist
     """
+    assert list(mags) == list(gsims_by_trt), 'Missing TRTs!'
     dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
                  for trt in gsims_by_trt}
-    aw = hdf5.ArrayWrapper((), dist_bins)
+    aw = hdf5.ArrayWrapper((), {})
     # computing the effect make sense only if all IMTs have the same
     # unity of measure; for simplicity we will consider only PGA and SA
     psd = (oq.pointsource_distance.interp(mags)
@@ -882,11 +887,12 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
             get_effect_by_mag, (sorted(allmags), sitecol1, gsims_by_trt,
                                 oq.maximum_distance, oq.imtls)
         ).reduce()
-        vars(aw).update(eff_by_mag)
-        effect = {
-            trt: Effect({mag: eff_by_mag[mag][:, t]
-                         for mag in mags[trt]}, dist_bins[trt])
-            for t, trt in enumerate(mags)}
+        effect = {}
+        for t, trt in enumerate(mags):
+            arr = numpy.array([eff_by_mag[mag][:, t] for mag in mags[trt]])
+            setattr(aw, trt, arr)  # shape (#mags, #dists)
+            setattr(aw, trt + '_dist_bins', dist_bins[trt])
+            effect[trt] = Effect(dict(zip(mags[trt], arr)), dist_bins[trt])
         minint = oq.minimum_intensity.get('default', 0)
         for trt, eff in effect.items():
             if minint:
