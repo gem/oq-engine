@@ -149,14 +149,6 @@ def _disagg_eps(lvl, truncnorm, epsilons, eps_bands):
     # disaggregate PoE of `iml` in different contributions,
     # each coming from ``epsilons`` distribution bins
     E = len(eps_bands)
-    if E == 1:  # shortcut
-        if lvl < epsilons[0]:
-            return 1.
-        elif lvl > epsilons[1]:
-            return 0.
-        else:
-            return truncnorm.sf(lvl)
-    # E > 1
     bin = numpy.searchsorted(epsilons, lvl)
     if bin == 0:
         return eps_bands
