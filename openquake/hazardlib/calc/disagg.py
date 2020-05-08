@@ -136,37 +136,29 @@ def _disaggregate(cmaker, site1, ctxs, iml1, eps3,
             mean_std[:, u] = get_mean_std(
                 site1, rctx, dctx, [iml1.imt], [gsim]).reshape(2)
     with pne_mon:
+        truncnorm, epsilons, eps_bands = eps3
+        cum_bands = [eps_bands[e:].sum() for e in range(len(eps_bands))] + [0]
         imls = to_distribution_values(iml1, iml1.imt)  # shape P
         for p, iml in enumerate(imls):
             lvls = (iml - mean_std[0]) / mean_std[1]
-            for u, (rctx, dctx) in enumerate(ctxs):
-                poes = _disagg_eps(lvls[u], *eps3)
+            tn = truncnorm.sf(lvls)
+            bins = numpy.searchsorted(epsilons, lvls)
+            for u, (rctx, _) in enumerate(ctxs):
+                poes = _disagg_eps(tn[u], bins[u], eps_bands, cum_bands)
                 bdata.pnes[u, p] = rctx.get_probability_no_exceedance(poes)
     return bdata
 
 
-def _disagg_eps(lvl, truncnorm, epsilons, eps_bands):
+def _disagg_eps(truncnorm, bin, eps_bands, cum_bands):
     # disaggregate PoE of `iml` in different contributions,
     # each coming from ``epsilons`` distribution bins
-    E = len(eps_bands)
-    bin = numpy.searchsorted(epsilons, lvl)
-    if bin == 0:
-        return eps_bands
-    elif bin > E:
-        return numpy.zeros(E)
-    else:
-        # for other cases (when `lvl` falls somewhere in the
-        # histogram):
-        return numpy.concatenate([
-            # take zeros for bins that are on the left hand side
-            # from the bin `lvl` falls into,
-            numpy.zeros(bin - 1),
-            # ... area of the portion of the bin containing ``lvl`
-            # (the portion is limited on the left hand side by
-            # ``lvl`` and on the right hand side by the bin edge),
-            [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
-            # ... and all bins on the right go unchanged.
-            eps_bands[bin:]])
+    res = numpy.zeros(len(eps_bands))
+    for e in range(len(res)):
+        if e == bin - 1:
+            res[e] = truncnorm - cum_bands[bin]
+        elif e >= bin:
+            res[e] = eps_bands[e]
+    return res
 
 
 # used in calculators/disaggregation
