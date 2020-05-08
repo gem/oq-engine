@@ -46,13 +46,16 @@ def check_same_levels(imtls):
     :returns: the periods and the levels
     :raises: a ValueError if the levels are not the same across all IMTs
     """
+    if not imtls:
+        raise ValueError('There are no intensity_measure_types_and_levels!')
     imls = imtls[next(iter(imtls))]
     for imt in imtls:
         if not imt.startswith(('PGA', 'SA')):
             raise ValueError('Site amplification works only with '
                              'PGA and SA, got %s' % imt)
         if numpy.isnan(imtls[imt]).all():
-            continue
+            raise ValueError(
+                'You forgot to set intensity_measure_types_and_levels!')
         elif len(imtls[imt]) != len(imls) or any(
                 l1 != l2 for l1, l2 in zip(imtls[imt], imls)):
             raise ValueError('Site amplification works only if the '

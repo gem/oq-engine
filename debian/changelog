@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Raised a clear error for amplification calculations with missing intensity
+    measure types and levels
   * Vectorized the disaggregation formula
   * Do not perform the disaggregation by epsilon when not required
   * Introduced management of uncertainty in the GMF amplifi
