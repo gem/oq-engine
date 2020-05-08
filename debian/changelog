@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Vectorized the disaggregation formula
   * Do not perform the disaggregation by epsilon when not required
   * Introduced management of uncertainty in the GMF amplifi
   * Changed the disaggregation calculator to distribute by IMT, thus reducing
