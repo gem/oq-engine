@@ -109,7 +109,7 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def _disaggregate(cmaker, sitecol, ctxs, iml1, eps3,
+def _disaggregate(cmaker, site1, ctxs, iml1, eps3,
                   pne_mon=performance.Monitor(),
                   gmf_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
@@ -123,39 +123,32 @@ def _disaggregate(cmaker, sitecol, ctxs, iml1, eps3,
                     pnes=numpy.zeros((U, P, E)))
     if U == 0:
         return bdata
-    for u, (rctx, dctx) in enumerate(ctxs):
-        [dist] = dctx.rrup
-        if gsim.minimum_distance and dist < gsim.minimum_distance:
-            dist = gsim.minimum_distance
-        bdata.mags[u] = rctx.mag
-        bdata.lons[u] = dctx.lon
-        bdata.lats[u] = dctx.lat
-        bdata.dists[u] = dist
-        with gmf_mon:
-            mean_std = get_mean_std(
-                sitecol, rctx, dctx, [iml1.imt], [gsim])[..., 0, 0]  # (2, 1)
-        with pne_mon:
-            imls = to_distribution_values(iml1, iml1.imt)  # shape P
-            poes = numpy.zeros((P, E))
-            for p, iml in enumerate(imls):
-                [lvl] = (iml - mean_std[0]) / mean_std[1]
-                poes[p] = _disagg_eps(mean_std, lvl, *eps3)
-            bdata.pnes[u] = rctx.get_probability_no_exceedance(poes)
+    mean_std = numpy.zeros((2, U))
+    with gmf_mon:
+        for u, (rctx, dctx) in enumerate(ctxs):
+            [dist] = dctx.rrup
+            if gsim.minimum_distance and dist < gsim.minimum_distance:
+                dist = gsim.minimum_distance
+            bdata.mags[u] = rctx.mag
+            bdata.lons[u] = dctx.lon
+            bdata.lats[u] = dctx.lat
+            bdata.dists[u] = dist
+            mean_std[:, u] = get_mean_std(
+                site1, rctx, dctx, [iml1.imt], [gsim]).reshape(2)
+    with pne_mon:
+        imls = to_distribution_values(iml1, iml1.imt)  # shape P
+        for p, iml in enumerate(imls):
+            lvls = (iml - mean_std[0]) / mean_std[1]
+            for u, (rctx, dctx) in enumerate(ctxs):
+                poes = _disagg_eps(lvls[u], *eps3)
+                bdata.pnes[u, p] = rctx.get_probability_no_exceedance(poes)
     return bdata
 
 
-def _disagg_eps(mean_std, lvl, truncnorm, epsilons, eps_bands):
+def _disagg_eps(lvl, truncnorm, epsilons, eps_bands):
     # disaggregate PoE of `iml` in different contributions,
     # each coming from ``epsilons`` distribution bins
     E = len(eps_bands)
-    if E == 1:  # shortcut
-        if lvl < epsilons[0]:
-            return 1.
-        elif lvl > epsilons[1]:
-            return 0.
-        else:
-            return truncnorm.sf(lvl)
-    # E > 1
     bin = numpy.searchsorted(epsilons, lvl)
     if bin == 0:
         return eps_bands

@@ -91,7 +91,7 @@ def _iml3(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return dic
 
 
-def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, monitor):
+def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -114,7 +114,6 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, monitor):
     """
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
-        oq = dstore['oqparam']
         sitecol = dstore['sitecol']
         rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
     RuptureContext.temporal_occurrence_model = PoissonTOM(
@@ -337,7 +336,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for idxs in indices[grp_id]:
                 for imt in oq.imtls:
                     smap.submit((dstore, idxs, cmaker, self.iml3[imt], trti,
-                                 self.bin_edges))
+                                 self.bin_edges, oq))
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 8D array
 
