@@ -517,24 +517,6 @@ class ArrayWrapper(object):
                if not k.startswith('_')}
         return toml.dumps(dic)
 
-    def save(self, path):
-        """
-        :param path: an .npz pathname
-        """
-        a = {}
-        for key, val in vars(self).items():
-            if key.startswith('_'):
-                continue
-            elif isinstance(val, str):
-                # without this oq extract would fail
-                a[key] = numpy.array(val.encode('utf-8'))
-            elif isinstance(val, dict):
-                # this is hack: we are losing the values
-                a[key] = list(val)
-            else:
-                a[key] = fix_array(val, key)
-        numpy.savez_compressed(path, **a)
-
     def to_table(self):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
@@ -737,3 +719,23 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
             newnames.append(new)
         arr.dtype.names = newnames
     return ArrayWrapper(arr, attrs)
+
+
+def save_npz(obj, path):
+    """
+    :param obj: object to serialize
+    :param path: an .npz pathname
+    """
+    a = {}
+    for key, val in vars(obj).items():
+        if key.startswith('_'):
+            continue
+        elif isinstance(val, str):
+            # without this oq extract would fail
+            a[key] = numpy.array(val.encode('utf-8'))
+        elif isinstance(val, dict):
+            # this is hack: we are losing the values
+            a[key] = list(val)
+        else:
+            a[key] = fix_array(val, key)
+    numpy.savez_compressed(path, **a)
