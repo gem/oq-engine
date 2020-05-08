@@ -137,16 +137,15 @@ def _disaggregate(cmaker, site1, ctxs, iml1, eps3,
                 site1, rctx, dctx, [iml1.imt], [gsim]).reshape(2)
     with pne_mon:
         imls = to_distribution_values(iml1, iml1.imt)  # shape P
-        for u, (rctx, dctx) in enumerate(ctxs):
-            poes = numpy.zeros((P, E))
-            for p, iml in enumerate(imls):
-                lvl = (iml - mean_std[0, u]) / mean_std[1, u]
-                poes[p] = _disagg_eps(mean_std, lvl, *eps3)
-            bdata.pnes[u] = rctx.get_probability_no_exceedance(poes)
+        for p, iml in enumerate(imls):
+            lvls = (iml - mean_std[0]) / mean_std[1]
+            for u, (rctx, dctx) in enumerate(ctxs):
+                poes = _disagg_eps(lvls[u], *eps3)
+                bdata.pnes[u, p] = rctx.get_probability_no_exceedance(poes)
     return bdata
 
 
-def _disagg_eps(mean_std, lvl, truncnorm, epsilons, eps_bands):
+def _disagg_eps(lvl, truncnorm, epsilons, eps_bands):
     # disaggregate PoE of `iml` in different contributions,
     # each coming from ``epsilons`` distribution bins
     E = len(eps_bands)
