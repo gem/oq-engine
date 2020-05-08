@@ -109,7 +109,7 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def _disaggregate(cmaker, sitecol, ctxs, iml1, eps3,
+def _disaggregate(cmaker, site1, ctxs, iml1, eps3,
                   pne_mon=performance.Monitor(),
                   gmf_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
@@ -123,22 +123,24 @@ def _disaggregate(cmaker, sitecol, ctxs, iml1, eps3,
                     pnes=numpy.zeros((U, P, E)))
     if U == 0:
         return bdata
-    for u, (rctx, dctx) in enumerate(ctxs):
-        [dist] = dctx.rrup
-        if gsim.minimum_distance and dist < gsim.minimum_distance:
-            dist = gsim.minimum_distance
-        bdata.mags[u] = rctx.mag
-        bdata.lons[u] = dctx.lon
-        bdata.lats[u] = dctx.lat
-        bdata.dists[u] = dist
-        with gmf_mon:
-            mean_std = get_mean_std(
-                sitecol, rctx, dctx, [iml1.imt], [gsim])[..., 0, 0]  # (2, 1)
-        with pne_mon:
-            imls = to_distribution_values(iml1, iml1.imt)  # shape P
+    mean_std = numpy.zeros((2, U))
+    with gmf_mon:
+        for u, (rctx, dctx) in enumerate(ctxs):
+            [dist] = dctx.rrup
+            if gsim.minimum_distance and dist < gsim.minimum_distance:
+                dist = gsim.minimum_distance
+            bdata.mags[u] = rctx.mag
+            bdata.lons[u] = dctx.lon
+            bdata.lats[u] = dctx.lat
+            bdata.dists[u] = dist
+            mean_std[:, u] = get_mean_std(
+                site1, rctx, dctx, [iml1.imt], [gsim]).reshape(2)
+    with pne_mon:
+        imls = to_distribution_values(iml1, iml1.imt)  # shape P
+        for u, (rctx, dctx) in enumerate(ctxs):
             poes = numpy.zeros((P, E))
             for p, iml in enumerate(imls):
-                [lvl] = (iml - mean_std[0]) / mean_std[1]
+                lvl = (iml - mean_std[0, u]) / mean_std[1, u]
                 poes[p] = _disagg_eps(mean_std, lvl, *eps3)
             bdata.pnes[u] = rctx.get_probability_no_exceedance(poes)
     return bdata
