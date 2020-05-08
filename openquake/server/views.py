@@ -40,7 +40,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore
+from openquake.baselib import datastore, hdf5
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim, valid
@@ -731,8 +731,8 @@ def extract(request, calc_id, what):
             os.close(fd)
             n = len(request.path_info)
             query_string = unquote_plus(request.get_full_path()[n:])
-            aw = _extract(ds, what + query_string)
-            aw.save(fname)
+            obj = _extract(ds, what + query_string)
+            hdf5.save_npz(obj, fname)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
