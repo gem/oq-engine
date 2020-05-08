@@ -148,25 +148,14 @@ def _disaggregate(cmaker, site1, ctxs, iml1, eps3,
 def _disagg_eps(lvl, truncnorm, epsilons, eps_bands):
     # disaggregate PoE of `iml` in different contributions,
     # each coming from ``epsilons`` distribution bins
-    E = len(eps_bands)
+    res = numpy.zeros(len(eps_bands))
     bin = numpy.searchsorted(epsilons, lvl)
-    if bin == 0:
-        return eps_bands
-    elif bin > E:
-        return numpy.zeros(E)
-    else:
-        # for other cases (when `lvl` falls somewhere in the
-        # histogram):
-        return numpy.concatenate([
-            # take zeros for bins that are on the left hand side
-            # from the bin `lvl` falls into,
-            numpy.zeros(bin - 1),
-            # ... area of the portion of the bin containing ``lvl`
-            # (the portion is limited on the left hand side by
-            # ``lvl`` and on the right hand side by the bin edge),
-            [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
-            # ... and all bins on the right go unchanged.
-            eps_bands[bin:]])
+    for e in range(len(res)):
+        if e == bin - 1:
+            res[e] = truncnorm.sf(lvl) - eps_bands[bin:].sum()
+        elif e >= bin:
+            res[e] = eps_bands[e]
+    return res
 
 
 # used in calculators/disaggregation
