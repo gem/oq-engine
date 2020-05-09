@@ -210,21 +210,21 @@ def build_disagg_matrix(bdata, bins, pnes):
     return 1. - mat6D
 
 
-def _bdata_mean_std(gsim, site1, ctxs, imt):
-    U = len(ctxs)
+def _bdata_mean_std(gsim, site1, rctxs, imt):
+    U = len(rctxs)
     bdata = BinData(mags=numpy.zeros(U), dists=numpy.zeros(U),
                     lons=numpy.zeros(U), lats=numpy.zeros(U))
     mean_std = numpy.zeros((2, U))
-    for u, (rctx, dctx) in enumerate(ctxs):
-        [dist] = dctx.rrup
+    for u, rctx in enumerate(rctxs):
+        dist = rctx.rrup
         if gsim.minimum_distance and dist < gsim.minimum_distance:
             dist = gsim.minimum_distance
         bdata.mags[u] = rctx.mag
-        bdata.lons[u] = dctx.lon
-        bdata.lats[u] = dctx.lat
+        bdata.lons[u] = rctx.lon
+        bdata.lats[u] = rctx.lat
         bdata.dists[u] = dist
         mean_std[:, u] = get_mean_std(
-            site1, rctx, dctx, [imt], [gsim]).reshape(2)
+            site1, rctx, rctx, [imt], [gsim]).reshape(2)
     return bdata, mean_std
 
 
@@ -342,10 +342,9 @@ def disaggregation(
              'imtls': {str(imt): [iml]}})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
-        ctxs = cmaker.from_srcs(srcs, sitecol)
-        rups = [rup for rup, _ in ctxs]
-        bdata[trt], mean_std = _bdata_mean_std(gsim, sitecol, ctxs, imt)
-        pnes[trt] = disaggregate(mean_std, rups, imt, imls, eps3)
+        rctxs = cmaker.from_srcs(srcs, sitecol)
+        bdata[trt], mean_std = _bdata_mean_std(gsim, sitecol, rctxs, imt)
+        pnes[trt] = disaggregate(mean_std, rctxs, imt, imls, eps3)
 
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
