@@ -109,20 +109,14 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def _disaggregate(cmaker, site1, ctxs, iml1, eps3,
+def _disaggregate(gsim, site1, ctxs, iml1, eps3,
                   pne_mon=performance.Monitor(),
                   gmf_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
     U, P, E = len(ctxs), len(iml1), len(eps3[1]) - 1
-    try:
-        gsim = cmaker.gsim_by_rlzi[iml1.rlzi]
-    except KeyError:
-        U = 0
     bdata = BinData(mags=numpy.zeros(U), dists=numpy.zeros(U),
                     lons=numpy.zeros(U), lats=numpy.zeros(U),
                     pnes=numpy.zeros((U, P, E)))
-    if U == 0:
-        return bdata
     mean_std = numpy.zeros((2, U))
     with gmf_mon:
         for u, (rctx, dctx) in enumerate(ctxs):
@@ -232,30 +226,31 @@ def _build_disagg_matrix(bdata, bins):
 
 
 # called by the engine
-def build_matrix(cmaker, singlesite, ctxs, imt, iml2, rlzs,
+def build_matrix(trunclevel, singlesite, ctxs, imt, iml2, gsims,
                  num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon):
     """
-    :param cmaker: a ContextMaker
+    :param trunclevel: the truncation level
     :param singlesite: a site collection with a single site
     :param ctxs: a list of pairs (rctx, dctx)
     :param imt: an intensity measure type
     :param iml2: an array of shape (P, Z)
-    :param rlzs: Z realizations for the given site
+    :param gsims: Z gsims, one per realization, possibly zero
     :param num_epsilon_bins: number of epsilons bins
     :param bins: bin edges for the given site
     :returns:
         7D disaggregation matrix of shape (#magbins, #distbins, #lonbins,
                                            #latbins, #epsbins, P, Z)
     """
-    eps3 = _eps3(cmaker.trunclevel, num_epsilon_bins)
+    eps3 = _eps3(trunclevel, num_epsilon_bins)
     arr = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
-    for z, rlz in enumerate(rlzs):
-        iml1 = hdf5.ArrayWrapper(iml2[:, z], dict(rlzi=rlz, imt=imt))
-        bdata = _disaggregate(cmaker, singlesite, ctxs, iml1, eps3,
-                              pne_mon, gmf_mon)
-        if bdata.pnes.sum():
-            with mat_mon:
-                arr[..., z] = _build_disagg_matrix(bdata, bins)
+    for z, gsim in enumerate(gsims):
+        if gsim:  # gsim is 0 in test case_2
+            iml1 = hdf5.ArrayWrapper(iml2[:, z], dict(imt=imt))
+            bdata = _disaggregate(gsim, singlesite, ctxs, iml1, eps3,
+                                  pne_mon, gmf_mon)
+            if bdata.pnes.sum():
+                with mat_mon:
+                    arr[..., z] = _build_disagg_matrix(bdata, bins)
     return arr
 
 
@@ -372,7 +367,7 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         ctxs = cmaker.from_srcs(srcs, sitecol)
-        bdata[trt] = _disaggregate(cmaker, sitecol, ctxs, imls, eps3)
+        bdata[trt] = _disaggregate(gsim_by_trt[trt], sitecol, ctxs, imls, eps3)
 
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(

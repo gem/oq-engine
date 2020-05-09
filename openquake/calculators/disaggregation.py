@@ -124,7 +124,14 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
     for sid, iml2 in zip(sitecol.sids, iml3):
         singlesite = sitecol.filtered([sid])
         bins = disagg.get_bins(bin_edges, sid)
-        rlzs = [iml3.rlzs[sid, z] for z in range(iml3.shape[-1])]
+        gsims = []
+        for z in range(iml3.shape[-1]):
+            try:
+                gsim = cmaker.gsim_by_rlzi[iml3.rlzs[sid, z]]
+            except KeyError:
+                gsims.append(0)
+            else:
+                gsims.append(gsim)
         ctxs = []
         ok, = numpy.where(
             rupdata['rrup_'][:, sid] <= cmaker.maximum_distance(cmaker.trt))
@@ -135,7 +142,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
                                     for par in rupdata if par.endswith('_'))
             ctxs.append((rctx, dctx))
         matrix = disagg.build_matrix(
-            cmaker, singlesite, ctxs, iml3.imt, iml2, rlzs,
+            cmaker.trunclevel, singlesite, ctxs, iml3.imt, iml2, gsims,
             oq.num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon)
         if matrix.any():
             yield {'trti': trti, 'imti': iml3.imti, sid: matrix}
