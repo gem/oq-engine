@@ -214,7 +214,7 @@ def _bdata_mean_std(gsim, site1, rctxs, imt):
     U = len(rctxs)
     bdata = BinData(mags=numpy.zeros(U), dists=numpy.zeros(U),
                     lons=numpy.zeros(U), lats=numpy.zeros(U))
-    mean_std = numpy.zeros((2, U))
+    mean_std = numpy.zeros((2, U), numpy.float32)
     for u, rctx in enumerate(rctxs):
         dist = rctx.rrup
         if gsim.minimum_distance and dist < gsim.minimum_distance:
