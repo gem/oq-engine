@@ -3,15 +3,15 @@
 
 # GEM Mirror
 # We also provide pre-compiled manylinux1 wheels for
-# h5py, Shapely, psutil, PyYAML
+# h5py, Shapely, psutil
 
 https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/setuptools-41.0.1-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py38/h5py-2.9.0-cp38-cp38-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py38/h5py-2.10.0-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/numpy-1.18.2-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/scipy-1.4.1-cp38-cp38-manylinux1_x86_64.whl 
 https://wheelhouse.openquake.org/v3/linux/py38/pandas-1.0.3-cp38-cp38-manylinux1_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py38/pyzmq-18.1.0-cp38-cp38-manylinux1_x86_64.whl 
+https://wheelhouse.openquake.org/v3/linux/py38/pyzmq-19.0.0-cp38-cp38-manylinux1_x86_64.whl 
 https://wheelhouse.openquake.org/v3/linux/py38/psutil-5.6.7-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/Shapely-1.7.0-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py/docutils-0.14-py3-none-any.whl
@@ -26,7 +26,6 @@ https://wheelhouse.openquake.org/v3/linux/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/urllib3-1.25.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/pyshp-1.2.3-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py38/PyYAML-5.1.2-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py/toml-0.10.0-py2.py3-none-any.whl
 
 ### Celery ###

@@ -90,6 +90,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.seed = None  # set by the engine
         self.min_mag = 0  # set by the SourceConverter
 
+    def is_gridded(self):
+        """
+        :returns: True if the source contains only gridded ruptures
+        """
+        return False
+
     @abc.abstractmethod
     def iter_ruptures(self, **kwargs):
         """

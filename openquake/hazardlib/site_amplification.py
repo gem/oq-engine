@@ -83,14 +83,15 @@ def check_unique(array, kfields, fname):
 
 class Amplifier(object):
     """
-    :param imtls: intensity measure types and levels DictArray M x I
-    :param ampl_funcs: an ArrayWrapper containing amplification functions
-    :param vs30: an array of vs30 values, one per site
-    :param amplevels: A levels used for the amplified curves
-    :attr periods: array of M periods
-    :attr midlevels: array of I-1 levels
-    :attr alpha: dict code, imt-> I-1 amplification coefficients
-    :attr sigma: dict code, imt-> I-1 amplification sigmas
+    Amplification class with methods .amplify and .amplify_gmfs.
+
+    :param imtls:
+        intensity measure types and levels DictArray M x I
+    :param ampl_funcs:
+        an ArrayWrapper containing amplification functions
+    :param amplevels:
+        intensity levels used for the amplified curves (if None, use the
+        levels from the imtls dictionary)
     """
     def __init__(self, imtls, ampl_funcs, amplevels=None):
         fname = getattr(ampl_funcs, 'fname', None)
@@ -186,20 +187,30 @@ class Amplifier(object):
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
 
-    def amplify_gmvs(self, ampl_code, gmvs, imt):
-        """
-        :param ampl_code: 2-letter code for the amplification function
-        :param gmvs: ground motion values on the given site
-        :param imt: intensity measure type string
-        """
-        alphas = self.alpha[ampl_code, self.imtdict[imt]]
-        if len(self.imls):
-            return numpy.interp(gmvs, self.midlevels, alphas) * gmvs
-        return alphas[0] * gmvs  # there is a single alpha
+    def _amplify_gmvs(self, ampl_code, gmvs, imt_str):
+        # gmvs is an array of shape E
+        imt = self.imtdict[imt_str]
+        alphas = self.alpha[ampl_code, imt]  # shape L
+        sigmas = self.sigma[ampl_code, imt]  # shape L
+        if len(self.imls):  # there are multiple alphas, sigmas
+            ialphas = numpy.interp(gmvs, self.midlevels, alphas)  # shape E
+            isigmas = numpy.interp(gmvs, self.midlevels, sigmas)  # shape E
+        else:  # there is a single alpha, sigma
+            ialphas = alphas[0]
+            isigmas = sigmas[0]
+        uncert = numpy.random.normal(numpy.zeros_like(gmvs), isigmas)
+        return numpy.exp(numpy.log(ialphas * gmvs) + uncert)
 
-    def amplify_gmfs(self, ampcodes, gmvs, imt):
+    def amplify_gmfs(self, ampcodes, gmvs, imts, seed=0):
         """
-        Amplify in-place the gmvs array of shape (N, E)
+        Amplify in-place the gmvs array of shape (M, N, E)
+
+        :param ampcodes: N codes for the amplification functions
+        :param gmvs: ground motion values
+        :param imts: intensity measure types
+        :param seed: seed used when adding the uncertainty
         """
-        for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs)):
-            gmvs[i] = self.amplify_gmvs(ampcode, arr, imt)
+        numpy.random.seed(seed)
+        for m, imt in enumerate(imts):
+            for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs[m])):
+                gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt))

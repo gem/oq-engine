@@ -408,7 +408,9 @@ def get(xml, investigation_time=50., rupture_mesh_spacing=5.,
         rupture_mesh_spacing,
         width_of_mfd_bin=width_of_mfd_bin,
         area_source_discretization=area_source_discretization)
-    return conv.convert_node(node)
+    src = conv.convert_node(node)
+    src.id = 0
+    return src
 
 
 if __name__ == '__main__':

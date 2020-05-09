@@ -63,13 +63,13 @@ from openquake.hmtk.parsers.faults.fault_yaml_parser import (
 
 
 BASE_FILE_PATH = os.path.join(os.path.dirname(__file__), 'yaml_examples')
-BAD_INPUT_FILE = os.path.join(BASE_FILE_PATH, 'bad_input_fault_example.yml')
+BAD_INPUT_FILE = os.path.join(BASE_FILE_PATH, 'bad_input_fault_example.toml')
 BAD_GEOMETRY_FILE = os.path.join(BASE_FILE_PATH,
-                                 'bad_geometry_fault_example.yml')
+                                 'bad_geometry_fault_example.toml')
 SIMPLE_GEOMETRY_FILE = os.path.join(BASE_FILE_PATH,
-                                    'simple_fault_example.yml')
+                                    'simple_fault_example.toml')
 COMPLEX_GEOMETRY_FILE = os.path.join(BASE_FILE_PATH,
-                                     'complex_fault_example.yml')
+                                     'complex_fault_example.toml')
 
 
 class TestYamlParserPeripherals(unittest.TestCase):

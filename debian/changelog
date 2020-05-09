@@ -1,3 +1,27 @@
+  [Michele Simionato]
+  * Raised a clear error for amplification calculations with missing intensity
+    measure types and levels
+  * Vectorized the disaggregation formula
+  * Do not perform the disaggregation by epsilon when not required
+  * Introduced management of uncertainty in the GMF amplifi
+  * Changed the disaggregation calculator to distribute by IMT, thus reducing
+    a lot the data transfer in calculations with many IMTs
+  * Changed /extract/disagg_layer to produce a single big layer
+  * Changed the binning algorithm for lon, lat in disaggregation, to make
+    sure that the number of bins is homogeneous across sites
+
+  [Marco Pagani]
+  * Fixed a bug in the ParseNDKtoGCMT parser + updated tests.
+  * Ported the method serialise_to_hmtk_csv implemented in the corresponding
+    class of the catalogue toolkit + added a test into the GCMTCatalogue class.
+
+  [Michele Simionato]
+  * Introduced a mixed XML+HDF5 format for gridded sources
+  * Internal: added a check on gridded sources: the arrays prob_occurs must
+    have homogeneous length across ruptures
+  * Removed the dependency from PyYAML, replaced the .yml files in the HMTK with
+    .toml files and added an utility `utils/yaml2toml`
+
 python3-oq-engine (3.9.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]

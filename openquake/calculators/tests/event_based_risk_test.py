@@ -124,7 +124,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   delta=1E-5)
 
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         # extract tot_curves, no tags
         aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'

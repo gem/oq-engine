@@ -36,7 +36,7 @@ class UcerfTestCase(CalculatorTestCase):
              0, 0, 0, 0])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=2E-5)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps

@@ -21,7 +21,7 @@ import unittest
 import unittest.mock as mock
 import numpy
 from openquake.baselib import parallel, general
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import lt
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -82,7 +82,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(str(ctx.exception), 'All sources were discarded!?')
 
     def test_wrong_smlt(self):
-        with self.assertRaises(InvalidFile):
+        with self.assertRaises(lt.LogicTreeError):
             self.run_calc(case_1.__file__, 'job_wrong.ini')
 
     def test_sa_period_too_big(self):

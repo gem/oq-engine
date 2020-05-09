@@ -244,6 +244,24 @@ def get_params(job_inis, **kw):
     return params
 
 
+def get_oq(text):
+    """
+    Returns an OqParam instance from a configuration string. For instance:
+
+    >>> get_oq('maximum_distance=200')
+    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': 200}, risk_investigation_time=None>
+    """
+    # UGLY: this is here to avoid circular imports
+    from openquake.calculators import base
+    OqParam.calculation_mode.validator.choices = tuple(base.calculators)
+    cp = configparser.ConfigParser()
+    cp.read_string('[general]\ncalculation_mode=classical\n' + text)
+    dic = dict(cp['general'])
+    dic['inputs'] = dict(job_ini='<in-memory>')
+    oq = OqParam(**dic)
+    return oq
+
+
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
                 **kw):
     """
@@ -1010,8 +1028,9 @@ def get_input_files(oqparam, hazard=False):
                                       (oqparam.inputs['job_ini'], key))
             fnames.update(fname)
         elif key == 'source_model_logic_tree':
-            for smpath in logictree.collect_info(fname).smpaths:
-                fnames.add(smpath)
+            smlt = logictree.SourceModelLogicTree(fname)
+            fnames.update(smlt.hdf5_files)
+            fnames.update(smlt.info.smpaths)
             fnames.add(fname)
         else:
             fnames.add(fname)

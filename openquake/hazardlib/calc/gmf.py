@@ -179,10 +179,11 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        numpy.random.seed(self.rupture.rup_id)
+        seed = self.rupture.rup_id
         result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
+        numpy.random.seed(seed)
         for imti, imt in enumerate(self.imts):
             if isinstance(gsim, MultiGMPE):
                 gs = gsim[str(imt)]  # MultiGMPE
@@ -190,16 +191,18 @@ class GmfComputer(object):
                 gs = gsim  # regular GMPE
             try:
                 result[imti], sig[imti], eps[imti] = self._compute(
-                    None, gs, num_events, imt)
+                     gs, num_events, imt)
             except Exception as exc:
                 raise exc.__class__(
                     '%s for %s, %s, srcidx=%s' % (exc, gs, imt, self.srcidx)
                 ).with_traceback(exc.__traceback__)
+        if self.amplifier:
+            self.amplifier.amplify_gmfs(
+                self.sctx.ampcode, result, self.imts, seed)
         return result, sig, eps
 
-    def _compute(self, seed, gsim, num_events, imt):
+    def _compute(self, gsim, num_events, imt):
         """
-        :param seed: a random seed or None if the seed is already set
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
         :param imt: an IMT instance
@@ -207,8 +210,6 @@ class GmfComputer(object):
                    epsilons(num_events))
         """
         rctx = getattr(self.rupture, 'rupture', self.rupture)
-        if seed is not None:
-            numpy.random.seed(seed)
         dctx = self.dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
             if self.correlation_model:
@@ -216,12 +217,10 @@ class GmfComputer(object):
                                  'no correlation model')
             mean, _stddevs = gsim.get_mean_and_stddevs(
                 self.sctx, rctx, dctx, imt, stddev_types=[])
-            mean = to_imt_unit_values(mean, imt)
-            mean.shape += (1, )
-            mean = mean.repeat(num_events, axis=1)
-            if self.amplifier:
-                self.amplifier.amplify_gmfs(self.sctx.ampcode, mean, str(imt))
-            return (mean,
+            gmf = to_imt_unit_values(mean, imt)
+            gmf.shape += (1, )
+            gmf = gmf.repeat(num_events, axis=1)
+            return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
         elif self.truncation_level is None:
@@ -275,8 +274,6 @@ class GmfComputer(object):
             gmf = to_imt_unit_values(
                 mean + intra_residual + inter_residual, imt)
             stdi = stddev_inter.max(axis=0)
-        if self.amplifier:
-            self.amplifier.amplify_gmfs(self.sctx.ampcode, gmf, str(imt))
         return gmf, stdi, epsilons
 
 

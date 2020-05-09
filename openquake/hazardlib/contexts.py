@@ -173,7 +173,12 @@ class ContextMaker(object):
         else:
             self.pointsource_distance = {}
         self.filter_distance = 'rrup'
-        self.imtls = param.get('imtls', {})
+        if 'imtls' in param:
+            self.imtls = param['imtls']
+        elif 'hazard_imtls' in param:
+            self.imtls = DictArray(param['hazard_imtls'])
+        else:
+            self.imtls = {}
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
         self.reqv = param.get('reqv')
         if self.reqv is not None:
@@ -767,9 +772,6 @@ class RuptureContext(BaseContext):
             #
             # `p(k|T)` is given by the attribute probs_occur and
             # `p(X<x|rup)` is computed as ``1 - poes``.
-            # Converting from 1d to 2d
-            if len(poes.shape) == 1:
-                poes = numpy.reshape(poes, (-1, len(poes)))
             p_kT = self.probs_occur
             prob_no_exceed = numpy.array(
                 [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])

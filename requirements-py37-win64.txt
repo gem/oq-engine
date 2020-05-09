@@ -3,7 +3,7 @@
 
 # GEM Mirror
 # We also provide pre-compiled win_amd64 wheels for
-# h5py, Shapely, psutil, PyYAML, Basemap
+# h5py, Shapely, psutil, Basemap
 
 https://wheelhouse.openquake.org/v3/windows/py/pytz-2019.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/setuptools-41.0.1-py2.py3-none-any.whl
@@ -26,7 +26,6 @@ https://wheelhouse.openquake.org/v3/windows/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/urllib3-1.25.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/pyshp-1.2.3-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/windows/py37/PyYAML-5.1.2-cp37-cp37m-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py/toml-0.10.0-py2.py3-none-any.whl
 
 ### setproctitle ###

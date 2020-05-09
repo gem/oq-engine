@@ -62,6 +62,12 @@ A,2,2,2,2,2
 A,1,2,2,2,2
 '''
 
+gmf_ampl_func = '''#,,,,,,"vs30_ref=760"
+ampcode,PGA,sigma_PGA
+A,1,0.3
+'''
+
+
 
 class AmplifierTestCase(unittest.TestCase):
     vs30 = numpy.array([760])
@@ -120,9 +126,10 @@ class AmplifierTestCase(unittest.TestCase):
             poes, [0.985002, 0.979996, 0.969991, 0.940012,
                    0.889958, 0.79, 0.690037], atol=1E-6)
 
-        # amplify GMFs
-        gmvs = a.amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
-        numpy.testing.assert_allclose(gmvs, [0.00505, 0.010233, 0.01575],
+        # amplify GMFs with sigmas
+        numpy.random.seed(42)
+        gmvs = a._amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
+        numpy.testing.assert_allclose(gmvs, [0.005307, 0.010093, 0.016804],
                                       atol=1E-5)
 
     def test_double(self):
@@ -144,8 +151,8 @@ class AmplifierTestCase(unittest.TestCase):
             poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
                    0.69, 0.09, 0.09], atol=1E-6)
 
-        # amplify GMFs
-        gmvs = a.amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
+        # amplify GMFs without sigmas
+        gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
         numpy.testing.assert_allclose(gmvs, [.2, .4, .6])
 
     def test_long_code(self):
@@ -160,3 +167,21 @@ class AmplifierTestCase(unittest.TestCase):
         aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
         with self.assertRaises(ValueError):
             Amplifier(self.imtls, aw)
+
+    def test_gmf_with_uncertainty(self):
+        fname = gettemp(gmf_ampl_func)
+        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
+        imtls = {'PGA': self.imls}
+        a = Amplifier(imtls, aw, self.soil_levels)
+        res = []
+        nsim = 10000
+        numpy.random.seed(42)  # must be fixed
+        for i in range(nsim):
+            gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'PGA')
+            res.append(list(gmvs))
+        res = numpy.array(res)
+        dat = numpy.reshape(numpy.tile([.1, .2, .3], nsim), (nsim, 3))
+        computed = numpy.std(numpy.log(res/dat), axis=0)
+        expected = numpy.array([0.3, 0.3, 0.3])
+        msg = "Computed and expected std do not match"
+        numpy.testing.assert_almost_equal(computed, expected, 2, err_msg=msg)

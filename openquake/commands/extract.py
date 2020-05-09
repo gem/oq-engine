@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import performance, sap
+from openquake.baselib import performance, sap, hdf5
 from openquake.calculators.extract import Extractor, WebExtractor
 
 
@@ -34,12 +34,8 @@ def extract(what, calc_id=-1, webapi=True, local=False):
         else:
             obj = Extractor(calc_id).get(what)
         w = what.replace('/', '-').replace('?', '-')
-        if not obj.shape:  # is a dictionary of arrays
-            fname = '%s_%d.txt' % (w, calc_id)
-            open(fname, 'w').write(obj.toml())
-        else:  # a regular ArrayWrapper
-            fname = '%s_%d.hdf5' % (w, calc_id)
-            obj.save(fname)
+        fname = '%s_%d.npz' % (w, calc_id)
+        hdf5.save_npz(obj, fname)
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)

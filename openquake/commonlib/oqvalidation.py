@@ -46,13 +46,16 @@ def check_same_levels(imtls):
     :returns: the periods and the levels
     :raises: a ValueError if the levels are not the same across all IMTs
     """
+    if not imtls:
+        raise ValueError('There are no intensity_measure_types_and_levels!')
     imls = imtls[next(iter(imtls))]
     for imt in imtls:
         if not imt.startswith(('PGA', 'SA')):
             raise ValueError('Site amplification works only with '
                              'PGA and SA, got %s' % imt)
         if numpy.isnan(imtls[imt]).all():
-            continue
+            raise ValueError(
+                'You forgot to set intensity_measure_types_and_levels!')
         elif len(imtls[imt]) != len(imls) or any(
                 l1 != l2 for l1, l2 in zip(imtls[imt], imls)):
             raise ValueError('Site amplification works only if the '
@@ -341,6 +344,9 @@ class OqParam(valid.ParamSet):
                       'coordinate_bin_width', 'num_epsilon_bins'):
                 if k not in vars(self):
                     raise InvalidFile('%s must be set in %s' % (k, job_ini))
+            if self.disagg_outputs and not any(
+                    'Eps' in out for out in self.disagg_outputs):
+                self.num_epsilon_bins = 1
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
@@ -872,6 +878,7 @@ class OqParam(valid.ParamSet):
                 'scenario')):
             return
         if ('source_model_logic_tree' not in self.inputs and
+                self.inputs['job_ini'] != '<in-memory>' and
                 not self.hazard_calculation_id):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %
