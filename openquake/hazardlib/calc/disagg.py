@@ -109,8 +109,8 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def _disaggregate(mean_std, rups, imt, imls, eps3,
-                  pne_mon=performance.Monitor()):
+def disaggregate(mean_std, rups, imt, imls, eps3,
+                 pne_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
     with pne_mon:
         truncnorm, epsilons, eps_bands = eps3
@@ -173,7 +173,7 @@ def get_bins(bin_edges, sid):
 
 
 # this is fast
-def _build_disagg_matrix(bdata, bins, pnes):
+def build_disagg_matrix(bdata, bins, pnes):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
@@ -226,35 +226,6 @@ def _bdata_mean_std(gsim, site1, ctxs, imt):
         mean_std[:, u] = get_mean_std(
             site1, rctx, dctx, [imt], [gsim]).reshape(2)
     return bdata, mean_std
-
-
-# called by the engine
-def build_matrix(trunclevel, singlesite, ctxs, imt, iml2, gsim_by_z,
-                 num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon):
-    """
-    :param trunclevel: the truncation level
-    :param singlesite: a site collection with a single site
-    :param ctxs: a list of pairs (rctx, dctx)
-    :param imt: an intensity measure type
-    :param iml2: an array of shape (P, Z)
-    :param gsim_by_z: dictionary z -> gsim
-    :param num_epsilon_bins: number of epsilons bins
-    :param bins: bin edges for the given site
-    :returns:
-        7D disaggregation matrix of shape (#magbins, #distbins, #lonbins,
-                                           #latbins, #epsbins, P, Z)
-    """
-    eps3 = _eps3(trunclevel, num_epsilon_bins)
-    arr = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
-    rups = [rup for (rup, _) in ctxs]
-    for z, gsim in gsim_by_z.items():
-        with gmf_mon:
-            bdata, mean_std = _bdata_mean_std(gsim, singlesite, ctxs, imt)
-        pnes = _disaggregate(mean_std, rups, imt, iml2[:, z], eps3, pne_mon)
-        if pnes.sum():
-            with mat_mon:
-                arr[..., z] = _build_disagg_matrix(bdata, bins, pnes)
-    return arr
 
 
 def _digitize_lons(lons, lon_bins):
@@ -374,7 +345,7 @@ def disaggregation(
         ctxs = cmaker.from_srcs(srcs, sitecol)
         rups = [rup for rup, _ in ctxs]
         bdata[trt], mean_std = _bdata_mean_std(gsim, sitecol, ctxs, imt)
-        pnes[trt] = _disaggregate(mean_std, rups, imt, imls, eps3)
+        pnes[trt] = disaggregate(mean_std, rups, imt, imls, eps3)
 
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
@@ -402,7 +373,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        mat6 = _build_disagg_matrix(bdata[trt], bin_edges, pnes[trt])
+        mat6 = build_disagg_matrix(bdata[trt], bin_edges, pnes[trt])
         matrix[..., trt_num[trt]] = mat6[..., 0]  # shape (..., P)
     return bin_edges + (trts,), matrix
 

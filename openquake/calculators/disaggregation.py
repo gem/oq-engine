@@ -141,9 +141,20 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
             dctx = DistancesContext((par[:-1], rupdata[par][ridx, [sid]])
                                     for par in rupdata if par.endswith('_'))
             ctxs.append((rctx, dctx))
-        matrix = disagg.build_matrix(
-            cmaker.trunclevel, singlesite, ctxs, iml3.imt, iml2, gsim_by_z,
-            oq.num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon)
+
+        eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
+        rups = [rup for (rup, _) in ctxs]
+        matrix = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
+        for z, gsim in gsim_by_z.items():
+            with gmf_mon:
+                bdata, mean_std = disagg._bdata_mean_std(
+                    gsim, singlesite, ctxs, iml3.imt)
+            pnes = disagg.disaggregate(
+                mean_std, rups, iml3.imt, iml2[:, z], eps3, pne_mon)
+            if pnes.sum():
+                with mat_mon:
+                    matrix[..., z] = disagg.build_disagg_matrix(
+                        bdata, bins, pnes)
         if matrix.any():
             yield {'trti': trti, 'imti': iml3.imti, sid: matrix}
 
