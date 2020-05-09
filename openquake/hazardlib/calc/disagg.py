@@ -229,7 +229,7 @@ def _bdata_mean_std(gsim, site1, ctxs, imt):
 
 
 # called by the engine
-def build_matrix(trunclevel, singlesite, ctxs, imt, iml2, gsims,
+def build_matrix(trunclevel, singlesite, ctxs, imt, iml2, gsim_by_z,
                  num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon):
     """
     :param trunclevel: the truncation level
@@ -237,7 +237,7 @@ def build_matrix(trunclevel, singlesite, ctxs, imt, iml2, gsims,
     :param ctxs: a list of pairs (rctx, dctx)
     :param imt: an intensity measure type
     :param iml2: an array of shape (P, Z)
-    :param gsims: Z gsims, one per realization, possibly zero
+    :param gsim_by_z: dictionary z -> gsim
     :param num_epsilon_bins: number of epsilons bins
     :param bins: bin edges for the given site
     :returns:
@@ -247,14 +247,13 @@ def build_matrix(trunclevel, singlesite, ctxs, imt, iml2, gsims,
     eps3 = _eps3(trunclevel, num_epsilon_bins)
     arr = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
     rups = [rup for (rup, _) in ctxs]
-    for z, gsim in enumerate(gsims):
-        if gsim:  # gsim is 0 in test case_2
-            with gmf_mon:
-                bdata, mean_std = _bdata_mean_std(gsim, singlesite, ctxs, imt)
-            pne = _disaggregate(mean_std, rups, imt, iml2[:, z], eps3, pne_mon)
-            if pne.sum():
-                with mat_mon:
-                    arr[..., z] = _build_disagg_matrix(bdata, bins, pne)
+    for z, gsim in gsim_by_z.items():
+        with gmf_mon:
+            bdata, mean_std = _bdata_mean_std(gsim, singlesite, ctxs, imt)
+        pnes = _disaggregate(mean_std, rups, imt, iml2[:, z], eps3, pne_mon)
+        if pnes.sum():
+            with mat_mon:
+                arr[..., z] = _build_disagg_matrix(bdata, bins, pnes)
     return arr
 
 
