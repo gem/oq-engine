@@ -124,19 +124,37 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
     for sid, iml2 in zip(sitecol.sids, iml3):
         singlesite = sitecol.filtered([sid])
         bins = disagg.get_bins(bin_edges, sid)
-        rlzs = [iml3.rlzs[sid, z] for z in range(iml3.shape[-1])]
-        ctxs = []
+        gsim_by_z = {}
+        for z in range(iml3.shape[-1]):
+            try:
+                gsim = cmaker.gsim_by_rlzi[iml3.rlzs[sid, z]]
+            except KeyError:
+                pass
+            else:
+                gsim_by_z[z] = gsim
+        rctxs = []
         ok, = numpy.where(
             rupdata['rrup_'][:, sid] <= cmaker.maximum_distance(cmaker.trt))
         for ridx in ok:  # consider only the ruptures close to the site
             rctx = RuptureContext((par, rupdata[par][ridx])
                                   for par in rupdata if not par.endswith('_'))
-            dctx = DistancesContext((par[:-1], rupdata[par][ridx, [sid]])
-                                    for par in rupdata if par.endswith('_'))
-            ctxs.append((rctx, dctx))
-        matrix = disagg.build_matrix(
-            cmaker, singlesite, ctxs, iml3.imt, iml2, rlzs,
-            oq.num_epsilon_bins, bins, pne_mon, mat_mon, gmf_mon)
+            for par in rupdata:
+                if par.endswith('_'):
+                    setattr(rctx, par[:-1], rupdata[par][ridx, [sid]])
+            rctxs.append(rctx)
+
+        eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
+        matrix = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
+        for z, gsim in gsim_by_z.items():
+            with gmf_mon:
+                bdata, mean_std = disagg._bdata_mean_std(
+                    gsim, singlesite, rctxs, iml3.imt)
+            pnes = disagg.disaggregate(
+                mean_std, rctxs, iml3.imt, iml2[:, z], eps3, pne_mon)
+            if pnes.sum():
+                with mat_mon:
+                    matrix[..., z] = disagg.build_disagg_matrix(
+                        bdata, bins, pnes)
         if matrix.any():
             yield {'trti': trti, 'imti': iml3.imti, sid: matrix}
 

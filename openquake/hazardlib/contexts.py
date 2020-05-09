@@ -202,18 +202,20 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
 
-    def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
+    def from_srcs(self, srcs, site1):  # used in disagg.disaggregation
         """
-        :returns: a list of pairs (rctx, dctx)
+        :returns: a list RuptureContexts
         """
         grp_ids = [0]
-        ctxs = []
+        rups = []
         for src in srcs:
             rups = list(src.iter_ruptures(shift_hypo=self.shift_hypo))
             for rup in rups:
                 self.add_rup_params(rup)  # make the rupture context-like
-            ctxs.extend(self.make_ctxs(rups, sites, grp_ids, False))
-        return ctxs
+            for rup, dctx in self.make_ctxs(rups, site1, grp_ids, False):
+                for name, dist in vars(dctx).items():
+                    setattr(rup, name, dist)
+        return rups
 
     def filter(self, sites, rup):
         """
