@@ -140,9 +140,9 @@ def _disagg_eps(truncnorm, bins, eps_bands, cum_bands):
     # each coming from ``epsilons`` distribution bins
     res = numpy.zeros((len(bins), len(eps_bands)))
     for e, eps_band in enumerate(eps_bands):
-        ok = e == bins - 1
-        res[ok, e] = truncnorm[ok] - cum_bands[bins[ok]]
-        res[e >= bins, e] = eps_band
+        res[bins <= e, e] = eps_band  # left bins
+        inside = bins == e + 1  # inside bins
+        res[inside, e] = truncnorm[inside] - cum_bands[bins[inside]]
     return res
 
 
