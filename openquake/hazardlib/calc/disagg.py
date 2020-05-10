@@ -133,7 +133,7 @@ def disaggregate(mean_std, rups, imt, imls, eps3,
                 poes = _disagg_eps(tn, bins, e, eps_band, cum_bands)
                 for u, rup in enumerate(rups):
                     bdata.pnes[u, p, e] = rup.get_probability_no_exceedance(
-                        poes[u])            '''
+                        poes[u])
     return bdata
 
 
