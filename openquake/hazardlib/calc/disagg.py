@@ -251,14 +251,12 @@ def get_mean_stdv(site1, ctxs, imt, gsim):
     :param gsim: GMPE instance
     """
     U = len(ctxs)
-    mean = numpy.zeros(U, numpy.float32)
-    std = numpy.zeros(U, numpy.float32)
+    ms = numpy.zeros((2, U), numpy.float32)
     for u, ctx in enumerate(ctxs):
         if gsim.minimum_distance and ctx.rrup[0] < gsim.minimum_distance:
             ctx.rrup = numpy.float32([gsim.minimum_distance])
-        mean[u], std[u] = get_mean_std(
-            site1, ctx, ctx, [imt], [gsim]).reshape(2)
-    return mean, std
+        ms[:, u] = get_mean_std(site1, ctx, ctx, [imt], [gsim]).reshape(2)
+    return ms
 
 
 # this is used in the hazardlib tests, not in the engine
