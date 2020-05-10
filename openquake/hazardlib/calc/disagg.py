@@ -118,7 +118,7 @@ def disaggregate(mean_std, rups, imt, imls, eps3,
                     pnes=numpy.zeros((U, P, E)))
     with pne_mon:
         truncnorm, epsilons, eps_bands = eps3
-        cum_bands = [eps_bands[e:].sum() for e in range(E)] + [0]
+        cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
         imls = to_distribution_values(imls, imt)  # shape P
         for u, rup in enumerate(rups):
             bdata.mags[u] = rup.mag
@@ -140,11 +140,9 @@ def _disagg_eps(truncnorm, bins, eps_bands, cum_bands):
     # each coming from ``epsilons`` distribution bins
     res = numpy.zeros((len(bins), len(eps_bands)))
     for e, eps_band in enumerate(eps_bands):
-        for u, bin in enumerate(bins):
-            if e == bin - 1:
-                res[u, e] = truncnorm[u] - cum_bands[bin]
-            elif e >= bin:
-                res[u, e] = eps_band
+        ok = e == bins - 1
+        res[ok, e] = truncnorm[ok] - cum_bands[bins[ok]]
+        res[e >= bins, e] = eps_band
     return res
 
 
