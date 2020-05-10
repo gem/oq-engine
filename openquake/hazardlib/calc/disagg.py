@@ -118,8 +118,7 @@ def disaggregate(mean_std, rups, imt, imls, eps3,
                     pnes=numpy.zeros((U, P, E)))
     with pne_mon:
         truncnorm, epsilons, eps_bands = eps3
-        U, P, E = len(rups), len(imls), len(eps_bands)
-        cum_bands = [eps_bands[e:].sum() for e in range(E)] + [0]
+        cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
         imls = to_distribution_values(imls, imt)  # shape P
         for u, rup in enumerate(rups):
             bdata.mags[u] = rup.mag
@@ -128,23 +127,23 @@ def disaggregate(mean_std, rups, imt, imls, eps3,
             bdata.dists[u] = rup.rrup[0]
         for p, iml in enumerate(imls):
             lvls = (iml - mean_std[0]) / mean_std[1]
-            tn = truncnorm.sf(lvls)
+            survival = truncnorm.sf(lvls)
             bins = numpy.searchsorted(epsilons, lvls)
-            for u, rup in enumerate(rups):
-                poes = _disagg_eps(tn[u], bins[u], eps_bands, cum_bands)
-                bdata.pnes[u, p] = rup.get_probability_no_exceedance(poes)
+            for e, eps_band in enumerate(eps_bands):
+                poes = _disagg_eps(survival, bins, e, eps_band, cum_bands)
+                for u, rup in enumerate(rups):
+                    bdata.pnes[u, p, e] = rup.get_probability_no_exceedance(
+                        poes[u])
     return bdata
 
 
-def _disagg_eps(truncnorm, bin, eps_bands, cum_bands):
+def _disagg_eps(survival, bins, e, eps_band, cum_bands):
     # disaggregate PoE of `iml` in different contributions,
     # each coming from ``epsilons`` distribution bins
-    res = numpy.zeros(len(eps_bands))
-    for e in range(len(res)):
-        if e == bin - 1:
-            res[e] = truncnorm - cum_bands[bin]
-        elif e >= bin:
-            res[e] = eps_bands[e]
+    res = numpy.zeros(len(bins))
+    res[bins <= e] = eps_band  # left bins
+    inside = bins == e + 1  # inside bins
+    res[inside] = survival[inside] - cum_bands[bins[inside]]
     return res
 
 

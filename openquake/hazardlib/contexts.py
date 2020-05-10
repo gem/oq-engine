@@ -111,17 +111,14 @@ class RupData(object):
         :param sites: a filtered site collection with N'<=N sites
         :param grp_ids: a tuple of indices associated to the ruptures
         """
-        U, N = len(ctxs), len(sites.complete)
+        N = len(sites.complete)
         params = (sorted(self.cmaker.REQUIRES_DISTANCES | {'rrup'}) +
                   ['lon', 'lat'])
-        data = {par + '_': numpy.ones((U, N), F32) * 9999 for par in params}
-        for par in data:
-            self.data[par].append(data[par])
         for r, (rup, dctx) in enumerate(ctxs):
             if numpy.isnan(rup.occurrence_rate):  # for nonparametric ruptures
                 probs_occur = rup.probs_occur
             else:
-                probs_occur = numpy.zeros(0, numpy.float64)
+                probs_occur = numpy.zeros(0, F32)
             self.data['occurrence_rate'].append(rup.occurrence_rate)
             self.data['probs_occur'].append(probs_occur)
             self.data['weight'].append(rup.weight or numpy.nan)
@@ -129,8 +126,9 @@ class RupData(object):
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
                 self.data[rup_param].append(getattr(rup, rup_param))
             for dst_param in params:  # including lon, lat
-                for s, dst in zip(sites.sids, getattr(dctx, dst_param)):
-                    data[dst_param + '_'][r, s] = dst
+                dst = numpy.ones(N, F32) * 9999
+                dst[sites.sids] = getattr(dctx, dst_param)
+                self.data[dst_param + '_'].append(dst)
 
     def dictarray(self):
         """
@@ -138,10 +136,7 @@ class RupData(object):
         """
         dic = {}
         for k, v in self.data.items():
-            if k.endswith('_'):
-                dic[k] = numpy.concatenate(v)
-            else:
-                dic[k] = numpy.array(v)
+            dic[k] = numpy.array(v, F32)
         return dic
 
 
