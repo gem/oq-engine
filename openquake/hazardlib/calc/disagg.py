@@ -129,20 +129,21 @@ def disaggregate(mean_std, rups, imt, imls, eps3,
             lvls = (iml - mean_std[0]) / mean_std[1]
             tn = truncnorm.sf(lvls)
             bins = numpy.searchsorted(epsilons, lvls)
-            poes = _disagg_eps(tn, bins, eps_bands, cum_bands)
-            for u, rup in enumerate(rups):
-                bdata.pnes[u, p] = rup.get_probability_no_exceedance(poes[u])
+            for e, eps_band in enumerate(eps_bands):
+                poes = _disagg_eps(tn, bins, e, eps_band, cum_bands)
+                for u, rup in enumerate(rups):
+                    bdata.pnes[u, p, e] = rup.get_probability_no_exceedance(
+                        poes[u])            '''
     return bdata
 
 
-def _disagg_eps(truncnorm, bins, eps_bands, cum_bands):
+def _disagg_eps(truncnorm, bins, e, eps_band, cum_bands):
     # disaggregate PoE of `iml` in different contributions,
     # each coming from ``epsilons`` distribution bins
-    res = numpy.zeros((len(bins), len(eps_bands)))
-    for e, eps_band in enumerate(eps_bands):
-        res[bins <= e, e] = eps_band  # left bins
-        inside = bins == e + 1  # inside bins
-        res[inside, e] = truncnorm[inside] - cum_bands[bins[inside]]
+    res = numpy.zeros(len(bins))
+    res[bins <= e] = eps_band  # left bins
+    inside = bins == e + 1  # inside bins
+    res[inside] = truncnorm[inside] - cum_bands[bins[inside]]
     return res
 
 

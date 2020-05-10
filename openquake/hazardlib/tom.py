@@ -121,7 +121,7 @@ class PoissonTOM(BaseTOM):
         :return:
             Float value between 0 and 1 inclusive.
         """
-        return 1 - math.exp(- occurrence_rate * self.time_span)
+        return 1 - numpy.exp(- occurrence_rate * self.time_span)
 
     def get_probability_n_occurrences(self, occurrence_rate, num):
         """

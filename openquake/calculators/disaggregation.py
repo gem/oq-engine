@@ -142,7 +142,8 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
                 if par.endswith('_'):
                     setattr(ctx, par[:-1], rupdata[par][ridx, [sid]])
             ctxs.append(ctx)
-
+        if not ctxs:
+            continue
         eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
         matrix = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
         for z, gsim in gsim_by_z.items():
