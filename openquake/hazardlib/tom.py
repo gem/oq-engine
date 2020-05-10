@@ -21,8 +21,6 @@ Module :mod:`openquake.hazardlib.tom` contains implementations of probability
 density functions for earthquake temporal occurrence modeling.
 """
 import abc
-import math
-
 import numpy
 import scipy.stats
 
