@@ -352,7 +352,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 trt, self.full_lt.get_rlzs_by_gsim(grp_id),
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
-                 'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
+                 'imtls': oq.imtls})
             for idxs in indices[grp_id]:
                 for imt in oq.imtls:
                     smap.submit((dstore, idxs, cmaker, self.iml3[imt], trti,
