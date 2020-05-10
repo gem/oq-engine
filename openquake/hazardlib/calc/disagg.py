@@ -243,6 +243,24 @@ def _digitize_lons(lons, lon_bins):
         return numpy.digitize(lons, lon_bins) - 1
 
 
+def get_mean_stdv(site1, ctxs, imt, gsim):
+    """
+    :param site1: site collection with a single site
+    :param ctxs: a list of RuptureContexts with distances
+    :param imt: Intensity Measure Type
+    :param gsim: GMPE instance
+    """
+    U = len(ctxs)
+    mean = numpy.zeros(U, numpy.float32)
+    std = numpy.zeros(U, numpy.float32)
+    for u, ctx in enumerate(ctxs):
+        if gsim.minimum_distance and ctx.rrup[0] < gsim.minimum_distance:
+            ctx.rrup = numpy.float32([gsim.minimum_distance])
+        mean[u], std[u] = get_mean_std(
+            site1, ctx, ctx, [imt], [gsim]).reshape(2)
+    return mean, std
+
+
 # this is used in the hazardlib tests, not in the engine
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
@@ -331,14 +349,9 @@ def disaggregation(
              'imtls': {str(imt): [iml]}})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
-        rctxs = cmaker.from_srcs(srcs, sitecol)
-        mean_std = numpy.zeros((2, len(rctxs)))
-        for u, rctx in enumerate(rctxs):
-            if gsim.minimum_distance and rctx.rrup[0] < gsim.minimum_distance:
-                rctx.rrup = numpy.float32([gsim.minimum_distance])
-            mean_std[:, u] = get_mean_std(
-                sitecol, rctx, rctx, [imt], [gsim]).reshape(2)
-        bdata[trt] = disaggregate(mean_std, rctxs, imt, imls, eps3)
+        ctxs = cmaker.from_srcs(srcs, sitecol)
+        mean_std = get_mean_stdv(sitecol, ctxs, imt, gsim)
+        bdata[trt] = disaggregate(mean_std, ctxs, imt, imls, eps3)
 
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(

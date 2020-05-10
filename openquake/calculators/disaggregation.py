@@ -30,7 +30,7 @@ from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.gsim.base import ContextMaker, get_mean_std
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import util
@@ -147,7 +147,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
         matrix = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
         for z, gsim in gsim_by_z.items():
             with gmf_mon:
-                ms = get_mean_stdv(singlesite, ctxs, iml3.imt, gsim)
+                ms = disagg.get_mean_stdv(singlesite, ctxs, iml3.imt, gsim)
             bdata = disagg.disaggregate(
                 ms, ctxs, iml3.imt, iml2[:, z], eps3, pne_mon)
             if bdata.pnes.sum():
@@ -155,16 +155,6 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
                     matrix[..., z] = disagg.build_disagg_matrix(bdata, bins)
         if matrix.any():
             yield {'trti': trti, 'imti': iml3.imti, sid: matrix}
-
-
-def get_mean_stdv(site1, ctxs, imt, gsim):
-    U = len(ctxs)
-    mean = numpy.zeros(U, numpy.float32)
-    std = numpy.zeros(U, numpy.float32)
-    for u, ctx in enumerate(ctxs):
-        mean[u], std[u] = get_mean_std(
-            site1, ctx, ctx, [imt], [gsim]).reshape(2)
-    return mean, std
 
 
 def agg_probs(*probs):
