@@ -39,7 +39,7 @@ from openquake.hazardlib.gsim.base import (
     ContextMaker, get_mean_std, to_distribution_values)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
-BinData = collections.namedtuple('BinData', 'mags, dists, lons, lats')
+BinData = collections.namedtuple('BinData', 'mags, dists, lons, lats, pnes')
 
 
 def assert_same_shape(arrays):
@@ -112,20 +112,28 @@ def _eps3(truncation_level, n_epsilons):
 def disaggregate(mean_std, rups, imt, imls, eps3,
                  pne_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
+    U, P, E = len(rups), len(imls), len(eps3[2])
+    bdata = BinData(mags=numpy.zeros(U), dists=numpy.zeros(U),
+                    lons=numpy.zeros(U), lats=numpy.zeros(U),
+                    pnes=numpy.zeros((U, P, E)))
     with pne_mon:
         truncnorm, epsilons, eps_bands = eps3
         U, P, E = len(rups), len(imls), len(eps_bands)
-        pnes = numpy.zeros((U, P, E), numpy.float64)
         cum_bands = [eps_bands[e:].sum() for e in range(E)] + [0]
         imls = to_distribution_values(imls, imt)  # shape P
+        for u, rup in enumerate(rups):
+            bdata.mags[u] = rup.mag
+            bdata.lons[u] = rup.lon
+            bdata.lats[u] = rup.lat
+            bdata.dists[u] = rup.rrup[0]
         for p, iml in enumerate(imls):
             lvls = (iml - mean_std[0]) / mean_std[1]
             tn = truncnorm.sf(lvls)
             bins = numpy.searchsorted(epsilons, lvls)
             for u, rup in enumerate(rups):
                 poes = _disagg_eps(tn[u], bins[u], eps_bands, cum_bands)
-                pnes[u, p] = rup.get_probability_no_exceedance(poes)
-    return pnes
+                bdata.pnes[u, p] = rup.get_probability_no_exceedance(poes)
+    return bdata
 
 
 def _disagg_eps(truncnorm, bin, eps_bands, cum_bands):
@@ -173,7 +181,7 @@ def get_bins(bin_edges, sid):
 
 
 # this is fast
-def build_disagg_matrix(bdata, bins, pnes):
+def build_disagg_matrix(bdata, bins):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
@@ -202,30 +210,12 @@ def build_disagg_matrix(bdata, bins, pnes):
     dists_idx[dists_idx == dim2] = dim2 - 1
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
-    U, P, E = pnes.shape
+    U, P, E = bdata.pnes.shape
     mat6D = numpy.ones(shape + [P])
     for i_mag, i_dist, i_lon, i_lat, pne in zip(
-            mags_idx, dists_idx, lons_idx, lats_idx, pnes):
+            mags_idx, dists_idx, lons_idx, lats_idx, bdata.pnes):
         mat6D[i_mag, i_dist, i_lon, i_lat] *= pne.T  # shape E, P
     return 1. - mat6D
-
-
-def _bdata_mean_std(gsim, site1, rctxs, imt):
-    U = len(rctxs)
-    bdata = BinData(mags=numpy.zeros(U), dists=numpy.zeros(U),
-                    lons=numpy.zeros(U), lats=numpy.zeros(U))
-    mean_std = numpy.zeros((2, U), numpy.float32)
-    for u, rctx in enumerate(rctxs):
-        dist = rctx.rrup
-        if gsim.minimum_distance and dist < gsim.minimum_distance:
-            dist = gsim.minimum_distance
-        bdata.mags[u] = rctx.mag
-        bdata.lons[u] = rctx.lon
-        bdata.lats[u] = rctx.lat
-        bdata.dists[u] = dist
-        mean_std[:, u] = get_mean_std(
-            site1, rctx, rctx, [imt], [gsim]).reshape(2)
-    return bdata, mean_std
 
 
 def _digitize_lons(lons, lon_bins):
@@ -328,7 +318,6 @@ def disaggregation(
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}  # by TRT
-    pnes = {}  # by TRT
     sitecol = SiteCollection([site])
     imls = hdf5.ArrayWrapper(
         numpy.array([iml]), dict(imt=imt, poes_disagg=[None], rlzi=0))
@@ -343,8 +332,13 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rctxs = cmaker.from_srcs(srcs, sitecol)
-        bdata[trt], mean_std = _bdata_mean_std(gsim, sitecol, rctxs, imt)
-        pnes[trt] = disaggregate(mean_std, rctxs, imt, imls, eps3)
+        mean_std = numpy.zeros((2, len(rctxs)))
+        for u, rctx in enumerate(rctxs):
+            if gsim.minimum_distance and rctx.rrup[0] < gsim.minimum_distance:
+                rctx.rrup = numpy.float32([gsim.minimum_distance])
+            mean_std[:, u] = get_mean_std(
+                sitecol, rctx, rctx, [imt], [gsim]).reshape(2)
+        bdata[trt] = disaggregate(mean_std, rctxs, imt, imls, eps3)
 
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
@@ -372,7 +366,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        mat6 = build_disagg_matrix(bdata[trt], bin_edges, pnes[trt])
+        mat6 = build_disagg_matrix(bdata[trt], bin_edges)
         matrix[..., trt_num[trt]] = mat6[..., 0]  # shape (..., P)
     return bin_edges + (trts,), matrix
 

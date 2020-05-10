@@ -98,6 +98,7 @@ class DisaggregateTestCase(unittest.TestCase):
         self.gsims = {self.trt: gsim}
 
     def test(self):
+        # a test sensitive to gsim.minimum_distance
         bin_edges, matrix = disagg.disaggregation(
             self.sources, self.site, self.imt, self.iml, self.gsims,
             self.truncation_level, n_epsilons=3,
