@@ -175,7 +175,7 @@ def agg_probs(*probs):
 
 def get_indices_by_grp_mag(dstore, mag_edges, concurrent_tasks):
     """
-    :returns: a dictionary grp_id, mag_bin -> indices
+    :returns: a dictionary grp_id, magi -> indices
     """
     acc = AccumDict(accum=[])  # grp_id, magi -> indices
     grp_ids = dstore['grp_ids'][:]
@@ -183,16 +183,16 @@ def get_indices_by_grp_mag(dstore, mag_edges, concurrent_tasks):
                                mag=dstore['rup/mag'][:]))
     tot = 0
     for (gidx, mag), d in df.groupby(['gidx', 'mag']):
-        magbin = numpy.searchsorted(mag_edges, mag) - 1
+        magi = numpy.searchsorted(mag_edges, mag) - 1
         for grp_id in grp_ids[gidx]:
-            acc[grp_id, magbin].extend(d.index)
+            acc[grp_id, magi].extend(d.index)
             tot += len(d)
     blocksize = numpy.ceil(tot / concurrent_tasks)
-    indices = {}
-    for grp_id, magbin in acc:
-        blocks = list(block_splitter(sorted(acc[grp_id, magbin]), blocksize))
-        indices[grp_id, magbin] = blocks
-    return indices
+    logging.info('Considering ~%d ruptures per block', blocksize)
+    for grp_id, magi in acc:
+        blocks = list(block_splitter(sorted(acc[grp_id, magi]), blocksize))
+        acc[grp_id, magi] = blocks
+    return acc
 
 
 def get_outputs_size(shapedic, disagg_outputs):
@@ -353,26 +353,24 @@ class DisaggregationCalculator(base.HazardCalculator):
         num_mag_bins = len(mag_edges) - 1
         tasks_per_imt_mag = numpy.ceil(
             oq.concurrent_tasks / M / num_mag_bins) or 1
-        rups_per_task = len(dstore['rup/mag']) / tasks_per_imt_mag
-        logging.info('Considering ~%d ruptures per task', rups_per_task)
         indices = get_indices_by_grp_mag(dstore, mag_edges, tasks_per_imt_mag)
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         trt_num = {trt: i for i, trt in enumerate(self.trts)}
-        for grp_id, magbin in indices:
+        for grp_id, magi in indices:
             trt = self.full_lt.trt_by_grp[grp_id]
             logging.info('Group #%d, sending rup_data for %s, magbin=%s',
-                         grp_id, trt, magbin)
+                         grp_id, trt, magi)
             trti = trt_num[trt]
             cmaker = ContextMaker(
                 trt, self.full_lt.get_rlzs_by_gsim(grp_id),
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
                  'imtls': oq.imtls})
-            for idxs in indices[grp_id, magbin]:
+            for idxs in indices[grp_id, magi]:
                 for imt in oq.imtls:
                     smap.submit((dstore, idxs, cmaker, self.iml3[imt],
-                                 trti, magbin, self.bin_edges[1:], oq))
+                                 trti, magi, self.bin_edges[1:], oq))
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 8D array
 
