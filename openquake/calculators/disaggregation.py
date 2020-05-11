@@ -149,6 +149,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
         if not ctxs:
             continue
         eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
+        # 6D-matrix #distbins, #lonbins, #latbins, #epsbins, P, Z
         matrix = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
         for z, gsim in gsim_by_z.items():
             with gmf_mon:
@@ -157,7 +158,6 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
                 ms, ctxs, iml3.imt, iml2[:, z], eps3, pne_mon)
             if bdata.pnes.sum():
                 with mat_mon:
-                    # 5D-matrix (#distbins, #lonbins, #latbins, #epsbins, #poes)
                     matrix[..., z] = disagg.build_disagg_matrix(bdata, bins)
         if matrix.any():
             yield {'trti': trti, 'magi': magi, 'imti': iml3.imti, sid: matrix}
@@ -173,7 +173,7 @@ def agg_probs(*probs):
     return 1. - acc
 
 
-def get_indices_by_grp_mag(dstore, mag_edges, concurrent_tasks):
+def get_indices_by_grp_mag(dstore, mag_edges):
     """
     :returns: a dictionary grp_id, magi -> indices
     """
@@ -187,11 +187,8 @@ def get_indices_by_grp_mag(dstore, mag_edges, concurrent_tasks):
         for grp_id in grp_ids[gidx]:
             acc[grp_id, magi].extend(d.index)
             tot += len(d)
-    blocksize = numpy.ceil(tot / concurrent_tasks)
-    logging.info('Considering ~%d ruptures per block', blocksize)
     for grp_id, magi in acc:
-        blocks = list(block_splitter(sorted(acc[grp_id, magi]), blocksize))
-        acc[grp_id, magi] = blocks
+        acc[grp_id, magi] = sorted(acc[grp_id, magi])
     return acc
 
 
@@ -276,7 +273,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         all_edges, shapedic = disagg.get_edges_shapedic(
             oq, self.sitecol, mags_by_trt)
         *self.bin_edges, self.trts = all_edges
-        src_filter = self.src_filter()
         if hasattr(self, 'csm'):
             for sg in self.csm.src_groups:
                 if sg.atomic:
@@ -345,29 +341,25 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for imt in oq.imtls:
                         self.imldic[s, rlz, poe, imt] = self.iml3[imt][s, p, z]
 
-        # submit #groups disaggregation tasks
+        # submit disaggregation tasks
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        M = len(oq.imtls)
         mag_edges = self.bin_edges[0]
-        num_mag_bins = len(mag_edges) - 1
-        tasks_per_imt_mag = numpy.ceil(
-            oq.concurrent_tasks / M / num_mag_bins) or 1
-        indices = get_indices_by_grp_mag(dstore, mag_edges, tasks_per_imt_mag)
+        indices = get_indices_by_grp_mag(dstore, mag_edges)
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         trt_num = {trt: i for i, trt in enumerate(self.trts)}
         for grp_id, magi in indices:
             trt = self.full_lt.trt_by_grp[grp_id]
-            logging.info('Group #%d, sending rup_data for %s, magbin=%s',
-                         grp_id, trt, magi)
             trti = trt_num[trt]
+            logging.info('Group #%d, %d ruptures for %s, magbin=%s',
+                         grp_id, len(indices[grp_id, magi]), trt, magi)
             cmaker = ContextMaker(
                 trt, self.full_lt.get_rlzs_by_gsim(grp_id),
                 {'truncation_level': oq.truncation_level,
-                 'maximum_distance': src_filter.integration_distance,
+                 'maximum_distance': oq.maximum_distance,
                  'imtls': oq.imtls})
-            for idxs in indices[grp_id, magi]:
+            for idxs in block_splitter(indices[grp_id, magi], 5000):
                 for imt in oq.imtls:
                     smap.submit((dstore, idxs, cmaker, self.iml3[imt],
                                  trti, magi, self.bin_edges[1:], oq))
