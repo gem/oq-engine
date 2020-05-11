@@ -92,7 +92,8 @@ def _iml3(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return dic
 
 
-def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
+def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
+                   monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -106,6 +107,8 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
         an ArrayWrapper of shape (N, P, Z) with an attribute imt
     :param trti:
         tectonic region type index
+    :param magi:
+        magnitude bin index
     :param bin_egdes:
         a quintet (mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
     :param monitor:
@@ -155,7 +158,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
                 with mat_mon:
                     matrix[..., z] = disagg.build_disagg_matrix(bdata, bins)
         if matrix.any():
-            yield {'trti': trti, 'imti': iml3.imti, sid: matrix}
+            yield {'trti': trti, 'magi': magi, 'imti': iml3.imti, sid: matrix}
 
 
 def agg_probs(*probs):
@@ -169,21 +172,24 @@ def agg_probs(*probs):
 
 
 def get_indices_by_grp_mag(dstore, mag_edges, concurrent_tasks):
+    """
+    :returns: a dictionary grp_id, mag_bin -> indices
+    """
     acc = AccumDict(accum=[])  # grp_id, magi -> indices
     grp_ids = dstore['grp_ids'][:]
     df = pandas.DataFrame(dict(gidx=dstore['rup/grp_id'][:],
                                mag=dstore['rup/mag'][:]))
     tot = 0
     for (gidx, mag), d in df.groupby(['gidx', 'mag']):
-        magi = numpy.searchsorted(mag_edges, mag)
+        magbin = numpy.searchsorted(mag_edges, mag) - 1
         for grp_id in grp_ids[gidx]:
-            acc[grp_id, magi].extend(d.index)
+            acc[grp_id, magbin].extend(d.index)
             tot += len(d)
     blocksize = numpy.ceil(tot / concurrent_tasks)
     indices = {}
-    for grp_id, magi in acc:
-        blocks = list(block_splitter(sorted(acc[grp_id, magi]), blocksize))
-        indices[grp_id, magi] = blocks
+    for grp_id, magbin in acc:
+        blocks = list(block_splitter(sorted(acc[grp_id, magbin]), blocksize))
+        indices[grp_id, magbin] = blocks
     return indices
 
 
@@ -351,20 +357,20 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         trt_num = {trt: i for i, trt in enumerate(self.trts)}
-        for grp_id, mag in indices:
+        for grp_id, magbin in indices:
             trt = self.full_lt.trt_by_grp[grp_id]
             logging.info('Group #%d, sending rup_data for %s, magbin=%s',
-                         grp_id, trt, mag)
+                         grp_id, trt, magbin)
             trti = trt_num[trt]
             cmaker = ContextMaker(
                 trt, self.full_lt.get_rlzs_by_gsim(grp_id),
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
                  'imtls': oq.imtls})
-            for idxs in indices[grp_id, mag]:
+            for idxs in indices[grp_id, magbin]:
                 for imt in oq.imtls:
-                    smap.submit((dstore, idxs, cmaker, self.iml3[imt], trti,
-                                 self.bin_edges, oq))
+                    smap.submit((dstore, idxs, cmaker, self.iml3[imt],
+                                 trti, magbin, self.bin_edges, oq))
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 8D array
 
@@ -380,6 +386,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             imti = result.pop('imti')
+            magi = result.pop('magi')
             for sid, probs in result.items():
                 before = acc[imti, sid].get(trti, 0)
                 acc[imti, sid][trti] = agg_probs(before, probs)
