@@ -340,6 +340,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         indices = get_indices_by_grp_mag(dstore, mag_edges)
         trt_num = {trt: i for i, trt in enumerate(self.trts)}
         allargs = []
+        M = len(oq.imtls)
         for grp_id, magi in indices:
             trt = self.full_lt.trt_by_grp[grp_id]
             trti = trt_num[trt]
@@ -350,7 +351,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
                  'imtls': oq.imtls})
-            for idxs in block_splitter(indices[grp_id, magi], 1000):
+            # enlarge the block size by M to have a consistent number of tasks
+            for idxs in block_splitter(indices[grp_id, magi], 1000 * M):
                 for imt in oq.imtls:
                     allargs.append((dstore, idxs, cmaker, self.iml3[imt],
                                     trti, magi, self.bin_edges[1:], oq))
