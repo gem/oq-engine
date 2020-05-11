@@ -29,7 +29,7 @@ import scipy.stats
 
 from openquake.hazardlib import contexts
 from openquake.baselib import hdf5, performance
-from openquake.baselib.general import groupby
+from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
@@ -247,6 +247,14 @@ def get_mean_stdv(site1, ctxs, imt, gsim):
     return ms
 
 
+def magbin_groups(rups, mag_bins):
+    groups = [[] for _ in mag_bins[1:]]
+    for rup in rups:
+        magi = numpy.searchsorted(mag_bins, rup.mag) - 1
+        groups[magi].append(rup)
+    return groups
+
+
 # this is used in the hazardlib tests, not in the engine
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
@@ -326,30 +334,35 @@ def disaggregation(
     imls = hdf5.ArrayWrapper(
         numpy.array([iml]), dict(imt=imt, poes_disagg=[None], rlzi=0))
     eps3 = _eps3(truncation_level, n_epsilons)
+
+    rups = AccumDict(accum=[])
+    cmaker = {}  # trt -> cmaker
     for trt, srcs in by_trt.items():
-        gsim = gsim_by_trt[trt]
-        cmaker = ContextMaker(
+        contexts.RuptureContext.temporal_occurrence_model = (
+            srcs[0].temporal_occurrence_model)
+        cmaker[trt] = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': truncation_level,
              'maximum_distance': source_filter.integration_distance,
              'imtls': {str(imt): [iml]}})
-        contexts.RuptureContext.temporal_occurrence_model = (
-            srcs[0].temporal_occurrence_model)
-        ctxs = cmaker.from_srcs(srcs, sitecol)
-        mean_std = get_mean_stdv(sitecol, ctxs, imt, gsim)
-        bdata[trt] = disaggregate(mean_std, ctxs, imt, imls, eps3)
+        rups[trt].extend(cmaker[trt].from_srcs(srcs, sitecol))
+    min_mag = min(r.mag for rs in rups.values() for r in rs)
+    max_mag = max(r.mag for rs in rups.values() for r in rs)
+    mag_bins = mag_bin_width * numpy.arange(
+        int(numpy.floor(min_mag / mag_bin_width)),
+        int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
-    if sum(len(bd.mags) for bd in bdata.values()) == 0:
+    for trt in cmaker:
+        gsim = gsim_by_trt[trt]
+        for magi, ctxs in enumerate(magbin_groups(rups[trt], mag_bins)):
+            mean_std = get_mean_stdv(sitecol, ctxs, imt, gsim)
+            bdata[trt, magi] = disaggregate(mean_std, ctxs, imt, imls, eps3)
+
+    if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
             % site, RuntimeWarning)
         return None, None
-
-    min_mag = min(bd.mags.min() for bd in bdata.values())
-    max_mag = max(bd.mags.max() for bd in bdata.values())
-    mag_bins = mag_bin_width * numpy.arange(
-        int(numpy.floor(min_mag / mag_bin_width)),
-        int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
     min_dist = min(bd.dists.min() for bd in bdata.values())
     max_dist = max(bd.dists.max() for bd in bdata.values())
@@ -364,9 +377,9 @@ def disaggregation(
     matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
-    for trt in bdata:
-        mat6 = build_disagg_matrix(bdata[trt], bin_edges)
-        matrix[..., trt_num[trt]] = mat6[..., 0]  # shape (..., P)
+    for trt, magi in bdata:
+        mat5 = build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
+        matrix[magi, ..., trt_num[trt]] = mat5[..., 0]  # shape (..., P)
     return bin_edges + (trts,), matrix
 
 
