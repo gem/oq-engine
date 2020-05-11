@@ -370,11 +370,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         Collect the results coming from compute_disagg into self.results.
 
-        :param acc: dictionary magi, imti, sid -> trti -> 6D array
+        :param acc: dictionary imti, sid -> trti, magi -> 6D array
         :param result: dictionary with the result coming from a task
         """
-        # 7D array of shape (#magbins, #distbins, #lonbins, #latbins, #epsbins,
-        #                    P, Z)
+        # 6D array of shape (#distbins, #lonbins, #latbins, #epsbins, P, Z)
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             imti = result.pop('imti')
@@ -413,9 +412,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             a dictionary sid -> trti -> disagg matrix
         """
         T = len(self.trts)
-        M = len(self.bin_edges[0]) - 1  # num_mag_bins
-        # build a dictionary m, s -> 8D matrix of shape (T, M, ..., E, P)
-        results = {ms: _matrix(dic, T, M) for ms, dic in results.items()}
+        Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
+        # build a dictionary m, s -> 8D matrix of shape (T, Ma, ..., E, P, Z)
+        results = {ms: _matrix(dic, T, Ma) for ms, dic in results.items()}
 
         # get the number of outputs
         shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
