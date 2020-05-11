@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the disaggregation calculator to distribute by magnitude bin,
+    thus reducing a lot the data transfer
   * Raised a clear error for amplification calculations with missing intensity
     measure types and levels
   * Vectorized the disaggregation formula
