@@ -382,125 +382,20 @@ def disaggregation(
     return bin_edges + (trts,), matrix
 
 
-def mag_pmf(matrix):
-    """
-    Fold full disaggregation matrix to magnitude PMF.
-
-    :returns:
-        1d array, a histogram representing magnitude PMF.
-    """
-    nmags, ndists, nlons, nlats, neps = matrix.shape
-    mag_pmf = numpy.zeros(nmags)
-    for i in range(nmags):
-        mag_pmf[i] = numpy.prod(
-            [1. - matrix[i, j, k, l, m]
-             for j in range(ndists)
-             for k in range(nlons)
-             for l in range(nlats)
-             for m in range(neps)])
-    return 1. - mag_pmf
+MAG, DIS, LON, LAT, EPS = 0, 1, 2, 3, 4
 
 
-def dist_pmf(matrix):
-    """
-    Fold full disaggregation matrix to distance PMF.
-
-    :returns:
-        1d array, a histogram representing distance PMF.
-    """
-    nmags, ndists, nlons, nlats, neps = matrix.shape
-    dist_pmf = numpy.zeros(ndists)
-    for j in range(ndists):
-        dist_pmf[j] = numpy.prod(
-            [1. - matrix[i, j, k, l, m]
-             for i in range(nmags)
-             for k in range(nlons)
-             for l in range(nlats)
-             for m in range(neps)])
-    return 1. - dist_pmf
+def compose(*axis):
+    return lambda x: 1. - numpy.prod(1. - x, axis)
 
 
-def trt_pmf(matrices):
-    """
-    Fold full disaggregation matrix to tectonic region type PMF.
-
-    :param matrices:
-        a matrix with T submatrices
-    :returns:
-        an array of T probabilities one per each tectonic region type
-    """
-    ntrts, nmags, ndists, nlons, nlats, neps = matrices.shape
-    pmf = numpy.zeros(ntrts)
-    for t in range(ntrts):
-        pmf[t] = 1. - numpy.prod(
-            [1. - matrices[t, i, j, k, l, m]
-             for i in range(nmags)
-             for j in range(ndists)
-             for k in range(nlons)
-             for l in range(nlats)
-             for m in range(neps)])
-    return pmf
-
-
-def mag_dist_pmf(matrix):
-    """
-    Fold full disaggregation matrix to magnitude / distance PMF.
-
-    :returns:
-        2d array. First dimension represents magnitude histogram bins,
-        second one -- distance histogram bins.
-    """
-    nmags, ndists, nlons, nlats, neps = matrix.shape
-    mag_dist_pmf = numpy.zeros((nmags, ndists))
-    for i in range(nmags):
-        for j in range(ndists):
-            mag_dist_pmf[i, j] = numpy.prod(
-                [1. - matrix[i, j, k, l, m]
-                 for k in range(nlons)
-                 for l in range(nlats)
-                 for m in range(neps)])
-    return 1. - mag_dist_pmf
-
-
-def mag_dist_eps_pmf(matrix):
-    """
-    Fold full disaggregation matrix to magnitude / distance / epsilon PMF.
-
-    :returns:
-        3d array. First dimension represents magnitude histogram bins,
-        second one -- distance histogram bins, third one -- epsilon
-        histogram bins.
-    """
-    nmags, ndists, nlons, nlats, neps = matrix.shape
-    mag_dist_eps_pmf = numpy.zeros((nmags, ndists, neps))
-    for i in range(nmags):
-        for j in range(ndists):
-            for m in range(neps):
-                mag_dist_eps_pmf[i, j, m] = numpy.prod(
-                    [1. - matrix[i, j, k, l, m]
-                     for k in range(nlons)
-                     for l in range(nlats)])
-    return 1. - mag_dist_eps_pmf
-
-
-def lon_lat_pmf(matrix):
-    """
-    Fold full disaggregation matrix to longitude / latitude PMF.
-
-    :returns:
-        2d array. First dimension represents longitude histogram bins,
-        second one -- latitude histogram bins.
-    """
-    nmags, ndists, nlons, nlats, neps = matrix.shape
-    lon_lat_pmf = numpy.zeros((nlons, nlats))
-    for k in range(nlons):
-        for l in range(nlats):
-            lon_lat_pmf[k, l] = numpy.prod(
-                [1. - matrix[i, j, k, l, m]
-                 for i in range(nmags)
-                 for j in range(ndists)
-                 for m in range(neps)])
-    return 1. - lon_lat_pmf
+mag_pmf = compose(DIS, LON, LAT, EPS)
+dist_pmf = compose(MAG, LON, LAT, EPS)
+mag_dist_pmf = compose(LON, LAT, EPS)
+mag_dist_eps_pmf = compose(LON, LAT)
+lon_lat_pmf = compose(DIS, MAG, EPS)
+mag_lon_lat_pmf = compose(DIS, EPS)
+trt_pmf = compose(1, 2, 3, 4, 5)
 
 
 def lon_lat_trt_pmf(matrices):
@@ -515,27 +410,6 @@ def lon_lat_trt_pmf(matrices):
     """
     res = numpy.array([lon_lat_pmf(mat) for mat in matrices])
     return res.transpose(1, 2, 0)
-
-
-def mag_lon_lat_pmf(matrix):
-    """
-    Fold full disaggregation matrix to magnitude / longitude / latitude PMF.
-
-    :returns:
-        3d array. First dimension represents magnitude histogram bins,
-        second one -- longitude histogram bins, third one -- latitude
-        histogram bins.
-    """
-    nmags, ndists, nlons, nlats, neps = matrix.shape
-    mag_lon_lat_pmf = numpy.zeros((nmags, nlons, nlats))
-    for i in range(nmags):
-        for k in range(nlons):
-            for l in range(nlats):
-                mag_lon_lat_pmf[i, k, l] = numpy.prod(
-                    [1. - matrix[i, j, k, l, m]
-                     for j in range(ndists)
-                     for m in range(neps)])
-    return 1. - mag_lon_lat_pmf
 
 
 # this dictionary is useful to extract a fixed set of
