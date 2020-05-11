@@ -22,6 +22,7 @@ Disaggregation calculator core functionality
 import logging
 import operator
 import numpy
+import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
@@ -167,19 +168,22 @@ def agg_probs(*probs):
     return 1. - acc
 
 
-def get_indices(dstore, concurrent_tasks):
-    acc = AccumDict(accum=[])  # grp_id -> indices
-    n = 0
-    grp_ids = dstore['grp_ids'][()]
-    for idx, gidx in enumerate(dstore['rup/grp_id'][()]):
-        n += len(grp_ids[gidx])
+def get_indices_by_grp_mag(dstore, mag_edges, concurrent_tasks):
+    acc = AccumDict(accum=[])  # grp_id, magi -> indices
+    grp_ids = dstore['grp_ids'][:]
+    df = pandas.DataFrame(dict(gidx=dstore['rup/grp_id'][:],
+                               mag=dstore['rup/mag'][:]))
+    tot = 0
+    for (gidx, mag), d in df.groupby(['gidx', 'mag']):
+        magi = numpy.searchsorted(mag_edges, mag)
         for grp_id in grp_ids[gidx]:
-            acc[grp_id].append(idx)
-    blocksize = numpy.ceil(n / concurrent_tasks)
-    indices = []
-    for grp_id in dstore['full_lt'].trt_by_grp:
-        blocks = list(block_splitter(acc[grp_id], blocksize))
-        indices.append(blocks)
+            acc[grp_id, magi].extend(d.index)
+            tot += len(d)
+    blocksize = numpy.ceil(tot / concurrent_tasks)
+    indices = {}
+    for grp_id, magi in acc:
+        blocks = list(block_splitter(sorted(acc[grp_id, magi]), blocksize))
+        indices[grp_id, magi] = blocks
     return indices
 
 
@@ -337,22 +341,27 @@ class DisaggregationCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         M = len(oq.imtls)
-        tasks_per_imt = numpy.ceil(oq.concurrent_tasks / M) or 1
-        rups_per_task = len(dstore['rup/mag']) / tasks_per_imt
+        mag_edges = self.bin_edges[0]
+        num_mag_bins = len(mag_edges) - 1
+        tasks_per_imt_mag = numpy.ceil(
+            oq.concurrent_tasks / M / num_mag_bins) or 1
+        rups_per_task = len(dstore['rup/mag']) / tasks_per_imt_mag
         logging.info('Considering ~%d ruptures per task', rups_per_task)
-        indices = get_indices(dstore, tasks_per_imt)
+        indices = get_indices_by_grp_mag(dstore, mag_edges, tasks_per_imt_mag)
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         trt_num = {trt: i for i, trt in enumerate(self.trts)}
-        for grp_id, trt in self.full_lt.trt_by_grp.items():
-            logging.info('Group #%d, sending rup_data for %s', grp_id, trt)
+        for grp_id, mag in indices:
+            trt = self.full_lt.trt_by_grp[grp_id]
+            logging.info('Group #%d, sending rup_data for %s, magbin=%s',
+                         grp_id, trt, mag)
             trti = trt_num[trt]
             cmaker = ContextMaker(
                 trt, self.full_lt.get_rlzs_by_gsim(grp_id),
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': src_filter.integration_distance,
                  'imtls': oq.imtls})
-            for idxs in indices[grp_id]:
+            for idxs in indices[grp_id, mag]:
                 for imt in oq.imtls:
                     smap.submit((dstore, idxs, cmaker, self.iml3[imt], trti,
                                  self.bin_edges, oq))
