@@ -351,8 +351,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
                  'imtls': oq.imtls})
-            # enlarge the block size by M to have a consistent number of tasks
-            for idxs in block_splitter(indices[grp_id, magi], 1000 * M):
+            # enlarge the block size by M to have an M-indep number of tasks
+            for idxs in block_splitter(indices[grp_id, magi],
+                                       oq.ruptures_per_block * M):
                 for imt in oq.imtls:
                     allargs.append((dstore, idxs, cmaker, self.iml3[imt],
                                     trti, magi, self.bin_edges[1:], oq))
