@@ -324,14 +324,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.build_disagg_by_src(rlzs)
 
         self.save_bin_edges()
-        sd = shapedic.copy()
-        sd.pop('trt')
-        nbytes, msg = get_array_nbytes(sd)
-        if nbytes > oq.max_data_transfer:
-            raise ValueError(
-                'Estimated data transfer too big\n%s > max_data_transfer=%s' %
-                (msg, humansize(oq.max_data_transfer)))
-        logging.info('Estimated data transfer:\n%s', msg)
         tot = get_outputs_size(shapedic, oq.disagg_outputs or disagg.pmf_map)
         logging.info('Total output size: %s', humansize(sum(tot.values())))
         self.imldic = {}  # sid, rlz, poe, imt -> iml
@@ -346,9 +338,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         mag_edges = self.bin_edges[0]
         indices = get_indices_by_grp_mag(dstore, mag_edges)
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         trt_num = {trt: i for i, trt in enumerate(self.trts)}
+        allargs = []
         for grp_id, magi in indices:
             trt = self.full_lt.trt_by_grp[grp_id]
             trti = trt_num[trt]
@@ -361,10 +352,24 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'imtls': oq.imtls})
             for idxs in block_splitter(indices[grp_id, magi], 1000):
                 for imt in oq.imtls:
-                    smap.submit((dstore, idxs, cmaker, self.iml3[imt],
-                                 trti, magi, self.bin_edges[1:], oq))
+                    allargs.append((dstore, idxs, cmaker, self.iml3[imt],
+                                    trti, magi, self.bin_edges[1:], oq))
+        sd = shapedic.copy()
+        sd.pop('trt')
+        sd.pop('mag')
+        sd.pop('M')
+        sd['tasks'] = numpy.ceil(len(allargs))
+        nbytes, msg = get_array_nbytes(sd)
+        if nbytes > oq.max_data_transfer:
+            raise ValueError(
+                'Estimated data transfer too big\n%s > max_data_transfer=%s' %
+                (msg, humansize(oq.max_data_transfer)))
+        logging.info('Estimated data transfer:\n%s', msg)
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(
+            compute_disagg, allargs, h5=self.datastore.hdf5)
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
-        return results  # sid -> trti-> 8D array
+        return results  # imti, sid -> trti, magi -> 6D array
 
     def agg_result(self, acc, result):
         """
@@ -415,7 +420,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
         # build a dictionary m, s -> 8D matrix of shape (T, Ma, ..., E, P, Z)
         results = {ms: _matrix(dic, T, Ma) for ms, dic in results.items()}
-
         # get the number of outputs
         shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
         logging.info('Extracting and saving the PMFs for %d outputs '

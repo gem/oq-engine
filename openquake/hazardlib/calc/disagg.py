@@ -69,7 +69,6 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     mag_edges = oq.mag_bin_width * numpy.arange(
         int(numpy.floor(min(mags) / oq.mag_bin_width)),
         int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
-    num_mag_bins = len(mag_edges) - 1
 
     # build dist_edges
     maxdist = max(filters.getdefault(oq.maximum_distance, trt) for trt in trts)
@@ -95,11 +94,9 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     shape = [len(edge) - 1 for edge in edges] + [len(trts)]
     shapedic = dict(zip(BIN_NAMES, shape))
     shapedic['N'] = len(sitecol)
-    shapedic['M'] = M = len(oq.imtls)
+    shapedic['M'] = len(oq.imtls)
     shapedic['P'] = len(oq.poes_disagg or (None,))
     shapedic['Z'] = Z
-    shapedic['task_factor'] = numpy.ceil(
-        oq.concurrent_tasks / M / num_mag_bins) or 1
     return bin_edges + [trts], shapedic
 
 
