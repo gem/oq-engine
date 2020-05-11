@@ -427,7 +427,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         Save the computed PMFs in the datastore
 
         :param results:
-            a dict (m, s) -> 8D-matrix of shape (T, .., E, P)
+            a dict (m, s) -> 8D-matrix of shape (T, Ma, D, Lo, La, E, P, Z)
         :param attrs:
             dictionary of attributes to add to the dataset
         """
