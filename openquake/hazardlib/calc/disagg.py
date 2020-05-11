@@ -90,7 +90,8 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     assert_same_shape(list(lat_edges.values()))
 
     bin_edges = [mag_edges, dist_edges, lon_edges, lat_edges, eps_edges]
-    shape = [len(bin) - 1 for bin in get_bins(bin_edges, 0)] + [len(trts)]
+    edges = [mag_edges, dist_edges, lon_edges[0], lat_edges[0], eps_edges]
+    shape = [len(edge) - 1 for edge in edges] + [len(trts)]
     shapedic = dict(zip(BIN_NAMES, shape))
     shapedic['N'] = len(sitecol)
     shapedic['M'] = M = len(oq.imtls)
@@ -169,14 +170,6 @@ def lon_lat_bins(lon, lat, size_km, coord_bin_width):
     if cross_idl(*lon_bins):
         lon_bins %= 360
     return lon_bins, lat_bins
-
-
-def get_bins(bin_edges, sid):
-    """
-    :returns: mags, dists, lons, lats, eps for the given sid
-    """
-    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
-    return mag_bins, dist_bins, lon_bins[sid], lat_bins[sid], eps_bins
 
 
 # this is fast

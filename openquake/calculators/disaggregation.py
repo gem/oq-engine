@@ -125,9 +125,10 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=True)
     gmf_mon = monitor('disagg mean_std', measuremem=False)
+    b = bin_edges  # mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
     for sid, iml2 in zip(sitecol.sids, iml3):
         singlesite = sitecol.filtered([sid])
-        bins = disagg.get_bins(bin_edges, sid)
+        bins = b[0], b[1], b[2][sid], b[3][sid], b[4]
         gsim_by_z = {}
         # since the ContextMaker must be used on ruptures with the
         # same TRT, given a realization there is a single gsim
@@ -398,7 +399,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         b = self.bin_edges
         T = len(self.trts)
-        shape = [len(bin) - 1 for bin in disagg.get_bins(b, 0)] + [T]
+        shape = [len(bin) - 1 for bin in
+                 (b[0], b[1], b[2][0], b[3][0], b[4])] + [T]
         matrix_size = numpy.prod(shape)  # 6D
         if matrix_size > 1E6:
             raise ValueError(
