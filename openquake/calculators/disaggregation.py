@@ -125,13 +125,12 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, bin_edges, oq, monitor):
         singlesite = sitecol.filtered([sid])
         bins = disagg.get_bins(bin_edges, sid)
         gsim_by_z = {}
-        for z in range(iml3.shape[-1]):
-            try:
-                gsim = cmaker.gsim_by_rlzi[iml3.rlzs[sid, z]]
-            except KeyError:
-                pass
-            else:
-                gsim_by_z[z] = gsim
+        # since the ContextMaker must be used on ruptures with the
+        # same TRT, given a realization there is a single gsim
+        for gsim, rlzs in cmaker.gsims.items():
+            for z in range(iml3.shape[-1]):
+                if iml3.rlzs[sid, z] in rlzs:
+                    gsim_by_z[z] = gsim
         ctxs = []
         ok, = numpy.where(
             rupdata['rrup_'][:, sid] <= cmaker.maximum_distance(cmaker.trt))

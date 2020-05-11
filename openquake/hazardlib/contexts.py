@@ -178,14 +178,6 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        if hasattr(gsims, 'items'):
-            # gsims is actually a dict rlzs_by_gsim
-            # since the ContextMaker must be used on ruptures with the
-            # same TRT, given a realization there is a single gsim
-            self.gsim_by_rlzi = {}
-            for gsim, rlzis in gsims.items():
-                for rlzi in rlzis:
-                    self.gsim_by_rlzi[rlzi] = gsim
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls)
