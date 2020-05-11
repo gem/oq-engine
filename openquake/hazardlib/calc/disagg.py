@@ -27,7 +27,7 @@ import collections
 import numpy
 import scipy.stats
 
-from openquake.hazardlib import pmf, contexts
+from openquake.hazardlib import contexts
 from openquake.baselib import hdf5, performance
 from openquake.baselib.general import groupby
 from openquake.hazardlib.calc import filters
@@ -39,7 +39,7 @@ from openquake.hazardlib.gsim.base import (
     ContextMaker, get_mean_std, to_distribution_values)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
-BinData = collections.namedtuple('BinData', 'mags, dists, lons, lats, pnes')
+BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
 
 
 def assert_same_shape(arrays):
@@ -114,15 +114,13 @@ def disaggregate(mean_std, rups, imt, imls, eps3,
                  pne_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
     U, P, E = len(rups), len(imls), len(eps3[2])
-    bdata = BinData(mags=numpy.zeros(U), dists=numpy.zeros(U),
-                    lons=numpy.zeros(U), lats=numpy.zeros(U),
-                    pnes=numpy.zeros((U, P, E)))
+    bdata = BinData(dists=numpy.zeros(U), lons=numpy.zeros(U),
+                    lats=numpy.zeros(U),  pnes=numpy.zeros((U, P, E)))
     with pne_mon:
         truncnorm, epsilons, eps_bands = eps3
         cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
         imls = to_distribution_values(imls, imt)  # shape P
         for u, rup in enumerate(rups):
-            bdata.mags[u] = rup.mag
             bdata.lons[u] = rup.lon
             bdata.lats[u] = rup.lat
             bdata.dists[u] = rup.rrup[0]
@@ -177,11 +175,11 @@ def build_disagg_matrix(bdata, bins):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
-    :returns: a 6D-matrix of shape (#magbins, #distbins, #lonbins,
-                                    #latbins, #epsbins, #poes)
+    :returns:
+        a 5D-matrix of shape (#distbins, #lonbins, #latbins, #epsbins, #poes)
     """
-    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
-    dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
+    dist_bins, lon_bins, lat_bins, eps_bins = bins
+    dim1, dim2, dim3, dim4 = shape = [len(b) - 1 for b in bins]
 
     # find bin indexes of rupture attributes; bins are assumed closed
     # on the lower bound, and open on the upper bound, that is [ )
@@ -189,7 +187,6 @@ def build_disagg_matrix(bdata, bins):
     # the 'international date line' issue
     # the 'minus 1' is needed because the digitize method returns the
     # index of the upper bound of the bin
-    mags_idx = numpy.digitize(bdata.mags+pmf.PRECISION, mag_bins) - 1
     dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
     lons_idx = _digitize_lons(bdata.lons, lon_bins)
     lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
@@ -198,16 +195,15 @@ def build_disagg_matrix(bdata, bins):
     # edge are associated to an index equal to len(bins) which is not a
     # valid index for the disaggregation matrix. Such values are assumed
     # to fall in the last bin
-    mags_idx[mags_idx == dim1] = dim1 - 1
-    dists_idx[dists_idx == dim2] = dim2 - 1
-    lons_idx[lons_idx == dim3] = dim3 - 1
-    lats_idx[lats_idx == dim4] = dim4 - 1
+    dists_idx[dists_idx == dim1] = dim1 - 1
+    lons_idx[lons_idx == dim2] = dim2 - 1
+    lats_idx[lats_idx == dim3] = dim3 - 1
     U, P, E = bdata.pnes.shape
-    mat6D = numpy.ones(shape + [P])
-    for i_mag, i_dist, i_lon, i_lat, pne in zip(
-            mags_idx, dists_idx, lons_idx, lats_idx, bdata.pnes):
-        mat6D[i_mag, i_dist, i_lon, i_lat] *= pne.T  # shape E, P
-    return 1. - mat6D
+    mat5D = numpy.ones(shape + [P])
+    for i_dist, i_lon, i_lat, pne in zip(
+            dists_idx, lons_idx, lats_idx, bdata.pnes):
+        mat5D[i_dist, i_lon, i_lat] *= pne.T  # shape E, P
+    return 1. - mat5D
 
 
 def _digitize_lons(lons, lon_bins):

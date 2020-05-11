@@ -62,12 +62,12 @@ def _check_curves(sid, rlzs, curves, imtls, poes_disagg):
     return bool(bad)
 
 
-def _trt_matrix(matrices, num_trts):
-    # convert a dict trti -> matrix into a single matrix of shape (T, ...)
-    trti = next(iter(matrices))
-    mat = numpy.zeros((num_trts,) + matrices[trti].shape)
-    for trti in matrices:
-        mat[trti] = matrices[trti]
+def _matrix(matrices, num_trts, num_mag_bins):
+    # convert a dict trti, magi -> matrix into a single matrix
+    trti, magi = next(iter(matrices))
+    mat = numpy.zeros((num_trts, num_mag_bins) + matrices[trti, magi].shape)
+    for trti, magi in matrices:
+        mat[trti, magi] = matrices[trti, magi]
     return mat
 
 
@@ -110,7 +110,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     :param magi:
         magnitude bin index
     :param bin_egdes:
-        a quintet (mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
+        a quartet (dist_edges, lon_edges, lat_edges, eps_edges)
     :param monitor:
         monitor of the currently running job
     :returns:
@@ -125,10 +125,10 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=True)
     gmf_mon = monitor('disagg mean_std', measuremem=False)
-    b = bin_edges  # mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
+    b = bin_edges  # dist_bins, lon_bins, lat_bins, eps_bins
     for sid, iml2 in zip(sitecol.sids, iml3):
         singlesite = sitecol.filtered([sid])
-        bins = b[0], b[1], b[2][sid], b[3][sid], b[4]
+        bins = b[0], b[1][sid], b[2][sid], b[3]
         gsim_by_z = {}
         # since the ContextMaker must be used on ruptures with the
         # same TRT, given a realization there is a single gsim
@@ -157,6 +157,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
                 ms, ctxs, iml3.imt, iml2[:, z], eps3, pne_mon)
             if bdata.pnes.sum():
                 with mat_mon:
+                    # 5D-matrix (#distbins, #lonbins, #latbins, #epsbins, #poes)
                     matrix[..., z] = disagg.build_disagg_matrix(bdata, bins)
         if matrix.any():
             yield {'trti': trti, 'magi': magi, 'imti': iml3.imti, sid: matrix}
@@ -371,7 +372,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for idxs in indices[grp_id, magbin]:
                 for imt in oq.imtls:
                     smap.submit((dstore, idxs, cmaker, self.iml3[imt],
-                                 trti, magbin, self.bin_edges, oq))
+                                 trti, magbin, self.bin_edges[1:], oq))
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 8D array
 
@@ -379,7 +380,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         Collect the results coming from compute_disagg into self.results.
 
-        :param acc: dictionary imti, sid -> trti -> 7D array
+        :param acc: dictionary magi, imti, sid -> trti -> 6D array
         :param result: dictionary with the result coming from a task
         """
         # 7D array of shape (#magbins, #distbins, #lonbins, #latbins, #epsbins,
@@ -389,8 +390,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             imti = result.pop('imti')
             magi = result.pop('magi')
             for sid, probs in result.items():
-                before = acc[imti, sid].get(trti, 0)
-                acc[imti, sid][trti] = agg_probs(before, probs)
+                before = acc[imti, sid].get((trti, magi), 0)
+                acc[imti, sid][trti, magi] = agg_probs(before, probs)
         return acc
 
     def save_bin_edges(self):
@@ -422,8 +423,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             a dictionary sid -> trti -> disagg matrix
         """
         T = len(self.trts)
-        # build a dictionary m, s -> 8D matrix of shape (T, ..., E, P)
-        results = {ms: _trt_matrix(dic, T) for ms, dic in results.items()}
+        M = len(self.bin_edges[0]) - 1  # num_mag_bins
+        # build a dictionary m, s -> 8D matrix of shape (T, M, ..., E, P)
+        results = {ms: _matrix(dic, T, M) for ms, dic in results.items()}
 
         # get the number of outputs
         shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
