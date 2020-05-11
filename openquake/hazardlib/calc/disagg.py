@@ -386,6 +386,9 @@ MAG, DIS, LON, LAT, EPS = 0, 1, 2, 3, 4
 
 
 def compose(*axis):
+    """
+    :returns: a function to compose probability arrays along the given axis
+    """
     return lambda x: 1. - numpy.prod(1. - x, axis)
 
 
@@ -395,7 +398,7 @@ mag_dist_pmf = compose(LON, LAT, EPS)
 mag_dist_eps_pmf = compose(LON, LAT)
 lon_lat_pmf = compose(DIS, MAG, EPS)
 mag_lon_lat_pmf = compose(DIS, EPS)
-trt_pmf = compose(1, 2, 3, 4, 5)
+trt_pmf = compose(1, 2, 3, 4, 5)  # applied on matrices TRT MAG DIS LON LAT EPS
 
 
 def lon_lat_trt_pmf(matrices):
