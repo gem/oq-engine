@@ -359,7 +359,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
                  'imtls': oq.imtls})
-            for idxs in block_splitter(indices[grp_id, magi], 5000):
+            for idxs in block_splitter(indices[grp_id, magi], 1000):
                 for imt in oq.imtls:
                     smap.submit((dstore, idxs, cmaker, self.iml3[imt],
                                  trti, magi, self.bin_edges[1:], oq))
