@@ -385,20 +385,20 @@ def disaggregation(
 MAG, DIS, LON, LAT, EPS = 0, 1, 2, 3, 4
 
 
-def compose(*axis):
+def collapse(*axis):
     """
     :returns: a function to compose probability arrays along the given axis
     """
     return lambda x: 1. - numpy.prod(1. - x, axis)
 
 
-mag_pmf = compose(DIS, LON, LAT, EPS)
-dist_pmf = compose(MAG, LON, LAT, EPS)
-mag_dist_pmf = compose(LON, LAT, EPS)
-mag_dist_eps_pmf = compose(LON, LAT)
-lon_lat_pmf = compose(DIS, MAG, EPS)
-mag_lon_lat_pmf = compose(DIS, EPS)
-trt_pmf = compose(1, 2, 3, 4, 5)  # applied on matrices TRT MAG DIS LON LAT EPS
+mag_pmf = collapse(DIS, LON, LAT, EPS)
+dist_pmf = collapse(MAG, LON, LAT, EPS)
+mag_dist_pmf = collapse(LON, LAT, EPS)
+mag_dist_eps_pmf = collapse(LON, LAT)
+lon_lat_pmf = collapse(DIS, MAG, EPS)
+mag_lon_lat_pmf = collapse(DIS, EPS)
+trt_pmf = collapse(1, 2, 3, 4, 5)  # applied on matrix TRT MAG DIS LON LAT EPS
 
 
 def lon_lat_trt_pmf(matrices):

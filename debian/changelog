@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the computation of the disaggregation PMFs by orders of magnitude
+    by using numpy.prod
   * Changed the disaggregation calculator to distribute by magnitude bin,
     thus reducing a lot the data transfer
   * Raised a clear error for amplification calculations with missing intensity

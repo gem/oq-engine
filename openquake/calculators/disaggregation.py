@@ -446,65 +446,24 @@ class DisaggregationCalculator(base.HazardCalculator):
             if many_rlzs:  # rescale the weights
                 weights = numpy.array([self.ws[r][imt] for r in rlzs])
                 weights /= weights.sum()  # normalize to 1
-            for p, poe in enumerate(self.poes_disagg):
-                mat7 = mat8[..., p, :]
-                for z in range(self.Z):
-                    mat6 = mat7[..., z]
-                    if mat6.any():  # nonzero
-                        self._save('disagg', s, rlzs[z], poe, imt, mat6)
-                if many_rlzs:  # compute the mean matrices
-                    mean = numpy.average(mat7, -1, weights)
-                    if mean.any():  # nonzero
-                        self._save('disagg', s, 'mean', poe, imt, mean)
+            self._save('disagg', s, imt, mat8)
+            #if many_rlzs:  # compute the mean matrices
+            #        mean = numpy.average(mat7, -1, weights)
+            #       if mean.any():  # nonzero
+            #            self._save('disagg', s, 'mean', poe, imt, mean)
         self.datastore.set_attrs('disagg', **attrs)
 
-    def _save(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
+    def _save(self, dskey, site_id, imt_str, matrix8):
         disagg_outputs = self.oqparam.disagg_outputs
-        lon = self.sitecol.lons[site_id]
-        lat = self.sitecol.lats[site_id]
-        try:
-            rlz = 'rlz-%d-' % rlz_id
-        except TypeError:  # for the mean
-            rlz = ''
-        disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
-            rlz=rlz, imt=imt_str, sid='sid-%d' % site_id,
-            poe='poe-%d' % self.poe_id[poe])
-        mag, dist, lonsd, latsd, eps = self.bin_edges
-        lons, lats = lonsd[site_id], latsd[site_id]
+        disp_name = 'disagg/%s-sid-%d/' % (imt_str, site_id)
         with self.monitor('extracting PMFs'):
             poe_agg = []
-            aggmatrix = agg_probs(*matrix6)
+            aggmatrix = agg_probs(*matrix8)
             for key, fn in disagg.pmf_map.items():
                 if not disagg_outputs or key in disagg_outputs:
-                    pmf = fn(matrix6 if key.endswith('TRT') else aggmatrix)
+                    pmf = fn(matrix8 if key.endswith('TRT') else aggmatrix)
                     self.datastore[disp_name + key] = pmf
                     poe_agg.append(1. - numpy.prod(1. - pmf))
-
-        attrs = self.datastore.hdf5[disp_name].attrs
-        attrs['site_id'] = site_id
-        attrs['rlzi'] = rlz_id
-        attrs['imt'] = imt_str
-        try:
-            attrs['iml'] = self.imldic[site_id, rlz_id, poe, imt_str]
-        except KeyError:  # for the mean
-            pass
-        attrs['mag_bin_edges'] = mag
-        attrs['dist_bin_edges'] = dist
-        attrs['lon_bin_edges'] = lons
-        attrs['lat_bin_edges'] = lats
-        attrs['eps_bin_edges'] = eps
-        attrs['trt_bin_edges'] = self.trts
-        attrs['location'] = (lon, lat)
-        # sanity check: all poe_agg should be the same
-        attrs['poe_agg'] = poe_agg
-        if poe and site_id in self.ok_sites:
-            attrs['poe'] = poe
-            poe_agg = numpy.mean(attrs['poe_agg'])
-            if abs(1 - poe_agg / poe) > .1:
-                logging.warning(
-                    'Site #%d: poe_agg=%s is quite different from the expected'
-                    ' poe=%s; perhaps the number of intensity measure'
-                    ' levels is too small?', site_id, poe_agg, poe)
 
     def build_disagg_by_src(self, rlzs):
         logging.warning('Disaggregation by source is experimental')
