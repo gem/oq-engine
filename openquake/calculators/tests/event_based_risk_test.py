@@ -253,7 +253,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(('losses_by_event', 'csv'), self.calc.datastore)
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
