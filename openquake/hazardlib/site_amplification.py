@@ -58,7 +58,7 @@ def digitize(name, values, edges):
     :returns: the indices of the values in the bins
 
     If there are V values and E edges this functions returns an array
-    with V elements in the range 0 .. E - 2; for instance:
+    with V elements in the range 0 .. E - 1; for instance:
 
     >>> digitize('period', [0, .1, .2], [0, .05, .1, .15, .20, .25])
     array([0, 2, 4])
@@ -94,11 +94,10 @@ class Amplifier(object):
         levels from the imtls dictionary)
     """
     def __init__(self, imtls, ampl_funcs, amplevels=None):
+        if not imtls:
+            raise ValueError('There are no intensity_measure_types!')
         fname = getattr(ampl_funcs, 'fname', None)
         self.imtls = imtls
-        self.periods, levels = check_same_levels(imtls)
-        self.amplevels = levels if amplevels is None else amplevels
-        self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
         self.vs30_ref = ampl_funcs.vs30_ref
         has_levels = 'level' in ampl_funcs.dtype.names
         if has_levels:
@@ -111,6 +110,13 @@ class Amplifier(object):
                 else ampl_funcs.dtype.names[1:])
         imts = [from_string(imt) for imt in cols
                 if not imt.startswith('sigma_')]
+        if imtls.isnan():  # for event based
+            self.periods = [from_string(imt).period for imt in imtls]
+            self.midlevels = imls if len(imls) else [0]
+        else:
+            self.periods, levels = check_same_levels(imtls)
+            self.amplevels = levels if amplevels is None else amplevels
+            self.midlevels = numpy.diff(levels) / 2 + levels[:-1]
         m_indices = digitize(
             'period', self.periods, [imt.period for imt in imts])
         if len(imls) <= 1:  # 1 level means same values for all levels

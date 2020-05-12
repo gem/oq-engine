@@ -20,7 +20,7 @@ import unittest
 import numpy
 from openquake.baselib import InvalidFile
 from openquake.baselib.hdf5 import read_csv
-from openquake.baselib.general import gettemp
+from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
 
@@ -68,12 +68,12 @@ A,1,0.3
 '''
 
 
-
 class AmplifierTestCase(unittest.TestCase):
     vs30 = numpy.array([760])
     imls = [.001, .002, .005, .01, .02, .05, .1, .2, .5, 1., 1.2]
     soil_levels = numpy.array([.002, .005, .01, .02, .05, .1, .2])
-    imtls = {'PGA': imls, 'SA(0.1)': imls, 'SA(0.2)': imls, 'SA(0.5)': imls}
+    imtls = DictArray({'PGA': imls, 'SA(0.1)': imls, 'SA(0.2)': imls,
+                       'SA(0.5)': imls})
     hcurve = [[.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01],  # PGA
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01],  # SA(0.1)
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01],  # SA(0.2)
@@ -171,7 +171,7 @@ class AmplifierTestCase(unittest.TestCase):
     def test_gmf_with_uncertainty(self):
         fname = gettemp(gmf_ampl_func)
         aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
-        imtls = {'PGA': self.imls}
+        imtls = DictArray({'PGA': self.imls})
         a = Amplifier(imtls, aw, self.soil_levels)
         res = []
         nsim = 10000
