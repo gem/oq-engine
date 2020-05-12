@@ -34,8 +34,12 @@ def extract(what, calc_id=-1, webapi=True, local=False):
         else:
             obj = Extractor(calc_id).get(what)
         w = what.replace('/', '-').replace('?', '-')
-        fname = '%s_%d.npz' % (w, calc_id)
-        hdf5.save_npz(obj, fname)
+        if not obj.shape:  # is a dictionary of arrays
+            fname = '%s_%d.txt' % (w, calc_id)
+            open(fname, 'w').write(obj.toml())
+        else:  # a regular ArrayWrapper
+            fname = '%s_%d.npz' % (w, calc_id)
+            hdf5.save_npz(obj, fname)
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)
