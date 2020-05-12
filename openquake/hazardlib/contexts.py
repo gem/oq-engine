@@ -198,7 +198,7 @@ class ContextMaker(object):
         for src in srcs:
             ctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                ctxs.append(self.add_rup_params(rup))
+                ctxs.append(self.make_ctx(rup))
             for ctx in self.make_ctxs(ctxs, site1, grp_ids, False):
                 pass  # add site and distance parameters
             allctxs.extend(ctxs)
@@ -237,7 +237,7 @@ class ContextMaker(object):
             raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
         return DistancesContext([(self.filter_distance, distances)])
 
-    def add_rup_params(self, rupture):
+    def make_ctx(self, rupture):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
@@ -304,7 +304,7 @@ class ContextMaker(object):
                 dctx.rjb = reqv
             if 'rrup' in self.REQUIRES_DISTANCES:
                 dctx.rrup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
-        rctx = self.add_rup_params(rupture)
+        rctx = self.make_ctx(rupture)
         return rctx, sites, dctx
 
     def make_ctxs(self, ruptures, sites, grp_ids, filt):
