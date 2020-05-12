@@ -68,6 +68,21 @@ A,1,0.3
 '''
 
 
+# provided by Catalina
+cata_ampl_func = '''\
+#,,,,,"vs30_ref=760"
+ampcode,level,PGA,SA(0.3),sigma_PGA,sigma_SA(0.3)
+z1,0.050,1.45,2.22,0.4,0.4
+z1,0.100,1.78,1.87,0.4,0.4
+z1,0.200,2.11,2.66,0.4,0.4
+z1,0.300,1.55,1.59,0.4,0.4
+z2,0.075,1.33,1.79,0.4,0.4
+z2,0.150,1.69,2.42,0.4,0.4
+z2,0.250,1.98,2.58,0.4,0.4
+z2,0.350,1.76,1.80,0.4,0.4
+'''
+
+
 class AmplifierTestCase(unittest.TestCase):
     vs30 = numpy.array([760])
     imls = [.001, .002, .005, .01, .02, .05, .1, .2, .5, 1., 1.2]
@@ -185,3 +200,13 @@ class AmplifierTestCase(unittest.TestCase):
         expected = numpy.array([0.3, 0.3, 0.3])
         msg = "Computed and expected std do not match"
         numpy.testing.assert_almost_equal(computed, expected, 2, err_msg=msg)
+
+    def test_gmf_cata(self):
+        fname = gettemp(cata_ampl_func)
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
+        import pdb; pdb.set_trace()
+        imtls = DictArray({'PGA': [numpy.nan]})
+        a = Amplifier(imtls, aw, self.soil_levels)
+        gmvs1 = a._amplify_gmvs(b'zone_1', numpy.array([.1, .2, .3]), 'PGA')
+        gmvs2 = a._amplify_gmvs(b'zone_2', numpy.array([.1, .2, .3]), 'PGA')

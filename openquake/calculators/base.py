@@ -790,7 +790,10 @@ class HazardCalculator(BaseCalculator):
         # store amplification functions if any
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
-            self.datastore['amplification'] = readinput.get_amplification(oq)
+            df = readinput.get_amplification(oq)
+            a = numpy.asarray(df.to_records())
+            import pdb; pdb.set_trace()
+            self.datastore['amplification'] = a
             check_amplification(self.datastore)
             self.amplifier = Amplifier(
                 oq.imtls, self.datastore['amplification'], oq.soil_intensities)

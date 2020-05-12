@@ -69,6 +69,8 @@ def digitize(name, values, edges):
     if min(values) < min(edges):
         raise ValueError(
             f'The {name} {min(values)} is outside the edges {edges}')
+    edges = edges.copy()
+    edges[-1] += 1E-5
     return numpy.digitize(values, edges) - 1
 
 
@@ -79,6 +81,10 @@ def check_unique(array, kfields, fname):
             if fname:
                 msg = '%s: %s' % (fname, msg)
             raise ValueError(msg)
+
+
+def midlevels(levels):
+    return numpy.diff(levels) / 2 + levels[:-1]
 
 
 class Amplifier(object):
@@ -112,11 +118,11 @@ class Amplifier(object):
                 if not imt.startswith('sigma_')]
         if imtls.isnan():  # for event based
             self.periods = [from_string(imt).period for imt in imtls]
-            self.midlevels = imls if len(imls) else [0]
+            self.midlevels = midlevels(imls if len(imls) else [0, 0])
         else:
             self.periods, levels = check_same_levels(imtls)
             self.amplevels = levels if amplevels is None else amplevels
-            self.midlevels = numpy.diff(levels) / 2 + levels[:-1]
+            self.midlevels = midlevels(levels)
         m_indices = digitize(
             'period', self.periods, [imt.period for imt in imts])
         if len(imls) <= 1:  # 1 level means same values for all levels
@@ -135,6 +141,7 @@ class Amplifier(object):
                 self.alpha[code, im] = alpha = numpy.zeros(L)
                 self.sigma[code, im] = sigma = numpy.zeros(L)
                 idx = 0
+                import pdb; pdb.set_trace()
                 for rec in arr[l_indices]:
                     alpha[idx] = rec[im]
                     try:
