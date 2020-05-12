@@ -278,6 +278,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                 if sg.atomic:
                     raise NotImplementedError(
                         'Atomic groups are not supported yet')
+        elif self.datastore['source_info'].attrs['atomic']:
+            raise NotImplementedError(
+                'Atomic groups are not supported yet')
 
         self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)

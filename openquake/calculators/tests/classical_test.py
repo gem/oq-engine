@@ -421,6 +421,19 @@ hazard_uhs-std.csv
 
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
+        hc_id = str(self.calc.datastore.calc_id)
+
+        # make sure there is an error when trying to disaggregate
+        with self.assertRaises(NotImplementedError):
+            self.run_calc(case_27.__file__, 'job.ini',
+                          hazard_calculation_id=hc_id,
+                          calculation_mode='disaggregation',
+                          truncation_level="3",
+                          poes_disagg="0.02",
+                          mag_bin_width="0.1",
+                          distance_bin_width="10.0",
+                          coordinate_bin_width="1.0",
+                          num_epsilon_bins="6")
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
