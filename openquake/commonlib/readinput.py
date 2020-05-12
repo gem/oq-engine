@@ -700,7 +700,9 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
 
     logging.info('There are %d sources with %d unique IDs', ns, len(data))
     if h5:
-        hdf5.create(h5, 'source_info', source_info_dt)  # avoid hdf5 damned bug
+        attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
+        # avoid hdf5 damned bug by creating source_info in advance
+        hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         for trt in mags:
             h5['source_mags/' + trt] = numpy.array(sorted(mags[trt]))
