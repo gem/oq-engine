@@ -125,7 +125,8 @@ class GmfComputer(object):
         try:
             self.sctx, self.dctx = rupture.sctx, rupture.dctx
         except AttributeError:
-            self.sctx, self.dctx = cmaker.make_contexts(sitecol, rupture)
+            self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
+                sitecol, rupture)
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
@@ -209,7 +210,7 @@ class GmfComputer(object):
         :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
                    epsilons(num_events))
         """
-        rctx = getattr(self.rupture, 'rupture', self.rupture)
+        rctx = self.rctx
         dctx = self.dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
             if self.correlation_model:
