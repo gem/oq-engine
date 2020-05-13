@@ -89,7 +89,6 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
                     # average losses
                     avg[idx, r, l] = (
                         ratios.sum(axis=0) * param['ses_ratio'] * aval)
-
                     # agglosses
                     agglosses[:, l] += ratios * aval
                     if 'builder' in param:

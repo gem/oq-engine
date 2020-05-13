@@ -108,7 +108,6 @@ class GmfComputer(object):
             raise ValueError('No IMTs')
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
-        self.rupture = rupture
         self.imts = [from_string(imt) for imt in imts]
         self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
@@ -116,16 +115,15 @@ class GmfComputer(object):
         self.amplifier = amplifier
         # `rupture` can be an EBRupture instance
         if hasattr(rupture, 'srcidx'):
+            self.ebrupture = rupture
             self.srcidx = rupture.srcidx  # the source the rupture comes from
             self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:
             self.srcidx = '?'
             self.e0 = 0
-        try:
-            self.sctx, self.dctx = rupture.sctx, rupture.dctx
-        except AttributeError:
-            self.sctx, self.dctx = cmaker.make_contexts(sitecol, rupture)
+        self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
+            sitecol, rupture)
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
@@ -135,9 +133,8 @@ class GmfComputer(object):
         :returns: [(sid, eid, gmv), ...], dt
         """
         t0 = time.time()
-        rup = self.rupture
         sids = self.sids
-        eids_by_rlz = rup.get_eids_by_rlz(rlzs_by_gsim)
+        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         data = []
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
@@ -179,7 +176,7 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        seed = self.rupture.rup_id
+        seed = self.ebrupture.rup_id
         result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
@@ -209,14 +206,13 @@ class GmfComputer(object):
         :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
                    epsilons(num_events))
         """
-        rctx = getattr(self.rupture, 'rupture', self.rupture)
         dctx = self.dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
             mean, _stddevs = gsim.get_mean_and_stddevs(
-                self.sctx, rctx, dctx, imt, stddev_types=[])
+                self.sctx, self.rctx, dctx, imt, stddev_types=[])
             gmf = to_imt_unit_values(mean, imt)
             gmf.shape += (1, )
             gmf = gmf.repeat(num_events, axis=1)
@@ -241,7 +237,7 @@ class GmfComputer(object):
                     self.correlation_model, gsim)
 
             mean, [stddev_total] = gsim.get_mean_and_stddevs(
-                self.sctx, rctx, dctx, imt, [StdDev.TOTAL])
+                self.sctx, self.rctx, dctx, imt, [StdDev.TOTAL])
             stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
 
@@ -253,7 +249,7 @@ class GmfComputer(object):
             epsilons.fill(numpy.nan)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
-                self.sctx, rctx, dctx, imt,
+                self.sctx, self.rctx, dctx, imt,
                 [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
