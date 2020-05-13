@@ -36,7 +36,7 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import (
-    ContextMaker, get_mean_std, to_distribution_values)
+    ContextMaker, to_distribution_values)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -230,9 +230,8 @@ def _digitize_lons(lons, lon_bins):
         return numpy.digitize(lons, lon_bins) - 1
 
 
-def get_mean_stdv(site1, ctxs, imt, gsim):
+def get_mean_stdv(ctxs, imt, gsim):
     """
-    :param site1: site collection with a single site
     :param ctxs: a list of RuptureContexts with distances
     :param imt: Intensity Measure Type
     :param gsim: GMPE instance
@@ -240,9 +239,7 @@ def get_mean_stdv(site1, ctxs, imt, gsim):
     U = len(ctxs)
     ms = numpy.zeros((2, U), numpy.float32)
     for u, ctx in enumerate(ctxs):
-        if gsim.minimum_distance and ctx.rrup[0] < gsim.minimum_distance:
-            ctx.rrup = numpy.float32([gsim.minimum_distance])
-        ms[:, u] = get_mean_std(site1, ctx, ctx, [imt], [gsim]).reshape(2)
+        ms[:, u] = ctx.get_mean_std([imt], [gsim]).reshape(2)
     return ms
 
 
