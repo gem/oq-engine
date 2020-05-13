@@ -271,7 +271,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+                                  delta=1.3E-5)
 
         # check event loss table
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
