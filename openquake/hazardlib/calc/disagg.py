@@ -36,7 +36,7 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import (
-    ContextMaker, get_mean_std, to_distribution_values)
+    ContextMaker, to_distribution_values)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -109,20 +109,24 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(mean_std, ctxs, imt, imls, eps3,
-                 pne_mon=performance.Monitor()):
+def disaggregate(ctxs, gsim, imt, imls, eps3,
+                 pne_mon=performance.Monitor(),
+                 gmf_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
     U, P, E = len(ctxs), len(imls), len(eps3[2])
     bdata = BinData(dists=numpy.zeros(U), lons=numpy.zeros(U),
                     lats=numpy.zeros(U),  pnes=numpy.zeros((U, P, E)))
-    with pne_mon:
+    with gmf_mon:
         truncnorm, epsilons, eps_bands = eps3
         cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
         imls = to_distribution_values(imls, imt)  # shape P
+        mean_std = numpy.zeros((2, U), numpy.float32)
         for u, ctx in enumerate(ctxs):
+            mean_std[:, u] = ctx.get_mean_std([imt], [gsim]).reshape(2)
             bdata.lons[u] = ctx.clon[0]  # lon of the closest rupture
             bdata.lats[u] = ctx.clat[0]  # lat of the closest rupture
             bdata.dists[u] = ctx.rrup[0]
+    with pne_mon:
         for p, iml in enumerate(imls):
             lvls = (iml - mean_std[0]) / mean_std[1]
             survival = truncnorm.sf(lvls)
@@ -228,22 +232,6 @@ def _digitize_lons(lons, lon_bins):
         return numpy.array(idx)
     else:
         return numpy.digitize(lons, lon_bins) - 1
-
-
-def get_mean_stdv(site1, ctxs, imt, gsim):
-    """
-    :param site1: site collection with a single site
-    :param ctxs: a list of RuptureContexts with distances
-    :param imt: Intensity Measure Type
-    :param gsim: GMPE instance
-    """
-    U = len(ctxs)
-    ms = numpy.zeros((2, U), numpy.float32)
-    for u, ctx in enumerate(ctxs):
-        if gsim.minimum_distance and ctx.rrup[0] < gsim.minimum_distance:
-            ctx.rrup = numpy.float32([gsim.minimum_distance])
-        ms[:, u] = get_mean_std(site1, ctx, ctx, [imt], [gsim]).reshape(2)
-    return ms
 
 
 def magbin_groups(rups, mag_bins):
@@ -354,8 +342,7 @@ def disaggregation(
     for trt in cmaker:
         gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(magbin_groups(rups[trt], mag_bins)):
-            mean_std = get_mean_stdv(sitecol, ctxs, imt, gsim)
-            bdata[trt, magi] = disaggregate(mean_std, ctxs, imt, imls, eps3)
+            bdata[trt, magi] = disaggregate(ctxs, gsim, imt, imls, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(

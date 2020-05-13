@@ -31,7 +31,7 @@ from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib import const, imt as imt_module
 from openquake.hazardlib.gsim import base
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -99,8 +99,9 @@ class RupData(object):
     """
     A class to collect rupture information into an AccumDict
     """
-    def __init__(self, cmaker, data=None):
+    def __init__(self, cmaker, num_probs_occur, data=None):
         self.cmaker = cmaker
+        self.num_probs_occur = num_probs_occur
         self.data = AccumDict(accum=[]) if data is None else data
 
     def add(self, ctxs, sites, grp_ids):
@@ -151,6 +152,7 @@ class ContextMaker(object):
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
+        self.num_probs_occur = param.get('num_probs_occur', 0)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
@@ -286,7 +288,7 @@ class ContextMaker(object):
 
         :raises ValueError:
             If any of declared required parameters (site, rupture and
-        distance parameters) is unknown.
+            distance parameters) is unknown.
         """
         if filt:
             sites, dctx = self.filter(sites, rupture)
@@ -318,7 +320,8 @@ class ContextMaker(object):
             for par in self.REQUIRES_SITES_PARAMETERS:
                 setattr(ctx, par, r_sites[par])
             ctx.sids = r_sites.sids
-            vars(ctx).update(vars(dctx))
+            for par in self.REQUIRES_DISTANCES | {'rrup'}:
+                setattr(ctx, par, getattr(dctx, par))
             ctx.grp_ids = grp_ids
             if not filt:
                 closest = rup.surface.get_closest_points(sites)
@@ -339,18 +342,21 @@ class ContextMaker(object):
         gmv = numpy.zeros((nmags, ndists))
         for m, d in itertools.product(range(nmags), range(ndists)):
             mag, dist = mags[m], dists[d]
-            rup = RuptureContext()
+            ctx = RuptureContext()
             for par in self.REQUIRES_RUPTURE_PARAMETERS:
-                setattr(rup, par, 0)
-            rup.mag = mag
-            rup.width = .01  # 10 meters to avoid warnings in abrahamson_2014
-            dctx = DistancesContext(
-                (dst, numpy.array([dist])) for dst in self.REQUIRES_DISTANCES)
+                setattr(ctx, par, 0)
+            for dst in self.REQUIRES_DISTANCES:
+                setattr(ctx, dst, numpy.array([dist]))
+            for par in self.REQUIRES_SITES_PARAMETERS:
+                setattr(ctx, par, getattr(sitecol1, par))
+            ctx.sids = sitecol1.sids
+            ctx.mag = mag
+            ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             means = []
             for gsim in self.gsims:
                 try:
-                    mean = base.get_mean_std(  # shape (2, N, M, G) -> M
-                        sitecol1, rup, dctx, self.imts, [gsim])[0, 0, :, 0]
+                    mean = ctx.get_mean_std(  # shape (2, N, M, G) -> M
+                        self.imts, [gsim])[0, 0, :, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())
@@ -429,8 +435,8 @@ class PmapMaker(object):
         for ctx in ctxs:
             # this must be fast since it is inside an inner loop
             with self.gmf_mon:
-                mean_std = base.get_mean_std(  # shape (2, N, M, G)
-                    ctx, ctx, ctx, self.imts, self.gsims)
+                # shape (2, N, M, G)
+                mean_std = ctx.get_mean_std(self.imts, self.gsims)
             with self.poe_mon:
                 ll = self.loglevels
                 poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
@@ -491,6 +497,7 @@ class PmapMaker(object):
     def _make_src_mutex(self):
         for src, sites in self.srcfilter(self.group):
             t0 = time.time()
+            N = len(sites.complete)
             self.totrups += src.num_ruptures
             self.numrups = 0
             self.numsites = 0
@@ -500,8 +507,16 @@ class PmapMaker(object):
                 pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
                 ctxs = self.cmaker.make_ctxs(
                     rups, sites, numpy.array(src.grp_ids), filt=True)
+                if self.fewsites:
+                    ctxs = self.cmaker.make_ctxs(
+                        rups, sites, numpy.array(src.grp_ids), filt=False)
+                    self.rupdata.add(ctxs, sites.complete, src.grp_ids)
+                    self.numsites += N * len(ctxs)
+                else:
+                    ctxs = self.cmaker.make_ctxs(  # rctx, sctx, dctx
+                        rups, sites, numpy.array(src.grp_ids), filt=True)
+                    self.numsites += sum(len(ctx.sids) for ctx in ctxs)
                 self.numrups += len(ctxs)
-                self.numsites += sum(len(ctx.sids) for ctx in ctxs)
             self._update_pmap(ctxs, pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
@@ -514,7 +529,7 @@ class PmapMaker(object):
         return self.pmap
 
     def make(self):
-        self.rupdata = RupData(self.cmaker)
+        self.rupdata = RupData(self.cmaker, self.num_probs_occur)
         imtls = self.cmaker.imtls
         L, G = len(imtls.array), len(self.gsims)
         self.pmap = AccumDict(accum=ProbabilityMap(L, G))  # grp_id -> pmap
@@ -750,6 +765,28 @@ class RuptureContext(BaseContext):
                 setattr(ctx, dist, array)
         return ctx
 
+    def get_mean_std(self, imts, gsims):
+        """
+        :returns: an array of shape (2, N, M, G) with means and stddevs
+        """
+        N = len(self.sids)
+        M = len(imts)
+        G = len(gsims)
+        arr = numpy.zeros((2, N, M, G))
+        num_tables = base.CoeffsTable.num_instances
+        for g, gsim in enumerate(gsims):
+            new = self.roundup(gsim.minimum_distance)
+            for m, imt in enumerate(imts):
+                mean, [std] = gsim.get_mean_and_stddevs(self, self, new, imt,
+                                                        [const.StdDev.TOTAL])
+                arr[0, :, m, g] = mean
+                arr[1, :, m, g] = std
+                if base.CoeffsTable.num_instances > num_tables:
+                    raise RuntimeError('Instantiating CoeffsTable inside '
+                                       '%s.get_mean_and_stddevs' %
+                                       gsim.__class__.__name__)
+        return arr
+
     def get_probability_no_exceedance(self, poes):
         """
         Compute and return the probability that in the time span for which the
@@ -783,9 +820,9 @@ class RuptureContext(BaseContext):
             #
             # `p(k|T)` is given by the attribute probs_occur and
             # `p(X<x|rup)` is computed as ``1 - poes``.
-            p_kT = self.probs_occur
             prob_no_exceed = numpy.array(
-                [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
+                [v * ((1 - poes) ** i)
+                 for i, v in enumerate(self.probs_occur)])
             prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
             if isinstance(prob_no_exceed, numpy.ndarray):
                 prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check

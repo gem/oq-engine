@@ -139,12 +139,16 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
         ctxs = []
         ok, = numpy.where(
             rupdata['rrup_'][:, sid] <= cmaker.maximum_distance(cmaker.trt))
-        for ridx in ok:  # consider only the ruptures close to the site
-            ctx = RuptureContext((par, rupdata[par][ridx])
-                                 for par in rupdata if not par.endswith('_'))
+        for u in ok:  # consider only the ruptures close to the site
+            ctx = RuptureContext()
             for par in rupdata:
-                if par.endswith('_'):
-                    setattr(ctx, par[:-1], rupdata[par][ridx, [sid]])
+                if not par.endswith('_'):
+                    setattr(ctx, par, rupdata[par][u])
+                else:  # site-dependent parameter
+                    setattr(ctx, par[:-1], rupdata[par][u, [sid]])
+            ctx.sids = singlesite.sids
+            for par in cmaker.REQUIRES_SITES_PARAMETERS:
+                setattr(ctx, par, singlesite[par])
             ctxs.append(ctx)
         if not ctxs:
             continue
@@ -152,10 +156,8 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
         # 6D-matrix #distbins, #lonbins, #latbins, #epsbins, P, Z
         matrix = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
         for z, gsim in gsim_by_z.items():
-            with gmf_mon:
-                ms = disagg.get_mean_stdv(singlesite, ctxs, iml3.imt, gsim)
             bdata = disagg.disaggregate(
-                ms, ctxs, iml3.imt, iml2[:, z], eps3, pne_mon)
+                ctxs, gsim, iml3.imt, iml2[:, z], eps3, pne_mon, gmf_mon)
             if bdata.pnes.sum():
                 with mat_mon:
                     matrix[..., z] = disagg.build_disagg_matrix(bdata, bins)

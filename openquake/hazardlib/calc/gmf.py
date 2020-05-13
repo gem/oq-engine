@@ -113,15 +113,16 @@ class GmfComputer(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.amplifier = amplifier
-        # `rupture` can be an EBRupture instance
+        # `rupture` is an EBRupture instance in the engine
         if hasattr(rupture, 'srcidx'):
             self.ebrupture = rupture
             self.srcidx = rupture.srcidx  # the source the rupture comes from
             self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
-        else:
+        else:  # in the hazardlib tests
             self.srcidx = '?'
             self.e0 = 0
+        self.seed = rupture.rup_id
         self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
             sitecol, rupture)
         self.sids = self.sctx.sids
@@ -176,11 +177,10 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        seed = self.ebrupture.rup_id
         result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
-        numpy.random.seed(seed)
+        numpy.random.seed(self.seed)
         for imti, imt in enumerate(self.imts):
             if isinstance(gsim, MultiGMPE):
                 gs = gsim[str(imt)]  # MultiGMPE
@@ -195,7 +195,7 @@ class GmfComputer(object):
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
-                self.sctx.ampcode, result, self.imts, seed)
+                self.sctx.ampcode, result, self.imts, self.seed)
         return result, sig, eps
 
     def _compute(self, gsim, num_events, imt):
