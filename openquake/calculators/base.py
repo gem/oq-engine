@@ -364,17 +364,20 @@ def check_time_event(oqparam, occupancy_periods):
              ', '.join(occupancy_periods)))
 
 
-def check_amplification(dstore):
+def check_amplification(ampl_df, sitecol):
     """
     Make sure the amplification codes in the site collection match the
-    ones in the amplification table
+    ones in the amplification table.
+
+    :param ampl_df: the amplification table as a pandas DataFrame
+    :param sitecol: the site collection
     """
-    codeset = set(dstore['amplification']['ampcode'])
+    codeset = set(ampl_df['ampcode'])
     if len(codeset) == 1:
         # there is a single amplification function, there is no need to
         # extend the sitecol with an ampcode field
         return
-    codes = set(dstore['sitecol'].ampcode)
+    codes = set(sitecol.ampcode)
     missing = codes - codeset
     if missing:
         raise ValueError('The site collection contains references to missing '
@@ -791,12 +794,8 @@ class HazardCalculator(BaseCalculator):
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
             df = readinput.get_amplification(oq)
-            a = numpy.asarray(df.to_records())
-            import pdb; pdb.set_trace()
-            self.datastore['amplification'] = a
-            check_amplification(self.datastore)
-            self.amplifier = Amplifier(
-                oq.imtls, self.datastore['amplification'], oq.soil_intensities)
+            check_amplification(df, self.sitecol)
+            self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
         else:
             self.amplifier = None

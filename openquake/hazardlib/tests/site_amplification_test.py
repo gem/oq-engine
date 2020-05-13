@@ -24,6 +24,8 @@ from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
 
+aac = numpy.testing.assert_allclose
+
 trivial_ampl_func = '''\
 #,,,,,,"vs30_ref=760"
 ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
@@ -102,8 +104,9 @@ class AmplifierTestCase(unittest.TestCase):
         # is lost and this is the reason why the first poe in 0.985
         # instead of 0.989
         fname = gettemp(trivial_ampl_func)
-        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
-        a = Amplifier(self.imtls, aw, self.soil_levels)
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
+        a = Amplifier(self.imtls, df, self.soil_levels)
         a.check(self.vs30, 0)
         numpy.testing.assert_allclose(
             a.midlevels, [0.0015, 0.0035, 0.0075, 0.015, 0.035, 0.075,
@@ -123,8 +126,9 @@ class AmplifierTestCase(unittest.TestCase):
 
     def test_simple(self):
         fname = gettemp(simple_ampl_func)
-        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
-        a = Amplifier(self.imtls, aw, self.soil_levels)
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
+        a = Amplifier(self.imtls, df, self.soil_levels)
         a.check(self.vs30, vs30_tolerance=1)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
@@ -149,8 +153,9 @@ class AmplifierTestCase(unittest.TestCase):
 
     def test_double(self):
         fname = gettemp(double_ampl_func)
-        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
-        a = Amplifier(self.imtls, aw)
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
+        a = Amplifier(self.imtls, df)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
             poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
@@ -173,21 +178,24 @@ class AmplifierTestCase(unittest.TestCase):
     def test_long_code(self):
         fname = gettemp(long_ampl_code)
         with self.assertRaises(InvalidFile) as ctx:
-            read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
+            read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                     index='ampcode')
         self.assertIn("line 3: ampcode='long_code' has length 9 > 4",
                       str(ctx.exception))
 
     def test_dupl(self):
         fname = gettemp(dupl_ampl_func)
-        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
         with self.assertRaises(ValueError):
-            Amplifier(self.imtls, aw)
+            Amplifier(self.imtls, df)
 
     def test_gmf_with_uncertainty(self):
         fname = gettemp(gmf_ampl_func)
-        aw = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64})
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
         imtls = DictArray({'PGA': self.imls})
-        a = Amplifier(imtls, aw, self.soil_levels)
+        a = Amplifier(imtls, df, self.soil_levels)
         res = []
         nsim = 10000
         numpy.random.seed(42)  # must be fixed
@@ -205,8 +213,17 @@ class AmplifierTestCase(unittest.TestCase):
         fname = gettemp(cata_ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
-        import pdb; pdb.set_trace()
         imtls = DictArray({'PGA': [numpy.nan]})
-        a = Amplifier(imtls, aw, self.soil_levels)
-        gmvs1 = a._amplify_gmvs(b'zone_1', numpy.array([.1, .2, .3]), 'PGA')
-        gmvs2 = a._amplify_gmvs(b'zone_2', numpy.array([.1, .2, .3]), 'PGA')
+        a = Amplifier(imtls, df, self.soil_levels)
+
+        numpy.random.seed(42)
+        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA')
+        aac(gmvs1, [0.217124, 0.399295, 0.602515], atol=1E-5)
+        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA')
+        aac(gmvs2, [0.266652, 0.334187, 0.510845], atol=1E-5)
+
+        numpy.random.seed(43)
+        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA')
+        aac(gmvs1, [0.197304, 0.293422, 0.399669], atol=1E-5)
+        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA')
+        aac(gmvs2, [0.117069, 0.517284, 0.475571], atol=1E-5)
