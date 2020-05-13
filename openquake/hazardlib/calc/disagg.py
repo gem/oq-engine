@@ -239,6 +239,8 @@ def get_mean_stdv(ctxs, imt, gsim):
     U = len(ctxs)
     ms = numpy.zeros((2, U), numpy.float32)
     for u, ctx in enumerate(ctxs):
+        if gsim.minimum_distance and ctx.rrup[0] < gsim.minimum_distance:
+            ctx.rrup = numpy.float32([gsim.minimum_distance])
         ms[:, u] = ctx.get_mean_std([imt], [gsim]).reshape(2)
     return ms
 
@@ -351,7 +353,7 @@ def disaggregation(
     for trt in cmaker:
         gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(magbin_groups(rups[trt], mag_bins)):
-            mean_std = get_mean_stdv(sitecol, ctxs, imt, gsim)
+            mean_std = get_mean_stdv(ctxs, imt, gsim)
             bdata[trt, magi] = disaggregate(mean_std, ctxs, imt, imls, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
