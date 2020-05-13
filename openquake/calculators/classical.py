@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
+import ast
 import time
 import logging
 import operator
@@ -203,7 +204,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         continue
                     if k == 'grp_id':
                         # store indices to the grp_ids table
-                        v = U16([self.gidx[tuple(x)] for x in v])
+                        tuples = map(ast.literal_eval, v)
+                        v = U16([self.gidx[tup] for tup in tuples])
                     hdf5.extend(self.datastore['rup/' + k], v)
         return acc
 
@@ -214,7 +216,7 @@ class ClassicalCalculator(base.HazardCalculator):
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'occurrence_rate',
-                   'weight', 'probs_occur', 'lon_', 'lat_', 'rrup_'}
+                   'weight', 'probs_occur', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         n = len(self.full_lt.sm_rlzs)
         trts = list(self.full_lt.gsim_lt.values)
@@ -381,7 +383,8 @@ class ClassicalCalculator(base.HazardCalculator):
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_level=oq.collapse_level,
-            max_sites_disagg=oq.max_sites_disagg)
+            max_sites_disagg=oq.max_sites_disagg,
+            num_probs_occur=self.csm.get_num_probs_occur())
         srcfilter = self.src_filter(self.datastore.tempname)
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]

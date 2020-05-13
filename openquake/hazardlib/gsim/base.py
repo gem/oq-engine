@@ -93,10 +93,7 @@ def get_mean_std(sctx, rctx, dctx, imts, gsims):
     arr = numpy.zeros((2, N, M, G))
     num_tables = CoeffsTable.num_instances
     for g, gsim in enumerate(gsims):
-        if hasattr(dctx, 'roundup'):
-            d = dctx.roundup(gsim.minimum_distance)
-        else:
-            d = dctx
+        d = dctx.roundup(gsim.minimum_distance)
         for m, imt in enumerate(imts):
             mean, [std] = gsim.get_mean_and_stddevs(sctx, rctx, d, imt,
                                                     [const.StdDev.TOTAL])

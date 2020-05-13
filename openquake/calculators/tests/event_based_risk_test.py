@@ -253,7 +253,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(('losses_by_event', 'csv'), self.calc.datastore)
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
@@ -262,7 +263,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-    def test_case_master(self):
+    def test_case_master1(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
         self.run_calc(case_master.__file__, 'job.ini', exports='csv')
@@ -270,7 +271,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+                                  delta=1.3E-5)
 
         # check event loss table
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
@@ -302,7 +303,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         df2 = self.calc.datastore.read_df('curves-stats', 'assets')
         aae(df2.columns, ['stats', 'return_periods', 'loss_types', 'value'])
 
-    def test_case_master_eb(self):
+    def test_case_master2(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
                       concurrent_tasks='4')

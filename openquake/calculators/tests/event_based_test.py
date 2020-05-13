@@ -20,7 +20,6 @@ import io
 import os
 import re
 import math
-import unittest
 
 import numpy.testing
 
