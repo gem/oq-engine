@@ -109,28 +109,28 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(mean_std, rups, imt, imls, eps3,
+def disaggregate(mean_std, ctxs, imt, imls, eps3,
                  pne_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
-    U, P, E = len(rups), len(imls), len(eps3[2])
+    U, P, E = len(ctxs), len(imls), len(eps3[2])
     bdata = BinData(dists=numpy.zeros(U), lons=numpy.zeros(U),
                     lats=numpy.zeros(U),  pnes=numpy.zeros((U, P, E)))
     with pne_mon:
         truncnorm, epsilons, eps_bands = eps3
         cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
         imls = to_distribution_values(imls, imt)  # shape P
-        for u, rup in enumerate(rups):
-            bdata.lons[u] = rup.lon
-            bdata.lats[u] = rup.lat
-            bdata.dists[u] = rup.rrup[0]
+        for u, ctx in enumerate(ctxs):
+            bdata.lons[u] = ctx.clon[0]  # lon of the closest rupture
+            bdata.lats[u] = ctx.clat[0]  # lat of the closest rupture
+            bdata.dists[u] = ctx.rrup[0]
         for p, iml in enumerate(imls):
             lvls = (iml - mean_std[0]) / mean_std[1]
             survival = truncnorm.sf(lvls)
             bins = numpy.searchsorted(epsilons, lvls)
             for e, eps_band in enumerate(eps_bands):
                 poes = _disagg_eps(survival, bins, e, eps_band, cum_bands)
-                for u, rup in enumerate(rups):
-                    bdata.pnes[u, p, e] = rup.get_probability_no_exceedance(
+                for u, ctx in enumerate(ctxs):
+                    bdata.pnes[u, p, e] = ctx.get_probability_no_exceedance(
                         poes[u])
     return bdata
 

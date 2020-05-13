@@ -214,7 +214,7 @@ class ClassicalCalculator(base.HazardCalculator):
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'grp_id', 'occurrence_rate',
-                   'weight', 'probs_occur', 'lon_', 'lat_', 'rrup_'}
+                   'weight', 'probs_occur', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         n = len(self.full_lt.sm_rlzs)
         trts = list(self.full_lt.gsim_lt.values)

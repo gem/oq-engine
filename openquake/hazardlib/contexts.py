@@ -113,7 +113,7 @@ class RupData(object):
         """
         N = len(sites.complete)
         params = (sorted(self.cmaker.REQUIRES_DISTANCES | {'rrup'}) +
-                  ['lon', 'lat'])
+                  ['clon', 'clat'])
         for r, ctx in enumerate(ctxs):
             if numpy.isnan(ctx.occurrence_rate):  # for nonparametric ruptures
                 probs_occur = ctx.probs_occur
@@ -125,7 +125,7 @@ class RupData(object):
             self.data['grp_id'].append(grp_ids)
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
                 self.data[rup_param].append(getattr(ctx, rup_param))
-            for dst_param in params:  # including lon, lat
+            for dst_param in params:  # including clon, clat
                 dst = numpy.ones(N, F32) * 9999
                 dst[sites.sids] = getattr(ctx, dst_param)
                 self.data[dst_param + '_'].append(dst)
@@ -198,10 +198,8 @@ class ContextMaker(object):
         for src in srcs:
             ctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                ctxs.append(self.make_ctx(rup))
-            for ctx in self.make_ctxs(ctxs, site1, grp_ids, False):
-                pass  # add site and distance parameters
-            allctxs.extend(ctxs)
+                ctxs.append(self.make_rctx(rup))
+            allctxs.extend(self.make_ctxs(ctxs, site1, grp_ids, False))
         return allctxs
 
     def filter(self, sites, rup):
@@ -237,7 +235,7 @@ class ContextMaker(object):
             raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
         return DistancesContext([(self.filter_distance, distances)])
 
-    def make_ctx(self, rupture):
+    def make_rctx(self, rupture):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
@@ -304,8 +302,7 @@ class ContextMaker(object):
                 dctx.rjb = reqv
             if 'rrup' in self.REQUIRES_DISTANCES:
                 dctx.rrup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
-        rctx = self.make_ctx(rupture)
-        return rctx, sites, dctx
+        return self.make_rctx(rupture), sites, dctx
 
     def make_ctxs(self, ruptures, sites, grp_ids, filt):
         """
@@ -318,14 +315,15 @@ class ContextMaker(object):
                 ctx, r_sites, dctx = self.make_contexts(sites, rup, filt)
             except FarAwayRupture:
                 continue
-            for k in r_sites.array.dtype.names:
-                setattr(ctx, k, r_sites[k])
+            for par in self.REQUIRES_SITES_PARAMETERS:
+                setattr(ctx, par, r_sites[par])
+            ctx.sids = r_sites.sids
             vars(ctx).update(vars(dctx))
             ctx.grp_ids = grp_ids
             if not filt:
                 closest = rup.surface.get_closest_points(sites)
-                ctx.lon = closest.lons
-                ctx.lat = closest.lats
+                ctx.clon = closest.lons
+                ctx.clat = closest.lats
             ctxs.append(ctx)
         return ctxs
 
@@ -416,8 +414,9 @@ class PmapMaker(object):
             mask = (ctx.rrup <= self.maximum_distance(
                 ctx.tectonic_region_type, ctx.mag))
             r_sites = sites.filter(mask)
-            for k in r_sites.array.dtype.names:
+            for k in self.REQUIRES_SITES_PARAMETERS:
                 setattr(ctx, k, r_sites[k])
+            ctx.sids = r_sites.sids
             for name in self.REQUIRES_DISTANCES:
                 setattr(ctx, name, getattr(ctx, name)[mask])
             self.numsites += len(r_sites)
@@ -730,6 +729,26 @@ class RuptureContext(BaseContext):
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
             setattr(self, param, value)
+
+    def roundup(self, minimum_distance):
+        """
+        If the minimum_distance is nonzero, returns a copy of the
+        RuptureContext with updated distances, i.e. the ones below
+        minimum_distance are rounded up to the minimum_distance. Otherwise,
+        returns the original.
+        """
+        if not minimum_distance:
+            return self
+        ctx = copy.copy(self)
+        for dist, array in vars(self).items():
+            if dist in KNOWN_DISTANCES:
+                small_distances = array < minimum_distance
+                if small_distances.any():
+                    array = numpy.array(array)  # make a copy first
+                    array[small_distances] = minimum_distance
+                    array.flags.writeable = False
+                setattr(ctx, dist, array)
+        return ctx
 
     def get_probability_no_exceedance(self, poes):
         """

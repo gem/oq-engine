@@ -122,11 +122,8 @@ class GmfComputer(object):
         else:
             self.srcidx = '?'
             self.e0 = 0
-        try:
-            self.sctx, self.dctx = rupture.sctx, rupture.dctx
-        except AttributeError:
-            self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
-                sitecol, rupture)
+        self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
+            sitecol, rupture)
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
