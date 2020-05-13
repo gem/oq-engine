@@ -263,7 +263,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-    def test_case_master(self):
+    def test_case_master1(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
         self.run_calc(case_master.__file__, 'job.ini', exports='csv')
@@ -303,7 +303,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         df2 = self.calc.datastore.read_df('curves-stats', 'assets')
         aae(df2.columns, ['stats', 'return_periods', 'loss_types', 'value'])
 
-    def test_case_master_eb(self):
+    def test_case_master2(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
                       concurrent_tasks='4')
