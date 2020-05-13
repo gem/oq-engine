@@ -156,10 +156,8 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
         # 6D-matrix #distbins, #lonbins, #latbins, #epsbins, P, Z
         matrix = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
         for z, gsim in gsim_by_z.items():
-            with gmf_mon:
-                ms = disagg.get_mean_stdv(ctxs, iml3.imt, gsim)
             bdata = disagg.disaggregate(
-                ms, ctxs, iml3.imt, iml2[:, z], eps3, pne_mon)
+                ctxs, gsim, iml3.imt, iml2[:, z], eps3, pne_mon, gmf_mon)
             if bdata.pnes.sum():
                 with mat_mon:
                     matrix[..., z] = disagg.build_disagg_matrix(bdata, bins)
