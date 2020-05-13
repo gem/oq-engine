@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
+import ast
 import time
 import logging
 import operator
@@ -203,7 +204,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         continue
                     if k == 'grp_id':
                         # store indices to the grp_ids table
-                        v = U16([self.gidx[tuple(x)] for x in v])
+                        tuples = map(ast.literal_eval, v)
+                        v = U16([self.gidx[tup] for tup in tuples])
                     hdf5.extend(self.datastore['rup/' + k], v)
         return acc
 
