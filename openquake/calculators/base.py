@@ -372,7 +372,7 @@ def check_amplification(ampl_df, sitecol):
     :param ampl_df: the amplification table as a pandas DataFrame
     :param sitecol: the site collection
     """
-    codeset = set(ampl_df['ampcode'])
+    codeset = set(ampl_df.index)
     if len(codeset) == 1:
         # there is a single amplification function, there is no need to
         # extend the sitecol with an ampcode field

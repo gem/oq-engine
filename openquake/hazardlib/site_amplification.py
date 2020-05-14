@@ -16,11 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from itertools import cycle
 import numpy
-import pandas
 from scipy.stats import norm
-from openquake.baselib.general import group_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.commonlib.oqvalidation import check_same_levels
@@ -54,14 +51,10 @@ def norm_cdf(x, a, s):
 def check_unique(df, kfields, fname):
     for k, rows in df.groupby(kfields):
         if len(rows) > 1:
-            msg = 'Found duplicates %s' % rows[kfields]
+            msg = 'Found duplicates for %s' % str(k)
             if fname:
                 msg = '%s: %s' % (fname, msg)
             raise ValueError(msg)
-
-
-def midlevels(levels):
-    return numpy.diff(levels) / 2 + levels[:-1]
 
 
 class Amplifier(object):
@@ -92,7 +85,7 @@ class Amplifier(object):
         if missing:
             raise ValueError('The amplification table does not contain %s'
                              % missing)
-        if imtls.isnan():  # for event based
+        if amplevels is None:  # for event based
             self.periods = [from_string(imt).period for imt in imtls]
         else:
             self.periods, levels = check_same_levels(imtls)
@@ -111,9 +104,9 @@ class Amplifier(object):
             else:
                 self.coeff[code] = df[cols]
         if amplevels is not None:  # PoEs amplification
-            self.midlevels = numpy.diff(amplevels) / 2 + amplevels[:-1]
-            self.ialphas = {}
-            self.isigmas = {}
+            self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # shape I-1
+            self.ialphas = {}  # code -> array of length I-1
+            self.isigmas = {}  # code -> array of length I-1
             for code in self.coeff:
                 for imt in imtls:
                     self.ialphas[code, imt], self.isigmas[code, imt] = (
@@ -172,9 +165,9 @@ class Amplifier(object):
         coeff = self.coeff[ampl_code]
         if len(coeff) == 1:  # there is single coefficient for all levels
             ones = numpy.ones_like(imls)
-            ialpha = coeff[imt_str].item() * ones
+            ialpha = float(coeff[imt_str]) * ones
             try:
-                isigma = coeff['sigma_' + imt_str].item() * ones
+                isigma = float(coeff['sigma_' + imt_str]) * ones
             except KeyError:
                 isigma = numpy.zeros_like(imls)  # shape E
         else:

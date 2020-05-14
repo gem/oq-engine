@@ -28,13 +28,13 @@ aac = numpy.testing.assert_allclose
 
 trivial_ampl_func = '''\
 #,,,,,,"vs30_ref=760"
-ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
+ampcode,PGA,SA(0.1),SA(0.2),SA(0.5),SA(1.5)
 A,1,1,1,1,1
 '''
 
 simple_ampl_func = '''\
 #,,,,,,,"vs30_ref=760"
-ampcode,level,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5),sigma_PGA,sigma_SA(0.3),sigma_SA(0.6),sigma_SA(1.0),sigma_SA(1.5)
+ampcode,level,PGA,SA(0.1),SA(0.2),SA(0.5),SA(1.5),sigma_PGA,sigma_SA(0.1),sigma_SA(0.2),sigma_SA(0.5),sigma_SA(1.5)
 A,.001,1.01,1,1,1.1,1.1,.1,.1,.1,.1,.1
 A,.01,1.05,1,1,1.1,1.1,.1,.1,.1,.1,.1
 A,.05,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
@@ -132,23 +132,23 @@ class AmplifierTestCase(unittest.TestCase):
         a.check(self.vs30, vs30_tolerance=1)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985002, 0.979997, 0.970004, 0.940069, 0.889961,
-                   0.79, 0.690037], atol=1E-6)
+            poes, [0.985002, 0.979996, 0.969991, 0.940012, 0.889958, 0.79,
+                   0.690037], atol=1E-6)
 
         poes = a.amplify_one(b'A', 'SA(0.2)', self.hcurve[2]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985002, 0.979997, 0.970004, 0.940069, 0.889961,
-                   0.79, 0.690037], atol=1E-6)
+            poes, [0.985002, 0.979996, 0.969991, 0.940012, 0.889958, 0.79,
+                   0.690037], atol=1E-6)
 
         poes = a.amplify_one(b'A', 'SA(0.5)', self.hcurve[3]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985002, 0.979996, 0.969991, 0.940012,
-                   0.889958, 0.79, 0.690037], atol=1E-6)
+            poes, [0.985039, 0.980002, 0.970098, 0.940294, 0.890025, 0.790981,
+                   0.690981], atol=1E-6)
 
         # amplify GMFs with sigmas
         numpy.random.seed(42)
         gmvs = a._amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
-        numpy.testing.assert_allclose(gmvs, [0.005307, 0.010093, 0.016804],
+        numpy.testing.assert_allclose(gmvs, [0.005401, 0.010356, 0.016704],
                                       atol=1E-5)
 
     def test_double(self):
@@ -158,20 +158,16 @@ class AmplifierTestCase(unittest.TestCase):
 
         a = Amplifier(self.imtls, df, self.soil_levels)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
-        import pdb; pdb.set_trace()
         numpy.testing.assert_allclose(
-            poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
-                   0.69, 0.09, 0.09], atol=1E-6)
+            poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
 
         poes = a.amplify_one(b'A', 'SA(0.2)', self.hcurve[2]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
-                   0.69, 0.09, 0.09], atol=1E-6)
+            poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
 
         poes = a.amplify_one(b'A', 'SA(0.5)', self.hcurve[3]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
-                   0.69, 0.09, 0.09], atol=1E-6)
+            poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
 
         # amplify GMFs without sigmas
         gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
@@ -186,11 +182,12 @@ class AmplifierTestCase(unittest.TestCase):
                       str(ctx.exception))
 
     def test_dupl(self):
-        fname = gettemp(dupl_ampl_func, self.soil_levels)
+        fname = gettemp(dupl_ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
-        with self.assertRaises(ValueError):
-            Amplifier(self.imtls, df)
+        with self.assertRaises(ValueError) as ctx:
+            Amplifier(self.imtls, df, self.soil_levels)
+        self.assertEqual(str(ctx.exception), "Found duplicates for b'A'")
 
     def test_gmf_with_uncertainty(self):
         fname = gettemp(gmf_ampl_func)
