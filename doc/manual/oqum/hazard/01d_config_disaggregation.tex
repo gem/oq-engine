@@ -81,13 +81,13 @@ rlz_index_disag = 22,23
     ``Outputs from Hazard Disaggregation'' section,
     see page~\pageref{subsec:output_hazard_disaggregation})
 
-    \item \Verb+disagg\_by\_src+: optional; if specified and set to true, disaggregation
+    \item \Verb+disagg_by_src+: optional; if specified and set to true, disaggregation
     by source is computed. This option currently only works if the logic tree is trivial
     (i.e. there is only one realization).
 
-    \item \Verb+num\_rlz\_disagg+: optional; specifies the number of realizations to be used, selecting those that yield intensity measure levels closest to the mean.  
+    \item \Verb+num_rlz_disagg+: optional; specifies the number of realizations to be used, selecting those that yield intensity measure levels closest to the mean.  
 
-    \item \Verb+rlz\_index\_disagg+: optional; specifies as a list of comma-separated integers the index or inices of the realization/s to disaggregate.
+    \item \Verb+rlz_index_disagg+: optional; specifies as a list of comma-separated integers the index or inices of the realization/s to disaggregate.
 
 \end{itemize}
 
@@ -99,7 +99,7 @@ specifying the probability of exceedance. An example is shown below:
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=7,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 [disaggregation]
-iml\_disagg = {'PGA': 0.1}
+iml_disagg = {'PGA': 0.1}
 \end{minted}
 
 If \texttt{iml\_disagg} is specified, the user should not include
