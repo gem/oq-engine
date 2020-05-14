@@ -110,8 +110,9 @@ As mentioned above, the user also has the option to perform disaggregation by
 directly specifying the intensity measure level to be disaggregated, rather than
 specifying the probability of exceedance. An example is shown below:
 
-\begin{minted}[firstline=1,linenos=true,firstnumber=7,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
-[disaggregation] iml_disagg = {'PGA': 0.1} \end{minted}
+\begin{minted}[firstline=1,linenos=true,firstnumber=7,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}[disaggregation] 
+iml_disagg = {'PGA': 0.1} 
+\end{minted}
 
 If \texttt{iml\_disagg} is specified, the user should not include
 \texttt{intensity\_measure\_types\_and\_levels} in the ``Calculation
