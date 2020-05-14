@@ -23,7 +23,7 @@ import unittest
 from io import BytesIO
 
 from openquake.baselib import general, datastore
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, site_amplification
 from openquake.risklib import asset
 from openquake.risklib.riskmodels import ValidationError
 from openquake.commonlib import readinput, logictree
@@ -538,12 +538,10 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.inputs['amplification'] = os.path.join(
             oq.base_path, 'invalid_amplification.csv')
-        with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_amplification(oq)
-        self.assertIn(
-            "levels for b'F' [1.0e-03 1.0e-02 5.0e-02 1.0e-01 2.0e-01 1.6e+00]"
-            " instead of [1.0e-03 1.0e-02 5.0e-02 1.0e-01 2.0e-01 5.0e-01"
-            " 1.6e+00]", str(ctx.exception))
+        df = readinput.get_amplification(oq)
+        with self.assertRaises(ValueError) as ctx:
+            site_amplification.Amplifier(oq.imtls, df)
+        self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
 
     def test_site_model_sites(self):
         # you can set them at the same time
