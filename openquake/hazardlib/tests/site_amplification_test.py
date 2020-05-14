@@ -47,7 +47,7 @@ A,1.21,1,1,1,1.1,1.1,.1,.1,.1,.1,.1
 
 double_ampl_func = '''\
 #,,,,,,,"vs30_ref=760"
-ampcode,PGA,SA(0.3),SA(0.6),SA(1.0),SA(1.5)
+ampcode,PGA,SA(0.1),SA(0.2),SA(0.5),SA(1.0)
 A,2,2,2,2,2
 '''
 
@@ -155,8 +155,10 @@ class AmplifierTestCase(unittest.TestCase):
         fname = gettemp(double_ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
-        a = Amplifier(self.imtls, df)
+
+        a = Amplifier(self.imtls, df, self.soil_levels)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
+        import pdb; pdb.set_trace()
         numpy.testing.assert_allclose(
             poes, [0.989, 0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79,
                    0.69, 0.09, 0.09], atol=1E-6)
@@ -184,7 +186,7 @@ class AmplifierTestCase(unittest.TestCase):
                       str(ctx.exception))
 
     def test_dupl(self):
-        fname = gettemp(dupl_ampl_func)
+        fname = gettemp(dupl_ampl_func, self.soil_levels)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         with self.assertRaises(ValueError):
@@ -195,7 +197,7 @@ class AmplifierTestCase(unittest.TestCase):
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         imtls = DictArray({'PGA': self.imls})
-        a = Amplifier(imtls, df, self.soil_levels)
+        a = Amplifier(imtls, df)
         res = []
         nsim = 10000
         numpy.random.seed(42)  # must be fixed
@@ -214,15 +216,15 @@ class AmplifierTestCase(unittest.TestCase):
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         imtls = DictArray({'PGA': [numpy.nan]})
-        a = Amplifier(imtls, df, self.soil_levels)
+        a = Amplifier(imtls, df)
 
-        numpy.random.seed(42)
+        numpy.random.seed(42)  # must be fixed
         gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA')
         aac(gmvs1, [0.217124, 0.399295, 0.602515], atol=1E-5)
         gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA')
         aac(gmvs2, [0.266652, 0.334187, 0.510845], atol=1E-5)
 
-        numpy.random.seed(43)
+        numpy.random.seed(43)  # changing the seed the results change a lot
         gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA')
         aac(gmvs1, [0.197304, 0.293422, 0.399669], atol=1E-5)
         gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA')

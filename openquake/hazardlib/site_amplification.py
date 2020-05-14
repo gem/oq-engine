@@ -81,6 +81,7 @@ class Amplifier(object):
             raise ValueError('There are no intensity_measure_types!')
         fname = getattr(ampl_df, 'fname', None)
         self.imtls = imtls
+        self.amplevels = amplevels
         self.vs30_ref = ampl_df.vs30_ref
         has_levels = 'level' in ampl_df.columns
         if has_levels:
@@ -109,6 +110,14 @@ class Amplifier(object):
                 self.coeff[code] = df[cols].set_index('level')
             else:
                 self.coeff[code] = df[cols]
+        if amplevels is not None:  # PoEs amplification
+            self.midlevels = numpy.diff(amplevels) / 2 + amplevels[:-1]
+            self.ialphas = {}
+            self.isigmas = {}
+            for code in self.coeff:
+                for imt in imtls:
+                    self.ialphas[code, imt], self.isigmas[code, imt] = (
+                        self._interp(code, imt, self.midlevels))
 
     def check(self, vs30, vs30_tolerance):
         """
@@ -132,15 +141,13 @@ class Amplifier(object):
         if ampl_code == b'' and len(self.ampcodes) == 1:
             # manage the case of a site collection with empty ampcode
             ampl_code = self.ampcodes[0]
-        stored_imt = self.imtdict[imt]
-        alphas = self.alpha[ampl_code, stored_imt]
-        sigmas = self.sigma[ampl_code, stored_imt]
+        ialphas = self.ialphas[ampl_code, imt]
+        isigmas = self.isigmas[ampl_code, imt]
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
         for g in range(G):
             p_occ = -numpy.diff(poes[:, g])
-            for mid, p, a, s in zip(
-                    self.midlevels, p_occ, cycle(alphas), cycle(sigmas)):
+            for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 ampl_poes[:, g] += (1-norm_cdf(self.amplevels/mid, a, s)) * p
         return ampl_poes
 
@@ -160,24 +167,30 @@ class Amplifier(object):
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
 
-    def _amplify_gmvs(self, ampl_code, gmvs, imt_str):
-        # gmvs is an array of shape E
+    def _interp(self, ampl_code, imt_str, imls):
+        # returns ialpha, isigma for the given levels
         coeff = self.coeff[ampl_code]
         if len(coeff) == 1:  # there is single coefficient for all levels
-            ialpha = coeff[imt_str].item()
+            ones = numpy.ones_like(imls)
+            ialpha = coeff[imt_str].item() * ones
             try:
-                isigma = coeff['sigma_' + imt_str].item()
+                isigma = coeff['sigma_' + imt_str].item() * ones
             except KeyError:
-                isigma = 0
+                isigma = numpy.zeros_like(imls)  # shape E
         else:
             alpha = coeff[imt_str]
             try:
                 sigma = coeff['sigma_' + imt_str]
             except KeyError:
-                isigma = numpy.zeros_like(gmvs)  # shape E
+                isigma = numpy.zeros_like(imls)  # shape E
             else:
-                isigma = numpy.interp(gmvs, alpha.index, sigma)  # shape E
-            ialpha = numpy.interp(gmvs, alpha.index, alpha)  # shape E
+                isigma = numpy.interp(imls, alpha.index, sigma)  # shape E
+            ialpha = numpy.interp(imls, alpha.index, alpha)  # shape E
+        return ialpha, isigma
+
+    def _amplify_gmvs(self, ampl_code, gmvs, imt_str):
+        # gmvs is an array of shape E
+        ialpha, isigma = self._interp(ampl_code, imt_str, gmvs)
         uncert = numpy.random.normal(numpy.zeros_like(gmvs), isigma)
         return numpy.exp(numpy.log(ialpha * gmvs) + uncert)
 
