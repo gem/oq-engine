@@ -346,6 +346,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         trt_num = {trt: i for i, trt in enumerate(self.trts)}
         allargs = []
         M = len(oq.imtls)
+        U = len(dstore['rup/mag'])
+        # enlarge the block size to have an M-independent number of tasks
+        blocksize = U / (oq.concurrent_tasks or 1) * M
+        logging.info('Sending up to %d ruptures per task', blocksize)
         for grp_id, magi in indices:
             trt = self.full_lt.trt_by_grp[grp_id]
             trti = trt_num[trt]
@@ -356,9 +360,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
                  'imtls': oq.imtls})
-            # enlarge the block size to have an MZ-independent number of tasks
-            for idxs in block_splitter(indices[grp_id, magi],
-                                       oq.ruptures_per_block * M * Z):
+            for idxs in block_splitter(indices[grp_id, magi], blocksize):
                 for imt in oq.imtls:
                     allargs.append((dstore, idxs, cmaker, self.iml3[imt],
                                     trti, magi, self.bin_edges[1:], oq))
