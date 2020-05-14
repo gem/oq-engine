@@ -20,7 +20,6 @@ import io
 import os
 import re
 import math
-import unittest
 
 import numpy.testing
 
@@ -340,8 +339,8 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure
-        self.run_calc(case_16.__file__, 'job.ini',
-                      ground_motion_fields='false')
+        # and GMF amplification too
+        self.run_calc(case_16.__file__, 'job.ini')
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_16.__file__, 'job.ini', hazard_calculation_id=hid)
         tmp = gettemp(view('global_gmfs', self.calc.datastore))

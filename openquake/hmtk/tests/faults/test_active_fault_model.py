@@ -218,7 +218,7 @@ class TestmtkActiveFaultModelCollapse(unittest.TestCase):
     def test_collapse_fault_model(self):
         input_file = os.path.join(
             BASE_DATA_PATH,
-            "collapse_test_simple_fault_example_4branch.yml")
+            "collapse_test_simple_fault_example_4branch.toml")
         mesh_spacing = 1.0
         reader = FaultYmltoSource(input_file)
         fault_model, tectonic_region = reader.read_file(mesh_spacing)

@@ -1,0 +1,39 @@
+# Suggested versions for development
+# !! must update pip first! so wheels will be used !!
+
+# GEM Mirror
+# We also provide pre-compiled macosx_10_9_x86_64 wheels for
+# h5py, Shapely, psutil
+
+https://wheelhouse.openquake.org/v3/macos/py/pytz-2019.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/setuptools-46.1.3-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py38/h5py-2.10.0-cp38-cp38-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py38/numpy-1.18.2-cp38-cp38-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py38/scipy-1.3.3-cp38-cp38-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py38/pandas-0.25.3-cp38-cp38-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py38/pyzmq-19.0.0-cp38-cp38-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py38/psutil-5.6.7-cp38-cp38-macosx_10_9_intel.whl
+https://wheelhouse.openquake.org/v3/macos/py38/Shapely-1.7.0-cp38-cp38-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py/docutils-0.14-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/decorator-4.4.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/pbr-5.2.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/six-1.12.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/Django-2.2.7-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/sqlparse-0.3.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/certifi-2019.3.9-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/chardet-3.0.4-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/idna-2.8-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/urllib3-1.25.3-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/requests-2.22.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/pyshp-1.2.3-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/toml-0.10.0-py2.py3-none-any.whl
+
+### Plotting ###
+# comment the following lines to skip installation
+# of the plotting libraries (optional feature)
+https://wheelhouse.openquake.org/v3/macos/py/python_dateutil-2.8.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/pyparsing-2.4.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py38/kiwisolver-1.2.0-cp38-cp38-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py38/matplotlib-3.1.2-cp38-cp38-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py38/pyproj-2.6.0-cp38-cp38-macosx_10_9_x86_64.whl

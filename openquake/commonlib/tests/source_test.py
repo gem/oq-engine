@@ -511,6 +511,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
         [np] = nrml.read(NONPARAMETRIC_SOURCE).sourceModel
+        converter.fname = NONPARAMETRIC_SOURCE
         converter.convert_node(np)
 
     def test_alternative_mfds(self):

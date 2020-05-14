@@ -16,10 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from itertools import cycle
 import numpy
 from scipy.stats import norm
-from openquake.baselib.general import group_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.commonlib.oqvalidation import check_same_levels
@@ -50,32 +48,10 @@ def norm_cdf(x, a, s):
         return norm.cdf(x, loc=a, scale=s)
 
 
-def digitize(name, values, edges):
-    """
-    :param name: 'period' or 'level'
-    :param values: periods or levels
-    :param edges: available periods or levels
-    :returns: the indices of the values in the bins
-
-    If there are V values and E edges this functions returns an array
-    with V elements in the range 0 .. E - 2; for instance:
-
-    >>> digitize('period', [0, .1, .2], [0, .05, .1, .15, .20, .25])
-    array([0, 2, 4])
-    """
-    if max(values) > max(edges):
-        raise ValueError(
-            f'The {name} {max(values)} is outside the edges {edges}')
-    if min(values) < min(edges):
-        raise ValueError(
-            f'The {name} {min(values)} is outside the edges {edges}')
-    return numpy.digitize(values, edges) - 1
-
-
-def check_unique(array, kfields, fname):
-    for k, rows in group_array(array, *kfields).items():
+def check_unique(df, kfields, fname):
+    for k, rows in df.groupby(kfields):
         if len(rows) > 1:
-            msg = 'Found duplicates %s' % rows[kfields]
+            msg = 'Found duplicates for %s' % str(k)
             if fname:
                 msg = '%s: %s' % (fname, msg)
             raise ValueError(msg)
@@ -83,58 +59,58 @@ def check_unique(array, kfields, fname):
 
 class Amplifier(object):
     """
-    :param imtls: intensity measure types and levels DictArray M x I
-    :param ampl_funcs: an ArrayWrapper containing amplification functions
-    :param vs30: an array of vs30 values, one per site
-    :param amplevels: A levels used for the amplified curves
-    :attr periods: array of M periods
-    :attr midlevels: array of I-1 levels
-    :attr alpha: dict code, imt-> I-1 amplification coefficients
-    :attr sigma: dict code, imt-> I-1 amplification sigmas
+    Amplification class with methods .amplify and .amplify_gmfs.
+
+    :param imtls:
+        intensity measure types and levels DictArray M x I
+    :param ampl_df:
+        a DataFrame containing amplification functions
+    :param amplevels:
+        intensity levels used for the amplified curves (if None, use the
+        levels from the imtls dictionary)
     """
-    def __init__(self, imtls, ampl_funcs, amplevels=None):
-        fname = getattr(ampl_funcs, 'fname', None)
+    def __init__(self, imtls, ampl_df, amplevels=None):
+        if not imtls:
+            raise ValueError('There are no intensity_measure_types!')
+        fname = getattr(ampl_df, 'fname', None)
         self.imtls = imtls
-        self.periods, levels = check_same_levels(imtls)
-        self.amplevels = levels if amplevels is None else amplevels
-        self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # mid levels
-        self.vs30_ref = ampl_funcs.vs30_ref
-        has_levels = 'level' in ampl_funcs.dtype.names
+        self.amplevels = amplevels
+        self.vs30_ref = ampl_df.vs30_ref
+        has_levels = 'level' in ampl_df.columns
         if has_levels:
-            self.imls = imls = numpy.array(sorted(set(ampl_funcs['level'])))
-            check_unique(ampl_funcs.array, ['ampcode', 'level'], fname)
+            check_unique(ampl_df, ['ampcode', 'level'], fname)
         else:
-            self.imls = imls = ()
-            check_unique(ampl_funcs.array, ['ampcode'], fname)
-        cols = (ampl_funcs.dtype.names[2:] if has_levels
-                else ampl_funcs.dtype.names[1:])
-        imts = [from_string(imt) for imt in cols
-                if not imt.startswith('sigma_')]
-        m_indices = digitize(
-            'period', self.periods, [imt.period for imt in imts])
-        if len(imls) <= 1:  # 1 level means same values for all levels
-            l_indices = [0]
+            check_unique(ampl_df, ['ampcode'], fname)
+        missing = set(imtls) - set(ampl_df.columns[has_levels:])
+        if missing:
+            raise ValueError('The amplification table does not contain %s'
+                             % missing)
+        if amplevels is None:  # for event based
+            self.periods = [from_string(imt).period for imt in imtls]
         else:
-            l_indices = digitize('level', self.midlevels, imls)
-        L = len(l_indices)
-        self.imtdict = {imt: str(imts[m]) for m, imt in zip(m_indices, imtls)}
-        self.alpha = {}  # code, imt -> alphas
-        self.sigma = {}  # code, imt -> sigmas
+            self.periods, levels = check_same_levels(imtls)
+        self.coeff = {}  # code -> dataframe
         self.ampcodes = []
-        for code, arr in group_array(ampl_funcs, 'ampcode').items():
+        cols = list(imtls)
+        if has_levels:
+            cols.append('level')
+        for col in ampl_df.columns:
+            if col.startswith('sigma_'):
+                cols.append(col)
+        for code, df in ampl_df.groupby('ampcode'):
             self.ampcodes.append(code)
-            for m in set(m_indices):
-                im = str(imts[m])
-                self.alpha[code, im] = alpha = numpy.zeros(L)
-                self.sigma[code, im] = sigma = numpy.zeros(L)
-                idx = 0
-                for rec in arr[l_indices]:
-                    alpha[idx] = rec[im]
-                    try:
-                        sigma[idx] = rec['sigma_' + im]
-                    except ValueError:  # missing sigma
-                        pass
-                    idx += 1
+            if has_levels:
+                self.coeff[code] = df[cols].set_index('level')
+            else:
+                self.coeff[code] = df[cols]
+        if amplevels is not None:  # PoEs amplification
+            self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # shape I-1
+            self.ialphas = {}  # code -> array of length I-1
+            self.isigmas = {}  # code -> array of length I-1
+            for code in self.coeff:
+                for imt in imtls:
+                    self.ialphas[code, imt], self.isigmas[code, imt] = (
+                        self._interp(code, imt, self.midlevels))
 
     def check(self, vs30, vs30_tolerance):
         """
@@ -158,15 +134,13 @@ class Amplifier(object):
         if ampl_code == b'' and len(self.ampcodes) == 1:
             # manage the case of a site collection with empty ampcode
             ampl_code = self.ampcodes[0]
-        stored_imt = self.imtdict[imt]
-        alphas = self.alpha[ampl_code, stored_imt]  # array with I-1 elements
-        sigmas = self.sigma[ampl_code, stored_imt]  # array with I-1 elements
+        ialphas = self.ialphas[ampl_code, imt]
+        isigmas = self.isigmas[ampl_code, imt]
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
         for g in range(G):
             p_occ = -numpy.diff(poes[:, g])
-            for mid, p, a, s in zip(
-                    self.midlevels, p_occ, cycle(alphas), cycle(sigmas)):
+            for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 ampl_poes[:, g] += (1-norm_cdf(self.amplevels/mid, a, s)) * p
         return ampl_poes
 
@@ -186,20 +160,43 @@ class Amplifier(object):
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
 
-    def amplify_gmvs(self, ampl_code, gmvs, imt):
-        """
-        :param ampl_code: 2-letter code for the amplification function
-        :param gmvs: ground motion values on the given site
-        :param imt: intensity measure type string
-        """
-        alphas = self.alpha[ampl_code, self.imtdict[imt]]
-        if len(self.imls):
-            return numpy.interp(gmvs, self.midlevels, alphas) * gmvs
-        return alphas[0] * gmvs  # there is a single alpha
+    def _interp(self, ampl_code, imt_str, imls):
+        # returns ialpha, isigma for the given levels
+        coeff = self.coeff[ampl_code]
+        if len(coeff) == 1:  # there is single coefficient for all levels
+            ones = numpy.ones_like(imls)
+            ialpha = float(coeff[imt_str]) * ones
+            try:
+                isigma = float(coeff['sigma_' + imt_str]) * ones
+            except KeyError:
+                isigma = numpy.zeros_like(imls)  # shape E
+        else:
+            alpha = coeff[imt_str]
+            try:
+                sigma = coeff['sigma_' + imt_str]
+            except KeyError:
+                isigma = numpy.zeros_like(imls)  # shape E
+            else:
+                isigma = numpy.interp(imls, alpha.index, sigma)  # shape E
+            ialpha = numpy.interp(imls, alpha.index, alpha)  # shape E
+        return ialpha, isigma
 
-    def amplify_gmfs(self, ampcodes, gmvs, imt):
+    def _amplify_gmvs(self, ampl_code, gmvs, imt_str):
+        # gmvs is an array of shape E
+        ialpha, isigma = self._interp(ampl_code, imt_str, gmvs)
+        uncert = numpy.random.normal(numpy.zeros_like(gmvs), isigma)
+        return numpy.exp(numpy.log(ialpha * gmvs) + uncert)
+
+    def amplify_gmfs(self, ampcodes, gmvs, imts, seed=0):
         """
-        Amplify in-place the gmvs array of shape (N, E)
+        Amplify in-place the gmvs array of shape (M, N, E)
+
+        :param ampcodes: N codes for the amplification functions
+        :param gmvs: ground motion values
+        :param imts: intensity measure types
+        :param seed: seed used when adding the uncertainty
         """
-        for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs)):
-            gmvs[i] = self.amplify_gmvs(ampcode, arr, imt)
+        numpy.random.seed(seed)
+        for m, imt in enumerate(imts):
+            for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs[m])):
+                gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt))

@@ -364,17 +364,20 @@ def check_time_event(oqparam, occupancy_periods):
              ', '.join(occupancy_periods)))
 
 
-def check_amplification(dstore):
+def check_amplification(ampl_df, sitecol):
     """
     Make sure the amplification codes in the site collection match the
-    ones in the amplification table
+    ones in the amplification table.
+
+    :param ampl_df: the amplification table as a pandas DataFrame
+    :param sitecol: the site collection
     """
-    codeset = set(dstore['amplification']['ampcode'])
+    codeset = set(ampl_df.index)
     if len(codeset) == 1:
         # there is a single amplification function, there is no need to
         # extend the sitecol with an ampcode field
         return
-    codes = set(dstore['sitecol'].ampcode)
+    codes = set(sitecol.ampcode)
     missing = codes - codeset
     if missing:
         raise ValueError('The site collection contains references to missing '
@@ -433,7 +436,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Rupture floating factor = %s', f)
         if s != 1:
             logging.info('Rupture spinning factor = %s', s)
-        if (f * s > 1.2 and self.oqparam.pointsource_distance is None
+        if (f * s >= 1.5 and self.oqparam.pointsource_distance is None
                 and 'classical' in self.oqparam.calculation_mode):
             logging.warning(
                 'You are not using the pointsource_distance approximation:\n'
@@ -790,17 +793,16 @@ class HazardCalculator(BaseCalculator):
         # store amplification functions if any
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
-            self.datastore['amplification'] = readinput.get_amplification(oq)
-            check_amplification(self.datastore)
-            self.amplifier = Amplifier(
-                oq.imtls, self.datastore['amplification'], oq.soil_intensities)
+            df = readinput.get_amplification(oq)
+            check_amplification(df, self.sitecol)
+            self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
         else:
             self.amplifier = None
 
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
-                          collapse_ctxs=oq.collapse_ctxs,
+                          collapse_level=oq.collapse_level,
                           avg_losses=oq.avg_losses, amplifier=self.amplifier)
 
         # compute exposure stats

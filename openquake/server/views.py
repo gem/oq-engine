@@ -30,7 +30,6 @@ import zlib
 import pickle
 import urllib.parse as urlparse
 import re
-import numpy
 import psutil
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
@@ -41,7 +40,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore
+from openquake.baselib import datastore, hdf5
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim, valid
@@ -732,20 +731,8 @@ def extract(request, calc_id, what):
             os.close(fd)
             n = len(request.path_info)
             query_string = unquote_plus(request.get_full_path()[n:])
-            aw = _extract(ds, what + query_string)
-            a = {}
-            for key, val in vars(aw).items():
-                if key.startswith('_'):
-                    continue
-                elif isinstance(val, str):
-                    # without this oq extract would fail
-                    a[key] = numpy.array(val.encode('utf-8'))
-                elif isinstance(val, dict):
-                    # this is hack: we are losing the values
-                    a[key] = list(val)
-                else:
-                    a[key] = utils.array_of_strings_to_bytes(val, key)
-            numpy.savez_compressed(fname, **a)
+            obj = _extract(ds, what + query_string)
+            hdf5.save_npz(obj, fname)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(

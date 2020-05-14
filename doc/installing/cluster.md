@@ -25,20 +25,16 @@ On **worker** nodes  `python3-oq-engine-worker` must be installed **instead**.
 
 ### Enable zmq distribution
 
-In all the nodes, the following file should be modified to enable *zmq* support:
+The following file (on all nodes) should be modified to enable
+*zmq* support:
 
-`/etc/openquake/openquake.cfg:`
+`/etc/openquake/openquake.cfg`
 
 ```
 [distribution]
 # enable celery only if you have a cluster
 oq_distribute = zmq
-```
 
-## OpenQuake Engine 'worker' node configuration File
-On all worker nodes, the `/etc/openquake/openquake.cfg` file should be also modified to set the *DbServer* daemon IP address as well as the workers addresses and number of cores available:
-
-```ini
 [dbserver]
 multi_user = true
 file = /var/lib/openquake/db.sqlite3

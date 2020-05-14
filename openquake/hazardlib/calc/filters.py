@@ -303,20 +303,6 @@ class SourceFilter(object):
         for tup, srcs in acc.items():
             yield srcs, self.sitecol.filtered(tup[2:])
 
-    # used in the disaggregation calculator
-    def get_bounding_boxes(self, trt=None, mag=None):
-        """
-        :param trt: a tectonic region type (used for the integration distance)
-        :param mag: a magnitude (used for the integration distance)
-        :returns: a list of bounding boxes, one per site
-        """
-        bbs = []
-        for site in self.sitecol:
-            bb = self.integration_distance.get_bounding_box(
-                site.location.longitude, site.location.latitude, trt, mag)
-            bbs.append(bb)
-        return bbs
-
     # used in the rupture prefiltering: it should not discard too much
     def close_sids(self, rec, trt):
         """

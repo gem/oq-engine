@@ -923,7 +923,7 @@ class MagDist(dict):
         >>> md.interp(dict(default=['5.0', '5.1', '5.2']))
         {'default': {'5.0': 50.0, '5.1': 50.0, '5.2': 50.0}}
         """
-        items_by_trt = floatdict(value.replace('*', '-1'))
+        items_by_trt = floatdict(value.replace('?', '-1'))
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):
@@ -943,7 +943,11 @@ class MagDist(dict):
         dic = {}
         for trt, mags in mags_by_trt.items():
             xs, ys = zip(*self[trt])
-            dists = numpy.interp(numpy.float64(mags), xs, ys)
+            if len(mags) == 1:
+                ms = [numpy.float64(mags)]
+            else:
+                ms = numpy.float64(mags)
+            dists = numpy.interp(ms, xs, ys)
             dic[trt] = dict(zip(mags, dists))
         return dic
 
@@ -953,7 +957,7 @@ class MagDist(dict):
         """
         return {trt: self[trt][-1][1] for trt in self}
 
-    def has_star(self):
+    def suggested(self):
         """
         :returns: True if there is a * for any TRT
         """
@@ -1275,19 +1279,17 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     @classmethod
     def check(cls, dic):
         """
-        Convert a dictionary name->string into a dictionary name->value
-        by converting the string. If the name does not correspond to a
-        known parameter, just ignore it and print a warning.
+        Check if a dictionary name->string can be converted into a dictionary
+        name->value. If the name does not correspond to a known parameter,
+        print a warning.
         """
-        res = {}
         for name, text in dic.items():
             try:
                 p = getattr(cls, name)
             except AttributeError:
                 logging.warning('Ignored unknown parameter %s', name)
             else:
-                res[name] = p.validator(text)
-        return res
+                p.validator(text)
 
     @classmethod
     def from_(cls, dic):
