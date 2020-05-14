@@ -54,55 +54,66 @@ rlz_index_disag = 22,23
     For the \texttt{poes\_disagg} the intensity measure level(s) for the disaggregation are
     inferred by performing a classical calculation and by inverting the hazard curves.
 
-    \item \Verb+iml_disagg+: the intensity measure level(s) to be disaggregated can be directly defined
-    by specifying \texttt{iml\_disagg}. Note that a
-    disaggregation computation requires either \texttt{poes\_disagg} or
-    \texttt{iml\_disagg} to be defined, but both cannot be defined at the same time.
+    \item \Verb+iml_disagg+: the intensity measure level(s) to be disaggregated
+	    can be directly defined by specifying \texttt{iml\_disagg}. Note
+		that a disaggregation computation requires either
+		\texttt{poes\_disagg} or \texttt{iml\_disagg} to be defined, but
+		both cannot be defined at the same time.
 
-    \item \Verb+mag_bin_width+: mandatory; specifies the width of every magnitude
-     histogram bin of the disaggregation matrix computed
+    \item \Verb+mag_bin_width+: mandatory; specifies the width of every
+	    magnitude histogram bin of the disaggregation matrix computed
 
     \item \Verb+distance_bin_width+: specifies the width of every distance
-    histogram bin of the disaggregation matrix computed (km)
+	    histogram bin of the disaggregation matrix computed (km)
 
-    \item \Verb+coordinate_bin_width+: specifies the width of every longitude-latitude
-    histogram bin of the disaggregation matrix computed (decimal degrees)
+    \item \Verb+coordinate_bin_width+: specifies the width of every
+	    longitude-latitude histogram bin of the disaggregation matrix
+		computed (decimal degrees)
 
     \item \Verb+num_epsilon_bins+: mandatory; specifies the number of epsilon
-    histogram bins of the disaggregation matrix. The width of the epsilon bins
-    depends on the \texttt{truncation\_level} defined in the
-    ``Calculation configuration'' section (page~\pageref{sec:calculation_configuration})
+	    histogram bins of the disaggregation matrix. The width of the
+		epsilon bins depends on the \texttt{truncation\_level} defined
+		in the ``Calculation configuration'' section
+		(page~\pageref{sec:calculation_configuration})
 
-    \item \Verb+disagg_outputs+: optional; specifies the type(s) of disaggregation
-    to be computed. The options are: \texttt{Mag}, \texttt{Dist}, \texttt{Lon\_Lat},
-    \texttt{Lon\_Lat\_TRT}, \texttt{Mag\_Dist}, \texttt{Mag\_Dist\_Eps},
-    \texttt{Mag\_Lon\_Lat}, \texttt{TRT}. If none are specified, then all are
-    computed. More details of the disaggregation output are given in the
-    ``Outputs from Hazard Disaggregation'' section,
-    see page~\pageref{subsec:output_hazard_disaggregation})
+    \item \Verb+disagg_outputs+: optional; specifies the type(s) of
+	    disaggregation to be computed. The options are: \texttt{Mag},
+		\texttt{Dist}, \texttt{Lon\_Lat}, \texttt{Lon\_Lat\_TRT},
+		\texttt{Mag\_Dist}, \texttt{Mag\_Dist\_Eps},
+		\texttt{Mag\_Lon\_Lat}, \texttt{TRT}. If none are specified,
+		then all are computed. More details of the disaggregation output
+		are given in the ``Outputs from Hazard Disaggregation'' section,
+		see page~\pageref{subsec:output_hazard_disaggregation})
 
-    \item \Verb+disagg_by_src+: optional; if specified and set to true, disaggregation
-    by source is computed. This option currently only works if the logic tree is trivial
-    (i.e. there is only one realization).
+    \item \Verb+disagg_by_src+: optional; if specified and set to true,
+	    disaggregation by source is computed. This option currently only
+		works if the logic tree is trivial (i.e. there is only one
+		realization).
 
-    \item \Verb+num_rlz_disagg+: optional; specifies the number of realizations to be used, selecting those that yield intensity measure levels closest to the mean.  
+    \item \Verb+num_rlz_disagg+: optional; specifies the number of realizations
+	    to be used, selecting those that yield intensity measure levels
+		closest to the mean.  
 
-    \item \Verb+rlz_index_disagg+: optional; specifies as a list of comma-separated integers the index or inices of the realization/s to disaggregate.
+    \item \Verb+rlz_index_disagg+: optional; specifies the index or indices of
+	    the realization/s to disaggregate as a list of comma-separated
+		integers.
 
 \end{itemize}
 
-If \texttt{num\_rlz\_disagg} is specified, the user should not specify \texttt{rlz\_index\_disagg}, and vice versa. If neither is specified, the realization that yields the intensity measure level closest to the mean will be selected. The output mean disaggregation uses only the selected realizations, *not* all the realizations of the model.  
+If \texttt{num\_rlz\_disagg} is specified, the user should not specify
+\texttt{rlz\_index\_disagg}, and vice versa. If neither is specified, the
+realization that yields the intensity measure level closest to the mean will be
+selected. The mean disaggregation is based on only the selected realizations,
+$not$ all the realizations of the model.  
 
 As mentioned above, the user also has the option to perform disaggregation by
 directly specifying the intensity measure level to be disaggregated, rather than
 specifying the probability of exceedance. An example is shown below:
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=7,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
-[disaggregation]
-iml_disagg = {'PGA': 0.1}
-\end{minted}
+[disaggregation] iml_disagg = {'PGA': 0.1} \end{minted}
 
 If \texttt{iml\_disagg} is specified, the user should not include
- \texttt{intensity\_measure\_types\_and\_levels} in the
-``Calculation configuration'' section (see page~\pageref{sec:calculation_configuration})
-since it is explicitly given here.
+\texttt{intensity\_measure\_types\_and\_levels} in the ``Calculation
+configuration'' section (see page~\pageref{sec:calculation_configuration}) since
+it is explicitly given here.
