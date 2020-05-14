@@ -421,10 +421,18 @@ hazard_uhs-std.csv
 
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
-        hc_id = str(self.calc.datastore.calc_id)
+        # make sure probs_occur are stored as expected
+        probs_occur = self.calc.datastore['rup/probs_occur'][:]
+        tot_probs_occur = sum(len(po) for po in probs_occur)
+        self.assertEqual(tot_probs_occur, 28)  # 14 nonparam rups x 2
+        npo = self.calc.csm.get_num_probs_occur()  # 2 probs_occur per rupture
+        self.assertEqual(npo, 2)
+        num_point_ruptures = sum(1 for po in probs_occur if len(po) == 0)
+        self.assertEqual(num_point_ruptures, 26)
 
         # make sure there is an error when trying to disaggregate
         with self.assertRaises(NotImplementedError):
+            hc_id = str(self.calc.datastore.calc_id)
             self.run_calc(case_27.__file__, 'job.ini',
                           hazard_calculation_id=hc_id,
                           calculation_mode='disaggregation',
