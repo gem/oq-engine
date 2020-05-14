@@ -349,8 +349,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         M = len(oq.imtls)
         U = len(dstore['rup/mag'])
         # enlarge the block size to have an M-independent number of tasks
-        blocksize = U / (oq.concurrent_tasks or 1) * M
-        logging.info('Sending up to %d ruptures per task', blocksize)
+        blocksize = int(numpy.ceil(U / (oq.concurrent_tasks or 1) * M))
+        logging.info('Sending up to {:_d} ruptures per task'.format(blocksize))
         for grp_id, magi in indices:
             trt = self.full_lt.trt_by_grp[grp_id]
             trti = trt_num[trt]
