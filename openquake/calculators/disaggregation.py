@@ -119,26 +119,19 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
-        rupdata = {k: dstore['rup/' + k][idxs] for k in dstore['rup']}
+        # NB: dstore['rup/' + k][idxs] would be ultraslow!
+        rupdata = {k: dstore['rup/' + k][:][idxs] for k in dstore['rup']}
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
-    mat_mon = monitor('build_disagg_matrix', measuremem=True)
-    gmf_mon = monitor('disagg mean_std', measuremem=False)
-    b = bin_edges  # dist_bins, lon_bins, lat_bins, eps_bins
+    mat_mon = monitor('build_disagg_matrix', measuremem=False)
+    ms_mon = monitor('disagg mean_std', measuremem=False)
+    eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
+    maxdist = cmaker.maximum_distance(cmaker.trt)
     for sid, iml2 in zip(sitecol.sids, iml3):
+        ok, = numpy.where(rupdata['rrup_'][:, sid] <= maxdist)
         singlesite = sitecol.filtered([sid])
-        bins = b[0], b[1][sid], b[2][sid], b[3]
-        gsim_by_z = {}
-        # since the ContextMaker must be used on ruptures with the
-        # same TRT, given a realization there is a single gsim
-        for gsim, rlzs in cmaker.gsims.items():
-            for z in range(iml3.shape[-1]):
-                if iml3.rlzs[sid, z] in rlzs:
-                    gsim_by_z[z] = gsim
         ctxs = []
-        ok, = numpy.where(
-            rupdata['rrup_'][:, sid] <= cmaker.maximum_distance(cmaker.trt))
         for u in ok:  # consider only the ruptures close to the site
             ctx = RuptureContext()
             for par in rupdata:
@@ -146,23 +139,31 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
                     setattr(ctx, par, rupdata[par][u])
                 else:  # site-dependent parameter
                     setattr(ctx, par[:-1], rupdata[par][u, [sid]])
-            ctx.sids = singlesite.sids
             for par in cmaker.REQUIRES_SITES_PARAMETERS:
                 setattr(ctx, par, singlesite[par])
+            ctx.sids = singlesite.sids
             ctxs.append(ctx)
         if not ctxs:
             continue
-        eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
-        # 6D-matrix #distbins, #lonbins, #latbins, #epsbins, P, Z
-        matrix = numpy.zeros([len(b) - 1 for b in bins] + list(iml2.shape))
-        for z, gsim in gsim_by_z.items():
-            bdata = disagg.disaggregate(
-                ctxs, gsim, iml3.imt, iml2[:, z], eps3, pne_mon, gmf_mon)
-            if bdata.pnes.sum():
-                with mat_mon:
-                    matrix[..., z] = disagg.build_disagg_matrix(bdata, bins)
-        if matrix.any():
-            yield {'trti': trti, 'magi': magi, 'imti': iml3.imti, sid: matrix}
+        # dist_bins, lon_bins, lat_bins, eps_bins
+        bins = bin_edges[0], bin_edges[1][sid], bin_edges[2][sid], bin_edges[3]
+
+        # z indices by gsim
+        zs_by_gsim = AccumDict(accum=[])
+        for gsim, rlzs in cmaker.gsims.items():
+            for z in range(iml3.shape[-1]):
+                if iml3.rlzs[sid, z] in rlzs:
+                    zs_by_gsim[gsim].append(z)
+
+        bdata = disagg.disaggregate(
+            ctxs, zs_by_gsim, iml3.imt, iml2, eps3, ms_mon, pne_mon)
+        if bdata.pnes.sum():
+            # build 6D-matrix #distbins, #lonbins, #latbins, #epsbins, P, Z
+            with mat_mon:
+                matrix = disagg.build_disagg_matrix(bdata, bins)
+                if matrix.any():
+                    yield {'trti': trti, 'magi': magi, 'imti': iml3.imti,
+                           sid: matrix}
 
 
 def agg_probs(*probs):
@@ -346,6 +347,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         trt_num = {trt: i for i, trt in enumerate(self.trts)}
         allargs = []
         M = len(oq.imtls)
+        U = len(dstore['rup/mag'])
+        # enlarge the block size to have an M-independent number of tasks
+        blocksize = int(numpy.ceil(U / (oq.concurrent_tasks or 1) * M))
+        logging.info('Found {:_d} ruptures, sending up to {:_d} per task'.
+                     format(U, blocksize))
         for grp_id, magi in indices:
             trt = self.full_lt.trt_by_grp[grp_id]
             trti = trt_num[trt]
@@ -356,9 +362,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
                  'imtls': oq.imtls})
-            # enlarge the block size by M to have an M-indep number of tasks
-            for idxs in block_splitter(indices[grp_id, magi],
-                                       oq.ruptures_per_block * M):
+            for idxs in block_splitter(indices[grp_id, magi], blocksize):
                 for imt in oq.imtls:
                     allargs.append((dstore, idxs, cmaker, self.iml3[imt],
                                     trti, magi, self.bin_edges[1:], oq))

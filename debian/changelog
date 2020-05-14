@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the disaggregation in the case of multiple realizations
   * Fixed bug in GMF amplification without intensity_measure_types_and_levels
   * Optimized the computation of the disaggregation PMFs by orders of magnitude
     by using numpy.prod
