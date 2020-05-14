@@ -40,8 +40,8 @@ distance_bin_width = 25.0
 coordinate_bin_width = 1.5
 num_epsilon_bins = 3
 disagg_outputs = Mag_Dist_Eps Mag_Lon_Lat
-num_rlz_disagg = 3
-rlz_index_disag = 22,23
+num_rlzs_disagg = 3
+rlz_index = 22,23
 \end{minted}
 
 \begin{itemize}
@@ -90,18 +90,18 @@ rlz_index_disag = 22,23
 		works if the logic tree is trivial (i.e. there is only one
 		realization).
 
-    \item \Verb+num_rlz_disagg+: optional; specifies the number of realizations
+    \item \Verb+num_rlzs_disagg+: optional; specifies the number of realizations
 	    to be used, selecting those that yield intensity measure levels
 		closest to the mean.  
 
-    \item \Verb+rlz_index_disagg+: optional; specifies the index or indices of
+    \item \Verb+rlz_index+: optional; specifies the index or indices of
 	    the realization/s to disaggregate as a list of comma-separated
 		integers.
 
 \end{itemize}
 
-If \texttt{num\_rlz\_disagg} is specified, the user should not specify
-\texttt{rlz\_index\_disagg}, and vice versa. If neither is specified, the
+If \texttt{num\_rlzs\_disagg} is specified, the user should not specify
+\texttt{rlz\_index}, and vice versa. If neither is specified, the
 realization that yields the intensity measure level closest to the mean will be
 selected. The mean disaggregation is based on only the selected realizations,
 $not$ all the realizations of the model.  
