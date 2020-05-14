@@ -723,22 +723,13 @@ def get_imts(oqparam):
 
 def get_amplification(oqparam):
     """
-    :returns: a composite array (amplification, param, imt0, imt1, ...)
+    :returns: a DataFrame (ampcode, level, PGA, SA() ...)
     """
     fname = oqparam.inputs['amplification']
-    aw = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64})
-    aw.fname = fname
-    imls = ()
-    if 'level' in aw.dtype.names:
-        for records in group_array(aw, 'ampcode').values():
-            if len(imls) == 0:
-                imls = numpy.sort(records['level'])
-            elif len(records['level']) != len(imls) or (
-                    records['level'] != imls).any():
-                raise InvalidFile('%s: levels for %s %s instead of %s' %
-                                  (fname, records['ampcode'][0],
-                                   records['level'], imls))
-    return aw
+    df = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64},
+                       index='ampcode')
+    df.fname = fname
+    return df
 
 
 def _cons_coeffs(records, limit_states):

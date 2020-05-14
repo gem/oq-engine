@@ -20,7 +20,6 @@ import os
 import ast
 import csv
 import inspect
-import logging
 import tempfile
 import importlib
 import itertools
@@ -28,6 +27,7 @@ from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
 import toml
+import pandas
 import numpy
 import h5py
 from openquake.baselib import InvalidFile
@@ -689,13 +689,15 @@ def _read_csv(fileobj, compositedt):
 # NB: it would be nice to use numpy.loadtxt(
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
-def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
+def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
+             index=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
     :param renamedict: aliases for the fields to rename
     :param sep: separator (default comma)
-    :return: a structured array of floats
+    :param index: if not None, returns a pandas DataFrame
+    :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
     with open(fname, encoding='utf-8-sig') as f:
@@ -718,6 +720,10 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
             new = renamedict.get(name, name)
             newnames.append(new)
         arr.dtype.names = newnames
+    if index:
+        df = pandas.DataFrame.from_records(arr, index)
+        vars(df).update(attrs)
+        return df
     return ArrayWrapper(arr, attrs)
 
 
