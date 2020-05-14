@@ -124,7 +124,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
-    mat_mon = monitor('build_disagg_matrix', measuremem=True)
+    mat_mon = monitor('build_disagg_matrix', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=False)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     maxdist = cmaker.maximum_distance(cmaker.trt)
