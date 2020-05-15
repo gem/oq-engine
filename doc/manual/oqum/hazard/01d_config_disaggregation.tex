@@ -41,7 +41,6 @@ coordinate_bin_width = 1.5
 num_epsilon_bins = 3
 disagg_outputs = Mag_Dist_Eps Mag_Lon_Lat
 num_rlzs_disagg = 3
-rlz_index = 22,23
 \end{minted}
 
 \begin{itemize}
@@ -94,13 +93,18 @@ rlz_index = 22,23
 	    to be used, selecting those that yield intensity measure levels
 		closest to the mean.  
 
-    \item \Verb+rlz_index+: optional; specifies the index or indices of
-	    the realization/s to disaggregate as a list of comma-separated
-		integers.
-
 \end{itemize}
 
-If \texttt{num\_rlzs\_disagg} is specified, the user should not specify
+Alternatively to \texttt{num\_rlzs\_disagg}, the user can specify the index or
+indices of the realizations to disaggregate as a list of comma-separated
+integers. For example:
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=7,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[disaggregation]
+rlz_index = 22,23
+\end{minted}
+
+If \texttt{num\_rlzs\_disagg} is specified, the user cannot specify
 \texttt{rlz\_index}, and vice versa. If neither is specified, the
 realization that yields the intensity measure level closest to the mean will be
 selected. The mean disaggregation is based on only the selected realizations,
