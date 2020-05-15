@@ -125,23 +125,19 @@ class PostRiskCalculator(base.RiskCalculator):
         self.datastore.create_dset(prefix + 'losses-rlzs', F32, shp)
         shp = self.get_shape(P, self.R, self.L, aggregate_by=aggregate_by)
         # shape P, R, L, T...
-        shape_descr = ['return_periods', 'rlzs', 'loss_types'] + aggregate_by
         self.datastore.create_dset(prefix + 'curves-rlzs', F32, shp)
         self.datastore.set_attrs(
             prefix + 'curves-rlzs', return_periods=builder.return_periods,
-            shape_descr=shape_descr, loss_types=loss_types, units=units,
-            rlzs=numpy.arange(self.R), **aggby)
+            rlzs=numpy.arange(self.R), loss_types=loss_types, **aggby)
         if self.R > 1:
-            shape_descr = (['return_periods', 'stats', 'loss_types'] +
-                           aggregate_by)
             shp = self.get_shape(P, S, self.L, aggregate_by=aggregate_by)
             # shape P, S, L, T...
             self.datastore.create_dset(prefix + 'curves-stats', F32, shp)
-            self.datastore.set_attrs(
-                prefix + 'curves-stats', return_periods=builder.return_periods,
+            self.datastore.set_shape_attrs(
+                prefix + 'curves-stats',
+                return_periods=builder.return_periods,
                 stats=[encode(name) for (name, func) in stats],
-                shape_descr=shape_descr, loss_types=loss_types, units=units,
-                **aggby)
+                loss_types=loss_types, units=units, **aggby)
 
     def execute(self):
         oq = self.oqparam
