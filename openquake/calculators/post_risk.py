@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib import general, parallel, datastore
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.hazardlib.stats import set_stats
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -192,12 +192,12 @@ class PostRiskCalculator(base.RiskCalculator):
                     ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
         if self.R > 1:
             logging.info('Computing aggregate statistics')
-            set_rlzs_stats(self.datastore, 'app_curves')
-            set_rlzs_stats(self.datastore, 'tot_curves')
-            set_rlzs_stats(self.datastore, 'tot_losses')
+            set_stats(self.datastore, 'app_curves')
+            set_stats(self.datastore, 'tot_curves')
+            set_stats(self.datastore, 'tot_losses')
             if oq.aggregate_by:
-                set_rlzs_stats(self.datastore, 'agg_curves')
-                set_rlzs_stats(self.datastore, 'agg_losses')
+                set_stats(self.datastore, 'agg_curves')
+                set_stats(self.datastore, 'agg_losses')
         return oq.aggregate_by
 
     def post_execute(self, aggregate_by):

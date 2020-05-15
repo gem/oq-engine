@@ -195,18 +195,12 @@ def apply_stat(f, arraylist, *extra, **kw):
         return f(arraylist, *extra, **kw)
 
 
-def set_rlzs_stats(dstore, prefix, arrayNR=None):
+def set_stats(dstore, prefix):
     """
     :param dstore: a DataStore object
-    :param prefix: dataset prefix
-    :param arrayNR: an array of shape (N, R, ...)
+    :param prefix: dataset prefix, assume <prefix>-rlzs is already stored
     """
-    if arrayNR is None:
-        # assume the -rlzs array is already stored
-        arrayNR = dstore[prefix + '-rlzs'][()]
-    else:
-        # store passed the -rlzs array
-        dstore[prefix + '-rlzs'] = arrayNR
+    arrayNR = dstore[prefix + '-rlzs'][()]
     R = arrayNR.shape[1]
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
@@ -215,8 +209,8 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
         statnames, statfuncs = zip(*stats.items())
         weights = dstore['weights'][()]
         name = prefix + '-stats'
-        if name in set(dstore):
+        if name in set(dstore):  # already present, like in event based risk
             dstore[name][...] = compute_stats2(arrayNR, statfuncs, weights)
-        else:
+        else:  # create it
             dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
-            dstore.set_attrs(name, stats=statnames)
+        dstore.set_attrs(name, stats=statnames)

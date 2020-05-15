@@ -76,4 +76,4 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
             bcr_data[aid]['annual_loss_orig'] = data[:, 0]
             bcr_data[aid]['annual_loss_retro'] = data[:, 1]
             bcr_data[aid]['bcr'] = data[:, 2]
-        stats.set_rlzs_stats(self.datastore, 'bcr', bcr_data)
+        stats.set_stats(self.datastore, 'bcr', bcr_data)

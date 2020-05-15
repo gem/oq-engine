@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip, encode
-from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.hazardlib.stats import set_stats
 from openquake.risklib import riskinput, riskmodels
 from openquake.calculators import base, post_risk
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -277,5 +277,5 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore['losses_by_event'] = agglosses
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
-            set_rlzs_stats(self.datastore, 'avg_losses')
+            set_stats(self.datastore, 'avg_losses')
         post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
