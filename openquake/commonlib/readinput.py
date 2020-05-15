@@ -71,6 +71,7 @@ source_info_dt = numpy.dtype([
     ('serial', numpy.uint32),          # 8
     ('trti', numpy.uint8),             # 9
 ])
+MULTIPLICITY = 3
 
 
 class DuplicatedPoint(Exception):
@@ -683,7 +684,7 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
         for src in sg:
             ns += 1
             if src.source_id in data:
-                multiplicity = data[src.source_id][3] + 1
+                multiplicity = data[src.source_id][MULTIPLICITY] + 1
             else:
                 multiplicity = 1
             row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
@@ -701,6 +702,10 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
             mags[sg.trt].update(srcmags)
 
     logging.info('There are %d sources with %d unique IDs', ns, len(data))
+    false_duplicates = [src_id for src_id in data
+                        if data[src_id][MULTIPLICITY] > 1]
+    logging.info('Found different sources with same ID: %s',
+                 numpy.array(false_duplicates))
     if h5:
         attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
         # avoid hdf5 damned bug by creating source_info in advance
