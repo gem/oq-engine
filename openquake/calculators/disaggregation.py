@@ -347,7 +347,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                      format(U, blocksize))
 
         grp_ids = dstore['grp_ids'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim2(grp_ids)
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         for gidx, magi in indices:
             trti = grp_ids[gidx][0] // num_eff_rlzs

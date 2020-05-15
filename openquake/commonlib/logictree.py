@@ -1307,7 +1307,7 @@ class FullLogicTree(object):
                 dic[grp] = list(self.get_rlzs_by_gsim(grp_id).values())
         return dic  # grp_id -> lists of rlzi
 
-    def get_rlzs_by_gsim2(self, list_of_grp_ids):
+    def get_rlzs_by_gsim_list(self, list_of_grp_ids):
         """
         :returns: a list gidx -> rlzs_by_gsim
         """
