@@ -439,13 +439,11 @@ def set_shape_attrs(hdf5file, dsetname, kw):
     dset = hdf5file[dsetname]
     S = len(dset.shape)
     if len(kw) < S:
-        raise ValueError('The dataset has %d dimensions but you passed %d axis'
-                         % (S, len(kw)))
-    dset.attrs['shape_descr'] = list(kw)[:S]
+        raise ValueError('The dataset %s has %d dimensions but you passed %d'
+                         ' axis' % (dsetname, S, len(kw)))
+    dset.attrs['shape_descr'] = encode(list(kw))[:S]
     for k, v in kw.items():
         dset.attrs[k] = v
-    if dsetname == 'agg_curves-rlzs':
-        import pdb; pdb.set_trace()
 
 
 class ArrayWrapper(object):

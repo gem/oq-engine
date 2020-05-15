@@ -275,5 +275,7 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore['losses_by_event'] = agglosses
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
-            set_rlzs_stats(self.datastore, 'avg_losses')
+            set_rlzs_stats(self.datastore, 'avg_losses',
+                           assets=self.assetcol['id'],
+                           loss_types=oq.loss_names)
         post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
