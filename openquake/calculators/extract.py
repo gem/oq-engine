@@ -1002,25 +1002,6 @@ def extract_mfd(dstore, what):
 #     return ArrayWrapper(occurrences, dic)
 
 
-@extract.add('src_loss_table')
-def extract_src_loss_table(dstore, loss_type):
-    """
-    Extract the source loss table for a give loss type, ordered in decreasing
-    order. Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/src_loss_table/structural
-    """
-    source_ids = dstore['source_info']['source_id']
-    idxs = dstore['ruptures'][('srcidx', 'grp_id')]
-    losses = dstore['rup_loss_table'][loss_type]
-    slt = numpy.zeros(len(source_ids), [('grp_id', U32), (loss_type, F32)])
-    for loss, (srcidx, grp_id) in zip(losses, idxs):
-        slt[srcidx][loss_type] += loss
-        slt[srcidx]['grp_id'] = grp_id
-    slt = util.compose_arrays(source_ids, slt, 'source_id')
-    slt.sort(order=loss_type)
-    return slt[::-1]
-
-
 @extract.add('mean_std_curves')
 def extract_mean_std_curves(dstore, what):
     """

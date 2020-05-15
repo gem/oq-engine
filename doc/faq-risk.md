@@ -143,14 +143,15 @@ statistically identical.
 
 ### Can I disaggregate my losses by source?
 
-Starting from engine 3.3 you can get a summary of the total losses across your portfolio of
-assets arising from each seismic source, over the effective investigation time. 
+Starting from engine 3.10 you can get a summary of the total losses across your
+portfolio of assets arising from each seismic source, over the effective
+investigation time. 
 For instance run the event based risk demo as follows:
 ```bash
-$ oq engine --run job_hazard.ini job_risk.ini
-$ oq extract src_loss_table/structural -1 local
-```
-and look inside the generated HDF5 file. You should see a table like the one below:
+$ oq engine --run job.ini
+
+and export the output "Source Loss Table".
+You should see a table like the one below:
 ```
 source_id       grp_id  loss
 "230"	0	7.13619e+10

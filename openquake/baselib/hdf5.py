@@ -432,6 +432,20 @@ def fix_array(arr, key):
     return arr
 
 
+def set_shape_attrs(hdf5file, dsetname, kw):
+    """
+    Set shape attributes on a dataset (and possibly other attributes)
+    """
+    dset = hdf5file[dsetname]
+    S = len(dset.shape)
+    if len(kw) < S:
+        raise ValueError('The dataset %s has %d dimensions but you passed %d'
+                         ' axis' % (dsetname, S, len(kw)))
+    dset.attrs['shape_descr'] = encode(list(kw))[:S]
+    for k, v in kw.items():
+        dset.attrs[k] = v
+
+
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group

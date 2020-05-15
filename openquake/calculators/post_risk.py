@@ -72,7 +72,7 @@ def post_ebrisk(dstore, aggkey, monitor):
     return out
 
 
-def get_losses_by_source(dstore, R, L):
+def get_loss_sources(dstore, R, L):
     """
     :returns:
         array of shape (Ns, R, L) where Ns is the number of sources,
@@ -105,37 +105,16 @@ class PostRiskCalculator(base.RiskCalculator):
         Create the datasets agg_curves-XXX, tot_curves-XXX,
         agg_losses-XXX, tot_losses-XXX.
         """
-        oq = self.oqparam
-        stats = oq.hazard_stats().items()
-        S = len(stats)
         P = len(builder.return_periods)
-        loss_types = oq.loss_names
         aggby = {'aggregate_by': aggregate_by}
         for tagname in aggregate_by:
             aggby[tagname] = encode(getattr(self.tagcol, tagname)[1:])
-        units = self.datastore['cost_calculator'].get_units(loss_types)
         shp = self.get_shape(self.L, self.R, aggregate_by=aggregate_by)
         # shape L, R, T...
         self.datastore.create_dset(prefix + 'losses-rlzs', F32, shp)
         shp = self.get_shape(P, self.R, self.L, aggregate_by=aggregate_by)
         # shape P, R, L, T...
-        shape_descr = ['return_periods', 'rlzs', 'loss_types'] + aggregate_by
         self.datastore.create_dset(prefix + 'curves-rlzs', F32, shp)
-        self.datastore.set_attrs(
-            prefix + 'curves-rlzs', return_periods=builder.return_periods,
-            shape_descr=shape_descr, loss_types=loss_types, units=units,
-            rlzs=numpy.arange(self.R), **aggby)
-        if self.R > 1:
-            shape_descr = (['return_periods', 'stats', 'loss_types'] +
-                           aggregate_by)
-            shp = self.get_shape(P, S, self.L, aggregate_by=aggregate_by)
-            # shape P, S, L, T...
-            self.datastore.create_dset(prefix + 'curves-stats', F32, shp)
-            self.datastore.set_attrs(
-                prefix + 'curves-stats', return_periods=builder.return_periods,
-                stats=[encode(name) for (name, func) in stats],
-                shape_descr=shape_descr, loss_types=loss_types, units=units,
-                **aggby)
 
     def execute(self):
         oq = self.oqparam
@@ -147,9 +126,12 @@ class PostRiskCalculator(base.RiskCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
                 return
-        logging.info('Building losses_by_source')
-        lbs = get_losses_by_source(self.datastore, self.R, self.L)
-        set_rlzs_stats(self.datastore, 'losses_by_source', lbs)
+        logging.info('Building loss_sources-rlzs and loss_sources-stats')
+        self.datastore['loss_sources-rlzs'] = get_loss_sources(
+            self.datastore, self.R, self.L)
+        set_rlzs_stats(self.datastore, 'loss_sources',
+                       source_id=self.datastore['source_info']['source_id'],
+                       loss_type=oq.loss_names)
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
@@ -185,14 +167,24 @@ class PostRiskCalculator(base.RiskCalculator):
                         (slice(None), r) + dic['idx']  # LRT...
                     ] = dic['agg_losses']
                     ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
-        if self.R > 1:
-            logging.info('Computing aggregate statistics')
-            set_rlzs_stats(self.datastore, 'app_curves')
-            set_rlzs_stats(self.datastore, 'tot_curves')
-            set_rlzs_stats(self.datastore, 'tot_losses')
-            if oq.aggregate_by:
-                set_rlzs_stats(self.datastore, 'agg_curves')
-                set_rlzs_stats(self.datastore, 'agg_losses')
+
+        units = self.datastore['cost_calculator'].get_units(oq.loss_names)
+        aggby = {tagname: encode(getattr(self.tagcol, tagname)[1:])
+                 for tagname in oq.aggregate_by}
+        set_rlzs_stats(self.datastore, 'app_curves',
+                       return_periods=builder.return_periods,
+                       loss_types=oq.loss_names, **aggby, units=units)
+        set_rlzs_stats(self.datastore, 'tot_curves',
+                       return_periods=builder.return_periods,
+                       loss_types=oq.loss_names, **aggby, units=units)
+        set_rlzs_stats(self.datastore, 'tot_losses',
+                       loss_types=oq.loss_names, **aggby, units=units)
+        if oq.aggregate_by:
+            set_rlzs_stats(self.datastore, 'agg_curves',
+                           return_periods=builder.return_periods,
+                           loss_types=oq.loss_names, **aggby, units=units)
+            set_rlzs_stats(self.datastore, 'agg_losses',
+                           loss_types=oq.loss_names, **aggby, units=units)
         return oq.aggregate_by
 
     def post_execute(self, aggregate_by):
