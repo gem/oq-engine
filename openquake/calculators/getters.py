@@ -380,7 +380,7 @@ class GmfGetter(object):
         for computer in self.gen_computers(mon):
             data, dt = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
-            self.times.append((computer.rupture.id, len(computer.sids), dt))
+            self.times.append((computer.ebrupture.id, len(computer.sids), dt))
             alldata.append(data)
         if not alldata:
             return []

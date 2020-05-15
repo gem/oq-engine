@@ -180,8 +180,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.gsim_class.REQUIRES_SITES_PARAMETERS = frozenset(
             'vs30 vs30measured z1pt0 z2pt5 lons lats'.split())
         sites = SiteCollection([self.site1, self.site2])
-        sctx, dctx = self.make_contexts(sites, self.rupture)
-        rctx = self.rupture
+        rctx, sctx, dctx = self.make_contexts(sites, self.rupture)
         self.assertEqual(rctx.mag, 123.45)
         self.assertEqual(rctx.rake, 123.56)
         self.assertEqual(rctx.strike, 60.123)
@@ -218,8 +217,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.gsim_class.REQUIRES_SITES_PARAMETERS = \
             set('vs30 z1pt0 lons'.split())
         sites = SiteCollection([self.site1, self.site2])
-        sctx, dctx = self.make_contexts(sites, self.rupture)
-        rctx = self.rupture
+        rctx, sctx, dctx = self.make_contexts(sites, self.rupture)
         self.assertEqual(
             (rctx.mag, rctx.rake, rctx.strike, rctx.hypo_lon),
             (123.45, 123.56, 60.123, 2))

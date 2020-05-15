@@ -29,6 +29,8 @@ from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_master)
 
+aae = numpy.testing.assert_almost_equal
+
 
 class DisaggregationTestCase(CalculatorTestCase):
 
@@ -102,11 +104,12 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
 
-        # test extract disagg_layer
+        # test extract disagg_layer for Mag
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
                      'imt=SA(0.1)&poe_id=0')
-        self.assertEqual(aw.dtype.names, ('site_id', 'lon', 'lat', 'poes'))
-        self.assertEqual(aw['poes'].shape, (2, 15))  # 2 rows
+        self.assertEqual(aw.dtype.names,
+                         ('site_id', 'lon', 'lat', 'rlz_id',
+                          'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None'))
 
     def test_case_3(self):
         # a case with poes_disagg too large
@@ -139,6 +142,20 @@ class DisaggregationTestCase(CalculatorTestCase):
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        # test extract disagg_layer for Lon_Lat
+        aw = extract(self.calc.datastore, 'disagg_layer?kind=Lon_Lat&'
+                     'imt=PGA&poe_id=0')
+        self.assertEqual(
+            aw.dtype.names,
+            ('site_id', 'lon', 'lat', 'rlz_id', 'lon_bins', 'lat_bins',
+             'Lon_Lat-PGA-0.002105'))
+
+        aae(aw.mag, [6.5, 6.75, 7., 7.25])
+        aae(aw.dist, [0., 25., 50., 75., 100., 125., 150., 175., 200.,
+                      225., 250., 275., 300.])
+        aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
+        self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also

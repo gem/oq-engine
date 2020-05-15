@@ -105,20 +105,6 @@ class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.05)
 
 
-class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ChiouYoungs2014NearFaultEffect
-
-    # First five tests use data ported from Kenneth Campbell
-    # tables for verifying NGA models, available from OpenSHA, see
-    # http://opensha.usc.edu/docs/opensha/NGA/Campbell_NGA_tests.zip
-    # This data is distributed under different license, see LICENSE.txt
-    # in tests/gsim/data/NGA
-
-    def test_mean_near_fault(self):
-        self.check('NGA/CY14/CY14_MEDIAN_RCDPP.csv',
-                   max_discrep_percentage=0.05)
-
-
 class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
 
     def make_rupture(self):

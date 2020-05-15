@@ -20,9 +20,9 @@ import os
 import unittest
 import unittest.mock as mock
 import numpy
-from openquake.baselib import parallel
-from openquake.hazardlib import InvalidFile
-from openquake.calculators.views import view
+from openquake.baselib import parallel, general
+from openquake.hazardlib import lt
+from openquake.calculators.views import view, rst_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
@@ -32,7 +32,7 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42, case_43, case_44, case_45, case_46, case_47)
+    case_42, case_43, case_44, case_45, case_46, case_47, case_48)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -82,7 +82,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(str(ctx.exception), 'All sources were discarded!?')
 
     def test_wrong_smlt(self):
-        with self.assertRaises(InvalidFile):
+        with self.assertRaises(lt.LogicTreeError):
             self.run_calc(case_1.__file__, 'job_wrong.ini')
 
     def test_sa_period_too_big(self):
@@ -269,6 +269,8 @@ hazard_uhs-std.csv
         self.assertIn("No 'hcurves-rlzs' found", str(ctx.exception))
 
     def test_case_17(self):  # oversampling
+        # this is a test with 4 sources A and B with the same ID
+        # sources A's are false duplicates, while the B's are true duplicates
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
@@ -276,6 +278,10 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
+        arr = self.calc.datastore['source_info'][:]
+        mul = dict(arr[['source_id', 'multiplicity']])
+        self.assertEqual(mul['A'], 2)  # different, multiplicity > 1
+        self.assertEqual(mul['B'], 1)  # duplicates
 
     def test_case_18(self):  # GMPEtable
         self.assert_curves_ok(
@@ -351,7 +357,7 @@ hazard_uhs-std.csv
         # another way to look at the duplicated sources; protects against
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
-        dic = dict(df['num_sources'])
+        dic = dict(df['multiplicity'])
         self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
 
     def test_case_21(self):
@@ -421,6 +427,27 @@ hazard_uhs-std.csv
 
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
+        # make sure probs_occur are stored as expected
+        probs_occur = self.calc.datastore['rup/probs_occur'][:]
+        tot_probs_occur = sum(len(po) for po in probs_occur)
+        self.assertEqual(tot_probs_occur, 28)  # 14 nonparam rups x 2
+        npo = self.calc.csm.get_num_probs_occur()  # 2 probs_occur per rupture
+        self.assertEqual(npo, 2)
+        num_point_ruptures = sum(1 for po in probs_occur if len(po) == 0)
+        self.assertEqual(num_point_ruptures, 26)
+
+        # make sure there is an error when trying to disaggregate
+        with self.assertRaises(NotImplementedError):
+            hc_id = str(self.calc.datastore.calc_id)
+            self.run_calc(case_27.__file__, 'job.ini',
+                          hazard_calculation_id=hc_id,
+                          calculation_mode='disaggregation',
+                          truncation_level="3",
+                          poes_disagg="0.02",
+                          mag_bin_width="0.1",
+                          distance_bin_width="10.0",
+                          coordinate_bin_width="1.0",
+                          num_epsilon_bins="6")
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
@@ -448,8 +475,8 @@ hazard_uhs-std.csv
                 nruptures.append((par, len(rupdata)))
             self.assertEqual(
                 nruptures,
-                [('dip', 3202), ('grp_id', 3202), ('hypo_depth', 3202),
-                 ('lat_', 3202), ('lon_', 3202), ('mag', 3202),
+                [('clat_', 3202), ('clon_', 3202), ('dip', 3202),
+                 ('grp_id', 3202), ('hypo_depth', 3202), ('mag', 3202),
                  ('occurrence_rate', 3202), ('probs_occur', 3202),
                  ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
                  ('rx_', 3202), ('weight', 3202), ('ztor', 3202)])
@@ -543,7 +570,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 522)  # effective ruptures
+        self.assertEqual(self.calc.numrups, 499)  # effective ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
@@ -566,3 +593,33 @@ hazard_uhs-std.csv
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
         self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv"],
                               case_47.__file__)
+
+    def test_case_48(self):
+        # pointsource_distance effects on a simple point source
+        self.run_calc(case_48.__file__, 'job.ini')
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+                                        ['sid0', 'sid1']))
+        self.assertEqualFiles('expected/exact_dists.txt', tmp)
+
+        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+                                        ['sid0', 'sid1']))
+        self.assertEqualFiles('expected/approx_dists.txt', tmp)
+        # this test shows in detail what happens to the distances in presence
+        # of a magnitude-dependent pointsource_distance: just look at the
+        # files expected/exact_dists.txt and expected/approx_dists.txt
+        # the exact distances for the first site are 54, 53, 53, ... 38, 32 km
+        # they decrease with the magnitude, since big magnitude -> big size ->
+        # smaller distance from the site.
+        # When the pointsource_distance is on, the approximated distances are
+        # 55, 55, 55, ..., 38, 32 km: the difference is in the first three
+        # values, corresponding to the small magnitudes.
+        # For small magnitudes the planar ruptures are replaced by points
+        # and thus the distances become larger (and constant).
+        # The maximum_distance here is 110 km and the second site
+        # was chosen very carefully, so that the exact distance for the highest
+        # magnitude is 109 km (within) while the approx distance is 111 km
+        # (outside): still the rupture is not discarded because we are in the
+        # few-sites regime.
+        # In the many-sites regime, small magnitude ruptures at distance close
+        # to the maximum_distance may be discarded, instead.

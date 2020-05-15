@@ -192,6 +192,7 @@ def reduce_sources(sources_with_same_id):
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
+        # duplicate sources: same id, same checksum
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
             src.grp_id = tuple(s.grp_id for s in srcs)
@@ -281,6 +282,13 @@ class CompositeSourceModel:
         """
         return [src for src_group in self.src_groups
                 for src in src_group]
+
+    def get_num_probs_occur(self):
+        """
+        :returns: the number of probs_occur from the underlying nonpar sources
+        """
+        return max(getattr(src, 'num_probs_occur', 0)
+                   for src in self.get_sources())
 
     def get_floating_spinning_factors(self):
         """

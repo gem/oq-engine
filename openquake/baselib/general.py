@@ -768,6 +768,12 @@ class DictArray(Mapping):
         else:
             self.L1 = None
 
+    def isnan(self):
+        """
+        :returns: true if all the underlying values are NaNs
+        """
+        return numpy.isnan(self.array).all()
+
     def new(self, array):
         """
         Convert an array of compatible length into a DictArray:

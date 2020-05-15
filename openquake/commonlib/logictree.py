@@ -175,7 +175,8 @@ Info = collections.namedtuple('Info', 'smpaths, applytosources')
 def collect_info(smlt):
     """
     Given a path to a source model logic tree, collect all of the
-    path names to the source models it contains and build
+    path names to the source models it contains and build:
+
     1. a dictionary source model branch ID -> paths
     2. a dictionary source model branch ID -> source IDs in applyToSources
 
@@ -271,6 +272,7 @@ class SourceModelLogicTree(object):
         self.previous_branches = []
         self.tectonic_region_types = set()
         self.source_types = set()
+        self.hdf5_files = set()
         self.root_branchset = None
         root = nrml.read(filename)
         try:
@@ -574,9 +576,12 @@ class SourceModelLogicTree(object):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        # using regular expressions is a lot faster than using the
+        # using regular expressions is a lot faster than parsing
         with self._get_source_model(source_model) as sm:
             xml = sm.read()
+        hdf5_file = os.path.splitext(source_model)[0] + '.hdf5'
+        if os.path.exists(hdf5_file):
+            self.hdf5_files.add(hdf5_file)
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
         self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
@@ -1301,6 +1306,19 @@ class FullLogicTree(object):
                 grp = 'grp-%02d' % grp_id
                 dic[grp] = list(self.get_rlzs_by_gsim(grp_id).values())
         return dic  # grp_id -> lists of rlzi
+
+    def get_rlzs_by_gsim_list(self, list_of_grp_ids):
+        """
+        :returns: a list gidx -> rlzs_by_gsim
+        """
+        out = []
+        for gidx, grp_ids in enumerate(list_of_grp_ids):
+            dic = AccumDict(accum=set())
+            for grp_id in grp_ids:
+                for gsim, rlzs in self.get_rlzs_by_gsim(grp_id).items():
+                    dic[gsim].update(rlzs)
+            out.append(dic)
+        return out
 
     def __getnewargs__(self):
         # with this FullLogicTree instances will be unpickled correctly

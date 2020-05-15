@@ -1,4 +1,39 @@
   [Michele Simionato]
+  * Raised an early error when `max_sites_disagg` is below the number of
+    sites in disaggregation calculations
+  * Extended the amplification framework to use different intensity levels
+    for different amplification functions
+  * Optimized the disaggregation in the case of multiple realizations
+  * Fixed bug in GMF amplification without intensity_measure_types_and_levels
+  * Optimized the computation of the disaggregation PMFs by orders of magnitude
+    by using numpy.prod
+  * Changed the disaggregation calculator to distribute by magnitude bin,
+    thus reducing a lot the data transfer
+  * Vectorized the disaggregation formula
+  * Do not perform the disaggregation by epsilon when not required
+  * Introduced management of uncertainty in the GMF amplifi
+  * Changed the disaggregation calculator to distribute by IMT, thus reducing
+    a lot the data transfer in calculations with many IMTs
+  * Changed /extract/disagg_layer to produce a single big layer
+  * Changed the binning algorithm for lon, lat in disaggregation, to make
+    sure that the number of bins is homogeneous across sites
+
+  [Marco Pagani]
+  * Fixed a bug in the ParseNDKtoGCMT parser + updated tests.
+  * Ported the method serialise_to_hmtk_csv implemented in the corresponding
+    class of the catalogue toolkit + added a test into the GCMTCatalogue class.
+
+  [Michele Simionato]
+  * Introduced a mixed XML+HDF5 format for gridded sources
+  * Internal: added a check on gridded sources: the arrays prob_occurs must
+    have homogeneous length across ruptures
+  * Removed the dependency from PyYAML, replaced the .yml files in the HMTK with
+    .toml files and added an utility `utils/yaml2toml`
+
+python3-oq-engine (3.9.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed a type error in the command `oq engine --run --params`
   * Restored the flag `split_sources` for testing purposes
   * Fixed a BOM bug in CSV exposures
   * When exporting the loss curves per asset now we also export the loss ratio
@@ -6,7 +41,8 @@
   * Fixed the exporter of the loss curves per asset: due to an ordering bug
     in some cases it was exporting wrong losses
   * Added a flag save_disk_space to avoid storing the inputs
-  * Changed the logic underlying the pointsource_distance approximation
+  * Changed the logic underlying the pointsource_distance approximation and
+    added the syntax pointsource_distance=?
   * Logged a warning when the pointsource_distance is too small
 
   [Graeme Weatherill]
@@ -54,7 +90,7 @@
   * Added Bindi2011, Bindi2014 and Cauzzi2014 scaled GMPEs contributed by
     the INGV
   * Added a check on classical calculations which are too large to run
-  * Added a flag `collapse_ruptures` and a new collapsing algorithm
+  * Added a parameter `collapse_level` and a new collapsing algorithm
   * Added a check for missing TRTs in the GSIM logic tree file
   * Reduced the storage required for site specific calculations
     with complex logic trees by removing duplicated ruptures
@@ -167,6 +203,8 @@
   * Changed the scenario damage calculator to use discrete damage distributions
   * Forced the "number" attribute in the exposure must be an integer in the
     range 1..65535, extrema included
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 27 Apr 2020 14:22:48 +0000
 
 python3-oq-engine (3.8.1-1~xenial01) xenial; urgency=low
 

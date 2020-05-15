@@ -63,13 +63,15 @@ source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('gidx', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
-    ('num_sources', numpy.uint32),     # 3
+    ('multiplicity', numpy.uint32),    # 3
     ('calc_time', numpy.float32),      # 4
     ('num_sites', numpy.uint32),       # 5
     ('eff_ruptures', numpy.uint32),    # 6
     ('checksum', numpy.uint32),        # 7
     ('serial', numpy.uint32),          # 8
+    ('trti', numpy.uint8),             # 9
 ])
+MULTIPLICITY = 3
 
 
 class DuplicatedPoint(Exception):
@@ -242,6 +244,24 @@ def get_params(job_inis, **kw):
         params['pointsource_distance'] = '0'
 
     return params
+
+
+def get_oq(text):
+    """
+    Returns an OqParam instance from a configuration string. For instance:
+
+    >>> get_oq('maximum_distance=200')
+    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': 200}, risk_investigation_time=None>
+    """
+    # UGLY: this is here to avoid circular imports
+    from openquake.calculators import base
+    OqParam.calculation_mode.validator.choices = tuple(base.calculators)
+    cp = configparser.ConfigParser()
+    cp.read_string('[general]\ncalculation_mode=classical\n' + text)
+    dic = dict(cp['general'])
+    dic['inputs'] = dict(job_ini='<in-memory>')
+    oq = OqParam(**dic)
+    return oq
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
@@ -664,11 +684,12 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
         for src in sg:
             ns += 1
             if src.source_id in data:
-                num_sources = data[src.source_id][3] + 1
+                multiplicity = data[src.source_id][MULTIPLICITY] + 1
             else:
-                num_sources = 1
+                multiplicity = 1
             row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
-                   num_sources, 0, 0, 0, src.checksum, src.serial]
+                   multiplicity, 0, 0, 0, src.checksum, src.serial,
+                   full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
@@ -681,8 +702,14 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
             mags[sg.trt].update(srcmags)
 
     logging.info('There are %d sources with %d unique IDs', ns, len(data))
+    false_duplicates = [src_id for src_id in data
+                        if data[src_id][MULTIPLICITY] > 1]
+    logging.info('Found different sources with same ID: %s',
+                 numpy.array(false_duplicates))
     if h5:
-        hdf5.create(h5, 'source_info', source_info_dt)  # avoid hdf5 damned bug
+        attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
+        # avoid hdf5 damned bug by creating source_info in advance
+        hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         for trt in mags:
             h5['source_mags/' + trt] = numpy.array(sorted(mags[trt]))
@@ -703,22 +730,13 @@ def get_imts(oqparam):
 
 def get_amplification(oqparam):
     """
-    :returns: a composite array (amplification, param, imt0, imt1, ...)
+    :returns: a DataFrame (ampcode, level, PGA, SA() ...)
     """
     fname = oqparam.inputs['amplification']
-    aw = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64})
-    aw.fname = fname
-    imls = ()
-    if 'level' in aw.dtype.names:
-        for records in group_array(aw, 'ampcode').values():
-            if len(imls) == 0:
-                imls = numpy.sort(records['level'])
-            elif len(records['level']) != len(imls) or (
-                    records['level'] != imls).any():
-                raise InvalidFile('%s: levels for %s %s instead of %s' %
-                                  (fname, records['ampcode'][0],
-                                   records['level'], imls))
-    return aw
+    df = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64},
+                       index='ampcode')
+    df.fname = fname
+    return df
 
 
 def _cons_coeffs(records, limit_states):
@@ -1010,8 +1028,9 @@ def get_input_files(oqparam, hazard=False):
                                       (oqparam.inputs['job_ini'], key))
             fnames.update(fname)
         elif key == 'source_model_logic_tree':
-            for smpath in logictree.collect_info(fname).smpaths:
-                fnames.add(smpath)
+            smlt = logictree.SourceModelLogicTree(fname)
+            fnames.update(smlt.hdf5_files)
+            fnames.update(smlt.info.smpaths)
             fnames.add(fname)
         else:
             fnames.add(fname)

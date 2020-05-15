@@ -68,7 +68,7 @@ def convert_UCERFSource(self, node):
         start_date,
         float(node["minMag"]),
         npd=self.convert_npdist(node),
-        hdd=self.convert_hpdist(node),
+        hdd=self.convert_hddist(node),
         aspect=~node.ruptAspectRatio,
         upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
         lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,

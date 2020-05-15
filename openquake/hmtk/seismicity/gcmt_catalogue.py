@@ -37,9 +37,9 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
@@ -48,9 +48,10 @@
 """
 Implements sets of classes for mapping components of the focal mechanism
 """
+import csv
 import datetime
-from math import fabs, floor, sqrt, pi
 import numpy as np
+from math import fabs, floor, sqrt, pi
 from openquake.hmtk.seismicity import gcmt_utils as utils
 from openquake.hmtk.seismicity.catalogue import Catalogue
 
@@ -445,6 +446,65 @@ class GCMTCatalogue(Catalogue):
         if len(self.gcmts) > 0:
             self.gcmts = [self.gcmts[iloc] for iloc in id0]
             self.number_gcmts = self.get_number_tensors()
+
+    def serialise_to_hmtk_csv(self, filename, centroid_location=True):
+        '''
+        Serialise the catalogue to a simple csv format, designed for
+        comptibility with the GEM Hazard Modeller's Toolkit
+        '''
+        header_list = ['eventID', 'Agency', 'year', 'month', 'day', 'hour',
+                       'minute', 'second', 'timeError', 'longitude',
+                       'latitude', 'SemiMajor90', 'SemiMinor90', 'ErrorStrike',
+                       'depth', 'depthError', 'magnitude', 'sigmaMagnitude']
+        with open(filename, 'wt') as fid:
+            writer = csv.DictWriter(fid, fieldnames=header_list)
+            headers = dict((header, header) for header in header_list)
+            writer.writerow(headers)
+            print('Writing to simple csv format ...')
+            for iloc, tensor in enumerate(self.gcmts):
+                # Generic Data
+                cmt_dict = {'eventID': iloc + 100000,
+                            'Agency': 'GCMT',
+                            'SemiMajor90': None,
+                            'SemiMinor90': None,
+                            'ErrorStrike': None,
+                            'magnitude': tensor.magnitude,
+                            'sigmaMagnitude': None,
+                            'depth': None,
+                            'depthError': None}
+
+                if centroid_location:
+                    # Time and location come from centroid
+                    cmt_dict['year'] = tensor.centroid.date.year
+                    cmt_dict['month'] = tensor.centroid.date.month
+                    cmt_dict['day'] = tensor.centroid.date.day
+                    cmt_dict['hour'] = tensor.centroid.time.hour
+                    cmt_dict['minute'] = tensor.centroid.time.minute
+                    cmt_dict['second'] = np.round(
+                        np.float(tensor.centroid.time.second) +
+                        np.float(tensor.centroid.time.microsecond) / 1.0e6, 2)
+                    cmt_dict['timeError'] = tensor.centroid.time_error
+                    cmt_dict['longitude'] = tensor.centroid.longitude
+                    cmt_dict['latitude'] = tensor.centroid.latitude
+                    cmt_dict['depth'] = tensor.centroid.depth
+                    cmt_dict['depthError'] = tensor.centroid.depth_error
+                else:
+                    # Time and location come from hypocentre
+                    cmt_dict['year'] = tensor.hypocentre.date.year
+                    cmt_dict['month'] = tensor.hypocentre.date.month
+                    cmt_dict['day'] = tensor.hypocentre.date.day
+                    cmt_dict['hour'] = tensor.hypocentre.time.hour
+                    cmt_dict['minute'] = tensor.hypocentre.time.minute
+                    cmt_dict['second'] = np.round(
+                        np.float(tensor.hypocentre.time.second) + 
+                        np.float(tensor.hypocentre.time.microsecond) / 1000000., 2)
+                    cmt_dict['timeError'] = None
+                    cmt_dict['longitude'] = tensor.hypocentre.longitude
+                    cmt_dict['latitude'] = tensor.hypocentre.latitude
+                    cmt_dict['depth'] = tensor.hypocentre.depth
+                    cmt_dict['depthError'] = None
+                writer.writerow(cmt_dict)
+        print('done!')
 
     def gcmt_to_simple_array(self, centroid_location=True):
         """

@@ -20,7 +20,6 @@ import os
 import ast
 import csv
 import inspect
-import logging
 import tempfile
 import importlib
 import itertools
@@ -28,6 +27,7 @@ from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
 import toml
+import pandas
 import numpy
 import h5py
 from openquake.baselib import InvalidFile
@@ -397,6 +397,41 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
+def fix_array(arr, key):
+    """
+    :param arr: array or array-like object
+    :param key: string associated to the error (appear in the error message)
+
+    If `arr` is a numpy array with dtype object containing strings, convert
+    it into a numpy array containing bytes, unless it has more than 2
+    dimensions or contains non-strings (these are errors). Return `arr`
+    unchanged in the other cases.
+    """
+    if arr is None:
+        return ()
+    if not isinstance(arr, numpy.ndarray):
+        return arr
+    if arr.dtype != numpy.dtype('O'):
+        d = arr.dtype.descr
+        if len(d) > 1 and isinstance(d[0][1], tuple):
+            # for extract_assets d[0] is the pair
+            # ('id', ('|S20', {'h5py_encoding': 'ascii'}))
+            # this is a horrible workaround for the h5py 2.10.0 issue
+            # https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
+            arr.dtype = [(n, str(arr.dtype[n])) for n in arr.dtype.names]
+        return arr
+    if arr.ndim == 1:
+        return numpy.array([s.encode('utf8') for s in arr])
+    elif arr.ndim == 2:
+        return numpy.array([[col.encode('utf8') for col in row]
+                            for row in arr])
+    else:
+        raise NotImplementedError('The array for %s has shape %s' %
+                                  (key, arr.shape))
+
+    return arr
+
+
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
@@ -481,22 +516,6 @@ class ArrayWrapper(object):
         dic = {k: v for k, v in vars(self).items()
                if not k.startswith('_')}
         return toml.dumps(dic)
-
-    def save(self, path, **extra):
-        """
-        :param path: an .hdf5 pathname
-        :param extra: extra attributes to be saved in the file
-        """
-        with File(path, 'w') as f:
-            for key, val in vars(self).items():
-                assert val is not None, key  # sanity check
-                try:
-                    f[key] = maybe_encode(val)
-                except ValueError as err:
-                    if 'Object header message is too large' in str(err):
-                        logging.error(str(err))
-            for k, v in extra.items():
-                f.attrs[k] = maybe_encode(v)
 
     def to_table(self):
         """
@@ -670,13 +689,15 @@ def _read_csv(fileobj, compositedt):
 # NB: it would be nice to use numpy.loadtxt(
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
-def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
+def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
+             index=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
     :param renamedict: aliases for the fields to rename
     :param sep: separator (default comma)
-    :return: a structured array of floats
+    :param index: if not None, returns a pandas DataFrame
+    :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
     with open(fname, encoding='utf-8-sig') as f:
@@ -699,4 +720,28 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
             new = renamedict.get(name, name)
             newnames.append(new)
         arr.dtype.names = newnames
+    if index:
+        df = pandas.DataFrame.from_records(arr, index)
+        vars(df).update(attrs)
+        return df
     return ArrayWrapper(arr, attrs)
+
+
+def save_npz(obj, path):
+    """
+    :param obj: object to serialize
+    :param path: an .npz pathname
+    """
+    a = {}
+    for key, val in vars(obj).items():
+        if key.startswith('_'):
+            continue
+        elif isinstance(val, str):
+            # without this oq extract would fail
+            a[key] = numpy.array(val.encode('utf-8'))
+        elif isinstance(val, dict):
+            # this is hack: we are losing the values
+            a[key] = list(val)
+        else:
+            a[key] = fix_array(val, key)
+    numpy.savez_compressed(path, **a)

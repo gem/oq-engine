@@ -139,7 +139,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         if len(data):
             gmfs.append(data)
             nbytes += data.nbytes
-        gmf_info.append((c.rupture.id, mon_haz.task_no, len(c.sids),
+        gmf_info.append((c.ebrupture.id, mon_haz.task_no, len(c.sids),
                          data.nbytes, mon_haz.dt))
         if nbytes > param['ebrisk_maxsize']:
             msg = 'produced subtask'

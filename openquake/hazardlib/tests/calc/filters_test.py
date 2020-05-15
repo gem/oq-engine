@@ -42,37 +42,8 @@ class IntegrationDistanceTestCase(unittest.TestCase):
 
 
 class SourceFilterTestCase(unittest.TestCase):
-    def test_get_bounding_boxes(self):
-        maxdist = IntegrationDistance({'default': 40})
-        sitecol = SiteCollection([
-            Site(location=Point(10, 20, 30),
-                 vs30=1.2, vs30measured=True,
-                 z1pt0=3.4, z2pt5=5.6, backarc=True),
-            Site(location=Point(-1.2, -3.4, -5.6),
-                 vs30=55.4, vs30measured=False,
-                 z1pt0=66.7, z2pt5=88.9, backarc=False)])
-        srcfilter = SourceFilter(sitecol, maxdist)
-        bb1, bb2 = srcfilter.get_bounding_boxes()
-        # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
-        aae(bb1, (9.6171855, 19.640272, 10.3828145, 20.359728))
-        aae(bb2, (-1.5603623, -3.759728, -0.8396377, -3.040272))
 
     def test_international_date_line(self):
-        maxdist = IntegrationDistance({'default': 40})
-        sitecol = SiteCollection([
-            Site(location=Point(179, 80),
-                 vs30=1.2, vs30measured=True,
-                 z1pt0=3.4, z2pt5=5.6, backarc=True),
-            Site(location=Point(-179, 80),
-                 vs30=55.4, vs30measured=False,
-                 z1pt0=66.7, z2pt5=88.9, backarc=False)])
-        srcfilter = SourceFilter(sitecol, maxdist)
-        bb1, bb2 = srcfilter.get_bounding_boxes(mag=4)
-        # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
-        aae(bb1, (176.928409, 79.640272, 181.071591, 80.359728))
-        aae(bb2, (-181.071591, 79.640272, -176.928409, 80.359728))
-
-    def test_international_date_line_2(self):
         # from a bug affecting a calculation in New Zealand
         fname = gettemp(characteric_source)
         [[src]] = nrml.to_python(fname)
