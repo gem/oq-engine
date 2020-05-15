@@ -195,19 +195,16 @@ def apply_stat(f, arraylist, *extra, **kw):
         return f(arraylist, *extra, **kw)
 
 
-def set_rlzs_stats(dstore, prefix, arrayNR=None):
+def set_rlzs_stats(dstore, prefix, **attrs):
     """
     :param dstore: a DataStore object
-    :param prefix: dataset prefix
-    :param arrayNR: an array of shape (N, R, ...)
+    :param prefix: dataset prefix, assume <prefix>-rlzs is already stored
     """
-    if arrayNR is None:
-        # assume the -rlzs array is already stored
-        arrayNR = dstore[prefix + '-rlzs'][()]
-    else:
-        # store passed the -rlzs array
-        dstore[prefix + '-rlzs'] = arrayNR
+    arrayNR = dstore[prefix + '-rlzs'][()]
     R = arrayNR.shape[1]
+    pairs = list(attrs.items())
+    pairs.insert(1, ('rlzs', numpy.arange(R)))
+    dstore.set_shape_attrs(prefix + '-rlzs', **dict(pairs))
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
         if not stats:
@@ -215,8 +212,7 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
         statnames, statfuncs = zip(*stats.items())
         weights = dstore['weights'][()]
         name = prefix + '-stats'
-        if name in set(dstore):
-            dstore[name][...] = compute_stats2(arrayNR, statfuncs, weights)
-        else:
-            dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
-            dstore.set_attrs(name, stats=statnames)
+        dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
+        pairs = list(attrs.items())
+        pairs.insert(1, ('stats', statnames))
+        dstore.set_shape_attrs(name, **dict(pairs))

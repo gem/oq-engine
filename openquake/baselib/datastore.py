@@ -274,6 +274,12 @@ class DataStore(collections.abc.MutableMapping):
         """
         self.hdf5.save_attrs(key, kw)
 
+    def set_shape_attrs(self, key, **kw):
+        """
+        Set shape attributes
+        """
+        hdf5.set_shape_attrs(self.hdf5, key, kw)
+
     def get_attr(self, key, name, default=None):
         """
         :param key: dataset path
