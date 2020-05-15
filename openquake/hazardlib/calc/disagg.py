@@ -56,7 +56,10 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     :returns: (mag dist lon lat eps trt) edges and shape dictionary
     """
     tl = oq.truncation_level
-    Z = oq.num_rlzs_disagg if oq.rlz_index is None else len(oq.rlz_index)
+    if oq.rlz_index is None:
+        Z = oq.num_rlzs_disagg or 1
+    else:
+        Z = len(oq.rlz_index)
     eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
     # build mag_edges
