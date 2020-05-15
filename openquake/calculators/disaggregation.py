@@ -295,7 +295,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
-            Z = oq.num_rlzs_disagg
+            Z = oq.num_rlzs_disagg or 1
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in self.sitecol.sids:
