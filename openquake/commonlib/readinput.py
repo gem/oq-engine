@@ -69,7 +69,7 @@ source_info_dt = numpy.dtype([
     ('eff_ruptures', numpy.uint32),    # 6
     ('checksum', numpy.uint32),        # 7
     ('serial', numpy.uint32),          # 8
-    ('ambiguous', numpy.uint8),        # 9
+    ('trti', numpy.uint8),             # 9
 ])
 
 
@@ -683,11 +683,12 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
         for src in sg:
             ns += 1
             if src.source_id in data:
-                num_sources = data[src.source_id][3] + 1
+                multiplicity = data[src.source_id][3] + 1
             else:
-                num_sources = 1
+                multiplicity = 1
             row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
-                   num_sources, 0, 0, 0, src.checksum, src.serial, 0]
+                   multiplicity, 0, 0, 0, src.checksum, src.serial,
+                   full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF

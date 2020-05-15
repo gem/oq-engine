@@ -55,7 +55,7 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
-NUM_SOURCES, CALC_TIME, NUM_SITES, EFF_RUPTURES, AMBIGUOUS = 3, 4, 5, 6, 9
+NUM_SOURCES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
@@ -862,10 +862,6 @@ class HazardCalculator(BaseCalculator):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        for src_id, number in self.csm.get_ambiguous().items():
-            # ambiguous source means same id, different checksum
-            # see for instance classical/case_15
-            self.csm.source_info[src_id][AMBIGUOUS] = number
         for src_id, arr in calc_times.items():
             src_id = re.sub(r':\d+$', '', src_id)
             row = self.csm.source_info[src_id]
