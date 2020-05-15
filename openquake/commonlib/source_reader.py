@@ -283,17 +283,6 @@ class CompositeSourceModel:
         return [src for src_group in self.src_groups
                 for src in src_group]
 
-    def get_ambiguous(self):
-        """
-        :returns: dictionary source_id -> number of distinct sources (if > 1)
-        """
-        dic = {}
-        for source_id, grp in general.groupby(
-                self.get_sources(), lambda s: s.source_id).items():
-            if len(grp) > 1:
-                dic[source_id] = len(grp)
-        return dic
-
     def get_num_probs_occur(self):
         """
         :returns: the number of probs_occur from the underlying nonpar sources
