@@ -204,10 +204,13 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
     if arrayNR is None:
         # assume the -rlzs array is already stored
         arrayNR = dstore[prefix + '-rlzs'][()]
+        R = arrayNR.shape[1]
     else:
         # store passed the -rlzs array
+        R = arrayNR.shape[1]
         dstore[prefix + '-rlzs'] = arrayNR
-    R = arrayNR.shape[1]
+        dstore[prefix + '-rlzs'].attrs['rlzs'] = [
+            'rlz-%d' % r for r in range(R)]
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
         if not stats:
