@@ -128,7 +128,8 @@ class PostRiskCalculator(base.RiskCalculator):
         self.datastore.create_dset(prefix + 'curves-rlzs', F32, shp)
         self.datastore.set_attrs(
             prefix + 'curves-rlzs', return_periods=builder.return_periods,
-            rlzs=numpy.arange(self.R), loss_types=loss_types, **aggby)
+            rlzs=numpy.arange(self.R), loss_types=loss_types, **aggby,
+            units=units)
         if self.R > 1:
             shp = self.get_shape(P, S, self.L, aggregate_by=aggregate_by)
             # shape P, S, L, T...
@@ -137,7 +138,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 prefix + 'curves-stats',
                 return_periods=builder.return_periods,
                 stats=[encode(name) for (name, func) in stats],
-                loss_types=loss_types, units=units, **aggby)
+                loss_types=loss_types, **aggby, units=units)
 
     def execute(self):
         oq = self.oqparam

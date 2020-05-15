@@ -434,15 +434,18 @@ def fix_array(arr, key):
 
 def set_shape_attrs(hdf5file, dsetname, kw):
     """
-    Set shape attributes on a dataset
+    Set shape attributes on a dataset (and possibly others)
     """
     dset = hdf5file[dsetname]
-    if len(kw) != len(dset.shape):
+    S = len(dset.shape)
+    if len(kw) < S:
         raise ValueError('The dataset has %d dimensions but you passed %d axis'
-                         % (len(dset.shape), len(kw)))
-    dset.attrs['shape_descr'] = list(kw)
+                         % (S, len(kw)))
+    dset.attrs['shape_descr'] = list(kw)[:S]
     for k, v in kw.items():
         dset.attrs[k] = v
+    if dsetname == 'agg_curves-rlzs':
+        import pdb; pdb.set_trace()
 
 
 class ArrayWrapper(object):
