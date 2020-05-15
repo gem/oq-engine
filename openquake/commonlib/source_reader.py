@@ -192,6 +192,7 @@ def reduce_sources(sources_with_same_id):
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
+        # duplicate sources: same id, same checksum
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
             src.grp_id = tuple(s.grp_id for s in srcs)
@@ -281,6 +282,17 @@ class CompositeSourceModel:
         """
         return [src for src_group in self.src_groups
                 for src in src_group]
+
+    def get_ambiguous(self):
+        """
+        :returns: dictionary source_id -> number of distinct sources (if > 1)
+        """
+        dic = {}
+        for source_id, grp in general.groupby(
+                self.get_sources(), lambda s: s.source_id).items():
+            if len(grp) > 1:
+                dic[source_id] = len(grp)
+        return dic
 
     def get_num_probs_occur(self):
         """
