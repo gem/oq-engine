@@ -212,10 +212,7 @@ def set_rlzs_stats(dstore, prefix, **attrs):
         statnames, statfuncs = zip(*stats.items())
         weights = dstore['weights'][()]
         name = prefix + '-stats'
-        if name in set(dstore):  # already present, like in event based risk
-            dstore[name][...] = compute_stats2(arrayNR, statfuncs, weights)
-        else:  # create it
-            dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
+        dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
         pairs = list(attrs.items())
         pairs.insert(1, ('stats', statnames))
         dstore.set_shape_attrs(name, **dict(pairs))

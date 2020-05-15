@@ -434,7 +434,7 @@ def fix_array(arr, key):
 
 def set_shape_attrs(hdf5file, dsetname, kw):
     """
-    Set shape attributes on a dataset (and possibly others)
+    Set shape attributes on a dataset (and possibly other attributes)
     """
     dset = hdf5file[dsetname]
     S = len(dset.shape)
