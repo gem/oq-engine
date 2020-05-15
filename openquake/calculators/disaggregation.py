@@ -176,23 +176,17 @@ def agg_probs(*probs):
     return 1. - acc
 
 
-def get_indices_by_grp_mag(dstore, mag_edges):
+def get_indices_by_gidx_mag(dstore, mag_edges):
     """
-    :returns: a dictionary grp_id, magi -> indices
+    :returns: a dictionary gidx, magi -> indices
     """
-    acc = AccumDict(accum=[])  # grp_id, magi -> indices
-    grp_ids = dstore['grp_ids'][:]
+    acc = AccumDict(accum=[])  # gidx, magi -> indices
     df = pandas.DataFrame(dict(gidx=dstore['rup/grp_id'][:],
                                mag=dstore['rup/mag'][:]))
-    tot = 0
     for (gidx, mag), d in df.groupby(['gidx', 'mag']):
         magi = numpy.searchsorted(mag_edges, mag) - 1
-        for grp_id in grp_ids[gidx]:
-            acc[grp_id, magi].extend(d.index)
-            tot += len(d)
-    for grp_id, magi in acc:
-        acc[grp_id, magi] = sorted(acc[grp_id, magi])
-    return acc
+        acc[gidx, magi].extend(d.index)
+    return {gm: sorted(idxs) for gm, idxs in acc.items()}
 
 
 def get_outputs_size(shapedic, disagg_outputs):
@@ -343,8 +337,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         mag_edges = self.bin_edges[0]
-        indices = get_indices_by_grp_mag(dstore, mag_edges)
-        trt_num = {trt: i for i, trt in enumerate(self.trts)}
+        indices = get_indices_by_gidx_mag(dstore, mag_edges)
         allargs = []
         M = len(oq.imtls)
         U = len(dstore['rup/mag'])
@@ -352,17 +345,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         blocksize = int(numpy.ceil(U / (oq.concurrent_tasks or 1) * M))
         logging.info('Found {:_d} ruptures, sending up to {:_d} per task'.
                      format(U, blocksize))
-        for grp_id, magi in indices:
-            trt = self.full_lt.trt_by_grp[grp_id]
-            trti = trt_num[trt]
-            logging.info('Group #%d, %d ruptures for %s, magbin=%s',
-                         grp_id, len(indices[grp_id, magi]), trt, magi)
+
+        grp_ids = dstore['grp_ids'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
+        num_eff_rlzs = len(self.full_lt.sm_rlzs)
+        for gidx, magi in indices:
+            trti = grp_ids[gidx][0] // num_eff_rlzs
+            trt = self.trts[trti]
             cmaker = ContextMaker(
-                trt, self.full_lt.get_rlzs_by_gsim(grp_id),
+                trt, rlzs_by_gsim[gidx],
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
                  'imtls': oq.imtls})
-            for idxs in block_splitter(indices[grp_id, magi], blocksize):
+            for idxs in block_splitter(indices[gidx, magi], blocksize):
                 for imt in oq.imtls:
                     allargs.append((dstore, idxs, cmaker, self.iml3[imt],
                                     trti, magi, self.bin_edges[1:], oq))
