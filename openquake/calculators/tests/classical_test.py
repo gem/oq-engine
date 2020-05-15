@@ -269,6 +269,8 @@ hazard_uhs-std.csv
         self.assertIn("No 'hcurves-rlzs' found", str(ctx.exception))
 
     def test_case_17(self):  # oversampling
+        # this is a test with 4 sources A and B with the same ID
+        # sources A's are false duplicates, while the B's are true duplicates
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1-ltr_0.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
@@ -276,6 +278,10 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
+        arr = self.calc.datastore['source_info'][:]
+        mul = dict(arr[['source_id', 'multiplicity']])
+        self.assertEqual(mul['A'], 2)  # different, multiplicity > 1
+        self.assertEqual(mul['B'], 1)  # duplicates
 
     def test_case_18(self):  # GMPEtable
         self.assert_curves_ok(
