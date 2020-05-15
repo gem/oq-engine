@@ -31,8 +31,8 @@ the time needed to parse and manage the source models, which has been
 substantially reduced. This is particularly visible in the case of the
 complex logic trees used for site specific analysis (we are talking
 about orders of magnitude speedups). For continental scale
-calculations the speedup is very sensible when running in preclassical
-mode or for single site calculations, while it is insignificant - 
+calculations the speedup is very significant when running in preclassical
+mode or for single site calculations, while it is not noticeable - 
 compared to the total runtime - in the other cases.
 
 The basic logic tree classes, as well as the code to
