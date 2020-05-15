@@ -352,8 +352,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         for gidx, magi in indices:
             trti = grp_ids[gidx][0] // num_eff_rlzs
             trt = self.trts[trti]
-            logging.info('Group #%d, %d ruptures for %s, magbin=%s',
-                         gidx, len(indices[gidx, magi]), trt, magi)
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim[gidx],
                 {'truncation_level': oq.truncation_level,
