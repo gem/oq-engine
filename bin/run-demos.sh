@@ -56,9 +56,9 @@ oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv
 MPLBACKEND=Agg oq plot rupture_info?min_mag=6
 echo "Displaying the exposed values in the ebrisk demo"
 oq show exposed_values/agg_NAME_1_taxonomy
-oq show exposed_values/agg_NAME_1
-oq show exposed_values/agg_taxonomy
-oq show exposed_values/agg
+#oq show exposed_values/agg_NAME_1
+#oq show exposed_values/agg_taxonomy
+#oq show exposed_values/agg
 
 # display the calculations
 oq db find %
