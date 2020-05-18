@@ -760,9 +760,6 @@ def save_npz(obj, path):
         elif isinstance(val, str):
             # without this oq extract would fail
             a[key] = numpy.array(val.encode('utf-8'))
-        elif isinstance(val, dict):
-            # this is hack: we are losing the values
-            a[key] = list(val)
         else:
             a[key] = fix_array(val, key)
     numpy.savez_compressed(path, **a)
