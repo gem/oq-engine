@@ -203,7 +203,7 @@ def set_rlzs_stats(dstore, prefix, **attrs):
     arrayNR = dstore[prefix + '-rlzs'][()]
     R = arrayNR.shape[1]
     pairs = list(attrs.items())
-    pairs.insert(1, ('rlz', numpy.arange(R)))
+    pairs.insert(1, ('rlzs', numpy.arange(R)))
     dstore.set_shape_attrs(prefix + '-rlzs', **dict(pairs))
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
@@ -214,5 +214,5 @@ def set_rlzs_stats(dstore, prefix, **attrs):
         name = prefix + '-stats'
         dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
         pairs = list(attrs.items())
-        pairs.insert(1, ('stat', statnames))
+        pairs.insert(1, ('stats', statnames))
         dstore.set_shape_attrs(name, **dict(pairs))

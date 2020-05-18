@@ -126,12 +126,14 @@ class PostRiskCalculator(base.RiskCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
                 return
-        logging.info('Building loss_sources-rlzs and loss_sources-stats')
-        self.datastore['loss_sources-rlzs'] = get_loss_sources(
-            self.datastore, self.R, self.L)
-        set_rlzs_stats(self.datastore, 'loss_sources',
-                       source_id=self.datastore['source_info']['source_id'],
-                       loss_type=oq.loss_names)
+        if 'source_info' in self.datastore:  # missing for gmf_ebrisk
+            info = self.datastore['source_info']
+            logging.info('Building loss_sources-rlzs and loss_sources-stats')
+            self.datastore['loss_sources-rlzs'] = get_loss_sources(
+                self.datastore, self.R, self.L)
+            set_rlzs_stats(self.datastore, 'loss_sources',
+                           source_id=info['source_id'],
+                           loss_type=oq.loss_names)
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
