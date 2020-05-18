@@ -193,6 +193,11 @@ class Extract(dict):
 extract = Extract()
 
 
+@extract.add('oqparam')
+def extract_oqparam(dstore, dummy):
+    return ArrayWrapper((), vars(dstore['oqparam']))
+
+
 # used by the QGIS plugin in scenario
 @extract.add('realizations')
 def extract_realizations(dstore, dummy):
