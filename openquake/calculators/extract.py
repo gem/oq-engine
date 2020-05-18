@@ -196,6 +196,9 @@ extract = Extract()
 
 @extract.add('oqparam')
 def extract_oqparam(dstore, dummy):
+    """
+    Extract job parameters as a JSON npz. Use it as /extract/oqparam
+    """
     return ArrayWrapper((), {'json': json.dumps(vars(dstore['oqparam']))})
 
 
