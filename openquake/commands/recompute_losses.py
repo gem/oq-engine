@@ -16,6 +16,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 from openquake.baselib import sap, datastore
 from openquake.commonlib import logs
@@ -27,6 +28,8 @@ def recompute_losses(calc_id):
     """Re-run the postprocessing after an event based risk calculation"""
     parent = datastore.read(calc_id)
     job_id = logs.init('job', level=logging.INFO)
+    if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+        os.environ['OQ_DISTRIBUTE'] = 'processpool'
     with logs.handle(job_id, logging.INFO):
         prc = PostRiskCalculator(parent['oqparam'], job_id)
         prc.datastore.parent = parent

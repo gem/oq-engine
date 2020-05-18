@@ -746,7 +746,7 @@ def extract_agg_losses(dstore, what):
         stats = ['mean']
         losses = dstore['avg_losses'][:, L].reshape(-1, 1)
     elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
-        stats = decode(dstore['avg_losses-stats'].attrs['stats'])
+        stats = decode(dstore['avg_losses-stats'].attrs['stat'])
         losses = dstore['avg_losses-stats'][:, :, L]
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
         stats = ['mean']
@@ -1029,7 +1029,7 @@ def crm_attrs(dstore, what):
 def _get(dstore, name):
     try:
         dset = dstore[name + '-stats']
-        return dset, decode(dset.attrs['stats'])
+        return dset, decode(dset.attrs['stat'])
     except KeyError:  # single realization
         return dstore[name + '-rlzs'], ['mean']
 

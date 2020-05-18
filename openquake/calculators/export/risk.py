@@ -112,7 +112,7 @@ def _get_data(dstore, dskey, stats):
     if kind == 'stats':
         weights = dstore['weights'][()]
         if dskey in set(dstore):  # precomputed
-            tags = [decode(s) for s in dstore.get_attr(dskey, 'stats')]
+            tags = [decode(s) for s in dstore.get_attr(dskey, 'stat')]
             statfuncs = [stats[tag] for tag in tags]
             value = dstore[dskey][()]  # shape (A, S, LI)
         else:  # computed on the fly
