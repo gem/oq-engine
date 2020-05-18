@@ -264,23 +264,24 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   fname, delta=1E-5)
 
     def test_case_master1(self):
-        if sys.platform == 'darwin':
-            raise unittest.SkipTest('MacOSX')
+        # it looks like the cholesky decomposition is OS-dependent, so
+        # the GMFs are different of macOS/Ubuntu20/Ubuntu18, therefore
+        # we have to raise the tolerance
         self.run_calc(case_master.__file__, 'job.ini', exports='csv')
         fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1.3E-5)
+                                  delta=1E-4)
 
         # check event loss table
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-5)
+                              delta=1E-4)
 
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
-            'expected/portfolio_losses.txt', fname, delta=1E-5)
+            'expected/portfolio_losses.txt', fname, delta=1E-4)
         os.remove(fname)
 
         # check ruptures are stored correctly
@@ -292,7 +293,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(
             ('aggregate_by/avg_losses?tag=occupancy&kind=mean', 'csv'),
             self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
+        self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0],
+                              delta=1E-4)
 
         self.check_multi_tag(self.calc.datastore)
 
@@ -314,14 +316,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
 
         fname = export(('tot_curves-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
 
         fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/avg_losses-mean.csv',
-                              fname, delta=1E-5)
+                              fname, delta=1E-4)
 
         fname = export(('losses_by_event', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/elt.csv', fname)
+        self.assertEqualFiles('expected/elt.csv', fname, delta=1E-4)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
@@ -335,7 +337,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
              'csv'),
             dstore)
         for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                                  delta=1E-4)
 
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
