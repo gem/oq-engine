@@ -188,7 +188,7 @@ def export_agg_losses(ekey, dstore):
     return writer.getsaved()
 
 
-@export.add(('losses_by_source', 'csv'))
+@export.add(('src_loss_table', 'csv'))
 def export_losses_by_source(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -198,8 +198,8 @@ def export_losses_by_source(ekey, dstore):
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time))
-    aw = hdf5.ArrayWrapper.from_(dstore['loss_sources-stats'], 'loss_value')
-    dest = dstore.build_fname('losses_by_source', '', 'csv')
+    aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
+    dest = dstore.build_fname('src_loss_table', '', 'csv')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(aw.to_table(), dest, comment=md)
     return writer.getsaved()

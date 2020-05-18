@@ -88,7 +88,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/portfolio_loss.txt', tmp)
 
         # test the src_loss_table extractor
-        [fname] = export(('losses_by_source', 'csv'), self.calc.datastore)
+        [fname] = export(('src_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         # test event_based_damage

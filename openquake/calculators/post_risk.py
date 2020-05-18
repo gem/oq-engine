@@ -72,19 +72,20 @@ def post_ebrisk(dstore, aggkey, monitor):
     return out
 
 
-def get_loss_sources(dstore, R, L):
+def get_src_loss_table(dstore, L):
     """
     :returns:
-        array of shape (Ns, R, L) where Ns is the number of sources,
-        R the number of realizations and L the number of loss types
+        array of shape (Ns, L) where Ns is the number of sources
+        and L the number of loss types
     """
     Ns = len(dstore['source_info'])
     lbe = dstore['losses_by_event'][:]
     rup_ids = dstore['events']['rup_id'][lbe['event_id']]
     srcidx = dstore['ruptures']['srcidx'][rup_ids]
-    lbs = numpy.zeros((Ns, R, L), F32)
+    w = dstore['weights'][:]
+    lbs = numpy.zeros((Ns, L), F32)
     for srcidx, rlzi, loss in zip(srcidx, lbe['rlzi'], lbe['loss']):
-        lbs[srcidx, rlzi] += loss
+        lbs[srcidx] += loss * w[rlzi]
     return lbs
 
 
@@ -127,13 +128,13 @@ class PostRiskCalculator(base.RiskCalculator):
                     eff_time)
                 return
         if 'source_info' in self.datastore:  # missing for gmf_ebrisk
-            info = self.datastore['source_info']
-            logging.info('Building loss_sources-rlzs and loss_sources-stats')
-            self.datastore['loss_sources-rlzs'] = get_loss_sources(
-                self.datastore, self.R, self.L)
-            set_rlzs_stats(self.datastore, 'loss_sources',
-                           source_id=info['source_id'],
-                           loss_type=oq.loss_names)
+            logging.info('Building src_loss_table')
+            source_ids = self.datastore['source_info']['source_id']
+            self.datastore['src_loss_table'] = get_src_loss_table(
+                self.datastore, self.L)
+            self.datastore.set_shape_attrs('src_loss_table',
+                                           source=source_ids,
+                                           loss_type=oq.loss_names)
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
