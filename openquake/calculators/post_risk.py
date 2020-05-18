@@ -78,15 +78,14 @@ def get_src_loss_table(dstore, L):
         array of shape (Ns, L) where Ns is the number of sources
         and L the number of loss types
     """
-    Ns = len(dstore['source_info'])
     lbe = dstore['losses_by_event'][:]
     rup_ids = dstore['events']['rup_id'][lbe['event_id']]
     srcidx = dstore['ruptures']['srcidx'][rup_ids]
     w = dstore['weights'][:]
-    lbs = numpy.zeros((Ns, L), F32)
+    acc = general.AccumDict(accum=numpy.zeros(L, F32))
     for srcidx, rlzi, loss in zip(srcidx, lbe['rlzi'], lbe['loss']):
-        lbs[srcidx] += loss * w[rlzi]
-    return lbs
+        acc[srcidx] += loss * w[rlzi]
+    return list(acc), numpy.array(list(acc.values()))
 
 
 @base.calculators.add('post_risk')
@@ -129,9 +128,8 @@ class PostRiskCalculator(base.RiskCalculator):
                 return
         if 'source_info' in self.datastore:  # missing for gmf_ebrisk
             logging.info('Building src_loss_table')
-            source_ids = self.datastore['source_info']['source_id']
-            self.datastore['src_loss_table'] = get_src_loss_table(
-                self.datastore, self.L)
+            source_ids, losses = get_src_loss_table(self.datastore, self.L)
+            self.datastore['src_loss_table'] = losses
             self.datastore.set_shape_attrs('src_loss_table',
                                            source=source_ids,
                                            loss_type=oq.loss_names)

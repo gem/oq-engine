@@ -86,7 +86,7 @@ def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('id', U32), ('serial', U32), ('srcidx', U16), ('grp_id', U16),
+    ('id', U32), ('serial', U32), ('srcidx', '<S10'), ('grp_id', U16),
     ('code', U8), ('n_occ', U16), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
@@ -264,7 +264,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
             for rup, grp_id, n_occ in src.sample_ruptures(samples * num_ses):
-                ebr = EBRupture(rup, src.id, grp_id, n_occ, samples)
+                ebr = EBRupture(rup, src.source_id, grp_id, n_occ, samples)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
             try:
