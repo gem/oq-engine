@@ -26,6 +26,7 @@ import itertools
 from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
+import json
 import toml
 import pandas
 import numpy
@@ -527,8 +528,14 @@ class ArrayWrapper(object):
         """
         if self.shape:
             return toml.dumps(self.array)
-        dic = {k: v for k, v in vars(self).items()
-               if not k.startswith('_')}
+        dic = {}
+        for k, v in vars(self).items():
+            if k.startswith('_'):
+                continue
+            elif k == 'json':
+                dic.update(json.loads(bytes(v)))
+            else:
+                dic[k] = v
         return toml.dumps(dic)
 
     def to_table(self):
