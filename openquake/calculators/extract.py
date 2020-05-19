@@ -778,9 +778,9 @@ def extract_agg_damages(dstore, what):
         for the given tags
     """
     loss_type, tags = get_loss_type_tags(what)
-    if 'dmg_by_asset' in dstore:  # scenario_damage
+    if 'avg_damages-rlzs' in dstore:  # scenario_damage
         lti = dstore['oqparam'].lti[loss_type]
-        losses = dstore['dmg_by_asset'][:, :, lti, 0]
+        losses = dstore['avg_damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags)
@@ -896,13 +896,11 @@ def extract_num_events(dstore, what):
     yield 'num_events', len(dstore['events'])
 
 
-def build_damage_dt(dstore, mean_std=True):
+def build_damage_dt(dstore):
     """
     :param dstore: a datastore instance
-    :param mean_std: a flag (default True)
     :returns:
-       a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
-       loss_type -> (ds1, ds2, ...) depending on the flag mean_std
+       a composite dtype loss_type -> (ds1, ds2, ...)
     """
     oq = dstore['oqparam']
     damage_states = ['no_damage'] + list(
@@ -910,11 +908,7 @@ def build_damage_dt(dstore, mean_std=True):
     dt_list = []
     for ds in damage_states:
         ds = str(ds)
-        if mean_std:
-            dt_list.append(('%s_mean' % ds, F32))
-            dt_list.append(('%s_stdv' % ds, F32))
-        else:
-            dt_list.append((ds, F32))
+        dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
@@ -922,33 +916,28 @@ def build_damage_dt(dstore, mean_std=True):
 
 def build_damage_array(data, damage_dt):
     """
-    :param data: an array of shape (A, L, 1, D) or (A, L, 2, D)
+    :param data: an array of shape (A, L, D)
     :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    A, L, MS, D = data.shape
+    A, L, D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
         for l, lt in enumerate(damage_dt.names):
-            std = any(f for f in damage_dt[lt].names if f.endswith('_stdv'))
-            if MS == 1 or not std:  # there is only the mean value
-                dmg[lt][a] = tuple(data[a, l, 0])
-            else:  # there are both mean and stddev
-                # data[a, l].T has shape (D, 2)
-                dmg[lt][a] = tuple(numpy.concatenate(data[a, l].T))
+            dmg[lt][a] = tuple(data[a, l])
     return dmg
 
 
-@extract.add('dmg_by_asset')
-def extract_dmg_by_asset_npz(dstore, what):
+@extract.add('avg_damages-rlzs')
+def extract_avg_damages_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore['dmg_by_asset']
+    data = dstore['avg_damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
-        dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        avg_damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
         yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
-            assets, dmg_by_asset)
+            assets, avg_damages)
 
 
 @extract.add('event_based_mfd')
