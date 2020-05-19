@@ -117,9 +117,9 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                             ddic[aid, eid][l] = ddd[1:]
                             d_event[eid][l] += ddd[1:]
                         if make_ddd is approx_ddd:
-                            ms = mean_std(fractions * asset['number'])
+                            ms = (fractions * asset['number']).mean(axis=0)
                         else:
-                            ms = mean_std(ddds)
+                            ms = ddds.mean(axis=0)
                         result['d_asset'].append((l, r, asset['ordinal'], ms))
                         # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
@@ -201,14 +201,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         logging.info('Found ~%d dmg distributions per asset', events_per_asset)
 
         # damage by asset
-        dt_list = []
-        mean_std_dt = numpy.dtype([('mean', (F32, D)), ('stddev', (F32, D))])
-        for ltype in ltypes:
-            dt_list.append((ltype, mean_std_dt))
-        d_asset = numpy.zeros((A, R, L, 2, D), F32)
-        for (l, r, a, stat) in result['d_asset']:
-            d_asset[a, r, l] = stat
-        self.datastore['dmg_by_asset'] = d_asset
+        d_asset = numpy.zeros((A, R, L, D), F32)
+        for (l, r, a, avg) in result['d_asset']:
+            d_asset[a, r, l] = avg
+        self.datastore['avg_damages-rlzs'] = d_asset
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -242,7 +238,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 @base.calculators.add('event_based_damage')
 class EventBasedDamageCalculator(ScenarioDamageCalculator):
     """
-    Event Based Damage calculator, able to compute dmg_by_asset, dmg_by_event
+    Event Based Damage calculator, able to compute avg_damages-rlzs, dmg_by_event
     and consequences.
     """
     core_task = scenario_damage
