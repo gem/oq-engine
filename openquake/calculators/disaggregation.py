@@ -26,7 +26,7 @@ import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes, humansize)
+    AccumDict, block_splitter, get_array_nbytes, humansize, pprod)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -482,7 +482,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 if not disagg_outputs or key in disagg_outputs:
                     pmf = fn(matrix6 if key.endswith('TRT') else aggmatrix)
                     self.datastore[disp_name + key] = pmf
-                    poe_agg.append(1. - numpy.prod(1. - pmf))
+                    poe_agg.append(pprod(pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['site_id'] = site_id

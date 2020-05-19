@@ -1414,7 +1414,7 @@ def gen_subclasses(cls):
         yield from gen_subclasses(subclass)
 
 
-def pprod(p, axis):
+def pprod(p, axis=None):
     """
     Probability product 1 - prod(1-p)
     """
