@@ -274,7 +274,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # check event loss table
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=2E-5)
+                              delta=5E-5)
 
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
