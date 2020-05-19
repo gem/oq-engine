@@ -704,8 +704,9 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
     logging.info('There are %d sources with %d unique IDs', ns, len(data))
     false_duplicates = [src_id for src_id in data
                         if data[src_id][MULTIPLICITY] > 1]
-    logging.info('Found different sources with same ID: %s',
-                 numpy.array(false_duplicates))
+    if false_duplicates:
+        logging.info('Found different sources with same ID: %s',
+                     numpy.array(false_duplicates))
     if h5:
         attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
         # avoid hdf5 damned bug by creating source_info in advance
