@@ -32,7 +32,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, stochastic
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
 
@@ -43,6 +43,7 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
+SOURCE_ID = stochastic.rupture_dt['source_id']
 memoized = lru_cache()
 
 
@@ -746,7 +747,7 @@ def extract_agg_losses(dstore, what):
         stats = ['mean']
         losses = dstore['avg_losses'][:, L].reshape(-1, 1)
     elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
-        stats = decode(dstore['avg_losses-stats'].attrs['stats'])
+        stats = decode(dstore['avg_losses-stats'].attrs['stat'])
         losses = dstore['avg_losses-stats'][:, :, L]
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
         stats = ['mean']
@@ -1002,25 +1003,6 @@ def extract_mfd(dstore, what):
 #     return ArrayWrapper(occurrences, dic)
 
 
-@extract.add('src_loss_table')
-def extract_src_loss_table(dstore, loss_type):
-    """
-    Extract the source loss table for a give loss type, ordered in decreasing
-    order. Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/src_loss_table/structural
-    """
-    source_ids = dstore['source_info']['source_id']
-    idxs = dstore['ruptures'][('srcidx', 'grp_id')]
-    losses = dstore['rup_loss_table'][loss_type]
-    slt = numpy.zeros(len(source_ids), [('grp_id', U32), (loss_type, F32)])
-    for loss, (srcidx, grp_id) in zip(losses, idxs):
-        slt[srcidx][loss_type] += loss
-        slt[srcidx]['grp_id'] = grp_id
-    slt = util.compose_arrays(source_ids, slt, 'source_id')
-    slt.sort(order=loss_type)
-    return slt[::-1]
-
-
 @extract.add('mean_std_curves')
 def extract_mean_std_curves(dstore, what):
     """
@@ -1048,7 +1030,7 @@ def crm_attrs(dstore, what):
 def _get(dstore, name):
     try:
         dset = dstore[name + '-stats']
-        return dset, decode(dset.attrs['stats'])
+        return dset, decode(dset.attrs['stat'])
     except KeyError:  # single realization
         return dstore[name + '-rlzs'], ['mean']
 
@@ -1235,7 +1217,7 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', U32), ('srcidx', U32), ('multiplicity', U16),
+            ('rup_id', U32), ('source_id', SOURCE_ID), ('multiplicity', U16),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -1259,7 +1241,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.id, ebr.srcidx, ebr.n_occ, rate,
+                (ebr.id, ebr.source_id, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake, boundaries) + ruptparams)
         return numpy.array(data, self.dt)

@@ -34,7 +34,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 EPSILON = 1E-12
-source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
+source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 KNOWN_MFDS = ('incrementalMFD', 'truncGutenbergRichterMFD',
               'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD')

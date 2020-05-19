@@ -271,7 +271,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         if oq.avg_losses:
-            self.datastore['avg_losses-stats'].attrs['stats'] = [b'mean']
+            self.datastore['avg_losses-stats'].attrs['stat'] = [b'mean']
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run()

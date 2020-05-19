@@ -47,28 +47,6 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
         eff_time, oq.risk_investigation_time)
 
 
-def build_loss_tables(dstore):
-    """
-    Compute the total losses by rupture
-    """
-    oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_rlzs()
-    lbe = dstore['losses_by_event'][()]
-    loss = lbe['loss']  # shape (E, L, T...)
-    shp = (R,) + lbe.dtype['loss'].shape
-    rup_id = dstore['events']['rup_id']
-    if len(shp) > 2:
-        loss = loss.sum(axis=tuple(range(2, len(shp))))  # shape (E, L)
-    losses_by_rupid = general.fast_agg(rup_id[lbe['event_id']], loss)
-    lst = [('rup_id', U32)] + [(name, F32) for name in oq.loss_names]
-    tbl = numpy.zeros(len(losses_by_rupid), lst)
-    tbl['rup_id'] = numpy.arange(len(tbl))
-    for li, name in enumerate(oq.loss_names):
-        tbl[name] = losses_by_rupid[:, li]
-    tbl.sort(order=oq.loss_names[0])
-    dstore['rup_loss_table'] = tbl
-
-
 def post_ebrisk(dstore, aggkey, monitor):
     """
     :param dstore: a DataStore instance
@@ -92,6 +70,21 @@ def post_ebrisk(dstore, aggkey, monitor):
     for rlzi, curves, losses in builder.gen_curves_by_rlz(df, oq.ses_ratio):
         out[rlzi] = dict(agg_curves=curves, agg_losses=losses, idx=idx)
     return out
+
+
+def get_src_loss_table(dstore, L):
+    """
+    :returns:
+        (source_ids, array of losses of shape (Ns, L))
+    """
+    lbe = dstore['losses_by_event'][:]
+    rup_ids = dstore['events']['rup_id'][lbe['event_id']]
+    source_id = dstore['ruptures']['source_id'][rup_ids]
+    w = dstore['weights'][:]
+    acc = general.AccumDict(accum=numpy.zeros(L, F32))
+    for source_id, rlzi, loss in zip(source_id, lbe['rlzi'], lbe['loss']):
+        acc[source_id] += loss * w[rlzi]
+    return zip(*sorted(acc.items()))
 
 
 @base.calculators.add('post_risk')
@@ -132,8 +125,13 @@ class PostRiskCalculator(base.RiskCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
                 return
-        logging.info('Building loss tables')
-        build_loss_tables(self.datastore)
+        if 'source_info' in self.datastore:  # missing for gmf_ebrisk
+            logging.info('Building src_loss_table')
+            source_ids, losses = get_src_loss_table(self.datastore, self.L)
+            self.datastore['src_loss_table'] = losses
+            self.datastore.set_shape_attrs('src_loss_table',
+                                           source=source_ids,
+                                           loss_type=oq.loss_names)
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
