@@ -264,12 +264,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_master1(self):
         # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
+        # it looks like the cholesky decomposition is OS-dependent, so
+        # the GMFs are different of macOS/Ubuntu20/Ubuntu18
         self.run_calc(case_master.__file__, 'job.ini', exports='csv')
         fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=2E-5)
+                                  delta=1E-4)
 
         # check event loss table
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
@@ -313,14 +315,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
 
         fname = export(('tot_curves-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=2E-5)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
 
         fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/avg_losses-mean.csv',
-                              fname, delta=1E-5)
+                              fname, delta=1E-4)
 
         fname = export(('losses_by_event', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/elt.csv', fname)
+        self.assertEqualFiles('expected/elt.csv', fname, delta=1E-4)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
@@ -335,7 +337,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                                  delta=1E-5)
+                                  delta=1E-4)
 
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
