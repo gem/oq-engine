@@ -28,7 +28,6 @@ urlpatterns = [
     url(r'^(\d+)/abort$', views.calc_abort),
     url(r'^(\d+)/datastore$', views.calc_datastore),
     url(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
-    url(r'^(\d+)/oqparam$', views.calc_oqparam),
     url(r'^(\d+)/results$', views.calc_results),
     url(r'^(\d+)/traceback$', views.calc_traceback),
     url(r'^(\d+)/log/size$', views.calc_log_size),

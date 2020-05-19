@@ -19,6 +19,7 @@ from urllib.parse import parse_qs
 from functools import lru_cache, partial
 import collections
 import logging
+import json
 import gzip
 import ast
 import io
@@ -192,6 +193,14 @@ class Extract(dict):
 
 
 extract = Extract()
+
+
+@extract.add('oqparam')
+def extract_oqparam(dstore, dummy):
+    """
+    Extract job parameters as a JSON npz. Use it as /extract/oqparam
+    """
+    return ArrayWrapper((), {'json': json.dumps(vars(dstore['oqparam']))})
 
 
 # used by the QGIS plugin in scenario
@@ -1357,7 +1366,7 @@ class WebExtractor(Extractor):
                 login_url, data=dict(username=username, password=password))
             if resp.status_code != 200:
                 raise WebAPIError(resp.text)
-        url = '%s/v1/calc/%d/oqparam' % (self.server, calc_id)
+        url = '%s/v1/calc/%d/extract/oqparam' % (self.server, calc_id)
         logging.info('GET %s', url)
         resp = self.sess.get(url)
         if resp.status_code == 404:
@@ -1367,7 +1376,8 @@ class WebExtractor(Extractor):
         self.status = self.sess.get(
             '%s/v1/calc/%d/status' % (self.server, calc_id)).json()
         self.oqparam = object.__new__(oqvalidation.OqParam)
-        vars(self.oqparam).update(resp.json())
+        js = bytes(numpy.load(io.BytesIO(resp.content))['json'])
+        vars(self.oqparam).update(json.loads(js))
 
     def get(self, what):
         """
