@@ -75,8 +75,7 @@ def post_ebrisk(dstore, aggkey, monitor):
 def get_src_loss_table(dstore, L):
     """
     :returns:
-        array of shape (Ns, L) where Ns is the number of sources
-        and L the number of loss types
+        (source_ids, array of losses of shape (Ns, L))
     """
     lbe = dstore['losses_by_event'][:]
     rup_ids = dstore['events']['rup_id'][lbe['event_id']]
@@ -85,7 +84,7 @@ def get_src_loss_table(dstore, L):
     acc = general.AccumDict(accum=numpy.zeros(L, F32))
     for source_id, rlzi, loss in zip(source_id, lbe['rlzi'], lbe['loss']):
         acc[source_id] += loss * w[rlzi]
-    return list(acc), numpy.array(list(acc.values()))
+    return zip(*sorted(acc.items()))
 
 
 @base.calculators.add('post_risk')

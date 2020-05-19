@@ -153,30 +153,22 @@ $ oq engine --run job.ini
 and export the output "Source Loss Table".
 You should see a table like the one below:
 ```
-source_id       grp_id  loss
-"230"	0	7.13619e+10
-"229"	0	5.02764e+10
-"231"	0	3.59305e+10
-"235"	0	2.67777e+10
-"232"	0	2.3294e+10
-"234"	0	9.5545e+09
-"227"	0	6.75134e+09
-"374"	0	1.11386e+09
-"238"	0	9.66742e+08
-"386"	0	2.85308e+08
-"233"	0	1.26478e+08
-"224"	0	7.19202e+07
-"228"	0	3.60474e+07
-"239"	0	2.30192e+07
-"376"	0	1.14477e+06
-"280"	0	832316
-"240"	0	623095
-"243"	0	100953
-"226"	0	58649.9
-"272"	0	0
-"236"	0	0
-"225"	0	0
+source,loss_type,loss_value,trt
+231,nonstructural,1.07658E+10,Active Shallow Crust
+231,structural,1.63773E+10,Active Shallow Crust
+386,nonstructural,3.82246E+07,Active Shallow Crust
+386,structural,6.18172E+07,Active Shallow Crust
+238,nonstructural,2.75016E+08,Active Shallow Crust
+238,structural,4.58682E+08,Active Shallow Crust
+239,nonstructural,4.51321E+05,Active Shallow Crust
+239,structural,7.62048E+05,Active Shallow Crust
+240,nonstructural,9.49753E+04,Active Shallow Crust
+240,structural,1.58884E+05,Active Shallow Crust
+280,nonstructural,6.44677E+03,Active Shallow Crust
+280,structural,1.14898E+04,Active Shallow Crust
+374,nonstructural,8.14875E+07,Active Shallow Crust
+374,structural,1.35158E+08,Active Shallow Crust
+...
 ```
-from which you can see that the source with ID "230" is the one
-causing the highest total losses for the portfolio of assets
-within the specified effective investigation time.
+from which one can infer the sources causing the highest total losses for
+the portfolio of assets within the specified effective investigation time.
