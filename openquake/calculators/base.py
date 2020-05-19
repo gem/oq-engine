@@ -1145,5 +1145,5 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
             logging.info('Storing %s', name)
             dstore[name] = assetcol.aggregate_by(list(names), aval)
             attrs = {tagname: getattr(assetcol.tagcol, tagname)[1:]
-                     for tagname in tagnames}
+                     for tagname in names}
             dstore.set_shape_attrs(name, **attrs, loss_name=lossnames)
