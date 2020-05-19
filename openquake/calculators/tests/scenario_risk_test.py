@@ -63,7 +63,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                             exports='csv')
         # this is also a case with a single site but an exposure grid,
         # to test a corner case
-        [fname] = out['losses_by_asset', 'csv']
+        [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
         # test agglosses
@@ -78,7 +78,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # a4 has a missing cost
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
 
-        [fname] = out['losses_by_asset', 'csv']
+        [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['agglosses', 'csv']
@@ -98,7 +98,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
 
-        [fname] = out['losses_by_asset', 'csv']
+        [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['agglosses', 'csv']
@@ -107,7 +107,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_5(self):
         # case with site model and 11 sites filled out of 17
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
-        [fname] = out['losses_by_asset', 'csv']
+        [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
     def test_case_6a(self):
@@ -140,13 +140,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_1h(self):
         # this is a case with 2 assets spawning 2 tasks
         out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv')
-        [fname] = out['losses_by_asset', 'csv']
+        [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
         # with a single task
         out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv',
                             concurrent_tasks='0')
-        [fname] = out['losses_by_asset', 'csv']
+        [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
     def test_case_master(self):

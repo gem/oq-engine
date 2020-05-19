@@ -101,7 +101,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
         # in dmg_by_event :-(
         result = dict(d_asset=[])
         for name in consequences:
-            result[name + '_by_asset'] = []
+            result['avg_' + name] = []
         ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
         with haz_mon:
             ri.hazard_getter.init()
@@ -124,8 +124,8 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
-                            result[name + '_by_asset'].append(
-                                (l, r, asset['ordinal'], mean_std(values)))
+                            result['avg_%s' % name].append(
+                                (l, r, asset['ordinal'], values.mean(axis=0)))
                             by_event = res[name + '_by_event']
                             for eid, value in zip(out.eids, values):
                                 by_event[eid][l] += value
@@ -220,14 +220,13 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         del result['d_asset']
         del result['d_event']
         dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
-        stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
         rlz = self.datastore['events']['rlz_id']
         for name, csq in result.items():
-            if name.endswith('_by_asset'):
-                c_asset = numpy.zeros((A, R, L), stat_dt)
+            if name.startswith('avg_'):
+                c_asset = numpy.zeros((A, R, L), F32)
                 for (l, r, a, stat) in result[name]:
                     c_asset[a, r, l] = stat
-                self.datastore[name] = c_asset
+                self.datastore[name + '-rlzs'] = c_asset
             elif name.endswith('_by_event'):
                 arr = numpy.zeros(len(csq), dtlist)
                 for i, (eid, loss) in enumerate(csq.items()):
@@ -238,8 +237,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 @base.calculators.add('event_based_damage')
 class EventBasedDamageCalculator(ScenarioDamageCalculator):
     """
-    Event Based Damage calculator, able to compute avg_damages-rlzs, dmg_by_event
-    and consequences.
+    Event Based Damage calculator, able to compute avg_damages-rlzs,
+    dmg_by_event and consequences.
     """
     core_task = scenario_damage
     precalc = 'event_based'

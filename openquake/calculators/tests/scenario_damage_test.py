@@ -105,7 +105,7 @@ RM       4_000
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-        fnames = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # one per realization
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
@@ -162,7 +162,7 @@ RM       4_000
         for i, fname in enumerate(fnames):
             self.assertEqualFiles('expected/avg_damages-rlzs-%d.csv' % i, fname)
 
-        fnames = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         for i, fname in enumerate(fnames):
             self.assertEqualFiles('expected/losses_asset-%d.csv' % i, fname)
 

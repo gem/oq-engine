@@ -90,12 +90,11 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
                 losses = out[loss_type]
                 if numpy.product(losses.shape) == 0:  # happens for all NaNs
                     continue
-                stats = numpy.zeros(len(ri.assets), stat_dt)  # mean, stddev
+                avg = numpy.zeros(len(ri.assets), F32)
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
-                    stats['mean'][a] = losses[a].mean()
-                    stats['stddev'][a] = losses[a].std(ddof=1)
-                    result['avg'].append((l, r, asset['ordinal'], stats[a]))
+                    avg[a] = losses[a].mean()
+                    result['avg'].append((l, r, asset['ordinal'], avg[a]))
                     for loss, eid in zip(losses[a], out.eids):
                         acc[aid, eid][l] = loss
                 agglosses = losses.sum(axis=0)  # shape num_gmfs
@@ -180,10 +179,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 agglosses[r]['stddev'] = F32(std)
 
             # losses by asset
-            losses_by_asset = numpy.zeros((A, R, L), stat_dt)
-            for (l, r, aid, stat) in result['avg']:
-                losses_by_asset[aid, r, l] = stat
-            self.datastore['losses_by_asset'] = losses_by_asset
+            losses_by_asset = numpy.zeros((A, R, L), F32)
+            for (l, r, aid, avg) in result['avg']:
+                losses_by_asset[aid, r, l] = avg
+            self.datastore['avg_losses-rlzs'] = losses_by_asset
             self.datastore['agglosses'] = agglosses
 
             # losses by event

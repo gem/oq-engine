@@ -126,7 +126,7 @@ def _get_data(dstore, dskey, stats):
     return name, value, tags
 
 
-# this is used by event_based_risk and classical_risk
+# this is used by event_based_risk, classical_risk and scenario_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
@@ -210,30 +210,6 @@ def export_src_loss_table(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     rows = add_columns(aw.to_table(), trt=get_trt)
     writer.save(rows, dest, comment=md)
-    return writer.getsaved()
-
-
-# this is used by scenario_risk
-@export.add(('losses_by_asset', 'csv'))
-def export_losses_by_asset(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    oq = dstore['oqparam']
-    loss_dt = oq.loss_dt(stat_dt)
-    losses_by_asset = dstore[ekey[0]][()]
-    rlzs = dstore['full_lt'].get_realizations()
-    assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
-    for rlz in rlzs:
-        losses = losses_by_asset[:, rlz.ordinal]
-        dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
-        data = compose_arrays(assets, losses.copy().view(loss_dt)[:, 0])
-        writer.save(data, dest, comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -374,6 +350,9 @@ def export_avg_damages_csv(ekey, dstore):
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+                   risk_investigation_time=oq.risk_investigation_time))
     for rlz in rlzs:
         if oq.modal_damage_state:
             avg_damages = modal_damage_array(data[:, rlz.ordinal], dmg_dt)
@@ -381,7 +360,7 @@ def export_avg_damages_csv(ekey, dstore):
             avg_damages = build_damage_array(data[:, rlz.ordinal], dmg_dt)
         fname = dstore.build_fname(ekey[0][:-5], rlz, ekey[1])
         writer.save(compose_arrays(assets, avg_damages), fname,
-                    renamedict=dict(id='asset_id'))
+                    renamedict=dict(id='asset_id'), comment=md)
     return writer.getsaved()
 
 
