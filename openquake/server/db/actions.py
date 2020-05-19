@@ -289,6 +289,7 @@ DISPLAY_NAME = {
     'disagg': 'Disaggregation Outputs',
     'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
+    'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
     'input': 'Input Files'
 }
