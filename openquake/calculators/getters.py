@@ -593,7 +593,6 @@ class RuptureGetter(object):
         dic = {'trt': self.trt, 'samples': self.samples}
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            source_ids = dstore['source_info']['source_id']
             rec = self.proxies[0].rec
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                 rec['sx'], rec['sy'])
@@ -609,7 +608,7 @@ class RuptureGetter(object):
             dic['n_occ'] = rec['n_occ']
             dic['serial'] = rec['serial']
             dic['mag'] = rec['mag']
-            dic['srcid'] = source_ids[rec['source_id']]
+            dic['srcid'] = rec['source_id']
         return dic
 
     def get_proxies(self, min_mag=0):
