@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Fixed a bug in the mixture model application when running multiple GMPEs
+
   [Michele Simionato]
   * Raised an early error when `max_sites_disagg` is below the number of
     sites in disaggregation calculations
