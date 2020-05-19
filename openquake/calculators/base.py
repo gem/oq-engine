@@ -328,7 +328,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 continue
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and self.R > 1:
-                    continue  # skip individual curves
+                    if (key[:-4] + 'stats') in self.datastore:
+                        continue  # skip individual curves
                 self._export((key, fmt))
             if has_hcurves and self.oqparam.hazard_maps:
                 self._export(('hmaps', fmt))
