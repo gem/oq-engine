@@ -350,6 +350,9 @@ def export_avg_damages_csv(ekey, dstore):
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+                   risk_investigation_time=oq.risk_investigation_time))
     for rlz in rlzs:
         if oq.modal_damage_state:
             avg_damages = modal_damage_array(data[:, rlz.ordinal], dmg_dt)
@@ -357,7 +360,7 @@ def export_avg_damages_csv(ekey, dstore):
             avg_damages = build_damage_array(data[:, rlz.ordinal], dmg_dt)
         fname = dstore.build_fname(ekey[0][:-5], rlz, ekey[1])
         writer.save(compose_arrays(assets, avg_damages), fname,
-                    renamedict=dict(id='asset_id'))
+                    renamedict=dict(id='asset_id'), comment=md)
     return writer.getsaved()
 
 
