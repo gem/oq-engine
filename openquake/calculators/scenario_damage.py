@@ -117,10 +117,10 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                             ddic[aid, eid][l] = ddd[1:]
                             d_event[eid][l] += ddd[1:]
                         if make_ddd is approx_ddd:
-                            ms = (fractions * asset['number']).mean(axis=0)
+                            avg = (fractions * asset['number']).mean(axis=0)
                         else:
-                            ms = ddds.mean(axis=0)
-                        result['d_asset'].append((l, r, asset['ordinal'], ms))
+                            avg = ddds.mean(axis=0)
+                        result['d_asset'].append((l, r, asset['ordinal'], avg))
                         # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
