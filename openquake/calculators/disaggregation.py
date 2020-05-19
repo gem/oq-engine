@@ -534,7 +534,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                             else 'poe-%s' % poe)
                     name = 'disagg_by_src/%s-%s-sid-%s' % (pref, imt, s)
                     if poes[m, p].sum():  # nonzero contribution
-                        poe_agg = 1 - numpy.prod(1 - poes[m, p])
+                        poe_agg = pprod(poes[m, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
                             logging.warning(
                                 'poe_agg=%s is quite different from '
