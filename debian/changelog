@@ -2,6 +2,9 @@
   * Fixed a bug in the mixture model application when running multiple GMPEs
 
   [Michele Simionato]
+  * Extended the /extract/ API to manage JSON
+  * Added a check on ebrisk to avoid generating too many loss curves
+  * Introduced an output "Source Loss Table" for event based risk calculations
   * Raised an early error when `max_sites_disagg` is below the number of
     sites in disaggregation calculations
   * Extended the amplification framework to use different intensity levels

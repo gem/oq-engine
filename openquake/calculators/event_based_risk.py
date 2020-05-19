@@ -207,7 +207,7 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore.set_shape_attrs(
                 'curves-stats',
                 assets=self.assetcol['id'],
-                stats=[encode(name) for (name, func) in stats],
+                stat=[encode(name) for (name, func) in stats],
                 return_periods=builder.return_periods,
                 loss_types=oq.loss_names
             )
@@ -217,7 +217,7 @@ class EbrCalculator(base.RiskCalculator):
                     fillvalue=None)
                 self.datastore.set_attrs(
                     'loss_maps-stats',
-                    stats=[encode(name) for (name, func) in stats])
+                    stat=[encode(name) for (name, func) in stats])
 
     def save_losses(self, dic):
         """
@@ -276,6 +276,6 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses',
-                           assets=self.assetcol['id'],
-                           loss_types=oq.loss_names)
+                           asset_id=self.assetcol['id'],
+                           loss_type=oq.loss_names)
         post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()

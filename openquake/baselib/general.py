@@ -1412,3 +1412,10 @@ def gen_subclasses(cls):
     for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
         yield subclass
         yield from gen_subclasses(subclass)
+
+
+def pprod(p, axis=None):
+    """
+    Probability product 1 - prod(1-p)
+    """
+    return 1. - numpy.prod(1. - p, axis)

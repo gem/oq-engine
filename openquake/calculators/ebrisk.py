@@ -189,6 +189,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['ebrisk_maxsize'] = oq.ebrisk_maxsize
         self.A = A = len(self.assetcol)
         self.L = L = len(lba.loss_names)
+        self.check_number_loss_curves()
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_names}
         logging.info('minimum_asset_loss=%s', mal)
@@ -212,6 +213,21 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                                'red with %d tasks' % oq.concurrent_tasks)
         self.datastore.create_dset('losses_by_event', elt_dt)
         self.datastore.create_dset('gmf_info', gmf_info_dt)
+
+    def check_number_loss_curves(self):
+        """
+        Raise an error if generating too many loss curves (>10,000)
+        """
+        shp = self.assetcol.tagcol.agg_shape(
+            (self.L,), aggregate_by=self.oqparam.aggregate_by)
+        if numpy.prod(shp) > 10_000:
+            dic = dict(loss_types=self.L)
+            for aggby in self.oqparam.aggregate_by:
+                dic[aggby] = len(getattr(self.assetcol.tagcol, aggby)) - 1
+            tot = numpy.prod(list(dic.values()))
+            msg = ' * ' .join('(%s=%d)' % item for item in dic.items())
+            raise ValueError('Producing too many aggregate loss curves, please'
+                             ' reduce the aggregate_by\n%s = %d' % (msg, tot))
 
     def execute(self):
         self.datastore.flush()  # just to be sure
@@ -271,7 +287,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         if oq.avg_losses:
-            self.datastore['avg_losses-stats'].attrs['stats'] = [b'mean']
+            self.datastore['avg_losses-stats'].attrs['stat'] = [b'mean']
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run()

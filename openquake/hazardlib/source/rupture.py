@@ -650,12 +650,12 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, grp_id, n_occ, samples=1, id=None):
+    def __init__(self, rupture, source_id, grp_id, n_occ, samples=1, id=None):
         # NB: when reading an exported ruptures.xml the rup_id will be 0
         # for the first rupture; it used to be the seed instead
         assert rupture.rup_id >= 0  # sanity check
         self.rupture = rupture
-        self.srcidx = srcidx
+        self.source_id = source_id
         self.grp_id = grp_id
         self.n_occ = n_occ
         self.samples = samples
@@ -781,7 +781,7 @@ class RuptureProxy(object):
         """
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
-        ebr = EBRupture(rupture, self.rec['srcidx'], self.rec['grp_id'],
+        ebr = EBRupture(rupture, self.rec['source_id'], self.rec['grp_id'],
                         self.rec['n_occ'], samples)
         ebr.id = self.rec['id']
         ebr.e0 = self.rec['e0']
