@@ -226,8 +226,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 dic[aggby] = len(getattr(self.assetcol.tagcol, aggby)) - 1
             tot = numpy.prod(list(dic.values()))
             msg = ' * ' .join('(%s=%d)' % item for item in dic.items())
-            raise ValueError('Producing too many aggregate loss curves, please '
-                             'reduce the aggregate_by\n%s = %d' % (msg, tot))
+            raise ValueError('Producing too many aggregate loss curves, please'
+                             ' reduce the aggregate_by\n%s = %d' % (msg, tot))
 
     def execute(self):
         self.datastore.flush()  # just to be sure
