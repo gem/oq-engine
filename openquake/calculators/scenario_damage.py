@@ -117,15 +117,15 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                             ddic[aid, eid][l] = ddd[1:]
                             d_event[eid][l] += ddd[1:]
                         if make_ddd is approx_ddd:
-                            avg = (fractions * asset['number']).mean(axis=0)
+                            tot = (fractions * asset['number']).sum(axis=0)
                         else:
-                            avg = ddds.mean(axis=0)
-                        result['d_asset'].append((l, r, asset['ordinal'], avg))
+                            tot = ddds.sum(axis=0)
+                        result['d_asset'].append((l, r, asset['ordinal'], tot))
                         # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
                             result['avg_%s' % name].append(
-                                (l, r, asset['ordinal'], values.mean(axis=0)))
+                                (l, r, asset['ordinal'], values.sum(axis=0)))
                             by_event = res[name + '_by_event']
                             for eid, value in zip(out.eids, values):
                                 by_event[eid][l] += value
@@ -200,11 +200,19 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         events_per_asset = (indices[:, 1] - indices[:, 0]).mean()
         logging.info('Found ~%d dmg distributions per asset', events_per_asset)
 
+        # avg_factor = factor used when computing the averages
+        oq = self.oqparam
+        if oq.investigation_time is None:  # scenario_damage
+            avg_factor = 1. / oq.number_of_ground_motion_fields
+        else:  # event_based_damage
+            avg_factor = oq.risk_investigation_time / (
+                oq.investigation_time * oq.ses_per_logic_tree_path)
+
         # damage by asset
         d_asset = numpy.zeros((A, R, L, D), F32)
-        for (l, r, a, avg) in result['d_asset']:
-            d_asset[a, r, l] = avg
-        self.datastore['avg_damages-rlzs'] = d_asset
+        for (l, r, a, tot) in result['d_asset']:
+            d_asset[a, r, l] = tot
+        self.datastore['avg_damages-rlzs'] = d_asset * avg_factor
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -226,7 +234,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 c_asset = numpy.zeros((A, R, L), F32)
                 for (l, r, a, stat) in result[name]:
                     c_asset[a, r, l] = stat
-                self.datastore[name + '-rlzs'] = c_asset
+                self.datastore[name + '-rlzs'] = c_asset * avg_factor
             elif name.endswith('_by_event'):
                 arr = numpy.zeros(len(csq), dtlist)
                 for i, (eid, loss) in enumerate(csq.items()):
