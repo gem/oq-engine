@@ -274,11 +274,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # check event loss table
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=5E-5)
+                              delta=1E-4)
 
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
-            'expected/portfolio_losses.txt', fname, delta=2E-5)
+            'expected/portfolio_losses.txt', fname, delta=1E-4)
         os.remove(fname)
 
         # check ruptures are stored correctly
@@ -290,7 +290,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(
             ('aggregate_by/avg_losses?tag=occupancy&kind=mean', 'csv'),
             self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
+        self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0],
+                              delta=1E-4)
 
         self.check_multi_tag(self.calc.datastore)
 
