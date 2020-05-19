@@ -114,13 +114,13 @@ class GmfComputer(object):
         self.correlation_model = correlation_model
         self.amplifier = amplifier
         # `rupture` is an EBRupture instance in the engine
-        if hasattr(rupture, 'srcidx'):
+        if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
-            self.srcidx = rupture.srcidx  # the source the rupture comes from
+            self.source_id = rupture.source_id  # the source the rupture comes from
             self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
-            self.srcidx = '?'
+            self.source_id = '?'
             self.e0 = 0
         self.seed = rupture.rup_id
         self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
@@ -191,7 +191,7 @@ class GmfComputer(object):
                      gs, num_events, imt)
             except Exception as exc:
                 raise exc.__class__(
-                    '%s for %s, %s, srcidx=%s' % (exc, gs, imt, self.srcidx)
+                    '%s for %s, %s, source_id=%s' % (exc, gs, imt, self.source_id)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(

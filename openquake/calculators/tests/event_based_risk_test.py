@@ -263,14 +263,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   fname, delta=1E-5)
 
     def test_case_master1(self):
-        if sys.platform == 'darwin':
-            raise unittest.SkipTest('MacOSX')
+        # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
         self.run_calc(case_master.__file__, 'job.ini', exports='csv')
         fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1.3E-5)
+                                  delta=2E-5)
 
         # check event loss table
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)

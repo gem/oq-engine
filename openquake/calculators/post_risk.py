@@ -80,11 +80,11 @@ def get_src_loss_table(dstore, L):
     """
     lbe = dstore['losses_by_event'][:]
     rup_ids = dstore['events']['rup_id'][lbe['event_id']]
-    srcidx = dstore['ruptures']['srcidx'][rup_ids]
+    source_id = dstore['ruptures']['source_id'][rup_ids]
     w = dstore['weights'][:]
     acc = general.AccumDict(accum=numpy.zeros(L, F32))
-    for srcidx, rlzi, loss in zip(srcidx, lbe['rlzi'], lbe['loss']):
-        acc[srcidx] += loss * w[rlzi]
+    for source_id, rlzi, loss in zip(source_id, lbe['rlzi'], lbe['loss']):
+        acc[source_id] += loss * w[rlzi]
     return list(acc), numpy.array(list(acc.values()))
 
 

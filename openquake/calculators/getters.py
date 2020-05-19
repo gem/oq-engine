@@ -534,7 +534,7 @@ def get_rupdict(dstore):
     dic = {}
     for i, ebr in enumerate(get_ebruptures(dstore)):
         dic['rup_%s' % i] = d = ebr.rupture.todict()
-        for attr in ['srcidx', 'grp_id', 'n_occ', 'samples']:
+        for attr in ['source_id', 'grp_id', 'n_occ', 'samples']:
             d[attr] = int(getattr(ebr, attr))
     return dic
 
@@ -578,7 +578,7 @@ class RuptureGetter(object):
         """
         eid_rlz = []
         for rup in self.proxies:
-            ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['srcidx'],
+            ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
                             self.grp_id, rup['n_occ'], self.samples)
             for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
@@ -609,7 +609,7 @@ class RuptureGetter(object):
             dic['n_occ'] = rec['n_occ']
             dic['serial'] = rec['serial']
             dic['mag'] = rec['mag']
-            dic['srcid'] = source_ids[rec['srcidx']]
+            dic['srcid'] = source_ids[rec['source_id']]
         return dic
 
     def get_proxies(self, min_mag=0):

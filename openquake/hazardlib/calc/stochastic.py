@@ -86,7 +86,7 @@ def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('id', U32), ('serial', U32), ('srcidx', '<S10'), ('grp_id', U16),
+    ('id', U32), ('serial', U32), ('source_id', '<S16'), ('grp_id', U16),
     ('code', U8), ('n_occ', U16), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
@@ -127,7 +127,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
                 srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (0, ebrupture.rup_id, ebrupture.srcidx, ebrupture.grp_id,
+        tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.grp_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
                minlon, minlat, maxlon, maxlat, hypo,
                offset, offset + len(points), sy, sz, 0, 0)
@@ -208,9 +208,9 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     # Create event based ruptures
     for src_key in rup_data:
         for rup_key in rup_data[src_key]:
-            rup, srcidx, grp_id = rup_data[src_key][rup_key]
+            rup, source_id, grp_id = rup_data[src_key][rup_key]
             cnt = rup_counter[src_key][rup_key]
-            ebr = EBRupture(rup, srcidx, grp_id, cnt, samples)
+            ebr = EBRupture(rup, source_id, grp_id, cnt, samples)
             eb_ruptures.append(ebr)
 
     return eb_ruptures, calc_times
