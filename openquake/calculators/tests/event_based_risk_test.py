@@ -334,7 +334,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
              'csv'),
             dstore)
         for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association

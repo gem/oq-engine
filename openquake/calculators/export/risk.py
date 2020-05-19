@@ -189,19 +189,27 @@ def export_agg_losses(ekey, dstore):
 
 
 @export.add(('src_loss_table', 'csv'))
-def export_losses_by_source(ekey, dstore):
+def export_src_loss_table(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
+    trts = dstore['full_lt'].trts
+    trt_by_source_id = {}
+    for rec in dstore['source_info']:
+        trt_by_source_id[rec['source_id'][:16]] = trts[rec['trti']]
+
+    def get_trt(row):
+        return trt_by_source_id[row.source]
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time))
     aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
     dest = dstore.build_fname('src_loss_table', '', 'csv')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    writer.save(aw.to_table(), dest, comment=md)
+    rows = add_columns(aw.to_table(), trt=get_trt)
+    writer.save(rows, dest, comment=md)
     return writer.getsaved()
 
 
