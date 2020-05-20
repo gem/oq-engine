@@ -73,13 +73,19 @@ RM       4_000
         # and also a case with modal_damage_state
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
+
+        # check avg_damages-rlzs
         [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        df = self.calc.datastore.read_df('avg_damages-rlzs', 'asset_id')
+        self.assertEqual(list(df.columns),
+                         ['rlz', 'loss_type', 'dmg_state', 'value'])
 
+        # check dmg_by_event
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-        # check avg_damages-rlzs
+        # check agg_damages extraction
         total = extract(self.calc.datastore, 'agg_damages/structural')
         aac(total, [[37312.8, 30846.1, 4869.6, 1271.5, 5700.7]], atol=.1)
 
