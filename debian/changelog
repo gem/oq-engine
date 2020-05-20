@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Fixed a bug in the mixture model application when running multiple GMPEs
+
   [Michele Simionato]
   * Fixed the formula used for the avg_damages-rlzs outputs in event based
     damage calculations
