@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2019-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,22 +16,27 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 from openquake.baselib import sap, datastore
 from openquake.commonlib import logs
 from openquake.calculators.post_risk import PostRiskCalculator
 
+
 @sap.Script
-def postrisk(calc_id):
+def recompute_losses(calc_id):
     """Re-run the postprocessing after an event based risk calculation"""
     parent = datastore.read(calc_id)
     job_id = logs.init('job', level=logging.INFO)
+    if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+        os.environ['OQ_DISTRIBUTE'] = 'processpool'
     with logs.handle(job_id, logging.INFO):
         prc = PostRiskCalculator(parent['oqparam'], job_id)
         prc.datastore.parent = parent
         prc.run()
 
-postrisk.arg('calc_id', 'ID of the risk calculation', type=int)
+
+recompute_losses.arg('calc_id', 'ID of the risk calculation', type=int)
 
 if __name__ == '__main__':
-    postrisk.callfunc()
+    recompute_losses.callfunc()

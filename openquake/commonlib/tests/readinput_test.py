@@ -83,7 +83,6 @@ reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
-investigation_time = 50.
 export_dir = %s
             """ % (os.path.basename(sites_csv), TMP))
             exp_base_path = os.path.dirname(
@@ -105,8 +104,7 @@ export_dir = %s
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
-                'investigation_time': 50.0,
-                'risk_investigation_time': 50.0,
+                'risk_investigation_time': None,
             }
 
             params = getparams(readinput.get_oqparam(source))
@@ -132,7 +130,6 @@ reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
-investigation_time = 50.
 export_dir = %s
 """ % (os.path.basename(sites_csv), TMP))
         oq = readinput.get_oqparam(source)

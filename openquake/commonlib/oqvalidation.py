@@ -166,7 +166,7 @@ class OqParam(valid.ParamSet):
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_cores = valid.Param(valid.positiveint, None)
     num_epsilon_bins = valid.Param(valid.positiveint)
-    num_rlzs_disagg = valid.Param(valid.positiveint, 1)
+    num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.MagDist.new, None)
@@ -302,6 +302,12 @@ class OqParam(valid.ParamSet):
             self.check_missing('gsim_logic_tree', 'debug')
             self.check_missing('source_model_logic_tree', 'debug')
 
+        # check investigation_time
+        if (self.investigation_time and
+                self.calculation_mode.startswith('scenario')):
+            raise ValueError('%s: there cannot be investigation_time in %s'
+                             % (self.inputs['job_ini'], self.calculation_mode))
+
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
             if self.gsim != '[FromFile]':
@@ -347,6 +353,10 @@ class OqParam(valid.ParamSet):
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
                 self.num_epsilon_bins = 1
+            if (self.rlz_index is not None
+                    and self.num_rlzs_disagg is not None):
+                raise InvalidFile('%s: you cannot set rlzs_index and '
+                                  'num_rlzs_disagg at the same time' % job_ini)
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':

@@ -257,9 +257,9 @@ def get_outputs(db, job_id):
 DISPLAY_NAME = {
     'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
-    'dmg_by_asset': 'Average Asset Damages',
+    'avg_damages-rlzs': 'Average Asset Damages',
+    'avg_damages-stats': 'Average Asset Damages Statistics',
     'dmg_by_event': 'Aggregate Event Damages',
-    'losses_by_asset': 'Average Asset Losses',
     'losses_by_event': 'Aggregate Event Losses',
     'events': 'Events',
     'damages-rlzs': 'Asset Damage Distribution',
@@ -289,6 +289,7 @@ DISPLAY_NAME = {
     'disagg': 'Disaggregation Outputs',
     'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
+    'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
     'input': 'Input Files'
 }

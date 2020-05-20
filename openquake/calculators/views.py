@@ -323,7 +323,7 @@ def view_totlosses(token, dstore):
     sanity check for the correctness of the implementation.
     """
     oq = dstore['oqparam']
-    tot_losses = dstore['losses_by_asset']['mean'].sum(axis=0)
+    tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
     return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
 
 
@@ -744,14 +744,12 @@ def view_act_ruptures_by_src(token, dstore):
     """
     Display the actual number of ruptures by source in event based calculations
     """
-    data = dstore['ruptures'][('srcidx', 'rup_id')]
-    counts = sorted(countby(data, 'srcidx').items(),
+    data = dstore['ruptures'][('source_id', 'grp_id', 'rup_id')]
+    counts = sorted(countby(data, 'source_id').items(),
                     key=operator.itemgetter(1), reverse=True)
-    src_info = dstore['source_info'][('grp_id', 'source_id')]
     table = [['src_id', 'grp_id', 'act_ruptures']]
-    for srcidx, act_ruptures in counts:
-        src = src_info[srcidx]
-        table.append([src['source_id'], src['grp_id'], act_ruptures])
+    for source_id, act_ruptures in counts:
+        table.append([source_id, src['grp_id'], act_ruptures])
     return rst_table(table)
 
 

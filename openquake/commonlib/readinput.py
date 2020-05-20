@@ -69,7 +69,9 @@ source_info_dt = numpy.dtype([
     ('eff_ruptures', numpy.uint32),    # 6
     ('checksum', numpy.uint32),        # 7
     ('serial', numpy.uint32),          # 8
+    ('trti', numpy.uint8),             # 9
 ])
+MULTIPLICITY = 3
 
 
 class DuplicatedPoint(Exception):
@@ -682,11 +684,12 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
         for src in sg:
             ns += 1
             if src.source_id in data:
-                num_sources = data[src.source_id][3] + 1
+                multiplicity = data[src.source_id][MULTIPLICITY] + 1
             else:
-                num_sources = 1
+                multiplicity = 1
             row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
-                   num_sources, 0, 0, 0, src.checksum, src.serial]
+                   multiplicity, 0, 0, 0, src.checksum, src.serial,
+                   full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
@@ -699,6 +702,11 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
             mags[sg.trt].update(srcmags)
 
     logging.info('There are %d sources with %d unique IDs', ns, len(data))
+    false_duplicates = [src_id for src_id in data
+                        if data[src_id][MULTIPLICITY] > 1]
+    if false_duplicates:
+        logging.info('Found different sources with same ID: %s',
+                     numpy.array(false_duplicates))
     if h5:
         attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
         # avoid hdf5 damned bug by creating source_info in advance

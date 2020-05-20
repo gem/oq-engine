@@ -26,6 +26,7 @@ import itertools
 from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
+import json
 import toml
 import pandas
 import numpy
@@ -432,6 +433,20 @@ def fix_array(arr, key):
     return arr
 
 
+def set_shape_attrs(hdf5file, dsetname, kw):
+    """
+    Set shape attributes on a dataset (and possibly other attributes)
+    """
+    dset = hdf5file[dsetname]
+    S = len(dset.shape)
+    if len(kw) < S:
+        raise ValueError('The dataset %s has %d dimensions but you passed %d'
+                         ' axis' % (dsetname, S, len(kw)))
+    dset.attrs['shape_descr'] = encode(list(kw))[:S]
+    for k, v in kw.items():
+        dset.attrs[k] = v
+
+
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
@@ -513,8 +528,14 @@ class ArrayWrapper(object):
         """
         if self.shape:
             return toml.dumps(self.array)
-        dic = {k: v for k, v in vars(self).items()
-               if not k.startswith('_')}
+        dic = {}
+        for k, v in vars(self).items():
+            if k.startswith('_'):
+                continue
+            elif k == 'json':
+                dic.update(json.loads(bytes(v)))
+            else:
+                dic[k] = v
         return toml.dumps(dic)
 
     def to_table(self):
@@ -739,9 +760,6 @@ def save_npz(obj, path):
         elif isinstance(val, str):
             # without this oq extract would fail
             a[key] = numpy.array(val.encode('utf-8'))
-        elif isinstance(val, dict):
-            # this is hack: we are losing the values
-            a[key] = list(val)
         else:
             a[key] = fix_array(val, key)
     numpy.savez_compressed(path, **a)

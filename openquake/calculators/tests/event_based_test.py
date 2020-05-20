@@ -282,7 +282,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
-        self.assertEqualFiles('expected/rup_data.csv', fname)
+        self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-5)
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
@@ -334,7 +334,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertGot(  # gridded rupture
             rup1, os.path.join(self.testdir, 'expected/rupture_1.toml'))
 
-        # test running scenario from event based
+        # test running scenario from event based, reading TOML
         self.run_calc(case_15.__file__, 'scenario.ini')
 
     def test_case_16(self):

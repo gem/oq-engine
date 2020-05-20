@@ -328,7 +328,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 continue
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and self.R > 1:
-                    continue  # skip individual curves
+                    if (key[:-4] + 'stats') in self.datastore:
+                        continue  # skip individual curves
                 self._export((key, fmt))
             if has_hcurves and self.oqparam.hazard_maps:
                 self._export(('hmaps', fmt))
@@ -453,6 +454,11 @@ class HazardCalculator(BaseCalculator):
             # can be None for the ruptures-only calculator
             with hdf5.File(self.datastore.tempname, 'w') as tmp:
                 tmp['sitecol'] = self.sitecol
+        elif (oq.calculation_mode == 'disaggregation' and
+              oq.max_sites_disagg < len(self.sitecol)):
+            raise ValueError(
+                'Please set max_sites_disagg=%d in %s' % (
+                    len(self.sitecol), oq.inputs['job_ini']))
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             full_lt = readinput.get_full_lt(oq)
@@ -1139,8 +1145,6 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
             name = 'exposed_values/' + '_'.join(('agg',) + names)
             logging.info('Storing %s', name)
             dstore[name] = assetcol.aggregate_by(list(names), aval)
-            attrs = dict(shape_descr=names + ('loss_name',),
-                         loss_name=lossnames)
-            for tagname in tagnames:
-                attrs[tagname] = getattr(assetcol.tagcol, tagname)[1:]
-            dstore.set_attrs(name, **attrs)
+            attrs = {tagname: getattr(assetcol.tagcol, tagname)[1:]
+                     for tagname in names}
+            dstore.set_shape_attrs(name, **attrs, loss_name=lossnames)

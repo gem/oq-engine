@@ -19,6 +19,7 @@ from urllib.parse import parse_qs
 from functools import lru_cache, partial
 import collections
 import logging
+import json
 import gzip
 import ast
 import io
@@ -32,7 +33,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, stochastic
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
 
@@ -43,6 +44,7 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
+SOURCE_ID = stochastic.rupture_dt['source_id']
 memoized = lru_cache()
 
 
@@ -191,6 +193,14 @@ class Extract(dict):
 
 
 extract = Extract()
+
+
+@extract.add('oqparam')
+def extract_oqparam(dstore, dummy):
+    """
+    Extract job parameters as a JSON npz. Use it as /extract/oqparam
+    """
+    return ArrayWrapper((), {'json': json.dumps(vars(dstore['oqparam']))})
 
 
 # used by the QGIS plugin in scenario
@@ -739,16 +749,10 @@ def extract_agg_losses(dstore, what):
     if not loss_type:
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
     L = dstore['oqparam'].lti[loss_type]
-    if 'losses_by_asset' in dstore:  # scenario_risk
-        stats = None
-        losses = dstore['losses_by_asset'][:, :, L]['mean']
-    elif 'avg_losses' in dstore:  # ebrisk
-        stats = ['mean']
-        losses = dstore['avg_losses'][:, L].reshape(-1, 1)
-    elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
-        stats = decode(dstore['avg_losses-stats'].attrs['stats'])
+    if 'avg_losses-stats' in dstore:
+        stats = decode(dstore['avg_losses-stats'].attrs['stat'])
         losses = dstore['avg_losses-stats'][:, :, L]
-    elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
+    elif 'avg_losses-rlzs' in dstore:
         stats = ['mean']
         losses = dstore['avg_losses-rlzs'][:, :, L]
     else:
@@ -768,9 +772,9 @@ def extract_agg_damages(dstore, what):
         for the given tags
     """
     loss_type, tags = get_loss_type_tags(what)
-    if 'dmg_by_asset' in dstore:  # scenario_damage
+    if 'avg_damages-rlzs' in dstore:  # scenario_damage
         lti = dstore['oqparam'].lti[loss_type]
-        losses = dstore['dmg_by_asset'][:, :, lti, 0]
+        losses = dstore['avg_damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags)
@@ -886,13 +890,11 @@ def extract_num_events(dstore, what):
     yield 'num_events', len(dstore['events'])
 
 
-def build_damage_dt(dstore, mean_std=True):
+def build_damage_dt(dstore):
     """
     :param dstore: a datastore instance
-    :param mean_std: a flag (default True)
     :returns:
-       a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
-       loss_type -> (ds1, ds2, ...) depending on the flag mean_std
+       a composite dtype loss_type -> (ds1, ds2, ...)
     """
     oq = dstore['oqparam']
     damage_states = ['no_damage'] + list(
@@ -900,11 +902,7 @@ def build_damage_dt(dstore, mean_std=True):
     dt_list = []
     for ds in damage_states:
         ds = str(ds)
-        if mean_std:
-            dt_list.append(('%s_mean' % ds, F32))
-            dt_list.append(('%s_stdv' % ds, F32))
-        else:
-            dt_list.append((ds, F32))
+        dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
@@ -912,33 +910,28 @@ def build_damage_dt(dstore, mean_std=True):
 
 def build_damage_array(data, damage_dt):
     """
-    :param data: an array of shape (A, L, 1, D) or (A, L, 2, D)
+    :param data: an array of shape (A, L, D)
     :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    A, L, MS, D = data.shape
+    A, L, D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
         for l, lt in enumerate(damage_dt.names):
-            std = any(f for f in damage_dt[lt].names if f.endswith('_stdv'))
-            if MS == 1 or not std:  # there is only the mean value
-                dmg[lt][a] = tuple(data[a, l, 0])
-            else:  # there are both mean and stddev
-                # data[a, l].T has shape (D, 2)
-                dmg[lt][a] = tuple(numpy.concatenate(data[a, l].T))
+            dmg[lt][a] = tuple(data[a, l])
     return dmg
 
 
-@extract.add('dmg_by_asset')
-def extract_dmg_by_asset_npz(dstore, what):
+@extract.add('avg_damages-rlzs')
+def extract_avg_damages_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore['dmg_by_asset']
+    data = dstore['avg_damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
-        dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        avg_damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
         yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
-            assets, dmg_by_asset)
+            assets, avg_damages)
 
 
 @extract.add('event_based_mfd')
@@ -1002,25 +995,6 @@ def extract_mfd(dstore, what):
 #     return ArrayWrapper(occurrences, dic)
 
 
-@extract.add('src_loss_table')
-def extract_src_loss_table(dstore, loss_type):
-    """
-    Extract the source loss table for a give loss type, ordered in decreasing
-    order. Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/src_loss_table/structural
-    """
-    source_ids = dstore['source_info']['source_id']
-    idxs = dstore['ruptures'][('srcidx', 'grp_id')]
-    losses = dstore['rup_loss_table'][loss_type]
-    slt = numpy.zeros(len(source_ids), [('grp_id', U32), (loss_type, F32)])
-    for loss, (srcidx, grp_id) in zip(losses, idxs):
-        slt[srcidx][loss_type] += loss
-        slt[srcidx]['grp_id'] = grp_id
-    slt = util.compose_arrays(source_ids, slt, 'source_id')
-    slt.sort(order=loss_type)
-    return slt[::-1]
-
-
 @extract.add('mean_std_curves')
 def extract_mean_std_curves(dstore, what):
     """
@@ -1048,7 +1022,7 @@ def crm_attrs(dstore, what):
 def _get(dstore, name):
     try:
         dset = dstore[name + '-stats']
-        return dset, decode(dset.attrs['stats'])
+        return dset, decode(dset.attrs['stat'])
     except KeyError:  # single realization
         return dstore[name + '-rlzs'], ['mean']
 
@@ -1235,7 +1209,7 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', U32), ('srcidx', U32), ('multiplicity', U16),
+            ('rup_id', U32), ('source_id', SOURCE_ID), ('multiplicity', U16),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -1259,7 +1233,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.id, ebr.srcidx, ebr.n_occ, rate,
+                (ebr.id, ebr.source_id, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake, boundaries) + ruptparams)
         return numpy.array(data, self.dt)
@@ -1375,7 +1349,7 @@ class WebExtractor(Extractor):
                 login_url, data=dict(username=username, password=password))
             if resp.status_code != 200:
                 raise WebAPIError(resp.text)
-        url = '%s/v1/calc/%d/oqparam' % (self.server, calc_id)
+        url = '%s/v1/calc/%d/extract/oqparam' % (self.server, calc_id)
         logging.info('GET %s', url)
         resp = self.sess.get(url)
         if resp.status_code == 404:
@@ -1385,7 +1359,8 @@ class WebExtractor(Extractor):
         self.status = self.sess.get(
             '%s/v1/calc/%d/status' % (self.server, calc_id)).json()
         self.oqparam = object.__new__(oqvalidation.OqParam)
-        vars(self.oqparam).update(resp.json())
+        js = bytes(numpy.load(io.BytesIO(resp.content))['json'])
+        vars(self.oqparam).update(json.loads(js))
 
     def get(self, what):
         """

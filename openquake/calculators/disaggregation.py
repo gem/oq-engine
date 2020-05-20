@@ -26,7 +26,7 @@ import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes, humansize)
+    AccumDict, block_splitter, get_array_nbytes, humansize, pprod)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -176,23 +176,17 @@ def agg_probs(*probs):
     return 1. - acc
 
 
-def get_indices_by_grp_mag(dstore, mag_edges):
+def get_indices_by_gidx_mag(dstore, mag_edges):
     """
-    :returns: a dictionary grp_id, magi -> indices
+    :returns: a dictionary gidx, magi -> indices
     """
-    acc = AccumDict(accum=[])  # grp_id, magi -> indices
-    grp_ids = dstore['grp_ids'][:]
+    acc = AccumDict(accum=[])  # gidx, magi -> indices
     df = pandas.DataFrame(dict(gidx=dstore['rup/grp_id'][:],
                                mag=dstore['rup/mag'][:]))
-    tot = 0
     for (gidx, mag), d in df.groupby(['gidx', 'mag']):
         magi = numpy.searchsorted(mag_edges, mag) - 1
-        for grp_id in grp_ids[gidx]:
-            acc[grp_id, magi].extend(d.index)
-            tot += len(d)
-    for grp_id, magi in acc:
-        acc[grp_id, magi] = sorted(acc[grp_id, magi])
-    return acc
+        acc[gidx, magi].extend(d.index)
+    return {gm: sorted(idxs) for gm, idxs in acc.items()}
 
 
 def get_outputs_size(shapedic, disagg_outputs):
@@ -295,7 +289,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
-            Z = oq.num_rlzs_disagg
+            Z = oq.num_rlzs_disagg or 1
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in self.sitecol.sids:
@@ -343,8 +337,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         mag_edges = self.bin_edges[0]
-        indices = get_indices_by_grp_mag(dstore, mag_edges)
-        trt_num = {trt: i for i, trt in enumerate(self.trts)}
+        indices = get_indices_by_gidx_mag(dstore, mag_edges)
         allargs = []
         M = len(oq.imtls)
         U = len(dstore['rup/mag'])
@@ -352,17 +345,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         blocksize = int(numpy.ceil(U / (oq.concurrent_tasks or 1) * M))
         logging.info('Found {:_d} ruptures, sending up to {:_d} per task'.
                      format(U, blocksize))
-        for grp_id, magi in indices:
-            trt = self.full_lt.trt_by_grp[grp_id]
-            trti = trt_num[trt]
-            logging.info('Group #%d, %d ruptures for %s, magbin=%s',
-                         grp_id, len(indices[grp_id, magi]), trt, magi)
+
+        grp_ids = dstore['grp_ids'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
+        num_eff_rlzs = len(self.full_lt.sm_rlzs)
+        for gidx, magi in indices:
+            trti = grp_ids[gidx][0] // num_eff_rlzs
+            trt = self.trts[trti]
             cmaker = ContextMaker(
-                trt, self.full_lt.get_rlzs_by_gsim(grp_id),
+                trt, rlzs_by_gsim[gidx],
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
                  'imtls': oq.imtls})
-            for idxs in block_splitter(indices[grp_id, magi], blocksize):
+            for idxs in block_splitter(indices[gidx, magi], blocksize):
                 for imt in oq.imtls:
                     allargs.append((dstore, idxs, cmaker, self.iml3[imt],
                                     trti, magi, self.bin_edges[1:], oq))
@@ -487,7 +482,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 if not disagg_outputs or key in disagg_outputs:
                     pmf = fn(matrix6 if key.endswith('TRT') else aggmatrix)
                     self.datastore[disp_name + key] = pmf
-                    poe_agg.append(1. - numpy.prod(1. - pmf))
+                    poe_agg.append(pprod(pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['site_id'] = site_id
@@ -539,7 +534,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                             else 'poe-%s' % poe)
                     name = 'disagg_by_src/%s-%s-sid-%s' % (pref, imt, s)
                     if poes[m, p].sum():  # nonzero contribution
-                        poe_agg = 1 - numpy.prod(1 - poes[m, p])
+                        poe_agg = pprod(poes[m, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
                             logging.warning(
                                 'poe_agg=%s is quite different from '

@@ -149,10 +149,10 @@ def dset2df(dset, index):
     dtlist = []
     for i, field in enumerate(shape_descr):
         values = dset.attrs[field]
-        try:
+        if isinstance(values[0], str):  # like the loss_type
+            dt = '<S16'
+        else:
             dt = values[0].dtype
-        except AttributeError:  # for instance a string has no dtype
-            dt = type(values[0])
         dtlist.append((field, dt))
         tags.append(values)
         idxs.append(range(len(values)))
@@ -273,6 +273,12 @@ class DataStore(collections.abc.MutableMapping):
         Set the HDF5 attributes of the given key
         """
         self.hdf5.save_attrs(key, kw)
+
+    def set_shape_attrs(self, key, **kw):
+        """
+        Set shape attributes
+        """
+        hdf5.set_shape_attrs(self.hdf5, key, kw)
 
     def get_attr(self, key, name, default=None):
         """

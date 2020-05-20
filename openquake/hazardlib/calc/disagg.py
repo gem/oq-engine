@@ -24,12 +24,13 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 import warnings
 import operator
 import collections
+from functools import partial
 import numpy
 import scipy.stats
 
 from openquake.hazardlib import contexts
-from openquake.baselib import hdf5, performance
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib import performance
+from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
@@ -56,7 +57,10 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
     :returns: (mag dist lon lat eps trt) edges and shape dictionary
     """
     tl = oq.truncation_level
-    Z = oq.num_rlzs_disagg if oq.rlz_index is None else len(oq.rlz_index)
+    if oq.rlz_index is None:
+        Z = oq.num_rlzs_disagg or 1
+    else:
+        Z = len(oq.rlz_index)
     eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
     # build mag_edges
@@ -386,21 +390,14 @@ def disaggregation(
 
 MAG, DIS, LON, LAT, EPS = 0, 1, 2, 3, 4
 
-
-def collapse(*axis):
-    """
-    :returns: a function to compose probability arrays along the given axis
-    """
-    return lambda x: 1. - numpy.prod(1. - x, axis)
-
-
-mag_pmf = collapse(DIS, LON, LAT, EPS)
-dist_pmf = collapse(MAG, LON, LAT, EPS)
-mag_dist_pmf = collapse(LON, LAT, EPS)
-mag_dist_eps_pmf = collapse(LON, LAT)
-lon_lat_pmf = collapse(DIS, MAG, EPS)
-mag_lon_lat_pmf = collapse(DIS, EPS)
-trt_pmf = collapse(1, 2, 3, 4, 5)  # applied on matrix TRT MAG DIS LON LAT EPS
+mag_pmf = partial(pprod, axis=(DIS, LON, LAT, EPS))
+dist_pmf = partial(pprod, axis=(MAG, LON, LAT, EPS))
+mag_dist_pmf = partial(pprod, axis=(LON, LAT, EPS))
+mag_dist_eps_pmf = partial(pprod, axis=(LON, LAT))
+lon_lat_pmf = partial(pprod, axis=(DIS, MAG, EPS))
+mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
+trt_pmf = partial(pprod, axis=(1, 2, 3, 4, 5))
+# applied on matrix TRT MAG DIS LON LAT EPS
 
 
 def lon_lat_trt_pmf(matrices):

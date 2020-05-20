@@ -33,8 +33,12 @@ def reduce_sm(calc_id):
     num_ids = len(info['source_id'])
     bad_ids = set(info[info['eff_ruptures'] == 0]['source_id'])
     if len(bad_ids) == 0:
-        logging.info('Nothing to remove, unless there are '
-                     'duplicated source IDs preventing the removal')
+        dupl = info[info['multiplicity'] > 1]['source_id']
+        if len(dupl) == 0:
+            logging.info('Nothing to remove')
+        else:
+            logging.info('Nothing to remove, but there are duplicated source '
+                         'IDs that could prevent the removal: %s' % dupl)
         return
     logging.info('Found %d far away sources', len(bad_ids))
     ok = info['eff_ruptures'] > 0
