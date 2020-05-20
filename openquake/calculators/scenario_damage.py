@@ -20,7 +20,6 @@ import logging
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, get_indices
-from openquake.risklib.scientific import mean_std
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -200,19 +199,18 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         events_per_asset = (indices[:, 1] - indices[:, 0]).mean()
         logging.info('Found ~%d dmg distributions per asset', events_per_asset)
 
-        # avg_factor = factor used when computing the averages
+        # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
         if oq.investigation_time is None:  # scenario_damage
-            avg_factor = 1. / oq.number_of_ground_motion_fields
+            avg_ratio = 1. / oq.number_of_ground_motion_fields
         else:  # event_based_damage
-            avg_factor = oq.risk_investigation_time / (
-                oq.investigation_time * oq.ses_per_logic_tree_path)
+            avg_ratio = oq.ses_ratio
 
         # damage by asset
         d_asset = numpy.zeros((A, R, L, D), F32)
         for (l, r, a, tot) in result['d_asset']:
             d_asset[a, r, l] = tot
-        self.datastore['avg_damages-rlzs'] = d_asset * avg_factor
+        self.datastore['avg_damages-rlzs'] = d_asset * avg_ratio
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -234,7 +232,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 c_asset = numpy.zeros((A, R, L), F32)
                 for (l, r, a, stat) in result[name]:
                     c_asset[a, r, l] = stat
-                self.datastore[name + '-rlzs'] = c_asset * avg_factor
+                self.datastore[name + '-rlzs'] = c_asset * avg_ratio
             elif name.endswith('_by_event'):
                 arr = numpy.zeros(len(csq), dtlist)
                 for i, (eid, loss) in enumerate(csq.items()):
