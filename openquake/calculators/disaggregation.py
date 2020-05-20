@@ -481,6 +481,13 @@ class DisaggregationCalculator(base.HazardCalculator):
             for key, fn in disagg.pmf_map.items():
                 if not disagg_outputs or key in disagg_outputs:
                     pmf = fn(matrix6 if key.endswith('TRT') else aggmatrix)
+                    negative = pmf < 0
+                    if negative.any():  # this should not happen!
+                        logging.error(
+                            'Negative probabilities for site_id=%d, rlz_id=%d,'
+                            ' poe=%s, imt=%s, kind=%s' % (site_id, rlz_id,
+                                                          poe, imt_str, key))
+                        pmf[negative] = 0
                     self.datastore[disp_name + key] = pmf
                     poe_agg.append(pprod(pmf))
 
