@@ -67,10 +67,10 @@ scenario:
 scenario_risk:
 --------------
 -  losses_by_event
--  losses_by_asset-rlzs
+-  avg_losses-rlzs
 -  agglosses-rlzs
 
 scenario_damage:
 ----------------
 -  dmg_by_event
--  dmg_by_asset-rlzs
+-  avg_damages-rlzs

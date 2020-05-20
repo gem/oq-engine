@@ -91,36 +91,6 @@ Response:
     "status": "failed",
     "start_time": "2017-06-05 12:01:26"}
 
-#### GET /v1/calc/:calc_id/oqparam
-
-Get the parameters of the given `calc_id`.
-
-Parameters: None
-
-Response:
-
-    {"area_source_discretization": 10.0,
-     "calculation_mode": "classical",
-     "description": "Hazard Calculation for end-to-end hazard+risk",
-     "intensity_measure_types_and_levels": {"PGA": [0.01, 0.04, 0.07, 0.1]},
-     "investigation_time": 50.0,
-     "maximum_distance": 300.0,
-     "mean_hazard_curves": true,
-     "number_of_logic_tree_samples": 0,
-     "poes": [0.1, 0.2],
-     "is_running": false,
-     "quantile_hazard_curves": [0.15, 0.5, 0.85],
-     "random_seed": 1024,
-     "reference_depth_to_1pt0km_per_sec": 50.0,
-     "reference_depth_to_2pt5km_per_sec": 2.5,
-     "reference_vs30_type": "measured",
-     "reference_vs30_value": 800.0,
-     "rupture_mesh_spacing": 20.0,
-     "sites": {"coordinates": [[-78.182, 15.615]], "type": "MultiPoint"},
-     "truncation_level": 4.0,
-     "uniform_hazard_spectra": false,
-     "width_of_mfd_bin": 0.2}
-
 
 #### GET /v1/calc/:calc_id/traceback
 

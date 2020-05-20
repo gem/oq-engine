@@ -334,7 +334,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertGot(  # gridded rupture
             rup1, os.path.join(self.testdir, 'expected/rupture_1.toml'))
 
-        # test running scenario from event based
+        # test running scenario from event based, reading TOML
         self.run_calc(case_15.__file__, 'scenario.ini')
 
     def test_case_16(self):

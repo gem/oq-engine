@@ -302,6 +302,12 @@ class OqParam(valid.ParamSet):
             self.check_missing('gsim_logic_tree', 'debug')
             self.check_missing('source_model_logic_tree', 'debug')
 
+        # check investigation_time
+        if (self.investigation_time and
+                self.calculation_mode.startswith('scenario')):
+            raise ValueError('%s: there cannot be investigation_time in %s'
+                             % (self.inputs['job_ini'], self.calculation_mode))
+
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
             if self.gsim != '[FromFile]':
