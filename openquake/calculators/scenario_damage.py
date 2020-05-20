@@ -201,10 +201,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
-        if oq.investigation_time is None:  # scenario_damage
-            avg_ratio = 1. / oq.number_of_ground_motion_fields
-        else:  # event_based_damage
+        if oq.investigation_time:  # event_based_damage
             avg_ratio = oq.ses_ratio
+        else:  # scenario_damage
+            avg_ratio = 1. / oq.number_of_ground_motion_fields
 
         # damage by asset
         d_asset = numpy.zeros((A, R, L, D), F32)
