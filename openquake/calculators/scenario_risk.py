@@ -22,6 +22,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, get_indices
+from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base
 
@@ -183,11 +184,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             for (l, r, aid, avg) in result['avg']:
                 losses_by_asset[aid, r, l] = avg
             self.datastore['avg_losses-rlzs'] = losses_by_asset
-            self.datastore.set_shape_attrs(
-                'avg_losses-rlzs',
-                asset_id=self.assetcol['id'],
-                rlz=numpy.arange(R),
-                loss_type=self.oqparam.loss_names)
+            set_rlzs_stats(self.datastore, 'avg_losses',
+                           asset_id=self.assetcol['id'],
+                           loss_type=self.oqparam.loss_names)
             self.datastore['agglosses'] = agglosses
 
             # losses by event

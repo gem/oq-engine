@@ -342,7 +342,7 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
-@export.add(('avg_damages-rlzs', 'csv'))
+@export.add(('avg_damages-rlzs', 'csv'), ('avg_damages-stats', 'csv'))
 def export_avg_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
@@ -353,12 +353,16 @@ def export_avg_damages_csv(ekey, dstore):
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time))
-    for rlz in rlzs:
+    if ekey[0].endswith('stats'):
+        tags = oq.hazard_stats()
+    else:
+        tags = ['%03d' % r for r in range(len(rlzs))]
+    for i, tag in enumerate(tags):
         if oq.modal_damage_state:
-            avg_damages = modal_damage_array(data[:, rlz.ordinal], dmg_dt)
+            avg_damages = modal_damage_array(data[:, i], dmg_dt)
         else:
-            avg_damages = build_damage_array(data[:, rlz.ordinal], dmg_dt)
-        fname = dstore.build_fname(ekey[0][:-5], rlz, ekey[1])
+            avg_damages = build_damage_array(data[:, i], dmg_dt)
+        fname = dstore.build_fname(ekey[0].split('-')[0], tag, ekey[1])
         writer.save(compose_arrays(assets, avg_damages), fname,
                     renamedict=dict(id='asset_id'), comment=md)
     return writer.getsaved()
