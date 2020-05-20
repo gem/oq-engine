@@ -593,7 +593,7 @@ hazard_uhs-std.csv
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
         self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
                                "hazard_curve-rlz-001-PGA.csv"],
-                              case_47.__file__)
+                              case_47.__file__, delta=1E05)
 
     def test_case_48(self):
         # pointsource_distance effects on a simple point source
