@@ -183,6 +183,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             for (l, r, aid, avg) in result['avg']:
                 losses_by_asset[aid, r, l] = avg
             self.datastore['avg_losses-rlzs'] = losses_by_asset
+            self.datastore.set_shape_attrs(
+                'avg_losses-rlzs',
+                asset_id=self.assetcol['id'],
+                rlz=numpy.arange(R),
+                loss_type=self.oqparam.loss_names)
             self.datastore['agglosses'] = agglosses
 
             # losses by event

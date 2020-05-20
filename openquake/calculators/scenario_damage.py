@@ -211,6 +211,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for (l, r, a, tot) in result['d_asset']:
             d_asset[a, r, l] = tot
         self.datastore['avg_damages-rlzs'] = d_asset * avg_ratio
+        self.datastore.set_shape_attrs(
+            'avg_damages-rlzs',
+            asset_id=self.assetcol['id'],
+            rlz=numpy.arange(R),
+            loss_type=oq.loss_names,
+            dmg_state=dstates)
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -233,6 +239,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 for (l, r, a, stat) in result[name]:
                     c_asset[a, r, l] = stat
                 self.datastore[name + '-rlzs'] = c_asset * avg_ratio
+                self.datastore.set_shape_attrs(
+                    name + '-rlzs',
+                    asset_id=self.assetcol['id'],
+                    rlz=numpy.arange(R),
+                    loss_type=oq.loss_names)
             elif name.endswith('_by_event'):
                 arr = numpy.zeros(len(csq), dtlist)
                 for i, (eid, loss) in enumerate(csq.items()):

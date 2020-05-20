@@ -149,10 +149,10 @@ def dset2df(dset, index):
     dtlist = []
     for i, field in enumerate(shape_descr):
         values = dset.attrs[field]
-        try:
+        if isinstance(values[0], str):  # like the loss_type
+            dt = '<S16'
+        else:
             dt = values[0].dtype
-        except AttributeError:  # for instance a string has no dtype
-            dt = type(values[0])
         dtlist.append((field, dt))
         tags.append(values)
         idxs.append(range(len(values)))
