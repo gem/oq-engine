@@ -822,12 +822,9 @@ class RuptureContext(BaseContext):
             # `p(X<x|rup)` is computed as ``1 - poes``.
             prob_no_exceed = numpy.array(
                 [v * ((1 - poes) ** i)
-                 for i, v in enumerate(self.probs_occur)])
-            prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-            if isinstance(prob_no_exceed, numpy.ndarray):
-                prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
-                prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
-            return prob_no_exceed
+                 for i, v in enumerate(self.probs_occur)]).sum(axis=0)
+            return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
+
         # parametric rupture
         tom = self.temporal_occurrence_model
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
