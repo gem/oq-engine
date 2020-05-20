@@ -20,6 +20,7 @@ import logging
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, get_indices
+from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -211,12 +212,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for (l, r, a, tot) in result['d_asset']:
             d_asset[a, r, l] = tot
         self.datastore['avg_damages-rlzs'] = d_asset * avg_ratio
-        self.datastore.set_shape_attrs(
-            'avg_damages-rlzs',
-            asset_id=self.assetcol['id'],
-            rlz=numpy.arange(R),
-            loss_type=oq.loss_names,
-            dmg_state=dstates)
+        set_rlzs_stats(self.datastore,
+                       'avg_damages',
+                       asset_id=self.assetcol['id'],
+                       loss_type=oq.loss_names,
+                       dmg_state=dstates)
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -239,11 +239,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 for (l, r, a, stat) in result[name]:
                     c_asset[a, r, l] = stat
                 self.datastore[name + '-rlzs'] = c_asset * avg_ratio
-                self.datastore.set_shape_attrs(
-                    name + '-rlzs',
-                    asset_id=self.assetcol['id'],
-                    rlz=numpy.arange(R),
-                    loss_type=oq.loss_names)
+                set_rlzs_stats(self.datastore, name,
+                               asset_id=self.assetcol['id'],
+                               loss_type=oq.loss_names)
             elif name.endswith('_by_event'):
                 arr = numpy.zeros(len(csq), dtlist)
                 for i, (eid, loss) in enumerate(csq.items()):

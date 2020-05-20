@@ -749,16 +749,10 @@ def extract_agg_losses(dstore, what):
     if not loss_type:
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
     L = dstore['oqparam'].lti[loss_type]
-    if 'losses_by_asset' in dstore:  # scenario_risk
-        stats = None
-        losses = dstore['losses_by_asset'][:, :, L]['mean']
-    elif 'avg_losses' in dstore:  # ebrisk
-        stats = ['mean']
-        losses = dstore['avg_losses'][:, L].reshape(-1, 1)
-    elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
+    if 'avg_losses-stats' in dstore:
         stats = decode(dstore['avg_losses-stats'].attrs['stat'])
         losses = dstore['avg_losses-stats'][:, :, L]
-    elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
+    elif 'avg_losses-rlzs' in dstore:
         stats = ['mean']
         losses = dstore['avg_losses-rlzs'][:, :, L]
     else:
