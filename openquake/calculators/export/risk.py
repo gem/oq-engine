@@ -310,26 +310,6 @@ def export_loss_maps_npz(ekey, dstore):
     return [fname]
 
 
-@export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
-def export_damages_csv(ekey, dstore):
-    rlzs = dstore['full_lt'].get_realizations()
-    oq = dstore['oqparam']
-    loss_types = oq.loss_dt().names
-    assets = get_assets(dstore)
-    value = dstore[ekey[0]][()]  # matrix N x R x LI or T x R x LI
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    if ekey[0].endswith('stats'):
-        tags = oq.hazard_stats()
-    else:
-        tags = ['%03d' % r for r in range(len(rlzs))]
-    for lti, lt in enumerate(loss_types):
-        for tag, values in zip(tags, value[:, :, lti].T):
-            fname = dstore.build_fname('damages-%s' % lt, tag, ekey[1])
-            writer.save(compose_arrays(assets, values), fname,
-                        renamedict=dict(id='asset_id'))
-    return writer.getsaved()
-
-
 def modal_damage_array(data, damage_dt):
     # determine the damage state with the highest probability
     A, L, D = data.shape
