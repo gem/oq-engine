@@ -591,7 +591,8 @@ hazard_uhs-std.csv
 
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
-        self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv"],
+        self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
+                               "hazard_curve-rlz-001-PGA.csv"],
                               case_47.__file__)
 
     def test_case_48(self):

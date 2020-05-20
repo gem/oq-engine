@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Fixed a bug in the mixture model application when running multiple GMPEs
+
   [Michele Simionato]
   * Extended the /extract/ API to manage JSON
   * Added a check on ebrisk to avoid generating too many loss curves
