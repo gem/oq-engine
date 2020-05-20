@@ -1,5 +1,6 @@
-
   [Michele Simionato]
+  * Extended the scenario calculators to compute the statistical outputs
+    if there is more than one GMPE
   * Fixed the formula used for the avg_damages-rlzs outputs in event based
     damage calculations
   * Raised an error if `investigation_time` is set in scenario calculations
