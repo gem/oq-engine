@@ -322,6 +322,9 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
+# damages and avg_damages require different DISPLAY_NAMEs, so they are
+# kept separated even if the exporter is the same; see Anirudh's comment
+# in https://github.com/gem/oq-engine/pull/5851
 @export.add(('avg_damages-rlzs', 'csv'), ('avg_damages-stats', 'csv'),
             ('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_avg_damages_csv(ekey, dstore):
