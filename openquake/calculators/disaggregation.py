@@ -149,11 +149,18 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
         bins = bin_edges[0], bin_edges[1][sid], bin_edges[2][sid], bin_edges[3]
 
         # z indices by gsim
+        Z = iml3.shape[-1]
         zs_by_gsim = AccumDict(accum=[])
         for gsim, rlzs in cmaker.gsims.items():
-            for z in range(iml3.shape[-1]):
+            for z in range(Z):
                 if iml3.rlzs[sid, z] in rlzs:
                     zs_by_gsim[gsim].append(z)
+
+        # sanity check: the zs are disjoint
+        counts = numpy.zeros(Z, numpy.uint8)
+        for zs in zs_by_gsim.values():
+            counts[zs] += 1
+        assert (counts <= 1).all(), counts
 
         bdata = disagg.disaggregate(
             ctxs, zs_by_gsim, iml3.imt, iml2, eps3, ms_mon, pne_mon)
