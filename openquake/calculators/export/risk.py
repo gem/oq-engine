@@ -363,20 +363,19 @@ def export_dmg_by_event(ekey, dstore):
     dt_list = [('event_id', U32), ('rlz_id', U16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
     dmg_by_event = dstore[ekey[0]][()]  # shape E, L, D
-    events_by_rlz = group_array(dstore['events'], 'rlz_id')
+    events = dstore['events'][()]
     writer = writers.CsvWriter(fmt='%d')
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
     writer.save(numpy.zeros(0, dt_list), fname)
     with open(fname, 'ab') as dest:
-        for rlz, events in events_by_rlz.items():
-            data = numpy.array(  # shape (E, L, D)
-                [dmg_by_event[eid] for eid in events['id']])
-            arr = numpy.zeros(len(data), dt_list)
-            arr['event_id'] = events['id']
-            arr['rlz_id'] = events['rlz_id']
+        for rlz_id in numpy.unique(events['rlz_id']):
+            ok, = numpy.where(events['rlz_id'] == rlz_id)
+            arr = numpy.zeros(len(ok), dt_list)
+            arr['event_id'] = events['id'][ok]
+            arr['rlz_id'] = rlz_id
             for l, loss_type in enumerate(damage_dt.names):
                 for d, dmg_state in enumerate(damage_dt[loss_type].names):
-                    arr[loss_type][dmg_state] = data[:, l, d]
+                    arr[loss_type][dmg_state] = dmg_by_event[ok, l, d]
             writer.save_block(arr, dest)
     return [fname]
 

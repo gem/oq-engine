@@ -19,6 +19,7 @@
 import os
 import numpy
 
+from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
@@ -166,6 +167,12 @@ RM       4_000
     def test_case_9(self):
         # case with noDamageLimit==0 that had NaNs in the past
         self.run_calc(case_9.__file__, 'job.ini')
+
+        # export/import dmg_by_event and check the total nodamage
+        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        df = read_csv(fname, index='event_id')
+        nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
+        self.assertEqual(nodamage, 1041226.0)
 
         fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         for i, fname in enumerate(fnames):

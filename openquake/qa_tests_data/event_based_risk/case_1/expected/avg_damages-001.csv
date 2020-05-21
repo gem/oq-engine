@@ -1,5 +1,5 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.10.0-gita7ddf60184', start_date='2020-05-19T15:07:00', checksum=1405139117, investigation_time=50.0, risk_investigation_time=50.0"
-asset_id,policy,taxonomy,lon,lat,structural~no_damage,structural~LS1,structural~LS2
+#,,,,,,,"generated_by='OpenQuake engine 3.10.0-git7bc5fd5127', start_date='2020-05-21T06:33:22', checksum=1405139117, investigation_time=50.0, risk_investigation_time=50.0"
+id,policy,taxonomy,lon,lat,structural~no_damage,structural~LS1,structural~LS2
 a0,"A","RM",81.29850,29.10980,5.000000E-01,5.500000E-01,3.000000E-01
 a1,"A","RC",83.08230,27.90060,5.180000E+01,2.545000E+01,2.275000E+01
 a2,"B","W",85.74770,27.90150,1.818500E+02,8.320000E+01,8.495000E+01
