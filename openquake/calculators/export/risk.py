@@ -349,7 +349,7 @@ def export_avg_damages_csv(ekey, dstore):
             avg_damages = build_damage_array(data[:, i], dmg_dt)
         fname = dstore.build_fname(ekey[0].split('-')[0], tag, ekey[1])
         writer.save(compose_arrays(assets, avg_damages), fname,
-                    comment=md)
+                    comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
