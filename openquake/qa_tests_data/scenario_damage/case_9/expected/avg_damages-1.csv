@@ -1,5 +1,5 @@
-#,,,,,,,,,,,,"generated_by='OpenQuake engine 3.10.0-git69b3403224', start_date='2020-05-21T06:03:30', checksum=177222344, investigation_time=None, risk_investigation_time=None"
-asset_id,Material,Municipio,Provincia,Region,taxonomy,lon,lat,structural~no_damage,structural~slight,structural~moderate,structural~extensive,structural~complete
+#,,,,,,,,,,,,"generated_by='OpenQuake engine 3.10.0-git01124c0e2d', start_date='2020-05-21T06:09:07', checksum=177222344"
+id,Material,Municipio,Provincia,Region,taxonomy,lon,lat,structural~no_damage,structural~slight,structural~moderate,structural~extensive,structural~complete
 asset_8638,"Masonry with reinforcement","SAN JUAN","SAN JUAN","REGIÓN EL VALLE","MR_LWAL-DNO_H1",-71.32667,18.96847,2.291400E+01,8.600000E-02,0.000000E+00,0.000000E+00,0.000000E+00
 asset_4704,"Wood","LAGUNA SALADA","VALVERDE","REGIÓN CIBAO NOROESTE","W-WS_LPB-DNO_H1",-71.08445,19.68303,6.971860E+02,1.613500E+01,3.584000E+00,1.179000E+00,9.160001E-01
 asset_4550,"Concrete","ESPERANZA","VALVERDE","REGIÓN CIBAO NOROESTE","CR_LFINF-DUH_H4",-70.94568,19.58565,9.040000E-01,7.900000E-02,1.200000E-02,0.000000E+00,5.000000E-03

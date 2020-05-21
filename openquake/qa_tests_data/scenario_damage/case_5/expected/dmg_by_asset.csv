@@ -1,4 +1,5 @@
-asset_id,taxonomy,lon,lat,structural~no_damage,structural~slight,structural~moderate,structural~extreme,structural~complete
+#,,,,,,,,"generated_by='OpenQuake engine 3.10.0-git01124c0e2d', start_date='2020-05-21T06:09:06', checksum=1085998052"
+id,taxonomy,lon,lat,structural~no_damage,structural~slight,structural~moderate,structural~extreme,structural~complete
 a2925,"A",81.96382,27.96117,1.300000E+02,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00
 a3518,"A",81.96382,28.56117,5.930000E+02,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00
 a2544,"A",82.78882,29.46117,2.900000E+01,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00
