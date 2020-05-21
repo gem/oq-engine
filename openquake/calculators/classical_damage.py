@@ -67,8 +67,8 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         for l, r in result:
             for aid, fractions in result[l, r].items():
                 damages[aid, r, l] = fractions
-        self.datastore['avg_damages-rlzs'] = damages
-        stats.set_rlzs_stats(self.datastore, 'avg_damages',
+        self.datastore['damages-rlzs'] = damages
+        stats.set_rlzs_stats(self.datastore, 'damages',
                              assets=self.assetcol['id'],
                              loss_types=self.oqparam.loss_names,
                              dmg_state=self.crmodel.damage_states)
