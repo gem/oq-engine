@@ -143,6 +143,7 @@ def disaggregate(ctxs, zs_by_gsim, imt, iml2, eps3,
             lons[u] = ctx.clon[0]  # closest point of the rupture lon
             lats[u] = ctx.clat[0]  # closest point of the rupture lat
     with pne_mon:
+        poes = numpy.zeros((U, E, P, Z))
         pnes = numpy.ones((U, E, P, Z))
         for g, zs in enumerate(zs_by_gsim.values()):
             for z in zs:
@@ -151,10 +152,10 @@ def disaggregate(ctxs, zs_by_gsim, imt, iml2, eps3,
                     sf = truncnorm.sf(lvls)
                     bins = numpy.searchsorted(epsilons, lvls)
                     for e, eps_band in enumerate(eps_bands):
-                        poes = _disagg_eps(sf, bins, e, eps_band, cum_bands)
-                        for u, ctx in enumerate(ctxs):
-                            pnes[u, e, p, z] *= (
-                                ctx.get_probability_no_exceedance(poes[u]))
+                        poes[:, e, p, z] = _disagg_eps(
+                            sf, bins, e, eps_band, cum_bands)
+        for u, ctx in enumerate(ctxs):
+            pnes[u] *= ctx.get_probability_no_exceedance(poes[u])
     return BinData(dists, lons, lats, pnes)
 
 
