@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in the dmg_by_event exporter: the damage distributions could
+    be associated to the wrong GMPE in some cases
   * Solved a bug with nonparametric ruptures: due to rounding errors,
     the disaggregation matrix could contain (small) negative probabilities
   * Extended the scenario calculators to compute the statistical outputs
