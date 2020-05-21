@@ -575,9 +575,14 @@ class PmapMaker(object):
         :param ctxs: a list of pairs (rup, dctx)
         :returns: collapsed contexts
         """
+        if self.collapse_level >= 3:  # hack, ignore everything except mag
+            rrp = ['mag']
+        else:
+            rrp = self.REQUIRES_RUPTURE_PARAMETERS
+
         def params(ctx):
             lst = []
-            for par in self.REQUIRES_RUPTURE_PARAMETERS:
+            for par in rrp:
                 lst.append(getattr(ctx, par))
             for dst in self.REQUIRES_DISTANCES:
                 lst.extend(numpy.round(getattr(ctx, dst)))
