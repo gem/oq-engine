@@ -29,18 +29,18 @@ def extract(what, calc_id=-1, webapi=False, local=False, extract_dir='.'):
     """
     with performance.Monitor('extract', measuremem=True) as mon:
         if local:
-            obj = WebExtractor(calc_id, 'http://localhost:8800', '').get(what)
+            aw = WebExtractor(calc_id, 'http://localhost:8800', '').get(what)
         elif webapi:
-            obj = WebExtractor(calc_id).get(what)
+            aw = WebExtractor(calc_id).get(what)
         else:
-            obj = Extractor(calc_id).get(what)
+            aw = Extractor(calc_id).get(what)
         w = what.replace('/', '-').replace('?', '-')
-        if obj.is_good():  # a regular ArrayWrapper
+        if aw.is_good():  # a regular ArrayWrapper
             fname = os.path.join(extract_dir, '%s_%d.npz' % (w, calc_id))
-            hdf5.save_npz(obj, fname)
-        else:  # ArrayWrapper of strings or other
+            hdf5.save_npz(aw, fname)
+        else:  # ArrayWrapper of strings, dictionaries or other types
             fname = os.path.join(extract_dir, '%s_%d.txt' % (w, calc_id))
-            open(fname, 'w').write(obj.toml())
+            open(fname, 'w').write(aw.toml())
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)
