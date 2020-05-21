@@ -335,8 +335,9 @@ def export_avg_damages_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
+    if oq.investigation_time:
+        md.update(dict(investigation_time=oq.investigation_time,
+                       risk_investigation_time=oq.risk_investigation_time))
     if ekey[0].endswith('stats'):
         tags = oq.hazard_stats()
     else:
@@ -348,7 +349,7 @@ def export_avg_damages_csv(ekey, dstore):
             avg_damages = build_damage_array(data[:, i], dmg_dt)
         fname = dstore.build_fname(ekey[0].split('-')[0], tag, ekey[1])
         writer.save(compose_arrays(assets, avg_damages), fname,
-                    renamedict=dict(id='asset_id'), comment=md)
+                    comment=md)
     return writer.getsaved()
 
 

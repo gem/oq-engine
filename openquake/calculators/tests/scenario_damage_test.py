@@ -169,7 +169,7 @@ RM       4_000
 
         fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         for i, fname in enumerate(fnames):
-            self.assertEqualFiles('expected/avg_damages-rlzs-%d.csv' % i, fname)
+            self.assertEqualFiles('expected/avg_damages-%d.csv' % i, fname)
 
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         for i, fname in enumerate(fnames):
@@ -181,4 +181,4 @@ RM       4_000
 
         fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         for i, fname in enumerate(fnames):
-            self.assertEqualFiles('expected/avg_damages-rlzs-%d.csv' % i, fname)
+            self.assertEqualFiles('expected/avg_damages-%d.csv' % i, fname)
