@@ -331,6 +331,33 @@ class ContextMaker(object):
             ctxs.append(ctx)
         return ctxs
 
+    def collapse_the_ctxs(self, ctxs):
+        """
+        Collapse contexts with similar parameters and distances.
+
+        :param ctxs: a list of pairs (rup, dctx)
+        :returns: collapsed contexts
+        """
+        if self.collapse_level >= 3:  # hack, ignore everything except mag
+            rrp = ['mag']
+            rnd = 0  # round distances to 1 km
+        else:
+            rrp = self.REQUIRES_RUPTURE_PARAMETERS
+            rnd = 1  # round distances to 100 m
+
+        def params(ctx):
+            lst = []
+            for par in rrp:
+                lst.append(getattr(ctx, par))
+            for dst in self.REQUIRES_DISTANCES:
+                lst.extend(numpy.round(getattr(ctx, dst), rnd))
+            return tuple(lst)
+
+        out = []
+        for values in groupby(ctxs, params).values():
+            out.extend(_collapse(values))
+        return out
+
     def max_intensity(self, sitecol1, mags, dists):
         """
         :param sitecol1: a SiteCollection instance with a single site
@@ -390,23 +417,27 @@ def combine_po(o1, o2):
 
 def _collapse(ctxs):
     # collapse a list of contexts into a single context
-    if len(ctxs) < 2:
+    if len(ctxs) < 2:  # nothing to collapse
         return ctxs
-    prup, nrup, out = [], [], []
+    prups, nrups, out = [], [], []
     for ctx in ctxs:
         if numpy.isnan(ctx.occurrence_rate):  # nonparametric
-            nrup.append(ctx)
+            nrups.append(ctx)
         else:  # parametrix
-            prup.append(ctx)
-    if prup:
-        ctx = copy.copy(prup[0])
-        ctx.occurrence_rate = sum(r.occurrence_rate for r in prup)
+            prups.append(ctx)
+    if len(prups) > 1:
+        ctx = copy.copy(prups[0])
+        ctx.occurrence_rate = sum(r.occurrence_rate for r in prups)
         out.append(ctx)
-    if nrup:
-        ctx = copy.copy(nrup[0])
+    else:
+        out.extend(prups)
+    if len(nrups) > 1:
+        ctx = copy.copy(nrups[0])
         ctx.probs_occur = functools.reduce(
-            combine_po, (n.probs_occur for n in nrup))
+            combine_po, (n.probs_occur for n in nrups))
         out.append(ctx)
+    else:
+        out.extend(nrups)
     return out
 
 
@@ -447,7 +478,7 @@ class PmapMaker(object):
             # print_finite_size(rups)
         ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
         if self.rup_indep and self.collapse_level > 1:
-            ctxs = self.collapse_the_ctxs(ctxs)
+            ctxs = self.cmaker.collapse_the_ctxs(ctxs)
         self.numrups += len(ctxs)
         if ctxs:
             self.rupdata.add(ctxs, sites, grp_ids)
@@ -602,34 +633,6 @@ class PmapMaker(object):
                 # group together ruptures in the same distance bin
                 output.extend(_collapse(rs))
         return output
-
-    def collapse_the_ctxs(self, ctxs):
-        """
-        Collapse contexts with similar parameters and distances.
-
-        :param ctxs: a list of pairs (rup, dctx)
-        :returns: collapsed contexts
-        """
-        if self.collapse_level >= 3:  # hack, ignore everything except mag
-            rrp = ['mag']
-        else:
-            rrp = self.REQUIRES_RUPTURE_PARAMETERS
-
-        def params(ctx):
-            lst = []
-            for par in rrp:
-                lst.append(getattr(ctx, par))
-            for dst in self.REQUIRES_DISTANCES:
-                lst.extend(numpy.round(getattr(ctx, dst)))
-            return tuple(lst)
-
-        out = []
-        for values in groupby(ctxs, params).values():
-            if len(values) == 1:
-                out.append(values[0])
-            else:
-                out.extend(_collapse(values))
-        return out
 
     def _get_rups(self, srcs, sites):
         # returns a list of ruptures, each one with a .sites attribute

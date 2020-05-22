@@ -162,6 +162,8 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
             counts[zs] += 1
         assert (counts <= 1).all(), counts
 
+        if cmaker.collapse_level >= 2:
+            ctxs = cmaker.collapse_the_ctxs(ctxs)
         bdata = disagg.disaggregate(
             ctxs, zs_by_gsim, iml3.imt, iml2, eps3, ms_mon, pne_mon)
         if bdata.pnes.sum():
