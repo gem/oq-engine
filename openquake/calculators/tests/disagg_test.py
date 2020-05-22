@@ -130,11 +130,17 @@ class DisaggregationTestCase(CalculatorTestCase):
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
     def test_case_5(self):
-        # this exercise gridded nonparametric sources
+        # test gridded nonparametric sources
         self.run_calc(case_5.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        # there is a collapsed nonparametric source with len(probs_occur)==3
+        # the other sizes are 2
+        sizes = [len(po) for po in self.calc.datastore['rup/probs_occur']]
+        self.assertTrue(any(size == 3 for size in sizes),
+                        'No collapse of probs_occur')
 
     def test_case_6(self):
         # test with international date line
