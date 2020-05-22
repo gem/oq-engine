@@ -116,6 +116,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     :returns:
         a dictionary sid -> 8D-array
     """
+    res = {}
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
@@ -176,8 +177,10 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
             with mat_mon:
                 matrix = disagg.build_disagg_matrix(bdata, bins)
                 if matrix.any():
-                    yield {'trti': trti, 'magi': magi, 'imti': iml3.imti,
-                           sid: matrix, 'collapse_factor': cfactor}
+                    res[sid] = matrix
+    res.update({'trti': trti, 'magi': magi, 'imti': iml3.imti,
+                'collapse_factor': cfactor})
+    return res
 
 
 def agg_probs(*probs):
