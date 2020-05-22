@@ -163,7 +163,11 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
         assert (counts <= 1).all(), counts
 
         if cmaker.collapse_level >= 2:
-            ctxs = cmaker.collapse_the_ctxs(ctxs)
+            ctxs_collapsed = cmaker.collapse_the_ctxs(ctxs)
+            cfactor = len(ctxs_collapsed) / len(ctxs)
+            ctxs = ctxs_collapsed
+        else:
+            cfactor = 1.
         bdata = disagg.disaggregate(
             ctxs, zs_by_gsim, iml3.imt, iml2, eps3, ms_mon, pne_mon)
         if bdata.pnes.sum():
@@ -172,7 +176,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
                 matrix = disagg.build_disagg_matrix(bdata, bins)
                 if matrix.any():
                     yield {'trti': trti, 'magi': magi, 'imti': iml3.imti,
-                           sid: matrix}
+                           sid: matrix, 'collapse_factor': cfactor}
 
 
 def agg_probs(*probs):
@@ -382,9 +386,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                 (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer:\n%s', msg)
         self.datastore.swmr_on()
+        self.collapse_factor = []
         smap = parallel.Starmap(
             compute_disagg, allargs, h5=self.datastore.hdf5)
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
+        logging.info('Collapse factor=%.5f', numpy.mean(self.collapse_factor))
         return results  # imti, sid -> trti, magi -> 6D array
 
     def agg_result(self, acc, result):
@@ -399,6 +405,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             trti = result.pop('trti')
             imti = result.pop('imti')
             magi = result.pop('magi')
+            self.collapse_factor.append(result.pop('collapse_factor'))
             for sid, probs in result.items():
                 before = acc[imti, sid].get((trti, magi), 0)
                 acc[imti, sid][trti, magi] = agg_probs(before, probs)
