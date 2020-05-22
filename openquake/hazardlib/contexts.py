@@ -365,6 +365,27 @@ class ContextMaker(object):
         return gmv
 
 
+def combine_po(o1, o2):
+    """
+    Combine probabilities of occurrence; used to collapse nonparametric
+    ruptures.
+
+    :param o1: probability distribution of length n1
+    :param o2: probability distribution of length n2
+    :returns: probability distribution of length n1 + n2
+
+    >>> combine_po([.99, .01], [.98, .02])
+    array([9.702e-01, 2.960e-02, 2.000e-04], dtype=float32)
+    """
+    n1 = len(o1)
+    n2 = len(o2)
+    o = numpy.zeros(n1 + n2 - 1, F32)
+    for i in range(n1):
+        for j in range(n2):
+            o[i + j] += o1[i] * o2[j]
+    return o
+
+
 def _collapse(ctxs):
     # collapse a list of contexts into a single context
     if len(ctxs) < 2:
@@ -381,8 +402,9 @@ def _collapse(ctxs):
         out.append(ctx)
     if nrup:
         ctx = copy.copy(nrup[0])
-        ctx.probs_occur = pprod(numpy.array([n.probs_occur for n in nrup]),
-                                axis=0)
+        #ctx.probs_occur = pprod(numpy.array([n.probs_occur for n in nrup]),
+        #                        axis=0)
+        ctx.probs_occur = numpy.array([n.probs_occur for n in nrup]).sum(axis=0)
         out.append(ctx)
     return out
 
