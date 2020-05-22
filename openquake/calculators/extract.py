@@ -823,7 +823,7 @@ def extract_losses_by_asset(dstore, what):
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
         avg_losses = dstore['avg_losses-stats'][()]
-        stats = decode(dstore['avg_losses-stats'].attrs['stats'])
+        stats = decode(dstore['avg_losses-stats'].attrs['stat'])
         for s, stat in enumerate(stats):
             losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
@@ -1191,8 +1191,8 @@ def extract_disagg_layer(dstore, what):
                         label = 'disagg/rlz-%d-%s-sid-%d-poe-%s/%s' % (
                             rlz, imt, sid, p, kind)
                         rec[key] = dstore[label][()]
-    return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1],
-                                  eps=edges[-2], trt=encode(edges[-1])))
+    return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
+                                  trt=numpy.array(encode(edges[-1]))))
 
 # ######################### extracting ruptures ##############################
 

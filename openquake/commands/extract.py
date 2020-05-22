@@ -15,31 +15,32 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 from openquake.baselib import performance, sap, hdf5
 from openquake.calculators.extract import Extractor, WebExtractor
 
 
 # `oq extract` is tested in the demos
 @sap.script
-def extract(what, calc_id=-1, webapi=True, local=False):
+def extract(what, calc_id=-1, webapi=False, local=False, extract_dir='.'):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     By default uses the WebAPI, otherwise the extraction is done locally.
     """
     with performance.Monitor('extract', measuremem=True) as mon:
         if local:
-            obj = WebExtractor(calc_id, 'http://localhost:8800', '').get(what)
+            aw = WebExtractor(calc_id, 'http://localhost:8800', '').get(what)
         elif webapi:
-            obj = WebExtractor(calc_id).get(what)
+            aw = WebExtractor(calc_id).get(what)
         else:
-            obj = Extractor(calc_id).get(what)
+            aw = Extractor(calc_id).get(what)
         w = what.replace('/', '-').replace('?', '-')
-        if not obj.shape:  # is a dictionary of arrays
-            fname = '%s_%d.txt' % (w, calc_id)
-            open(fname, 'w').write(obj.toml())
-        else:  # a regular ArrayWrapper
-            fname = '%s_%d.npz' % (w, calc_id)
-            hdf5.save_npz(obj, fname)
+        if aw.is_good():  # a regular ArrayWrapper
+            fname = os.path.join(extract_dir, '%s_%d.npz' % (w, calc_id))
+            hdf5.save_npz(aw, fname)
+        else:  # ArrayWrapper of strings, dictionaries or other types
+            fname = os.path.join(extract_dir, '%s_%d.txt' % (w, calc_id))
+            open(fname, 'w').write(aw.toml())
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)

@@ -36,6 +36,7 @@ from openquake.commands.tidy import tidy
 from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
+from openquake.commands.extract import extract
 from openquake.commands.sample import sample
 from openquake.commands.reduce_sm import reduce_sm
 from openquake.commands.engine import run_job, smart_run
@@ -276,6 +277,14 @@ class RunShowExportTestCase(unittest.TestCase):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
             export('hcurves', self.calc_id, 'csv', tempdir)
+        fnames = os.listdir(tempdir)
+        self.assertIn(str(fnames[0]), str(p))
+        shutil.rmtree(tempdir)
+
+    def test_extract_sitecol(self):
+        tempdir = tempfile.mkdtemp()
+        with Print.patch() as p:
+            extract('sitecol', self.calc_id, extract_dir=tempdir)
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)

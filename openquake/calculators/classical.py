@@ -194,11 +194,11 @@ class ClassicalCalculator(base.HazardCalculator):
                         v = rup_data[k]
                     except KeyError:
                         if k == 'probs_occur':
-                            v = [numpy.zeros(0, F32)] * nr
+                            v = [numpy.zeros(0)] * nr
                         elif k.endswith('_'):
-                            v = numpy.ones((nr, self.N), F32) * numpy.nan
+                            v = numpy.ones((nr, self.N)) * numpy.nan
                         else:
-                            v = numpy.ones(nr, F32) * numpy.nan
+                            v = numpy.ones(nr) * numpy.nan
                     if k == 'probs_occur':  # variable lenght arrays
                         self.datastore.hdf5.save_vlen('rup/' + k, v)
                         continue
@@ -237,7 +237,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 if k == 'grp_id':
                     self.datastore.create_dset('rup/' + k, U16)
                 elif k == 'probs_occur':  # vlen
-                    self.datastore.create_dset('rup/' + k, hdf5.vfloat32)
+                    self.datastore.create_dset('rup/' + k, hdf5.vfloat64)
                 elif k.endswith('_'):  # array of shape (U, N)
                     self.datastore.create_dset(
                         'rup/' + k, F32, shape=(None, self.N),

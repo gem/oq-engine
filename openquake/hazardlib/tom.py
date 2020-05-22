@@ -83,6 +83,7 @@ class BaseTOM(metaclass=abc.ABCMeta):
         given in the constructor.
         """
 
+
 class FatedTOM(BaseTOM):
 
     def __init__(self, time_span, occurrence_rate=None):

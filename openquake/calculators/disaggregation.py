@@ -149,12 +149,26 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
         bins = bin_edges[0], bin_edges[1][sid], bin_edges[2][sid], bin_edges[3]
 
         # z indices by gsim
+        Z = iml3.shape[-1]
         zs_by_gsim = AccumDict(accum=[])
         for gsim, rlzs in cmaker.gsims.items():
-            for z in range(iml3.shape[-1]):
+            for z in range(Z):
                 if iml3.rlzs[sid, z] in rlzs:
                     zs_by_gsim[gsim].append(z)
 
+        # sanity check: the zs are disjoint
+        counts = numpy.zeros(Z, numpy.uint8)
+        for zs in zs_by_gsim.values():
+            counts[zs] += 1
+        assert (counts <= 1).all(), counts
+
+        # collapse the contexts if the collapse_level is high enough
+        if cmaker.collapse_level >= 2:
+            ctxs_collapsed = cmaker.collapse_the_ctxs(ctxs)
+            cfactor = len(ctxs_collapsed) / len(ctxs)
+            ctxs = ctxs_collapsed
+        else:
+            cfactor = 1.
         bdata = disagg.disaggregate(
             ctxs, zs_by_gsim, iml3.imt, iml2, eps3, ms_mon, pne_mon)
         if bdata.pnes.sum():
@@ -163,7 +177,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
                 matrix = disagg.build_disagg_matrix(bdata, bins)
                 if matrix.any():
                     yield {'trti': trti, 'magi': magi, 'imti': iml3.imti,
-                           sid: matrix}
+                           sid: matrix, 'collapse_factor': cfactor}
 
 
 def agg_probs(*probs):
@@ -356,6 +370,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 trt, rlzs_by_gsim[gidx],
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
+                 'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
             for idxs in block_splitter(indices[gidx, magi], blocksize):
                 for imt in oq.imtls:
@@ -373,9 +388,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                 (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer:\n%s', msg)
         self.datastore.swmr_on()
+        self.collapse_factor = []
         smap = parallel.Starmap(
             compute_disagg, allargs, h5=self.datastore.hdf5)
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
+        cfactor = numpy.mean(self.collapse_factor)
+        logging.info('Collapse factor=%.5f', cfactor)
         return results  # imti, sid -> trti, magi -> 6D array
 
     def agg_result(self, acc, result):
@@ -390,6 +408,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             trti = result.pop('trti')
             imti = result.pop('imti')
             magi = result.pop('magi')
+            self.collapse_factor.append(result.pop('collapse_factor'))
             for sid, probs in result.items():
                 before = acc[imti, sid].get((trti, magi), 0)
                 acc[imti, sid][trti, magi] = agg_probs(before, probs)

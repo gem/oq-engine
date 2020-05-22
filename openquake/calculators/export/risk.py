@@ -322,7 +322,11 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
-@export.add(('avg_damages-rlzs', 'csv'), ('avg_damages-stats', 'csv'))
+# damages and avg_damages require different DISPLAY_NAMEs, so they are
+# kept separated even if the exporter is the same; see Anirudh's comment
+# in https://github.com/gem/oq-engine/pull/5851
+@export.add(('avg_damages-rlzs', 'csv'), ('avg_damages-stats', 'csv'),
+            ('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_avg_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
@@ -331,8 +335,9 @@ def export_avg_damages_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
+    if oq.investigation_time:
+        md.update(dict(investigation_time=oq.investigation_time,
+                       risk_investigation_time=oq.risk_investigation_time))
     if ekey[0].endswith('stats'):
         tags = oq.hazard_stats()
     else:
@@ -344,7 +349,7 @@ def export_avg_damages_csv(ekey, dstore):
             avg_damages = build_damage_array(data[:, i], dmg_dt)
         fname = dstore.build_fname(ekey[0].split('-')[0], tag, ekey[1])
         writer.save(compose_arrays(assets, avg_damages), fname,
-                    renamedict=dict(id='asset_id'), comment=md)
+                    comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -358,20 +363,19 @@ def export_dmg_by_event(ekey, dstore):
     dt_list = [('event_id', U32), ('rlz_id', U16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
     dmg_by_event = dstore[ekey[0]][()]  # shape E, L, D
-    events_by_rlz = group_array(dstore['events'], 'rlz_id')
+    events = dstore['events'][()]
     writer = writers.CsvWriter(fmt='%d')
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
     writer.save(numpy.zeros(0, dt_list), fname)
     with open(fname, 'ab') as dest:
-        for rlz, events in events_by_rlz.items():
-            data = numpy.array(  # shape (E, L, D)
-                [dmg_by_event[eid] for eid in events['id']])
-            arr = numpy.zeros(len(data), dt_list)
-            arr['event_id'] = events['id']
-            arr['rlz_id'] = events['rlz_id']
+        for rlz_id in numpy.unique(events['rlz_id']):
+            ok, = numpy.where(events['rlz_id'] == rlz_id)
+            arr = numpy.zeros(len(ok), dt_list)
+            arr['event_id'] = events['id'][ok]
+            arr['rlz_id'] = rlz_id
             for l, loss_type in enumerate(damage_dt.names):
                 for d, dmg_state in enumerate(damage_dt[loss_type].names):
-                    arr[loss_type][dmg_state] = data[:, l, d]
+                    arr[loss_type][dmg_state] = dmg_by_event[ok, l, d]
             writer.save_block(arr, dest)
     return [fname]
 
