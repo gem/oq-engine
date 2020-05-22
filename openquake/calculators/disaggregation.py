@@ -92,8 +92,8 @@ def _iml3(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return dic
 
 
-def _prepare(rupdata, sid, cmaker, sitecol, iml3, cfactors):
-    # returns ctxs and zs_by_gsim
+def _prepare_ctxs(rupdata, sid, cmaker, sitecol, iml3, cfactors):
+    # returns ctxs
     maxdist = cmaker.maximum_distance(cmaker.trt)
     ok, = numpy.where(rupdata['rrup_'][:, sid] <= maxdist)
     singlesite = sitecol.filtered([sid])
@@ -110,21 +110,7 @@ def _prepare(rupdata, sid, cmaker, sitecol, iml3, cfactors):
         ctx.sids = singlesite.sids
         ctxs.append(ctx)
     if not ctxs:
-        return [], {}
-
-    # z indices by gsim
-    Z = iml3.shape[-1]
-    zs_by_gsim = AccumDict(accum=[])
-    for gsim, rlzs in cmaker.gsims.items():
-        for z in range(Z):
-            if iml3.rlzs[sid, z] in rlzs:
-                zs_by_gsim[gsim].append(z)
-
-    # sanity check: the zs are disjoint
-    counts = numpy.zeros(Z, numpy.uint8)
-    for zs in zs_by_gsim.values():
-        counts[zs] += 1
-    assert (counts <= 1).all(), counts
+        return []
 
     # collapse the contexts if the collapse_level is high enough
     if cmaker.collapse_level >= 2:
@@ -133,7 +119,7 @@ def _prepare(rupdata, sid, cmaker, sitecol, iml3, cfactors):
         ctxs = ctxs_collapsed
     else:
         cfactors.append(1.)
-    return ctxs, zs_by_gsim
+    return ctxs
 
 
 def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
@@ -176,10 +162,24 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     cfactors = []
     for sid, iml2 in zip(sitecol.sids, iml3):
         with pre_mon:
-            ctxs, zs_by_gsim = _prepare(
-                rupdata, sid, cmaker, sitecol, iml3, cfactors)
+            ctxs = _prepare_ctxs(rupdata, sid, cmaker, sitecol, iml3, cfactors)
         if not ctxs:
             continue
+
+        # z indices by gsim
+        Z = iml3.shape[-1]
+        zs_by_gsim = AccumDict(accum=[])
+        for gsim, rlzs in cmaker.gsims.items():
+            for z in range(Z):
+                if iml3.rlzs[sid, z] in rlzs:
+                    zs_by_gsim[gsim].append(z)
+
+        # sanity check: the zs are disjoint
+        counts = numpy.zeros(Z, numpy.uint8)
+        for zs in zs_by_gsim.values():
+            counts[zs] += 1
+        assert (counts <= 1).all(), counts
+
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = bin_edges[0], bin_edges[1][sid], bin_edges[2][sid], bin_edges[3]
         bdata = disagg.disaggregate(
