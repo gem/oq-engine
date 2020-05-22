@@ -151,22 +151,22 @@ def disaggregate(ctxs, zs_by_gsim, imt, iml2, eps3,
                     lvls = (iml - mean_std[0, :, g]) / mean_std[1, :, g]
                     sf = truncnorm.sf(lvls)
                     bins = numpy.searchsorted(epsilons, lvls)
-                    for e, eps_band in enumerate(eps_bands):
-                        poes[:, e, p, z] = _disagg_eps(
-                            sf, bins, e, eps_band, cum_bands)
+                    poes[:, :, p, z] = _disagg_eps(
+                        sf, bins, eps_bands, cum_bands)
         for u, ctx in enumerate(ctxs):
             pnes[u] *= ctx.get_probability_no_exceedance(poes[u])
     return BinData(dists, lons, lats, pnes)
 
 
-def _disagg_eps(survival, bins, e, eps_band, cum_bands):
+def _disagg_eps(survival, bins, eps_bands, cum_bands):
     # disaggregate PoE of `iml` in different contributions,
     # each coming from ``epsilons`` distribution bins
-    res = numpy.zeros(len(bins))
-    res[bins <= e] = eps_band  # left bins
-    inside = bins == e + 1  # inside bins
-    res[inside] = survival[inside] - cum_bands[bins[inside]]
-    return res
+    res = numpy.zeros((len(bins), len(eps_bands)))
+    for e, eps_band in enumerate(eps_bands):
+        res[bins <= e, e] = eps_band  # left bins
+        inside = bins == e + 1  # inside bins
+        res[inside, e] = survival[inside] - cum_bands[bins[inside]]
+    return res  # shape (U, E)
 
 
 # used in calculators/disaggregation
