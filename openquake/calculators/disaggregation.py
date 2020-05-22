@@ -92,7 +92,7 @@ def _iml3(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return dic
 
 
-def _prepare_ctxs(rupdata, sid, cmaker, sitecol, iml3, cfactors):
+def _prepare_ctxs(rupdata, sid, cmaker, sitecol, cfactors):
     # returns ctxs
     maxdist = cmaker.maximum_distance(cmaker.trt)
     ok, = numpy.where(rupdata['rrup_'][:, sid] <= maxdist)
@@ -122,7 +122,7 @@ def _prepare_ctxs(rupdata, sid, cmaker, sitecol, iml3, cfactors):
     return ctxs
 
 
-def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
+def compute_disagg(dstore, idxs, cmaker, iml3dict, trti, magi, bin_edges, oq,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -133,8 +133,8 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
         an array of indices to ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param iml3:
-        an ArrayWrapper of shape (N, P, Z) with an attribute imt
+    :param iml3dict:
+        a dictionary imt -> array of shape (N, P, Z)
     :param trti:
         tectonic region type index
     :param magi:
@@ -146,7 +146,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     :returns:
         a dictionary sid -> 8D-array
     """
-    res = {'trti': trti, 'magi': magi, 'imti': iml3.imti}
+    res = {'trti': trti, 'magi': magi}
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
@@ -160,9 +160,10 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     pre_mon = monitor('preparing contexts', measuremem=False)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     cfactors = []
-    for sid, iml2 in zip(sitecol.sids, iml3):
+    iml3 = next(iter(iml3dict.values()))
+    for sid in sitecol.sids:
         with pre_mon:
-            ctxs = _prepare_ctxs(rupdata, sid, cmaker, sitecol, iml3, cfactors)
+            ctxs = _prepare_ctxs(rupdata, sid, cmaker, sitecol, cfactors)
         if not ctxs:
             continue
 
@@ -182,14 +183,15 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
 
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = bin_edges[0], bin_edges[1][sid], bin_edges[2][sid], bin_edges[3]
-        bdata = disagg.disaggregate(
-            ctxs, zs_by_gsim, iml3.imt, iml2, eps3, ms_mon, pne_mon)
-        if bdata.pnes.sum():
-            # build 6D-matrix #distbins, #lonbins, #latbins, #epsbins, P, Z
-            with mat_mon:
-                matrix = disagg.build_disagg_matrix(bdata, bins)
-                if matrix.any():
-                    res[sid] = matrix
+        for imti, iml3 in enumerate(iml3dict.values()):
+            bdata = disagg.disaggregate(
+                ctxs, zs_by_gsim, iml3.imt, iml3[sid], eps3, ms_mon, pne_mon)
+            if bdata.pnes.sum():
+                # build 6D-matrix #distbins, #lonbins, #latbins, #epsbins, P, Z
+                with mat_mon:
+                    matrix = disagg.build_disagg_matrix(bdata, bins)
+                    if matrix.any():
+                        res[sid, imti] = matrix
     res['collapse_factor'] = numpy.mean(cfactors)
     return res
 
@@ -367,10 +369,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         mag_edges = self.bin_edges[0]
         indices = get_indices_by_gidx_mag(dstore, mag_edges)
         allargs = []
-        M = len(oq.imtls)
         U = len(dstore['rup/mag'])
         # enlarge the block size to have an M-independent number of tasks
-        blocksize = int(numpy.ceil(U / (oq.concurrent_tasks or 1) * M))
+        blocksize = int(numpy.ceil(U / (oq.concurrent_tasks or 1)))
         logging.info('Found {:_d} ruptures, sending up to {:_d} per task'.
                      format(U, blocksize))
 
@@ -387,9 +388,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
             for idxs in block_splitter(indices[gidx, magi], blocksize):
-                for imt in oq.imtls:
-                    allargs.append((dstore, idxs, cmaker, self.iml3[imt],
-                                    trti, magi, self.bin_edges[1:], oq))
+                allargs.append((dstore, idxs, cmaker, self.iml3,
+                                trti, magi, self.bin_edges[1:], oq))
         sd = shapedic.copy()
         sd.pop('trt')
         sd.pop('mag')
@@ -420,10 +420,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         # 6D array of shape (#distbins, #lonbins, #latbins, #epsbins, P, Z)
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
-            imti = result.pop('imti')
             magi = result.pop('magi')
             self.collapse_factor.append(result.pop('collapse_factor'))
-            for sid, probs in result.items():
+            for (sid, imti), probs in result.items():
                 before = acc[imti, sid].get((trti, magi), 0)
                 acc[imti, sid][trti, magi] = agg_probs(before, probs)
         return acc
