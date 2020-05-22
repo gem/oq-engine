@@ -92,6 +92,36 @@ def _iml3(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return dic
 
 
+def _prepare_ctxs(rupdata, sid, cmaker, sitecol, iml3, cfactors):
+    # returns ctxs
+    maxdist = cmaker.maximum_distance(cmaker.trt)
+    ok, = numpy.where(rupdata['rrup_'][:, sid] <= maxdist)
+    singlesite = sitecol.filtered([sid])
+    ctxs = []
+    for u in ok:  # consider only the ruptures close to the site
+        ctx = RuptureContext()
+        for par in rupdata:
+            if not par.endswith('_'):
+                setattr(ctx, par, rupdata[par][u])
+            else:  # site-dependent parameter
+                setattr(ctx, par[:-1], rupdata[par][u, [sid]])
+        for par in cmaker.REQUIRES_SITES_PARAMETERS:
+            setattr(ctx, par, singlesite[par])
+        ctx.sids = singlesite.sids
+        ctxs.append(ctx)
+    if not ctxs:
+        return []
+
+    # collapse the contexts if the collapse_level is high enough
+    if cmaker.collapse_level >= 2:
+        ctxs_collapsed = cmaker.collapse_the_ctxs(ctxs)
+        cfactors.append(len(ctxs_collapsed) / len(ctxs))
+        ctxs = ctxs_collapsed
+    else:
+        cfactors.append(1.)
+    return ctxs
+
+
 def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
@@ -116,6 +146,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     :returns:
         a dictionary sid -> 8D-array
     """
+    res = {'trti': trti, 'magi': magi, 'imti': iml3.imti}
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
@@ -126,27 +157,14 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=False)
+    pre_mon = monitor('preparing contexts', measuremem=False)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
-    maxdist = cmaker.maximum_distance(cmaker.trt)
+    cfactors = []
     for sid, iml2 in zip(sitecol.sids, iml3):
-        ok, = numpy.where(rupdata['rrup_'][:, sid] <= maxdist)
-        singlesite = sitecol.filtered([sid])
-        ctxs = []
-        for u in ok:  # consider only the ruptures close to the site
-            ctx = RuptureContext()
-            for par in rupdata:
-                if not par.endswith('_'):
-                    setattr(ctx, par, rupdata[par][u])
-                else:  # site-dependent parameter
-                    setattr(ctx, par[:-1], rupdata[par][u, [sid]])
-            for par in cmaker.REQUIRES_SITES_PARAMETERS:
-                setattr(ctx, par, singlesite[par])
-            ctx.sids = singlesite.sids
-            ctxs.append(ctx)
+        with pre_mon:
+            ctxs = _prepare_ctxs(rupdata, sid, cmaker, sitecol, iml3, cfactors)
         if not ctxs:
             continue
-        # dist_bins, lon_bins, lat_bins, eps_bins
-        bins = bin_edges[0], bin_edges[1][sid], bin_edges[2][sid], bin_edges[3]
 
         # z indices by gsim
         Z = iml3.shape[-1]
@@ -162,13 +180,8 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
             counts[zs] += 1
         assert (counts <= 1).all(), counts
 
-        # collapse the contexts if the collapse_level is high enough
-        if cmaker.collapse_level >= 2:
-            ctxs_collapsed = cmaker.collapse_the_ctxs(ctxs)
-            cfactor = len(ctxs_collapsed) / len(ctxs)
-            ctxs = ctxs_collapsed
-        else:
-            cfactor = 1.
+        # dist_bins, lon_bins, lat_bins, eps_bins
+        bins = bin_edges[0], bin_edges[1][sid], bin_edges[2][sid], bin_edges[3]
         bdata = disagg.disaggregate(
             ctxs, zs_by_gsim, iml3.imt, iml2, eps3, ms_mon, pne_mon)
         if bdata.pnes.sum():
@@ -176,8 +189,9 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
             with mat_mon:
                 matrix = disagg.build_disagg_matrix(bdata, bins)
                 if matrix.any():
-                    yield {'trti': trti, 'magi': magi, 'imti': iml3.imti,
-                           sid: matrix, 'collapse_factor': cfactor}
+                    res[sid] = matrix
+    res['collapse_factor'] = numpy.mean(cfactors)
+    return res
 
 
 def agg_probs(*probs):
