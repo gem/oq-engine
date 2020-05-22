@@ -162,7 +162,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
             counts[zs] += 1
         assert (counts <= 1).all(), counts
 
-        # collapse the contexts if the collapse_level if high enough
+        # collapse the contexts if the collapse_level is high enough
         if cmaker.collapse_level >= 2:
             ctxs_collapsed = cmaker.collapse_the_ctxs(ctxs)
             cfactor = len(ctxs_collapsed) / len(ctxs)
