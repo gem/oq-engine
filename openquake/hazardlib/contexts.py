@@ -23,13 +23,14 @@ import logging
 import warnings
 import operator
 import itertools
+import functools
 import collections
 import numpy
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, groupby_bin, pprod)
+    AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import const, imt as imt_module
 from openquake.hazardlib.gsim import base
@@ -119,7 +120,7 @@ class RupData(object):
             if numpy.isnan(ctx.occurrence_rate):  # for nonparametric ruptures
                 probs_occur = ctx.probs_occur
             else:
-                probs_occur = numpy.zeros(0, F32)
+                probs_occur = numpy.zeros(0)
             self.data['occurrence_rate'].append(ctx.occurrence_rate)
             self.data['probs_occur'].append(probs_occur)
             self.data['weight'].append(ctx.weight or numpy.nan)
@@ -127,7 +128,7 @@ class RupData(object):
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
                 self.data[rup_param].append(getattr(ctx, rup_param))
             for dst_param in params:  # including clon, clat
-                dst = numpy.ones(N, F32) * 9999
+                dst = numpy.ones(N) * 9999
                 dst[sites.sids] = getattr(ctx, dst_param)
                 self.data[dst_param + '_'].append(dst)
 
@@ -365,6 +366,7 @@ class ContextMaker(object):
         return gmv
 
 
+# see contexts_tests.py for examples of collapse
 def combine_po(o1, o2):
     """
     Combine probabilities of occurrence; used to collapse nonparametric
@@ -375,11 +377,11 @@ def combine_po(o1, o2):
     :returns: probability distribution of length n1 + n2
 
     >>> combine_po([.99, .01], [.98, .02])
-    array([9.702e-01, 2.960e-02, 2.000e-04], dtype=float32)
+    array([9.702e-01, 2.960e-02, 2.000e-04])
     """
     n1 = len(o1)
     n2 = len(o2)
-    o = numpy.zeros(n1 + n2 - 1, F32)
+    o = numpy.zeros(n1 + n2 - 1)
     for i in range(n1):
         for j in range(n2):
             o[i + j] += o1[i] * o2[j]
@@ -402,9 +404,8 @@ def _collapse(ctxs):
         out.append(ctx)
     if nrup:
         ctx = copy.copy(nrup[0])
-        #ctx.probs_occur = pprod(numpy.array([n.probs_occur for n in nrup]),
-        #                        axis=0)
-        ctx.probs_occur = numpy.array([n.probs_occur for n in nrup]).sum(axis=0)
+        ctx.probs_occur = functools.reduce(
+            combine_po, (n.probs_occur for n in nrup))
         out.append(ctx)
     return out
 

@@ -63,12 +63,13 @@ class CollapseTestCase(unittest.TestCase):
         ctxs = [RuptureContext([('occurrence_rate', numpy.nan),
                                 ('probs_occur', [.999, .001])]),
                 RuptureContext([('occurrence_rate', numpy.nan),
-                                ('probs_occur', [.998, .002])])]
+                                ('probs_occur', [.998, .002])]),
+                RuptureContext([('occurrence_rate', numpy.nan),
+                                ('probs_occur', [.997, .003])])]
         for poe in (.1, .5, .9):
             c1, pnes1 = compose(ctxs, poe)
             c2, pnes2 = compose(_collapse(ctxs), poe)
-            import pdb; pdb.set_trace()
-            aac(c1, c2, rtol=1E-6)  # the same within 2%
+            aac(c1, c2)  # the same
 
     def test_mixed(self):
         RuptureContext.temporal_occurrence_model = PoissonTOM(50.)
@@ -81,4 +82,4 @@ class CollapseTestCase(unittest.TestCase):
         for poe in (.1, .5, .9):
             c1, pnes = compose(ctxs, poe)
             c2, pnes = compose(_collapse(ctxs), poe)
-            aac(c1, c2, rtol=1E-6)  # the same within 2%
+            aac(c1, c2)  # the same
