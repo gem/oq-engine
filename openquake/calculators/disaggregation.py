@@ -162,6 +162,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3, trti, magi, bin_edges, oq,
             counts[zs] += 1
         assert (counts <= 1).all(), counts
 
+        # collapse the contexts if the collapse_level if high enough
         if cmaker.collapse_level >= 2:
             ctxs_collapsed = cmaker.collapse_the_ctxs(ctxs)
             cfactor = len(ctxs_collapsed) / len(ctxs)
@@ -369,6 +370,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 trt, rlzs_by_gsim[gidx],
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
+                 'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
             for idxs in block_splitter(indices[gidx, magi], blocksize):
                 for imt in oq.imtls:
@@ -390,7 +392,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             compute_disagg, allargs, h5=self.datastore.hdf5)
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
-        logging.info('Collapse factor=%.5f', numpy.mean(self.collapse_factor))
+        cfactor = numpy.mean(self.collapse_factor)
+        logging.info('Collapse factor=%.5f', cfactor)
         return results  # imti, sid -> trti, magi -> 6D array
 
     def agg_result(self, acc, result):
