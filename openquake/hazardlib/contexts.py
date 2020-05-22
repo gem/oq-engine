@@ -29,7 +29,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, groupby_bin)
+    AccumDict, DictArray, groupby, groupby_bin, pprod)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import const, imt as imt_module
 from openquake.hazardlib.gsim import base
@@ -369,9 +369,22 @@ def _collapse(ctxs):
     # collapse a list of contexts into a single context
     if len(ctxs) < 2:
         return ctxs
-    ctx = copy.copy(ctxs[0])
-    ctx.occurrence_rate = sum(r.occurrence_rate for r in ctxs)
-    return [ctx]
+    prup, nrup, out = [], [], []
+    for ctx in ctxs:
+        if numpy.isnan(ctx.occurrence_rate):  # nonparametric
+            nrup.append(ctx)
+        else:  # parametrix
+            prup.append(ctx)
+    if prup:
+        ctx = copy.copy(prup[0])
+        ctx.occurrence_rate = sum(r.occurrence_rate for r in prup)
+        out.append(ctx)
+    if nrup:
+        ctx = copy.copy(nrup[0])
+        ctx.probs_occur = pprod(numpy.array([n.probs_occur for n in nrup]),
+                                axis=0)
+        out.append(ctx)
+    return out
 
 
 def print_finite_size(rups):
@@ -404,14 +417,13 @@ class PmapMaker(object):
 
     def _gen_ctxs(self, rups, sites, grp_ids):
         # generate triples (rup, sites, dctx)
-        rup_param = not numpy.isnan([r.occurrence_rate for r in rups]).any()
-        collapse_level = self.rup_indep and rup_param and self.collapse_level
-        if (collapse_level and len(sites.complete) == 1 and
+        if (self.rup_indep and self.collapse_level and
+                len(sites.complete) == 1 and
                 self.pointsource_distance != {}):
             rups = self.collapse_point_ruptures(rups, sites)
             # print_finite_size(rups)
         ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-        if collapse_level > 1:
+        if self.rup_indep and self.collapse_level > 1:
             ctxs = self.collapse_the_ctxs(ctxs)
         self.numrups += len(ctxs)
         if ctxs:
@@ -593,8 +605,7 @@ class PmapMaker(object):
             if len(values) == 1:
                 out.append(values[0])
             else:
-                [ctx] = _collapse(values)
-                out.append(ctx)
+                out.extend(_collapse(values))
         return out
 
     def _get_rups(self, srcs, sites):
