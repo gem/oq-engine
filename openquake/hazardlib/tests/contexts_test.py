@@ -57,7 +57,7 @@ class CollapseTestCase(unittest.TestCase):
         for poe in (.1, .5, .9):
             c1, pnes1 = compose(ctxs, poe)
             c2, pnes2 = compose(_collapse(ctxs), poe)
-            aac(c1, c2, rtol=1e-6)  # the same
+            aac(c1, c2)  # the same
 
     def test_nonparam(self):
         ctxs = [RuptureContext([('occurrence_rate', numpy.nan),
@@ -80,6 +80,6 @@ class CollapseTestCase(unittest.TestCase):
                 RuptureContext([('occurrence_rate', numpy.nan),
                                 ('probs_occur', [.998, .002])])]
         for poe in (.1, .5, .9):
-            c1, pnes = compose(ctxs, poe)
-            c2, pnes = compose(_collapse(ctxs), poe)
+            c1, pnes1 = compose(ctxs, poe)
+            c2, pnes2 = compose(_collapse(ctxs), poe)
             aac(c1, c2)  # the same
