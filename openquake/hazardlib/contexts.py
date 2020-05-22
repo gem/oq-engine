@@ -394,7 +394,7 @@ class ContextMaker(object):
 
 
 # see contexts_tests.py for examples of collapse
-def combine_po(o1, o2):
+def combine_pmf(o1, o2):
     """
     Combine probabilities of occurrence; used to collapse nonparametric
     ruptures.
@@ -403,7 +403,7 @@ def combine_po(o1, o2):
     :param o2: probability distribution of length n2
     :returns: probability distribution of length n1 + n2
 
-    >>> combine_po([.99, .01], [.98, .02])
+    >>> combine_pmf([.99, .01], [.98, .02])
     array([9.702e-01, 2.960e-02, 2.000e-04])
     """
     n1 = len(o1)
@@ -434,7 +434,7 @@ def _collapse(ctxs):
     if len(nrups) > 1:
         ctx = copy.copy(nrups[0])
         ctx.probs_occur = functools.reduce(
-            combine_po, (n.probs_occur for n in nrups))
+            combine_pmf, (n.probs_occur for n in nrups))
         out.append(ctx)
     else:
         out.extend(nrups)
