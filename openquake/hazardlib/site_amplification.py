@@ -159,10 +159,6 @@ class Amplifier(object):
                 logaf = numpy.log(self.amplevels/mid)
                 poes = (1.0-norm_cdf(logaf, numpy.log(a), s))
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
-                #print("mid {:6.4f} prb {:6.4f} median {:6.4f} std {:6.4f}".format(mid, p, a, s))
-                #print(ampl_poes[:, g])
-                #print("poes", poes)
-                #print("\n")
         return ampl_poes
 
     def amplify(self, ampl_code, pcurves):

@@ -128,6 +128,7 @@ class AmplifierTestCase(unittest.TestCase):
         #
         # MP: checked using hand calculations some values of the poes computed
         # considering uncertainty
+        #
         fname = gettemp(simple_ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
