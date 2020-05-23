@@ -287,7 +287,7 @@ DISPLAY_NAME = {
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
-    'disagg_by_src': 'Disaggregation by Source',
+#    'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
     'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',

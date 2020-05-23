@@ -179,15 +179,8 @@ class DisaggregationTestCase(CalculatorTestCase):
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
         # test_disagg_by_src
-        dbs = self.calc.datastore['disagg_by_src']
-        self.assertEqual(sorted(dbs), ['poe-0.01-PGA-sid-0',
-                                       'poe-0.01-PGA-sid-1',
-                                       'poe-0.01-SA(0.25)-sid-0',
-                                       'poe-0.01-SA(0.25)-sid-1',
-                                       'poe-0.05-PGA-sid-0',
-                                       'poe-0.05-PGA-sid-1',
-                                       'poe-0.05-SA(0.25)-sid-0',
-                                       'poe-0.05-SA(0.25)-sid-1'])
-        arr = dbs['poe-0.01-PGA-sid-0'][()]
-        numpy.testing.assert_almost_equal(
-            arr, [0, 0, 1.9179472e-05, 9.9810150e-03])
+        df = self.calc.datastore.read_df('disagg_by_src', 'src_id')
+        self.assertEqual(str(df[0:1]),"""\
+        sid       lvl     value
+src_id                         
+b'1'      0  b'PGA_0'  0.982884""")

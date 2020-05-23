@@ -30,8 +30,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util, logs
+from openquake.hazardlib.probability_map import ProbabilityMap, combine2
+from openquake.commonlib import calc, util, logs, readinput
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -159,11 +159,12 @@ class ClassicalCalculator(base.HazardCalculator):
         if not dic['pmap']:
             return acc
         if self.oqparam.disagg_by_src:
-            # store the pmaps for the given source
-            for grp_id, pmap in dic['pmap'].items():
-                name = 'poes_by_src/%s/grp-%02d' % (
-                    dic['extra']['source_id'], grp_id)
-                self.datastore[name] = pmap
+            # store the curves for the given source
+            src_id = dic['extra']['source_id']
+            trt = dic['extra']['trt']
+            serial = self.csm.source_info[src_id][readinput.SERIAL]
+            sids, probs = combine2(dic['pmap'].values(), self.weights[trt])
+            self.datastore['disagg_by_src'][serial, sids] = probs
         trt = dic['extra'].pop('trt')
         self.maxradius = max(self.maxradius, dic['extra'].pop('maxradius'))
         with self.monitor('aggregate curves'):
@@ -262,6 +263,24 @@ class ClassicalCalculator(base.HazardCalculator):
                           humansize(pmapbytes)))
         logging.info(MAXMEMORY % (self.N, num_levels, max_num_gsims,
                                   max_num_grp_ids, humansize(pmapbytes)))
+
+        acc = AccumDict(accum=[])  # trt -> weights
+        for br in self.full_lt.gsim_lt.branches:
+            acc[br.trt].append(br.weight.dic['weight'])
+        self.weights = {trt: numpy.array(w) for trt, w in acc.items()}
+        Ns = len(self.csm.source_info)
+        if self.oqparam.disagg_by_src:
+            lvls = []
+            for imt, imls in self.oqparam.imtls.items():
+                for lvl in range(len(imls)):
+                    lvls.append('%s_%d' % (imt, lvl))
+            sources = numpy.array([row[0].encode('utf-8')
+                                   for row in self.csm.source_info])
+            self.datastore.create_dset('disagg_by_src', F32,
+                                       (Ns, self.N, num_levels))
+            self.datastore.set_shape_attrs(
+                'disagg_by_src', src_id=sources,
+                sid=numpy.arange(self.N), lvl=lvls)
         return zd
 
     def execute(self):

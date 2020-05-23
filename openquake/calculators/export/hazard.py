@@ -572,24 +572,6 @@ def export_disagg_csv(ekey, dstore):
     return fnames
 
 
-@export.add(('disagg_by_src', 'csv'))
-def export_disagg_by_src_csv(ekey, dstore):
-    paths = []
-    srcdata = dstore['disagg_by_grp'][()]
-    header = ['source_id', 'poe']
-    by_poe = operator.itemgetter(1)
-    for name in dstore['disagg_by_src']:
-        probs = dstore['disagg_by_src/' + name][()]
-        ok = probs > 0
-        src = srcdata[ok]
-        data = [header] + sorted(zip(add_quotes(src['grp_name']), probs[ok]),
-                                 key=by_poe, reverse=True)
-        path = dstore.export_path(name + '_Src.csv')
-        writers.write_csv(path, data, fmt='%.7e')
-        paths.append(path)
-    return paths
-
-
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
     data = extract(dstore, 'realizations').array

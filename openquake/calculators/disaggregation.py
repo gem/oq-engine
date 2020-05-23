@@ -347,8 +347,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.ok_sites = set(self.check_poes_disagg(curves, rlzs))
         self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
                           self.poes_disagg, curves)
-        if oq.disagg_by_src:
-            self.build_disagg_by_src(rlzs)
 
         self.save_bin_edges()
         tot = get_outputs_size(shapedic, oq.disagg_outputs or disagg.pmf_map)
@@ -545,35 +543,3 @@ class DisaggregationCalculator(base.HazardCalculator):
                     'Site #%d: poe_agg=%s is quite different from the expected'
                     ' poe=%s; perhaps the number of intensity measure'
                     ' levels is too small?', site_id, poe_agg, poe)
-
-    def build_disagg_by_src(self, rlzs):
-        logging.warning('Disaggregation by source is experimental')
-        oq = self.oqparam
-        groups = list(self.full_lt.get_rlzs_by_grp())
-        M = len(oq.imtls)
-        P = len(self.poes_disagg)
-        for (s, z), rlz in numpy.ndenumerate(rlzs):
-            poes = numpy.zeros((M, P, len(groups)))
-            rlz = rlzs[s, z]
-            for g, grp_id in enumerate(groups):
-                pcurve = self.pgetter.get_pcurve(s, rlz, int(grp_id[4:]))
-                if pcurve is None:
-                    continue
-                for m, imt in enumerate(oq.imtls):
-                    xs = oq.imtls[imt]
-                    ys = pcurve.array[oq.imtls(imt), 0]
-                    poes[m, :, g] = numpy.interp(
-                        self.iml4[s][m, :, z], xs, ys)
-            for m, imt in enumerate(oq.imtls):
-                for p, poe in enumerate(self.poes_disagg):
-                    pref = ('iml-%s' % oq.iml_disagg[imt] if poe is None
-                            else 'poe-%s' % poe)
-                    name = 'disagg_by_src/%s-%s-sid-%s' % (pref, imt, s)
-                    if poes[m, p].sum():  # nonzero contribution
-                        poe_agg = pprod(poes[m, p])
-                        if poe and abs(1 - poe_agg / poe) > .1:
-                            logging.warning(
-                                'poe_agg=%s is quite different from '
-                                'the expected poe=%s', poe_agg, poe)
-                        self.datastore[name] = poes[m, p]
-                        self.datastore.set_attrs(name, poe_agg=poe_agg)
