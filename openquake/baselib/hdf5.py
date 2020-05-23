@@ -494,6 +494,12 @@ class ArrayWrapper(object):
             return getattr(self, idx)
         return self.array[idx]
 
+    def __setitem__(self, idx, val):
+        if isinstance(idx, str) and idx in self.__dict__:
+            setattr(self, idx, val)
+        else:
+            self.array[idx] = val
+
     def __toh5__(self):
         arr = getattr(self, 'array', ())
         if len(arr):

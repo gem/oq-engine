@@ -71,25 +71,25 @@ def _matrix(matrices, num_trts, num_mag_bins):
     return mat
 
 
-def _iml3(rlzs, iml_disagg, imtls, poes_disagg, curves):
-    # a dictionary of ArrayWrappers imt -> (N, P, Z) with intensities
+def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
+    # a list of ArrayWrappers sid -> (M, P, Z)
     N, Z = rlzs.shape
     P = len(poes_disagg)
-    dic = {}
+    M = len(imtls)
+    imts = [from_string(imt) for imt in imtls]
+    lst = [hdf5.ArrayWrapper(numpy.empty((M, P, Z)),
+                             {'rlzs': rlzs[s], 'imts': imts})
+           for s in range(N)]
     for m, imt in enumerate(imtls):
-        iml3 = numpy.empty((N, P, Z))
-        iml3.fill(numpy.nan)
         for (s, z), rlz in numpy.ndenumerate(rlzs):
             curve = curves[s][z]
             if poes_disagg == (None,):
-                iml3[s, 0, z] = imtls[imt]
+                lst[s][m, 0, z] = imtls[imt]
             elif curve:
                 poes = curve[imt][::-1]
                 imls = imtls[imt][::-1]
-                iml3[s, :, z] = numpy.interp(poes_disagg, poes, imls)
-        dic[imt] = hdf5.ArrayWrapper(
-            iml3, dict(imt=from_string(imt), imti=m, rlzs=rlzs))
-    return dic
+                lst[s][m, :, z] = numpy.interp(poes_disagg, poes, imls)
+    return lst
 
 
 def _prepare_ctxs(rupdata, sid, cmaker, sitecol, cfactors):
@@ -122,7 +122,7 @@ def _prepare_ctxs(rupdata, sid, cmaker, sitecol, cfactors):
     return ctxs
 
 
-def compute_disagg(dstore, idxs, cmaker, iml3dict, trti, magi, bin_edges, oq,
+def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -133,8 +133,8 @@ def compute_disagg(dstore, idxs, cmaker, iml3dict, trti, magi, bin_edges, oq,
         an array of indices to ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param iml3dict:
-        a dictionary imt -> array of shape (N, P, Z)
+    :param iml4:
+        a list sid -> ArrayWrapper of shape (M, P, Z)
     :param trti:
         tectonic region type index
     :param magi:
@@ -144,7 +144,7 @@ def compute_disagg(dstore, idxs, cmaker, iml3dict, trti, magi, bin_edges, oq,
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary sid -> 8D-array
+        a dictionary sid -> 7D-array
     """
     res = {'trti': trti, 'magi': magi}
     with monitor('reading rupdata', measuremem=True):
@@ -160,19 +160,18 @@ def compute_disagg(dstore, idxs, cmaker, iml3dict, trti, magi, bin_edges, oq,
     pre_mon = monitor('preparing contexts', measuremem=False)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     cfactors = []
-    iml3 = next(iter(iml3dict.values()))
-    for sid in sitecol.sids:
+    for sid, iml3 in enumerate(iml4):
         with pre_mon:
             ctxs = _prepare_ctxs(rupdata, sid, cmaker, sitecol, cfactors)
         if not ctxs:
             continue
 
         # z indices by gsim
-        Z = iml3.shape[-1]
+        M, P, Z = iml3.shape
         zs_by_gsim = AccumDict(accum=[])
         for gsim, rlzs in cmaker.gsims.items():
             for z in range(Z):
-                if iml3.rlzs[sid, z] in rlzs:
+                if iml3.rlzs[z] in rlzs:
                     zs_by_gsim[gsim].append(z)
 
         # sanity check: the zs are disjoint
@@ -183,13 +182,12 @@ def compute_disagg(dstore, idxs, cmaker, iml3dict, trti, magi, bin_edges, oq,
 
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = bin_edges[0], bin_edges[1][sid], bin_edges[2][sid], bin_edges[3]
-        for imti, iml3 in enumerate(iml3dict.values()):
-            matrix = disagg.disaggregate(
-                ctxs, zs_by_gsim, iml3.imt, iml3[sid], eps3, bins,
-                ms_mon, pne_mon, mat_mon)
-            if matrix.any():
-                # build 6D-matrix #distbins, #lonbins, #latbins, #epsbins, P, Z
-                res[sid, imti] = matrix
+        # build 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
+        matrix = disagg.disaggregate(
+            ctxs, iml3.imts, zs_by_gsim, iml3.array, eps3, bins,
+            ms_mon, pne_mon, mat_mon)
+        if matrix.any():
+            res[sid] = matrix
     res['collapse_factor'] = numpy.mean(cfactors)
     return res
 
@@ -346,7 +344,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             curves = [self.get_curve(sid, rlzs[sid])
                       for sid in self.sitecol.sids]
             self.ok_sites = set(self.check_poes_disagg(curves, rlzs))
-        self.iml3 = _iml3(rlzs, oq.iml_disagg, oq.imtls,
+        self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
                           self.poes_disagg, curves)
         if oq.disagg_by_src:
             self.build_disagg_by_src(rlzs)
@@ -356,10 +354,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Total output size: %s', humansize(sum(tot.values())))
         self.imldic = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
+            iml3 = self.iml4[s]
             for z, rlz in enumerate(rlzs[s]):
                 for p, poe in enumerate(self.poes_disagg):
-                    for imt in oq.imtls:
-                        self.imldic[s, rlz, poe, imt] = self.iml3[imt][s, p, z]
+                    for m, imt in enumerate(oq.imtls):
+                        self.imldic[s, rlz, poe, imt] = iml3[m, p, z]
 
         # submit disaggregation tasks
         dstore = (self.datastore.parent if self.datastore.parent
@@ -386,7 +385,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
             for idxs in block_splitter(indices[gidx, magi], blocksize):
-                allargs.append((dstore, idxs, cmaker, self.iml3,
+                allargs.append((dstore, idxs, cmaker, self.iml4,
                                 trti, magi, self.bin_edges[1:], oq))
         sd = shapedic.copy()
         sd.pop('trt')
@@ -412,17 +411,17 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         Collect the results coming from compute_disagg into self.results.
 
-        :param acc: dictionary imti, sid -> trti, magi -> 6D array
+        :param acc: dictionary sid -> trti, magi -> 6D array
         :param result: dictionary with the result coming from a task
         """
-        # 6D array of shape (#distbins, #lonbins, #latbins, #epsbins, P, Z)
+        # 7D array of shape (#distbins, #lonbins, #latbins, #epsbins, M, P, Z)
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
             self.collapse_factor.append(result.pop('collapse_factor'))
-            for (sid, imti), probs in result.items():
-                before = acc[imti, sid].get((trti, magi), 0)
-                acc[imti, sid][trti, magi] = agg_probs(before, probs)
+            for sid, probs in result.items():
+                before = acc[sid].get((trti, magi), 0)
+                acc[sid][trti, magi] = agg_probs(before, probs)
         return acc
 
     def save_bin_edges(self):
@@ -455,8 +454,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         T = len(self.trts)
         Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
-        # build a dictionary m, s -> 8D matrix of shape (T, Ma, ..., E, P, Z)
-        results = {ms: _matrix(dic, T, Ma) for ms, dic in results.items()}
+        # build a dictionary s -> 9D matrix of shape (T, Ma, ..., E, M, P, Z)
+        results = {s: _matrix(dic, T, Ma) for s, dic in results.items()}
         # get the number of outputs
         shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
@@ -473,23 +472,23 @@ class DisaggregationCalculator(base.HazardCalculator):
             dictionary of attributes to add to the dataset
         """
         imts = list(self.oqparam.imtls)
-        for (m, s), mat8 in results.items():
-            imt = imts[m]
+        for s, mat9 in results.items():
             rlzs = self.rlzs[s]
             many_rlzs = len(rlzs) > 1
-            if many_rlzs:  # rescale the weights
-                weights = numpy.array([self.ws[r][imt] for r in rlzs])
-                weights /= weights.sum()  # normalize to 1
-            for p, poe in enumerate(self.poes_disagg):
-                mat7 = mat8[..., p, :]
-                for z in range(self.Z):
-                    mat6 = mat7[..., z]
-                    if mat6.any():  # nonzero
-                        self._save('disagg', s, rlzs[z], poe, imt, mat6)
-                if many_rlzs:  # compute the mean matrices
-                    mean = numpy.average(mat7, -1, weights)
-                    if mean.any():  # nonzero
-                        self._save('disagg', s, 'mean', poe, imt, mean)
+            for m, imt in enumerate(imts):
+                if many_rlzs:  # rescale the weights
+                    weights = numpy.array([self.ws[r][imt] for r in rlzs])
+                    weights /= weights.sum()  # normalize to 1
+                for p, poe in enumerate(self.poes_disagg):
+                    mat7 = mat9[..., m, p, :]
+                    for z in range(self.Z):
+                        mat6 = mat7[..., z]
+                        if mat6.any():  # nonzero
+                            self._save('disagg', s, rlzs[z], poe, imt, mat6)
+                    if many_rlzs:  # compute the mean matrices
+                        mean = numpy.average(mat7, -1, weights)
+                        if mean.any():  # nonzero
+                            self._save('disagg', s, 'mean', poe, imt, mean)
         self.datastore.set_attrs('disagg', **attrs)
 
     def _save(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
@@ -564,7 +563,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     xs = oq.imtls[imt]
                     ys = pcurve.array[oq.imtls(imt), 0]
                     poes[m, :, g] = numpy.interp(
-                        self.iml3[imt][s, :, z], xs, ys)
+                        self.iml4[s][m, :, z], xs, ys)
             for m, imt in enumerate(oq.imtls):
                 for p, poe in enumerate(self.poes_disagg):
                     pref = ('iml-%s' % oq.iml_disagg[imt] if poe is None

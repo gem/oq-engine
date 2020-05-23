@@ -113,45 +113,49 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, zs_by_gsim, imt, iml2, eps3, bin_edges=(),
+def disaggregate(ctxs, imts, zs_by_gsim, iml3, eps3, bin_edges=(),
                  ms_mon=performance.Monitor(),
                  pne_mon=performance.Monitor(),
                  mat_mon=performance.Monitor()):
     """
     :param ctxs: a list of U fat RuptureContexts
-    :param zs_by_gims: a dictionary gsim -> list of z indices
+    :param imts: a list of Intensity Measure Type objects
+    :param zs_by_gims: a dictionary gsim -> Z indices
     :param imt: an Intensity Measure Type
-    :param iml2: a matrix of intensities of shape (P, Z)
+    :param iml3: an array of shape (M, P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
     :param ms_mon: monitor for the mean_std calculation
     :param pne_mon: monitor for the probabilities of no exceedance
     """
     # disaggregate (separate) PoE in different contributions
     U, E, G = len(ctxs), len(eps3[2]), len(zs_by_gsim)
-    P, Z = iml2.shape
+    M, P, Z = iml3.shape
     dists = numpy.zeros(U)
     lons = numpy.zeros(U)
     lats = numpy.zeros(U)
+    iml3 = iml3.copy()
     with ms_mon:
         truncnorm, epsilons, eps_bands = eps3
         cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
-        iml2 = to_distribution_values(iml2, imt)  # shape P, Z
-        mean_std = numpy.zeros((2, U, G), numpy.float32)
+        for m, imt in enumerate(imts):
+            iml3[m] = to_distribution_values(iml3[m], imt)
+        mean_std = numpy.zeros((2, U, M, G), numpy.float32)
         for u, ctx in enumerate(ctxs):
             for g, gsim in enumerate(zs_by_gsim):
-                mean_std[:, u, g] = ctx.get_mean_std([imt], [gsim]).reshape(2)
+                mean_std[:, u, :, g] = ctx.get_mean_std(
+                    imts, [gsim]).reshape(2, M)
             dists[u] = ctx.rrup[0]  # distance to the site
             lons[u] = ctx.clon[0]  # closest point of the rupture lon
             lats[u] = ctx.clat[0]  # closest point of the rupture lat
     with pne_mon:
-        poes = numpy.zeros((U, E, P, Z))
-        pnes = numpy.ones((U, E, P, Z))
+        poes = numpy.zeros((U, E, M, P, Z))
+        pnes = numpy.ones((U, E, M, P, Z))
         for g, zs in enumerate(zs_by_gsim.values()):
-            for (p, z), iml in numpy.ndenumerate(iml2):
+            for (m, p, z), iml in numpy.ndenumerate(iml3):
                 if z in zs:
-                    lvls = (iml - mean_std[0, :, g]) / mean_std[1, :, g]
+                    lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
                     idxs = numpy.searchsorted(epsilons, lvls)
-                    poes[:, :, p, z] = _disagg_eps(
+                    poes[:, :, m, p, z] = _disagg_eps(
                         truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
         for u, ctx in enumerate(ctxs):
             pnes[u] *= ctx.get_probability_no_exceedance(poes[u])
@@ -187,7 +191,7 @@ def lon_lat_bins(lon, lat, size_km, coord_bin_width):
     nbins = numpy.ceil(size_km * KM_TO_DEGREES / coord_bin_width)
     delta_lon = min(angular_distance(size_km, lat), 180)
     delta_lat = min(size_km * KM_TO_DEGREES, 90)
-    EPS = .001  # avoid discarding the last edge
+    EPS = .001  # avoid discarding the last edgebdata.pnes.shape
     lon_bins = lon + numpy.arange(-delta_lon, delta_lon + EPS,
                                   delta_lon / nbins)
     lat_bins = lat + numpy.arange(-delta_lat, delta_lat + EPS,
@@ -203,7 +207,7 @@ def _build_disagg_matrix(bdata, bins):
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
     :returns:
-        a 6D-matrix of shape (#distbins, #lonbins, #latbins, #epsbins, P, Z)
+        a 7D-matrix of shape (#distbins, #lonbins, #latbins, #epsbins, M, P, Z)
     """
     dist_bins, lon_bins, lat_bins, eps_bins = bins
     dim1, dim2, dim3, dim4 = shape = [len(b) - 1 for b in bins]
@@ -225,12 +229,12 @@ def _build_disagg_matrix(bdata, bins):
     dists_idx[dists_idx == dim1] = dim1 - 1
     lons_idx[lons_idx == dim2] = dim2 - 1
     lats_idx[lats_idx == dim3] = dim3 - 1
-    U, E, P, Z = bdata.pnes.shape
-    mat6D = numpy.ones(shape + [P, Z])
+    U, E, M, P, Z = bdata.pnes.shape
+    mat7D = numpy.ones(shape + [M, P, Z])
     for i_dist, i_lon, i_lat, pne in zip(
             dists_idx, lons_idx, lats_idx, bdata.pnes):
-        mat6D[i_dist, i_lon, i_lat] *= pne  # shape E, P, Z
-    return 1. - mat6D
+        mat7D[i_dist, i_lon, i_lat] *= pne  # shape E, M, P, Z
+    return 1. - mat7D
 
 
 def _digitize_lons(lons, lon_bins):
@@ -341,9 +345,9 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
-    bdata = {}  # by TRT
+    bdata = {}  # by trt, magi
     sitecol = SiteCollection([site])
-    iml2 = numpy.array([[iml]])
+    iml3 = numpy.array([[[iml]]])
     eps3 = _eps3(truncation_level, n_epsilons)
 
     rups = AccumDict(accum=[])
@@ -366,7 +370,8 @@ def disaggregation(
     for trt in cmaker:
         gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            bdata[trt, magi] = disaggregate(ctxs, {gsim: [0]}, imt, iml2, eps3)
+            bdata[trt, magi] = disaggregate(
+                ctxs, [imt], {gsim: [0]}, iml3, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
@@ -386,10 +391,10 @@ def disaggregation(
     bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
     matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
                           len(lon_bins) - 1, len(lat_bins) - 1,
-                          len(eps_bins) - 1, len(trts)))
+                          len(eps_bins) - 1, len(trts)))  # 6D
     for trt, magi in bdata:
-        mat6 = _build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
-        matrix[magi, ..., trt_num[trt]] = mat6[..., 0, 0]
+        mat7 = _build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
+        matrix[magi, ..., trt_num[trt]] = mat7[..., 0, 0, 0]
     return bin_edges + (trts,), matrix
 
 
