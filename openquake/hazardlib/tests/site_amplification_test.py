@@ -149,7 +149,7 @@ class AmplifierTestCase(unittest.TestCase):
             poes, [0.985109, 0.980022, 0.970272, 0.940816, 0.890224, 0.792719,
                    0.692719], atol=1E-6)
 
-        # amplify GMFs with sigmas
+        # Amplify GMFs with sigmas
         numpy.random.seed(42)
         gmvs = a._amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
         numpy.testing.assert_allclose(gmvs, [0.005401, 0.010356, 0.016704],

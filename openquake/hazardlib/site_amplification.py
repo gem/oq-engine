@@ -154,7 +154,7 @@ class Amplifier(object):
                 # to 'p' times 1 (if the value of shaking on rock will be
                 # larger than the value of shaking on soil) or 0 (if the
                 # value of shaking on rock will be smaller than the value of
-                # shaking on soil)s
+                # shaking on soil)
                 #
                 logaf = numpy.log(self.amplevels/mid)
                 poes = (1.0-norm_cdf(logaf, numpy.log(a), s))
