@@ -391,7 +391,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         sd = shapedic.copy()
         sd.pop('trt')
         sd.pop('mag')
-        sd.pop('M')
         sd['tasks'] = numpy.ceil(len(allargs))
         nbytes, msg = get_array_nbytes(sd)
         if nbytes > oq.max_data_transfer:
