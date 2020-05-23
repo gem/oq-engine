@@ -150,8 +150,9 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
-        # NB: dstore['rup/' + k][idxs] would be ultraslow!
-        rupdata = {k: dstore['rup/' + k][:][idxs] for k in dstore['rup']}
+        # NB: using dstore['rup/' + k][idxs] would be ultraslow!
+        a, b = idxs.min(), idxs.max() + 1
+        rupdata = {k: dstore['rup/' + k][a:b][idxs-a] for k in dstore['rup']}
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
@@ -385,7 +386,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
             for idxs in block_splitter(indices[gidx, magi], blocksize):
-                allargs.append((dstore, idxs, cmaker, self.iml4,
+                allargs.append((dstore, numpy.array(idxs), cmaker, self.iml4,
                                 trti, magi, self.bin_edges[1:], oq))
         sd = shapedic.copy()
         sd.pop('trt')
