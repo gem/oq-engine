@@ -179,8 +179,5 @@ class DisaggregationTestCase(CalculatorTestCase):
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
         # test_disagg_by_src
-        df = self.calc.datastore.read_df('disagg_by_src', 'src_id')
-        self.assertEqual(str(df[0:1]),"""\
-        sid       lvl     value
-src_id                         
-b'1'      0  b'PGA_0'  0.982884""")
+        df = self.calc.datastore.read_df('disagg_by_src', 'src')
+        self.assertEqual(list(df.columns), ['sid', 'imt', 'lvl', 'value'])

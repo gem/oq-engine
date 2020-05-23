@@ -25,6 +25,7 @@ from datetime import datetime
 import numpy
 
 from openquake.baselib import parallel, hdf5
+from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, groupby, humansize)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
@@ -164,7 +165,9 @@ class ClassicalCalculator(base.HazardCalculator):
             trt = dic['extra']['trt']
             serial = self.csm.source_info[src_id][readinput.SERIAL]
             sids, probs = combine2(dic['pmap'].values(), self.weights[trt])
-            self.datastore['disagg_by_src'][serial, sids] = probs
+            self.datastore['disagg_by_src'][serial, sids] = probs.reshape(
+                -1, self.M, self.L1)
+
         trt = dic['extra'].pop('trt')
         self.maxradius = max(self.maxradius, dic['extra'].pop('maxradius'))
         with self.monitor('aggregate curves'):
@@ -270,17 +273,16 @@ class ClassicalCalculator(base.HazardCalculator):
         self.weights = {trt: numpy.array(w) for trt, w in acc.items()}
         Ns = len(self.csm.source_info)
         if self.oqparam.disagg_by_src:
-            lvls = []
-            for imt, imls in self.oqparam.imtls.items():
-                for lvl in range(len(imls)):
-                    lvls.append('%s_%d' % (imt, lvl))
-            sources = numpy.array([row[0].encode('utf-8')
-                                   for row in self.csm.source_info])
+            self.M = len(self.oqparam.imtls)
+            self.L1 = num_levels // self.M
+            sources = encode([row[0] for row in self.csm.source_info])
             self.datastore.create_dset('disagg_by_src', F32,
-                                       (Ns, self.N, num_levels))
+                                       (Ns, self.N, self.M, self.L1))
             self.datastore.set_shape_attrs(
-                'disagg_by_src', src_id=sources,
-                sid=numpy.arange(self.N), lvl=lvls)
+                'disagg_by_src', src=sources,
+                sid=numpy.arange(self.N),
+                imt=encode(list(self.oqparam.imtls)),
+                lvl=numpy.arange(self.L1))
         return zd
 
     def execute(self):
