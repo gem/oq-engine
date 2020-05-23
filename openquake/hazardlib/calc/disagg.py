@@ -29,7 +29,7 @@ import numpy
 import scipy.stats
 
 from openquake.hazardlib import contexts
-from openquake.baselib import performance
+from openquake.baselib import performance, hdf5
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -113,9 +113,10 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, zs_by_gsim, imt, iml2, eps3,
+def disaggregate(ctxs, zs_by_gsim, imt, iml2, eps3, bin_edges=(),
                  ms_mon=performance.Monitor(),
-                 pne_mon=performance.Monitor()):
+                 pne_mon=performance.Monitor(),
+                 mat_mon=performance.Monitor()):
     """
     :param ctxs: a list of U fat RuptureContexts
     :param zs_by_gims: a dictionary gsim -> list of z indices
@@ -146,16 +147,19 @@ def disaggregate(ctxs, zs_by_gsim, imt, iml2, eps3,
         poes = numpy.zeros((U, E, P, Z))
         pnes = numpy.ones((U, E, P, Z))
         for g, zs in enumerate(zs_by_gsim.values()):
-            for z in zs:
-                for p, iml in enumerate(iml2[:, z]):
+            for (p, z), iml in numpy.ndenumerate(iml2):
+                if z in zs:
                     lvls = (iml - mean_std[0, :, g]) / mean_std[1, :, g]
-                    sf = truncnorm.sf(lvls)
-                    bins = numpy.searchsorted(epsilons, lvls)
+                    idxs = numpy.searchsorted(epsilons, lvls)
                     poes[:, :, p, z] = _disagg_eps(
-                        sf, bins, eps_bands, cum_bands)
+                        truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
         for u, ctx in enumerate(ctxs):
             pnes[u] *= ctx.get_probability_no_exceedance(poes[u])
-    return BinData(dists, lons, lats, pnes)
+    bindata = BinData(dists, lons, lats, pnes)
+    if not bin_edges:
+        return bindata
+    with mat_mon:
+        return _build_disagg_matrix(bindata, bin_edges)
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -194,7 +198,7 @@ def lon_lat_bins(lon, lat, size_km, coord_bin_width):
 
 
 # this is fast
-def build_disagg_matrix(bdata, bins):
+def _build_disagg_matrix(bdata, bins):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
@@ -384,7 +388,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt, magi in bdata:
-        mat6 = build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
+        mat6 = _build_disagg_matrix(bdata[trt, magi], bin_edges[1:])
         matrix[magi, ..., trt_num[trt]] = mat6[..., 0, 0]
     return bin_edges + (trts,), matrix
 

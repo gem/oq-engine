@@ -184,14 +184,12 @@ def compute_disagg(dstore, idxs, cmaker, iml3dict, trti, magi, bin_edges, oq,
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = bin_edges[0], bin_edges[1][sid], bin_edges[2][sid], bin_edges[3]
         for imti, iml3 in enumerate(iml3dict.values()):
-            bdata = disagg.disaggregate(
-                ctxs, zs_by_gsim, iml3.imt, iml3[sid], eps3, ms_mon, pne_mon)
-            if bdata.pnes.sum():
+            matrix = disagg.disaggregate(
+                ctxs, zs_by_gsim, iml3.imt, iml3[sid], eps3, bins,
+                ms_mon, pne_mon, mat_mon)
+            if matrix.any():
                 # build 6D-matrix #distbins, #lonbins, #latbins, #epsbins, P, Z
-                with mat_mon:
-                    matrix = disagg.build_disagg_matrix(bdata, bins)
-                    if matrix.any():
-                        res[sid, imti] = matrix
+                res[sid, imti] = matrix
     res['collapse_factor'] = numpy.mean(cfactors)
     return res
 
