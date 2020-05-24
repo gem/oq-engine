@@ -490,6 +490,8 @@ def export_disagg_xml(ekey, dstore):
     writercls = hazard_writers.DisaggXMLWriter
     trts = dstore.get_attr('full_lt', 'trts')
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
+    z_by_sr = {(s, r): z for (s, z), r in numpy.ndenumerate(
+        dstore['iml4/rlzs'][:])}
     for key in group:
         if not key.startswith('rlz-'):
             continue
@@ -500,8 +502,7 @@ def export_disagg_xml(ekey, dstore):
         imt = from_string(imt)
         sid = int(sid)
         p = int(p)
-        z_by_r = {r: z for z, r in enumerate(dstore['iml4/rlzs'][sid])}
-        z = z_by_r[rlz.ordinal]
+        z = z_by_sr[sid, rlz.ordinal]
         poe_agg = dstore['poe4'][sid, m, p, z]
         iml = iml4[sid, m, p, z]
         fname = dstore.export_path(key + '.xml')
