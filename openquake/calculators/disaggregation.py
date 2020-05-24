@@ -230,7 +230,9 @@ def get_indices_by_gidx_mag(dstore, mag_edges):
     for (gidx, mag), d in df.groupby(['gidx', 'mag']):
         magi = numpy.searchsorted(mag_edges, mag) - 1
         for idx in d.index:
-            acc[gidx, magi].append(RupIndex(idx, weight=close[idx].sum()))
+            weight = close[idx].sum()
+            if weight:
+                acc[gidx, magi].append(RupIndex(idx, weight))
     return acc
 
 
