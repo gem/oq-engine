@@ -474,38 +474,44 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
 DisaggMatrix = collections.namedtuple(
     'DisaggMatrix', 'poe iml dim_labels matrix')
 
+RX = re.compile(r'rlz-(\d+)-(.+)-sid-(\d+)-poe-(\d+)')
+
 # NB: this is not able to export the mean files
 @export.add(('disagg', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_disagg_xml(ekey, dstore):
     oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
     rlzs = dstore['full_lt'].get_realizations()
     group = dstore['disagg']
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
     trts = dstore.get_attr('full_lt', 'trts')
+    bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     for key in group:
         if not key.startswith('rlz-'):
             continue
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
-        rlz = rlzs[attrs['rlzi']]
+        rlz, imt, sid, poe = RX.search(key).groups()
+        rlz = rlzs[int(rlz)]
+        imt = from_string(imt)
+        sid = int(sid)
         poe_agg = attrs['poe_agg']
         iml = attrs['iml']
-        imt = from_string(attrs['imt'])
         fname = dstore.export_path(key + '.xml')
-        lon, lat = attrs['location']
+        lon, lat = sitecol.lons[sid], sitecol.lats[sid]
         writer = writercls(
             fname, investigation_time=oq.investigation_time,
             imt=imt.name, smlt_path='_'.join(rlz.sm_lt_path),
             gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
             sa_period=getattr(imt, 'period', None) or None,
             sa_damping=getattr(imt, 'damping', None),
-            mag_bin_edges=attrs['mag_bin_edges'],
-            dist_bin_edges=attrs['dist_bin_edges'],
-            lon_bin_edges=attrs['lon_bin_edges'],
-            lat_bin_edges=attrs['lat_bin_edges'],
-            eps_bin_edges=attrs['eps_bin_edges'],
+            mag_bin_edges=bins['mags'],
+            dist_bin_edges=bins['dists'],
+            lon_bin_edges=bins['lons'][sid],
+            lat_bin_edges=bins['lats'][sid],
+            eps_bin_edges=bins['eps'],
             tectonic_region_types=trts)
         data = []
         for poe, k in zip(poe_agg, oq.disagg_outputs or disagg.pmf_map):

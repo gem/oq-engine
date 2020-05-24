@@ -437,11 +437,17 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The disaggregation matrix is too large '
                 '(%d elements): fix the binning!' % matrix_size)
+
+        def _arr(bin_no):
+            ne = len(b[bin_no][0])
+            z = numpy.zeros((self.N, ne))
+            for sid, arr in b[bin_no].items():
+                z[sid] = arr
+            return z
         self.datastore['disagg-bins/mags'] = b[0]
         self.datastore['disagg-bins/dists'] = b[1]
-        for sid in self.sitecol.sids:
-            self.datastore['disagg-bins/lons/sid-%d' % sid] = b[2][sid]
-            self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
+        self.datastore['disagg-bins/lons'] = _arr(2)
+        self.datastore['disagg-bins/lats'] = _arr(3)
         self.datastore['disagg-bins/eps'] = b[4]
 
     def post_execute(self, results):
