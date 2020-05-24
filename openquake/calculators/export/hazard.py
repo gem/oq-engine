@@ -482,6 +482,8 @@ RX = re.compile(r'rlz-(\d+)-(.+)-sid-(\d+)-poe-(\d+)')
 def export_disagg_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
+    iml4 = dstore['iml4/array']
+    imts = list(oq.imtls)
     rlzs = dstore['full_lt'].get_realizations()
     group = dstore['disagg']
     fnames = []
@@ -494,11 +496,14 @@ def export_disagg_xml(ekey, dstore):
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz, imt, sid, poe = RX.search(key).groups()
+        m = imts.index(imt)
         rlz = rlzs[int(rlz)]
         imt = from_string(imt)
         sid = int(sid)
+        p = int(poe)
+        z_by_r = {r: z for z, r in enumerate(dstore['iml4/rlzs'][sid])}
         poe_agg = attrs['poe_agg']
-        iml = attrs['iml']
+        iml = iml4[sid, m, p, z_by_r[rlz.ordinal]]
         fname = dstore.export_path(key + '.xml')
         lon, lat = sitecol.lons[sid], sitecol.lats[sid]
         writer = writercls(
