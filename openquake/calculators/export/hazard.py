@@ -494,16 +494,16 @@ def export_disagg_xml(ekey, dstore):
         if not key.startswith('rlz-'):
             continue
         matrix = dstore['disagg/' + key]
-        attrs = group[key].attrs
-        rlz, imt, sid, poe = RX.search(key).groups()
+        rlz, imt, sid, p = RX.search(key).groups()
         m = imts.index(imt)
         rlz = rlzs[int(rlz)]
         imt = from_string(imt)
         sid = int(sid)
-        p = int(poe)
+        p = int(p)
         z_by_r = {r: z for z, r in enumerate(dstore['iml4/rlzs'][sid])}
-        poe_agg = attrs['poe_agg']
-        iml = iml4[sid, m, p, z_by_r[rlz.ordinal]]
+        z = z_by_r[rlz.ordinal]
+        poe_agg = dstore['poe4'][sid, m, p, z]
+        iml = iml4[sid, m, p, z]
         fname = dstore.export_path(key + '.xml')
         lon, lat = sitecol.lons[sid], sitecol.lats[sid]
         writer = writercls(

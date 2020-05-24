@@ -347,9 +347,11 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.ok_sites = set(self.check_poes_disagg(curves, rlzs))
         self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
                           self.poes_disagg, curves)
-        self.datastore['iml4/array'] = numpy.array(self.iml4)  # (N, M, P, Z)
+        iml4 = numpy.array(self.iml4)  # (N, M, P, Z)
+        self.datastore['iml4/array'] = iml4
         self.datastore['iml4/rlzs'] = numpy.array(
             [iml3.rlzs for iml3 in self.iml4])  # shape (N, Z)
+        self.datastore['poe4'] = numpy.zeros_like(iml4)
         if oq.disagg_by_src:
             self.build_disagg_by_src(rlzs)
 
@@ -583,3 +585,4 @@ class DisaggregationCalculator(base.HazardCalculator):
                                 'the expected poe=%s', poe_agg, poe)
                         self.datastore[name] = poes[m, p]
                         self.datastore.set_attrs(name, poe_agg=poe_agg)
+                        self.datastore['poe4'][s, m, p, z] = poe_agg
