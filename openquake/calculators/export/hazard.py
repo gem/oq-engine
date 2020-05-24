@@ -495,7 +495,7 @@ def export_disagg_xml(ekey, dstore):
     for key in group:
         if not key.startswith('rlz-'):
             continue
-        matrix = dstore['disagg/' + key]
+        grp = dstore['disagg/' + key]
         rlz, imt, sid, p = RX.search(key).groups()
         m = imts.index(imt)
         rlz = rlzs[int(rlz)]
@@ -521,7 +521,7 @@ def export_disagg_xml(ekey, dstore):
             tectonic_region_types=trts)
         data = []
         for k in (oq.disagg_outputs or disagg.pmf_map):
-            data.append(DisaggMatrix(poe_agg, iml, k.split('_'), matrix[k]))
+            data.append(DisaggMatrix(poe_agg, iml, k.split('_'), grp[k]))
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
