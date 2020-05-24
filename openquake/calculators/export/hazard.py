@@ -519,8 +519,8 @@ def export_disagg_xml(ekey, dstore):
             eps_bin_edges=bins['eps'],
             tectonic_region_types=trts)
         data = []
-        for poe, k in zip(poe_agg, oq.disagg_outputs or disagg.pmf_map):
-            data.append(DisaggMatrix(poe, iml, k.split('_'), matrix[k]))
+        for k in (oq.disagg_outputs or disagg.pmf_map):
+            data.append(DisaggMatrix(poe_agg, iml, k.split('_'), matrix[k]))
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
@@ -538,7 +538,7 @@ def export_disagg_csv(ekey, dstore):
         try:
             poe = attrs['poe']
         except Exception:  # no poes_disagg were given
-            poe = attrs['poe_agg'][0]
+            poe = attrs['poe_agg']
         try:
             rlz = rlzs[attrs['rlzi']]
         except TypeError:

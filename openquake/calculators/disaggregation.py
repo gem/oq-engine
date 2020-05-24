@@ -514,8 +514,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
-            poe_agg = []
             aggmatrix = agg_probs(*matrix6)
+            poe_agg = pprod(aggmatrix)
             for key, fn in disagg.pmf_map.items():
                 if not disagg_outputs or key in disagg_outputs:
                     pmf = fn(matrix6 if key.endswith('TRT') else aggmatrix)
@@ -527,7 +527,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                                                           poe, imt_str, key))
                         pmf[negative] = 0
                     self.datastore[disp_name + key] = pmf
-                    poe_agg.append(pprod(pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['site_id'] = site_id
@@ -544,11 +543,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         attrs['eps_bin_edges'] = eps
         attrs['trt_bin_edges'] = self.trts
         attrs['location'] = (lon, lat)
-        # sanity check: all poe_agg should be the same
         attrs['poe_agg'] = poe_agg
         if poe and site_id in self.ok_sites:
             attrs['poe'] = poe
-            poe_agg = numpy.mean(attrs['poe_agg'])
             if abs(1 - poe_agg / poe) > .1:
                 logging.warning(
                     'Site #%d: poe_agg=%s is quite different from the expected'
