@@ -490,22 +490,22 @@ def export_disagg_csv_xml(ekey, dstore):
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
-    for key in group:
-        grp = dstore['disagg/' + key]
+    for key in group:  # for instance key = 'SA(0.1)-sid-0-poe-0'
         imt, sid, p = RX.search(key).groups()
         m = imts.index(imt)
         imt = from_string(imt)
         sid = int(sid)
         p = int(p)
-        poe_agg = dstore['poe3'][sid, m, p]
+        grp = dstore['disagg/' + key]
         for z, r in enumerate(dstore['iml4/rlzs'][sid]):
             rlz = rlzs[r]
             iml = iml4[sid, m, p, z]
-            fname = dstore.export_path('rlz-%d-%s-poe-%d.xml' % (r, key, p))
+            poe_agg = dstore['poe4'][sid, m, p, z]
+            fname = dstore.export_path('rlz-%d-%s.xml' % (r, key))
             lon, lat = sitecol.lons[sid], sitecol.lats[sid]
             metadata = dstore.metadata
             metadata.update(investigation_time=oq.investigation_time,
-                            imt=imt.name, poe=poe_agg,
+                            imt=imt.name,
                             smlt_path='_'.join(rlz.sm_lt_path),
                             gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
                             mag_bin_edges=bins['Mag'].tolist(),
@@ -526,6 +526,7 @@ def export_disagg_csv_xml(ekey, dstore):
                 writer.serialize(data)
                 fnames.append(fname)
             else:  # csv
+                metadata['poe'] = poe_agg
                 for k in (oq.disagg_outputs or disagg.pmf_map):
                     header = k.lower().split('_') + ['poe']
                     com = {key: value for key, value in metadata.items()

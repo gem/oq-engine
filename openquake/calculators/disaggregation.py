@@ -352,7 +352,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore['iml4/array'] = iml4
         self.datastore['iml4/rlzs'] = numpy.array(
             [iml3.rlzs for iml3 in self.iml4])  # shape (N, Z)
-        self.datastore['poe3'] = numpy.zeros_like(iml4[..., 0])
+        self.datastore['poe4'] = numpy.zeros_like(iml4)
         if oq.disagg_by_src:
             self.build_disagg_by_src(rlzs)
 
@@ -501,15 +501,15 @@ class DisaggregationCalculator(base.HazardCalculator):
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             imt=imt, sid='sid-%d' % site_id, poe='poe-%d' % p)
         with self.monitor('extracting PMFs'):
-            aggmatrix = agg_probs(*matrix7)
-            poe_agg = pprod(aggmatrix)
-            self.datastore['poe3'][site_id, m, p] = poe_agg
+            aggmatrix = agg_probs(*matrix7)  # 6D
+            poe_agg = pprod(aggmatrix, axis=(0, 1, 2, 3, 4))  # shape Z
+            self.datastore['poe4'][site_id, m, p] = poe_agg
             for key, fn in disagg.pmf_map.items():
                 if not disagg_outputs or key in disagg_outputs:
                     pmf = fn(matrix7 if key.endswith('TRT') else aggmatrix)
                     self.datastore[disp_name + key] = pmf
         if poe and site_id in self.ok_sites:
-            if abs(1 - poe_agg / poe) > .1:
+            if abs(1 - pprod(poe_agg) / poe) > .1:
                 logging.warning(
                     'Site #%d: poe_agg=%s is quite different from the expected'
                     ' poe=%s; perhaps the number of intensity measure'
