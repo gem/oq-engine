@@ -110,7 +110,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
                      'imt=SA(0.1)&poe_id=0')
         self.assertEqual(aw.dtype.names,
-                         ('site_id', 'lon', 'lat', 'rlz_id',
+                         ('site_id', 'lon', 'lat',
                           'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None'))
 
     def test_case_3(self):
@@ -156,7 +156,7 @@ class DisaggregationTestCase(CalculatorTestCase):
                      'imt=PGA&poe_id=0')
         self.assertEqual(
             aw.dtype.names,
-            ('site_id', 'lon', 'lat', 'rlz_id', 'lon_bins', 'lat_bins',
+            ('site_id', 'lon', 'lat', 'lon_bins', 'lat_bins',
              'Lon_Lat-PGA-0.002105'))
 
         aae(aw.mag, [6.5, 6.75, 7., 7.25])

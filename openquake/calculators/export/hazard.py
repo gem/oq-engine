@@ -497,9 +497,9 @@ def export_disagg_csv_xml(ekey, dstore):
         imt = from_string(imt)
         sid = int(sid)
         p = int(p)
+        poe_agg = dstore['poe3'][sid, m, p]
         for z, r in enumerate(dstore['iml4/rlzs'][sid]):
             rlz = rlzs[r]
-            poe_agg = dstore['poe4'][sid, m, p, z]
             iml = iml4[sid, m, p, z]
             fname = dstore.export_path('rlz-%d-%s.xml' % (r, key))
             lon, lat = sitecol.lons[sid], sitecol.lats[sid]
@@ -508,8 +508,6 @@ def export_disagg_csv_xml(ekey, dstore):
                             imt=imt.name, poe=poe_agg,
                             smlt_path='_'.join(rlz.sm_lt_path),
                             gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
-                            sa_period=getattr(imt, 'period', None) or None,
-                            sa_damping=getattr(imt, 'damping', None),
                             mag_bin_edges=bins['Mag'],
                             dist_bin_edges=bins['Dist'],
                             lon_bin_edges=bins['Lon'][sid],
@@ -517,6 +515,8 @@ def export_disagg_csv_xml(ekey, dstore):
                             eps_bin_edges=bins['Eps'],
                             tectonic_region_types=bins['TRT'])
             if ekey[1] == 'xml':
+                metadata['sa_period'] = getattr(imt, 'period', None) or None
+                metadata['sa_damping'] = getattr(imt, 'damping', None)
                 writer = writercls(fname, **metadata)
                 data = []
                 for k in (oq.disagg_outputs or disagg.pmf_map):

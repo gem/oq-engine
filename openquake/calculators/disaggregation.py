@@ -309,10 +309,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
-
-        self.ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
+        self.M = len(self.imts)
+        ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
         self.pgetter = getters.PmapGetter(
-            self.datastore, self.ws, self.sitecol.sids)
+            self.datastore, ws, self.sitecol.sids)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
@@ -323,7 +323,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     curves = numpy.array(
                         [pc.array for pc in self.pgetter.get_pcurves(sid)])
                     mean = getters.build_stat_curve(
-                        curves, oq.imtls, stats.mean_curve, self.ws)
+                        curves, oq.imtls, stats.mean_curve, ws)
                     rlzs[sid] = util.closest_to_ref(curves, mean.array)[:Z]
                 self.datastore['best_rlzs'] = rlzs
         else:
@@ -351,7 +351,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore['iml4/array'] = iml4
         self.datastore['iml4/rlzs'] = numpy.array(
             [iml3.rlzs for iml3 in self.iml4])  # shape (N, Z)
-        self.datastore['poe4'] = numpy.zeros_like(iml4)
+        self.datastore['poe3'] = numpy.zeros_like(iml4[..., 0])
         if oq.disagg_by_src:
             self.build_disagg_by_src(rlzs)
 
@@ -483,24 +483,25 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param attrs:
             dictionary of attributes to add to the dataset
         """
-        imts = list(self.oqparam.imtls)
         for s, mat9 in results.items():
             rlzs = self.rlzs[s]
-            for m, imt in enumerate(imts):
+            for m in range(self.M):
                 for p, poe in enumerate(self.poes_disagg):
                     mat7 = mat9[..., m, p, :]
                     if mat7.any():  # nonzero
-                        self._save('disagg', s, rlzs, poe, imt, mat7)
+                        self._save('disagg', s, rlzs, poe, m, mat7)
         self.datastore.set_attrs('disagg', **attrs)
 
-    def _save(self, dskey, site_id, rlzs, poe, imt_str, matrix7):
+    def _save(self, dskey, site_id, rlzs, poe, m, matrix7):
+        p = self.poe_id[poe]
+        imt = self.imts[m]
         disagg_outputs = self.oqparam.disagg_outputs
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
-            imt=imt_str, sid='sid-%d' % site_id,
-            poe='poe-%d' % self.poe_id[poe])
+            imt=imt, sid='sid-%d' % site_id, poe='poe-%d' % p)
         with self.monitor('extracting PMFs'):
             aggmatrix = agg_probs(*matrix7)
             poe_agg = pprod(aggmatrix)
+            self.datastore['poe3'][site_id, m, p] = poe_agg
             for key, fn in disagg.pmf_map.items():
                 if not disagg_outputs or key in disagg_outputs:
                     pmf = fn(matrix7 if key.endswith('TRT') else aggmatrix)
@@ -543,4 +544,3 @@ class DisaggregationCalculator(base.HazardCalculator):
                                 'the expected poe=%s', poe_agg, poe)
                         self.datastore[name] = poes[m, p]
                         self.datastore.set_attrs(name, poe_agg=poe_agg)
-                        self.datastore['poe4'][s, m, p, z] = poe_agg

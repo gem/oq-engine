@@ -1149,13 +1149,11 @@ def extract_disagg(dstore, what):
 
 
 def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
-    Z = shapedic['Z']
     dt = [('site_id', U32), ('lon', F32), ('lat', F32),
-          ('rlz_id', (U16, Z)),
           ('lon_bins', (F32, shapedic['lon'] + 1)),
           ('lat_bins', (F32, shapedic['lat'] + 1))]
     for out in disagg_outputs:
-        shp = tuple(shapedic[key] for key in out.lower().split('_')) + (Z,)
+        shp = tuple(shapedic[key] for key in out.lower().split('_'))
         for imt in imts:
             for poe in poes_disagg:
                 dt.append(('%s-%s-%s' % (out, imt, poe), (F32, shp)))
@@ -1185,21 +1183,24 @@ def extract_disagg_layer(dstore, what):
         best_rlzs = dstore['best_rlzs']
     except KeyError:
         best_rlzs = numpy.zeros((len(sitecol), shapedic['Z']), U16)
+    realizations = numpy.array(dstore['full_lt'].get_realizations())
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
+        rlzs = realizations[best_rlzs[sid]]
         rec['site_id'] = sid
         rec['lon'] = lon
         rec['lat'] = lat
-        rec['rlz_id'] = best_rlzs[sid]
         rec['lon_bins'] = edges[2][sid]
         rec['lat_bins'] = edges[3][sid]
-        for kind in kinds:
-            for imt in oq.imtls:
+        for imt in oq.imtls:
+            weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
+            weights /= weights.sum()  # normalize to 1
+            for kind in kinds:
                 for p, poe in enumerate(poes_disagg):
                     key = '%s-%s-%s' % (kind, imt, poe)
                     label = 'disagg/%s-sid-%d-poe-%s/%s' % (
                         imt, sid, p, kind)
-                    rec[key] = dstore[label][()]
+                    rec[key] = dstore[label][()] @ weights
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 
