@@ -25,6 +25,7 @@ import numpy
 
 from openquake.baselib.general import (
     group_array, deprecated, AccumDict, DictArray)
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
@@ -513,7 +514,7 @@ def export_disagg_csv_xml(ekey, dstore):
                             lon_bin_edges=bins['Lon'][sid].tolist(),
                             lat_bin_edges=bins['Lat'][sid].tolist(),
                             eps_bin_edges=bins['Eps'].tolist(),
-                            tectonic_region_types=bins['TRT'].tolist())
+                            tectonic_region_types=decode(bins['TRT'].tolist()))
             if ekey[1] == 'xml':
                 metadata['sa_period'] = getattr(imt, 'period', None) or None
                 metadata['sa_damping'] = getattr(imt, 'damping', None)

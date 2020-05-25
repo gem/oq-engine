@@ -325,7 +325,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     mean = getters.build_stat_curve(
                         curves, oq.imtls, stats.mean_curve, ws)
                     rlzs[sid] = util.closest_to_ref(curves, mean.array)[:Z]
-                self.datastore['best_rlzs'] = rlzs
+            self.datastore['best_rlzs'] = rlzs
         else:
             Z = len(oq.rlz_index)
             rlzs = numpy.zeros((self.N, Z), int)

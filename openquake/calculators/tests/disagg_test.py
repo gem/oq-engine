@@ -19,6 +19,7 @@ import os
 import sys
 import unittest
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib.probability_map import combine
 from openquake.calculators import getters
@@ -147,9 +148,15 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_6(self):
         # test with international date line
         self.run_calc(case_6.__file__, 'job.ini')
+
+        # test CSV export
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        # test the CSVs are readable
+        for fname in fnames:
+            hdf5.read_csv(fname)
 
         # test extract disagg_layer for Lon_Lat
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Lon_Lat&'
@@ -164,6 +171,7 @@ class DisaggregationTestCase(CalculatorTestCase):
                       225., 250., 275., 300.])
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
+
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also

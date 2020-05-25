@@ -683,7 +683,10 @@ def parse_comment(comment):
     """
     if comment[0] == '"' and comment[-1] == '"':
         comment = comment[1:-1]
-    dic = toml.loads('{%s}' % comment.replace('""', '"'))
+    try:
+        dic = toml.loads('{%s}' % comment.replace('""', '"'))
+    except toml.TomlDecodeError as err:
+        raise ValueError('%s in %s' % (err, comment))
     return list(dic.items())
 
 
