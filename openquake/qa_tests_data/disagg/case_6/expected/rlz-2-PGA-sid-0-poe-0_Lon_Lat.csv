@@ -4,7 +4,7 @@
        179.39637296, 179.86950944, 180.34264592, 180.8157824 ,
        181.28891887]), lat_bin_edges=array([-20.82276, -20.3731 , -19.92344, -19.47378, -19.02412, -18.57446,
        -18.1248 , -17.67514, -17.22548, -16.77582, -16.32616, -15.8765 ,
-       -15.42684]), eps_bin_edges=array([-3.,  3.]), tectonic_region_types=['Active Shallow Crust'], sa_period=None, sa_damping=None"
+       -15.42684]), eps_bin_edges=array([-3.,  3.]), tectonic_region_types=['Active Shallow Crust']"
 lon,lat,poe
 1.75848E+02,-2.05979E+01,0.00000E+00
 1.75848E+02,-2.01483E+01,0.00000E+00

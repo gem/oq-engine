@@ -331,6 +331,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             rlzs = numpy.zeros((self.N, Z), int)
             for z in range(Z):
                 rlzs[:, z] = oq.rlz_index[z]
+            self.datastore['best_rlzs'] = rlzs
         assert Z <= self.R, (Z, self.R)
         self.Z = Z
         self.rlzs = rlzs

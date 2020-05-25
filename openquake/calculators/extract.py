@@ -1179,10 +1179,7 @@ def extract_disagg_layer(dstore, what):
         oq, sitecol, dstore['source_mags'])
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    try:
-        best_rlzs = dstore['best_rlzs']
-    except KeyError:
-        best_rlzs = numpy.zeros((len(sitecol), shapedic['Z']), U16)
+    best_rlzs = dstore['best_rlzs']
     realizations = numpy.array(dstore['full_lt'].get_realizations())
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):

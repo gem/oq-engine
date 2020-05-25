@@ -513,7 +513,7 @@ def export_disagg_csv_xml(ekey, dstore):
                             lon_bin_edges=bins['Lon'][sid].tolist(),
                             lat_bin_edges=bins['Lat'][sid].tolist(),
                             eps_bin_edges=bins['Eps'].tolist(),
-                            tectonic_region_types=bins['TRT'])
+                            tectonic_region_types=bins['TRT'].tolist())
             if ekey[1] == 'xml':
                 metadata['sa_period'] = getattr(imt, 'period', None) or None
                 metadata['sa_damping'] = getattr(imt, 'damping', None)
