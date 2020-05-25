@@ -172,7 +172,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
-
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also
         # prints the warning on poe_agg very different from the expected poe

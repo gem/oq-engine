@@ -167,14 +167,12 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     pre_mon = monitor('preparing contexts', measuremem=False)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     cfactors = []
-    eff_rups = 0
     t0 = time.time()
     for sid, iml3 in enumerate(iml4):
         with pre_mon:
             ctxs = _prepare_ctxs(rupdata, sid, cmaker, sitecol, cfactors)
         if not ctxs:
             continue
-        eff_rups += len(ctxs)
 
         # z indices by gsim
         M, P, Z = iml3.shape
@@ -200,7 +198,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             res[sid] = matrix
     res['collapse_factor'] = numpy.mean(cfactors)
     res['duration'] = time.time() - t0
-    res['nrups'] = eff_rups / len(sitecol)
+    res['nrups'] = len(idxs)
     return res
 
 
