@@ -19,7 +19,6 @@
 """
 Disaggregation calculator core functionality
 """
-import time
 import logging
 import operator
 import collections
@@ -152,7 +151,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     :returns:
         a dictionary sid -> 7D-array
     """
-    res = {'trti': trti, 'magi': magi, 'task_no': monitor.task_no}
+    res = {'trti': trti, 'magi': magi}
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
@@ -167,7 +166,6 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     pre_mon = monitor('preparing contexts', measuremem=False)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     cfactors = []
-    t0 = time.time()
     for sid, iml3 in enumerate(iml4):
         with pre_mon:
             ctxs = _prepare_ctxs(rupdata, sid, cmaker, sitecol, cfactors)
@@ -197,8 +195,6 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         if matrix.any():
             res[sid] = matrix
     res['collapse_factor'] = numpy.mean(cfactors)
-    res['duration'] = time.time() - t0
-    res['nrups'] = len(idxs)
     return res
 
 
@@ -397,6 +393,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         grp_ids = dstore['grp_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
+        task_inputs = []
         for gidx, magi in indices:
             trti = grp_ids[gidx][0] // num_eff_rlzs
             trt = self.trts[trti]
@@ -411,6 +408,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 idxs = numpy.array([ri.index for ri in rupidxs])
                 allargs.append((dstore, idxs, cmaker, self.iml4,
                                 trti, magi, self.bin_edges[1:], oq))
+                task_inputs.append((trti, magi, len(idxs)))
         sd = shapedic.copy()
         sd.pop('trt')
         sd.pop('mag')
@@ -421,9 +419,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer:\n%s', msg)
-        dt = numpy.dtype([('task_no', U16), ('trti', U8), ('magi', U8),
-                          ('nrups', U32), ('duration', F32)])
-        self.datastore['disagg_times'] = numpy.zeros(len(allargs), dt)
+        dt = numpy.dtype([('trti', U8), ('magi', U8), ('nrups', U32)])
+        self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         self.datastore.swmr_on()
         self.collapse_factor = []
         smap = parallel.Starmap(
@@ -444,11 +441,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
-            duration = result.pop('duration')
-            task_no = result.pop('task_no')
-            nrups = result.pop('nrups')
-            self.datastore['disagg_times'][task_no] = (
-                task_no, trti, magi, nrups, duration)
             self.collapse_factor.append(result.pop('collapse_factor'))
             for sid, probs in result.items():
                 before = acc[sid].get((trti, magi), 0)
