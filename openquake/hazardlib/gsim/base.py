@@ -177,9 +177,9 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
         for g, gsim in enumerate(gsims):
             if "mixture_model" in gsim.kwargs:
                 for fact, wgt in zip(
-                    gsim.kwargs["mixture_model"]["factors"],
-                    gsim.kwargs["mixture_model"]["weights"]):
-                    mean_stdi = numpy.array(mean_std[:, :, :, g]) # make a copy
+                        gsim.kwargs["mixture_model"]["factors"],
+                        gsim.kwargs["mixture_model"]["weights"]):
+                    mean_stdi = numpy.array(mean_std[:, :, :, g])  # a copy
                     mean_stdi[1] *= fact
                     arr[:, :, g] += (wgt * _get_poes(mean_stdi, loglevels, tl,
                                                      squeeze=1))
@@ -198,6 +198,29 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
 # will become shorted in the N dimension (number of affected sites)
 def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
     mean, stddev = mean_std  # shape (N, M, G) each
+    N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
+    out = numpy.zeros((N, L) if squeeze else (N, L, G))
+    lvl = 0
+    for m, imt in enumerate(loglevels):
+        for iml in loglevels[imt]:
+            if truncation_level == 0:  # just compare imls to mean
+                out[:, lvl] = iml <= mean[:, m]
+            else:
+                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
+            lvl += 1
+    return _truncnorm_sf(truncation_level, out)
+
+
+def _get_poes_site(mean_std, loglevels, truncation_level, squeeze=False):
+    """
+    :param mean_std:
+        See :function:`openquake.hazardlib.gsim.base.get_poes`
+    :param loglevels:
+        See :function:`openquake.hazardlib.gsim.base.get_poes`
+    :param truncation_level:
+    :param squeeze:
+    """
+    mean, stddev = mean_std  # shape (N, M, G)
     N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
     out = numpy.zeros((N, L) if squeeze else (N, L, G))
     lvl = 0
