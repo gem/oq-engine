@@ -1100,14 +1100,14 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&z=0
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1
     """
     qdict = parse(what)
     label = qdict['kind'][0]
     imt = qdict['imt'][0]
     poe_idx = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    z = int(qdict['z'][0]) if 'z' in qdict else 0
+    z = int(qdict['z'][0]) if 'z' in qdict else None
 
     def get(v, sid):
         if len(v.shape) == 2:
@@ -1115,6 +1115,15 @@ def extract_disagg(dstore, what):
         return v[:]
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
     dset = disagg_output(dstore, imt, sid, poe_idx)
+    if z is None:  # compute stats
+        best = dstore['best_rlzs'][sid]
+        rlzs = [rlz for rlz in dstore['full_lt'].get_realizations()
+                if rlz.ordinal in best]
+        weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
+        weights /= weights.sum()  # normalize to 1
+        matrix = dset[label][()] @ weights
+        return ArrayWrapper(matrix, {k: bins[k] for k in label.split('_')})
+
     matrix = dset[label][..., z]
 
     # adapted from the nrml_converters
@@ -1124,7 +1133,7 @@ def extract_disagg(dstore, what):
         matrix = numpy.swapaxes(matrix, 1, 2)
         disag_tup = ('Lon', 'Lat', 'Mag')
 
-    axis = [bins[v] for v in disag_tup]
+    axis = [bins[k] for k in disag_tup]
     # compute axis mid points
     axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
             else ax for ax in axis]
