@@ -211,14 +211,25 @@ def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
     return _truncnorm_sf(truncation_level, out)
 
 
-def _get_poes_site(mean_std, loglevels, truncation_level, squeeze=False):
+def _get_poes_site(mean_std, loglevels, truncation_level, ampl_df,
+                   mag, rrup, squeeze=False):
     """
     :param mean_std:
         See :function:`openquake.hazardlib.gsim.base.get_poes`
     :param loglevels:
-        See :function:`openquake.hazardlib.gsim.base.get_poes`
+        Intensity measure level per intensity measure type. See
+        :function:`openquake.hazardlib.gsim.base.get_poes`
     :param truncation_level:
+    :param ampl_df:
+    :param mag:
+        The magnitude of the earthquake
+    :param rrup:
+        The rrup distances
     :param squeeze:
+
+    TODO
+        - We might want to compute the ideal IMTs on rock.
+        - We might want to run this assuming that rrup are all the same
     """
     mean, stddev = mean_std  # shape (N, M, G)
     N, L, G = len(mean), len(loglevels.array), mean.shape[-1]

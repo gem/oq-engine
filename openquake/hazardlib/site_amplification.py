@@ -77,7 +77,10 @@ class Amplifier(object):
         self.amplevels = amplevels
         self.vs30_ref = ampl_df.vs30_ref
         has_levels = 'level' in ampl_df.columns
-        if has_levels:
+        if has_levels and 'from_mag' in ampl_df.keys():
+            keys = ['ampcode', 'level', 'from_mag', 'from_rrup']
+            check_unique(ampl_df, keys, fname)
+        elif has_levels and 'level' in ampl_df.keys():
             check_unique(ampl_df, ['ampcode', 'level'], fname)
         else:
             check_unique(ampl_df, ['ampcode'], fname)
@@ -94,6 +97,7 @@ class Amplifier(object):
         cols = list(imtls)
         if has_levels:
             cols.append('level')
+        # Appending to the new dataframe the sigma values
         for col in ampl_df.columns:
             if col.startswith('sigma_'):
                 cols.append(col)
