@@ -1084,18 +1084,13 @@ def _getkey(names, key):
 
 # the disagg datagroup may contain
 # PGA-sid-0-poe-0
-# rlz-0-PGA-sid-0-poe-0
-# rlz-1-PGA-sid-0-poe-0
-def disagg_output(dstore, imt, sid, poe_id, rlz=None):
+def disagg_output(dstore, imt, sid, poe_id):
     """
     :returns:
         a datagroup
     """
     key = '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
-    if rlz is not None:
-        key = 'rlz-%d-%s' % (rlz, key)
-    else:
-        key = _getkey(sorted(dstore['disagg']), key)
+    key = _getkey(sorted(dstore['disagg']), key)
     return dstore['disagg'][key]
 
 
@@ -1105,17 +1100,34 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&rlz=0
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1
     """
     qdict = parse(what)
     label = qdict['kind'][0]
     imt = qdict['imt'][0]
-    poe_idx = int(qdict['poe_id'][0])
+    poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    rlz = (int(qdict['rlz'][0]) if 'rlz' in qdict else
-           0 if len(dstore['weights']) == 1 else None)
-    dset = disagg_output(dstore, imt, sid, poe_idx, rlz)
-    matrix = dset[label][()]
+    z = int(qdict['z'][0]) if 'z' in qdict else None
+
+    def get(v, sid):
+        if len(v.shape) == 2:
+            return v[sid]
+        return v[:]
+    bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
+    dset = disagg_output(dstore, imt, sid, poe_id)
+    if z is None:  # compute stats
+        best = dstore['best_rlzs'][sid]
+        rlzs = [rlz for rlz in dstore['full_lt'].get_realizations()
+                if rlz.ordinal in best]
+        weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
+        weights /= weights.sum()  # normalize to 1
+        matrix = dset[label][()] @ weights
+        attrs = {k: bins[k] for k in label.split('_')}
+        attrs.update(site_id=[sid], imt=[imt], poe_id=[poe_id],
+                     kind=label)
+        return ArrayWrapper(matrix, attrs)
+
+    matrix = dset[label][..., z]
 
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
@@ -1124,7 +1136,7 @@ def extract_disagg(dstore, what):
         matrix = numpy.swapaxes(matrix, 1, 2)
         disag_tup = ('Lon', 'Lat', 'Mag')
 
-    axis = [dset.attrs[v.lower() + '_bin_edges'] for v in disag_tup]
+    axis = [bins[k] for k in disag_tup]
     # compute axis mid points
     axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
             else ax for ax in axis]
@@ -1141,7 +1153,6 @@ def extract_disagg(dstore, what):
 
 def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
     dt = [('site_id', U32), ('lon', F32), ('lat', F32),
-          ('rlz_id', (U16, shapedic['Z'])),
           ('lon_bins', (F32, shapedic['lon'] + 1)),
           ('lat_bins', (F32, shapedic['lat'] + 1))]
     for out in disagg_outputs:
@@ -1171,26 +1182,25 @@ def extract_disagg_layer(dstore, what):
         oq, sitecol, dstore['source_mags'])
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    try:
-        best_rlzs = dstore['best_rlzs']
-    except KeyError:
-        best_rlzs = numpy.zeros((len(sitecol), shapedic['Z']), U16)
+    best_rlzs = dstore['best_rlzs']
+    realizations = numpy.array(dstore['full_lt'].get_realizations())
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
+        rlzs = realizations[best_rlzs[sid]]
         rec['site_id'] = sid
         rec['lon'] = lon
         rec['lat'] = lat
-        rec['rlz_id'] = rlzs = best_rlzs[sid]
         rec['lon_bins'] = edges[2][sid]
         rec['lat_bins'] = edges[3][sid]
-        for kind in kinds:
-            for imt in oq.imtls:
+        for imt in oq.imtls:
+            weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
+            weights /= weights.sum()  # normalize to 1
+            for kind in kinds:
                 for p, poe in enumerate(poes_disagg):
-                    for rlz in rlzs:
-                        key = '%s-%s-%s' % (kind, imt, poe)
-                        label = 'disagg/rlz-%d-%s-sid-%d-poe-%s/%s' % (
-                            rlz, imt, sid, p, kind)
-                        rec[key] = dstore[label][()]
+                    key = '%s-%s-%s' % (kind, imt, poe)
+                    label = 'disagg/%s-sid-%d-poe-%s/%s' % (
+                        imt, sid, p, kind)
+                    rec[key] = dstore[label][()] @ weights
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 

@@ -138,9 +138,14 @@ def make_figure_uhs(extractors, what):
     return plt
 
 
+def middle(x):
+    # [1, 2, 3] => [1.5, 2.5]
+    return (x[:-1] + x[1:]) / 2.
+
+
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot 'disagg?kind=Mag&imt=PGA&rlz=0'
+    $ oq plot 'disagg?kind=Mag&imt=PGA'
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -150,12 +155,12 @@ def make_figure_disagg(extractors, what):
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    [rlz] = disagg.rlz
     ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
                   (disagg.kind, sid, imt, poe_id, oq.investigation_time))
-    x, y = disagg.array.T
+    y = disagg.array
+    bins = getattr(disagg, disagg.kind)
+    ax.bar(middle(bins), y)
     print(y)
-    ax.plot(x, y, label='rlz-%s' % rlz)
     ax.legend()
     return plt
 
