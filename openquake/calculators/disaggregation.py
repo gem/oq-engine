@@ -495,13 +495,9 @@ class DisaggregationCalculator(base.HazardCalculator):
 
     def _save(self, dskey, site_id, rlzs, poe, imt_str, matrix7):
         disagg_outputs = self.oqparam.disagg_outputs
-        lon = self.sitecol.lons[site_id]
-        lat = self.sitecol.lats[site_id]
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             imt=imt_str, sid='sid-%d' % site_id,
             poe='poe-%d' % self.poe_id[poe])
-        mag, dist, lonsd, latsd, eps = self.bin_edges
-        lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
             aggmatrix = agg_probs(*matrix7)
             poe_agg = pprod(aggmatrix)
@@ -509,25 +505,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 if not disagg_outputs or key in disagg_outputs:
                     pmf = fn(matrix7 if key.endswith('TRT') else aggmatrix)
                     self.datastore[disp_name + key] = pmf
-
-        attrs = self.datastore.hdf5[disp_name].attrs
-        attrs['site_id'] = site_id
-        attrs['imt'] = imt_str
-        try:
-            attrs['iml'] = [self.imldic[site_id, r, poe, imt_str]
-                            for r in rlzs]
-        except KeyError:  # for the mean
-            pass
-        attrs['mag_bin_edges'] = mag
-        attrs['dist_bin_edges'] = dist
-        attrs['lon_bin_edges'] = lons
-        attrs['lat_bin_edges'] = lats
-        attrs['eps_bin_edges'] = eps
-        attrs['trt_bin_edges'] = self.trts
-        attrs['location'] = (lon, lat)
-        attrs['poe_agg'] = poe_agg
         if poe and site_id in self.ok_sites:
-            attrs['poe'] = poe
             if abs(1 - poe_agg / poe) > .1:
                 logging.warning(
                     'Site #%d: poe_agg=%s is quite different from the expected'
