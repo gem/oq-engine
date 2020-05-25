@@ -487,7 +487,6 @@ def export_disagg_csv_xml(ekey, dstore):
     group = dstore['disagg']
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
-    trts = dstore.get_attr('full_lt', 'trts').tolist()
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
@@ -511,12 +510,12 @@ def export_disagg_csv_xml(ekey, dstore):
                             gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
                             sa_period=getattr(imt, 'period', None) or None,
                             sa_damping=getattr(imt, 'damping', None),
-                            mag_bin_edges=bins['mags'],
-                            dist_bin_edges=bins['dists'],
-                            lon_bin_edges=bins['lons'][sid],
-                            lat_bin_edges=bins['lats'][sid],
-                            eps_bin_edges=bins['eps'],
-                            tectonic_region_types=trts)
+                            mag_bin_edges=bins['Mag'],
+                            dist_bin_edges=bins['Dist'],
+                            lon_bin_edges=bins['Lon'][sid],
+                            lat_bin_edges=bins['Lat'][sid],
+                            eps_bin_edges=bins['Eps'],
+                            tectonic_region_types=bins['TRT'])
             if ekey[1] == 'xml':
                 writer = writercls(fname, **metadata)
                 data = []

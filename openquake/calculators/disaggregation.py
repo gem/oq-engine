@@ -449,11 +449,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             for sid, arr in b[bin_no].items():
                 z[sid] = arr
             return z
-        self.datastore['disagg-bins/mags'] = b[0]
-        self.datastore['disagg-bins/dists'] = b[1]
-        self.datastore['disagg-bins/lons'] = _arr(2)
-        self.datastore['disagg-bins/lats'] = _arr(3)
-        self.datastore['disagg-bins/eps'] = b[4]
+        self.datastore['disagg-bins/Mag'] = b[0]
+        self.datastore['disagg-bins/Dist'] = b[1]
+        self.datastore['disagg-bins/Lon'] = _arr(2)
+        self.datastore['disagg-bins/Lat'] = _arr(3)
+        self.datastore['disagg-bins/Eps'] = b[4]
+        self.datastore['disagg-bins/TRT'] = encode(self.trts)
 
     def post_execute(self, results):
         """

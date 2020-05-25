@@ -1108,6 +1108,12 @@ def extract_disagg(dstore, what):
     poe_idx = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
     z = int(qdict['z'][0]) if 'z' in qdict else 0
+
+    def get(v, sid):
+        if len(v.shape) == 2:
+            return v[sid]
+        return v[:]
+    bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
     dset = disagg_output(dstore, imt, sid, poe_idx)
     matrix = dset[label][..., z]
 
@@ -1118,7 +1124,7 @@ def extract_disagg(dstore, what):
         matrix = numpy.swapaxes(matrix, 1, 2)
         disag_tup = ('Lon', 'Lat', 'Mag')
 
-    axis = [dset.attrs[v.lower() + '_bin_edges'] for v in disag_tup]
+    axis = [bins[v] for v in disag_tup]
     # compute axis mid points
     axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
             else ax for ax in axis]
