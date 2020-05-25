@@ -362,17 +362,17 @@ hazard_uhs-std.csv
         self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
-        df = self.calc.datastore.read_df('hcurves-rlzs', 'iml')
+        df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
         self.assertEqual(list(df.columns), ['sid', 'rlz', 'value'])
-        df = self.calc.datastore.read_df('hcurves-stats', 'iml')
+        df = self.calc.datastore.read_df('hcurves-stats', 'lvl')
         self.assertEqual(list(df.columns), ['sid', 'stat', 'value'])
         # df
         #       sid     stat     value
-        # iml
-        # 0.01    0  b'mean'  0.048771
-        # 0.10    0  b'mean'  0.028694
-        # 0.30    0  b'mean'  0.007563
-        # 1.00    0  b'mean'  0.000065
+        # lvl
+        # 0    0  b'mean'  0.048771
+        # 1    0  b'mean'  0.028694
+        # 2    0  b'mean'  0.007563
+        # 3    0  b'mean'  0.000065
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration

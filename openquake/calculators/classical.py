@@ -484,16 +484,16 @@ class ClassicalCalculator(base.HazardCalculator):
         if R > 1 and oq.individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
             self.datastore.set_shape_attrs(
-                'hcurves-rlzs', sid=sids, rlz=numpy.arange(R), iml=imls)
+                'hcurves-rlzs', sid=sids, rlz=numpy.arange(R), lvl=range(L))
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
                 self.datastore.set_shape_attrs(
-                    'hmaps-stats', sid=sids, rlz=numpy.arange(R),
+                    'hmaps-rlzs', sid=sids, rlz=numpy.arange(R),
                     imt=list(oq.imtls), poe=oq.poes)
         if hstats:
             self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
             self.datastore.set_shape_attrs(
-                'hcurves-stats', sid=sids, stat=list(hstats), iml=imls)
+                'hcurves-stats', sid=sids, stat=list(hstats), lvl=range(L))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
                 self.datastore.set_shape_attrs(
