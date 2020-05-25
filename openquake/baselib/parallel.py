@@ -565,7 +565,6 @@ class IterResult(object):
                 name = result.mon.operation[6:]  # strip 'total '
                 result.mon.save_task_info(self.h5, result, name, mem_gb)
                 result.mon.flush(self.h5)
-                self.h5.flush()
             elif not result.func:  # real output
                 yield val
 

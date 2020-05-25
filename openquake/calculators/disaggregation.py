@@ -21,6 +21,7 @@ Disaggregation calculator core functionality
 """
 import logging
 import operator
+import collections
 import numpy
 import pandas
 
@@ -46,6 +47,10 @@ However the source model produces at most probabilities
 of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
+U8 = numpy.uint8
+U16 = numpy.uint16
+U32 = numpy.uint32
+F32 = numpy.float32
 
 
 def _check_curves(sid, rlzs, curves, imtls, poes_disagg):
@@ -195,7 +200,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
 
 def agg_probs(*probs):
     """
-    Aggregate probabilities withe the usual formula 1 - (1 - P1) ... (1 - Pn)
+    Aggregate probabilities with the usual formula 1 - (1 - P1) ... (1 - Pn)
     """
     acc = 1. - probs[0]
     for prob in probs[1:]:
@@ -203,17 +208,26 @@ def agg_probs(*probs):
     return 1. - acc
 
 
+# the weight is the number of sites within 100 km from the rupture
+RupIndex = collections.namedtuple('RupIndex', 'index weight')
+
+
 def get_indices_by_gidx_mag(dstore, mag_edges):
     """
     :returns: a dictionary gidx, magi -> indices
     """
     acc = AccumDict(accum=[])  # gidx, magi -> indices
+    close = dstore['rup/rrup_'][:] < 9999.  # close sites
+    logging.info('Reading {:_d} ruptures'.format(len(close)))
     df = pandas.DataFrame(dict(gidx=dstore['rup/grp_id'][:],
                                mag=dstore['rup/mag'][:]))
     for (gidx, mag), d in df.groupby(['gidx', 'mag']):
         magi = numpy.searchsorted(mag_edges, mag) - 1
-        acc[gidx, magi].extend(d.index)
-    return {gm: sorted(idxs) for gm, idxs in acc.items()}
+        for idx in d.index:
+            weight = close[idx].sum()
+            if weight:
+                acc[gidx, magi].append(RupIndex(idx, weight))
+    return acc
 
 
 def get_outputs_size(shapedic, disagg_outputs):
@@ -371,15 +385,13 @@ class DisaggregationCalculator(base.HazardCalculator):
         mag_edges = self.bin_edges[0]
         indices = get_indices_by_gidx_mag(dstore, mag_edges)
         allargs = []
-        U = len(dstore['rup/mag'])
-        # enlarge the block size to have an M-independent number of tasks
-        blocksize = int(numpy.ceil(U / (oq.concurrent_tasks or 1)))
-        logging.info('Found {:_d} ruptures, sending up to {:_d} per task'.
-                     format(U, blocksize))
-
+        totweight = sum(sum(ri.weight for ri in indices[gm])
+                        for gm in indices)
+        maxweight = int(numpy.ceil(totweight / (oq.concurrent_tasks or 1)))
         grp_ids = dstore['grp_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
+        task_inputs = []
         for gidx, magi in indices:
             trti = grp_ids[gidx][0] // num_eff_rlzs
             trt = self.trts[trti]
@@ -389,9 +401,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'maximum_distance': oq.maximum_distance,
                  'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
-            for idxs in block_splitter(indices[gidx, magi], blocksize):
-                allargs.append((dstore, numpy.array(idxs), cmaker, self.iml4,
+            for rupidxs in block_splitter(
+                    indices[gidx, magi], maxweight, weight):
+                idxs = numpy.array([ri.index for ri in rupidxs])
+                allargs.append((dstore, idxs, cmaker, self.iml4,
                                 trti, magi, self.bin_edges[1:], oq))
+                task_inputs.append((trti, magi, len(idxs)))
         sd = shapedic.copy()
         sd.pop('trt')
         sd.pop('mag')
@@ -402,6 +417,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer:\n%s', msg)
+        dt = numpy.dtype([('trti', U8), ('magi', U8), ('nrups', U32)])
+        self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         self.datastore.swmr_on()
         self.collapse_factor = []
         smap = parallel.Starmap(
@@ -472,7 +489,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
-        self.save_disagg_results(results, trts=encode(self.trts))
+        with self.monitor('saving disagg results'):
+            self.save_disagg_results(results, trts=encode(self.trts))
 
     def save_disagg_results(self, results, **attrs):
         """

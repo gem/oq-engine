@@ -29,7 +29,7 @@ import numpy
 import scipy.stats
 
 from openquake.hazardlib import contexts
-from openquake.baselib import performance, hdf5
+from openquake.baselib import performance
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
