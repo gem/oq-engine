@@ -321,6 +321,7 @@ hazard_uhs-std.csv
     def test_case_20(self):
         # Source geometry enumeration, apply_to_sources
         self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
             'hazard_curve-smltp_sm1_sg1_cog1_char_complex-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg1_cog1_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg1_cog1_char_simple-gsimltp_Sad1997.csv',
@@ -359,6 +360,19 @@ hazard_uhs-std.csv
         df = self.calc.datastore.read_df('source_info', 'source_id')
         dic = dict(df['multiplicity'])
         self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
+
+        # check pandas readability of hcurves-rlzs and hcurves-stats
+        df = self.calc.datastore.read_df('hcurves-rlzs', 'iml')
+        self.assertEqual(list(df.columns), ['sid', 'rlz', 'value'])
+        df = self.calc.datastore.read_df('hcurves-stats', 'iml')
+        self.assertEqual(list(df.columns), ['sid', 'stat', 'value'])
+        # df
+        #       sid     stat     value
+        # iml
+        # 0.01    0  b'mean'  0.048771
+        # 0.10    0  b'mean'  0.028694
+        # 0.30    0  b'mean'  0.007563
+        # 1.00    0  b'mean'  0.000065
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
@@ -565,6 +579,13 @@ hazard_uhs-std.csv
         # split/filter a long complex fault source with maxdist=1000 km
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_42.__file__)
+
+        # check pandas readability of hmaps-stats
+        df = self.calc.datastore.read_df('hmaps-stats', 'sid')
+        self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
+        #         stat     imt       poe     value
+        # sid
+        # 0    b'mean'  b'PGA'  0.002105  0.030926
 
     def test_case_43(self):
         # this is a test for pointsource_distance

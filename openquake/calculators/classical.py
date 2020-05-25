@@ -470,23 +470,35 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         # initialize datasets
+        sids = self.sitecol.complete.sids
+        imls = oq.imtls.array
         N = len(self.sitecol.complete)
         P = len(oq.poes)
         M = len(oq.imtls)
         if oq.soil_intensities is not None:
             L = M * len(oq.soil_intensities)
         else:
-            L = len(oq.imtls.array)
+            L = len(imls)
         R = len(self.realizations)
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
+            self.datastore.set_shape_attrs(
+                'hcurves-rlzs', sid=sids, rlz=numpy.arange(R), iml=imls)
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
+                self.datastore.set_shape_attrs(
+                    'hmaps-stats', sid=sids, rlz=numpy.arange(R),
+                    imt=list(oq.imtls), poe=oq.poes)
         if hstats:
             self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
+            self.datastore.set_shape_attrs(
+                'hcurves-stats', sid=sids, stat=list(hstats), iml=imls)
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
+                self.datastore.set_shape_attrs(
+                    'hmaps-stats', sid=sids, stat=list(hstats),
+                    imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
         logging.info('Building hazard statistics')
         weights = [rlz.weight for rlz in self.realizations]
