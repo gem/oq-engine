@@ -1105,7 +1105,7 @@ def extract_disagg(dstore, what):
     qdict = parse(what)
     label = qdict['kind'][0]
     imt = qdict['imt'][0]
-    poe_idx = int(qdict['poe_id'][0])
+    poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
     z = int(qdict['z'][0]) if 'z' in qdict else None
 
@@ -1114,7 +1114,7 @@ def extract_disagg(dstore, what):
             return v[sid]
         return v[:]
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
-    dset = disagg_output(dstore, imt, sid, poe_idx)
+    dset = disagg_output(dstore, imt, sid, poe_id)
     if z is None:  # compute stats
         best = dstore['best_rlzs'][sid]
         rlzs = [rlz for rlz in dstore['full_lt'].get_realizations()
@@ -1122,7 +1122,10 @@ def extract_disagg(dstore, what):
         weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
         weights /= weights.sum()  # normalize to 1
         matrix = dset[label][()] @ weights
-        return ArrayWrapper(matrix, {k: bins[k] for k in label.split('_')})
+        attrs = {k: bins[k] for k in label.split('_')}
+        attrs.update(site_id=[sid], imt=[imt], poe_id=[poe_id],
+                     kind=label)
+        return ArrayWrapper(matrix, attrs)
 
     matrix = dset[label][..., z]
 
