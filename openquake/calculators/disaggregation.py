@@ -443,16 +443,17 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'The disaggregation matrix is too large '
                 '(%d elements): fix the binning!' % matrix_size)
 
-        def _arr(bin_no):
-            ne = len(b[bin_no][0])
-            z = numpy.zeros((self.N, ne))
-            for sid, arr in b[bin_no].items():
-                z[sid] = arr
-            return z
+        def a(bin_no):
+            # lon/lat edges for the sites, bin_no can be 2 or 3
+            num_edges = len(b[bin_no][0])
+            arr = numpy.zeros((self.N, num_edges))
+            for sid, edges in b[bin_no].items():
+                arr[sid] = edges
+            return arr
         self.datastore['disagg-bins/Mag'] = b[0]
         self.datastore['disagg-bins/Dist'] = b[1]
-        self.datastore['disagg-bins/Lon'] = _arr(2)
-        self.datastore['disagg-bins/Lat'] = _arr(3)
+        self.datastore['disagg-bins/Lon'] = a(2)
+        self.datastore['disagg-bins/Lat'] = a(3)
         self.datastore['disagg-bins/Eps'] = b[4]
         self.datastore['disagg-bins/TRT'] = encode(self.trts)
 

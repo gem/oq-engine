@@ -501,18 +501,18 @@ def export_disagg_csv_xml(ekey, dstore):
         for z, r in enumerate(dstore['iml4/rlzs'][sid]):
             rlz = rlzs[r]
             iml = iml4[sid, m, p, z]
-            fname = dstore.export_path('rlz-%d-%s.xml' % (r, key))
+            fname = dstore.export_path('rlz-%d-%s-poe-%d.xml' % (r, key, p))
             lon, lat = sitecol.lons[sid], sitecol.lats[sid]
             metadata = dstore.metadata
             metadata.update(investigation_time=oq.investigation_time,
                             imt=imt.name, poe=poe_agg,
                             smlt_path='_'.join(rlz.sm_lt_path),
                             gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
-                            mag_bin_edges=bins['Mag'],
-                            dist_bin_edges=bins['Dist'],
-                            lon_bin_edges=bins['Lon'][sid],
-                            lat_bin_edges=bins['Lat'][sid],
-                            eps_bin_edges=bins['Eps'],
+                            mag_bin_edges=bins['Mag'].tolist(),
+                            dist_bin_edges=bins['Dist'].tolist(),
+                            lon_bin_edges=bins['Lon'][sid].tolist(),
+                            lat_bin_edges=bins['Lat'][sid].tolist(),
+                            eps_bin_edges=bins['Eps'].tolist(),
                             tectonic_region_types=bins['TRT'])
             if ekey[1] == 'xml':
                 metadata['sa_period'] = getattr(imt, 'period', None) or None
