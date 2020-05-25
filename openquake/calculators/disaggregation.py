@@ -39,7 +39,7 @@ from openquake.calculators import getters
 from openquake.calculators import base
 
 weight = operator.attrgetter('weight')
-DISAGG_RES_FMT = '%(rlz)s%(imt)s-%(sid)s-%(poe)s/'
+DISAGG_RES_FMT = '%(imt)s-%(sid)s-%(poe)s/'
 POE_TOO_BIG = '''\
 Site #%d: you are trying to disaggregate for poe=%s.
 However the source model produces at most probabilities
@@ -485,57 +485,36 @@ class DisaggregationCalculator(base.HazardCalculator):
         imts = list(self.oqparam.imtls)
         for s, mat9 in results.items():
             rlzs = self.rlzs[s]
-            many_rlzs = len(rlzs) > 1
             for m, imt in enumerate(imts):
-                if many_rlzs:  # rescale the weights
-                    weights = numpy.array([self.ws[r][imt] for r in rlzs])
-                    weights /= weights.sum()  # normalize to 1
                 for p, poe in enumerate(self.poes_disagg):
                     mat7 = mat9[..., m, p, :]
-                    for z in range(self.Z):
-                        mat6 = mat7[..., z]
-                        if mat6.any():  # nonzero
-                            self._save('disagg', s, rlzs[z], poe, imt, mat6)
-                    if many_rlzs:  # compute the mean matrices
-                        mean = numpy.average(mat7, -1, weights)
-                        if mean.any():  # nonzero
-                            self._save('disagg', s, 'mean', poe, imt, mean)
+                    if mat7.any():  # nonzero
+                        self._save('disagg', s, rlzs, poe, imt, mat7)
         self.datastore.set_attrs('disagg', **attrs)
 
-    def _save(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
+    def _save(self, dskey, site_id, rlzs, poe, imt_str, matrix7):
         disagg_outputs = self.oqparam.disagg_outputs
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
-        try:
-            rlz = 'rlz-%d-' % rlz_id
-        except TypeError:  # for the mean
-            rlz = ''
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
-            rlz=rlz, imt=imt_str, sid='sid-%d' % site_id,
+            imt=imt_str, sid='sid-%d' % site_id,
             poe='poe-%d' % self.poe_id[poe])
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
-            aggmatrix = agg_probs(*matrix6)
+            aggmatrix = agg_probs(*matrix7)
             poe_agg = pprod(aggmatrix)
             for key, fn in disagg.pmf_map.items():
                 if not disagg_outputs or key in disagg_outputs:
-                    pmf = fn(matrix6 if key.endswith('TRT') else aggmatrix)
-                    negative = pmf < 0
-                    if negative.any():  # this should not happen!
-                        logging.error(
-                            'Negative probabilities for site_id=%d, rlz_id=%d,'
-                            ' poe=%s, imt=%s, kind=%s' % (site_id, rlz_id,
-                                                          poe, imt_str, key))
-                        pmf[negative] = 0
+                    pmf = fn(matrix7 if key.endswith('TRT') else aggmatrix)
                     self.datastore[disp_name + key] = pmf
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['site_id'] = site_id
-        attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
         try:
-            attrs['iml'] = self.imldic[site_id, rlz_id, poe, imt_str]
+            attrs['iml'] = [self.imldic[site_id, r, poe, imt_str]
+                            for r in rlzs]
         except KeyError:  # for the mean
             pass
         attrs['mag_bin_edges'] = mag

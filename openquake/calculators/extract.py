@@ -1084,18 +1084,13 @@ def _getkey(names, key):
 
 # the disagg datagroup may contain
 # PGA-sid-0-poe-0
-# rlz-0-PGA-sid-0-poe-0
-# rlz-1-PGA-sid-0-poe-0
-def disagg_output(dstore, imt, sid, poe_id, rlz=None):
+def disagg_output(dstore, imt, sid, poe_id):
     """
     :returns:
         a datagroup
     """
     key = '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
-    if rlz is not None:
-        key = 'rlz-%d-%s' % (rlz, key)
-    else:
-        key = _getkey(sorted(dstore['disagg']), key)
+    key = _getkey(sorted(dstore['disagg']), key)
     return dstore['disagg'][key]
 
 
@@ -1105,17 +1100,16 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&rlz=0
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&z=0
     """
     qdict = parse(what)
     label = qdict['kind'][0]
     imt = qdict['imt'][0]
     poe_idx = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    rlz = (int(qdict['rlz'][0]) if 'rlz' in qdict else
-           0 if len(dstore['weights']) == 1 else None)
-    dset = disagg_output(dstore, imt, sid, poe_idx, rlz)
-    matrix = dset[label][()]
+    z = int(qdict['z'][0]) if 'z' in qdict else 0
+    dset = disagg_output(dstore, imt, sid, poe_idx)
+    matrix = dset[label][..., z]
 
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
@@ -1140,12 +1134,13 @@ def extract_disagg(dstore, what):
 
 
 def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
+    Z = shapedic['Z']
     dt = [('site_id', U32), ('lon', F32), ('lat', F32),
-          ('rlz_id', (U16, shapedic['Z'])),
+          ('rlz_id', (U16, Z)),
           ('lon_bins', (F32, shapedic['lon'] + 1)),
           ('lat_bins', (F32, shapedic['lat'] + 1))]
     for out in disagg_outputs:
-        shp = tuple(shapedic[key] for key in out.lower().split('_'))
+        shp = tuple(shapedic[key] for key in out.lower().split('_')) + (Z,)
         for imt in imts:
             for poe in poes_disagg:
                 dt.append(('%s-%s-%s' % (out, imt, poe), (F32, shp)))
@@ -1180,17 +1175,16 @@ def extract_disagg_layer(dstore, what):
         rec['site_id'] = sid
         rec['lon'] = lon
         rec['lat'] = lat
-        rec['rlz_id'] = rlzs = best_rlzs[sid]
+        rec['rlz_id'] = best_rlzs[sid]
         rec['lon_bins'] = edges[2][sid]
         rec['lat_bins'] = edges[3][sid]
         for kind in kinds:
             for imt in oq.imtls:
                 for p, poe in enumerate(poes_disagg):
-                    for rlz in rlzs:
-                        key = '%s-%s-%s' % (kind, imt, poe)
-                        label = 'disagg/rlz-%d-%s-sid-%d-poe-%s/%s' % (
-                            rlz, imt, sid, p, kind)
-                        rec[key] = dstore[label][()]
+                    key = '%s-%s-%s' % (kind, imt, poe)
+                    label = 'disagg/%s-sid-%d-poe-%s/%s' % (
+                        imt, sid, p, kind)
+                    rec[key] = dstore[label][()]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 

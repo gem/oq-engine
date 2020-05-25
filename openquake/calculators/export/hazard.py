@@ -474,12 +474,11 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
 DisaggMatrix = collections.namedtuple(
     'DisaggMatrix', 'poe iml dim_labels matrix')
 
-RX = re.compile(r'rlz-(\d+)-(.+)-sid-(\d+)-poe-(\d+)')
+RX = re.compile(r'(.+)-sid-(\d+)-poe-(\d+)')
 
-# NB: this is not able to export the mean files
-@export.add(('disagg', 'xml'))
-@deprecated(msg='Use the CSV exporter instead')
-def export_disagg_xml(ekey, dstore):
+
+@export.add(('disagg', 'csv'), ('disagg', 'xml'))
+def export_disagg_csv_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     iml4 = dstore['iml4/array']
@@ -488,100 +487,58 @@ def export_disagg_xml(ekey, dstore):
     group = dstore['disagg']
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
-    trts = dstore.get_attr('full_lt', 'trts')
+    trts = dstore.get_attr('full_lt', 'trts').tolist()
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
-    z_by_sr = {(s, r): z for (s, z), r in numpy.ndenumerate(
-        dstore['iml4/rlzs'][:])}
+    ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
+    skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     for key in group:
-        if not key.startswith('rlz-'):
-            continue
         grp = dstore['disagg/' + key]
-        rlz, imt, sid, p = RX.search(key).groups()
+        imt, sid, p = RX.search(key).groups()
         m = imts.index(imt)
-        rlz = rlzs[int(rlz)]
         imt = from_string(imt)
         sid = int(sid)
         p = int(p)
-        z = z_by_sr[sid, rlz.ordinal]
-        poe_agg = dstore['poe4'][sid, m, p, z]
-        iml = iml4[sid, m, p, z]
-        fname = dstore.export_path(key + '.xml')
-        lon, lat = sitecol.lons[sid], sitecol.lats[sid]
-        writer = writercls(
-            fname, investigation_time=oq.investigation_time,
-            imt=imt.name, smlt_path='_'.join(rlz.sm_lt_path),
-            gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
-            sa_period=getattr(imt, 'period', None) or None,
-            sa_damping=getattr(imt, 'damping', None),
-            mag_bin_edges=bins['mags'],
-            dist_bin_edges=bins['dists'],
-            lon_bin_edges=bins['lons'][sid],
-            lat_bin_edges=bins['lats'][sid],
-            eps_bin_edges=bins['eps'],
-            tectonic_region_types=trts)
-        data = []
-        for k in (oq.disagg_outputs or disagg.pmf_map):
-            data.append(DisaggMatrix(poe_agg, iml, k.split('_'), grp[k]))
-        writer.serialize(data)
-        fnames.append(fname)
+        for z, r in enumerate(dstore['iml4/rlzs'][sid]):
+            rlz = rlzs[r]
+            poe_agg = dstore['poe4'][sid, m, p, z]
+            iml = iml4[sid, m, p, z]
+            fname = dstore.export_path('rlz-%d-%s.xml' % (r, key))
+            lon, lat = sitecol.lons[sid], sitecol.lats[sid]
+            metadata = dstore.metadata
+            metadata.update(investigation_time=oq.investigation_time,
+                            imt=imt.name, poe=poe_agg,
+                            smlt_path='_'.join(rlz.sm_lt_path),
+                            gsimlt_path=rlz.gsim_rlz.pid, lon=lon, lat=lat,
+                            sa_period=getattr(imt, 'period', None) or None,
+                            sa_damping=getattr(imt, 'damping', None),
+                            mag_bin_edges=bins['mags'],
+                            dist_bin_edges=bins['dists'],
+                            lon_bin_edges=bins['lons'][sid],
+                            lat_bin_edges=bins['lats'][sid],
+                            eps_bin_edges=bins['eps'],
+                            tectonic_region_types=trts)
+            if ekey[1] == 'xml':
+                writer = writercls(fname, **metadata)
+                data = []
+                for k in (oq.disagg_outputs or disagg.pmf_map):
+                    arr = grp[k][..., z]
+                    dm = DisaggMatrix(poe_agg, iml, k.split('_'), arr)
+                    data.append(dm)
+                writer.serialize(data)
+                fnames.append(fname)
+            else:  # csv
+                for k in (oq.disagg_outputs or disagg.pmf_map):
+                    header = k.lower().split('_') + ['poe']
+                    com = {key: value for key, value in metadata.items()
+                           if value is not None and key not in skip_keys}
+                    com.update(metadata)
+                    fname = dstore.export_path(
+                        'rlz-%d-%s_%s.csv' % (r, key, k))
+                    values = extract(dstore, ex % (k, imt, sid, p, z))
+                    writers.write_csv(fname, values, header=header,
+                                      comment=com, fmt='%.5E')
+                    fnames.append(fname)
     return sorted(fnames)
-
-
-@export.add(('disagg', 'csv'))
-def export_disagg_csv(ekey, dstore):
-    oq = dstore['oqparam']
-    rlzs = dstore['full_lt'].get_realizations()
-    group = dstore[ekey[0]]
-    fnames = []
-    skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
-    for key in group:
-        attrs = group[key].attrs
-        try:
-            poe = attrs['poe']
-        except Exception:  # no poes_disagg were given
-            poe = attrs['poe_agg']
-        try:
-            rlz = rlzs[attrs['rlzi']]
-        except TypeError:
-            rlz = ''
-            dic = dict(poe='%.7f' % poe)
-            ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d'
-        else:
-            dic = dict(poe='%.7f' % poe, iml='%.7e' % attrs['iml'],
-                       rlz=rlz.ordinal)
-            ex = ('disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&rlz=' +
-                  str(rlz.ordinal))
-        imt = from_string(attrs['imt'])
-        site_id = attrs['site_id']
-        lon, lat = attrs['location']
-        metadata = dstore.metadata
-        # Loads "disaggMatrices" nodes
-        if hasattr(rlz, 'sm_lt_path'):
-            metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
-            metadata['gsimlt_path'] = rlz.gsim_rlz.pid
-        metadata['imt'] = imt.name
-        metadata['investigation_time'] = oq.investigation_time
-        metadata['lon'] = lon
-        metadata['lat'] = lat
-        metadata['Mag'] = attrs['mag_bin_edges']
-        metadata['Dist'] = attrs['dist_bin_edges']
-        metadata['Lon'] = attrs['lon_bin_edges']
-        metadata['Lat'] = attrs['lat_bin_edges']
-        metadata['Eps'] = attrs['eps_bin_edges']
-        metadata['TRT'] = attrs['trt_bin_edges']
-        # example: key = 'rlz-0-PGA-sid-0-poe-0'
-        poe_id = int(key.rsplit('-', 1)[1])
-        for label, dset in sorted(group[key].items()):
-            header = label.lower().split('_') + ['poe']
-            com = {key: value for key, value in metadata.items()
-                   if value is not None and key not in skip_keys}
-            com.update(dic)
-            fname = dstore.export_path(key + '_%s.csv' % label)
-            values = extract(dstore, ex % (label, imt, site_id, poe_id))
-            writers.write_csv(fname, values, header=header, comment=com,
-                              fmt='%.5E')
-            fnames.append(fname)
-    return fnames
 
 
 @export.add(('disagg_by_src', 'csv'))
