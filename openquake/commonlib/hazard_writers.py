@@ -623,7 +623,7 @@ class DisaggXMLWriter(object):
                 for idxs, value in numpy.ndenumerate(result.matrix):
                     prob = et.SubElement(diss_matrix, 'prob')
 
-                    index = ','.join([str(x) for x in idxs])
+                    index = ','.join(str(x) for x in idxs)
                     prob.set('index', index)
                     prob.set('value', scientificformat(value))
 

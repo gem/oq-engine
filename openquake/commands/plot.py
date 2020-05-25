@@ -138,9 +138,23 @@ def make_figure_uhs(extractors, what):
     return plt
 
 
+def middle(x):
+    # [1, 2, 3] => [1.5, 2.5]
+    return (x[:-1] + x[1:]) / 2.
+
+
+def stacked_bar(ax, x, ys, width):
+    cumsum = ys.cumsum(axis=0)
+    for i, y in enumerate(ys):
+        if i > 0:
+            ax.bar(x, y, width, bottom=cumsum[i-1])
+        else:
+            ax.bar(x, y, width)
+
+
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot 'disagg?kind=Mag&imt=PGA&rlz=0'
+    $ oq plot 'disagg?kind=Mag&imt=PGA'
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -150,13 +164,25 @@ def make_figure_disagg(extractors, what):
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    [rlz] = disagg.rlz
     ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
                   (disagg.kind, sid, imt, poe_id, oq.investigation_time))
-    x, y = disagg.array.T
+    y = disagg.array
     print(y)
-    ax.plot(x, y, label='rlz-%s' % rlz)
-    ax.legend()
+    ndims = len(y.shape)
+    axis = disagg.kind.split('_')
+    bins = getattr(disagg, axis[0])
+    ax.set_xlabel(axis[0])
+    ax.set_xticks(bins)
+    x = middle(bins)
+    width = (x[1] - x[0]) * 0.8
+    if ndims == 1:  # simple bar chart
+        ax.bar(x, y)
+    elif ndims == 2:  # stacked bar chart
+        stacked_bar(ax, x, y.T, width)
+        ys = ['%.1f' % y for y in getattr(disagg, axis[1])]
+        ax.legend(ys)
+    else:
+        raise NotImplementedError('Plot of kind %s' % disagg.kind)
     return plt
 
 

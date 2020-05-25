@@ -417,11 +417,12 @@ def lon_lat_trt_pmf(matrices):
     :param matrices:
         a matrix with T submatrices
     :returns:
-        3d array. First dimension represents longitude histogram bins,
-        second one latitude histogram bins, third one trt histogram bins.
+        4d array. First dimension represents longitude histogram bins,
+        second one latitude histogram bins, third one trt histogram bins,
+        last dimension is the z index, associatd to the realization.
     """
     res = numpy.array([lon_lat_pmf(mat) for mat in matrices])
-    return res.transpose(1, 2, 0)
+    return res.transpose(1, 2, 0, 3)
 
 
 # this dictionary is useful to extract a fixed set of
