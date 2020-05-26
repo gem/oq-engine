@@ -355,7 +355,9 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.ground_motion_fields and not oq.hazard_curves_from_gmfs:
             return
         N = len(self.sitecol.complete)
+        M = len(oq.imtls)
         L = len(oq.imtls.array)
+        L1 = L // M
         if result and oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
@@ -375,7 +377,7 @@ class EventBasedCalculator(base.HazardCalculator):
                                      (len(weights), len(pmaps)))
             if oq.individual_curves:
                 logging.info('Saving individual hazard curves')
-                self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
+                self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
                 self.datastore.set_attrs('hcurves-rlzs', nbytes=N * R * L * 4)
                 if oq.poes:
                     P = len(oq.poes)
@@ -385,9 +387,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.datastore.set_attrs(
                         'hmaps-rlzs', nbytes=N * R * P * M * 4)
                 for r, pmap in enumerate(pmaps):
-                    arr = numpy.zeros((N, L), F32)
+                    arr = numpy.zeros((N, M, L1), F32)
                     for sid in pmap:
-                        arr[sid] = pmap[sid].array[:, 0]
+                        arr[sid] = pmap[sid].array.reshape(M, L1)
                     self.datastore['hcurves-rlzs'][:, r] = arr
                     if oq.poes:
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
@@ -396,7 +398,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
             if S:
                 logging.info('Computing statistical hazard curves')
-                self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
+                self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
                 self.datastore.set_attrs('hcurves-stats', nbytes=N * S * L * 4)
                 if oq.poes:
                     P = len(oq.poes)
@@ -408,9 +410,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 for s, stat in enumerate(hstats):
                     pmap = compute_pmap_stats(
                         pmaps, [hstats[stat]], weights, oq.imtls)
-                    arr = numpy.zeros((N, L), F32)
+                    arr = numpy.zeros((N, M, L1), F32)
                     for sid in pmap:
-                        arr[sid] = pmap[sid].array[:, 0]
+                        arr[sid] = pmap[sid].array.reshape(M, L1)
                     self.datastore['hcurves-stats'][:, s] = arr
                     if oq.poes:
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
