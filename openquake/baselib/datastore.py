@@ -466,17 +466,18 @@ class DataStore(collections.abc.MutableMapping):
         data = bytes(numpy.asarray(self[key][()]))
         return io.BytesIO(gzip.decompress(data))
 
-    def read_df(self, key, index=None, filterdict=()):
+    def read_df(self, key, index=None, sel=()):
         """
         :param key: name of the structured dataset
         :param index: if given, name of the "primary key" field
+        :param sel: dictionary used to select subsets of the dataset
         :returns: pandas DataFrame associated to the dataset
         """
         dset = self.getitem(key)
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
         if 'shape_descr' in dset.attrs:
-            return dset2df(dset, index, filterdict)
+            return dset2df(dset, index, sel)
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
