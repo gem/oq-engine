@@ -32,7 +32,7 @@ from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, logs
-from openquake.calculators import base, extract
+from openquake.calculators import base
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rgetters, gen_rupture_getters,
     sig_eps_dt, time_dt)
@@ -50,16 +50,16 @@ by_grp = operator.attrgetter('grp_id')
 
 # ######################## GMF calculator ############################ #
 
-def get_mean_curves(dstore, m):
+def get_mean_curves(dstore, imt):
     """
     Extract the mean hazard curves from the datastore, as an array of shape
     (N, L1)
     """
-    if 'hcurves-stats' in dstore:
-        dset = dstore['hcurves-stats']
+    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
     else:  # there is only 1 realization
-        dset = dstore['hcurves-rlzs']
-    return dset[:, 0, m]
+        arr = dstore.sel('hcurves-rlzs', rlz=0, imt=imt)
+    return arr[:, 0, 0, :]
 
 # ########################################################################## #
 
@@ -382,7 +382,9 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.individual_curves:
                 logging.info('Saving individual hazard curves')
                 self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-                self.datastore.set_attrs('hcurves-rlzs', nbytes=N * R * L * 4)
+                self.datastore.set_shape_attrs(
+                    'hcurves-rlzs', sid=numpy.arange(N), rlz=numpy.arange(R),
+                    imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
                     P = len(oq.poes)
                     M = len(oq.imtls)
@@ -403,7 +405,9 @@ class EventBasedCalculator(base.HazardCalculator):
             if S:
                 logging.info('Computing statistical hazard curves')
                 self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-                self.datastore.set_attrs('hcurves-stats', nbytes=N * S * L * 4)
+                self.datastore.set_shape_attrs(
+                    'hcurves-stats', sid=numpy.arange(N), stat=list(hstats),
+                    imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
                     P = len(oq.poes)
                     M = len(oq.imtls)
@@ -438,9 +442,9 @@ class EventBasedCalculator(base.HazardCalculator):
             # the computation
             self.cl.run()
             engine.expose_outputs(self.cl.datastore)
-            for m, imt in enumerate(oq.imtls):
-                cl_mean_curves = get_mean_curves(self.cl.datastore, m)
-                eb_mean_curves = get_mean_curves(self.datastore, m)
+            for imt in oq.imtls:
+                cl_mean_curves = get_mean_curves(self.cl.datastore, imt)
+                eb_mean_curves = get_mean_curves(self.datastore, imt)
                 self.rdiff, index = util.max_rel_diff_index(
                     cl_mean_curves, eb_mean_curves)
                 logging.warning('Relative difference with the classical '

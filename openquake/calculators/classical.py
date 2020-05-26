@@ -473,6 +473,7 @@ class ClassicalCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         P = len(oq.poes)
         M = self.M = len(oq.imtls)
+        imts = list(oq.imtls)
         if oq.soil_intensities is not None:
             L = M * len(oq.soil_intensities)
         else:
@@ -482,10 +483,16 @@ class ClassicalCalculator(base.HazardCalculator):
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
+            self.datastore.set_shape_attrs(
+                'hcurves-rlzs', sid=numpy.arange(N), rlz=numpy.arange(R),
+                imt=imts, lvl=numpy.arange(L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
         if hstats:
             self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
+            self.datastore.set_shape_attrs(
+                'hcurves-stats', sid=numpy.arange(N), stat=list(hstats),
+                imt=imts, lvl=numpy.arange(L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
         ct = oq.concurrent_tasks or 1
