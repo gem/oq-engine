@@ -211,8 +211,8 @@ def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
     return _truncnorm_sf(truncation_level, out)
 
 
-def _get_poes_site(mean_std, loglevels, truncation_level, ampl_df,
-                   mag, rrup, squeeze=False):
+def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
+                   mag, squeeze=False):
     """
     :param mean_std:
         See :function:`openquake.hazardlib.gsim.base.get_poes`
@@ -220,7 +220,8 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampl_df,
         Intensity measure level per intensity measure type. See
         :function:`openquake.hazardlib.gsim.base.get_poes`
     :param truncation_level:
-    :param ampl_df:
+    :param ampl:
+        Site amplifier
     :param mag:
         The magnitude of the earthquake
     :param rrup:
@@ -242,7 +243,8 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampl_df,
             else:
                 out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
-    return _truncnorm_sf(truncation_level, out)
+    poes_rock = _truncnorm_sf(truncation_level, out)
+    print(poes_rock)
 
 
 class MetaGSIM(abc.ABCMeta):

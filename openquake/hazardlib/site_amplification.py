@@ -67,7 +67,7 @@ class Amplifier(object):
         A DataFrame containing amplification functions.
     :param amplevels:
         Intensity levels used for the amplified curves (if None, use the
-        levels from the imtls dictionary)
+        levels from the imtls dictionary). It's an array.
     """
     def __init__(self, imtls, ampl_df, amplevels=None):
         if not imtls:
@@ -77,6 +77,7 @@ class Amplifier(object):
         self.amplevels = amplevels
         self.vs30_ref = ampl_df.vs30_ref
         has_levels = 'level' in ampl_df.columns
+        # Checking the input dataframe
         if has_levels and 'from_mag' in ampl_df.keys():
             keys = ['ampcode', 'level', 'from_mag', 'from_rrup']
             check_unique(ampl_df, keys, fname)
@@ -97,7 +98,7 @@ class Amplifier(object):
         cols = list(imtls)
         if has_levels:
             cols.append('level')
-        # Appending to the new dataframe the sigma values
+        # Appending to the list dataframe the sigma values
         for col in ampl_df.columns:
             if col.startswith('sigma_'):
                 cols.append(col)
@@ -107,7 +108,8 @@ class Amplifier(object):
                 self.coeff[code] = df[cols].set_index('level')
             else:
                 self.coeff[code] = df[cols]
-        if amplevels is not None:  # PoEs amplification
+        # PoEs amplification
+        if amplevels is not None:
             self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # shape I-1
             self.ialphas = {}  # code -> array of length I-1
             self.isigmas = {}  # code -> array of length I-1

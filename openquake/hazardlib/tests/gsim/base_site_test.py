@@ -18,10 +18,17 @@
 
 import numpy
 import unittest
+
+from openquake.hazardlib import const
 from openquake.baselib.hdf5 import read_csv
+from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import ampcode_dt
+from openquake.hazardlib.gsim.base import get_mean_std, _get_poes_site
 from openquake.baselib.general import gettemp, DictArray
+from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.site_amplification import Amplifier
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 
 ampl_func = '''\
@@ -67,10 +74,25 @@ class GetPoesSiteTestCase(unittest.TestCase):
         fname = gettemp(ampl_func)
         self.df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                            index='ampcode')
-        # Add a multiindex to this dataframe
+        # Add a multi-index to this dataframe
         self.df.reset_index(drop=False, inplace=True)
         self.df.set_index(['ampcode', 'from_mag',  'from_rrup'])
+        # Compute GM on rock
+        gmm = BooreAtkinson2008()
+        # Set parameters
+        imts = [PGA(), SA(1.0)]
+        sites = Dummy.get_site_collection(4, vs30=760.0)
+        self.mag = 6.0
+        rup = Dummy.get_rupture(mag=self.mag)
+        dists = DistancesContext()
+        dists.rjb = numpy.array([10., 20., 30., 40.])
+        self.meastd = get_mean_std(sites, rup, dists, imts, [gmm])
 
     def test01(self):
         amp = Amplifier(self.imtls, self.df, self.soil_levels)
         print(self.df.head())
+
+        imls = numpy.log([0.01, 0.05, 0.1, 0.2, 0.5])
+        imtls_rock = DictArray({'PGA': imls, 'SA(1.0)': imls})
+
+        _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag)
