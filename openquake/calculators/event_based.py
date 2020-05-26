@@ -390,8 +390,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     M = len(oq.imtls)
                     ds = self.datastore.create_dset(
                         'hmaps-rlzs', F32, (N, R, M, P))
-                    self.datastore.set_attrs(
-                        'hmaps-rlzs', nbytes=N * R * P * M * 4)
+                    self.datastore.set_shape_attrs(
+                        'hmaps-rlzs', site_id=N, rlz_id=R,
+                        imt=list(oq.imtls), poe=oq.poes)
                 for r, pmap in enumerate(pmaps):
                     arr = numpy.zeros((N, M, L1), F32)
                     for sid in pmap:
@@ -413,8 +414,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     M = len(oq.imtls)
                     ds = self.datastore.create_dset(
                         'hmaps-stats', F32, (N, S, M, P))
-                    self.datastore.set_attrs(
-                        'hmaps-stats', nbytes=N * S * P * M * 4)
+                    self.datastore.set_shape_attrs(
+                        'hmaps-stats', site_id=N, stat=list(hstats),
+                        imt=list(oq.imtls), poes=oq.poes)
                 for s, stat in enumerate(hstats):
                     pmap = compute_pmap_stats(
                         pmaps, [hstats[stat]], weights, oq.imtls)
