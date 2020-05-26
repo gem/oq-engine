@@ -160,7 +160,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not dic['pmap']:
             return acc
         if self.oqparam.disagg_by_src:
-            # store the curves for the given source
+            # store the poes for the given source
             src_id = dic['extra']['source_id']
             trt = dic['extra']['trt']
             serial = self.csm.source_info[src_id][readinput.SERIAL]
@@ -190,6 +190,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     acc[grp_id] |= pmap
                 acc.eff_ruptures[trt] += eff_rups
 
+            # store rup_data if there are few sites
             rup_data = dic['rup_data']
             nr = len(rup_data.get('grp_id', []))
             if nr:
@@ -277,12 +278,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.L1 = num_levels // self.M
             sources = encode([row[0] for row in self.csm.source_info])
             self.datastore.create_dset('disagg_by_src', F32,
-                                       (Ns, self.N, self.M, self.L1))
+                                       (self.N, Ns, self.M, self.L1))
             self.datastore.set_shape_attrs(
-                'disagg_by_src', src=sources,
-                sid=numpy.arange(self.N),
-                imt=encode(list(self.oqparam.imtls)),
-                lvl=numpy.arange(self.L1))
+                'disagg_by_src', site_id=self.N, src_id=sources,
+                imt=list(self.oqparam.imtls), lvl=self.L1)
         return zd
 
     def execute(self):

@@ -34,6 +34,8 @@ from openquake.qa_tests_data.classical import (
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48)
 
+aac = numpy.testing.assert_allclose
+
 
 class ClassicalTestCase(CalculatorTestCase):
 
@@ -49,6 +51,12 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, actual,
                                   delta=delta)
         return got
+
+    def check_disagg_by_src(self):
+        means = self.calc.datastore.sel('hcurves-stats', stat='mean')[:, 0]
+        curves = general.pprod(self.calc.datastore.sel('disagg_by_src'),
+                               axis=1)  # compose the probabilities
+        aac(curves, means, atol=1E-6)
 
     def test_case_1(self):
         self.assert_curves_ok(
@@ -108,6 +116,9 @@ class ClassicalTestCase(CalculatorTestCase):
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
+
+        # check disagg_by_src for a single realization
+        self.check_disagg_by_src()
 
     def test_case_3(self):
         self.assert_curves_ok(
@@ -173,6 +184,7 @@ class ClassicalTestCase(CalculatorTestCase):
              'quantile_curve-0.1.csv',
              'quantile_curve-0.9.csv'],
             case_11.__file__)
+        self.check_disagg_by_src()
 
     def test_case_12(self):
         # test Modified GMPE
