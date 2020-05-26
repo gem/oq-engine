@@ -50,12 +50,16 @@ by_grp = operator.attrgetter('grp_id')
 
 # ######################## GMF calculator ############################ #
 
-def get_mean_curves(dstore):
+def get_mean_curves(dstore, m):
     """
-    Extract the mean hazard curves from the datastore, as a composite
-    array of length nsites.
+    Extract the mean hazard curves from the datastore, as an array of shape
+    (N, L1)
     """
-    return dict(extract.extract(dstore, 'hcurves?kind=mean'))['mean']
+    if 'hcurves-stats' in dstore:
+        dset = dstore['hcurves-stats']
+    else:  # there is only 1 realization
+        dset = dstore['hcurves-rlzs']
+    return dset[:, 0, m]
 
 # ########################################################################## #
 
@@ -434,10 +438,11 @@ class EventBasedCalculator(base.HazardCalculator):
             # the computation
             self.cl.run()
             engine.expose_outputs(self.cl.datastore)
-            cl_mean_curves = get_mean_curves(self.cl.datastore)
-            eb_mean_curves = get_mean_curves(self.datastore)
-            self.rdiff, index = util.max_rel_diff_index(
-                cl_mean_curves, eb_mean_curves)
-            logging.warning('Relative difference with the classical '
-                            'mean curves: %d%% at site index %d',
-                            self.rdiff * 100, index)
+            for m, imt in enumerate(oq.imtls):
+                cl_mean_curves = get_mean_curves(self.cl.datastore, m)
+                eb_mean_curves = get_mean_curves(self.datastore, m)
+                self.rdiff, index = util.max_rel_diff_index(
+                    cl_mean_curves, eb_mean_curves)
+                logging.warning('Relative difference with the classical '
+                                'mean curves: %d%% at site index %d, imt=%s',
+                                self.rdiff * 100, index, imt)
