@@ -31,8 +31,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.hazardlib.probability_map import ProbabilityMap, combine2
-from openquake.commonlib import calc, util, logs, readinput
+from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.commonlib import calc, util, logs
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -162,11 +162,12 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
             src_id = dic['extra']['source_id']
-            trt = dic['extra']['trt']
-            serial = self.csm.source_info[src_id][readinput.SERIAL]
-            sids, probs = combine2(dic['pmap'].values(), self.weights[trt])
-            self.datastore['disagg_by_src'][serial, sids] = probs.reshape(
-                -1, self.M, self.L1)
+            for grp_id, pmap in dic['pmap'].items():
+                if pmap:
+                    if (src_id, grp_id) in acc:
+                        acc[src_id, grp_id] |= pmap
+                    else:
+                        acc[src_id, grp_id] = pmap
 
         trt = dic['extra'].pop('trt')
         self.maxradius = max(self.maxradius, dic['extra'].pop('maxradius'))
@@ -187,7 +188,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 eff_rups, eff_sites, sorted(srcids))
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
-                    acc[grp_id] |= pmap
+                    if grp_id in acc:
+                        acc[grp_id] |= pmap
+                    else:
+                        acc[grp_id] = pmap
                 acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
@@ -233,7 +237,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
                 for dparam in cm.REQUIRES_DISTANCES:
                     rparams.add(dparam + '_')
-                zd[grp_id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
         if self.few_sites:
             self.rparams = sorted(rparams)
@@ -268,10 +271,10 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(MAXMEMORY % (self.N, num_levels, max_num_gsims,
                                   max_num_grp_ids, humansize(pmapbytes)))
 
-        acc = AccumDict(accum=[])  # trt -> weights
+        w = AccumDict(accum=[])  # trt -> weights
         for br in self.full_lt.gsim_lt.branches:
-            acc[br.trt].append(br.weight.dic['weight'])
-        self.weights = {trt: numpy.array(w) for trt, w in acc.items()}
+            w[br.trt].append(br.weight.dic['weight'])
+        self.weights = {trt: numpy.array(wr) for trt, wr in w.items()}
         Ns = len(self.csm.source_info)
         if self.oqparam.disagg_by_src:
             self.M = len(self.oqparam.imtls)
@@ -480,10 +483,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     trt = self.full_lt.trt_by_grp[grp_id]
                     name = 'poes%s/grp-%02d' % (src_id, grp_id)
                     self.datastore[name] = pmap
-                    extreme = max(
-                        get_extreme_poe(pmap[sid].array, oq.imtls)
-                        for sid in pmap)
-                    data.append((grp_id, trt, extreme))
+                    if not src_id:
+                        extreme = max(
+                            get_extreme_poe(pmap[sid].array, oq.imtls)
+                            for sid in pmap)
+                        data.append((grp_id, trt, extreme))
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
