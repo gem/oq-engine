@@ -27,7 +27,7 @@ import numpy
 import h5py
 import pandas
 
-from openquake.baselib import hdf5, config, performance
+from openquake.baselib import hdf5, config, performance, python3compat
 
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
@@ -447,13 +447,7 @@ class DataStore(collections.abc.MutableMapping):
         :param index: if given, name of the "primary key" field
         :returns: pandas DataFrame associated to the dataset
         """
-        try:
-            dset = self.getitem(key)
-        except KeyError:
-            if self.parent:
-                dset = self.parent.getitem(key)
-            else:
-                raise
+        dset = self.getitem(key)
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
         if 'shape_descr' in dset.attrs:
@@ -478,6 +472,24 @@ class DataStore(collections.abc.MutableMapping):
             else:  # scalar field
                 data[name] = arr
         return pandas.DataFrame.from_records(data, index=index)
+
+    def sel(self, key, **kw):
+        """
+        Select a dataset with shape_descr. For instance
+        dstore.sel('hcurves', imt='PGA', sid=2)
+        """
+        dset = self.getitem(key)
+        assert 'shape_descr' in dset.attrs, 'Missing %s.shape_descr' % key
+        lst = []
+        for dim in python3compat.decode(dset.attrs['shape_descr']):
+            if dim in kw:
+                val = kw[dim]
+                values = list(dset.attrs[dim])
+                idx = values.index(val)
+                lst.append(slice(idx, idx + 1))
+            else:
+                lst.append(slice(None))
+        return dset[tuple(lst)]
 
     @property
     def metadata(self):
