@@ -363,16 +363,9 @@ hazard_uhs-std.csv
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
-        self.assertEqual(list(df.columns), ['sid', 'rlz', 'value'])
+        self.assertEqual(list(df.columns), ['sid', 'rlz', 'imt', 'value'])
         df = self.calc.datastore.read_df('hcurves-stats', 'lvl')
-        self.assertEqual(list(df.columns), ['sid', 'stat', 'value'])
-        # df
-        #       sid     stat     value
-        # lvl
-        # 0    0  b'mean'  0.048771
-        # 1    0  b'mean'  0.028694
-        # 2    0  b'mean'  0.007563
-        # 3    0  b'mean'  0.000065
+        self.assertEqual(list(df.columns), ['sid', 'stat', 'imt', 'value'])
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
@@ -581,7 +574,8 @@ hazard_uhs-std.csv
                                "hazard_map-mean-PGA.csv"], case_42.__file__)
 
         # check pandas readability of hmaps-stats
-        df = self.calc.datastore.read_df('hmaps-stats', 'sid')
+        df = self.calc.datastore.read_df('hmaps-stats', 'sid',
+                                         dict(imt='PGA', stat='mean'))
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
         #         stat     imt       poe     value
         # sid

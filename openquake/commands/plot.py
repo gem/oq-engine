@@ -49,7 +49,7 @@ def make_figure_hcurves(extractors, what):
         for ck, arr in got.items():
             if (arr == 0).all():
                 logging.warning('There is a zero curve %s_%s', *ck)
-            ax.loglog(imls, arr[0], '-', label='%s_%s' % ck)
+            ax.loglog(imls, arr.flat, '-', label='%s_%s' % ck)
         ax.grid(True)
         ax.legend()
     return plt

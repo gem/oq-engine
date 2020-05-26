@@ -437,7 +437,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dset = self.datastore.getitem(kind)
                     for r, pmap in enumerate(pmaps):
                         for s in pmap:
-                            dset[s, r] = pmap[s].array[:, 0]  # shape L
+                            dset[s, r] = pmap[s].array.reshape(self.M, self.L1)
             self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
@@ -474,26 +474,30 @@ class ClassicalCalculator(base.HazardCalculator):
         imls = oq.imtls.array
         N = len(self.sitecol.complete)
         P = len(oq.poes)
-        M = len(oq.imtls)
+        M = self.M = len(oq.imtls)
+        imts = list(oq.imtls)
         if oq.soil_intensities is not None:
             L = M * len(oq.soil_intensities)
         else:
             L = len(imls)
+        L1 = self.L1 = L // M
         R = len(self.realizations)
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
-            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
+            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_attrs(
-                'hcurves-rlzs', sid=sids, rlz=numpy.arange(R), lvl=range(L))
+                'hcurves-rlzs', sid=numpy.arange(N), rlz=numpy.arange(R),
+                imt=imts, lvl=numpy.arange(L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
                 self.datastore.set_shape_attrs(
                     'hmaps-rlzs', sid=sids, rlz=numpy.arange(R),
                     imt=list(oq.imtls), poe=oq.poes)
         if hstats:
-            self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
+            self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
             self.datastore.set_shape_attrs(
-                'hcurves-stats', sid=sids, stat=list(hstats), lvl=range(L))
+                'hcurves-stats', sid=numpy.arange(N), stat=list(hstats),
+                imt=imts, lvl=numpy.arange(L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
                 self.datastore.set_shape_attrs(
