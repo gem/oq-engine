@@ -443,8 +443,9 @@ def set_shape_attrs(hdf5file, dsetname, kw):
         raise ValueError('The dataset %s has %d dimensions but you passed %d'
                          ' axis' % (dsetname, S, len(kw)))
     dset.attrs['shape_descr'] = encode(list(kw))[:S]
-    for k, v in kw.items():
+    for d, (k, v) in enumerate(kw.items()):
         dset.attrs[k] = v
+        dset.dims[d].label = k  # set dimension label
 
 
 class ArrayWrapper(object):
