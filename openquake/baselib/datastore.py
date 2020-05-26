@@ -137,28 +137,53 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-def dset2df(dset, index):
+def sel(dset, filterdict):
+    """
+    Select a dataset with shape_descr. For instance
+    dstore.sel('hcurves', imt='PGA', sid=2)
+    """
+    assert 'shape_descr' in dset.attrs, 'Missing %s.shape_descr' % dset.name
+    lst = []
+    for dim in python3compat.decode(dset.attrs['shape_descr']):
+        if dim in filterdict:
+            val = filterdict[dim]
+            values = list(dset.attrs[dim])
+            idx = values.index(val)
+            lst.append(slice(idx, idx + 1))
+        else:
+            lst.append(slice(None))
+    return dset[tuple(lst)]
+
+
+def dset2df(dset, index, filterdict):
     """
     Converts an HDF5 dataset with an attribute shape_descr into a Pandas
     dataframe. NB: this is very slow for large datasets.
     """
-    shape_descr = [v.decode('utf-8') for v in dset.attrs['shape_descr']]
+    arr = sel(dset, filterdict)
+    shape_descr = python3compat.decode(dset.attrs['shape_descr'])
     out = []
     tags = []
     idxs = []
     dtlist = []
-    for i, field in enumerate(shape_descr):
-        values = dset.attrs[field]
+    for dim in shape_descr:
+        values = list(dset.attrs[dim])
+        if dim in filterdict:
+            val = filterdict[dim]
+            idx = values.index(val)
+            idxs.append([idx])
+            values = [val]
+        else:
+            idxs.append(range(len(values)))
         if isinstance(values[0], str):  # like the loss_type
             dt = '<S16'
         else:
             dt = values[0].dtype
-        dtlist.append((field, dt))
+        dtlist.append((dim, dt))
         tags.append(values)
-        idxs.append(range(len(values)))
     dtlist.append(('value', dset.dtype))
     for idx, vals in zip(itertools.product(*idxs), itertools.product(*tags)):
-        out.append(vals + (dset[idx],))
+        out.append(vals + (arr[idx],))
     return pandas.DataFrame.from_records(numpy.array(out, dtlist), index)
 
 
@@ -441,7 +466,7 @@ class DataStore(collections.abc.MutableMapping):
         data = bytes(numpy.asarray(self[key][()]))
         return io.BytesIO(gzip.decompress(data))
 
-    def read_df(self, key, index=None):
+    def read_df(self, key, index=None, filterdict=()):
         """
         :param key: name of the structured dataset
         :param index: if given, name of the "primary key" field
@@ -451,7 +476,7 @@ class DataStore(collections.abc.MutableMapping):
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
         if 'shape_descr' in dset.attrs:
-            return dset2df(dset, index)
+            return dset2df(dset, index, filterdict)
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
@@ -478,18 +503,7 @@ class DataStore(collections.abc.MutableMapping):
         Select a dataset with shape_descr. For instance
         dstore.sel('hcurves', imt='PGA', sid=2)
         """
-        dset = self.getitem(key)
-        assert 'shape_descr' in dset.attrs, 'Missing %s.shape_descr' % key
-        lst = []
-        for dim in python3compat.decode(dset.attrs['shape_descr']):
-            if dim in kw:
-                val = kw[dim]
-                values = list(dset.attrs[dim])
-                idx = values.index(val)
-                lst.append(slice(idx, idx + 1))
-            else:
-                lst.append(slice(None))
-        return dset[tuple(lst)]
+        return sel(self.getitem(key), kw)
 
     @property
     def metadata(self):
