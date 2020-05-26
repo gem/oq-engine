@@ -178,7 +178,7 @@ def dset2df(dset, index, filterdict):
         if isinstance(values[0], str):  # like the loss_type
             dt = '<S16'
         else:
-            dt = values[0].dtype
+            dt = type(values[0])
         dtlist.append((dim, dt))
         tags.append(values)
     dtlist.append(('value', dset.dtype))
