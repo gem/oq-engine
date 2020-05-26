@@ -437,7 +437,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dset = self.datastore.getitem(kind)
                     for r, pmap in enumerate(pmaps):
                         for s in pmap:
-                            dset[s, r] = pmap[s].array[:, 0]  # shape L
+                            dset[s, r] = pmap[s].array.reshape(self.M, self.L1)
             self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
@@ -472,19 +472,20 @@ class ClassicalCalculator(base.HazardCalculator):
         # initialize datasets
         N = len(self.sitecol.complete)
         P = len(oq.poes)
-        M = len(oq.imtls)
+        M = self.M = len(oq.imtls)
         if oq.soil_intensities is not None:
             L = M * len(oq.soil_intensities)
         else:
             L = len(oq.imtls.array)
+        L1 = self.L1 = L // M
         R = len(self.realizations)
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
-            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
+            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
         if hstats:
-            self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
+            self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
         ct = oq.concurrent_tasks or 1

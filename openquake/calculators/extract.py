@@ -382,6 +382,7 @@ def extract_hcurves(dstore, what):
     /extract/hcurves?kind=rlzs etc
     """
     info = get_info(dstore)
+    imts = list(info['imtls'])
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
         mesh = get_mesh(sitecol, complete=False)
@@ -392,19 +393,19 @@ def extract_hcurves(dstore, what):
     params = parse(what, info)
     if 'imt' in params:
         [imt] = params['imt']
-        slc = info['imtls'](imt)
+        m = imts.index(imt)
     else:
-        slc = ALL
+        m = ALL
     sids = params.get('site_id', ALL)
     if params['rlzs']:
         dset = dstore['hcurves-rlzs']
-        for k in params['k']:
-            yield 'rlz-%03d' % k, hdf5.extract(dset, sids, k, slc)[:, 0]
+        for k in params['k']:  # rlz or stat
+            yield 'rlz-%03d' % k, hdf5.extract(dset, sids, k, m, ALL)
     else:
         dset = dstore['hcurves-stats']
         stats = list(info['stats'])
-        for k in params['k']:
-            yield stats[k], hdf5.extract(dset, sids, k, slc)[:, 0]
+        for k in params['k']:  # rlz or stat
+            yield stats[k], hdf5.extract(dset, sids, k, m, ALL)
     yield from params.items()
 
 
