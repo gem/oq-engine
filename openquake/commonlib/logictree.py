@@ -991,6 +991,15 @@ class GsimLogicTree(object):
         # TODO: add an .idx to each GSIM ?
         return branches
 
+    def get_weights_by_trt(self):
+        """
+        :returns: dictionary trt -> array of length G
+        """
+        w = AccumDict(accum=[])  # trt -> weights
+        for br in self.branches:
+            w[br.trt].append(br.weight.dic['weight'])
+        return {trt: numpy.array(we) for trt, we in w.items()}
+
     def get_gsims(self, trt):
         """
         :param trt: tectonic region type

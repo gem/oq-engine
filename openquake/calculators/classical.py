@@ -271,17 +271,13 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(MAXMEMORY % (self.N, num_levels, max_num_gsims,
                                   max_num_grp_ids, humansize(pmapbytes)))
 
-        w = AccumDict(accum=[])  # trt -> weights
-        for br in self.full_lt.gsim_lt.branches:
-            w[br.trt].append(br.weight.dic['weight'])
-        self.weights = {trt: numpy.array(wr) for trt, wr in w.items()}
-        Ns = len(self.csm.source_info)
+        self.Ns = len(self.csm.source_info)
         if self.oqparam.disagg_by_src:
             self.M = len(self.oqparam.imtls)
             self.L1 = num_levels // self.M
             sources = encode([row[0] for row in self.csm.source_info])
             self.datastore.create_dset('disagg_by_src', F32,
-                                       (self.N, Ns, self.M, self.L1))
+                                       (self.N, self.Ns, self.M, self.L1))
             self.datastore.set_shape_attrs(
                 'disagg_by_src', site_id=self.N, src_id=sources,
                 imt=list(self.oqparam.imtls), lvl=self.L1)
@@ -472,6 +468,9 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         data = []
+        weights_by_trt = self.full_lt.gsim_lt.get_weights_by_trt()
+        L = len(oq.imtls.array)
+        acc = numpy.zeros((self.N, self.Ns, L))
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if pmap:  # pmap can be missing if the group is filtered away
@@ -481,13 +480,20 @@ class ClassicalCalculator(base.HazardCalculator):
                     else:  # regular case
                         src_id, grp_id = '', key
                     trt = self.full_lt.trt_by_grp[grp_id]
-                    name = 'poes%s/grp-%02d' % (src_id, grp_id)
-                    self.datastore[name] = pmap
-                    if not src_id:
+                    weights = weights_by_trt[trt]  # G weights
+                    name = 'poes/grp-%02d' % grp_id
+                    if src_id:
+                        for sid, pcurve in pmap.items():
+                            acc[sid] = 1. - (1. - acc[sid]) * (
+                                1. - pcurve.array @ weights)
+                    else:
+                        self.datastore[name] = pmap
                         extreme = max(
                             get_extreme_poe(pmap[sid].array, oq.imtls)
                             for sid in pmap)
                         data.append((grp_id, trt, extreme))
+        self.datastore['disagg_by_src'][:] = acc.reshape(
+            self.N, self.Ns, self.M, self.L1)
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
