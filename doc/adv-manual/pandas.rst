@@ -24,3 +24,13 @@ then you can process the hazard curves as follows::
 
 The dictionary ``dict(imt='PGA', stat='mean', sid=0)`` is used to select
 subsets of the entire dataset.
+
+If you do not like pandas, or for some reason you prefer plain numpy arrays,
+you can get a slice of hazard curves by using the `.sel` method::
+
+  >>> arr = dstore.sel('hcurves-stats', imt='PGA', stat='mean', sid=0)
+  >>> arr.shape  # (num_sites, num_stats, num_imts, num_levels)
+  (1, 1, 1, 45)
+
+Notice that the `.sel` method does not reduce the number of dimensions
+of the original array (4 in this case), it just reduces the shape.
