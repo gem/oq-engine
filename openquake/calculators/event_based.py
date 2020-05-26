@@ -383,7 +383,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 logging.info('Saving individual hazard curves')
                 self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
                 self.datastore.set_shape_attrs(
-                    'hcurves-rlzs', sid=numpy.arange(N), rlz=numpy.arange(R),
+                    'hcurves-rlzs', sid=N, rlz=R,
                     imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
                     P = len(oq.poes)
@@ -406,7 +406,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 logging.info('Computing statistical hazard curves')
                 self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
                 self.datastore.set_shape_attrs(
-                    'hcurves-stats', sid=numpy.arange(N), stat=list(hstats),
+                    'hcurves-stats', sid=N, stat=list(hstats),
                     imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
                     P = len(oq.poes)

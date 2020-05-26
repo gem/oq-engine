@@ -137,6 +137,13 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
+def _range(value):
+    if hasattr(value, '__len__'):
+        return list(value)
+    else:
+        return list(range(value))
+
+
 def sel(dset, filterdict):
     """
     Select a dataset with shape_descr. For instance
@@ -147,7 +154,7 @@ def sel(dset, filterdict):
     for dim in python3compat.decode(dset.attrs['shape_descr']):
         if dim in filterdict:
             val = filterdict[dim]
-            values = list(dset.attrs[dim])
+            values = _range(dset.attrs[dim])
             idx = values.index(val)
             lst.append(slice(idx, idx + 1))
         else:
@@ -167,7 +174,7 @@ def dset2df(dset, index, filterdict):
     idxs = []
     dtlist = []
     for dim in shape_descr:
-        values = list(dset.attrs[dim])
+        values = _range(dset.attrs[dim])
         if dim in filterdict:
             val = filterdict[dim]
             idx = values.index(val)
