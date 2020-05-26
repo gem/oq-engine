@@ -65,8 +65,11 @@ class GetPoesSiteTestCase(unittest.TestCase):
     # Add check that IMT and sigma are the same
     # Add check on IMTs
 
+    # Reference Vs30
     vs30 = numpy.array([760])
+    # 11 levels
     imls = [.001, .002, .005, .01, .02, .05, .1, .2, .5, 1., 1.2]
+    # 7 levels
     soil_levels = numpy.array([.002, .005, .01, .02, .05, .1, .2])
     imtls = DictArray({'PGA': imls, 'SA(1.0)': imls})
 
@@ -89,10 +92,13 @@ class GetPoesSiteTestCase(unittest.TestCase):
         self.meastd = get_mean_std(sites, rup, dists, imts, [gmm])
 
     def test01(self):
+        sitecode = b'A'
         amp = Amplifier(self.imtls, self.df, self.soil_levels)
-        print(self.df.head())
-
         imls = numpy.log([0.01, 0.05, 0.1, 0.2, 0.5])
         imtls_rock = DictArray({'PGA': imls, 'SA(1.0)': imls})
-
-        _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag)
+        res = _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag, sitecode)
+        
+        import matplotlib.pyplot as plt
+        print(res[0][0])
+        plt.plot(self.imls, res[0][0])
+        

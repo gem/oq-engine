@@ -70,14 +70,24 @@ class Amplifier(object):
         levels from the imtls dictionary). It's an array.
     """
     def __init__(self, imtls, ampl_df, amplevels=None):
+        # Check input
         if not imtls:
             raise ValueError('There are no intensity_measure_types!')
+        # If available, get the filename containing the amplification function
         fname = getattr(ampl_df, 'fname', None)
+        # Set the intensity measure types and levels on rock
         self.imtls = imtls
+        # Set the intensity levels for which we compute poes on soil. Note
+        # that we assume they are the same for all the intensity measure types
+        # considered
         self.amplevels = amplevels
+        # This is the reference Vs30 for the amplification function
         self.vs30_ref = ampl_df.vs30_ref
         has_levels = 'level' in ampl_df.columns
-        # Checking the input dataframe
+        # Checking the input dataframe. The first case is for amplification
+        # Functions that depend on magnitude, distance and iml (the latter
+        # can be probably removed since is closely correlated to the other
+        # two variables
         if has_levels and 'from_mag' in ampl_df.keys():
             keys = ['ampcode', 'level', 'from_mag', 'from_rrup']
             check_unique(ampl_df, keys, fname)
@@ -86,6 +96,8 @@ class Amplifier(object):
         else:
             check_unique(ampl_df, ['ampcode'], fname)
         missing = set(imtls) - set(ampl_df.columns[has_levels:])
+        # Raise an error in case the hazard on rock does not contain
+        # all the IMTs included in the amplification function
         if missing:
             raise ValueError('The amplification table does not contain %s'
                              % missing)
@@ -93,22 +105,32 @@ class Amplifier(object):
             self.periods = [from_string(imt).period for imt in imtls]
         else:
             self.periods, levels = check_same_levels(imtls)
+        # Create a dictionary containing for each site-category [key] a
+        # dataframe [value] with the corresponding amplification function
         self.coeff = {}  # code -> dataframe
         self.ampcodes = []
+        # This is a list with the names of the columns we will use to filter
+        # the dataframe with the amplification function
         cols = list(imtls)
+        print(cols)
         if has_levels:
             cols.append('level')
-        # Appending to the list dataframe the sigma values
+        # Appending to the list, the column names for sigma
         for col in ampl_df.columns:
             if col.startswith('sigma_'):
                 cols.append(col)
+        # Now we populate the dictionary containing for each site class the
+        # corresponding dataframe with the amplification
         for code, df in ampl_df.groupby('ampcode'):
             self.ampcodes.append(code)
             if has_levels:
                 self.coeff[code] = df[cols].set_index('level')
             else:
                 self.coeff[code] = df[cols]
-        # PoEs amplification
+        # This is used in the case of the convolution method. We compute the
+        # probability of occurrence for discrete intervals of ground motion 
+        # and we prepare values of median amplification and std for the 
+        # midlevels (i.e. ground motion on rock) for each IMT
         if amplevels is not None:
             self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # shape I-1
             self.ialphas = {}  # code -> array of length I-1

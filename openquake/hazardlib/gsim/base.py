@@ -28,6 +28,7 @@ import functools
 import numpy
 from scipy.special import ndtr
 
+from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
@@ -212,7 +213,7 @@ def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
 
 
 def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
-                   mag, squeeze=False):
+                   mag, sitecode, squeeze=False):
     """
     :param mean_std:
         See :function:`openquake.hazardlib.gsim.base.get_poes`
@@ -244,7 +245,8 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
                 out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
     poes_rock = _truncnorm_sf(truncation_level, out)
-    print(poes_rock)
+    poes_soil = ampl.amplify(sitecode, [ProbabilityCurve(c) for c in poes_rock])
+    return [poes_rock, poes_soil]
 
 
 class MetaGSIM(abc.ABCMeta):
