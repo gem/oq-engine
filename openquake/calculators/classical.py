@@ -440,23 +440,26 @@ class ClassicalCalculator(base.HazardCalculator):
                             dset[s, r] = pmap[s].array.reshape(self.M, self.L1)
             self.datastore.flush()
 
-    def post_execute(self, pmap_by_grp_id):
+    def post_execute(self, pmap_by_key):
         """
         Collect the hazard curves by realization and export them.
 
-        :param pmap_by_grp_id:
-            a dictionary grp_id -> hazard curves
+        :param pmap_by_key:
+            a dictionary key -> hazard curves
         """
         oq = self.oqparam
         data = []
         with self.monitor('saving probability maps'):
-            for grp_id, pmap in pmap_by_grp_id.items():
+            for key, pmap in pmap_by_key.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
+                    if isinstance(key, tuple):  # in case of disagg_by_src
+                        src_id, grp_id = key
+                    else:  # regular case
+                        src_id, grp_id = '', key
                     trt = self.full_lt.trt_by_grp[grp_id]
-                    key = 'poes/grp-%02d' % grp_id
-                    self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=trt)
+                    name = 'poes%s/grp-%02d' % (src_id, grp_id)
+                    self.datastore[name] = pmap
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
