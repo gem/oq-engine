@@ -245,6 +245,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
                 out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
     poes_rock = _truncnorm_sf(truncation_level, out)
+    print(poes_rock[0].shape)
     poes_soil = ampl.amplify(sitecode, [ProbabilityCurve(c) for c in poes_rock])
     return [poes_rock, poes_soil]
 

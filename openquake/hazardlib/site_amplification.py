@@ -112,7 +112,6 @@ class Amplifier(object):
         # This is a list with the names of the columns we will use to filter
         # the dataframe with the amplification function
         cols = list(imtls)
-        print(cols)
         if has_levels:
             cols.append('level')
         # Appending to the list, the column names for sigma
@@ -128,17 +127,28 @@ class Amplifier(object):
             else:
                 self.coeff[code] = df[cols]
         # This is used in the case of the convolution method. We compute the
-        # probability of occurrence for discrete intervals of ground motion 
-        # and we prepare values of median amplification and std for the 
+        # probability of occurrence for discrete intervals of ground motion
+        # and we prepare values of median amplification and std for the
         # midlevels (i.e. ground motion on rock) for each IMT
         if amplevels is not None:
-            self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # shape I-1
-            self.ialphas = {}  # code -> array of length I-1
-            self.isigmas = {}  # code -> array of length I-1
-            for code in self.coeff:
-                for imt in imtls:
-                    self.ialphas[code, imt], self.isigmas[code, imt] = (
-                        self._interp(code, imt, self.midlevels))
+            self._set_alpha_sigma(imtls, levels)
+
+    def _set_alpha_sigma(self, imtls, levels, mag=None, dst=None):
+        """
+        This sets the median amplification and std
+        """
+        self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # shape I-1
+        self.ialphas = {}  # code -> array of length I-1
+        self.isigmas = {}  # code -> array of length I-1
+        for code in self.coeff:
+            for imt in imtls:
+                if mag is not None and dst is not None:
+                    mags = np.unique(
+                    a[np.abs(a-a0).argmin)]
+
+
+                self.ialphas[code, imt], self.isigmas[code, imt] = (
+                    self._interp(code, imt, self.midlevels))
 
     def check(self, vs30, vs30_tolerance):
         """

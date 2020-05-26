@@ -99,6 +99,8 @@ class GetPoesSiteTestCase(unittest.TestCase):
         res = _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag, sitecode)
         
         import matplotlib.pyplot as plt
-        print(res[0][0])
-        plt.plot(self.imls, res[0][0])
-        
+        print(res[0][0], len(res[0]))
+        print(res[1][0])
+        plt.plot(amp.midlevels, res[0][0])
+        plt.xscale('log')
+        plt.show()
