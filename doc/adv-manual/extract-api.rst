@@ -39,7 +39,7 @@ Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves:
 >>> from openquake.calculators.extract import Extractor
 >>> calc_id = 42  # for example
 >>> extractor = Extractor(calc_id)
->>> obj = extractor.get('hcurves?kind=mean&imt-PGA')  # returns an ArrayWrapper
+>>> obj = extractor.get('hcurves?kind=mean&imt=PGA')  # returns an ArrayWrapper
 >>> obj.array.shape  # an example with 10,000 sites and 20 levels per PGA
 (10000, 20)
 >>> extractor.close()

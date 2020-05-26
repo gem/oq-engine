@@ -135,14 +135,14 @@ def export_hcurves_by_imt_csv(
     :param kind: a string with the kind of output (realization or statistics)
     :param fname: name of the exported file
     :param sitecol: site collection
-    :param array: an array of shape (N, L) and dtype numpy.float32
+    :param array: an array of shape (N, 1, M, L1) and dtype numpy.float32
     :param imtls: intensity measure types and levels
     :param comment: comment dictionary
     """
     nsites = len(sitecol)
     fnames = []
+    m = 0
     for imt, imls in imtls.items():
-        slc = imtls(imt)
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
@@ -150,11 +150,12 @@ def export_hcurves_by_imt_csv(
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
-            hcurves[sid] = (lon, lat, dep) + tuple(array[sid, slc])
+            hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, m])
         comment.update(imt=imt)
         fnames.append(
             writers.write_csv(dest, hcurves, comment=comment,
                               header=[name for (name, dt) in lst]))
+        m += 1
     return fnames
 
 
@@ -222,6 +223,7 @@ def export_hcurves_csv(ekey, dstore):
                                  hmap.flatten().view(hmap_dt), comment))
         elif key == 'hcurves':
             hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
+            # shape (N, R|S, M, L1)
             if 'amplification' in oq.inputs:
                 imtls = DictArray(
                     {imt: oq.soil_intensities for imt in oq.imtls})

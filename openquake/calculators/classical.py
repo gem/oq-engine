@@ -437,7 +437,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dset = self.datastore.getitem(kind)
                     for r, pmap in enumerate(pmaps):
                         for s in pmap:
-                            dset[s, r] = pmap[s].array[:, 0]  # shape L
+                            dset[s, r] = pmap[s].array.reshape(self.M, self.L1)
             self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
@@ -470,23 +470,37 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         # initialize datasets
+        imls = oq.imtls.array
         N = len(self.sitecol.complete)
         P = len(oq.poes)
-        M = len(oq.imtls)
+        M = self.M = len(oq.imtls)
+        imts = list(oq.imtls)
         if oq.soil_intensities is not None:
             L = M * len(oq.soil_intensities)
         else:
-            L = len(oq.imtls.array)
+            L = len(imls)
+        L1 = self.L1 = L // M
         R = len(self.realizations)
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
-            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
+            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
+            self.datastore.set_shape_attrs(
+                'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
+                self.datastore.set_shape_attrs(
+                    'hmaps-rlzs', site_id=N, rlz_id=R,
+                    imt=list(oq.imtls), poe=oq.poes)
         if hstats:
-            self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
+            self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
+            self.datastore.set_shape_attrs(
+                'hcurves-stats', site_id=N, stat=list(hstats),
+                imt=imts, lvl=numpy.arange(L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
+                self.datastore.set_shape_attrs(
+                    'hmaps-stats', site_id=N, stat=list(hstats),
+                    imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
         logging.info('Building hazard statistics')
         weights = [rlz.weight for rlz in self.realizations]
