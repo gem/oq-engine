@@ -6,7 +6,9 @@ it is possible to process the engine outputs with it.
 Here we will give an example involving hazard curves.
 
 Suppose you ran the AreaSourceClassicalPSHA demo, with calculation ID=42;
-then you can process the hazard curves as follows::
+then you can process the hazard curves as follows:
+
+.. code-block:: python
 
   >>> from openquake.baselib.datastore import read
   >>> dstore = read(42)
@@ -26,7 +28,9 @@ The dictionary ``dict(imt='PGA', stat='mean', sid=0)`` is used to select
 subsets of the entire dataset.
 
 If you do not like pandas, or for some reason you prefer plain numpy arrays,
-you can get a slice of hazard curves by using the `.sel` method::
+you can get a slice of hazard curves by using the ``.sel`` method:
+
+.. code-block:: python
 
   >>> arr = dstore.sel('hcurves-stats', imt='PGA', stat='mean', sid=0)
   >>> arr.shape  # (num_sites, num_stats, num_imts, num_levels)
