@@ -485,21 +485,21 @@ class ClassicalCalculator(base.HazardCalculator):
         if R > 1 and oq.individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_attrs(
-                'hcurves-rlzs', sid=N, rlz=R, imt=imts, lvl=numpy.arange(L1))
+                'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
                 self.datastore.set_shape_attrs(
-                    'hmaps-rlzs', sid=N, rlz=R,
+                    'hmaps-rlzs', site_id=N, rlz_id=R,
                     imt=list(oq.imtls), poe=oq.poes)
         if hstats:
             self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
             self.datastore.set_shape_attrs(
-                'hcurves-stats', sid=numpy.arange(N), stat=list(hstats),
+                'hcurves-stats', site_id=N, stat=list(hstats),
                 imt=imts, lvl=numpy.arange(L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
                 self.datastore.set_shape_attrs(
-                    'hmaps-stats', sid=N, stat=list(hstats),
+                    'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
         logging.info('Building hazard statistics')

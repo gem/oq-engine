@@ -58,7 +58,7 @@ def get_mean_curves(dstore, imt):
     if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
         arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
     else:  # there is only 1 realization
-        arr = dstore.sel('hcurves-rlzs', rlz=0, imt=imt)
+        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
     return arr[:, 0, 0, :]
 
 # ########################################################################## #
@@ -383,7 +383,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 logging.info('Saving individual hazard curves')
                 self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
                 self.datastore.set_shape_attrs(
-                    'hcurves-rlzs', sid=N, rlz=R,
+                    'hcurves-rlzs', site_id=N, rlz_id=R,
                     imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
                     P = len(oq.poes)
@@ -406,7 +406,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 logging.info('Computing statistical hazard curves')
                 self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
                 self.datastore.set_shape_attrs(
-                    'hcurves-stats', sid=N, stat=list(hstats),
+                    'hcurves-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
                     P = len(oq.poes)

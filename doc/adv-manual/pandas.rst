@@ -13,8 +13,8 @@ then you can process the hazard curves as follows:
   >>> from openquake.baselib.datastore import read
   >>> dstore = read(42)
   >>> df = dstore.read_df('hcurves-stats', index='lvl',
-  ...                     sel=dict(imt='PGA', stat='mean', sid=0))
-       sid     stat     imt     value
+  ...                     sel=dict(imt='PGA', stat='mean', site_id=0))
+       site_id stat     imt     value
   lvl                                
   0      0  b'mean'  b'PGA'  0.999982
   1      0  b'mean'  b'PGA'  0.999949
@@ -24,17 +24,19 @@ then you can process the hazard curves as follows:
   ..   ...      ...     ...       ...
   44     0  b'mean'  b'PGA'  0.000000
 
-The dictionary ``dict(imt='PGA', stat='mean', sid=0)`` is used to select
-subsets of the entire dataset.
+The dictionary ``dict(imt='PGA', stat='mean', site_id=0)`` is used to select
+subsets of the entire dataset: in this case hazard curves for mean PGA for
+the first site.
 
 If you do not like pandas, or for some reason you prefer plain numpy arrays,
 you can get a slice of hazard curves by using the ``.sel`` method:
 
 .. code-block:: python
 
-  >>> arr = dstore.sel('hcurves-stats', imt='PGA', stat='mean', sid=0)
+  >>> arr = dstore.sel('hcurves-stats', imt='PGA', stat='mean', site_id=0)
   >>> arr.shape  # (num_sites, num_stats, num_imts, num_levels)
   (1, 1, 1, 45)
 
 Notice that the `.sel` method does not reduce the number of dimensions
-of the original array (4 in this case), it just reduces the shape.
+of the original array (4 in this case), it just reduces the number of elements.
+It was inspired by a similar functionality in xarray.

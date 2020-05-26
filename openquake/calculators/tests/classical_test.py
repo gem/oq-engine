@@ -363,9 +363,11 @@ hazard_uhs-std.csv
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
-        self.assertEqual(list(df.columns), ['sid', 'rlz', 'imt', 'value'])
+        self.assertEqual(list(df.columns),
+                         ['site_id', 'rlz_id', 'imt', 'value'])
         df = self.calc.datastore.read_df('hcurves-stats', 'lvl')
-        self.assertEqual(list(df.columns), ['sid', 'stat', 'imt', 'value'])
+        self.assertEqual(list(df.columns),
+                         ['site_id', 'stat', 'imt', 'value'])
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
@@ -574,12 +576,9 @@ hazard_uhs-std.csv
                                "hazard_map-mean-PGA.csv"], case_42.__file__)
 
         # check pandas readability of hmaps-stats
-        df = self.calc.datastore.read_df('hmaps-stats', 'sid',
+        df = self.calc.datastore.read_df('hmaps-stats', 'site_id',
                                          dict(imt='PGA', stat='mean'))
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
-        #         stat     imt       poe     value
-        # sid
-        # 0    b'mean'  b'PGA'  0.002105  0.030926
 
     def test_case_43(self):
         # this is a test for pointsource_distance
