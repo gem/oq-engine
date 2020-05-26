@@ -22,6 +22,7 @@ Contents:
    event-based-with-large-logic-tree
    site-specific
    extract-api
+   pandas
    parametric-gmpes
    multipoint
    parallelization

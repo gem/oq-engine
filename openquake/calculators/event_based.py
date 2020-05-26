@@ -32,7 +32,7 @@ from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, logs
-from openquake.calculators import base, extract
+from openquake.calculators import base
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rgetters, gen_rupture_getters,
     sig_eps_dt, time_dt)
@@ -50,12 +50,16 @@ by_grp = operator.attrgetter('grp_id')
 
 # ######################## GMF calculator ############################ #
 
-def get_mean_curves(dstore):
+def get_mean_curves(dstore, imt):
     """
-    Extract the mean hazard curves from the datastore, as a composite
-    array of length nsites.
+    Extract the mean hazard curves from the datastore, as an array of shape
+    (N, L1)
     """
-    return dict(extract.extract(dstore, 'hcurves?kind=mean'))['mean']
+    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
+    else:  # there is only 1 realization
+        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
+    return arr[:, 0, 0, :]
 
 # ########################################################################## #
 
@@ -355,7 +359,9 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.ground_motion_fields and not oq.hazard_curves_from_gmfs:
             return
         N = len(self.sitecol.complete)
+        M = len(oq.imtls)
         L = len(oq.imtls.array)
+        L1 = L // M
         if result and oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
@@ -375,19 +381,22 @@ class EventBasedCalculator(base.HazardCalculator):
                                      (len(weights), len(pmaps)))
             if oq.individual_curves:
                 logging.info('Saving individual hazard curves')
-                self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
-                self.datastore.set_attrs('hcurves-rlzs', nbytes=N * R * L * 4)
+                self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
+                self.datastore.set_shape_attrs(
+                    'hcurves-rlzs', site_id=N, rlz_id=R,
+                    imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
                     P = len(oq.poes)
                     M = len(oq.imtls)
                     ds = self.datastore.create_dset(
                         'hmaps-rlzs', F32, (N, R, M, P))
-                    self.datastore.set_attrs(
-                        'hmaps-rlzs', nbytes=N * R * P * M * 4)
+                    self.datastore.set_shape_attrs(
+                        'hmaps-rlzs', site_id=N, rlz_id=R,
+                        imt=list(oq.imtls), poe=oq.poes)
                 for r, pmap in enumerate(pmaps):
-                    arr = numpy.zeros((N, L), F32)
+                    arr = numpy.zeros((N, M, L1), F32)
                     for sid in pmap:
-                        arr[sid] = pmap[sid].array[:, 0]
+                        arr[sid] = pmap[sid].array.reshape(M, L1)
                     self.datastore['hcurves-rlzs'][:, r] = arr
                     if oq.poes:
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
@@ -396,21 +405,24 @@ class EventBasedCalculator(base.HazardCalculator):
 
             if S:
                 logging.info('Computing statistical hazard curves')
-                self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
-                self.datastore.set_attrs('hcurves-stats', nbytes=N * S * L * 4)
+                self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
+                self.datastore.set_shape_attrs(
+                    'hcurves-stats', site_id=N, stat=list(hstats),
+                    imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
                     P = len(oq.poes)
                     M = len(oq.imtls)
                     ds = self.datastore.create_dset(
                         'hmaps-stats', F32, (N, S, M, P))
-                    self.datastore.set_attrs(
-                        'hmaps-stats', nbytes=N * S * P * M * 4)
+                    self.datastore.set_shape_attrs(
+                        'hmaps-stats', site_id=N, stat=list(hstats),
+                        imt=list(oq.imtls), poes=oq.poes)
                 for s, stat in enumerate(hstats):
                     pmap = compute_pmap_stats(
                         pmaps, [hstats[stat]], weights, oq.imtls)
-                    arr = numpy.zeros((N, L), F32)
+                    arr = numpy.zeros((N, M, L1), F32)
                     for sid in pmap:
-                        arr[sid] = pmap[sid].array[:, 0]
+                        arr[sid] = pmap[sid].array.reshape(M, L1)
                     self.datastore['hcurves-stats'][:, s] = arr
                     if oq.poes:
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
@@ -432,10 +444,11 @@ class EventBasedCalculator(base.HazardCalculator):
             # the computation
             self.cl.run()
             engine.expose_outputs(self.cl.datastore)
-            cl_mean_curves = get_mean_curves(self.cl.datastore)
-            eb_mean_curves = get_mean_curves(self.datastore)
-            self.rdiff, index = util.max_rel_diff_index(
-                cl_mean_curves, eb_mean_curves)
-            logging.warning('Relative difference with the classical '
-                            'mean curves: %d%% at site index %d',
-                            self.rdiff * 100, index)
+            for imt in oq.imtls:
+                cl_mean_curves = get_mean_curves(self.cl.datastore, imt)
+                eb_mean_curves = get_mean_curves(self.datastore, imt)
+                self.rdiff, index = util.max_rel_diff_index(
+                    cl_mean_curves, eb_mean_curves)
+                logging.warning('Relative difference with the classical '
+                                'mean curves: %d%% at site index %d, imt=%s',
+                                self.rdiff * 100, index, imt)
