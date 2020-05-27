@@ -509,9 +509,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 self.datastore['poe4'][s, :, p] = poe_agg
                 for m, imt in enumerate(self.imts):
                     mat7 = mat8[..., m, :]
-                    if mat7.any():  # nonzero
-                        self._save('disagg', s, rlzs, p, imt, mat7)
-                if poe and abs(1 - pprod(poe_agg) / poe) > .1:
+                    self._save('disagg', s, rlzs, p, imt, mat7)
+                if poe and abs(1 - pprod(poe_agg).mean() / poe) > .1:
                     logging.warning(
                         'Site #%d: poe_agg=%s is quite different from the '
                         'expected poe=%s; perhaps the number of intensity '
@@ -520,10 +519,9 @@ class DisaggregationCalculator(base.HazardCalculator):
     def _save(self, dskey, site_id, rlzs, p, imt, matrix7):
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             imt=imt, sid='sid-%d' % site_id, poe='poe-%d' % p)
-        with self.monitor('extracting PMFs'):
-            outputs = self.oqparam.disagg_outputs
-            aggmatrix = agg_probs(*matrix7)  # 6D
-            for key, fn in disagg.pmf_map.items():
-                if not outputs or key in outputs:
-                    pmf = fn(matrix7 if key.endswith('TRT') else aggmatrix)
-                    self.datastore[disp_name + key] = pmf
+        outputs = self.oqparam.disagg_outputs
+        aggmatrix = agg_probs(*matrix7)  # 6D
+        for key, fn in disagg.pmf_map.items():
+            if not outputs or key in outputs:
+                pmf = fn(matrix7 if key.endswith('TRT') else aggmatrix)
+                self.datastore[disp_name + key] = pmf
