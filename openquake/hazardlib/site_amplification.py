@@ -62,11 +62,11 @@ class Amplifier(object):
     Amplification class with methods .amplify and .amplify_gmfs.
 
     :param imtls:
-        intensity measure types and levels DictArray M x I
+        Intensity measure types and levels DictArray M x I
     :param ampl_df:
-        a DataFrame containing amplification functions
+        A DataFrame containing amplification functions.
     :param amplevels:
-        intensity levels used for the amplified curves (if None, use the
+        Intensity levels used for the amplified curves (if None, use the
         levels from the imtls dictionary)
     """
     def __init__(self, imtls, ampl_df, amplevels=None):
@@ -141,7 +141,24 @@ class Amplifier(object):
         for g in range(G):
             p_occ = -numpy.diff(poes[:, g])
             for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
-                ampl_poes[:, g] += (1-norm_cdf(self.amplevels/mid, a, s)) * p
+                #
+                # This computes the conditional probabilities of exceeding
+                # defined values of shaking on soil given a value of shaking
+                # on rock. 'mid' is the value of ground motion on rock to
+                # which we associate the probability of occurrence 'p'. 'a'
+                # is the median amplification factor and 's' is the standard
+                # deviation of the logarithm of amplification.
+                #
+                # In the case of an amplification function without uncertainty
+                # (i.e. sigma is zero) this will return values corresponding
+                # to 'p' times 1 (if the value of shaking on rock will be
+                # larger than the value of shaking on soil) or 0 (if the
+                # value of shaking on rock will be smaller than the value of
+                # shaking on soil)
+                #
+                logaf = numpy.log(self.amplevels/mid)
+                poes = (1.0-norm_cdf(logaf, numpy.log(a), s))
+                ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
     def amplify(self, ampl_code, pcurves):
