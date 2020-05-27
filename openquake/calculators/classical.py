@@ -32,7 +32,7 @@ from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util, logs
+from openquake.commonlib import calc, util, logs, readinput
 from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -161,13 +161,7 @@ class ClassicalCalculator(base.HazardCalculator):
             return acc
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
-            src_id = dic['extra']['source_id']
-            for grp_id, pmap in dic['pmap'].items():
-                if pmap:
-                    if (src_id, grp_id) in acc:
-                        acc[src_id, grp_id] |= pmap
-                    else:
-                        acc[src_id, grp_id] = pmap
+            acc[dic['extra']['source_id']] = dic['pmap']
 
         trt = dic['extra'].pop('trt')
         self.maxradius = max(self.maxradius, dic['extra'].pop('maxradius'))
@@ -187,11 +181,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.by_task[extra['task_no']] = (
                 eff_rups, eff_sites, sorted(srcids))
             for grp_id, pmap in dic['pmap'].items():
-                if pmap:
-                    if grp_id in acc:
-                        acc[grp_id] |= pmap
-                    else:
-                        acc[grp_id] = pmap
+                if pmap and grp_id in acc:
+                    acc[grp_id] |= pmap
+                else:
+                    acc[grp_id] = pmap
                 acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
@@ -276,11 +269,12 @@ class ClassicalCalculator(base.HazardCalculator):
             self.M = len(self.oqparam.imtls)
             self.L1 = num_levels // self.M
             sources = encode([row[0] for row in self.csm.source_info])
-            self.datastore.create_dset('disagg_by_src', F32,
-                                       (self.N, self.Ns, self.M, self.L1))
+            self.datastore.create_dset(
+                'disagg_by_src', F32,
+                (self.N, self.R, self.M, self.L1, self.Ns))
             self.datastore.set_shape_attrs(
-                'disagg_by_src', site_id=self.N, src_id=sources,
-                imt=list(self.oqparam.imtls), lvl=self.L1)
+                'disagg_by_src', site_id=self.N, rlz_id=self.R,
+                imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return zd
 
     def execute(self):
@@ -471,9 +465,16 @@ class ClassicalCalculator(base.HazardCalculator):
         weights_by_trt = self.full_lt.gsim_lt.get_weights_by_trt()
         L = len(oq.imtls.array)
         acc = numpy.zeros((self.N, self.Ns, L))
+        self.weights = [rlz.weight for rlz in self.realizations]
+        pgetter = getters.PmapGetter(self.datastore, self.weights)
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
-                if pmap:  # pmap can be missing if the group is filtered away
+                if isinstance(key, str):  # disagg_by_src
+                    serial = self.csm.source_info[key][readinput.SERIAL]
+                    self.datastore['disagg_by_src'][..., serial] = (
+                        pgetter.get_hcurves(
+                            {'grp-%02d' % gid: pmap[gid] for gid in pmap}))
+                elif pmap:  # pmap can be missing if the group is filtered away
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
                     if isinstance(key, tuple):  # in case of disagg_by_src
                         src_id, grp_id = key
@@ -492,8 +493,6 @@ class ClassicalCalculator(base.HazardCalculator):
                             get_extreme_poe(pmap[sid].array, oq.imtls)
                             for sid in pmap)
                         data.append((grp_id, trt, extreme))
-        self.datastore['disagg_by_src'][:] = acc.reshape(
-            self.N, self.Ns, self.M, self.L1)
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
@@ -536,7 +535,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
         logging.info('Building hazard statistics')
-        self.weights = [rlz.weight for rlz in self.realizations]
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, self.weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg,

@@ -54,10 +54,13 @@ class ClassicalTestCase(CalculatorTestCase):
         return got
 
     def check_disagg_by_src(self):
-        means = self.calc.datastore.sel('hcurves-stats', stat='mean')[:, 0]
-        curves = general.pprod(self.calc.datastore.sel('disagg_by_src'),
-                               axis=1)  # compose the probabilities
-        aac(curves, means, atol=1E-6)
+        mean = self.calc.datastore.sel(
+            'hcurves-stats', site_id=0, stat='mean')[0, 0]
+        dbs = self.calc.datastore.sel('disagg_by_src', site_id=0)  # N R M L Ns
+        pprod = general.pprod(dbs[0], axis=3)  # R M L
+        ws = numpy.array([w['weight'] for w in self.calc.weights])
+        curve = (pprod.T @ ws).T
+        aac(curve, mean, atol=1E-6)
 
     def test_case_1(self):
         self.assert_curves_ok(
@@ -185,13 +188,14 @@ class ClassicalTestCase(CalculatorTestCase):
              'quantile_curve-0.1.csv',
              'quantile_curve-0.9.csv'],
             case_11.__file__)
-        self.check_disagg_by_src()
 
         # checking PmapGetter.get_pcurve
         pgetter = PmapGetter(self.calc.datastore, self.calc.weights)
-        poes = pgetter.get_mean_NML(pgetter.init())
-        mean = self.calc.datastore.sel('hcurves-stats', stat='mean')
-        aac(poes.flat, mean.flat)
+        poes = pgetter.get_hcurves(pgetter.init())[0]
+        mean = self.calc.datastore.sel('hcurves-stats', stat='mean', sid=0)
+        mean2 = poes.T @ numpy.array([w['weight'] for w in self.calc.weights])
+        aac(mean2.flat, mean.flat)
+        self.check_disagg_by_src()
 
     def test_case_12(self):
         # test Modified GMPE
