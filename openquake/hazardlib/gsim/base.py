@@ -213,7 +213,7 @@ def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
 
 
 def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
-                   mag, sitecode, squeeze=False):
+                   mag, sitecode, rrup, squeeze=False):
     """
     :param mean_std:
         See :function:`openquake.hazardlib.gsim.base.get_poes`
@@ -246,7 +246,8 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
             lvl += 1
     poes_rock = _truncnorm_sf(truncation_level, out)
     print(poes_rock[0].shape)
-    poes_soil = ampl.amplify(sitecode, [ProbabilityCurve(c) for c in poes_rock])
+    pcurves = [ProbabilityCurve(c) for c in poes_rock]
+    poes_soil = ampl.amplify(sitecode, pcurves, mag, rrup)
     return [poes_rock, poes_soil]
 
 
