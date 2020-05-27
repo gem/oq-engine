@@ -98,6 +98,7 @@ class DisaggregateTestCase(unittest.TestCase):
         self.gsims = {self.trt: gsim}
 
     def test(self):
+        # a test sensitive to gsim.minimum_distance
         bin_edges, matrix = disagg.disaggregation(
             self.sources, self.site, self.imt, self.iml, self.gsims,
             self.truncation_level, n_epsilons=3,
@@ -105,14 +106,14 @@ class DisaggregateTestCase(unittest.TestCase):
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
         aaae = numpy.testing.assert_array_almost_equal
         aaae(mag_bins, [3, 6, 9])
-        aaae(dist_bins, [8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48,
-                         52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100,
-                         104, 108, 112])
+        aaae(dist_bins, [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52,
+                         56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104,
+                         108, 112])
         aaae(lon_bins, [-0.904195, 0.1, 1.104195])
         aaae(lat_bins, [-0.904194, 0.1, 1.104194])
         aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
         self.assertEqual(trt_bins, [self.trt])
-        aaae(matrix.shape, (2, 26, 2, 2, 3, 1))
+        aaae(matrix.shape, (2, 27, 2, 2, 3, 1))
         aaae(matrix.sum(), 6.14179818e-11)
 
 

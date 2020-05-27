@@ -20,14 +20,15 @@ import os
 import ast
 import csv
 import inspect
-import logging
 import tempfile
 import importlib
 import itertools
 from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
+import json
 import toml
+import pandas
 import numpy
 import h5py
 from openquake.baselib import InvalidFile
@@ -432,6 +433,22 @@ def fix_array(arr, key):
     return arr
 
 
+def set_shape_attrs(hdf5file, dsetname, kw):
+    """
+    Set shape attributes on a dataset (and possibly other attributes)
+    """
+    dset = hdf5file[dsetname]
+    S = len(dset.shape)
+    if len(kw) < S:
+        raise ValueError('The dataset %s has %d dimensions but you passed %d'
+                         ' axis' % (dsetname, S, len(kw)))
+    dset.attrs['shape_descr'] = encode(list(kw))[:S]
+    for k, v in kw.items():
+        dset.attrs[k] = v
+    for d, k in enumerate(dset.attrs['shape_descr']):
+        dset.dims[d].label = k  # set dimension label
+
+
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
@@ -479,6 +496,12 @@ class ArrayWrapper(object):
             return getattr(self, idx)
         return self.array[idx]
 
+    def __setitem__(self, idx, val):
+        if isinstance(idx, str) and idx in self.__dict__:
+            setattr(self, idx, val)
+        else:
+            self.array[idx] = val
+
     def __toh5__(self):
         arr = getattr(self, 'array', ())
         if len(arr):
@@ -513,8 +536,14 @@ class ArrayWrapper(object):
         """
         if self.shape:
             return toml.dumps(self.array)
-        dic = {k: v for k, v in vars(self).items()
-               if not k.startswith('_')}
+        dic = {}
+        for k, v in vars(self).items():
+            if k.startswith('_'):
+                continue
+            elif k == 'json':
+                dic.update(json.loads(bytes(v)))
+            else:
+                dic[k] = v
         return toml.dumps(dic)
 
     def to_table(self):
@@ -575,6 +604,13 @@ class ArrayWrapper(object):
         """
         return {k: v for k, v in vars(self).items()
                 if k != 'array' and not k.startswith('_')}
+
+    def is_good(self):
+        """
+        An ArrayWrapper is good if it only contains arrays
+        """
+        return all(isinstance(v, numpy.ndarray) for k, v in vars(self).items()
+                   if not k.startswith('_'))
 
 
 def decode_array(values):
@@ -649,7 +685,10 @@ def parse_comment(comment):
     """
     if comment[0] == '"' and comment[-1] == '"':
         comment = comment[1:-1]
-    dic = toml.loads('{%s}' % comment.replace('""', '"'))
+    try:
+        dic = toml.loads('{%s}' % comment.replace('""', '"'))
+    except toml.TomlDecodeError as err:
+        raise ValueError('%s in %s' % (err, comment))
     return list(dic.items())
 
 
@@ -689,13 +728,15 @@ def _read_csv(fileobj, compositedt):
 # NB: it would be nice to use numpy.loadtxt(
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
-def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
+def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
+             index=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
     :param renamedict: aliases for the fields to rename
     :param sep: separator (default comma)
-    :return: a structured array of floats
+    :param index: if not None, returns a pandas DataFrame
+    :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
     with open(fname, encoding='utf-8-sig') as f:
@@ -718,6 +759,10 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
             new = renamedict.get(name, name)
             newnames.append(new)
         arr.dtype.names = newnames
+    if index:
+        df = pandas.DataFrame.from_records(arr, index)
+        vars(df).update(attrs)
+        return df
     return ArrayWrapper(arr, attrs)
 
 
@@ -733,9 +778,6 @@ def save_npz(obj, path):
         elif isinstance(val, str):
             # without this oq extract would fail
             a[key] = numpy.array(val.encode('utf-8'))
-        elif isinstance(val, dict):
-            # this is hack: we are losing the values
-            a[key] = list(val)
         else:
             a[key] = fix_array(val, key)
     numpy.savez_compressed(path, **a)

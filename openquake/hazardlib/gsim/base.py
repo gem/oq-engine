@@ -179,8 +179,8 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
                 for fact, wgt in zip(
                     gsim.kwargs["mixture_model"]["factors"],
                     gsim.kwargs["mixture_model"]["weights"]):
-                    mean_stdi = numpy.copy(mean_std)
-                    mean_stdi[1, :, :, :] *= fact
+                    mean_stdi = numpy.array(mean_std[:, :, :, g]) # make a copy
+                    mean_stdi[1] *= fact
                     arr[:, :, g] += (wgt * _get_poes(mean_stdi, loglevels, tl,
                                                      squeeze=1))
             else:

@@ -93,6 +93,22 @@ class PmapGetter(object):
     def imts(self):
         return list(self.imtls)
 
+    @property
+    def L(self):
+        return len(self.imtls.array)
+
+    @property
+    def N(self):
+        return len(self.sids)
+
+    @property
+    def M(self):
+        return len(self.imtls)
+
+    @property
+    def R(self):
+        return len(self.weights)
+
     def init(self):
         """
         Read the poes and set the .data attribute with the hazard curves
@@ -152,13 +168,13 @@ class PmapGetter(object):
                         break
         return pmap
 
-    def get_pcurves(self, sid):  # used in classical
+    def get_pcurves(self, sid, pmap_by_grp=()):  # used in classical
         """
         :returns: a list of R probability curves with shape L
         """
-        pmap_by_grp = self.init()
-        L = len(self.imtls.array)
-        pcurves = [probability_map.ProbabilityCurve(numpy.zeros((L, 1)))
+        if not pmap_by_grp:
+            pmap_by_grp = self.init()
+        pcurves = [probability_map.ProbabilityCurve(numpy.zeros((self.L, 1)))
                    for _ in range(self.num_rlzs)]
         for grp, pmap in pmap_by_grp.items():
             try:
@@ -171,27 +187,18 @@ class PmapGetter(object):
                     pcurves[rlzi] |= c
         return pcurves
 
-    def get_pcurve(self, s, r, g):  # used in disaggregation
+    def get_hcurves(self, pmap_by_grp):
         """
-        :param s: site ID
-        :param r: realization ID
-        :param g: group ID
-        :returns: a probability curves with shape L (or None, if missing)
+        :param pmap_by_grp: a dictionary of ProbabilityMaps by group
+        :returns: an array of PoEs of shape (N, R, M, L)
         """
-        grp = 'grp-%02d' % g
-        pmap = self.init()[grp]
-        try:
-            pc = pmap[s]
-        except KeyError:
-            return
-        L = len(self.imtls.array)
-        pcurve = probability_map.ProbabilityCurve(numpy.zeros((L, 1)))
-        for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
-            for rlzi in rlzis:
-                if rlzi == r:
-                    pcurve |= probability_map.ProbabilityCurve(
-                        pc.array[:, [gsim_idx]])
-        return pcurve
+        self.init()
+        res = numpy.zeros((self.N, self.R, self.L))
+        for sid in self.sids:
+            pcurves = self.get_pcurves(sid, pmap_by_grp)
+            for rlz, pcurve in enumerate(pcurves):
+                res[sid, rlz] += pcurve.array[:, 0]
+        return res.reshape(self.N, self.R, self.M, -1)
 
     def items(self, kind=''):
         """
@@ -380,7 +387,7 @@ class GmfGetter(object):
         for computer in self.gen_computers(mon):
             data, dt = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
-            self.times.append((computer.rupture.id, len(computer.sids), dt))
+            self.times.append((computer.ebrupture.id, len(computer.sids), dt))
             alldata.append(data)
         if not alldata:
             return []
@@ -534,7 +541,7 @@ def get_rupdict(dstore):
     dic = {}
     for i, ebr in enumerate(get_ebruptures(dstore)):
         dic['rup_%s' % i] = d = ebr.rupture.todict()
-        for attr in ['srcidx', 'grp_id', 'n_occ', 'samples']:
+        for attr in ['source_id', 'grp_id', 'n_occ', 'samples']:
             d[attr] = int(getattr(ebr, attr))
     return dic
 
@@ -578,7 +585,7 @@ class RuptureGetter(object):
         """
         eid_rlz = []
         for rup in self.proxies:
-            ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['srcidx'],
+            ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
                             self.grp_id, rup['n_occ'], self.samples)
             for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
@@ -593,7 +600,6 @@ class RuptureGetter(object):
         dic = {'trt': self.trt, 'samples': self.samples}
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            source_ids = dstore['source_info']['source_id']
             rec = self.proxies[0].rec
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                 rec['sx'], rec['sy'])
@@ -609,7 +615,7 @@ class RuptureGetter(object):
             dic['n_occ'] = rec['n_occ']
             dic['serial'] = rec['serial']
             dic['mag'] = rec['mag']
-            dic['srcid'] = source_ids[rec['srcidx']]
+            dic['srcid'] = rec['source_id']
         return dic
 
     def get_proxies(self, min_mag=0):

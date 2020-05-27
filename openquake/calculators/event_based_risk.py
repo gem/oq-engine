@@ -89,7 +89,6 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
                     # average losses
                     avg[idx, r, l] = (
                         ratios.sum(axis=0) * param['ses_ratio'] * aval)
-
                     # agglosses
                     agglosses[:, l] += ratios * aval
                     if 'builder' in param:
@@ -194,23 +193,21 @@ class EbrCalculator(base.RiskCalculator):
         self.loss_maps_dt = (F32, (C, L))
         if oq.individual_curves or R == 1:
             self.datastore.create_dset('curves-rlzs', F32, (A, R, P, L))
-            shape_descr = ['assets', 'rlzs', 'return_periods', 'loss_types']
-            self.datastore.set_attrs(
-                'curves-rlzs', shape_descr=shape_descr,
+            self.datastore.set_shape_attrs(
+                'curves-rlzs',
                 assets=self.assetcol['id'],
-                return_periods=builder.return_periods,
                 rlzs=numpy.arange(R),
+                return_periods=builder.return_periods,
                 loss_types=oq.loss_names)
         if oq.conditional_loss_poes:
             self.datastore.create_dset(
                 'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
         if R > 1:
             self.datastore.create_dset('curves-stats', F32, (A, S, P, L))
-            shape_descr = ['assets', 'stats', 'return_periods', 'loss_types']
-            self.datastore.set_attrs(
-                'curves-stats', shape_descr=shape_descr,
+            self.datastore.set_shape_attrs(
+                'curves-stats',
                 assets=self.assetcol['id'],
-                stats=[encode(name) for (name, func) in stats],
+                stat=[encode(name) for (name, func) in stats],
                 return_periods=builder.return_periods,
                 loss_types=oq.loss_names
             )
@@ -220,7 +217,7 @@ class EbrCalculator(base.RiskCalculator):
                     fillvalue=None)
                 self.datastore.set_attrs(
                     'loss_maps-stats',
-                    stats=[encode(name) for (name, func) in stats])
+                    stat=[encode(name) for (name, func) in stats])
 
     def save_losses(self, dic):
         """
@@ -278,5 +275,7 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore['losses_by_event'] = agglosses
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
-            set_rlzs_stats(self.datastore, 'avg_losses')
+            set_rlzs_stats(self.datastore, 'avg_losses',
+                           asset_id=self.assetcol['id'],
+                           loss_type=oq.loss_names)
         post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()

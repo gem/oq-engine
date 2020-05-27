@@ -19,7 +19,7 @@
 import os
 import numpy
 
-from openquake.baselib.general import fast_agg3
+from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
@@ -34,27 +34,20 @@ aac = numpy.testing.assert_allclose
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
-    def assert_ok(self, pkg, job_ini, exports='csv', kind='dmg'):
+    def assert_ok(self, pkg, job_ini, exports='csv', kind='damages'):
         test_dir = os.path.dirname(pkg.__file__)
         out = self.run_calc(test_dir, job_ini, exports=exports,
                             collapse_threshold='0')
-        got = out[kind + '_by_asset', exports]
+        try:
+            got = out['avg_%s-rlzs' % kind, exports]
+        except KeyError:
+            got = out['avg_%s-stats' % kind, exports]
         expected_dir = os.path.join(test_dir, 'expected')
         expected = sorted(f for f in os.listdir(expected_dir)
                           if f.endswith(exports) and 'by_taxon' not in f)
         self.assertEqual(len(got), len(expected))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual)
-        #self.check_dmg_by_event()
-
-    def check_dmg_by_event(self):
-        number = self.calc.datastore['assetcol/array']['number']
-        data = self.calc.datastore['dd_data/data'][()]
-        if len(data):
-            data_by_eid = fast_agg3(data, 'eid', ['dd'], number[data['aid']])
-            dmg_by_event = self.calc.datastore['dmg_by_event'][()]
-            for rec1, rec2 in zip(data_by_eid, dmg_by_event):
-                aac(rec1['dd'], rec2['dmg'][:, 1:], atol=.1)
 
     def test_case_1(self):
         # test with a single event and a missing tag
@@ -84,13 +77,19 @@ RM       4_000
         # and also a case with modal_damage_state
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
-        [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
+        # check avg_damages-rlzs
+        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        df = self.calc.datastore.read_df('avg_damages-rlzs', 'asset_id')
+        self.assertEqual(list(df.columns),
+                         ['rlz', 'loss_type', 'dmg_state', 'value'])
+
+        # check dmg_by_event
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-        # check dmg_by_asset
+        # check agg_damages extraction
         total = extract(self.calc.datastore, 'agg_damages/structural')
         aac(total, [[37312.8, 30846.1, 4869.6, 1271.5, 5700.7]], atol=.1)
 
@@ -116,7 +115,7 @@ RM       4_000
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-        fnames = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # one per realization
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
@@ -154,8 +153,8 @@ RM       4_000
         self.assert_ok(case_7, 'job_h.ini,job_r.ini', exports='csv')
 
         # just run the npz export
-        [npz] = export(('dmg_by_asset', 'npz'), self.calc.datastore)
-        self.assertEqual(strip_calc_id(npz), 'dmg_by_asset.npz')
+        [npz] = export(('avg_damages-rlzs', 'npz'), self.calc.datastore)
+        self.assertEqual(strip_calc_id(npz), 'avg_damages-rlzs.npz')
 
     def test_case_8(self):
         # case with a shakemap
@@ -169,11 +168,17 @@ RM       4_000
         # case with noDamageLimit==0 that had NaNs in the past
         self.run_calc(case_9.__file__, 'job.ini')
 
-        fnames = export(('dmg_by_asset', 'csv'), self.calc.datastore)
-        for i, fname in enumerate(fnames):
-            self.assertEqualFiles('expected/dmg_by_asset-%d.csv' % i, fname)
+        # export/import dmg_by_event and check the total nodamage
+        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        df = read_csv(fname, index='event_id')
+        nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
+        self.assertEqual(nodamage, 1041226.0)
 
-        fnames = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
+        for i, fname in enumerate(fnames):
+            self.assertEqualFiles('expected/avg_damages-%d.csv' % i, fname)
+
+        fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         for i, fname in enumerate(fnames):
             self.assertEqualFiles('expected/losses_asset-%d.csv' % i, fname)
 
@@ -181,6 +186,6 @@ RM       4_000
         # case with more IMTs in the imported GMFs than required
         self.run_calc(case_10.__file__, 'job.ini')
 
-        fnames = export(('dmg_by_asset', 'csv'), self.calc.datastore)
+        fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         for i, fname in enumerate(fnames):
-            self.assertEqualFiles('expected/dmg_by_asset-%d.csv' % i, fname)
+            self.assertEqualFiles('expected/avg_damages-%d.csv' % i, fname)

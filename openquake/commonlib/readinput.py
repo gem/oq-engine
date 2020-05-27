@@ -69,7 +69,9 @@ source_info_dt = numpy.dtype([
     ('eff_ruptures', numpy.uint32),    # 6
     ('checksum', numpy.uint32),        # 7
     ('serial', numpy.uint32),          # 8
+    ('trti', numpy.uint8),             # 9
 ])
+MULTIPLICITY, SERIAL = 3, 8
 
 
 class DuplicatedPoint(Exception):
@@ -675,18 +677,19 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
-    ns = 0
+    ns = -1
     for sg in csm.src_groups:
         if hasattr(sg, 'mags'):  # UCERF
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
-            ns += 1
             if src.source_id in data:
-                num_sources = data[src.source_id][3] + 1
+                multiplicity = data[src.source_id][MULTIPLICITY] + 1
             else:
-                num_sources = 1
+                multiplicity = 1
+                ns += 1
             row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
-                   num_sources, 0, 0, 0, src.checksum, src.serial]
+                   multiplicity, 0, 0, 0, src.checksum, src.serial or ns,
+                   full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
@@ -697,16 +700,22 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-
     logging.info('There are %d sources with %d unique IDs', ns, len(data))
+    false_duplicates = [src_id for src_id in data
+                        if data[src_id][MULTIPLICITY] > 1]
+    if false_duplicates:
+        logging.info('Found different sources with same ID: %s',
+                     numpy.array(false_duplicates))
     if h5:
-        hdf5.create(h5, 'source_info', source_info_dt)  # avoid hdf5 damned bug
+        attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
+        # avoid hdf5 damned bug by creating source_info in advance
+        hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         for trt in mags:
             h5['source_mags/' + trt] = numpy.array(sorted(mags[trt]))
         h5['grp_ids'] = grp_ids
     csm.gsim_lt.check_imts(oqparam.imtls)
-    csm.source_info = data
+    csm.source_info = data  # src_id -> row
     if os.environ.get('OQ_CHECK_INPUT'):
         source.check_complex_faults(csm.get_sources())
     return csm
@@ -721,22 +730,13 @@ def get_imts(oqparam):
 
 def get_amplification(oqparam):
     """
-    :returns: a composite array (amplification, param, imt0, imt1, ...)
+    :returns: a DataFrame (ampcode, level, PGA, SA() ...)
     """
     fname = oqparam.inputs['amplification']
-    aw = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64})
-    aw.fname = fname
-    imls = ()
-    if 'level' in aw.dtype.names:
-        for records in group_array(aw, 'ampcode').values():
-            if len(imls) == 0:
-                imls = numpy.sort(records['level'])
-            elif len(records['level']) != len(imls) or (
-                    records['level'] != imls).any():
-                raise InvalidFile('%s: levels for %s %s instead of %s' %
-                                  (fname, records['ampcode'][0],
-                                   records['level'], imls))
-    return aw
+    df = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64},
+                       index='ampcode')
+    df.fname = fname
+    return df
 
 
 def _cons_coeffs(records, limit_states):

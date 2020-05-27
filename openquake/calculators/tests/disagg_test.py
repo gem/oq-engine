@@ -19,6 +19,7 @@ import os
 import sys
 import unittest
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib.probability_map import combine
 from openquake.calculators import getters
@@ -26,6 +27,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_master)
 
@@ -62,13 +64,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             case_1.__file__,
             fmt='csv')
 
-        # check disagg_by_src, poe=0.02, 0.1, imt=PGA, SA(0.025)
-
-        #self.assertEqual(len(out['disagg_by_src', 'csv']), 4)
-        #for fname in out['disagg_by_src', 'csv']:
-        #    self.assertEqualFiles('expected_output/%s' % strip_calc_id(fname),
-        #                          fname)
-
         # disaggregation by source group
         rlzs = self.calc.datastore['full_lt'].get_realizations()
         ws = [rlz.weight for rlz in rlzs]
@@ -83,6 +78,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         for sid in pmap:
             numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
 
+        check_disagg_by_src(self.calc.datastore)
+
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
         # site #0 is partially discarded
@@ -93,7 +90,9 @@ class DisaggregationTestCase(CalculatorTestCase):
              'rlz-0-SA(0.1)-sid-1.xml',
              'rlz-1-SA(0.1)-sid-0.xml',
              'rlz-1-SA(0.1)-sid-1.xml',
+             'rlz-2-SA(0.1)-sid-0.xml',
              'rlz-2-SA(0.1)-sid-1.xml',
+             'rlz-3-SA(0.1)-sid-0.xml',
              'rlz-3-SA(0.1)-sid-1.xml'],
             case_2.__file__)
 
@@ -108,7 +107,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
                      'imt=SA(0.1)&poe_id=0')
         self.assertEqual(aw.dtype.names,
-                         ('site_id', 'lon', 'lat', 'rlz_id',
+                         ('site_id', 'lon', 'lat',
                           'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None'))
 
     def test_case_3(self):
@@ -130,25 +129,37 @@ class DisaggregationTestCase(CalculatorTestCase):
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
     def test_case_5(self):
-        # this exercise gridded nonparametric sources
+        # test gridded nonparametric sources
         self.run_calc(case_5.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
+        # there is a collapsed nonparametric source with len(probs_occur)==3
+        # the other sizes are 2
+        sizes = [len(po) for po in self.calc.datastore['rup/probs_occur']]
+        self.assertTrue(any(size == 3 for size in sizes),
+                        'No collapse of probs_occur')
+
     def test_case_6(self):
         # test with international date line
         self.run_calc(case_6.__file__, 'job.ini')
+
+        # test CSV export
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        # test the CSVs are readable
+        for fname in fnames:
+            hdf5.read_csv(fname)
 
         # test extract disagg_layer for Lon_Lat
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Lon_Lat&'
                      'imt=PGA&poe_id=0')
         self.assertEqual(
             aw.dtype.names,
-            ('site_id', 'lon', 'lat', 'rlz_id', 'lon_bins', 'lat_bins',
+            ('site_id', 'lon', 'lat', 'lon_bins', 'lat_bins',
              'Lon_Lat-PGA-0.002105'))
 
         aae(aw.mag, [6.5, 6.75, 7., 7.25])
@@ -156,6 +167,8 @@ class DisaggregationTestCase(CalculatorTestCase):
                       225., 250., 275., 300.])
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
+
+        check_disagg_by_src(self.calc.datastore)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also
@@ -172,16 +185,4 @@ class DisaggregationTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
-        # test_disagg_by_src
-        dbs = self.calc.datastore['disagg_by_src']
-        self.assertEqual(sorted(dbs), ['poe-0.01-PGA-sid-0',
-                                       'poe-0.01-PGA-sid-1',
-                                       'poe-0.01-SA(0.25)-sid-0',
-                                       'poe-0.01-SA(0.25)-sid-1',
-                                       'poe-0.05-PGA-sid-0',
-                                       'poe-0.05-PGA-sid-1',
-                                       'poe-0.05-SA(0.25)-sid-0',
-                                       'poe-0.05-SA(0.25)-sid-1'])
-        arr = dbs['poe-0.01-PGA-sid-0'][()]
-        numpy.testing.assert_almost_equal(
-            arr, [0, 0, 1.9179472e-05, 9.9810150e-03])
+        check_disagg_by_src(self.calc.datastore)

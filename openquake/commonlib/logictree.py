@@ -1307,6 +1307,19 @@ class FullLogicTree(object):
                 dic[grp] = list(self.get_rlzs_by_gsim(grp_id).values())
         return dic  # grp_id -> lists of rlzi
 
+    def get_rlzs_by_gsim_list(self, list_of_grp_ids):
+        """
+        :returns: a list of dictionaries rlzs_by_gsim, one for each gidx
+        """
+        out = []
+        for gidx, grp_ids in enumerate(list_of_grp_ids):
+            dic = AccumDict(accum=set())
+            for grp_id in grp_ids:
+                for gsim, rlzs in self.get_rlzs_by_gsim(grp_id).items():
+                    dic[gsim].update(rlzs)
+            out.append(dic)
+        return out
+
     def __getnewargs__(self):
         # with this FullLogicTree instances will be unpickled correctly
         return self.seed, self.num_samples, self.sm_rlzs

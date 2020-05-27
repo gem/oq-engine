@@ -113,3 +113,13 @@ class DataStoreTestCase(unittest.TestCase):
         arr2 = numpy.load(fname)['array']
         self.assertEqual(arr2.dtype, dt)
         os.remove(fname)
+
+    def test_sel(self):
+        # test dstore.sel
+        N, M, L = 1, 2, 3
+        imts = 'PGA', 'SA(1.0)'
+        self.dstore['hcurves'] = numpy.zeros((N, M, L))
+        self.dstore.set_shape_attrs(
+            'hcurves', sid=[0], imt=imts, lvl=range(L))
+        arr = self.dstore.sel('hcurves', imt='PGA', lvl=2)
+        self.assertEqual(arr.shape, (1, 1, 1))

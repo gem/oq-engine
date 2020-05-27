@@ -105,7 +105,7 @@ class OqParam(valid.ParamSet):
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_threshold = valid.Param(valid.probability, 0.5)
-    collapse_level = valid.Param(valid.Choice('0', '1', '2'), 0)
+    collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), 0)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -166,7 +166,7 @@ class OqParam(valid.ParamSet):
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_cores = valid.Param(valid.positiveint, None)
     num_epsilon_bins = valid.Param(valid.positiveint)
-    num_rlzs_disagg = valid.Param(valid.positiveint, 1)
+    num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.MagDist.new, None)
@@ -288,9 +288,9 @@ class OqParam(valid.ParamSet):
             lens = set(map(len, self.hazard_imtls.values()))
             if len(lens) > 1:
                 dic = {imt: len(ls) for imt, ls in self.hazard_imtls.items()}
-                warnings.warn(
+                raise ValueError(
                     'Each IMT must have the same number of levels, instead '
-                    'you have %s' % dic, DeprecationWarning)
+                    'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
@@ -301,6 +301,12 @@ class OqParam(valid.ParamSet):
             self.check_missing('site_model', 'debug')
             self.check_missing('gsim_logic_tree', 'debug')
             self.check_missing('source_model_logic_tree', 'debug')
+
+        # check investigation_time
+        if (self.investigation_time and
+                self.calculation_mode.startswith('scenario')):
+            raise ValueError('%s: there cannot be investigation_time in %s'
+                             % (self.inputs['job_ini'], self.calculation_mode))
 
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
@@ -347,6 +353,10 @@ class OqParam(valid.ParamSet):
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
                 self.num_epsilon_bins = 1
+            if (self.rlz_index is not None
+                    and self.num_rlzs_disagg is not None):
+                raise InvalidFile('%s: you cannot set rlzs_index and '
+                                  'num_rlzs_disagg at the same time' % job_ini)
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':

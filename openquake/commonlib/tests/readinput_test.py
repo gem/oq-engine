@@ -23,7 +23,7 @@ import unittest
 from io import BytesIO
 
 from openquake.baselib import general, datastore
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, site_amplification
 from openquake.risklib import asset
 from openquake.risklib.riskmodels import ValidationError
 from openquake.commonlib import readinput, logictree
@@ -83,7 +83,6 @@ reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
-investigation_time = 50.
 export_dir = %s
             """ % (os.path.basename(sites_csv), TMP))
             exp_base_path = os.path.dirname(
@@ -105,8 +104,7 @@ export_dir = %s
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
-                'investigation_time': 50.0,
-                'risk_investigation_time': 50.0,
+                'risk_investigation_time': None,
             }
 
             params = getparams(readinput.get_oqparam(source))
@@ -132,7 +130,6 @@ reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
-investigation_time = 50.
 export_dir = %s
 """ % (os.path.basename(sites_csv), TMP))
         oq = readinput.get_oqparam(source)
@@ -538,12 +535,10 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.inputs['amplification'] = os.path.join(
             oq.base_path, 'invalid_amplification.csv')
-        with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_amplification(oq)
-        self.assertIn(
-            "levels for b'F' [1.0e-03 1.0e-02 5.0e-02 1.0e-01 2.0e-01 1.6e+00]"
-            " instead of [1.0e-03 1.0e-02 5.0e-02 1.0e-01 2.0e-01 5.0e-01"
-            " 1.6e+00]", str(ctx.exception))
+        df = readinput.get_amplification(oq)
+        with self.assertRaises(ValueError) as ctx:
+            site_amplification.Amplifier(oq.imtls, df)
+        self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
 
     def test_site_model_sites(self):
         # you can set them at the same time

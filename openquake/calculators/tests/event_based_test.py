@@ -20,7 +20,6 @@ import io
 import os
 import re
 import math
-import unittest
 
 import numpy.testing
 
@@ -272,10 +271,10 @@ class EventBasedTestCase(CalculatorTestCase):
                          dic)
 
         fnames = out['hcurves', 'csv']
-        mean_eb = get_mean_curves(self.calc.datastore)
+        mean_eb = get_mean_curves(self.calc.datastore, 'PGA')
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-        mean_cl = get_mean_curves(self.calc.cl.datastore)
+        mean_cl = get_mean_curves(self.calc.cl.datastore, 'PGA')
         reldiff, _index = max_rel_diff_index(
             mean_cl, mean_eb, min_value=0.1)
         self.assertLess(reldiff, 0.07)
@@ -283,7 +282,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
-        self.assertEqualFiles('expected/rup_data.csv', fname)
+        self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-5)
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
@@ -335,25 +334,17 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertGot(  # gridded rupture
             rup1, os.path.join(self.testdir, 'expected/rupture_1.toml'))
 
-        # test running scenario from event based
+        # test running scenario from event based, reading TOML
         self.run_calc(case_15.__file__, 'scenario.ini')
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure
-        self.run_calc(case_16.__file__, 'job.ini',
-                      ground_motion_fields='false')
+        # and GMF amplification too
+        self.run_calc(case_16.__file__, 'job.ini')
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_16.__file__, 'job.ini', hazard_calculation_id=hid)
         tmp = gettemp(view('global_gmfs', self.calc.datastore))
         self.assertEqualFiles('expected/global_gmfs.txt', tmp)
-
-        # validation test for missing intensity_measure_types_and_levels
-        with self.assertRaises(ValueError) as ctx:
-            self.run_calc(case_16.__file__, 'job.ini',
-                          intensity_measure_types='PGA',
-                          intensity_measure_types_and_levels='')
-        self.assertEqual(str(ctx.exception),
-                         'There are no intensity_measure_types_and_levels!')
 
     def test_case_17(self):  # oversampling
         # also, grp-00 does not produce ruptures

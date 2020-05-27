@@ -1,4 +1,5 @@
-asset_id,taxonomy,lon,lat,structural~no_damage_mean,structural~no_damage_stdv,structural~LS1_mean,structural~LS1_stdv,structural~LS2_mean,structural~LS2_stdv
-"a1","RM",81.29850,29.10980,2.915600E+03,1.086361E+02,8.360000E+01,1.077581E+02,8.000000E-01,1.095445E+00
-"a2","RC",83.08230,27.90060,6.360000E+01,5.950462E+01,6.306000E+02,3.123160E+02,3.058000E+02,3.573538E+02
-"a3","W",85.74770,27.90150,6.590000E+02,6.044233E+02,1.029000E+03,2.970497E+02,3.120000E+02,4.093287E+02
+#,,,,,,"generated_by='OpenQuake engine 3.10.0-gitc5935f7279', start_date='2020-05-21T06:50:48', checksum=4198355049"
+asset_id,taxonomy,lon,lat,structural~no_damage,structural~LS1,structural~LS2
+a1,"RM",81.29850,29.10980,2.915600E+03,8.360000E+01,8.000000E-01
+a2,"RC",83.08230,27.90060,6.360000E+01,6.306000E+02,3.058000E+02
+a3,"W",85.74770,27.90150,6.590000E+02,1.029000E+03,3.120000E+02

@@ -778,23 +778,6 @@ def calc_datastore(request, job_id):
     return response
 
 
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def calc_oqparam(request, job_id):
-    """
-    Return the calculation parameters as a JSON
-    """
-    job = logs.dbcmd('get_job', int(job_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
-        return HttpResponseForbidden()
-
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        oq = ds['oqparam']
-    return HttpResponse(content=json.dumps(vars(oq)), content_type=JSON)
-
-
 def web_engine(request, **kwargs):
     return render(request, "engine/index.html",
                   dict())

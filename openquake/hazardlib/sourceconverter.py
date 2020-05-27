@@ -34,7 +34,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 EPSILON = 1E-12
-source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
+source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 KNOWN_MFDS = ('incrementalMFD', 'truncGutenbergRichterMFD',
               'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD')
@@ -864,6 +864,7 @@ class SourceConverter(RuptureConverter):
             with hdf5.File(self.hdf5_fname, 'r') as h:
                 dic = {k: d[:] for k, d in h[node['id']].items()}
             nps.fromdict(dic, rups_weights)
+            num_probs = len(dic['probs_occur'])
         else:
             # read the rupture data from the XML nodes
             num_probs = None
@@ -881,6 +882,7 @@ class SourceConverter(RuptureConverter):
                 rup.tectonic_region_type = trt
                 rup.weight = None if rups_weights is None else rups_weights[i]
                 nps.data.append((rup, probs))
+        nps.num_probs_occur = num_probs
         return nps
 
     def convert_sourceModel(self, node):

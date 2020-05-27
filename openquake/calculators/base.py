@@ -328,7 +328,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 continue
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and self.R > 1:
-                    continue  # skip individual curves
+                    if (key[:-4] + 'stats') in self.datastore:
+                        continue  # skip individual curves
                 self._export((key, fmt))
             if has_hcurves and self.oqparam.hazard_maps:
                 self._export(('hmaps', fmt))
@@ -364,17 +365,20 @@ def check_time_event(oqparam, occupancy_periods):
              ', '.join(occupancy_periods)))
 
 
-def check_amplification(dstore):
+def check_amplification(ampl_df, sitecol):
     """
     Make sure the amplification codes in the site collection match the
-    ones in the amplification table
+    ones in the amplification table.
+
+    :param ampl_df: the amplification table as a pandas DataFrame
+    :param sitecol: the site collection
     """
-    codeset = set(dstore['amplification']['ampcode'])
+    codeset = set(ampl_df.index)
     if len(codeset) == 1:
         # there is a single amplification function, there is no need to
         # extend the sitecol with an ampcode field
         return
-    codes = set(dstore['sitecol'].ampcode)
+    codes = set(sitecol.ampcode)
     missing = codes - codeset
     if missing:
         raise ValueError('The site collection contains references to missing '
@@ -435,7 +439,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Rupture spinning factor = %s', s)
         if (f * s >= 1.5 and self.oqparam.pointsource_distance is None
                 and 'classical' in self.oqparam.calculation_mode):
-            logging.warning(
+            logging.info(
                 'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
 
@@ -450,6 +454,14 @@ class HazardCalculator(BaseCalculator):
             # can be None for the ruptures-only calculator
             with hdf5.File(self.datastore.tempname, 'w') as tmp:
                 tmp['sitecol'] = self.sitecol
+        elif (oq.calculation_mode == 'disaggregation' and
+              oq.max_sites_disagg < len(self.sitecol)):
+            raise ValueError(
+                'Please set max_sites_disagg=%d in %s' % (
+                    len(self.sitecol), oq.inputs['job_ini']))
+        elif oq.disagg_by_src and len(self.sitecol) > oq.max_sites_disagg:
+            raise ValueError(
+                'There are too many sites to use disagg_by_src=true')
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             full_lt = readinput.get_full_lt(oq)
@@ -790,10 +802,9 @@ class HazardCalculator(BaseCalculator):
         # store amplification functions if any
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
-            self.datastore['amplification'] = readinput.get_amplification(oq)
-            check_amplification(self.datastore)
-            self.amplifier = Amplifier(
-                oq.imtls, self.datastore['amplification'], oq.soil_intensities)
+            df = readinput.get_amplification(oq)
+            check_amplification(df, self.sitecol)
+            self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
         else:
             self.amplifier = None
@@ -1137,8 +1148,6 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
             name = 'exposed_values/' + '_'.join(('agg',) + names)
             logging.info('Storing %s', name)
             dstore[name] = assetcol.aggregate_by(list(names), aval)
-            attrs = dict(shape_descr=names + ('loss_name',),
-                         loss_name=lossnames)
-            for tagname in tagnames:
-                attrs[tagname] = getattr(assetcol.tagcol, tagname)[1:]
-            dstore.set_attrs(name, **attrs)
+            attrs = {tagname: getattr(assetcol.tagcol, tagname)[1:]
+                     for tagname in names}
+            dstore.set_shape_attrs(name, **attrs, loss_name=lossnames)

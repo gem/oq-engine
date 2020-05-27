@@ -65,9 +65,13 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data,
                          HTTP_HOST='127.0.0.1')
-        assert resp.content, 'No content from /v1/calc/%s' % path
+        if hasattr(resp, 'content'):
+            assert resp.content, 'No content from /v1/calc/%s' % path
+            js = resp.content.decode('utf8')
+        else:
+            js = bytes(loadnpz(resp.streaming_content)['json'])
         try:
-            return json.loads(resp.content.decode('utf8'))
+            return json.loads(js)
         except Exception:
             print('Invalid JSON, see %s' % gettemp(resp.content),
                   file=sys.stderr)
@@ -249,8 +253,8 @@ class EngineServerTestCase(unittest.TestCase):
             cd, 'attachment; filename=output--hazard_map-mean_.csv')
 
         # check oqparam
-        resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
-        self.assertEqual(resp['calculation_mode'], 'classical')
+        dic = self.get('%s/extract/oqparam' % job_id)  # parameters
+        self.assertEqual(dic['calculation_mode'], 'classical')
 
         # check extract hcurves
         url = '/v1/calc/%s/extract/hcurves?kind=stats&imt=PGA' % job_id

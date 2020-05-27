@@ -323,7 +323,7 @@ def view_totlosses(token, dstore):
     sanity check for the correctness of the implementation.
     """
     oq = dstore['oqparam']
-    tot_losses = dstore['losses_by_asset']['mean'].sum(axis=0)
+    tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
     return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
 
 
@@ -603,7 +603,8 @@ def view_hmap(token, dstore):
         poe = valid.probability(token.split(':')[1])
     except IndexError:
         poe = 0.1
-    mean = dict(extract(dstore, 'hcurves?kind=mean'))['mean']
+    mean = dict(extract(dstore, 'hcurves?kind=mean'))['mean']  # (N, 1, M, L1)
+    mean = mean.reshape(len(mean), -1)  # shape N, L
     oq = dstore['oqparam']
     hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
@@ -707,6 +708,20 @@ def view_mean_disagg(token, dstore):
     return rst_table(sorted(tbl), header=header)
 
 
+@view.add('disagg_times')
+def view_disagg_times(token, dstore):
+    """
+    Display slow tasks for disaggregation
+    """
+    data = dstore['disagg_task'][:]
+    info = dstore.read_df('task_info', 'taskname').loc[b'compute_disagg']
+    tbl = []
+    for duration, task_no in zip(info['duration'], info['task_no']):
+        tbl.append((duration, task_no) + tuple(data[task_no]))
+    header = ('duration', 'task_no') + data.dtype.names
+    return rst_table(sorted(tbl), header=header)
+
+
 @view.add('elt')
 def view_elt(token, dstore):
     """
@@ -744,14 +759,12 @@ def view_act_ruptures_by_src(token, dstore):
     """
     Display the actual number of ruptures by source in event based calculations
     """
-    data = dstore['ruptures'][('srcidx', 'rup_id')]
-    counts = sorted(countby(data, 'srcidx').items(),
+    data = dstore['ruptures'][('source_id', 'grp_id', 'rup_id')]
+    counts = sorted(countby(data, 'source_id').items(),
                     key=operator.itemgetter(1), reverse=True)
-    src_info = dstore['source_info'][('grp_id', 'source_id')]
     table = [['src_id', 'grp_id', 'act_ruptures']]
-    for srcidx, act_ruptures in counts:
-        src = src_info[srcidx]
-        table.append([src['source_id'], src['grp_id'], act_ruptures])
+    for source_id, act_ruptures in counts:
+        table.append([source_id, src['grp_id'], act_ruptures])
     return rst_table(table)
 
 

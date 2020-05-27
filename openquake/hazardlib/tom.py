@@ -21,8 +21,6 @@ Module :mod:`openquake.hazardlib.tom` contains implementations of probability
 density functions for earthquake temporal occurrence modeling.
 """
 import abc
-import math
-
 import numpy
 import scipy.stats
 
@@ -85,6 +83,7 @@ class BaseTOM(metaclass=abc.ABCMeta):
         given in the constructor.
         """
 
+
 class FatedTOM(BaseTOM):
 
     def __init__(self, time_span, occurrence_rate=None):
@@ -121,7 +120,7 @@ class PoissonTOM(BaseTOM):
         :return:
             Float value between 0 and 1 inclusive.
         """
-        return 1 - math.exp(- occurrence_rate * self.time_span)
+        return 1 - numpy.exp(- occurrence_rate * self.time_span)
 
     def get_probability_n_occurrences(self, occurrence_rate, num):
         """

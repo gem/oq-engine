@@ -112,7 +112,7 @@ def _get_data(dstore, dskey, stats):
     if kind == 'stats':
         weights = dstore['weights'][()]
         if dskey in set(dstore):  # precomputed
-            tags = [decode(s) for s in dstore.get_attr(dskey, 'stats')]
+            tags = [decode(s) for s in dstore.get_attr(dskey, 'stat')]
             statfuncs = [stats[tag] for tag in tags]
             value = dstore[dskey][()]  # shape (A, S, LI)
         else:  # computed on the fly
@@ -126,7 +126,7 @@ def _get_data(dstore, dskey, stats):
     return name, value, tags
 
 
-# this is used by event_based_risk and classical_risk
+# this is used by event_based_risk, classical_risk and scenario_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
@@ -188,27 +188,28 @@ def export_agg_losses(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by scenario_risk
-@export.add(('losses_by_asset', 'csv'))
-def export_losses_by_asset(ekey, dstore):
+@export.add(('src_loss_table', 'csv'))
+def export_src_loss_table(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    loss_dt = oq.loss_dt(stat_dt)
-    losses_by_asset = dstore[ekey[0]][()]
-    rlzs = dstore['full_lt'].get_realizations()
-    assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    trts = dstore['full_lt'].trts
+    trt_by_source_id = {}
+    for rec in dstore['source_info']:
+        trt_by_source_id[rec['source_id'][:16]] = trts[rec['trti']]
+
+    def get_trt(row):
+        return trt_by_source_id[row.source]
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time))
-    for rlz in rlzs:
-        losses = losses_by_asset[:, rlz.ordinal]
-        dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
-        data = compose_arrays(assets, losses.copy().view(loss_dt)[:, 0])
-        writer.save(data, dest, comment=md, renamedict=dict(id='asset_id'))
+    aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
+    dest = dstore.build_fname('src_loss_table', '', 'csv')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    rows = add_columns(aw.to_table(), trt=get_trt)
+    writer.save(rows, dest, comment=md)
     return writer.getsaved()
 
 
@@ -309,56 +310,46 @@ def export_loss_maps_npz(ekey, dstore):
     return [fname]
 
 
-@export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
-def export_damages_csv(ekey, dstore):
-    rlzs = dstore['full_lt'].get_realizations()
-    oq = dstore['oqparam']
-    loss_types = oq.loss_dt().names
-    assets = get_assets(dstore)
-    value = dstore[ekey[0]][()]  # matrix N x R x LI or T x R x LI
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    if ekey[0].endswith('stats'):
-        tags = oq.hazard_stats()
-    else:
-        tags = ['rlz-%03d' % r for r in range(len(rlzs))]
-    for lti, lt in enumerate(loss_types):
-        for tag, values in zip(tags, value[:, :, lti].T):
-            fname = dstore.build_fname('damages-%s' % lt, tag, ekey[1])
-            writer.save(compose_arrays(assets, values), fname,
-                        renamedict=dict(id='asset_id'))
-    return writer.getsaved()
-
-
 def modal_damage_array(data, damage_dt):
     # determine the damage state with the highest probability
-    A, L, MS, D = data.shape
+    A, L, D = data.shape
     dmgstate = damage_dt['structural'].names
     arr = numpy.zeros(A, [('modal-ds-' + lt, hdf5.vstr)
                           for lt in damage_dt.names])
     for l, loss_type in enumerate(damage_dt.names):
-        arr['modal-ds-' + loss_type] = [dmgstate[data[a, l, 0].argmax()]
+        arr['modal-ds-' + loss_type] = [dmgstate[data[a, l].argmax()]
                                         for a in range(A)]
     return arr
 
 
-@export.add(('dmg_by_asset', 'csv'))
-def export_dmg_by_asset_csv(ekey, dstore):
-    E = len(dstore['events'])
+# damages and avg_damages require different DISPLAY_NAMEs, so they are
+# kept separated even if the exporter is the same; see Anirudh's comment
+# in https://github.com/gem/oq-engine/pull/5851
+@export.add(('avg_damages-rlzs', 'csv'), ('avg_damages-stats', 'csv'),
+            ('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
+def export_avg_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
-    dmg_dt = build_damage_dt(dstore, mean_std=False)
-    damage_dt = build_damage_dt(dstore, mean_std=E > 1)
+    dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
-    for rlz in rlzs:
+    md = dstore.metadata
+    if oq.investigation_time:
+        md.update(dict(investigation_time=oq.investigation_time,
+                       risk_investigation_time=oq.risk_investigation_time))
+    if ekey[0].endswith('stats'):
+        tags = oq.hazard_stats()
+    else:
+        tags = ['%03d' % r for r in range(len(rlzs))]
+    for i, tag in enumerate(tags):
         if oq.modal_damage_state:
-            dmg_by_asset = modal_damage_array(data[:, rlz.ordinal], dmg_dt)
+            avg_damages = modal_damage_array(data[:, i], dmg_dt)
         else:
-            dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        writer.save(compose_arrays(assets, dmg_by_asset), fname,
-                    renamedict=dict(id='asset_id'))
+            avg_damages = build_damage_array(data[:, i], dmg_dt)
+        fname = dstore.build_fname(ekey[0].split('-')[0], tag, ekey[1])
+        writer.save(compose_arrays(assets, avg_damages), fname,
+                    comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -368,24 +359,23 @@ def export_dmg_by_event(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    damage_dt = build_damage_dt(dstore, mean_std=False)
+    damage_dt = build_damage_dt(dstore)
     dt_list = [('event_id', U32), ('rlz_id', U16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
     dmg_by_event = dstore[ekey[0]][()]  # shape E, L, D
-    events_by_rlz = group_array(dstore['events'], 'rlz_id')
+    events = dstore['events'][()]
     writer = writers.CsvWriter(fmt='%d')
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
     writer.save(numpy.zeros(0, dt_list), fname)
     with open(fname, 'ab') as dest:
-        for rlz, events in events_by_rlz.items():
-            data = numpy.array(  # shape (E, L, D)
-                [dmg_by_event[eid] for eid in events['id']])
-            arr = numpy.zeros(len(data), dt_list)
-            arr['event_id'] = events['id']
-            arr['rlz_id'] = events['rlz_id']
+        for rlz_id in numpy.unique(events['rlz_id']):
+            ok, = numpy.where(events['rlz_id'] == rlz_id)
+            arr = numpy.zeros(len(ok), dt_list)
+            arr['event_id'] = events['id'][ok]
+            arr['rlz_id'] = rlz_id
             for l, loss_type in enumerate(damage_dt.names):
                 for d, dmg_state in enumerate(damage_dt[loss_type].names):
-                    arr[loss_type][dmg_state] = data[:, l, d]
+                    arr[loss_type][dmg_state] = dmg_by_event[ok, l, d]
             writer.save_block(arr, dest)
     return [fname]
 

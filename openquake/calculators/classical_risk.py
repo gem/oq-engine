@@ -125,9 +125,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
                 base.set_array(stat_curves_lt['losses'][a, s], losses)
         self.datastore['avg_losses-stats'] = avg_losses
-        self.datastore.set_attrs('avg_losses-stats', stats=stats)
+        self.datastore.set_attrs('avg_losses-stats', stat=stats)
         self.datastore['loss_curves-stats'] = stat_curves
-        self.datastore.set_attrs('loss_curves-stats', stats=stats)
+        self.datastore.set_attrs('loss_curves-stats', stat=stats)
 
         if self.R > 1:  # individual realizations saved only if many
             loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)
