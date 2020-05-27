@@ -490,25 +490,22 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
-            self.save_disagg_results(results, trts=encode(self.trts))
+            self.save_disagg_results(results)
 
-    def save_disagg_results(self, results, **attrs):
+    def save_disagg_results(self, results):
         """
         Save the computed PMFs in the datastore
 
         :param results:
-            a dict (m, s) -> 8D-matrix of shape (T, Ma, D, Lo, La, E, P, Z)
-        :param attrs:
-            dictionary of attributes to add to the dataset
+            a dict s -> 9D-matrix of shape (T, Ma, D, Lo, La, E, M, P, Z)
         """
         for s, mat9 in results.items():
             rlzs = self.rlzs[s]
-            for m in range(self.M):
-                for p, poe in enumerate(self.poes_disagg):
+            for p, poe in enumerate(self.poes_disagg):
+                for m in range(self.M):
                     mat7 = mat9[..., m, p, :]
                     if mat7.any():  # nonzero
                         self._save('disagg', s, rlzs, poe, m, mat7)
-        self.datastore.set_attrs('disagg', **attrs)
 
     def _save(self, dskey, site_id, rlzs, poe, m, matrix7):
         p = self.poe_id[poe]
