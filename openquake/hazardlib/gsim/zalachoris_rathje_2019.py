@@ -21,12 +21,13 @@ Module exports :class:'ZalachorisRathje2019'
 """
 from __future__ import division
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
 
-class ZalachorisRathje2019(GMPE):
+class ZalachorisRathje2019(BooreEtAl2014):
     """
     Implements the Induced Seismicity GMPE of Zalachoris & Rathje (2019)
     for Texas, Oklahoma and Kansas.
@@ -64,14 +65,14 @@ class ZalachorisRathje2019(GMPE):
     REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
     #: Required rupture parameters are magnitude, and rake.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
 
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = set(('rjb', 'rhypo'))
 
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
-    non_verified = True
+    non_verified = False
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -89,13 +90,14 @@ class ZalachorisRathje2019(GMPE):
 
         imt_per = 0 if imt.name == 'PGV' else imt.period
         pga_rock = self._get_pga_on_rock(C_PGA, rup, dists)
-        mean_BSSA14 = (self._get_magnitude_scaling_term(C, rup) +
-					self._get_path_scaling(C, dists, rup.mag) +
-					self._get_site_scaling(C, pga_rock, sites, imt_per, dists.rjb))
+        mean_BSSA14 = (
+            self._get_magnitude_scaling_term(C, rup) +
+			self._get_path_scaling(C, dists, rup.mag) +
+			self._get_site_scaling(C, pga_rock, sites, imt_per, dists.rjb))
 
         FZR19 = (self._get_ZR19_magnitude_term(C_ZR19, rup.mag) +
-				self._get_ZR19_distance_term(C_ZR19, dists.rhypo) +
-				self._get_ZR19_site_term(C_ZR19, sites))
+				 self._get_ZR19_distance_term(C_ZR19, dists.rhypo) +
+			 	 self._get_ZR19_site_term(C_ZR19, sites))
 
         # add HA15, all in ln units
         mean = mean_BSSA14 + self.get_FENA(Cadj, rup, dists, imt)
@@ -106,94 +108,6 @@ class ZalachorisRathje2019(GMPE):
         stddevs = self._get_stddevs(C_ZR19, len(dists.rjb), stddev_types)
 
         return mean, stddevs
-
-    #: terms for BSSA14
-    def _get_pga_on_rock(self, C, rup, dists):
-        """
-        Returns the median PGA on rock, which is a sum of the
-        magnitude and distance scaling
-        """
-        return np.exp(self._get_magnitude_scaling_term(C, rup) +
-                      self._get_path_scaling(C, dists, rup.mag))
-
-    def _get_magnitude_scaling_term(self, C, rup):
-        """
-        Returns the magnitude scling term defined in equation (2)
-        """
-        dmag = rup.mag - C["Mh"]
-        if rup.mag <= C["Mh"]:
-            mag_term = (C["e4"] * dmag) + (C["e5"] * (dmag ** 2.0))
-        else:
-            mag_term = C["e6"] * dmag
-        return self._get_style_of_faulting_term(C, rup) + mag_term
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Get fault type dummy variables
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal.
-        Note that the 'Unspecified' case is not considered here as
-        rake is always given.
-        """
-        if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-            # strike-slip
-            return C["e1"]
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            return C["e3"]
-        else:
-            # normal
-            return C["e2"]
-
-    def _get_path_scaling(self, C, dists, mag):
-        """
-        Returns the path scaling term given by equation (3)
-        """
-        rval = np.sqrt((dists.rjb ** 2.0) + (C["h"] ** 2.0))
-        scaling = (C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *\
-            np.log(rval / self.CONSTS["Rref"])
-        return scaling + ((C["c3"] + C["Dc3"]) * (rval - self.CONSTS["Rref"]))
-
-    def _get_site_scaling(self, C, pga_rock, sites, period, rjb):
-        """
-        Returns the site-scaling term (equation 5), broken down into a
-        linear scaling, a nonlinear scaling and a basin scaling term
-        """
-        flin = self._get_linear_site_term(C, sites.vs30)
-        fnl = self._get_nonlinear_site_term(C, sites.vs30, pga_rock)
-        fbd = self._get_basin_depth_term(C, sites, period)
-        return flin + fnl + fbd
-
-    def _get_linear_site_term(self, C, vs30):
-        """
-        Returns the linear site scaling term (equation 6)
-        """
-        flin = vs30 / self.CONSTS["Vref"]
-        flin[vs30 > C["Vc"]] = C["Vc"] / self.CONSTS["Vref"]
-        return C["c"] * np.log(flin)
-
-    def _get_nonlinear_site_term(self, C, vs30, pga_rock):
-        """
-        Returns the nonlinear site scaling term (equation 7)
-        """
-        v_s = np.copy(vs30)
-        v_s[vs30 > 760.] = 760.
-        # Nonlinear controlling parameter (equation 8)
-        f_2 = C["f4"] * (np.exp(C["f5"] * (v_s - 360.)) -
-                         np.exp(C["f5"] * 360.))
-        fnl = self.CONSTS["f1"] + f_2 * np.log((pga_rock + self.CONSTS["f3"]) /
-                                               self.CONSTS["f3"])
-        return fnl
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        return np.zeros(len(sites.vs30), dtype=float)
 
     #: terms for HA15
     def _get_C2_term(self, Cadj, rjb):
@@ -218,7 +132,7 @@ class ZalachorisRathje2019(GMPE):
         """
 
         imean = (Cadj["C1"] + self._get_C2_term(Cadj, dists.rjb) +
-				self._get_C3_term(Cadj, dists.rjb))
+				 self._get_C3_term(Cadj, dists.rjb))
 
         # Convert from log10 to ln
         if imt.name in "SA PGA":
@@ -264,8 +178,8 @@ class ZalachorisRathje2019(GMPE):
         """
         Rb_ = C_ZR19["Rb"]
         FR = np.zeros_like(rhypo)
-        FR[(rhypo < Rb_) & (rhypo >= 4)] = C_ZR19["a"] *\
-											np.log(rhypo[(rhypo < Rb_) & (rhypo >= 4)]/Rb_)
+        FR[(rhypo < Rb_) & (rhypo >= 4)] = (C_ZR19["a"] *
+			    np.log(rhypo[(rhypo < Rb_) & (rhypo >= 4)]/Rb_))
         FR[rhypo < 4] = C_ZR19["a"] * np.log(4/Rb_)
         return FR
 
@@ -275,12 +189,13 @@ class ZalachorisRathje2019(GMPE):
         """
         Vc_ = C_ZR19["Vc"]
         FS = np.zeros_like(sites.vs30)
-        FS[sites.vs30 < Vc_] = C_ZR19["c"] *\
-								np.log(sites.vs30[sites.vs30 < Vc_]/Vc_)
+        FS[sites.vs30 < Vc_] = (C_ZR19["c"] *\
+				np.log(sites.vs30[sites.vs30 < Vc_]/Vc_))
         return FS
 
     #: coeffs for BSSA14
-    #: Sfewer decimals used for BSSA14 by Zalachoris compared to the original values
+    #: Sfewer decimals used for BSSA14 by Zalachoris compared to the original 
+    #: values
     COEFFS_BSSA14 = CoeffsTable(sa_damping=5, table="""\
     IMT		e0          e1          e2          e3 			e4          e5          e6          Mh          c1          c2          c3          h           Dc3         c           Vc              f4          f5          f6          f7          R1          R2          DfR         DfV         f1          f2          t1          t2
 	pgv		5.0400000	5.0800000	4.8500000	5.0300000	1.0700000	-0.1540000	0.2250000	6.2000000	-1.2400000	0.1490000	-0.0034400	5.3000000	0.0000000	-0.8400000	1300.0000000	-0.1000000	-0.0084400	-9.9000000	-9.9000000	105.0000000	272.0000000	0.0820000	0.0800000	0.6440000	0.5520000	0.4010000	0.3460000

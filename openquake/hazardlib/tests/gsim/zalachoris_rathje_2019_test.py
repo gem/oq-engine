@@ -26,16 +26,16 @@ class ZalachorisRathje2019TestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('Zalachoris/Zalachoris_MEAN.csv',
-                   max_discrep_percentage=0.88)
+                   max_discrep_percentage=1.0)
 
     def test_std_intra(self):
         self.check('Zalachoris/Zalachoris_intra.csv',
-                   max_discrep_percentage=0.11)
+                   max_discrep_percentage=0.2)
 
     def test_std_inter(self):
         self.check('Zalachoris/Zalachoris_inter.csv',
-                   max_discrep_percentage=0.17)
+                   max_discrep_percentage=0.2)
 
     def test_std_total(self):
         self.check('Zalachoris/Zalachoris_totalsigma.csv',
-                   max_discrep_percentage=0.08)
+                   max_discrep_percentage=0.1)
