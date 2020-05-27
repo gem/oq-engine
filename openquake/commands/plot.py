@@ -169,8 +169,9 @@ def make_figure_disagg(extractors, what):
     ndims = len(y.shape)
     axis = disagg.kind.split('_')
     bins = getattr(disagg, axis[0])
-    x = middle(bins)
-    width = (x[1] - x[0]) * 0.8
+    ncalcs = len(extractors)
+    width = (bins[1] - bins[0]) * 0.5
+    x = middle(bins) if ncalcs == 1 else middle(bins) - width
     if ndims == 1:  # simple bar chart
         ax = fig.add_subplot(1, 1, 1)
         ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
@@ -178,7 +179,11 @@ def make_figure_disagg(extractors, what):
         ax.set_xlabel(axis[0])
         ax.set_xticks(bins)
         ax.bar(x, y, width)
+        for ex in extractors[1:]:
+            ax.bar(x + width, ex.get(what).array, width)
         return plt
+    if ncalcs > 1:
+        raise NotImplementedError('Comparison for %s' % disagg.kind)
     # 2D images
     if ndims == 2:
         y = y.reshape(y.shape + (1,))
