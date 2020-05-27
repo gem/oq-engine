@@ -376,9 +376,3 @@ def combine(pmaps):
     for pmap in pmaps:
         res |= pmap
     return res
-
-
-def combine2(pmaps, weights):
-    pmap = combine(pmaps)
-    return pmap.sids, pmap.array @ weights
-

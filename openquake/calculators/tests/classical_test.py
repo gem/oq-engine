@@ -38,6 +38,15 @@ from openquake.qa_tests_data.classical import (
 aac = numpy.testing.assert_allclose
 
 
+def check_disagg_by_src(calc):
+    sel = calc.datastore.sel
+    mean = sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # M, L
+    dbs = sel('disagg_by_src', site_id=0)[0]  # R M L Ns
+    weights = calc.datastore['weights'][:]
+    mean2 = numpy.einsum('r...,r', dbs, weights)  # M L Ns
+    aac(mean, general.pprod(mean2, axis=2), atol=1E-6)
+
+
 class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
@@ -52,14 +61,6 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, actual,
                                   delta=delta)
         return got
-
-    def check_disagg_by_src(self):
-        sel = self.calc.datastore.sel
-        mean = sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # M, L
-        dbs = sel('disagg_by_src', site_id=0)[0]  # R M L Ns
-        ws = numpy.array([w['weight'] for w in self.calc.weights])
-        mean2 = numpy.einsum('r...,r', dbs, ws)  # M L Ns
-        aac(mean, general.pprod(mean2, axis=2), atol=1E-6)
 
     def test_case_1(self):
         self.assert_curves_ok(
@@ -121,7 +122,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve.csv', fname)
 
         # check disagg_by_src for a single realization
-        self.check_disagg_by_src()
+        check_disagg_by_src(self.calc)
 
     def test_case_3(self):
         self.assert_curves_ok(
@@ -194,7 +195,7 @@ class ClassicalTestCase(CalculatorTestCase):
         mean = self.calc.datastore.sel('hcurves-stats', stat='mean', sid=0)
         mean2 = poes.T @ numpy.array([w['weight'] for w in self.calc.weights])
         aac(mean2.flat, mean.flat)
-        self.check_disagg_by_src()
+        check_disagg_by_src(self.calc)
 
     def test_case_12(self):
         # test Modified GMPE
@@ -230,7 +231,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # test disagg_by_src in a complex case with duplicated sources
         # this is NOT working!
-        # self.check_disagg_by_src()
+        # check_disagg_by_src(self.calc)
 
     def test_case_14(self):
         # test classical with 2 gsims and 1 sample

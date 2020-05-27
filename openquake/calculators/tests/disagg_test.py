@@ -27,6 +27,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_master)
 
@@ -76,6 +77,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         cmap = combine(pmaps)  # combination of the mean maps per source group
         for sid in pmap:
             numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
+
+        # check_disagg_by_src(self.calc) # NOT working yet
 
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
@@ -165,6 +168,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
+        # check_disagg_by_src(self.calc)  # NOT working
+
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also
         # prints the warning on poe_agg very different from the expected poe
@@ -179,3 +184,5 @@ class DisaggregationTestCase(CalculatorTestCase):
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
+
+        check_disagg_by_src(self.calc)
