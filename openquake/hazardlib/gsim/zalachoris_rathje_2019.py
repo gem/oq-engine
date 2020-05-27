@@ -132,7 +132,7 @@ class ZalachorisRathje2019(BooreEtAl2014):
         """
 
         imean = (Cadj["C1"] + self._get_C2_term(Cadj, dists.rjb) +
-				 self._get_C3_term(Cadj, dists.rjb))
+                 self._get_C3_term(Cadj, dists.rjb))
 
         # Convert from log10 to ln
         if imt.name in "SA PGA":
@@ -189,7 +189,7 @@ class ZalachorisRathje2019(BooreEtAl2014):
         """
         Vc_ = C_ZR19["Vc"]
         FS = np.zeros_like(sites.vs30)
-        FS[sites.vs30 < Vc_] = (C_ZR19["c"] *\
+        FS[sites.vs30 < Vc_] = (C_ZR19["c"] *
 				np.log(sites.vs30[sites.vs30 < Vc_]/Vc_))
         return FS
 

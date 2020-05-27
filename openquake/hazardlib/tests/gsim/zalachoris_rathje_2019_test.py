@@ -14,15 +14,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
-from openquake.hazardlib.gsim.zalachoris_rathje_2019 import ZalachorisRathje2019
+from openquake.hazardlib.gsim.zalachoris_rathje_2019 import (
+        ZalachorisRathje2019)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class ZalachorisRathje2019TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZalachorisRathje2019
 
-    # Tables provided by original authors (George Zalachoris) - he used fewer decimals in the coeffs of BSSA14
+    # Tables provided by original authors (George Zalachoris) - he used fewer 
+    # decimals in the coeffs of BSSA14
 
     def test_mean(self):
         self.check('Zalachoris/Zalachoris_MEAN.csv',
