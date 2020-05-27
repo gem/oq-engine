@@ -490,43 +490,38 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
-            self.save_disagg_results(results, trts=encode(self.trts))
+            self.save_disagg_results(results)
 
-    def save_disagg_results(self, results, **attrs):
+    def save_disagg_results(self, results):
         """
         Save the computed PMFs in the datastore
 
         :param results:
-            a dict (m, s) -> 8D-matrix of shape (T, Ma, D, Lo, La, E, P, Z)
-        :param attrs:
-            dictionary of attributes to add to the dataset
+            a dict s -> 9D-matrix of shape (T, Ma, D, Lo, La, E, M, P, Z)
         """
         for s, mat9 in results.items():
+            if s not in self.ok_sites:
+                continue
             rlzs = self.rlzs[s]
-            for m in range(self.M):
-                for p, poe in enumerate(self.poes_disagg):
-                    mat7 = mat9[..., m, p, :]
-                    if mat7.any():  # nonzero
-                        self._save('disagg', s, rlzs, poe, m, mat7)
-        self.datastore.set_attrs('disagg', **attrs)
+            for p, poe in enumerate(self.poes_disagg):
+                mat8 = mat9[..., p, :]
+                poe_agg = pprod(mat8, axis=(0, 1, 2, 3, 4, 5))  # shape M, Z
+                self.datastore['poe4'][s, :, p] = poe_agg
+                for m, imt in enumerate(self.imts):
+                    mat7 = mat8[..., m, :]
+                    self._save('disagg', s, rlzs, p, imt, mat7)
+                if poe and abs(1 - pprod(poe_agg).mean() / poe) > .1:
+                    logging.warning(
+                        'Site #%d: poe_agg=%s is quite different from the '
+                        'expected poe=%s; perhaps the number of intensity '
+                        'measure levels is too small?', s, poe_agg, poe)
 
-    def _save(self, dskey, site_id, rlzs, poe, m, matrix7):
-        p = self.poe_id[poe]
-        imt = self.imts[m]
-        disagg_outputs = self.oqparam.disagg_outputs
+    def _save(self, dskey, site_id, rlzs, p, imt, matrix7):
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             imt=imt, sid='sid-%d' % site_id, poe='poe-%d' % p)
-        with self.monitor('extracting PMFs'):
-            aggmatrix = agg_probs(*matrix7)  # 6D
-            poe_agg = pprod(aggmatrix, axis=(0, 1, 2, 3, 4))  # shape Z
-            self.datastore['poe4'][site_id, m, p] = poe_agg
-            for key, fn in disagg.pmf_map.items():
-                if not disagg_outputs or key in disagg_outputs:
-                    pmf = fn(matrix7 if key.endswith('TRT') else aggmatrix)
-                    self.datastore[disp_name + key] = pmf
-        if poe and site_id in self.ok_sites:
-            if abs(1 - pprod(poe_agg) / poe) > .1:
-                logging.warning(
-                    'Site #%d: poe_agg=%s is quite different from the expected'
-                    ' poe=%s; perhaps the number of intensity measure'
-                    ' levels is too small?', site_id, poe_agg, poe)
+        outputs = self.oqparam.disagg_outputs
+        aggmatrix = agg_probs(*matrix7)  # 6D
+        for key, fn in disagg.pmf_map.items():
+            if not outputs or key in outputs:
+                pmf = fn(matrix7 if key.endswith('TRT') else aggmatrix)
+                self.datastore[disp_name + key] = pmf
