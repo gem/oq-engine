@@ -27,7 +27,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, block_splitter, groupby, humansize)
+    AccumDict, block_splitter, groupby, humansize, get_array_nbytes)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -269,6 +269,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.M = len(self.oqparam.imtls)
             self.L1 = num_levels // self.M
             sources = encode([src_id for src_id in self.csm.source_info])
+            size, msg = get_array_nbytes(
+                dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
+            if size > TWO32:
+                raise RuntimeError('The matrix disagg_by_src is too large: %s'
+                                   % msg)
             self.datastore.create_dset(
                 'disagg_by_src', F32,
                 (self.N, self.R, self.M, self.L1, self.Ns))
