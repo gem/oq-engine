@@ -133,9 +133,9 @@ class Amplifier(object):
         # probability of occurrence for discrete intervals of ground motion
         # and we prepare values of median amplification and std for the
         # midlevels (i.e. ground motion on rock) for each IMT
-        self.imtls = imtls
-        self.levels = levels
         if amplevels is not None:
+            self.imtls = imtls
+            self.levels = levels
             self._set_alpha_sigma(mag=None, dst=None)
 
     def _set_alpha_sigma(self, mag, dst):
@@ -149,14 +149,18 @@ class Amplifier(object):
         self.isigmas = {}  # code -> array of length I-1
         for code in self.coeff:
             df = self.coeff[code]
+            if mag is not None:
+                # Reducing the initial dataframe by keeping information just
+                # for the given magnitude and distance
+                magu = numpy.sort(numpy.unique(df['from_mag']))
+                magsel = magu[max(numpy.argwhere(magu < mag))[0]]
+                df = df.loc[df['from_mag'] == magsel, :]
+                dstu = numpy.sort(numpy.unique(df['from_rrup']))
+                dstsel = dstu[max(numpy.argwhere(dstu < dst))[0]]
+                df = df.loc[df['from_rrup'] == dstsel, :]
             for imt in imtls:
-                if mag is not None and dst is not None:
-                    print(df.keys())
-                    print(numpy.abs(df['from_mag']-mag))
-                    mags = numpy.unique(df.ilocs[numpy.abs(df['from_mag']-mag).argmin])
-
                 self.ialphas[code, imt], self.isigmas[code, imt] = (
-                    self._interp(code, imt, self.midlevels))
+                    self._interp(code, imt, self.midlevels, df))
 
     def check(self, vs30, vs30_tolerance):
         """
@@ -181,8 +185,9 @@ class Amplifier(object):
         if ampl_code == b'' and len(self.ampcodes) == 1:
             ampl_code = self.ampcodes[0]
         # Get median amplification an std of the logarithm
-        ialphas = self.ialphas[ampl_code, imt]
-        isigmas = self.isigmas[ampl_code, imt]
+        if mag is None and dst is None:
+            ialphas = self.ialphas[ampl_code, imt]
+            isigmas = self.isigmas[ampl_code, imt]
 
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
@@ -192,11 +197,15 @@ class Amplifier(object):
             # Compute the probability of occurrence of GM within a number of
             # intervals
             p_occ = -numpy.diff(poes[:, g])
+            # print(p_occ.flatten())
             #
             # Setting the amplification function
             if mag is not None and dst is not None:
-                
-                self._set_alpha_sigma(mag, dst)
+                d = dst[g] if len(dst) else dst
+                self._set_alpha_sigma(mag, d)
+
+                ialphas = self.ialphas[ampl_code, imt]
+                isigmas = self.isigmas[ampl_code, imt]
 
             for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 #
@@ -236,9 +245,11 @@ class Amplifier(object):
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
 
-    def _interp(self, ampl_code, imt_str, imls):
+    def _interp(self, ampl_code, imt_str, imls, coeff=None):
         # returns ialpha, isigma for the given levels
-        coeff = self.coeff[ampl_code]
+        if coeff is None:
+            coeff = self.coeff[ampl_code]
+
         if len(coeff) == 1:  # there is single coefficient for all levels
             ones = numpy.ones_like(imls)
             ialpha = float(coeff[imt_str]) * ones

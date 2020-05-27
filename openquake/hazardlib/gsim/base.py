@@ -228,6 +228,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
     :param rrup:
         The rrup distances
     :param squeeze:
+        A boolean. Should be True when
 
     TODO
         - We might want to compute the ideal IMTs on rock.
@@ -245,7 +246,6 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
                 out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
     poes_rock = _truncnorm_sf(truncation_level, out)
-    print(poes_rock[0].shape)
     pcurves = [ProbabilityCurve(c) for c in poes_rock]
     poes_soil = ampl.amplify(sitecode, pcurves, mag, rrup)
     return [poes_rock, poes_soil]
