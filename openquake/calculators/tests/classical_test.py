@@ -54,13 +54,12 @@ class ClassicalTestCase(CalculatorTestCase):
         return got
 
     def check_disagg_by_src(self):
-        mean = self.calc.datastore.sel(
-            'hcurves-stats', site_id=0, stat='mean')[0, 0]
-        dbs = self.calc.datastore.sel('disagg_by_src', site_id=0)  # N R M L Ns
-        pprod = general.pprod(dbs[0], axis=3)  # R M L
+        sel = self.calc.datastore.sel
+        mean = sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # M, L
+        dbs = sel('disagg_by_src', site_id=0)[0]  # R M L Ns
         ws = numpy.array([w['weight'] for w in self.calc.weights])
-        curve = (pprod.T @ ws).T
-        aac(curve, mean, atol=1E-6)
+        mean2 = numpy.einsum('r...,r', dbs, ws)  # M L Ns
+        aac(mean, general.pprod(mean2, axis=2), atol=1E-6)
 
     def test_case_1(self):
         self.assert_curves_ok(
@@ -228,6 +227,10 @@ class ClassicalTestCase(CalculatorTestCase):
                          ('0.005', '0.007', '0.0098', '0.0137', '0.0192',
                           '0.0269', '0.0376', '0.0527', '0.0738', '0.103',
                           '0.145', '0.203', '0.284'))
+
+        # test disagg_by_src in a complex case with duplicated sources
+        # this is NOT working!
+        # self.check_disagg_by_src()
 
     def test_case_14(self):
         # test classical with 2 gsims and 1 sample

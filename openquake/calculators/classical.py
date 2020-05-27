@@ -268,7 +268,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.oqparam.disagg_by_src:
             self.M = len(self.oqparam.imtls)
             self.L1 = num_levels // self.M
-            sources = encode([row[0] for row in self.csm.source_info])
+            sources = encode([src_id for src_id in self.csm.source_info])
             self.datastore.create_dset(
                 'disagg_by_src', F32,
                 (self.N, self.R, self.M, self.L1, self.Ns))
@@ -462,11 +462,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         data = []
-        weights_by_trt = self.full_lt.gsim_lt.get_weights_by_trt()
-        L = len(oq.imtls.array)
-        acc = numpy.zeros((self.N, self.Ns, L))
-        self.weights = [rlz.weight for rlz in self.realizations]
-        pgetter = getters.PmapGetter(self.datastore, self.weights)
+        weights = [rlz.weight for rlz in self.realizations]
+        pgetter = getters.PmapGetter(self.datastore, weights)
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
@@ -475,24 +472,15 @@ class ClassicalCalculator(base.HazardCalculator):
                         pgetter.get_hcurves(
                             {'grp-%02d' % gid: pmap[gid] for gid in pmap}))
                 elif pmap:  # pmap can be missing if the group is filtered away
+                    # key is the group ID
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
-                    if isinstance(key, tuple):  # in case of disagg_by_src
-                        src_id, grp_id = key
-                    else:  # regular case
-                        src_id, grp_id = '', key
-                    trt = self.full_lt.trt_by_grp[grp_id]
-                    weights = weights_by_trt[trt]  # G weights
-                    name = 'poes/grp-%02d' % grp_id
-                    if src_id:
-                        for sid, pcurve in pmap.items():
-                            acc[sid] = 1. - (1. - acc[sid]) * (
-                                1. - pcurve.array @ weights)
-                    else:
-                        self.datastore[name] = pmap
-                        extreme = max(
-                            get_extreme_poe(pmap[sid].array, oq.imtls)
-                            for sid in pmap)
-                        data.append((grp_id, trt, extreme))
+                    trt = self.full_lt.trt_by_grp[key]
+                    name = 'poes/grp-%02d' % key
+                    self.datastore[name] = pmap
+                    extreme = max(
+                        get_extreme_poe(pmap[sid].array, oq.imtls)
+                        for sid in pmap)
+                    data.append((key, trt, extreme))
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
@@ -535,6 +523,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
         logging.info('Building hazard statistics')
+        self.weights = [rlz.weight for rlz in self.realizations]
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, self.weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg,
