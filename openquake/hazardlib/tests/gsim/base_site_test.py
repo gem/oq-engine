@@ -89,6 +89,8 @@ class GetPoesSiteTestCase(unittest.TestCase):
         rup = Dummy.get_rupture(mag=self.mag)
         dists = DistancesContext()
         dists.rjb = numpy.array([10., 20., 30., 40.])
+        dists.rrup = numpy.array([10., 20., 30., 40.])
+        self.rrup = dists.rrup
         self.meastd = get_mean_std(sites, rup, dists, imts, [gmm])
 
     def test01(self):
@@ -96,8 +98,9 @@ class GetPoesSiteTestCase(unittest.TestCase):
         amp = Amplifier(self.imtls, self.df, self.soil_levels)
         imls = numpy.log([0.01, 0.05, 0.1, 0.2, 0.5])
         imtls_rock = DictArray({'PGA': imls, 'SA(1.0)': imls})
-        res = _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag, sitecode)
-        
+        res = _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag,
+                             sitecode, self.rrup)
+
         import matplotlib.pyplot as plt
         print(res[0][0], len(res[0]))
         print(res[1][0])

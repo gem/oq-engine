@@ -84,10 +84,11 @@ class Amplifier(object):
         # This is the reference Vs30 for the amplification function
         self.vs30_ref = ampl_df.vs30_ref
         has_levels = 'level' in ampl_df.columns
+        has_mags = 'from_mag' in ampl_df.columns
         # Checking the input dataframe. The first case is for amplification
-        # Functions that depend on magnitude, distance and iml (the latter
-        # can be probably removed since is closely correlated to the other
-        # two variables
+        # functions that depend on magnitude, distance and iml (the latter
+        # in this case can be probably removed since is closely correlated
+        # to the other two variables
         if has_levels and 'from_mag' in ampl_df.keys():
             keys = ['ampcode', 'level', 'from_mag', 'from_rrup']
             check_unique(ampl_df, keys, fname)
@@ -112,6 +113,8 @@ class Amplifier(object):
         # This is a list with the names of the columns we will use to filter
         # the dataframe with the amplification function
         cols = list(imtls)
+        if has_mags:
+            cols.extend(['from_mag', 'from_rrup'])
         if has_levels:
             cols.append('level')
         # Appending to the list, the column names for sigma
@@ -130,22 +133,27 @@ class Amplifier(object):
         # probability of occurrence for discrete intervals of ground motion
         # and we prepare values of median amplification and std for the
         # midlevels (i.e. ground motion on rock) for each IMT
+        self.imtls = imtls
+        self.levels = levels
         if amplevels is not None:
-            self._set_alpha_sigma(imtls, levels)
+            self._set_alpha_sigma(mag=None, dst=None)
 
-    def _set_alpha_sigma(self, imtls, levels, mag=None, dst=None):
+    def _set_alpha_sigma(self, mag, dst):
         """
         This sets the median amplification and std
         """
+        imtls = self.imtls
+        levels = self.levels
         self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # shape I-1
         self.ialphas = {}  # code -> array of length I-1
         self.isigmas = {}  # code -> array of length I-1
         for code in self.coeff:
+            df = self.coeff[code]
             for imt in imtls:
                 if mag is not None and dst is not None:
-                    mags = np.unique(
-                    a[np.abs(a-a0).argmin)]
-
+                    print(df.keys())
+                    print(numpy.abs(df['from_mag']-mag))
+                    mags = numpy.unique(df.ilocs[numpy.abs(df['from_mag']-mag).argmin])
 
                 self.ialphas[code, imt], self.isigmas[code, imt] = (
                     self._interp(code, imt, self.midlevels))
@@ -160,7 +168,7 @@ class Amplifier(object):
                              'from vs30_ref=%d over the tolerance of %d' %
                              (self.vs30_ref, vs30_tolerance))
 
-    def amplify_one(self, ampl_code, imt, poes):
+    def amplify_one(self, ampl_code, imt, poes, mag=None, dst=None):
         """
         :param ampl_code: code for the amplification function
         :param imt: an intensity measure type
@@ -169,15 +177,27 @@ class Amplifier(object):
         """
         if isinstance(poes, list):  # in the tests
             poes = numpy.array(poes).reshape(-1, 1)
+        # Manage the case of a site collection with empty ampcode
         if ampl_code == b'' and len(self.ampcodes) == 1:
-            # manage the case of a site collection with empty ampcode
             ampl_code = self.ampcodes[0]
+        # Get median amplification an std of the logarithm
         ialphas = self.ialphas[ampl_code, imt]
         isigmas = self.isigmas[ampl_code, imt]
+
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
+        #
+        # Amplify, for each site i.e. distance
         for g in range(G):
+            # Compute the probability of occurrence of GM within a number of
+            # intervals
             p_occ = -numpy.diff(poes[:, g])
+            #
+            # Setting the amplification function
+            if mag is not None and dst is not None:
+                
+                self._set_alpha_sigma(mag, dst)
+
             for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 #
                 # This computes the conditional probabilities of exceeding
@@ -199,7 +219,7 @@ class Amplifier(object):
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
-    def amplify(self, ampl_code, pcurves):
+    def amplify(self, ampl_code, pcurves, mag=None, dst=None):
         """
         :param ampl_code: 2-letter code for the amplification function
         :param pcurves: a list of ProbabilityCurves containing PoEs
@@ -210,7 +230,8 @@ class Amplifier(object):
             lst = []
             for imt in self.imtls:
                 slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
+                new = self.amplify_one(ampl_code, imt, pcurve.array[slc],
+                                       mag, dst)
                 lst.append(new)
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
