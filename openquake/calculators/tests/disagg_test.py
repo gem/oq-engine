@@ -63,13 +63,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             case_1.__file__,
             fmt='csv')
 
-        # check disagg_by_src, poe=0.02, 0.1, imt=PGA, SA(0.025)
-
-        #self.assertEqual(len(out['disagg_by_src', 'csv']), 4)
-        #for fname in out['disagg_by_src', 'csv']:
-        #    self.assertEqualFiles('expected_output/%s' % strip_calc_id(fname),
-        #                          fname)
-
         # disaggregation by source group
         rlzs = self.calc.datastore['full_lt'].get_realizations()
         ws = [rlz.weight for rlz in rlzs]
@@ -186,7 +179,3 @@ class DisaggregationTestCase(CalculatorTestCase):
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
-
-        # test_disagg_by_src
-        df = self.calc.datastore.read_df('disagg_by_src', 'src')
-        self.assertEqual(list(df.columns), ['sid', 'imt', 'lvl', 'value'])

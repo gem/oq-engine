@@ -25,6 +25,7 @@ from openquake.hazardlib import lt
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.getters import PmapGetter
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
@@ -185,6 +186,12 @@ class ClassicalTestCase(CalculatorTestCase):
              'quantile_curve-0.9.csv'],
             case_11.__file__)
         self.check_disagg_by_src()
+
+        # checking PmapGetter.get_pcurve
+        pgetter = PmapGetter(self.calc.datastore, self.calc.weights)
+        poes = pgetter.get_mean_NML(pgetter.init())
+        mean = self.calc.datastore.sel('hcurves-stats', stat='mean')
+        aac(poes.flat, mean.flat)
 
     def test_case_12(self):
         # test Modified GMPE

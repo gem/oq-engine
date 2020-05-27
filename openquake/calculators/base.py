@@ -459,6 +459,9 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
+        elif oq.disagg_by_src and len(self.sitecol) > oq.max_sites_disagg:
+            raise ValueError(
+                'There are too many sites to use disagg_by_src=true')
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             full_lt = readinput.get_full_lt(oq)

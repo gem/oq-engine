@@ -1318,7 +1318,7 @@ class FullLogicTree(object):
 
     def get_rlzs_by_gsim_list(self, list_of_grp_ids):
         """
-        :returns: a list gidx -> rlzs_by_gsim
+        :returns: a list of dictionaries rlzs_by_gsim, one for each gidx
         """
         out = []
         for gidx, grp_ids in enumerate(list_of_grp_ids):
