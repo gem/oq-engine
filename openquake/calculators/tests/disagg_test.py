@@ -78,7 +78,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         for sid in pmap:
             numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
 
-        # check_disagg_by_src(self.calc.datastore) # NOT working yet
+        check_disagg_by_src(self.calc.datastore)
 
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
@@ -168,7 +168,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
-        # check_disagg_by_src(self.calc.datastore)  # NOT working
+        check_disagg_by_src(self.calc.datastore)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also

@@ -19,6 +19,7 @@ import os
 import re
 import ast
 import time
+import copy
 import logging
 import operator
 from datetime import datetime
@@ -184,7 +185,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 if pmap and grp_id in acc:
                     acc[grp_id] |= pmap
                 else:
-                    acc[grp_id] = pmap
+                    acc[grp_id] = copy.copy(pmap)
                 acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
