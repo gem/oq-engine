@@ -157,32 +157,52 @@ def make_figure_disagg(extractors, what):
     $ oq plot 'disagg?kind=Mag&imt=PGA'
     """
     import matplotlib.pyplot as plt
+    from matplotlib import cm
     fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
-                  (disagg.kind, sid, imt, poe_id, oq.investigation_time))
     y = disagg.array
     print(y)
     ndims = len(y.shape)
     axis = disagg.kind.split('_')
     bins = getattr(disagg, axis[0])
-    ax.set_xlabel(axis[0])
-    ax.set_xticks(bins)
     x = middle(bins)
     width = (x[1] - x[0]) * 0.8
     if ndims == 1:  # simple bar chart
-        ax.bar(x, y)
-    elif ndims == 2:  # stacked bar chart
-        stacked_bar(ax, x, y.T, width)
-        ys = ['%.1f' % y for y in getattr(disagg, axis[1])]
-        ax.legend(ys)
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
+                      (disagg.kind, sid, imt, poe_id, oq.investigation_time))
+        ax.set_xlabel(axis[0])
+        ax.set_xticks(bins)
+        ax.bar(x, y, width)
+        return plt
+    # 2D images
+    if ndims == 2:
+        y = y.reshape(y.shape + (1,))
+        zbins = ['']
     else:
-        raise NotImplementedError('Plot of kind %s' % disagg.kind)
+        zbins = getattr(disagg, axis[2])
+    Z = y.shape[-1]
+    axes = []
+    for z in range(Z):
+        arr = y[:, :, z]
+        ax = fig.add_subplot(Z, 1, z + 1)
+        axes.append(ax)
+        ax.set_ylabel(axis[1])
+        ax.set_title(zbins[z])
+        vbins = getattr(disagg, axis[1])  # vertical bins
+        cmap = cm.get_cmap('jet', 100)
+        extent = bins[0], bins[-1], vbins[0], vbins[-1]
+        im = ax.imshow(arr, cmap=cmap, extent=extent,
+                       aspect='auto', vmin=y.min(), vmax=y.max())
+        # stacked bar chart
+        # stacked_bar(ax, x, y.T, width)
+        # ys = ['%.1f' % y for y in getattr(disagg, axis[1])]
+        # ax.legend(ys)
+    fig.colorbar(im, ax=axes)
     return plt
 
 
