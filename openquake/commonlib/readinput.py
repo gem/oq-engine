@@ -71,7 +71,7 @@ source_info_dt = numpy.dtype([
     ('serial', numpy.uint32),          # 8
     ('trti', numpy.uint8),             # 9
 ])
-MULTIPLICITY = 3
+MULTIPLICITY, SERIAL = 3, 8
 
 
 class DuplicatedPoint(Exception):
@@ -677,18 +677,18 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
-    ns = 0
+    ns = -1
     for sg in csm.src_groups:
         if hasattr(sg, 'mags'):  # UCERF
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
-            ns += 1
             if src.source_id in data:
                 multiplicity = data[src.source_id][MULTIPLICITY] + 1
             else:
                 multiplicity = 1
+                ns += 1
             row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
-                   multiplicity, 0, 0, 0, src.checksum, src.serial,
+                   multiplicity, 0, 0, 0, src.checksum, src.serial or ns,
                    full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
@@ -700,7 +700,6 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-
     logging.info('There are %d sources with %d unique IDs', ns, len(data))
     false_duplicates = [src_id for src_id in data
                         if data[src_id][MULTIPLICITY] > 1]
@@ -716,7 +715,7 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
             h5['source_mags/' + trt] = numpy.array(sorted(mags[trt]))
         h5['grp_ids'] = grp_ids
     csm.gsim_lt.check_imts(oqparam.imtls)
-    csm.source_info = data
+    csm.source_info = data  # src_id -> row
     if os.environ.get('OQ_CHECK_INPUT'):
         source.check_complex_faults(csm.get_sources())
     return csm

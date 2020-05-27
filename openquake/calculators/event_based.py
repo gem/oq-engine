@@ -443,9 +443,9 @@ class EventBasedCalculator(base.HazardCalculator):
             # model, however usually this is quite fast and do not dominate
             # the computation
             self.cl.run()
-            engine.expose_outputs(self.cl.datastore)
+            engine.expose_outputs(self.datastore)
             for imt in oq.imtls:
-                cl_mean_curves = get_mean_curves(self.cl.datastore, imt)
+                cl_mean_curves = get_mean_curves(self.datastore, imt)
                 eb_mean_curves = get_mean_curves(self.datastore, imt)
                 self.rdiff, index = util.max_rel_diff_index(
                     cl_mean_curves, eb_mean_curves)

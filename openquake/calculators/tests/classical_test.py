@@ -38,6 +38,18 @@ from openquake.qa_tests_data.classical import (
 aac = numpy.testing.assert_allclose
 
 
+def check_disagg_by_src(dstore):
+    """
+    Make sure that by composing disagg_by_src one gets the hazard curves
+    """
+    mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
+    dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
+    poes = general.pprod(dbs, axis=4)  # N, R, M, L
+    weights = dstore['weights'][:]
+    mean2 = numpy.einsum('sr...,r->s...', poes, weights)  # N, M, L
+    aac(mean, mean2, atol=1E-6)
+
+
 class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
@@ -112,6 +124,9 @@ class ClassicalTestCase(CalculatorTestCase):
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
 
+        # check disagg_by_src for a single realization
+        check_disagg_by_src(self.calc.datastore)
+
     def test_case_3(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -179,9 +194,11 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # checking PmapGetter.get_pcurve
         pgetter = PmapGetter(self.calc.datastore, self.calc.weights)
-        poes = pgetter.get_mean_NML(pgetter.init())
-        mean = self.calc.datastore.sel('hcurves-stats', stat='mean')
-        aac(poes.flat, mean.flat)
+        poes = pgetter.get_hcurves(pgetter.init())[0]
+        mean = self.calc.datastore.sel('hcurves-stats', stat='mean', sid=0)
+        mean2 = poes.T @ numpy.array([w['weight'] for w in self.calc.weights])
+        aac(mean2.flat, mean.flat)
+        check_disagg_by_src(self.calc.datastore)
 
     def test_case_12(self):
         # test Modified GMPE
@@ -214,6 +231,9 @@ class ClassicalTestCase(CalculatorTestCase):
                          ('0.005', '0.007', '0.0098', '0.0137', '0.0192',
                           '0.0269', '0.0376', '0.0527', '0.0738', '0.103',
                           '0.145', '0.203', '0.284'))
+
+        # test disagg_by_src in a complex case with duplicated sources
+        check_disagg_by_src(self.calc.datastore)
 
     def test_case_14(self):
         # test classical with 2 gsims and 1 sample

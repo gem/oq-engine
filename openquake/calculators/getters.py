@@ -105,6 +105,10 @@ class PmapGetter(object):
     def M(self):
         return len(self.imtls)
 
+    @property
+    def R(self):
+        return len(self.weights)
+
     def init(self):
         """
         Read the poes and set the .data attribute with the hazard curves
@@ -183,20 +187,18 @@ class PmapGetter(object):
                     pcurves[rlzi] |= c
         return pcurves
 
-    def get_mean_NML(self, pmap_by_grp):
+    def get_hcurves(self, pmap_by_grp):
         """
         :param pmap_by_grp: a dictionary of ProbabilityMaps by group
-        :returns: an array of mean PoEs of shape (N, M, L)
-
-        The mean is computed by ignoring the weights by IMT.
+        :returns: an array of PoEs of shape (N, R, M, L)
         """
         self.init()
-        res = numpy.zeros((self.N, self.L))
+        res = numpy.zeros((self.N, self.R, self.L))
         for sid in self.sids:
             pcurves = self.get_pcurves(sid, pmap_by_grp)
-            for pcurve, w in zip(pcurves, self.weights):
-                res[sid, :] += pcurve.array[:, 0] * w
-        return res.reshape(self.N, self.M, -1)
+            for rlz, pcurve in enumerate(pcurves):
+                res[sid, rlz] += pcurve.array[:, 0]
+        return res.reshape(self.N, self.R, self.M, -1)
 
     def items(self, kind=''):
         """
