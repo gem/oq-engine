@@ -1,5 +1,8 @@
   [Iason Grigoratos]
-  * Implemented the Zalachoris & Rathje (2019) GMMs
+  * Implemented the Zalachoris & Rathje (2019) GMM
+
+  [Graeme Weatherill]
+  * Adds PGV coefficients to USGS CEUS GMPE tables (where applicable)
 
   [Michele Simionato]
   * Removed the `disagg_by_src` exporter
