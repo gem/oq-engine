@@ -19,7 +19,6 @@
 """
 Module exports :class:'ZalachorisRathje2019'
 """
-from __future__ import division
 import numpy as np
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
@@ -43,11 +42,7 @@ class ZalachorisRathje2019(BooreEtAl2014):
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`
@@ -55,20 +50,19 @@ class ZalachorisRathje2019(BooreEtAl2014):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, pag 106.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+        const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
 
     #: Required distance measure is Rjb
-    REQUIRES_DISTANCES = set(('rjb', 'rhypo'))
+    REQUIRES_DISTANCES = {'rjb', 'rhypo'}
 
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
