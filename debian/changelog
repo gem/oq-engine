@@ -1,3 +1,6 @@
+  [Iason Grigoratos]
+  * Implemented the Zalachoris & Rathje (2019) GMM
+
   [Michele Simionato]
   * Optimized the disaggregation outputs, saving storage time
 

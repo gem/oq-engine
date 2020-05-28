@@ -979,6 +979,14 @@ yu_2013
     :undoc-members:
     :show-inheritance:
 
+zalachoris_rathje_2019
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.zalachoris_rathje_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 zhao_2006
 -----------------------------------------
 
