@@ -236,19 +236,33 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
     """
     mean, stddev = mean_std  # shape (N, M, G)
     N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
-    out = numpy.zeros((N, L) if squeeze else (N, L, G))
+    out_l = numpy.zeros((N, L) if squeeze else (N, L, G))
+    out_u = numpy.zeros((N, L) if squeeze else (N, L, G))
     lvl = 0
     for m, imt in enumerate(loglevels):
-        for iml in loglevels[imt]:
+        ll = loglevels[imt]
+        sigma = max(ampl.isigmas)
+        print('Sigma', sigma)
+
+        for iml_l, iml_u in zip(ll[:-1], ll[1:]):
             if truncation_level == 0:  # just compare imls to mean
-                out[:, lvl] = iml <= mean[:, m]
+                out_l[:, lvl] = iml_l <= mean[:, m]
+                out_u[:, lvl] = iml_u <= mean[:, m]
             else:
-                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
+                out_l[:, lvl] = (iml_l - mean[:, m]) / stddev[:, m]
+                out_u[:, lvl] = (iml_u - mean[:, m]) / stddev[:, m]
             lvl += 1
-    poes_rock = _truncnorm_sf(truncation_level, out)
-    pcurves = [ProbabilityCurve(c) for c in poes_rock]
-    poes_soil = ampl.amplify(sitecode, pcurves, mag, rrup)
-    return [poes_rock, poes_soil]
+            # Probability of occurrence on rock - The shape of this array
+            # is number of sites x number of IMLs
+            pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
+                         _truncnorm_sf(truncation_level, out_u))
+            print(pocc_rock.shape)
+            # Now we calculate the probability of exceedance on soil
+
+
+    #pcurves = [ProbabilityCurve(c) for c in poes_rock]
+    #poes_soil = ampl.amplify(sitecode, pcurves, mag, rrup)
+    return None, None
 
 
 class MetaGSIM(abc.ABCMeta):

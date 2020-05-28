@@ -100,14 +100,16 @@ class GetPoesSiteTestCase(unittest.TestCase):
         imls = numpy.log([0.01, 0.05, 0.1, 0.2, 0.5])
         imtls_rock = DictArray({'PGA': imls, 'SA(1.0)': imls})
 
-        print(self.meastd.shape)
-
         res = _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag,
                              sitecode, self.rrup)
 
         import matplotlib.pyplot as plt
         #print(res[0][0], len(res[0]))
-        #print(res[1][0])
+        rock = res[0]
+        soil = res[1]
+        print(rock.shape)
+        print(soil[0].__dict__)
         plt.plot(amp.midlevels, res[0][0])
+        plt.plot(amp.midlevels, soil[0].array[:], 'o')
         plt.xscale('log')
         plt.show()
