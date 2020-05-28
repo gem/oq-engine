@@ -151,10 +151,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)
     U, N, M, G = len(ctxs), len(sitecol), len(oq.imtls), len(cmaker.gsims)
     with ms_mon:
-        imts = []
-        for m, imt in enumerate(oq.imtls):
-            imts.append(from_string(imt))
-            iml4[:, m] = disagg.to_distribution_values(iml4[:, m], imt)
+        imts = [from_string(imt) for imt in oq.imtls]
         mean_std = numpy.zeros((2, U, N, M, G), F32)
         for u, ctx in enumerate(ctxs):
             mean_std[:, u] = ctx.get_mean_std(imts, cmaker.gsims)
@@ -162,23 +159,27 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     for s, iml3 in enumerate(iml4):
         # z indices by gsim
         M, P, Z = iml3.shape
-        zs_by_gsim = AccumDict(accum=[])
-        for gsim, rlzs in cmaker.gsims.items():
+        zs_by_g = AccumDict(accum=[])
+        for g, rlzs in enumerate(cmaker.gsims.values()):
             for z in range(Z):
                 if iml4.rlzs[s, z] in rlzs:
-                    zs_by_gsim[gsim].append(z)
+                    zs_by_g[g].append(z)
 
         # sanity check: the zs are disjoint
         counts = numpy.zeros(Z, numpy.uint8)
-        for zs in zs_by_gsim.values():
+        for zs in zs_by_g.values():
             counts[zs] += 1
         assert (counts <= 1).all(), counts
+
+        # switch to logarithmic intensities
+        for m, imt in enumerate(oq.imtls):
+            iml3[m] = disagg.to_distribution_values(iml3[m], imt)
 
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = bin_edges[0], bin_edges[1][s], bin_edges[2][s], bin_edges[3]
         # build 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
         matrix = disagg.disaggregate(
-            ctxs, mean_std, zs_by_gsim, iml3, eps3, s, bins, pne_mon, mat_mon)
+            ctxs, mean_std, zs_by_g, iml3, eps3, s, bins, pne_mon, mat_mon)
         if matrix.any():
             res[s] = matrix
     return res

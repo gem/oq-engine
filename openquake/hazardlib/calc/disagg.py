@@ -113,13 +113,13 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, mean_std, zs_by_gsim, iml3, eps3, sid, bin_edges=(),
+def disaggregate(ctxs, mean_std, zs_by_g, iml3, eps3, sid, bin_edges=(),
                  pne_mon=performance.Monitor(),
                  mat_mon=performance.Monitor()):
     """
     :param ctxs: a list of U fat RuptureContexts
     :param imts: a list of Intensity Measure Type objects
-    :param zs_by_gims: a dictionary gsim -> Z indices
+    :param zs_by_g: a dictionary g -> Z indices
     :param imt: an Intensity Measure Type
     :param iml3: an array of shape (M, P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
@@ -141,7 +141,7 @@ def disaggregate(ctxs, mean_std, zs_by_gsim, iml3, eps3, sid, bin_edges=(),
     with pne_mon:
         poes = numpy.zeros((U, E, M, P, Z))
         pnes = numpy.ones((U, E, M, P, Z))
-        for g, zs in enumerate(zs_by_gsim.values()):
+        for g, zs in zs_by_g.items():
             for (m, p, z), iml in numpy.ndenumerate(iml3):
                 if z in zs:
                     lvls = (iml - mean_std[0, :, sid, m, g]) / (
