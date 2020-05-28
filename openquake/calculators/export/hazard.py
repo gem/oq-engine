@@ -487,7 +487,7 @@ def iproduct(*sizes):
 def export_disagg_csv_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    iml4 = dstore['iml4/array']
+    iml4 = dstore['iml4']
     N, M, P, Z = iml4.shape
     imts = list(oq.imtls)
     rlzs = dstore['full_lt'].get_realizations()
@@ -502,7 +502,7 @@ def export_disagg_csv_xml(ekey, dstore):
         if sum(arr.sum() for arr in dic.values()) == 0:  # no data
             continue
         imt = from_string(imts[m])
-        r = dstore['iml4/rlzs'][s, z]
+        r = iml4.rlzs[s, z]
         rlz = rlzs[r]
         iml = iml4[s, m, p, z]
         poe_agg = dstore['poe4'][s, m, p, z]

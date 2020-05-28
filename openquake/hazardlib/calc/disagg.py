@@ -113,8 +113,7 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, imts, zs_by_gsim, iml3, eps3, bin_edges=(),
-                 ms_mon=performance.Monitor(),
+def disaggregate(ctxs, mean_std, zs_by_gsim, iml3, eps3, sid, bin_edges=(),
                  pne_mon=performance.Monitor(),
                  mat_mon=performance.Monitor()):
     """
@@ -124,36 +123,29 @@ def disaggregate(ctxs, imts, zs_by_gsim, iml3, eps3, bin_edges=(),
     :param imt: an Intensity Measure Type
     :param iml3: an array of shape (M, P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
-    :param ms_mon: monitor for the mean_std calculation
     :param pne_mon: monitor for the probabilities of no exceedance
     """
     # disaggregate (separate) PoE in different contributions
-    U, E, G = len(ctxs), len(eps3[2]), len(zs_by_gsim)
+    U, E = len(ctxs), len(eps3[2])
     M, P, Z = iml3.shape
     dists = numpy.zeros(U)
     lons = numpy.zeros(U)
     lats = numpy.zeros(U)
     iml3 = iml3.copy()
-    with ms_mon:
-        truncnorm, epsilons, eps_bands = eps3
-        cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
-        for m, imt in enumerate(imts):
-            iml3[m] = to_distribution_values(iml3[m], imt)
-        mean_std = numpy.zeros((2, U, M, G), numpy.float32)
-        for u, ctx in enumerate(ctxs):
-            for g, gsim in enumerate(zs_by_gsim):
-                mean_std[:, u, :, g] = ctx.get_mean_std(
-                    imts, [gsim]).reshape(2, M)
-            dists[u] = ctx.rrup[0]  # distance to the site
-            lons[u] = ctx.clon[0]  # closest point of the rupture lon
-            lats[u] = ctx.clat[0]  # closest point of the rupture lat
+    truncnorm, epsilons, eps_bands = eps3
+    cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
+    for u, ctx in enumerate(ctxs):
+        dists[u] = ctx.rrup[sid]  # distance to the site
+        lons[u] = ctx.clon[sid]  # closest point of the rupture lon
+        lats[u] = ctx.clat[sid]  # closest point of the rupture lat
     with pne_mon:
         poes = numpy.zeros((U, E, M, P, Z))
         pnes = numpy.ones((U, E, M, P, Z))
         for g, zs in enumerate(zs_by_gsim.values()):
             for (m, p, z), iml in numpy.ndenumerate(iml3):
                 if z in zs:
-                    lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
+                    lvls = (iml - mean_std[0, :, sid, m, g]) / (
+                        mean_std[1, :, sid, m, g])
                     idxs = numpy.searchsorted(epsilons, lvls)
                     poes[:, :, m, p, z] = _disagg_eps(
                         truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
