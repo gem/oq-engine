@@ -144,12 +144,10 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=False)
-    ms_mon = monitor('disagg mean_std', measuremem=False)
-    pre_mon = monitor('preparing contexts', measuremem=False)
+    ms_mon = monitor('disagg mean_std', measuremem=True)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
-    with pre_mon:
-        ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)
     with ms_mon:
+        ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
         mean_std = disagg.get_mean_std(ctxs, oq.imtls, cmaker.gsims)
 
     for s, iml3 in enumerate(iml4):
