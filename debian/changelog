@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Optimized the disaggregation outputs, saving storage time
+
   [Graeme Weatherill]
   * Adds PGV coefficients to USGS CEUS GMPE tables (where applicable)
 
