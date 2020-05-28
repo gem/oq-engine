@@ -59,7 +59,7 @@ class ZalachorisRathje2019(BooreEtAl2014):
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake.
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb', 'rhypo'}
