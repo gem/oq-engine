@@ -90,15 +90,13 @@ class DisaggregationTestCase(CalculatorTestCase):
              'rlz-0-SA(0.1)-sid-1.xml',
              'rlz-1-SA(0.1)-sid-0.xml',
              'rlz-1-SA(0.1)-sid-1.xml',
-             'rlz-2-SA(0.1)-sid-0.xml',
              'rlz-2-SA(0.1)-sid-1.xml',
-             'rlz-3-SA(0.1)-sid-0.xml',
              'rlz-3-SA(0.1)-sid-1.xml'],
             case_2.__file__)
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 8)  # number of CSV files
+        self.assertEqual(len(fnames), 6)  # number of CSV files
         for fname in fnames:
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)

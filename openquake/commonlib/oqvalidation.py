@@ -18,12 +18,11 @@
 
 import os
 import logging
-import warnings
 import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib.general import DictArray, AccumDict, DeprecationWarning
+from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
@@ -115,7 +114,8 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
-    disagg_outputs = valid.Param(valid.disagg_outputs, None)
+    disagg_outputs = valid.Param(valid.disagg_outputs,
+                                 list(calc.disagg.pmf_map))
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     distance_bin_width = valid.Param(valid.positivefloat)

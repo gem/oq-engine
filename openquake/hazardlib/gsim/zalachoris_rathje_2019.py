@@ -188,7 +188,7 @@ class ZalachorisRathje2019(BooreEtAl2014):
         return FS
 
     #: coeffs for BSSA14
-    #: Sfewer decimals used for BSSA14 by Zalachoris compared to the original 
+    #: fewer decimals used for BSSA14 by Zalachoris compared to the original 
     #: values
     COEFFS_BSSA14 = CoeffsTable(sa_damping=5, table="""\
     IMT		e0          e1          e2          e3 			e4          e5          e6          Mh          c1          c2          c3          h           Dc3         c           Vc              f4          f5          f6          f7          R1          R2          DfR         DfV         f1          f2          t1          t2
