@@ -700,12 +700,18 @@ def view_mean_disagg(token, dstore):
     Display mean quantities for the disaggregation. Useful for checking
     differences between two calculations.
     """
+    N, M, P, Z = dstore['iml4/array'].shape
     tbl = []
-    for key, dset in sorted(dstore['disagg'].items()):
-        vals = [ds[()].mean() for k, ds in sorted(dset.items())]
-        tbl.append([key] + vals)
-    header = ['key'] + sorted(dset)
-    return rst_table(sorted(tbl), header=header)
+    kd = {key: dset[:] for key, dset in sorted(dstore['disagg'].items())}
+    oq = dstore['oqparam']
+    for s in range(N):
+        for m, imt in enumerate(oq.imtls):
+            for p in range(P):
+                row = ['%s-sid-%d-poe-%s' % (imt, s, p)]
+                for k, d in kd.items():
+                    row.append(d[s, m, p].mean())
+                tbl.append(row)
+    return rst_table(sorted(tbl), header=['key'] + list(kd))
 
 
 @view.add('disagg_times')
