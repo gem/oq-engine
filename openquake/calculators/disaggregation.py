@@ -515,8 +515,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                 continue
             for p, poe in enumerate(self.poes_disagg):
                 mat8 = mat9[..., p, :]
-                poe_agg = pprod(mat8, axis=(0, 1, 2, 3, 4, 5))  # shape M, Z
+                poe_agg = pprod(mat8, axis=(0, 1, 2, 3, 4, 5))
                 self.datastore['poe4'][s, :, p] = poe_agg
+                pa = poe_agg.mean()
                 for m, imt in enumerate(self.imts):
                     mat7 = mat8[..., m, :]
                     mat6 = agg_probs(*mat7)  # 6D
@@ -524,8 +525,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                         pmf = disagg.pmf_map[key](
                             mat7 if key.endswith('TRT') else mat6)
                         out[key][:, m, p, :] = pmf
-                if poe and abs(1 - pprod(poe_agg).mean() / poe) > .1:
                     logging.warning(
                         'Site #%d: poe_agg=%s is quite different from the '
                         'expected poe=%s; perhaps the number of intensity '
-                        'measure levels is too small?', s, poe_agg, poe)
+                        'measure levels is too small?', s, pa, poe)
