@@ -881,17 +881,6 @@ class HazardCalculator(BaseCalculator):
         """For compatibility with the engine"""
 
 
-def build_hmaps(hcurves_by_kind, slice_, imtls, poes, monitor):
-    """
-    Build hazard maps from a slice of hazard curves.
-    :returns: a pair ({kind: hmaps}, slice)
-    """
-    dic = {}
-    for kind, hcurves in hcurves_by_kind.items():
-        dic[kind] = calc.make_hmap_array(hcurves, imtls, poes, len(hcurves))
-    return dic, slice_
-
-
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
