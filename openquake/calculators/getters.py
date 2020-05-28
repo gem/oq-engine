@@ -194,10 +194,12 @@ class PmapGetter(object):
         """
         self.init()
         res = numpy.zeros((self.N, self.R, self.L))
-        for sid in self.sids:
-            pcurves = self.get_pcurves(sid, pmap_by_grp)
-            for rlz, pcurve in enumerate(pcurves):
-                res[sid, rlz] += pcurve.array[:, 0]
+        for grp, pmap in pmap_by_grp.items():
+            for sid, pc in pmap.items():
+                for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
+                    poes = pc.array[:, gsim_idx]
+                    for rlzi in rlzis:
+                        res[sid, rlzi] = general.agg_probs(res[sid, rlzi], poes)
         return res.reshape(self.N, self.R, self.M, -1)
 
     def items(self, kind=''):

@@ -1419,3 +1419,13 @@ def pprod(p, axis=None):
     Probability product 1 - prod(1-p)
     """
     return 1. - numpy.prod(1. - p, axis)
+
+
+def agg_probs(*probs):
+    """
+    Aggregate probabilities with the usual formula 1 - (1 - P1) ... (1 - Pn)
+    """
+    acc = 1. - probs[0]
+    for prob in probs[1:]:
+        acc *= 1. - prob
+    return 1. - acc

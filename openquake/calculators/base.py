@@ -475,12 +475,6 @@ class HazardCalculator(BaseCalculator):
                 sids = self.src_filter().within_bbox(srcs)
                 if len(sids) == 0:
                     raise RuntimeError('All sources were discarded!?')
-                if oq.disagg_by_src and len(srcs) > 1000:
-                    j = oq.inputs['job_ini']
-                    raise InvalidFile(
-                        '%s: disagg_by_src can be set only if there are <=1000'
-                        ' sources, but %d were found in the model' %
-                        (j, len(srcs)))
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
 

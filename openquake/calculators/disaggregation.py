@@ -27,11 +27,10 @@ import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes, humansize, pprod)
+    AccumDict, block_splitter, get_array_nbytes, humansize, pprod, agg_probs)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
@@ -175,16 +174,6 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         if matrix.any():
             res[s] = matrix
     return res
-
-
-def agg_probs(*probs):
-    """
-    Aggregate probabilities with the usual formula 1 - (1 - P1) ... (1 - Pn)
-    """
-    acc = 1. - probs[0]
-    for prob in probs[1:]:
-        acc *= 1. - prob
-    return 1. - acc
 
 
 # the weight is the number of sites within 100 km from the rupture
