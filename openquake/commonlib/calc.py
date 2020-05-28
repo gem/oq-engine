@@ -197,21 +197,6 @@ def make_hmap(pmap, imtls, poes, sid=None):
     return hmap
 
 
-def make_hmap_array(pmap, imtls, poes, nsites):
-    """
-    :returns: a compound array of hazard maps of shape nsites
-    """
-    hcurves = pmap[()]
-    dtlist = [('%s-%s' % (imt, poe), F32) for imt in imtls for poe in poes]
-    array = numpy.zeros(len(pmap), dtlist)
-    for imt, imls in imtls.items():
-        curves = hcurves[:, imtls(imt)]
-        for poe in poes:
-            array['%s-%s' % (imt, poe)] = compute_hazard_maps(
-                curves, imls, poe).flat
-    return array  # array of shape N
-
-
 def make_uhs(hmap, info):
     """
     Make Uniform Hazard Spectra curves for each location.

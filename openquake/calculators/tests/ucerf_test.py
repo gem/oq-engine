@@ -61,10 +61,6 @@ class UcerfTestCase(CalculatorTestCase):
         # check the distribution of the events
         self.assertEventsByRlz([15, 19])
 
-        # check the mean hazard map
-        got = gettemp(view('hmap', self.calc.datastore))
-        self.assertEqualFiles('expected/hmap.rst', got)
-
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini',
                       ruptures_per_block='50', exports='csv')

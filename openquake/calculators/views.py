@@ -28,7 +28,6 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg, fast_agg3)
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, calc
 from openquake.commonlib.writers import build_header, scientificformat
@@ -591,28 +590,6 @@ def view_task_ebrisk(token, dstore):
         humansize(extra['gmfbytes'].sum()),
         (rups['n_occ'] * extra['nsites']).sum())
     return msg
-
-
-@view.add('hmap')
-def view_hmap(token, dstore):
-    """
-    Display the highest 20 points of the mean hazard map. Called as
-    $ oq show hmap:0.1  # 10% PoE
-    """
-    try:
-        poe = valid.probability(token.split(':')[1])
-    except IndexError:
-        poe = 0.1
-    mean = dict(extract(dstore, 'hcurves?kind=mean'))['mean']  # (N, 1, M, L1)
-    mean = mean.reshape(len(mean), -1)  # shape N, L
-    oq = dstore['oqparam']
-    hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
-    dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
-    array = numpy.zeros(len(hmap), dt)
-    for i, vals in enumerate(hmap):
-        array[i] = (i, ) + tuple(vals)
-    array.sort(order=list(oq.imtls)[0])
-    return rst_table(array[:20])
 
 
 @view.add('global_hcurves')
