@@ -508,6 +508,8 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         :param results:
             a dict s -> 9D-matrix of shape (T, Ma, D, Lo, La, E, M, P, Z)
+        :para out:
+            a dict kind -> PMF matrix to be populated
         """
         outputs = self.oqparam.disagg_outputs
         for s, mat9 in results.items():
@@ -515,17 +517,18 @@ class DisaggregationCalculator(base.HazardCalculator):
                 continue
             for p, poe in enumerate(self.poes_disagg):
                 mat8 = mat9[..., p, :]
-                poe_agg = pprod(mat8, axis=(0, 1, 2, 3, 4, 5))
-                self.datastore['poe4'][s, :, p] = poe_agg
-                pa = poe_agg.mean()
+                poe2 = pprod(mat8, axis=(0, 1, 2, 3, 4, 5))
+                self.datastore['poe4'][s, :, p] = poe2  # shape (M, Z)
+                poe_agg = poe2.mean()
+                if poe and abs(1 - poe_agg / poe) > .1:
+                    logging.warning(
+                        'Site #%d: poe_agg=%s is quite different from the '
+                        'expected poe=%s; perhaps the number of intensity '
+                        'measure levels is too small?', s, poe_agg, poe)
                 for m, imt in enumerate(self.imts):
                     mat7 = mat8[..., m, :]
                     mat6 = agg_probs(*mat7)  # 6D
                     for key in outputs:
                         pmf = disagg.pmf_map[key](
                             mat7 if key.endswith('TRT') else mat6)
-                        out[key][:, m, p, :] = pmf
-                    logging.warning(
-                        'Site #%d: poe_agg=%s is quite different from the '
-                        'expected poe=%s; perhaps the number of intensity '
-                        'measure levels is too small?', s, pa, poe)
+                        out[key][s, m, p, :] = pmf

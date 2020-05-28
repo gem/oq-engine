@@ -1107,7 +1107,7 @@ def extract_disagg(dstore, what):
                 if rlz.ordinal in best]
         weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
         weights /= weights.sum()  # normalize to 1
-        matrix = out[label] @ weights
+        matrix = out @ weights
         attrs = {k: bins[k] for k in label.split('_')}
         attrs.update(site_id=[sid], imt=[imt], poe_id=[poe_id],
                      kind=label)

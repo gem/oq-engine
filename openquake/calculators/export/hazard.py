@@ -497,6 +497,10 @@ def export_disagg_csv_xml(ekey, dstore):
     ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     for s, m, p, z in iproduct(N, M, P, Z):
+        dic = {k: dstore['disagg/' + k][s, m, p, ..., z]
+               for k in oq.disagg_outputs}
+        if sum(arr.sum() for arr in dic.values()) == 0:  # no data
+            continue
         imt = from_string(imts[m])
         r = dstore['iml4/rlzs'][s, z]
         rlz = rlzs[r]
@@ -522,13 +526,9 @@ def export_disagg_csv_xml(ekey, dstore):
             writer = writercls(fname, **metadata)
             data = []
             for k in oq.disagg_outputs:
-                arr = dstore['disagg/' + k][s, m, p, z]
-                if arr.any():
-                    dm = DisaggMatrix(poe_agg, iml, k.split('_'), arr)
-                    data.append(dm)
-            if data:
-                writer.serialize(data)
-                fnames.append(fname)
+                data.append(DisaggMatrix(poe_agg, iml, k.split('_'), dic[k]))
+            writer.serialize(data)
+            fnames.append(fname)
         else:  # csv
             metadata['poe'] = poe_agg
             for k in oq.disagg_outputs:
