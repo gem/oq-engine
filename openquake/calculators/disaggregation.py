@@ -149,14 +149,12 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     with pre_mon:
         ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)
-    U, N, M, G = len(ctxs), len(sitecol), len(oq.imtls), len(cmaker.gsims)
     with ms_mon:
-        imts = [from_string(imt) for imt in oq.imtls]
-        mean_std = numpy.zeros((2, U, N, M, G), F32)
-        for u, ctx in enumerate(ctxs):
-            mean_std[:, u] = ctx.get_mean_std(imts, cmaker.gsims)
+        mean_std = disagg.get_mean_std(ctxs, oq.imtls, cmaker.gsims)
 
     for s, iml3 in enumerate(iml4):
+        iml2dict = {imt: iml3[m] for m, imt in enumerate(oq.imtls)}
+
         # z indices by gsim
         M, P, Z = iml3.shape
         zs_by_g = AccumDict(accum=[])
@@ -171,15 +169,11 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             counts[zs] += 1
         assert (counts <= 1).all(), counts
 
-        # switch to logarithmic intensities
-        for m, imt in enumerate(oq.imtls):
-            iml3[m] = disagg.to_distribution_values(iml3[m], imt)
-
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = bin_edges[0], bin_edges[1][s], bin_edges[2][s], bin_edges[3]
         # build 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
         matrix = disagg.disaggregate(
-            ctxs, mean_std, zs_by_g, iml3, eps3, s, bins, pne_mon, mat_mon)
+            ctxs, mean_std, zs_by_g, iml2dict, eps3, s, bins, pne_mon, mat_mon)
         if matrix.any():
             res[s] = matrix
     return res
