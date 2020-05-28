@@ -1392,7 +1392,7 @@ def categorize(values, nchars=2):
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
 
-def get_array_nbytes(sizedict):
+def get_array_nbytes(sizedict, size=8):
     """
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
@@ -1400,9 +1400,9 @@ def get_array_nbytes(sizedict):
     >>> get_array_nbytes(dict(nsites=2, nbins=5))
     (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
     """
-    nbytes = numpy.prod(list(sizedict.values())) * 8
+    nbytes = numpy.prod(list(sizedict.values())) * size
     prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
-    return nbytes, '%s * 8 bytes = %s' % (prod, humansize(nbytes))
+    return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
 
 
 def gen_subclasses(cls):

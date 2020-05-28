@@ -377,6 +377,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
+        G, U = 0, 0
         for gidx, magi in indices:
             trti = grp_ids[gidx][0] // num_eff_rlzs
             trt = self.trts[trti]
@@ -386,12 +387,17 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'maximum_distance': oq.maximum_distance,
                  'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
+            G = max(G, len(cmaker.gsims))
             for rupidxs in block_splitter(
                     indices[gidx, magi], maxweight, weight):
                 idxs = numpy.array([ri.index for ri in rupidxs])
+                U = max(U, len(idxs))
                 allargs.append((dstore, idxs, cmaker, self.iml4,
                                 trti, magi, self.bin_edges[1:], oq))
                 task_inputs.append((trti, magi, len(idxs)))
+
+        nbytes, msg = get_array_nbytes(dict(N=self.N, M=self.M, G=G, U=U))
+        logging.info('Estimated maximum memory per task: %s', msg)
         sd = self.shapedic.copy()
         sd.pop('trt')
         sd.pop('mag')
