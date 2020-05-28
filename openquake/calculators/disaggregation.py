@@ -397,7 +397,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 task_inputs.append((trti, magi, len(idxs)))
 
         nbytes, msg = get_array_nbytes(dict(N=self.N, M=self.M, G=G, U=U))
-        logging.info('Estimated maximum memory per task: %s', msg)
+        logging.info('Estimated maximum memory per task:\n%s', msg)
         sd = self.shapedic.copy()
         sd.pop('trt')
         sd.pop('mag')
