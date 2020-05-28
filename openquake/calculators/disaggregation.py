@@ -505,16 +505,17 @@ class DisaggregationCalculator(base.HazardCalculator):
             rlzs = self.rlzs[s]
             for p, poe in enumerate(self.poes_disagg):
                 mat8 = mat9[..., p, :]
-                poe_agg = pprod(mat8, axis=(0, 1, 2, 3, 4, 5))  # shape M, Z
+                poe_agg = pprod(mat8, axis=(0, 1, 2, 3, 4, 5))
                 self.datastore['poe4'][s, :, p] = poe_agg
+                pa = poe_agg.mean()
                 for m, imt in enumerate(self.imts):
                     mat7 = mat8[..., m, :]
                     self._save('disagg', s, rlzs, p, imt, mat7)
-                if poe and abs(1 - pprod(poe_agg).mean() / poe) > .1:
+                if poe and abs(1 - pa / poe) > .1:
                     logging.warning(
                         'Site #%d: poe_agg=%s is quite different from the '
                         'expected poe=%s; perhaps the number of intensity '
-                        'measure levels is too small?', s, poe_agg, poe)
+                        'measure levels is too small?', s, pa, poe)
 
     def _save(self, dskey, site_id, rlzs, p, imt, matrix7):
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
