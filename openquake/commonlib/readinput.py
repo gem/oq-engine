@@ -700,7 +700,7 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-    logging.info('There are %d sources with %d unique IDs', ns, len(data))
+    logging.info('There are %d sources with %d unique IDs', ns + 1, len(data))
     false_duplicates = [src_id for src_id in data
                         if data[src_id][MULTIPLICITY] > 1]
     if false_duplicates:
