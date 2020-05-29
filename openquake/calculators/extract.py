@@ -1141,11 +1141,15 @@ def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
     dt = [('site_id', U32), ('lon', F32), ('lat', F32),
           ('lon_bins', (F32, shapedic['lon'] + 1)),
           ('lat_bins', (F32, shapedic['lat'] + 1))]
+    Z = shapedic['Z']
     for out in disagg_outputs:
         shp = tuple(shapedic[key] for key in out.lower().split('_'))
         for imt in imts:
             for poe in poes_disagg:
                 dt.append(('%s-%s-%s' % (out, imt, poe), (F32, shp)))
+    for imt in imts:
+        for poe in poes_disagg:
+            dt.append(('iml-%s-%s' % (imt, poe), (F32, (Z,))))
     return dt
 
 
@@ -1168,24 +1172,26 @@ def extract_disagg_layer(dstore, what):
         oq, sitecol, dstore['source_mags'])
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    best_rlzs = dstore['best_rlzs']
     realizations = numpy.array(dstore['full_lt'].get_realizations())
-    for kind in kinds:
-        arr = dstore['disagg/' + kind][:]  # shape N, M, P, ..., Z
-        for sid, lon, lat, rec in zip(
-                sitecol.sids, sitecol.lons, sitecol.lats, out):
-            rlzs = realizations[best_rlzs[sid]]
-            rec['site_id'] = sid
-            rec['lon'] = lon
-            rec['lat'] = lat
-            rec['lon_bins'] = edges[2][sid]
-            rec['lat_bins'] = edges[3][sid]
-            for m, imt in enumerate(oq.imtls):
-                weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
-                weights /= weights.sum()  # normalize to 1
-                for p, poe in enumerate(poes_disagg):
+    iml4 = dstore['iml4'][:]
+    best_rlzs = dstore['best_rlzs'][:]
+    arr = {kind: dstore['disagg/' + kind][:] for kind in kinds}
+    for sid, lon, lat, rec in zip(
+            sitecol.sids, sitecol.lons, sitecol.lats, out):
+        rlzs = realizations[best_rlzs[sid]]
+        rec['site_id'] = sid
+        rec['lon'] = lon
+        rec['lat'] = lat
+        rec['lon_bins'] = edges[2][sid]
+        rec['lat_bins'] = edges[3][sid]
+        for m, imt in enumerate(oq.imtls):
+            ws = numpy.array([rlz.weight[imt] for rlz in rlzs])
+            ws /= ws.sum()  # normalize to 1
+            for p, poe in enumerate(poes_disagg):
+                for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
-                    rec[key] = arr[sid, m, p] @ weights
+                    rec[key] = arr[kind][sid, m, p] @ ws
+                rec['iml-%s-%s' % (imt, poe)] = iml4[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 
