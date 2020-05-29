@@ -89,6 +89,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.check_floating_spinning()
         if not self.datastore.parent:
             self.rupser = calc.RuptureSerializer(self.datastore)
+        self.srcfilter = self.src_filter(self.datastore.tempname)
 
     def init_logic_tree(self, full_lt):
         self.trt_by_grp = full_lt.trt_by_grp
@@ -107,7 +108,7 @@ class EventBasedCalculator(base.HazardCalculator):
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
-    def build_events_from_sources(self, srcfilter):
+    def build_events_from_sources(self):
         """
         Prefilter the composite source model and store the source_info
         """
@@ -122,8 +123,10 @@ class EventBasedCalculator(base.HazardCalculator):
             # manage the filtering in a special way
             for sg in self.csm.src_groups:
                 for src in sg:
-                    src.src_filter = srcfilter
+                    src.src_filter = self.srcfilter
             srcfilter = nofilter  # otherwise it would be ultra-slow
+        else:
+            srcfilter = self.srcfilter
         for sg in self.csm.src_groups:
             if not sg.sources:
                 continue
@@ -297,13 +300,12 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.set_param()
         self.offset = 0
-        srcfilter = self.src_filter(self.datastore.tempname)
         self.indices = AccumDict(accum=[])  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.datastore.parent['full_lt'])
         else:  # from sources
-            self.build_events_from_sources(srcfilter)
+            self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
@@ -327,9 +329,10 @@ class EventBasedCalculator(base.HazardCalculator):
         # compute_gmfs in parallel
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
-        iterargs = ((rgetter, srcfilter, self.param)
+        iterargs = ((rgetter, self.srcfilter, self.param)
                     for rgetter in gen_rupture_getters(
-                            self.datastore, srcfilter, oq.concurrent_tasks))
+                            self.datastore, self.srcfilter,
+                            oq.concurrent_tasks))
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores

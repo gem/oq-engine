@@ -239,7 +239,8 @@ class RuptureSerializer(object):
         rup_array.array['gidx2'] += offset
         hdf5.extend(self.datastore['ruptures'], rup_array)
         hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
-        # TODO: PMFs for nonparametric ruptures are not stored
+        # NB: PMFs for nonparametric ruptures are not stored, but they are
+        # not needed after the ruptures have been sampled
         self.datastore.flush()
 
     def close(self):
@@ -247,8 +248,6 @@ class RuptureSerializer(object):
         Save information about the rupture codes as attributes of the
         'ruptures' dataset.
         """
-        if 'ruptures' not in self.datastore:  # for UCERF
-            return
         codes = numpy.unique(self.datastore['ruptures']['code'])
         attr = {'code_%d' % code: ' '.join(
             cls.__name__ for cls in code2cls[code]) for code in codes}
