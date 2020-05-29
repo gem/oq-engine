@@ -106,8 +106,8 @@ class DisaggregationTestCase(CalculatorTestCase):
                      'imt=SA(0.1)&poe_id=0')
         self.assertEqual(aw.dtype.names,
                          ('site_id', 'lon', 'lat',
-                          'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None',
-                          'iml-SA(0.1)-None'))
+                          'lon_bins', 'lat_bins', 'Mag-SA(0.1)-0y',
+                          'iml-SA(0.1)-0y'))
 
     def test_case_3(self):
         # a case with poes_disagg too large
@@ -159,7 +159,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(
             aw.dtype.names,
             ('site_id', 'lon', 'lat', 'lon_bins', 'lat_bins',
-             'Lon_Lat-PGA-0.002105', 'iml-PGA-0.002105'))
+             'Lon_Lat-PGA-475y', 'iml-PGA-475y'))
 
         aae(aw.mag, [6.5, 6.75, 7., 7.25])
         aae(aw.dist, [0., 25., 50., 75., 100., 125., 150., 175., 200.,

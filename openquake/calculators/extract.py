@@ -1137,7 +1137,7 @@ def extract_disagg(dstore, what):
     return ArrayWrapper(values, qdict)
 
 
-def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
+def _disagg_output_dt(shapedic, disagg_outputs, imts, rperiods):
     dt = [('site_id', U32), ('lon', F32), ('lat', F32),
           ('lon_bins', (F32, shapedic['lon'] + 1)),
           ('lat_bins', (F32, shapedic['lat'] + 1))]
@@ -1145,12 +1145,23 @@ def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
     for out in disagg_outputs:
         shp = tuple(shapedic[key] for key in out.lower().split('_'))
         for imt in imts:
-            for poe in poes_disagg:
-                dt.append(('%s-%s-%s' % (out, imt, poe), (F32, shp)))
+            for rp in rperiods:
+                dt.append(('%s-%s-%dy' % (out, imt, rp), (F32, shp)))
     for imt in imts:
-        for poe in poes_disagg:
-            dt.append(('iml-%s-%s' % (imt, poe), (F32, (Z,))))
+        for rp in rperiods:
+            dt.append(('iml-%s-%dy' % (imt, rp), (F32, (Z,))))
     return dt
+
+
+def return_period(poe, investigation_time):
+    """
+    :returns: the return period associated to a given PoE
+
+    >>> return_period(0.002105, 1)
+    475
+    """
+    return numpy.uint32(
+        1. / (1. - numpy.exp(- numpy.array(poe) / investigation_time)))
 
 
 @extract.add('disagg_layer')
@@ -1167,10 +1178,11 @@ def extract_disagg_layer(dstore, what):
     else:
         kinds = oq.disagg_outputs
     sitecol = dstore['sitecol']
-    poes_disagg = oq.poes_disagg or (None,)
+    poes_disagg = oq.poes_disagg or (numpy.nan,)
+    rperiods = return_period(poes_disagg, oq.investigation_time)
     edges, shapedic = disagg.get_edges_shapedic(
         oq, sitecol, dstore['source_mags'])
-    dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
+    dt = _disagg_output_dt(shapedic, kinds, oq.imtls, rperiods)
     out = numpy.zeros(len(sitecol), dt)
     realizations = numpy.array(dstore['full_lt'].get_realizations())
     iml4 = dstore['iml4'][:]
@@ -1187,11 +1199,11 @@ def extract_disagg_layer(dstore, what):
         for m, imt in enumerate(oq.imtls):
             ws = numpy.array([rlz.weight[imt] for rlz in rlzs])
             ws /= ws.sum()  # normalize to 1
-            for p, poe in enumerate(poes_disagg):
+            for p, rp in enumerate(rperiods):
                 for kind in kinds:
-                    key = '%s-%s-%s' % (kind, imt, poe)
+                    key = '%s-%s-%dy' % (kind, imt, rp)
                     rec[key] = arr[kind][sid, m, p] @ ws
-                rec['iml-%s-%s' % (imt, poe)] = iml4[sid, m, p]
+                rec['iml-%s-%dy' % (imt, rp)] = iml4[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 
