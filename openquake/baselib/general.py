@@ -196,12 +196,14 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
+def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
+                   sort=False):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
     :param weight: a function returning the weigth of a given item
     :param key: a function returning the kind of a given item
+    :param sort: if True, sort the items by reverse weight before splitting
 
     Group together items of the same kind until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
@@ -224,7 +226,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
         raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
     prev_key = 'Unspecified'
-    for item in items:
+    for item in sorted(items, key=weight, reverse=True) if sort else items:
         w = weight(item)
         k = key(item)
         if w < 0:  # error
