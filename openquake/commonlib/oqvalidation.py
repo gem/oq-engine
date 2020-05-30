@@ -210,7 +210,7 @@ class OqParam(valid.ParamSet):
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 1E8)  # used in ebrisk
-    min_weight = valid.Param(valid.positiveint, 3000)  # used in classical
+    min_weight = valid.Param(valid.positiveint, 10_000)  # used in classical
     max_weight = valid.Param(valid.positiveint, 300_000)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)

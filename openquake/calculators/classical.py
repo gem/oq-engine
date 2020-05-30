@@ -390,8 +390,7 @@ class ClassicalCalculator(base.HazardCalculator):
             f1, f2 = classical, classical
         else:
             f1, f2 = classical, classical_split_filter
-        min_weight = oq.min_weight * (10 if self.few_sites else 1)
-        max_weight = max(min(totweight / C, oq.max_weight), min_weight)
+        max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
         param = dict(
@@ -415,7 +414,8 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, totweight/C, srcweight))
+                        else block_splitter(sg, totweight/C, srcweight,
+                                            sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
                 for block in blocks:
