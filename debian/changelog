@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * The `minimum_magnitude` parameter was incorrectly ignored in UCERF
+
   [Iason Grigoratos]
   * Implemented the Zalachoris & Rathje (2019) GMM
 

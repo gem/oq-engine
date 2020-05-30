@@ -214,10 +214,10 @@ class SourceGroup(collections.abc.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
-        if not src.min_mag:  # if not set already
-            src.min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
-            if not src.get_mags():  # filtered out
-                return
+        src.min_mag = max(src.min_mag, self.min_mag.get(self.trt)
+                          or self.min_mag['default'])
+        if src.min_mag and not src.get_mags():  # filtered out
+            return
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
                 self.rup_interdep == 'mutex'):
@@ -920,7 +920,7 @@ class SourceConverter(RuptureConverter):
             assert 'tom' in node.attrib, msg
             if isinstance(tom, PoissonTOM):
                 assert hasattr(sg, 'occurrence_rate')
-        #
+
         for src_node in node:
             src = self.convert_node(src_node)
             if src is None:  # filtered out by source_id
