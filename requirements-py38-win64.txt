@@ -36,4 +36,4 @@ https://wheelhouse.openquake.org/v3/windows/py/pyparsing-2.4.0-py2.py3-none-any.
 https://wheelhouse.openquake.org/v3/windows/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py38/kiwisolver-1.1.0-cp38-none-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py38/matplotlib-3.1.2-cp38-cp38-win_amd64.whl
-https://wheelhouse.openquake.org/v3/windows/py38/pyproj-2.6.0-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/pyproj-2.5.0-cp38-cp38-win_amd64.whl
