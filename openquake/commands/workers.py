@@ -15,13 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import sys
-import getpass
 from pprint import pprint
-from openquake.baselib import sap, config, workerpool
-
-
-ro_commands = ('status', 'inspect')
+from openquake.baselib import sap
+from openquake.commonlib import logs
 
 
 @sap.script
@@ -29,13 +25,8 @@ def workers(cmd):
     """
     start/stop/restart the workers, or return their status
     """
-    if (cmd not in ro_commands and config.dbserver.multi_user and
-            getpass.getuser() != 'openquake'):
-        sys.exit('oq workers only works in single user mode')
-
-    master = workerpool.WorkerMaster(**config.zworkers)
-    pprint(getattr(master, cmd)())
+    pprint(logs.dbcmd('zmq_' + cmd))
 
 
 workers.arg('cmd', 'command',
-            choices='start stop status restart inspect'.split())
+            choices='start stop status restart inspect wait'.split())
