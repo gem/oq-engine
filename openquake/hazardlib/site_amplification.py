@@ -16,11 +16,67 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import numpy
 from scipy.stats import norm
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.commonlib.oqvalidation import check_same_levels
+
+
+class AmplFunction():
+    """
+    Class for managing an amplification function DataFrame
+
+    :param df:
+        A :class:`pandas.DataFrame` instance
+    """
+    
+    def __init__(self, df):
+        self.df = df
+
+    @classmethod
+    def get_df_for_mag_dst_soil(df, mag=None, dst=None, soil=None, imt=None):
+        """
+        :param df:
+            Dataframe
+        :param mag:
+            Magnitude
+        :param dst:
+            Distance
+        """
+        if mag is not None:
+            magu = numpy.sort(numpy.unique(df['from_mag']))
+            magsel = magu[max(numpy.argwhere(magu < mag))[0]]
+            df = df.loc[df['from_mag'] == magsel, :]
+        if dst is not None:
+            dstu = numpy.sort(numpy.unique(df['from_rrup']))
+            dstsel = dstu[max(numpy.argwhere(dstu < dst))[0]]
+            df = df.loc[df['from_rrup'] == dstsel, :]
+        if imt is not None:
+            drop = []
+            for key in df.keys():
+                if not (key in ['ampcode', 'from_mag', 'from_rrup'] or 
+                        re.search(imt, key)):
+                    drop.append(key)
+            df = df.drop(columns=drop)
+        if soil is not None:
+            df = df.loc[df['ampcode'] == soil, :]
+        return AmplFunction(df)
+
+    def get_imts(self):
+        out = []
+        for key in self.df.keys():
+            if re.search('^SA', key) or re.search('^PGA', key):
+                out.append(key)
+        return key
+
+    def get_max_sigma(self):
+        sigma = 0
+        for (cName, cData) in self.df.iteritems():
+            if re.search('^sigma', cName):
+                sigma = max([sigma, max(cData)])
+        return sigma
 
 
 # this is necessary since norm.cdf for scale=0 returns NaNs
@@ -239,6 +295,7 @@ class Amplifier(object):
             lst = []
             for imt in self.imtls:
                 slc = self.imtls(imt)
+                print('slc', slc)
                 new = self.amplify_one(ampl_code, imt, pcurve.array[slc],
                                        mag, dst)
                 lst.append(new)

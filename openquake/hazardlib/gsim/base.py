@@ -212,7 +212,7 @@ def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
     return _truncnorm_sf(truncation_level, out)
 
 
-def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
+def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
                    mag, sitecode, rrup, squeeze=False):
     """
     :param mean_std:
@@ -234,33 +234,72 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampl,
         - We might want to compute the ideal IMTs on rock.
         - We might want to run this assuming that rrup are all the same
     """
+
+    # Mean and std of ground motion for the IMTs considered in this analysis
     mean, stddev = mean_std  # shape (N, M, G)
     N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
+
+    # List of the IMTs
+    imts = [s for s in loglevels]
+
+    # `nsamp` is the number of IMLs per IMT used to compute the hazard on rock
+    # while 'L' is total number of ground-motion values
+    nsamp = 30
+    L = nsamp * len(imts)
+
+    # Arrays used to compute the poes on rock
     out_l = numpy.zeros((N, L) if squeeze else (N, L, G))
     out_u = numpy.zeros((N, L) if squeeze else (N, L, G))
+
+    # This is the array where we store the output results i.e. poes on soil
+    LS = len(loglevels[imts[0]])
+    out_s = numpy.zeros((N, LS) if squeeze else (N, LS, G))
+
+    # Get the values of ground-motion used to compute the probability of
+    # exceedance on soil. Note that we assume they are the same for all the
+    # IMTs considered.
+    amplevels = loglevels[imts[0]]
+
+    # Now we compute the probability of exceedance for each IMT
     lvl = 0
     for m, imt in enumerate(loglevels):
-        ll = loglevels[imt]
-        sigma = max(ampl.isigmas)
-        print('Sigma', sigma)
 
+        # Here we set automatically the IMLs that should be used to compute
+        # the probability of occurrence of GM on rock within discrete
+        # intervals
+        sigma = ampfun.get_max_sigma()
+        ll = numpy.linspace(min(amplevels)-sigma,
+                            max(amplevels)+sigma, num=nsamp)
+
+        # Now we calculate for each ground motion interval the probability
+        # of occurrence on rock for all the sites
         for iml_l, iml_u in zip(ll[:-1], ll[1:]):
-            if truncation_level == 0:  # just compare imls to mean
+
+            # Set the arguments of the truncated normal distribution
+            # function
+            if truncation_level == 0:
                 out_l[:, lvl] = iml_l <= mean[:, m]
                 out_u[:, lvl] = iml_u <= mean[:, m]
             else:
                 out_l[:, lvl] = (iml_l - mean[:, m]) / stddev[:, m]
                 out_u[:, lvl] = (iml_u - mean[:, m]) / stddev[:, m]
             lvl += 1
+
             # Probability of occurrence on rock - The shape of this array
-            # is number of sites x number of IMLs
+            # is: number of sites x number of IMLs x GMMs
             pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
                          _truncnorm_sf(truncation_level, out_u))
-            print(pocc_rock.shape)
-            # Now we calculate the probability of exceedance on soil
+
+            # Get the required amplification function given the input
+            # parameters
 
 
-    #pcurves = [ProbabilityCurve(c) for c in poes_rock]
+            print(pocc_rock)
+
+
+            
+
+
     #poes_soil = ampl.amplify(sitecode, pcurves, mag, rrup)
     return None, None
 

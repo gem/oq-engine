@@ -29,6 +29,9 @@ from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
+
+from openquake.hazardlib.site_amplification import AmplFunction
 
 
 ampl_func = '''\
@@ -75,41 +78,50 @@ class GetPoesSiteTestCase(unittest.TestCase):
 
     def setUp(self):
         fname = gettemp(ampl_func)
-        self.df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
-                           index='ampcode')
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
         # Add a multi-index to this dataframe
-        self.df.reset_index(drop=False, inplace=True)
-        self.df.set_index(['ampcode', 'from_mag',  'from_rrup'])
+        df.reset_index(drop=False, inplace=True)
+        df.set_index(['ampcode', 'from_mag',  'from_rrup'])
+        self.df = AmplFunction(df)
+
         # Compute GM on rock
-        gmm = BooreAtkinson2008()
+        gmmA = BooreAtkinson2008()
+        gmmB = BooreEtAl2014()
+        dsts = [10., 15., 20., 30., 40.]
         # Set parameters
         imts = [PGA(), SA(1.0)]
-        sites = Dummy.get_site_collection(4, vs30=760.0)
+        sites = Dummy.get_site_collection(len(dsts), vs30=760.0)
         self.mag = 6.0
         rup = Dummy.get_rupture(mag=self.mag)
         dists = DistancesContext()
-        dists.rjb = numpy.array([10., 20., 30., 40.])
-        dists.rrup = numpy.array([10., 20., 30., 40.])
+        dists.rjb = numpy.array(dsts)
+        dists.rrup = numpy.array(dsts)
         self.rrup = dists.rrup
         # Shape: 2 x 4 (distances) x 2 (IMTs) x 1 (GMMs)
-        self.meastd = get_mean_std(sites, rup, dists, imts, [gmm])
+        self.meastd = get_mean_std(sites, rup, dists, imts, [gmmA])
+        # Shape: 2 x 4 (distances) x 2 (IMTs) x 2 (GMMs)
+        self.meastd = get_mean_std(sites, rup, dists, imts, [gmmA, gmmB])
 
     def test01(self):
         sitecode = b'A'
-        amp = Amplifier(self.imtls, self.df, self.soil_levels)
-        imls = numpy.log([0.01, 0.05, 0.1, 0.2, 0.5])
-        imtls_rock = DictArray({'PGA': imls, 'SA(1.0)': imls})
+        imls_soil = numpy.log([0.01, 0.05, 0.1, 0.2, 0.5])
+        # imtls_rock = DictArray({'PGA': imls_, 'SA(1.0)': imls})
+        # amp = Amplifier(self.imtls, self.df, self.soil_levels)
+        #res = _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag,
+        #                     sitecode, self.rrup)
 
-        res = _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag,
+        imtls_soil = DictArray({'PGA': imls_soil, 'SA(1.0)': imls_soil})
+        res = _get_poes_site(self.meastd, imtls_soil, 3.0, self.df, self.mag,
                              sitecode, self.rrup)
 
+        """
         import matplotlib.pyplot as plt
         #print(res[0][0], len(res[0]))
         rock = res[0]
         soil = res[1]
-        print(rock.shape)
-        print(soil[0].__dict__)
         plt.plot(amp.midlevels, res[0][0])
         plt.plot(amp.midlevels, soil[0].array[:], 'o')
         plt.xscale('log')
         plt.show()
+        """
