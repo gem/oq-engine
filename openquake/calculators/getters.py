@@ -198,8 +198,8 @@ class PmapGetter(object):
             for sid, pc in pmap.items():
                 for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
                     poes = pc.array[:, gsim_idx]
-                    for rlzi in rlzis:
-                        res[sid, rlzi] = general.agg_probs(res[sid, rlzi], poes)
+                    for rlz in rlzis:
+                        res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
         return res.reshape(self.N, self.R, self.M, -1)
 
     def items(self, kind=''):
