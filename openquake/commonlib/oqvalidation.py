@@ -18,12 +18,11 @@
 
 import os
 import logging
-import warnings
 import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib.general import DictArray, AccumDict, DeprecationWarning
+from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
@@ -115,7 +114,8 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
-    disagg_outputs = valid.Param(valid.disagg_outputs, None)
+    disagg_outputs = valid.Param(valid.disagg_outputs,
+                                 list(calc.disagg.pmf_map))
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     distance_bin_width = valid.Param(valid.positivefloat)
@@ -160,7 +160,7 @@ class OqParam(valid.ParamSet):
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
-    minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
+    minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
@@ -210,7 +210,7 @@ class OqParam(valid.ParamSet):
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 1E8)  # used in ebrisk
-    min_weight = valid.Param(valid.positiveint, 3000)  # used in classical
+    min_weight = valid.Param(valid.positiveint, 6_000)  # used in classical
     max_weight = valid.Param(valid.positiveint, 300_000)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -288,9 +288,9 @@ class OqParam(valid.ParamSet):
             lens = set(map(len, self.hazard_imtls.values()))
             if len(lens) > 1:
                 dic = {imt: len(ls) for imt, ls in self.hazard_imtls.items()}
-                warnings.warn(
+                raise ValueError(
                     'Each IMT must have the same number of levels, instead '
-                    'you have %s' % dic, DeprecationWarning)
+                    'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')

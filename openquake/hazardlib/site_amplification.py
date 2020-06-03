@@ -291,7 +291,6 @@ class Amplifier(object):
                 # shaking on soil)
                 #
                 logaf = numpy.log(self.amplevels/mid)
-                poes = (1.0-norm_cdf(logaf, numpy.log(a), s))
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 

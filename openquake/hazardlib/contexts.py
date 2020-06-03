@@ -498,6 +498,7 @@ class PmapMaker(object):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
             pmap = self.pmap
+        rup_indep = self.rup_indep
         for ctx in ctxs:
             # this must be fast since it is inside an inner loop
             with self.gmf_mon:
@@ -515,15 +516,13 @@ class PmapMaker(object):
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)
                 pnes = ctx.get_probability_no_exceedance(poes)
-                for grp_id in ctx.grp_ids:
-                    p = pmap[grp_id]
-                    if self.rup_indep:
-                        for sid, pne in zip(ctx.sids, pnes):
-                            p.setdefault(sid, 1.).array *= pne
-                    else:  # rup_mutex
-                        for sid, pne in zip(ctx.sids, pnes):
-                            p.setdefault(sid, 0.).array += (
-                                1.-pne) * ctx.weight
+                for sid, pne in zip(ctx.sids, pnes):
+                    for grp_id in ctx.grp_ids:
+                        probs = pmap[grp_id].setdefault(sid, rup_indep).array
+                        if rup_indep:
+                            probs *= pne
+                        else:  # rup_mutex
+                            probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
         with self.cmaker.mon('iter_ruptures', measuremem=False):

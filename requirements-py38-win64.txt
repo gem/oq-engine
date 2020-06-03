@@ -1,0 +1,39 @@
+# Suggested versions for development
+# !! must update pip first! so wheels will be used !!
+
+# GEM Mirror
+# We also provide pre-compiled win_amd64 wheels for
+# h5py, Shapely, psutil, Basemap
+
+https://wheelhouse.openquake.org/v3/windows/py/pytz-2019.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/setuptools-41.0.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py38/h5py-2.10.0-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/numpy-1.18.2-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/scipy-1.4.1-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/pandas-1.0.3-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/pyzmq-19.0.0-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/psutil-5.6.7-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/Shapely-1.7.0-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py/docutils-0.14-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/decorator-4.4.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/pbr-5.2.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/six-1.12.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/Django-2.2.7-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/sqlparse-0.3.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/certifi-2019.3.9-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/chardet-3.0.4-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/idna-2.8-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/urllib3-1.25.3-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/requests-2.22.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/pyshp-1.2.3-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/toml-0.10.0-py2.py3-none-any.whl
+
+### Plotting ###
+# comment the following lines to skip installation
+# of the plotting libraries (optional feature)
+https://wheelhouse.openquake.org/v3/windows/py/python_dateutil-2.8.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/pyparsing-2.4.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/cycler-0.10.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py38/kiwisolver-1.1.0-cp38-none-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/matplotlib-3.1.2-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/pyproj-2.5.0-cp38-cp38-win_amd64.whl

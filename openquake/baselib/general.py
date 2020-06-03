@@ -196,12 +196,14 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
+def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
+                   sort=False):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
     :param weight: a function returning the weigth of a given item
     :param key: a function returning the kind of a given item
+    :param sort: if True, sort the items by reverse weight before splitting
 
     Group together items of the same kind until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
@@ -224,7 +226,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
         raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
     prev_key = 'Unspecified'
-    for item in items:
+    for item in sorted(items, key=weight, reverse=True) if sort else items:
         w = weight(item)
         k = key(item)
         if w < 0:  # error
@@ -1392,7 +1394,7 @@ def categorize(values, nchars=2):
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
 
-def get_array_nbytes(sizedict):
+def get_array_nbytes(sizedict, size=8):
     """
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
@@ -1400,9 +1402,9 @@ def get_array_nbytes(sizedict):
     >>> get_array_nbytes(dict(nsites=2, nbins=5))
     (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
     """
-    nbytes = numpy.prod(list(sizedict.values())) * 8
+    nbytes = numpy.prod(list(sizedict.values())) * size
     prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
-    return nbytes, '%s * 8 bytes = %s' % (prod, humansize(nbytes))
+    return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
 
 
 def gen_subclasses(cls):
@@ -1419,3 +1421,13 @@ def pprod(p, axis=None):
     Probability product 1 - prod(1-p)
     """
     return 1. - numpy.prod(1. - p, axis)
+
+
+def agg_probs(*probs):
+    """
+    Aggregate probabilities with the usual formula 1 - (1 - P1) ... (1 - Pn)
+    """
+    acc = 1. - probs[0]
+    for prob in probs[1:]:
+        acc *= 1. - prob
+    return 1. - acc

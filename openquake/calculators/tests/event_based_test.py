@@ -271,10 +271,10 @@ class EventBasedTestCase(CalculatorTestCase):
                          dic)
 
         fnames = out['hcurves', 'csv']
-        mean_eb = get_mean_curves(self.calc.datastore)
+        mean_eb = get_mean_curves(self.calc.datastore, 'PGA')
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-        mean_cl = get_mean_curves(self.calc.cl.datastore)
+        mean_cl = get_mean_curves(self.calc.cl.datastore, 'PGA')
         reldiff, _index = max_rel_diff_index(
             mean_cl, mean_eb, min_value=0.1)
         self.assertLess(reldiff, 0.07)

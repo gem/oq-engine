@@ -382,6 +382,7 @@ def extract_hcurves(dstore, what):
     /extract/hcurves?kind=rlzs etc
     """
     info = get_info(dstore)
+    imts = list(info['imtls'])
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
         mesh = get_mesh(sitecol, complete=False)
@@ -392,19 +393,19 @@ def extract_hcurves(dstore, what):
     params = parse(what, info)
     if 'imt' in params:
         [imt] = params['imt']
-        slc = info['imtls'](imt)
+        m = imts.index(imt)
     else:
-        slc = ALL
+        m = ALL
     sids = params.get('site_id', ALL)
     if params['rlzs']:
         dset = dstore['hcurves-rlzs']
-        for k in params['k']:
-            yield 'rlz-%03d' % k, hdf5.extract(dset, sids, k, slc)[:, 0]
+        for k in params['k']:  # rlz or stat
+            yield 'rlz-%03d' % k, hdf5.extract(dset, sids, k, m, ALL)
     else:
         dset = dstore['hcurves-stats']
         stats = list(info['stats'])
-        for k in params['k']:
-            yield stats[k], hdf5.extract(dset, sids, k, slc)[:, 0]
+        for k in params['k']:  # rlz or stat
+            yield stats[k], hdf5.extract(dset, sids, k, m, ALL)
     yield from params.items()
 
 
@@ -1077,23 +1078,6 @@ def get_ruptures_within(dstore, bbox):
     return dstore['ruptures'][mask]
 
 
-def _getkey(names, key):
-    match = [name for name in names if name.endswith(key)]
-    return match[0]
-
-
-# the disagg datagroup may contain
-# PGA-sid-0-poe-0
-def disagg_output(dstore, imt, sid, poe_id):
-    """
-    :returns:
-        a datagroup
-    """
-    key = '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
-    key = _getkey(sorted(dstore['disagg']), key)
-    return dstore['disagg'][key]
-
-
 @extract.add('disagg')
 def extract_disagg(dstore, what):
     """
@@ -1113,21 +1097,23 @@ def extract_disagg(dstore, what):
         if len(v.shape) == 2:
             return v[sid]
         return v[:]
+    oq = dstore['oqparam']
+    imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
-    dset = disagg_output(dstore, imt, sid, poe_id)
+    out = dstore['disagg/' + label][sid, imt2m[imt], poe_id]
     if z is None:  # compute stats
         best = dstore['best_rlzs'][sid]
         rlzs = [rlz for rlz in dstore['full_lt'].get_realizations()
                 if rlz.ordinal in best]
         weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
         weights /= weights.sum()  # normalize to 1
-        matrix = dset[label][()] @ weights
+        matrix = out @ weights
         attrs = {k: bins[k] for k in label.split('_')}
         attrs.update(site_id=[sid], imt=[imt], poe_id=[poe_id],
                      kind=label)
         return ArrayWrapper(matrix, attrs)
 
-    matrix = dset[label][..., z]
+    matrix = out[..., z]
 
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
@@ -1155,11 +1141,15 @@ def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
     dt = [('site_id', U32), ('lon', F32), ('lat', F32),
           ('lon_bins', (F32, shapedic['lon'] + 1)),
           ('lat_bins', (F32, shapedic['lat'] + 1))]
+    Z = shapedic['Z']
     for out in disagg_outputs:
         shp = tuple(shapedic[key] for key in out.lower().split('_'))
         for imt in imts:
             for poe in poes_disagg:
                 dt.append(('%s-%s-%s' % (out, imt, poe), (F32, shp)))
+    for imt in imts:
+        for poe in poes_disagg:
+            dt.append(('iml-%s-%s' % (imt, poe), (F32, (Z,))))
     return dt
 
 
@@ -1175,15 +1165,17 @@ def extract_disagg_layer(dstore, what):
     if 'kind' in qdict:
         kinds = qdict['kind']
     else:
-        kinds = list(oq.disagg_outputs or disagg.pmf_map)
+        kinds = oq.disagg_outputs
     sitecol = dstore['sitecol']
     poes_disagg = oq.poes_disagg or (None,)
     edges, shapedic = disagg.get_edges_shapedic(
         oq, sitecol, dstore['source_mags'])
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    best_rlzs = dstore['best_rlzs']
     realizations = numpy.array(dstore['full_lt'].get_realizations())
+    iml4 = dstore['iml4'][:]
+    best_rlzs = dstore['best_rlzs'][:]
+    arr = {kind: dstore['disagg/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         rlzs = realizations[best_rlzs[sid]]
@@ -1192,15 +1184,14 @@ def extract_disagg_layer(dstore, what):
         rec['lat'] = lat
         rec['lon_bins'] = edges[2][sid]
         rec['lat_bins'] = edges[3][sid]
-        for imt in oq.imtls:
-            weights = numpy.array([rlz.weight[imt] for rlz in rlzs])
-            weights /= weights.sum()  # normalize to 1
-            for kind in kinds:
-                for p, poe in enumerate(poes_disagg):
+        for m, imt in enumerate(oq.imtls):
+            ws = numpy.array([rlz.weight[imt] for rlz in rlzs])
+            ws /= ws.sum()  # normalize to 1
+            for p, poe in enumerate(poes_disagg):
+                for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
-                    label = 'disagg/%s-sid-%d-poe-%s/%s' % (
-                        imt, sid, p, kind)
-                    rec[key] = dstore[label][()] @ weights
+                    rec[key] = arr[kind][sid, m, p] @ ws
+                rec['iml-%s-%s' % (imt, poe)] = iml4[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 

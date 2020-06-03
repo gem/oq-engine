@@ -27,6 +27,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_master)
 
@@ -63,13 +64,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             case_1.__file__,
             fmt='csv')
 
-        # check disagg_by_src, poe=0.02, 0.1, imt=PGA, SA(0.025)
-
-        #self.assertEqual(len(out['disagg_by_src', 'csv']), 4)
-        #for fname in out['disagg_by_src', 'csv']:
-        #    self.assertEqualFiles('expected_output/%s' % strip_calc_id(fname),
-        #                          fname)
-
         # disaggregation by source group
         rlzs = self.calc.datastore['full_lt'].get_realizations()
         ws = [rlz.weight for rlz in rlzs]
@@ -84,6 +78,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         for sid in pmap:
             numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
 
+        check_disagg_by_src(self.calc.datastore)
+
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
         # site #0 is partially discarded
@@ -94,15 +90,13 @@ class DisaggregationTestCase(CalculatorTestCase):
              'rlz-0-SA(0.1)-sid-1.xml',
              'rlz-1-SA(0.1)-sid-0.xml',
              'rlz-1-SA(0.1)-sid-1.xml',
-             'rlz-2-SA(0.1)-sid-0.xml',
              'rlz-2-SA(0.1)-sid-1.xml',
-             'rlz-3-SA(0.1)-sid-0.xml',
              'rlz-3-SA(0.1)-sid-1.xml'],
             case_2.__file__)
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 8)  # number of CSV files
+        self.assertEqual(len(fnames), 6)  # number of CSV files
         for fname in fnames:
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
@@ -112,7 +106,8 @@ class DisaggregationTestCase(CalculatorTestCase):
                      'imt=SA(0.1)&poe_id=0')
         self.assertEqual(aw.dtype.names,
                          ('site_id', 'lon', 'lat',
-                          'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None'))
+                          'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None',
+                          'iml-SA(0.1)-None'))
 
     def test_case_3(self):
         # a case with poes_disagg too large
@@ -164,13 +159,15 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(
             aw.dtype.names,
             ('site_id', 'lon', 'lat', 'lon_bins', 'lat_bins',
-             'Lon_Lat-PGA-0.002105'))
+             'Lon_Lat-PGA-0.002105', 'iml-PGA-0.002105'))
 
         aae(aw.mag, [6.5, 6.75, 7., 7.25])
         aae(aw.dist, [0., 25., 50., 75., 100., 125., 150., 175., 200.,
                       225., 250., 275., 300.])
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
+
+        check_disagg_by_src(self.calc.datastore)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also
@@ -187,16 +184,4 @@ class DisaggregationTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
-        # test_disagg_by_src
-        dbs = self.calc.datastore['disagg_by_src']
-        self.assertEqual(sorted(dbs), ['poe-0.01-PGA-sid-0',
-                                       'poe-0.01-PGA-sid-1',
-                                       'poe-0.01-SA(0.25)-sid-0',
-                                       'poe-0.01-SA(0.25)-sid-1',
-                                       'poe-0.05-PGA-sid-0',
-                                       'poe-0.05-PGA-sid-1',
-                                       'poe-0.05-SA(0.25)-sid-0',
-                                       'poe-0.05-SA(0.25)-sid-1'])
-        arr = dbs['poe-0.01-PGA-sid-0'][()]
-        numpy.testing.assert_almost_equal(
-            arr, [0, 0, 1.9179472e-05, 9.9810150e-03])
+        check_disagg_by_src(self.calc.datastore)
