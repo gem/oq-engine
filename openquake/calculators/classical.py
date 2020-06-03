@@ -379,7 +379,15 @@ class ClassicalCalculator(base.HazardCalculator):
             return src.weight * g
 
         logging.info('Weighting the sources')
-        totweight = sum(sum(srcweight(src) for src in sg) for sg in src_groups)
+        totweight = 0
+        for sg in src_groups:
+            for src in sg:
+                totweight += srcweight(src)
+                if src.code == b'C' and src.num_ruptures > 10_000:
+                    msg = ('{} is suspiciously large, containing {:_d} '
+                           'ruptures with complex_fault_mesh_spacing={} km')
+                    spc = oq.complex_fault_mesh_spacing
+                    logging.warning(msg.format(src, src.num_ruptures, spc))
         C = oq.concurrent_tasks or 1
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
