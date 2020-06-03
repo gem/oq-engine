@@ -17,8 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import copy
 import numpy
+import pandas as pd
 from scipy.stats import norm
+from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.commonlib.oqvalidation import check_same_levels
@@ -26,57 +29,65 @@ from openquake.commonlib.oqvalidation import check_same_levels
 
 class AmplFunction():
     """
-    Class for managing an amplification function DataFrame
+    Class for managing an amplification function DataFrame. In its simplest
+    form the Amplification function.
 
     :param df:
         A :class:`pandas.DataFrame` instance
     """
-    
-    def __init__(self, df):
+
+    def __init__(self, df, soil=None):
+        # If the function is used only for one soil type then we filter out
+        # the other soil typologies
+        if soil is not None:
+            df = df[df['ampcode'] == soil]
         self.df = df
 
     @classmethod
-    def get_df_for_mag_dst_soil(df, mag=None, dst=None, soil=None, imt=None):
+    def from_compact(cls, df):
         """
         :param df:
-            Dataframe
-        :param mag:
-            Magnitude
-        :param dst:
-            Distance
+            A :class:`pandas.DataFrame` instance
+        :returns:
+            A :class:`openquake.hazardlib.site_amplification.AmplFunction`
+            instance
         """
-        if mag is not None:
-            magu = numpy.sort(numpy.unique(df['from_mag']))
-            magsel = magu[max(numpy.argwhere(magu < mag))[0]]
-            df = df.loc[df['from_mag'] == magsel, :]
-        if dst is not None:
-            dstu = numpy.sort(numpy.unique(df['from_rrup']))
-            dstsel = dstu[max(numpy.argwhere(dstu < dst))[0]]
-            df = df.loc[df['from_rrup'] == dstsel, :]
-        if imt is not None:
-            drop = []
-            for key in df.keys():
-                if not (key in ['ampcode', 'from_mag', 'from_rrup'] or 
-                        re.search(imt, key)):
-                    drop.append(key)
-            df = df.drop(columns=drop)
-        if soil is not None:
-            df = df.loc[df['ampcode'] == soil, :]
+
+        # Get IMTs
+        imts = []
+        for key in df.keys():
+            if re.search('^SA', key) or re.search('^PGA', key):
+                imts.append(key)
+
+        # Create the temporary list of lists
+        out = []
+        for i, row in df.iterrows():
+            tmp = [row['ampcode'], row['from_mag'], row['from_rrup'], row['level']]
+            for imt in imts:
+                med = row[imt]
+                std = row['sigma_'+imt]
+                out.append([tmp[0], tmp[1], tmp[2], tmp[3],
+                            imt, med, std])
+            if i > 10:
+                break
+
+        # Create the dataframe
+        dtypes = {'ampcode': ampcode_dt, 'from_mag': float,
+                  'from_rrup': float, 'level': float, 'imt': str,
+                  'median': float, 'std': float}
+        columns = [k for k in dtypes]
+        df = pd.DataFrame(out, columns=columns)
+        df = df.astype(dtypes)
+
+        print(df.head)
         return AmplFunction(df)
 
-    def get_imts(self):
-        out = []
-        for key in self.df.keys():
-            if re.search('^SA', key) or re.search('^PGA', key):
-                out.append(key)
-        return key
-
+    def get_mean_std(self, site, imt, imls, mag, dsts):
+        df = copy.copy(self.df)
+        df = df[(df['ampcode'] == site) & (df['imt'] == imt)]
+ 
     def get_max_sigma(self):
-        sigma = 0
-        for (cName, cData) in self.df.iteritems():
-            if re.search('^sigma', cName):
-                sigma = max([sigma, max(cData)])
-        return sigma
+        return max(self.df['std'])
 
 
 # this is necessary since norm.cdf for scale=0 returns NaNs
@@ -295,7 +306,6 @@ class Amplifier(object):
             lst = []
             for imt in self.imtls:
                 slc = self.imtls(imt)
-                print('slc', slc)
                 new = self.amplify_one(ampl_code, imt, pcurve.array[slc],
                                        mag, dst)
                 lst.append(new)

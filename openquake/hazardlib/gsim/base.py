@@ -293,11 +293,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
             # Get the required amplification function given the input
             # parameters
 
-
             print(pocc_rock)
-
-
-            
 
 
     #poes_soil = ampl.amplify(sitecode, pcurves, mag, rrup)
