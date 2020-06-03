@@ -267,14 +267,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.Ns = len(self.csm.source_info)
         if self.oqparam.disagg_by_src:
-            self.M = len(self.oqparam.imtls)
-            self.L1 = num_levels // self.M
-            sources = encode([src_id for src_id in self.csm.source_info])
-            size, msg = get_array_nbytes(
-                dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
-            if size > TWO32:
-                raise RuntimeError('The matrix disagg_by_src is too large: %s'
-                                   % msg)
+            sources = self.get_source_ids()
             self.datastore.create_dset(
                 'disagg_by_src', F32,
                 (self.N, self.R, self.M, self.L1, self.Ns))
@@ -282,6 +275,28 @@ class ClassicalCalculator(base.HazardCalculator):
                 'disagg_by_src', site_id=self.N, rlz_id=self.R,
                 imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return zd
+
+    def get_source_ids(self):
+        """
+        :returns: the unique source IDs contained in the composite model
+        """
+        oq = self.oqparam
+        self.M = len(oq.imtls)
+        self.L1 = len(oq.imtls.array) // self.M
+        sources = encode([src_id for src_id in self.csm.source_info])
+        size, msg = get_array_nbytes(
+            dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
+        ps = 'pointSource' in self.full_lt.source_model_lt.source_types
+        if size > TWO32 and not ps:
+            raise RuntimeError('The matrix disagg_by_src is too large: %s'
+                               % msg)
+        elif size > TWO32:
+            msg = ('The source model contains point sources: you cannot set '
+                   'disagg_by_src=true unless you convert them to multipoint '
+                   'sources with the command oq upgrade_nrml --multipoint %s'
+                   ) % oq.base_path
+            raise RuntimeError(msg)
+        return sources
 
     def execute(self):
         """
