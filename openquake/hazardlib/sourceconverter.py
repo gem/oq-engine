@@ -1180,17 +1180,22 @@ def _pointsources2multipoints(srcs, i):
     return i, allsources
 
 
+def drop_trivial_weights(group):
+    ws = group.attrib.get('srcs_weights')
+    if ws and len(set(ws)) == 1:  # all equal
+        del group.attrib['srcs_weights']
+
+
 def update_source_model(sm_node, fname):
     """
     :param sm_node: a sourceModel Node object containing sourceGroups
     """
     i = 0
     for group in sm_node:
-        if 'srcs_weights' in group.attrib:
-            raise InvalidFile('srcs_weights must be removed in %s' % fname)
         if not group.tag.endswith('sourceGroup'):
             raise InvalidFile('wrong NRML, got %s instead of '
                               'sourceGroup in %s' % (group.tag, fname))
+        drop_trivial_weights(group)
         psrcs = []
         others = []
         for src in group:
