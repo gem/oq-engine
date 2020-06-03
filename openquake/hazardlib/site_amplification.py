@@ -37,14 +37,15 @@ class AmplFunction():
     """
 
     def __init__(self, df, soil=None):
-        # If the function is used only for one soil type then we filter out
+        # If the function is used only for one soil type, then we filter out
         # the other soil typologies
         if soil is not None:
             df = df[df['ampcode'] == soil]
+        self.mags = numpy.unique(df['from_mag'])
         self.df = df
 
     @classmethod
-    def from_compact(cls, df):
+    def from_compact(cls, df, soil=None):
         """
         :param df:
             A :class:`pandas.DataFrame` instance
@@ -62,7 +63,8 @@ class AmplFunction():
         # Create the temporary list of lists
         out = []
         for i, row in df.iterrows():
-            tmp = [row['ampcode'], row['from_mag'], row['from_rrup'], row['level']]
+            tmp = [row['ampcode'], row['from_mag'],
+                   row['from_rrup'], row['level']]
             for imt in imts:
                 med = row[imt]
                 std = row['sigma_'+imt]
@@ -79,13 +81,25 @@ class AmplFunction():
         df = pd.DataFrame(out, columns=columns)
         df = df.astype(dtypes)
 
-        print(df.head)
-        return AmplFunction(df)
+        return AmplFunction(df, soil)
 
     def get_mean_std(self, site, imt, imls, mag, dsts):
+
         df = copy.copy(self.df)
         df = df[(df['ampcode'] == site) & (df['imt'] == imt)]
- 
+
+        # Filtering magnitude
+        idx = numpy.argmin(self.mags - mag)
+        print(mag, self.mags[idx])
+        df = df[df['from_mag' == self.mags[idx]]]
+
+        # Filtering distance
+        idx = numpy.argmin(s - mag)
+        print(mag, self.mags[idx])
+        df = df[df['from_mag' == self.mags[idx]]]
+
+
+
     def get_max_sigma(self):
         return max(self.df['std'])
 
