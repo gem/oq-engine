@@ -333,7 +333,10 @@ class File(h5py.File):
         elif (isinstance(obj, numpy.ndarray) and obj.shape and
               len(obj) and isinstance(obj[0], str)):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
-        elif (isinstance(obj, numpy.ndarray) and not obj.shape and
+        elif isinstance(obj, numpy.ndarray) and obj.shape:
+            d = self.create_dataset(path, obj.shape, obj.dtype, fillvalue=None)
+            d[:] = obj
+        elif (isinstance(obj, numpy.ndarray) and
               obj.dtype.name.startswith('bytes')):
             self._set(path, numpy.void(bytes(obj)))
         elif isinstance(obj, list) and len(obj) and isinstance(

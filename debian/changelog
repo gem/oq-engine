@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed error with large ShakeMap calculations ('events' not found)
   * Raised an error when using `disagg_by_src` with too many point sources
   * The `minimum_magnitude` parameter was incorrectly ignored in UCERF
 

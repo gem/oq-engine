@@ -952,7 +952,7 @@ class RiskCalculator(HazardCalculator):
         """
         if (self.oqparam.hazard_calculation_id and
                 'gmf_data' not in self.datastore):
-            # 'gmf_data' in self.datastore happens for ShakeMap calculations
+            # not ShakeMap calculations
             self.datastore.parent.close()  # make sure it is closed
             dstore = self.datastore.parent
         else:
@@ -966,9 +966,7 @@ class RiskCalculator(HazardCalculator):
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you set '
                     'ground_motion_fields=False or a large minimum_intensity')
-        if (self.oqparam.calculation_mode not in
-                'event_based_damage scenario_damage scenario_risk'
-                and dstore is self.datastore):
+        if dstore is self.datastore:
             # hack to make h5py happy; I could not get this to work with
             # the SWMR mode
             getter.init()
