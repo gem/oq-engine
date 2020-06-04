@@ -403,7 +403,7 @@ def extract_hcurves(dstore, what):
     [sid] = params.get('site_id', [0])
     if params['rlzs']:
         for k in params['k']:  # rlz
-            arr = dstore.sel('hcurves-rlzs', imt=imt, rlz=k, site_id=sid)
+            arr = dstore.sel('hcurves-rlzs', imt=imt, rlz_id=k, site_id=sid)
             yield 'rlz-%03d' % k, arr
     else:
         stats = list(info['stats'])
@@ -434,7 +434,7 @@ def extract_hmaps(dstore, what):
     if params['rlzs']:
         for k in params['k']:
             # shape (N, R, M, P)
-            arr = dstore.sel('hmaps-rlzs', imt=imt, rlz=k)
+            arr = dstore.sel('hmaps-rlzs', imt=imt, rlz_id=k)
             yield 'rlz-%03d' % k, arr[:, 0, 0]  # shape (N, P)
     else:
         stats = list(info['stats'])
@@ -466,7 +466,7 @@ def extract_uhs(dstore, what):
     [sid] = params.get('site_id', [0])
     if params['rlzs']:
         for k in params['k']:
-            arr = dstore.sel('hmaps-rlzs', site_id=sid, rlz=k)
+            arr = dstore.sel('hmaps-rlzs', site_id=sid, rlz_id=k)
             yield 'rlz-%03d' % k, arr
     else:
         stats = list(info['stats'])
