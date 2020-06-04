@@ -131,8 +131,9 @@ def make_figure_uhs(extractors, what):
                       (site, poe, oq.investigation_time))
         ax.set_ylabel('SA')
         for ck, arr in got.items():
-            ax.plot(periods, arr[0, :, j], '-', label='%s_%s' % ck)
-            ax.plot(periods, arr[0, :, j], '.')
+            curve = list(arr[site][str(poe)])
+            ax.plot(periods, curve, '-', label='%s_%s' % ck)
+            ax.plot(periods, curve, '.')
         ax.grid(True)
         ax.legend()
     return plt

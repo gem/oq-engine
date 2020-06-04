@@ -374,41 +374,6 @@ def _get_dict(dstore, name, imtls, stats):
     return dic
 
 
-@extract.add('hcurves')
-def extract_hcurves(dstore, what):
-    """
-    Extracts hazard curves. Use it as /extract/hcurves?kind=mean or
-    /extract/hcurves?kind=rlz-0, /extract/hcurves?kind=stats,
-    /extract/hcurves?kind=rlzs etc
-    """
-    info = get_info(dstore)
-    imts = list(info['imtls'])
-    if what == '':  # npz exports for QGIS
-        sitecol = dstore['sitecol']
-        mesh = get_mesh(sitecol, complete=False)
-        dic = _get_dict(dstore, 'hcurves-stats', info['imtls'], info['stats'])
-        yield from hazard_items(
-            dic, mesh, investigation_time=info['investigation_time'])
-        return
-    params = parse(what, info)
-    if 'imt' in params:
-        [imt] = params['imt']
-        m = imts.index(imt)
-    else:
-        m = ALL
-    sids = params.get('site_id', ALL)
-    if params['rlzs']:
-        dset = dstore['hcurves-rlzs']
-        for k in params['k']:  # rlz or stat
-            yield 'rlz-%03d' % k, hdf5.extract(dset, sids, k, m, ALL)
-    else:
-        dset = dstore['hcurves-stats']
-        stats = list(info['stats'])
-        for k in params['k']:  # rlz or stat
-            yield stats[k], hdf5.extract(dset, sids, k, m, ALL)
-    yield from params.items()
-
-
 @extract.add('sitecol')
 def extract_sitecol(dstore, what):
     """
@@ -417,6 +382,41 @@ def extract_sitecol(dstore, what):
     Use it as /extract/sitecol
     """
     return dstore['sitecol'].array
+
+
+def _items(dstore, name, what, info):
+    params = parse(what, info)
+    filt = {}
+    if 'imt' in params:
+        [imt] = params['imt']
+        filt['imt'] = imt
+    if params['rlzs']:
+        for k in params['k']:
+            filt['rlz_id'] = k
+            yield 'rlz-%03d' % k, dstore.sel(name + '-rlzs', **filt)[:, 0]
+    else:
+        stats = list(info['stats'])
+        for k in params['k']:
+            filt['stat'] = stat = stats[k]
+            yield stat, dstore.sel(name + '-stats', **filt)[:, 0]
+    yield from params.items()
+
+
+@extract.add('hcurves')
+def extract_hcurves(dstore, what):
+    """
+    Extracts hazard curves. Use it as /extract/hcurves?kind=mean&imt=PGA or
+    /extract/hcurves?kind=rlz-0&imt=SA(1.0)
+    """
+    info = get_info(dstore)
+    if what == '':  # npz exports for QGIS
+        sitecol = dstore['sitecol']
+        mesh = get_mesh(sitecol, complete=False)
+        dic = _get_dict(dstore, 'hcurves-stats', info['imtls'], info['stats'])
+        yield from hazard_items(
+            dic, mesh, investigation_time=info['investigation_time'])
+        return
+    yield from _items(dstore, 'hcurves', what, info)
 
 
 @extract.add('hmaps')
@@ -434,23 +434,7 @@ def extract_hmaps(dstore, what):
         yield from hazard_items(
             dic, mesh, investigation_time=info['investigation_time'])
         return
-    params = parse(what, info)
-    if 'imt' in params:
-        [imt] = params['imt']
-        m = info['imt'][imt]
-        s = slice(m, m + 1)
-    else:
-        s = ALL
-    if params['rlzs']:
-        dset = dstore['hmaps-rlzs']
-        for k in params['k']:
-            yield 'rlz-%03d' % k, hdf5.extract(dset, ALL, k, s, ALL)[:, 0]
-    else:
-        dset = dstore['hmaps-stats']
-        stats = list(info['stats'])
-        for k in params['k']:
-            yield stats[k], hdf5.extract(dset, ALL, k, s, ALL)[:, 0]
-    yield from params.items()
+    yield from _items(dstore, 'hmaps', what, info)
 
 
 @extract.add('uhs')
@@ -465,31 +449,16 @@ def extract_uhs(dstore, what):
         mesh = get_mesh(sitecol, complete=False)
         dic = {}
         for stat, s in info['stats'].items():
-            hmap = dstore['hmaps-stats'][:, s]
+            hmap = dstore['hmaps-stats'][:, s]  # shape (N, M, P)
             dic[stat] = calc.make_uhs(hmap, info)
         yield from hazard_items(
             dic, mesh, investigation_time=info['investigation_time'])
         return
-    params = parse(what, info)
-    periods = []
-    for m, imt in enumerate(info['imtls']):
-        if imt == 'PGA' or imt.startswith('SA'):
-            periods.append(m)
-    if 'site_id' in params:
-        sids = params['site_id']
-    else:
-        sids = ALL
-    if params['rlzs']:
-        dset = dstore['hmaps-rlzs']
-        for k in params['k']:
-            yield ('rlz-%03d' % k,
-                   hdf5.extract(dset, sids, k, periods, ALL)[:, 0])
-    else:
-        dset = dstore['hmaps-stats']
-        stats = list(info['stats'])
-        for k in params['k']:
-            yield stats[k], hdf5.extract(dset, sids, k, periods, ALL)[:, 0]
-    yield from params.items()
+    for k, v in _items(dstore, 'hmaps', what, info):  # shape (N, M, P)
+        if hasattr(v, 'shape') and len(v.shape) == 3:
+            yield k, calc.make_uhs(v, info)
+        else:
+            yield k, v
 
 
 @extract.add('effect')
