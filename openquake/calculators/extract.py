@@ -387,6 +387,8 @@ def extract_sitecol(dstore, what):
 def _items(dstore, name, what, info):
     params = parse(what, info)
     filt = {}
+    if 'site_id' in params:
+        filt['site_id'] = params['site_id'][0]
     if 'imt' in params:
         [imt] = params['imt']
         filt['imt'] = imt
