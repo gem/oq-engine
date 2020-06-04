@@ -567,8 +567,8 @@ class ClassicalCalculator(base.HazardCalculator):
             build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
         if 'hmaps-stats' in self.datastore:
-            hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # N, M, P
-            maxhaz = hmaps.max(axis=(0, 2))
+            hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
+            maxhaz = hmaps.max(axis=(0, 1, 3))
             mh = dict(zip(self.oqparam.imtls, maxhaz))
             logging.info('The maximum hazard map values are %s', mh)
 
