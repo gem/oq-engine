@@ -81,7 +81,7 @@ def make_figure_hmaps(extractors, what):
         [kind] = hmaps1.kind
         assert hmaps1.kind == [kind]
         for j, poe in enumerate(oq1.poes):
-            diff = hmaps1[kind][:, 0, j] - hmaps2[kind][:, 0, j]
+            diff = hmaps1[kind][:, j] - hmaps2[kind][:, j]
             maxdiff = numpy.abs(diff).max()
             ax = fig.add_subplot(1, n_poes, j + 1)
             ax.grid(True)
@@ -106,7 +106,7 @@ def make_figure_hmaps(extractors, what):
                           'inv_time=%dy' %
                           (imt, kind, poe, ex.calc_id, oq.investigation_time))
             ax.scatter(sitecol['lon'], sitecol['lat'],
-                       c=hmaps[kind][:, 0, j], cmap='jet')
+                       c=hmaps[kind][:, j], cmap='jet')
     return plt
 
 

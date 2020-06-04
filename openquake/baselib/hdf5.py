@@ -629,54 +629,6 @@ def decode_array(values):
     return out
 
 
-def extract(dset, *d_slices):
-    """
-    :param dset: a D-dimensional dataset or array
-    :param d_slices: D slice objects (or similar)
-    :returns: a reduced D-dimensional array
-
-    >>> a = numpy.array([[1, 2, 3], [4, 5, 6]])  # shape (2, 3)
-    >>> extract(a, slice(None), 1)
-    array([[2],
-           [5]])
-    >>> extract(a, [0, 1], slice(1, 3))
-    array([[2, 3],
-           [5, 6]])
-    """
-    shp = list(dset.shape)
-    if len(shp) != len(d_slices):
-        raise ValueError('Array with %d dimensions but %d slices' %
-                         (len(shp), len(d_slices)))
-    sizes = []
-    slices = []
-    for i, slc in enumerate(d_slices):
-        if slc == slice(None):
-            size = shp[i]
-            slices.append([slice(None)])
-        elif hasattr(slc, 'start'):
-            size = slc.stop - slc.start
-            slices.append([slice(slc.start, slc.stop, 0)])
-        elif isinstance(slc, list):
-            size = len(slc)
-            slices.append([slice(s, s + 1, j) for j, s in enumerate(slc)])
-        elif isinstance(slc, Number):
-            size = 1
-            slices.append([slice(slc, slc + 1, 0)])
-        else:
-            size = shp[i]
-            slices.append([slc])
-        sizes.append(size)
-    array = numpy.zeros(sizes, dset.dtype)
-    for tup in itertools.product(*slices):
-        aidx = tuple(s if s.step is None
-                     else slice(s.step, s.step + s.stop - s.start)
-                     for s in tup)
-        sel = tuple(s if s.step is None else slice(s.start, s.stop)
-                    for s in tup)
-        array[aidx] = dset[sel]
-    return array
-
-
 def parse_comment(comment):
     """
     Parse a comment of the form
