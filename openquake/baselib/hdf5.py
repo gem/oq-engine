@@ -23,7 +23,6 @@ import inspect
 import tempfile
 import importlib
 import itertools
-from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
 import json
