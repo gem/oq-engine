@@ -457,7 +457,7 @@ def extract_uhs(dstore, what):
         mesh = get_mesh(sitecol, complete=False)
         dic = {}
         for stat, s in info['stats'].items():
-            hmap = dstore['hmaps-stats'][:, s]
+            hmap = dstore['hmaps-stats'][:, s]  # shape (N, M, P)
             dic[stat] = calc.make_uhs(hmap, info)
         yield from hazard_items(
             dic, mesh, investigation_time=info['investigation_time'])
