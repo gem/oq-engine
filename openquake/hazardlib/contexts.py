@@ -41,7 +41,6 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 bymag = operator.attrgetter('mag')
 bydist = operator.attrgetter('dist')
 I16 = numpy.int16
-F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
 
@@ -861,9 +860,9 @@ class RuptureContext(BaseContext):
             #
             # `p(k|T)` is given by the attribute probs_occur and
             # `p(X<x|rup)` is computed as ``1 - poes``.
-            prob_no_exceed = numpy.array(
-                [v * ((1 - poes) ** i)
-                 for i, v in enumerate(self.probs_occur)]).sum(axis=0)
+            prob_no_exceed = numpy.float64(
+                [v * (1 - poes) ** i for i, v in enumerate(self.probs_occur)]
+            ).sum(axis=0)
             return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
 
         # parametric rupture
