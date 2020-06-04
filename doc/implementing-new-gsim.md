@@ -1,4 +1,4 @@
-# Implementing a new GSIM in the OpenQuake hazard library [provisional]
+# Implementing a new GSIM in the OpenQuake Engine hazard library 
 
 Below we provide a concise description of the process to be adopted for the creation of a new GSIM (i.e. GMPE or IPE) in the OpenQuake hazard library.
 
