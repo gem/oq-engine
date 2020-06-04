@@ -134,7 +134,7 @@ def export_hcurves_by_imt_csv(
     :param kind: a string with the kind of output (realization or statistics)
     :param fname: name of the exported file
     :param sitecol: site collection
-    :param array: an array of shape (N, 1, 1, L1) and dtype numpy.float32
+    :param array: an array of shape (N, 1, L1) and dtype numpy.float32
     :param imt: intensity measure type
     :param imls: intensity measure levels
     :param comment: comment dictionary
@@ -147,7 +147,7 @@ def export_hcurves_by_imt_csv(
     hcurves = numpy.zeros(nsites, lst)
     for sid, lon, lat, dep in zip(
             range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
-        hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, 0, :])
+        hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
     comment.update(imt=imt)
     return writers.write_csv(dest, hcurves, comment=comment,
                              header=[name for (name, dt) in lst])
@@ -281,7 +281,7 @@ def export_uhs_xml(ekey, dstore):
                 investigation_time=oq.investigation_time, **metadata)
             data = []
             for site, curve in zip(sitemesh, uhs):
-                data.append(UHS(curve[:, p], Location(site)))
+                data.append(UHS(curve[str(poe)], Location(site)))
             writer.serialize(data)
             fnames.append(fname)
     return sorted(fnames)

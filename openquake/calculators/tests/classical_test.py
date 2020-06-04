@@ -295,7 +295,7 @@ hazard_uhs-std.csv
         # individual_curves was false
         with self.assertRaises(KeyError) as ctx:
             export(('hcurves/rlz-3', 'csv'), self.calc.datastore)
-        self.assertIn("No 'hcurves-rlzs' found", str(ctx.exception))
+        self.assertIn('hcurves-rlzs', str(ctx.exception))
 
     def test_case_17(self):  # oversampling
         # this is a test with 4 sources A and B with the same ID

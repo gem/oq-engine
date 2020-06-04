@@ -384,6 +384,24 @@ def extract_sitecol(dstore, what):
     return dstore['sitecol'].array
 
 
+def _items(dstore, name, what, info):
+    params = parse(what, info)
+    filt = {}
+    if 'imt' in params:
+        [imt] = params['imt']
+        filt['imt'] = imt
+    if params['rlzs']:
+        for k in params['k']:
+            filt['rlz_id'] = k
+            yield 'rlz-%03d' % k, dstore.sel(name + '-rlzs', **filt)[:, 0]
+    else:
+        stats = list(info['stats'])
+        for k in params['k']:
+            filt['stat'] = stat = stats[k]
+            yield stat, dstore.sel(name + '-stats', **filt)[:, 0]
+    yield from params.items()
+
+
 @extract.add('hcurves')
 def extract_hcurves(dstore, what):
     """
@@ -398,20 +416,7 @@ def extract_hcurves(dstore, what):
         yield from hazard_items(
             dic, mesh, investigation_time=info['investigation_time'])
         return
-    params = parse(what, info)
-    [imt] = params['imt']
-    [sid] = params.get('site_id', [0])
-    if params['rlzs']:
-        for k in params['k']:  # rlz
-            arr = dstore.sel('hcurves-rlzs', imt=imt, rlz_id=k, site_id=sid)
-            yield 'rlz-%03d' % k, arr
-    else:
-        stats = list(info['stats'])
-        for k in params['k']:  # stat
-            arr = dstore.sel(
-                'hcurves-stats', imt=imt, stat=stats[k], site_id=sid)
-            yield stats[k], arr
-    yield from params.items()
+    yield from _items(dstore, 'hcurves', what, info)
 
 
 @extract.add('hmaps')
@@ -429,20 +434,7 @@ def extract_hmaps(dstore, what):
         yield from hazard_items(
             dic, mesh, investigation_time=info['investigation_time'])
         return
-    params = parse(what, info)
-    [imt] = params['imt']
-    if params['rlzs']:
-        for k in params['k']:
-            # shape (N, R, M, P)
-            arr = dstore.sel('hmaps-rlzs', imt=imt, rlz_id=k)
-            yield 'rlz-%03d' % k, arr[:, 0, 0]  # shape (N, P)
-    else:
-        stats = list(info['stats'])
-        for k in params['k']:
-            # shape (N, S, M, P)
-            arr = dstore.sel('hmaps-stats', imt=imt, stat=stats[k])
-            yield stats[k], arr[:, 0, 0]  # shape (N, P)
-    yield from params.items()
+    yield from _items(dstore, 'hmaps', what, info)
 
 
 @extract.add('uhs')
@@ -462,18 +454,11 @@ def extract_uhs(dstore, what):
         yield from hazard_items(
             dic, mesh, investigation_time=info['investigation_time'])
         return
-    params = parse(what, info)
-    [sid] = params.get('site_id', [0])
-    if params['rlzs']:
-        for k in params['k']:
-            arr = dstore.sel('hmaps-rlzs', site_id=sid, rlz_id=k)
-            yield 'rlz-%03d' % k, arr
-    else:
-        stats = list(info['stats'])
-        for k in params['k']:
-            arr = dstore.sel('hmaps-stats', site_id=sid, stat=stats[k])
-            yield stats[k], arr
-    yield from params.items()
+    for k, v in _items(dstore, 'hmaps', what, info):  # shape (N, M, P)
+        if hasattr(v, 'shape') and len(v.shape) == 3:
+            yield k, calc.make_uhs(v, info)
+        else:
+            yield k, v
 
 
 @extract.add('effect')
