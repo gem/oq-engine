@@ -471,7 +471,10 @@ class ArrayWrapper(object):
             array, attrs = obj[()], dict(obj.attrs)
             shape_descr = attrs.get('shape_descr', [])
             for descr in map(decode, shape_descr):
-                attrs[descr] = list(attrs[descr])
+                val = attrs[descr]
+                if isinstance(val, numpy.int64):
+                    val = range(val)
+                attrs[descr] = list(val)
         else:  # assume obj is an array
             array, attrs = obj, {}
         return cls(array, attrs, (extra,))
