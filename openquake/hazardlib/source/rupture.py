@@ -272,8 +272,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
             mag, rake, tectonic_region_type, hypocenter, surface,
             rupture_slip_direction, weight)
         # an array of probabilities with sum 1
-        self.probs_occur = numpy.array(
-            [prob for (prob, occ) in pmf.data], numpy.float32)
+        self.probs_occur = numpy.array([prob for (prob, occ) in pmf.data])
         self.occurrence_rate = numpy.nan
 
     def sample_number_of_occurrences(self, n=1):
