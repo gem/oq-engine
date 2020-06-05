@@ -29,8 +29,7 @@ from openquake.commonlib.oqvalidation import check_same_levels
 
 class AmplFunction():
     """
-    Class for managing an amplification function DataFrame. In its simplest
-    form the Amplification function.
+    Class for managing an amplification function DataFrame.
 
     :param df:
         A :class:`pandas.DataFrame` instance
@@ -62,7 +61,7 @@ class AmplFunction():
 
         # Create the temporary list of lists
         out = []
-        for i, row in df.iterrows():
+        for _, row in df.iterrows():
             tmp = [row['ampcode'], row['from_mag'],
                    row['from_rrup'], row['level']]
             for imt in imts:
@@ -70,8 +69,6 @@ class AmplFunction():
                 std = row['sigma_'+imt]
                 out.append([tmp[0], tmp[1], tmp[2], tmp[3],
                             imt, med, std])
-            if i > 10:
-                break
 
         # Create the dataframe
         dtypes = {'ampcode': ampcode_dt, 'from_mag': float,
@@ -83,24 +80,48 @@ class AmplFunction():
 
         return AmplFunction(df, soil)
 
-    def get_mean_std(self, site, imt, imls, mag, dsts):
+    def get_mean_std(self, site, imt, iml, mag, dst):
+        """
+        :param site:
+            A string specifying the site
+        :param imt:
+            A string specifying the intensity measure type e.g. 'PGA' or
+            'SA(1.0)'
+        :param iml:
+            A float with the shaking level on rock for which we need the
+            amplification factor
+        :param mag:
+            A float with the magnitude of the rupture
+        :param dst:
+            A float defining the rupture-site distance
+        :returns:
+            A tuple with the median amplification factor and the std of the
+            logarithm
+        """
 
         df = copy.copy(self.df)
         df = df[(df['ampcode'] == site) & (df['imt'] == imt)]
 
         # Filtering magnitude
-        idx = numpy.argmin(self.mags - mag)
-        print(mag, self.mags[idx])
-        df = df[df['from_mag' == self.mags[idx]]]
+        idx = numpy.argmin((self.mags - mag) > 0)
+        df = df[df['from_mag'] == self.mags[idx]]
 
         # Filtering distance
-        idx = numpy.argmin(s - mag)
-        print(mag, self.mags[idx])
-        df = df[df['from_mag' == self.mags[idx]]]
+        tmp_dsts = numpy.array(sorted(df['from_rrup']))
+        idx = numpy.argmin((tmp_dsts - dst) > 0)
+        df = df[df['from_rrup'] == tmp_dsts[idx]]
 
+        # Interpolating
+        median = numpy.interp(iml, df['level'], df['median'])
+        std = numpy.interp(iml, df['level'], df['std'])
 
+        return median, std
 
     def get_max_sigma(self):
+        """
+        :returns:
+            The maximum sigma value in the amplification function
+        """
         return max(self.df['std'])
 
 

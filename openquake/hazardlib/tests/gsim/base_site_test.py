@@ -22,8 +22,7 @@ import unittest
 from openquake.hazardlib import const
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.site import ampcode_dt
-from openquake.hazardlib.gsim.base import get_mean_std, _get_poes_site
+from openquake.hazardlib.gsim.base import get_mean_std, _get_poes_site, _get_poes
 from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.site_amplification import Amplifier
@@ -31,97 +30,80 @@ from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
+from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import AmplFunction
-
-
-ampl_func = '''\
-#,,,,,,,"vs30_ref=760"
-ampcode,from_mag,from_rrup,level,PGA,SA(1.0),sigma_PGA,sigma_SA(1.0)
-A,      4.0,      0.0,     0.001,1.0,1.0,    0.3,      0.2
-A,      4.0,      0.0,     0.010,1.0,1.0,    0.3,      0.2
-A,      4.0,      0.0,     0.050,1.0,1.0,    0.3,      0.2
-A,      4.0,      0.0,     0.100,1.0,1.0,    0.3,      0.2
-A,      4.0,      0.0,     0.500,1.0,1.0,    0.3,      0.2
-A,      4.0,      0.0,     1.000,1.0,1.0,    0.3,      0.2
-A,      5.5,      0.0,     0.001,1.0,1.0,    0.3,      0.2
-A,      5.5,      0.0,     0.010,1.0,1.0,    0.3,      0.2
-A,      5.5,      0.0,     0.050,1.0,1.0,    0.3,      0.2
-A,      5.5,      0.0,     0.100,1.0,1.0,    0.3,      0.2
-A,      5.5,      0.0,     0.500,1.0,1.0,    0.3,      0.2
-A,      5.5,      0.0,     1.000,1.0,1.0,    0.3,      0.2
-A,      4.0,     20.0,     0.001,1.0,1.0,    0.3,      0.2
-A,      4.0,     20.0,     0.010,1.0,1.0,    0.3,      0.2
-A,      4.0,     20.0,     0.050,1.0,1.0,    0.3,      0.2
-A,      4.0,     20.0,     0.100,1.0,1.0,    0.3,      0.2
-A,      4.0,     20.0,     0.500,1.0,1.0,    0.3,      0.2
-A,      4.0,     20.0,     1.000,1.0,1.0,    0.3,      0.2
-A,      5.5,     20.0,     0.001,1.0,1.0,    0.3,      0.2
-A,      5.5,     20.0,     0.010,1.0,1.0,    0.3,      0.2
-A,      5.5,     20.0,     0.050,1.0,1.0,    0.3,      0.2
-A,      5.5,     20.0,     0.100,1.0,1.0,    0.3,      0.2
-A,      5.5,     20.0,     0.500,1.0,1.0,    0.3,      0.2
-A,      5.5,     20.0,     1.000,1.0,1.0,    0.3,      0.2
-'''
+from openquake.hazardlib.tests.site_amplification_function_test import ampl_func
 
 
 class GetPoesSiteTestCase(unittest.TestCase):
     # Add check that IMT and sigma are the same
     # Add check on IMTs
 
-    # Reference Vs30
-    vs30 = numpy.array([760])
-    # 11 levels
-    imls = [.001, .002, .005, .01, .02, .05, .1, .2, .5, 1., 1.2]
-    # 7 levels
-    soil_levels = numpy.array([.002, .005, .01, .02, .05, .1, .2])
-    imtls = DictArray({'PGA': imls, 'SA(1.0)': imls})
-
     def setUp(self):
+
         fname = gettemp(ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
-        # Add a multi-index to this dataframe
-        df.reset_index(drop=False, inplace=True)
-        df.set_index(['ampcode', 'from_mag',  'from_rrup'])
         self.df = AmplFunction(df)
 
-        # Compute GM on rock
+        # Set GMMs
         gmmA = BooreAtkinson2008()
         gmmB = BooreEtAl2014()
-        dsts = [10., 15., 20., 30., 40.]
+
         # Set parameters
+        dsts = [10., 15., 20., 30., 40.]
+        dsts = [10.]
         imts = [PGA(), SA(1.0)]
         sites = Dummy.get_site_collection(len(dsts), vs30=760.0)
-        self.mag = 6.0
+        self.mag = 5.5
         rup = Dummy.get_rupture(mag=self.mag)
         dists = DistancesContext()
         dists.rjb = numpy.array(dsts)
         dists.rrup = numpy.array(dsts)
         self.rrup = dists.rrup
+
+        # Compute GM on rock
         # Shape: 2 x 4 (distances) x 2 (IMTs) x 1 (GMMs)
         self.meastd = get_mean_std(sites, rup, dists, imts, [gmmA])
         # Shape: 2 x 4 (distances) x 2 (IMTs) x 2 (GMMs)
         self.meastd = get_mean_std(sites, rup, dists, imts, [gmmA, gmmB])
 
     def test01(self):
+        import time
+
+        fname = gettemp(ampl_func)
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
+        df.reset_index(drop=False, inplace=True)
+        af = AmplFunction.from_compact(df)
+
+        truncation_level = 3
         sitecode = b'A'
-        imls_soil = numpy.log([0.01, 0.05, 0.1, 0.2, 0.5])
-        # imtls_rock = DictArray({'PGA': imls_, 'SA(1.0)': imls})
-        # amp = Amplifier(self.imtls, self.df, self.soil_levels)
-        #res = _get_poes_site(self.meastd, imtls_rock, 3.0, amp, self.mag,
-        #                     sitecode, self.rrup)
 
+        imls_soil = numpy.log([0.012, 0.052, 0.12, 0.22, 0.52])
+        imls_soil = numpy.log(numpy.logspace(-2, 0, num=20))
         imtls_soil = DictArray({'PGA': imls_soil, 'SA(1.0)': imls_soil})
-        res = _get_poes_site(self.meastd, imtls_soil, 3.0, self.df, self.mag,
-                             sitecode, self.rrup)
 
-        """
+        # The output in this case will be (1, x, 2) i.e. 1 site, number
+        # intensity measure levels times 2 and 2 GMMs
+        start = time.process_time()
+        tmp = _get_poes(self.meastd, imtls_soil, truncation_level)
+        print(time.process_time() - start)
+
+        start = time.process_time()
+        # This function is rather slow at the moment
+        res = _get_poes_site(self.meastd, imtls_soil, truncation_level,
+                             af, self.mag, sitecode, self.rrup[0],
+                             squeeze=False)
+        print(time.process_time() - start)
+
         import matplotlib.pyplot as plt
-        #print(res[0][0], len(res[0]))
-        rock = res[0]
-        soil = res[1]
-        plt.plot(amp.midlevels, res[0][0])
-        plt.plot(amp.midlevels, soil[0].array[:], 'o')
+        plt.plot(numpy.exp(imls_soil), res[0, 0:len(imls_soil), 0], '-o',
+                 label='soil')
+        plt.plot(numpy.exp(imls_soil), tmp[0, 0:len(imls_soil), 0], '-o',
+                 label='rock')
+        plt.legend()
         plt.xscale('log')
+        plt.yscale('log')
+        plt.grid(which='both')
         plt.show()
-        """
