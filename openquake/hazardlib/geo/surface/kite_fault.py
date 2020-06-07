@@ -20,18 +20,29 @@
 Module :mod:`openquake.hazardlib.geo.surface.kite_fault` defines
 :class:`KiteFaultSurface`.
 """
+
+import copy
 import numpy as np
 
-from openquake.baselib.node import Node
-from openquake.hazardlib.geo.geodetic import distance, azimuth
-from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from pyproj import Geod
+from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.geodetic import npoints_towards
+from openquake.hazardlib.geo.geodetic import distance, azimuth
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+
+TOL = 0.5
+TOLERANCE = 0.2
 
 
 class KiteFaultSurface(BaseSurface):
     """
+    The Kite Fault Surface allows the construction of faults with variable
+    width along the strike, variable dip angle along the dip and strike
+    composed by several disaligned segments. Thrust faults and listric faults
+    can be easily implemented.
+
     """
     def __init__(self, mesh):
         self.mesh = mesh
@@ -66,56 +77,46 @@ class KiteFaultSurface(BaseSurface):
         pass
 
     @classmethod
-    def check_fault_data(cls, fault_trace, upper_seismogenic_depth,
-                         lower_seismogenic_depth, dip, mesh_spacing):
+    def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
+                      align=False):
         """
-        Verify the fault data and raise ``ValueError`` if anything is wrong.
-
-        This method doesn't have to be called by hands before creating the
-        surface object, because it is called from :meth:`from_fault_data`.
-        """
-        if not len(fault_trace) >= 2:
-            raise ValueError("the fault trace must have at least two points")
-        if not fault_trace.horizontal():
-            raise ValueError("the fault trace must be horizontal")
-        tlats = [point.latitude for point in fault_trace.points]
-        tlons = [point.longitude for point in fault_trace.points]
-        if geo_utils.line_intersects_itself(tlons, tlats):
-            raise ValueError("fault trace intersects itself")
-        if not 0.0 < dip <= 90.0:
-            raise ValueError("dip must be between 0.0 and 90.0")
-        if not lower_seismogenic_depth > upper_seismogenic_depth:
-            raise ValueError("lower seismogenic depth must be greater than "
-                             "upper seismogenic depth")
-        if not upper_seismogenic_depth >= fault_trace[0].depth:
-            raise ValueError("upper seismogenic depth must be greater than "
-                             "or equal to depth of fault trace")
-        if not mesh_spacing > 0.0:
-            raise ValueError("mesh spacing must be positive")
-
-    @classmethod
-    def from_profiles(cls, profiles, profile_sd, edge_sd, idl, align=False):
-        """
-        This creates a mesh from a set of profiles
+        This method creates a quadrilateral mesh from a set of profiles. The
+        construction of the mesh is done trying to get quadrilaterals as much
+        as possible close to a square. Nonetheless some distorsions are
+        possible and admitted.
 
         :param list profiles:
             A list of :class:`openquake.hazardlib.geo.Line.line` instances
         :param float profile_sd:
-            The sampling distance along the profiles
+            The desired sampling distance along the profiles [dd] CHECK
         :param edge_sd:
-            The sampling distance along the edges
+            The desired sampling distance along the edges [dd] CHECK
+        :param idl:
+            Boolean true if IDL
         :param align:
-            A boolean used to decide if profiles should be aligned at top
+            A boolean used to decide if profiles should or should not be
+            aligned at the top.
         :returns:
-            A :class:`numpy.ndarray` instance with the coordinates of the mesh
+            A :class:`numpy.ndarray` instance with the coordinates of nodes
+            of the mesh representing the fault surface. The cardinality of
+            this array is: number of edges x number of profiles x 3.
+            The coordinate of the point at [0, 0, :] is first point along the
+            trace defined using the right-hand rule.
+
+                        [0, 0, :]            [0, -1, :]
+            Upper edge  |--------------------|
+                        |         V          | Fault dipping toward the
+                        |                    | observer
+            Lower edge  |____________________|
+
         """
 
-        # resample profiles
+        # Resample profiles using the resampling distance provided
         rprofiles = []
         for prf in profiles:
             rprofiles.append(_resample_profile(prf, profile_sd))
-        #
-        # set the reference profile i.e. the longest one
+
+        # Set the reference profile i.e. the longest one
         ref_idx = None
         max_length = -1e10
         for idx, prf in enumerate(rprofiles):
@@ -123,32 +124,37 @@ class KiteFaultSurface(BaseSurface):
             if length > max_length:
                 max_length = length
                 ref_idx = idx
-        #
+
         # Check that in each profile the points are equally spaced
         for pro in rprofiles:
-            pnts = [(pnt.longitude, pnt.latitude, pnt.depth) for pnt in pro.points]
+            pnts = [(p.longitude, p.latitude, p.depth) for p in pro.points]
             pnts = np.array(pnts)
-            #
+
+            # Check that the profile is not crossing the IDL and compute the
+            # distance between consecutive points along the profile
             assert np.all(pnts[:, 0] <= 180) & np.all(pnts[:, 0] >= -180)
             dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
                            pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
+
+            # Check that all the distances are within a tolerance
             np.testing.assert_allclose(dst, profile_sd, rtol=1.)
-        #
-        # find the delta needed to align profiles if requested
+
+        # Find the delta needed to align profiles if requested
         shift = np.zeros(len(rprofiles)-1)
         if align is True:
             for i in range(0, len(rprofiles)-1):
-                shift[i] = profiles_depth_alignment(rprofiles[i], rprofiles[i+1])
+                shift[i] = profiles_depth_alignment(rprofiles[i],
+                                                    rprofiles[i+1])
         shift = np.array([0] + list(shift))
-        #
-        # find the maximum back-shift
+
+        # Find the maximum back-shift
         ccsum = [shift[0]]
         for i in range(1, len(shift)):
             ccsum.append(shift[i] + ccsum[i-1])
         add = ccsum - min(ccsum)
-        #
-        # Create resampled profiles. Now the profiles should be all aligned from
-        # the top (if align option is True)
+
+        # Create resampled profiles. Now the profiles should be all aligned
+        # from the top (if align option is True)
         rprof = []
         maxnum = 0
         for i, pro in enumerate(rprofiles):
@@ -161,26 +167,26 @@ class KiteFaultSurface(BaseSurface):
                 points = coo
             rprof.append(points)
             maxnum = max(maxnum, len(rprof[-1]))
-        #
-        # Now profiles will have the same number of samples (some of them can be
-        # nan)
+
+        # Now profiles will have the same number of samples (some of them can
+        # be nan). This is needed to have an array to store the surface.
         for i, pro in enumerate(rprof):
             while len(pro) < maxnum:
                 pro.append([np.nan, np.nan, np.nan])
             rprof[i] = np.array(pro)
-        #
-        # create mesh in forward direction
+
+        # Create mesh the in the forward direction
         prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
-        #
-        # create the mesh in backward direction
+
+        # Create the mesh in the backward direction
         if ref_idx > 0:
             prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl)
         else:
             prfl = []
         prf = prfl + prfr
         msh = np.array(prf)
-        #
-        # convert from profiles to edges
+
+        # Convert from profiles to edges
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
         return msh
@@ -191,17 +197,17 @@ def _resample_profile(line, sampling_dist):
     :parameter line:
         An instance of :class:`openquake.hazardlib.geo.line.Line`
     :parameter sampling_dist:
-        A scalar definining the distance used to sample the profile
+        A scalar definining the distance [km] used to sample the profile
     :returns:
         An instance of :class:`openquake.hazardlib.geo.line.Line`
     """
     lo = [pnt.longitude for pnt in line.points]
     la = [pnt.latitude for pnt in line.points]
     de = [pnt.depth for pnt in line.points]
-    #
+
     # Set projection
     g = Geod(ellps='WGS84')
-    #
+
     # Add a tolerance length to the last point of the profile
     # check that final portion of the profile is not vertical
     if abs(lo[-2]-lo[-1]) > 1e-5 and abs(la[-2]-la[-1]) > 1e-5:
@@ -215,68 +221,69 @@ def _resample_profile(line, sampling_dist):
         la[-1] = endlat
         de[-1] = de[-1] + vdist
         az12, az21, odist = g.inv(lo[-2], la[-2], lo[-1], la[-1])
-        # checking
+
+        # Checking
         odist /= 1e3
         slopec = np.arctan((de[-1] - de[-2]) / odist)
         assert abs(slope-slopec) < 1e-3
     else:
         de[-1] = de[-1] + TOLERANCE * sampling_dist
-    #
-    # initialise the cumulated distance
+
+    # Initialise the cumulated distance
     cdist = 0.
-    #
-    # get the azimuth of the profile
+
+    # Get the azimuth of the profile
     azim = azimuth(lo[0], la[0], lo[-1], la[-1])
-    #
-    # initialise the list with the resampled nodes
+
+    # Initialise the list with the resampled nodes
     idx = 0
     resampled_cs = [Point(lo[idx], la[idx], de[idx])]
-    #
-    # set the starting point
+
+    # Set the starting point
     slo = lo[idx]
     sla = la[idx]
     sde = de[idx]
-    #
-    # resampling
+
+    # Resampling
     while 1:
-        #
-        # check loop exit condition
+
+        # Check loop exit condition
         if idx > len(lo)-2:
             break
-        #
-        # compute the distance between the starting point and the next point
+
+        # Compute the distance between the starting point and the next point
         # on the profile
         segment_len = distance(slo, sla, sde, lo[idx+1], la[idx+1], de[idx+1])
-        #
-        # search for the point
+
+        # Search for the point
         if cdist+segment_len > sampling_dist:
-            #
-            # this is the lenght of the last segment-fraction needed to
+
+            # This is the lenght of the last segment-fraction needed to
             # obtain the sampling distance
             delta = sampling_dist - cdist
-            #
-            # compute the slope of the last segment and its horizontal length.
+
+            # Compute the slope of the last segment and its horizontal length.
             # We need to manage the case of a vertical segment TODO
             segment_hlen = distance(slo, sla, 0., lo[idx+1], la[idx+1], 0.)
             if segment_hlen > 1e-5:
                 segment_slope = np.arctan((de[idx+1] - sde) / segment_hlen)
             else:
                 segment_slope = 90.
-            #
-            # horizontal and vertical lenght of delta
+
+            # Horizontal and vertical lenght of delta
             delta_v = delta * np.sin(segment_slope)
             delta_h = delta * np.cos(segment_slope)
-            #
-            # add a new point to the cross section
+
+            # Add a new point to the cross section
             pnts = npoints_towards(slo, sla, sde, azim, delta_h, delta_v, 2)
-            #
-            # update the starting point
+
+            # Update the starting point
             slo = pnts[0][-1]
             sla = pnts[1][-1]
             sde = pnts[2][-1]
             resampled_cs.append(Point(slo, sla, sde))
-            #
-            # reset the cumulative distance
+
+            # Reset the cumulative distance
             cdist = 0.
 
         else:
@@ -285,8 +292,8 @@ def _resample_profile(line, sampling_dist):
             slo = lo[idx]
             sla = la[idx]
             sde = de[idx]
-    #
-    # check the distances along the profile
+
+    # Check the distances along the profile
     coo = [[pnt.longitude, pnt.latitude, pnt.depth] for pnt in resampled_cs]
     coo = np.array(coo)
     for i in range(0, coo.shape[0]-1):
@@ -294,6 +301,404 @@ def _resample_profile(line, sampling_dist):
                        coo[i+1, 0], coo[i+1, 1], coo[i+1, 2])
         if abs(dst-sampling_dist) > 0.1*sampling_dist:
             raise ValueError('Wrong distance between points along the profile')
-    #
-    # 
+
     return Line(resampled_cs)
+
+
+def profiles_depth_alignment(pro1, pro2):
+    """
+    Find the indexes needed to align the profiles i.e. define profiles whose
+    edges are as much as possible horizontal. Note that this method expects
+    that the two profiles had been already resampled, therefore, vertexes in
+    each profile should be equally spaced.
+
+    :param pro1:
+        An instance of :class:`openquake.hazardlib.geo.line.Line`
+    :param pro2:
+        An instance of :class:`openquake.hazardlib.geo.line.Line`
+    :returns:
+        An integer
+    """
+
+    # Create two numpy.ndarray with the coordinates of the two profiles
+    coo1 = [(pnt.longitude, pnt.latitude, pnt.depth) for pnt in pro1.points]
+    coo2 = [(pnt.longitude, pnt.latitude, pnt.depth) for pnt in pro2.points]
+    coo1 = np.array(coo1)
+    coo2 = np.array(coo2)
+
+    # Set the profile with the smaller number of points as the first one
+    swap = 1
+    if coo2.shape[0] < coo1.shape[0]:
+        tmp = coo1
+        coo1 = coo2
+        coo2 = tmp
+        swap = -1
+
+    # Process the profiles. Note that in the ideal case the two profiles
+    # require at least 5 points
+    if len(coo1) > 5 and len(coo2) > 5:
+        #
+        # create two arrays of the same lenght
+        coo1 = np.array(coo1)
+        coo2 = np.array(coo2[:coo1.shape[0]])
+        #
+        indexes = np.arange(-2, 3)
+        dff = np.zeros_like(indexes)
+        for i, shf in enumerate(indexes):
+            if shf < 0:
+                dff[i] = np.mean(abs(coo1[:shf, 2] - coo2[-shf:, 2]))
+            elif shf == 0:
+                dff[i] = np.mean(abs(coo1[:, 2] - coo2[:, 2]))
+            else:
+                dff[i] = np.mean(abs(coo1[shf:, 2] - coo2[:-shf, 2]))
+        amin = np.amin(dff)
+        res = indexes[np.amax(np.nonzero(dff == amin))] * swap
+    else:
+        d1 = np.zeros((len(coo2)-len(coo1)+1, len(coo1)))
+        d2 = np.zeros((len(coo2)-len(coo1)+1, len(coo1)))
+        for i in np.arange(0, len(coo2)-len(coo1)+1):
+            d2[i, :] = [coo2[d, 2] for d in range(i, i+len(coo1))]
+            d1[i, :] = coo1[:, 2]
+        res = np.argmin(np.sum(abs(d2-d1), axis=1))
+    return res
+
+
+def get_coords(line, idl):
+    """
+    Create a list with the coordinates of the points describing a line
+
+    :param line:
+        An instance of :class:`openquake.hazardlib.geo.line.Line`
+    :returns:
+        A list with the 3D coordinates of the line.
+    """
+    tmp = []
+    for p in line.points:
+        if p is not None:
+            if idl:
+                p.longitude = (p.longitude+360 if p.longitude < 0
+                               else p.longitude)
+            tmp.append([p.longitude, p.latitude, p.depth])
+    return tmp
+
+
+def get_mesh(pfs, rfi, sd, idl):
+    """
+    From a set of profiles creates the mesh in the forward direction from the
+    reference profile.
+
+    :param pfs:
+        List of :class:`openquake.hazardlib.geo.line.Line` instances
+    :param rfi:
+        Index of the reference profile
+    :param sd:
+        Sampling distance [km] for the edges
+    :param idl:
+        Boolean indicating the need to account for the IDL
+    :returns:
+        An updated list of the profiles i.e. a list of
+        :class:`openquake.hazardlib.geo.line.Line` instances
+    """
+    g = Geod(ellps='WGS84')
+
+    # Residual distance, last index
+    rdist = [0 for _ in range(0, len(pfs[0]))]
+    laidx = [0 for _ in range(0, len(pfs[0]))]
+
+    # New profiles
+    npr = list([copy.deepcopy(pfs[rfi])])
+
+    # Run for all the profiles 'after' the reference one
+    for i in range(rfi, len(pfs)-1):
+
+        # Profiles
+        pr = pfs[i+1]
+        pl = pfs[i]
+
+        # Fixing IDL case
+        if idl:
+            for ii in range(0, len(pl)):
+                ptmp = pl[ii][0]
+                ptmp = ptmp+360 if ptmp < 0 else ptmp
+                pl[ii][0] = ptmp
+
+        # Point in common on the two profiles
+        cmm = np.logical_and(np.isfinite(pr[:, 2]), np.isfinite(pl[:, 2]))
+        cmmi = np.nonzero(cmm)[0].astype(int)
+
+        # Update last profile index
+        mxx = 0
+        for ll in laidx:
+            if ll is not None:
+                mxx = max(mxx, ll)
+
+        # Loop over the points in the right profile
+        for x in range(0, len(pr[:, 2])):
+
+            # This edge is in common between the last and the current profiles
+            if x in cmmi and laidx[x] is None:
+                iii = []
+                for li, lv in enumerate(laidx):
+                    if lv is not None:
+                        iii.append(li)
+                iii = np.array(iii)
+                minidx = np.argmin(abs(iii-x))
+                laidx[x] = mxx
+                rdist[x] = rdist[minidx]
+            elif x not in cmmi:
+                laidx[x] = None
+                rdist[x] = 0
+
+        # Loop over profiles
+        for k in list(np.nonzero(cmm)[0]):
+
+            # Compute distance and azimuth between the corresponding points
+            # on the two profiles
+            az12, _, hdist = g.inv(pl[k, 0], pl[k, 1], pr[k, 0], pr[k, 1])
+            hdist /= 1e3
+            vdist = pr[k, 2] - pl[k, 2]
+            tdist = (vdist**2 + hdist**2)**.5
+            ndists = int(np.floor((tdist+rdist[k])/sd))
+
+            ll = g.npts(pl[k, 0], pl[k, 1], pr[k, 0], pr[k, 1],
+                        np.ceil(tdist)*20)
+            ll = np.array(ll)
+            lll = np.ones_like(ll)
+            lll[:, 0] = pl[k, 0]
+            lll[:, 1] = pl[k, 1]
+
+            _, _, hdsts = g.inv(lll[:, 0], lll[:, 1], ll[:, 0], ll[:, 1])
+            hdsts /= 1e3
+            deps = np.linspace(pl[k, 2], pr[k, 2], ll.shape[0], endpoint=True)
+            tdsts = (hdsts**2 + (pl[k, 2]-deps)**2)**0.5
+            assert len(deps) == ll.shape[0]
+
+            # Compute distance between consecutive profiles
+            dd = distance(pl[k, 0], pl[k, 1], pl[k, 2],
+                          pr[k, 0], pr[k, 1], pr[k, 2])
+
+            # Check distance
+            if abs(dd-tdist) > 0.1*tdist:
+                print('dd:', dd)
+                tmps = 'Error while building the mesh'
+                tmps += '\nDistances: {:f} {:f}'
+                raise ValueError(tmps.format(dd, tdist))
+
+            # Adding new points along the edge with index k
+            for j in range(ndists):
+
+                # Add new profile
+                if len(npr)-1 < laidx[k]+1:
+                    npr = add_empty_profile(npr)
+
+                # Compute the coordinates of intermediate points along the
+                # current edge
+                tmp = (j+1)*sd - rdist[k]
+                lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
+                                  tmp*hdist/tdist*1e3)
+
+                tidx = np.argmin(abs(tdsts-tmp))
+                lo = ll[tidx, 0]
+                la = ll[tidx, 1]
+
+                # Fix longitudes
+                if idl:
+                    lo = lo+360 if lo < 0 else lo
+
+                # Computing depths
+                de = pl[k, 2] + tmp*vdist/hdist
+                de = deps[tidx]
+
+                npr[laidx[k]+1][k] = [lo, la, de]
+                if (k > 0 and np.all(np.isfinite(npr[laidx[k]+1][k])) and
+                        np.all(np.isfinite(npr[laidx[k]][k]))):
+
+                    p1 = npr[laidx[k]][k]
+                    p2 = npr[laidx[k]+1][k]
+                    d = distance(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
+
+                    # Check
+                    if abs(d-sd) > 0.1*sd:
+                        tmpf = 'd: {:f} diff: {:f} tol: {:f} sd:{:f}'
+                        tmpf += '\nresidual: {:f}'
+                        tmps = tmpf.format(d, d-sd, TOL*sd, sd, rdist[k])
+                        raise ValueError(tmps)
+                laidx[k] += 1
+
+            rdist[k] = tdist - sd*ndists + rdist[k]
+            assert rdist[k] < sd
+
+    return npr
+
+
+def get_mesh_back(pfs, rfi, sd, idl):
+    """
+    Compute resampled profiles in the backward direction from the reference
+    profile and creates the portion of the mesh 'before' the reference profile.
+
+    :param list pfs:
+        Original profiles. Each profile is a :class:`numpy.ndarray` instance
+        with 3 columns and as many rows as the number of points included
+    :param int rfi:
+        Index of the reference profile
+    :param sd:
+        Sampling distance [in km] along the strike
+    :param boolean idl:
+        A flag used to specify cases where the model crosses the IDL
+    :returns:
+
+    """
+
+    # Projection
+    g = Geod(ellps='WGS84')
+
+    # Initialize residual distance and last index lists
+    rdist = [0 for _ in range(0, len(pfs[0]))]
+    laidx = [0 for _ in range(0, len(pfs[0]))]
+
+    # Create list containing the new profiles. We start by adding the
+    # reference profile
+    npr = list([copy.deepcopy(pfs[rfi])])
+
+    # Run for all the profiles from the reference one backward
+    for i in range(rfi, 0, -1):
+
+        # Set the profiles to be used for the construction of the mesh
+        pr = pfs[i-1]
+        pl = pfs[i]
+
+        # Points in common on the two profiles i.e. points that in both the
+        # profiles are not NaN
+        cmm = np.logical_and(np.isfinite(pr[:, 2]), np.isfinite(pl[:, 2]))
+
+        # Transform the indexes into integers and initialise the maximum
+        # index of the points in common
+        cmmi = np.nonzero(cmm)[0].astype(int)
+        mxx = 0
+        for ll in laidx:
+            if ll is not None:
+                mxx = max(mxx, ll)
+
+        # Update indexes
+        for x in range(0, len(pr[:, 2])):
+            if x in cmmi and laidx[x] is None:
+                iii = []
+                for li, lv in enumerate(laidx):
+                    if lv is not None:
+                        iii.append(li)
+                iii = np.array(iii)
+                minidx = np.argmin(abs(iii-x))
+                laidx[x] = mxx
+                rdist[x] = rdist[minidx]
+            elif x not in cmmi:
+                laidx[x] = None
+                rdist[x] = 0
+
+        # Loop over the points in common between the two profiles
+        for k in list(np.nonzero(cmm)[0]):
+
+            # Compute azimuth and horizontal distance
+            az12, _, hdist = g.inv(pl[k, 0], pl[k, 1], pr[k, 0], pr[k, 1])
+            hdist /= 1e3
+            vdist = pr[k, 2] - pl[k, 2]
+            tdist = (vdist**2 + hdist**2)**.5
+            ndists = int(np.floor((tdist+rdist[k])/sd))
+
+            # Adding new points along edge with index k
+            for j, dst in enumerate(range(ndists)):
+                #
+                # add new profile
+                if len(npr)-1 < laidx[k]+1:
+                    npr = add_empty_profile(npr)
+                #
+                # fix distance
+                tmp = (j+1)*sd - rdist[k]
+                lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
+                                  tmp*hdist/tdist*1e3)
+
+                if idl:
+                    lo = lo+360 if lo < 0 else lo
+
+                de = pl[k, 2] + tmp*vdist/hdist
+                npr[laidx[k]+1][k] = [lo, la, de]
+
+                if (k > 0 and np.all(np.isfinite(npr[laidx[k]+1][k])) and
+                        np.all(np.isfinite(npr[laidx[k]][k]))):
+
+                    p1 = npr[laidx[k]][k]
+                    p2 = npr[laidx[k]+1][k]
+                    d = distance(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
+                    #
+                    # >>> TOLERANCE
+                    if abs(d-sd) > TOL*sd:
+                        tmpf = 'd: {:f} diff: {:f} tol: {:f} sd:{:f}'
+                        tmpf += '\nresidual: {:f}'
+                        tmps = tmpf.format(d, d-sd, TOL*sd, sd, rdist[k])
+                        msg = 'The mesh spacing exceeds the tolerance limits'
+                        tmps += '\n {:s}'.format(msg)
+                        raise ValueError(tmps)
+
+                laidx[k] += 1
+            rdist[k] = tdist - sd*ndists + rdist[k]
+            assert rdist[k] < sd
+
+    tmp = []
+    for i in range(len(npr)-1, 0, -1):
+        tmp.append(npr[i])
+
+    return tmp
+
+
+def add_empty_profile(npr, idx=-1):
+    """
+    :param npr:
+        An integer defining the number of points composing the profile
+    :returns:
+        A list with the new empty profiles
+    """
+
+    #
+    tmp = [[np.nan, np.nan, np.nan] for _ in range(len(npr[0]))]
+    if idx == -1:
+        npr = npr + [tmp]
+    elif idx == 0:
+        npr = [tmp] + npr
+    else:
+        ValueError('Undefined option')
+
+    # Check that profiles have the same lenght
+    for i in range(0, len(npr)-1):
+        assert len(npr[i]) == len(npr[i+1])
+
+    return npr
+
+
+def fix_mesh(msh):
+    """
+    Check that the quadrilaterals composing the final mesh are correctly
+    defined i.e. all the vertexes are finite.
+
+    :param msh:
+        A :class:`numpy.ndarray` instance with the coordinates of the mesh
+    :returns:
+        A revised :class:`numpy.ndarray` instance with the coordinates of
+        the mesh
+    """
+    for i in range(msh.shape[0]):
+        ru = i+1
+        rl = i-1
+        for j in range(msh.shape[1]):
+            cu = j+1
+            cl = j-1
+
+            trl = False if cl < 0 else np.isfinite(msh[i, cl, 0])
+            tru = False if cu > msh.shape[1]-1 else np.isfinite(msh[i, cu, 0])
+            tcl = False if rl < 0 else np.isfinite(msh[rl, j, 0])
+            tcu = False if ru > msh.shape[0]-1 else np.isfinite(msh[ru, j, 0])
+
+            check_row = trl or tru
+            check_col = tcl or tcu
+
+            if not (check_row and check_col):
+                msh[i, j, :] = np.nan
+    return msh
