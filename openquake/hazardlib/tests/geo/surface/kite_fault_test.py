@@ -63,6 +63,22 @@ def ppp(profiles, smsh, title=''):
     plt.show()
 
 
+class KiteFaultSurfaceSimpleTests(unittest.TestCase):
+
+    def setUp(self):
+        path = os.path.join(BASE_DATA_PATH, 'profiles05')
+        self.prf, _ = _read_profiles(path)
+
+    def test_mesh_creation(self):
+        """ Create the mesh: two parallel profiles - no top alignment """
+        hsmpl = 4
+        vsmpl = 2
+        idl = False
+        alg = False
+        smsh = KiteFaultSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+        
+ 
+
 class KiteFaultSurfaceTestCase(unittest.TestCase):
     """ Test the construction of a Kite fault surface. """
 

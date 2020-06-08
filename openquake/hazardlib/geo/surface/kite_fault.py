@@ -26,11 +26,9 @@ import numpy as np
 
 from pyproj import Geod
 from openquake.hazardlib.geo import Point, Line
-from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.geodetic import distance, azimuth
-from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 
 TOL = 0.5
 TOLERANCE = 0.2
@@ -189,6 +187,7 @@ class KiteFaultSurface(BaseSurface):
         # Convert from profiles to edges
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
+
         return msh
 
 
@@ -329,9 +328,7 @@ def profiles_depth_alignment(pro1, pro2):
     # Set the profile with the smaller number of points as the first one
     swap = 1
     if coo2.shape[0] < coo1.shape[0]:
-        tmp = coo1
-        coo1 = coo2
-        coo2 = tmp
+        coo1, coo2 = coo2, coo1
         swap = -1
 
     # Process the profiles. Note that in the ideal case the two profiles
@@ -605,7 +602,7 @@ def get_mesh_back(pfs, rfi, sd, idl):
             ndists = int(np.floor((tdist+rdist[k])/sd))
 
             # Adding new points along edge with index k
-            for j, dst in enumerate(range(ndists)):
+            for j, _ in enumerate(range(ndists)):
                 #
                 # add new profile
                 if len(npr)-1 < laidx[k]+1:
