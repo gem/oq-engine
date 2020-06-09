@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Implements a heteroskedastic standard deviation model for the Kotha et al.
+    (2020) GMPE
+  
   [Michele Simionato]
   * Fixed error with large ShakeMap calculations ('events' not found)
   * Raised an error when using `disagg_by_src` with too many point sources

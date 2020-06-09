@@ -100,8 +100,8 @@ def get_phi_ss(imt, mag):
     else:
         phi = C["a"] + (mag - 5.0) * ((C["b"] - C["a"]) / 1.5)
     return phi
-        
-        
+
+
 BASE_PATH = os.path.join(os.path.dirname(__file__), "kotha_2020_tables")
 
 
@@ -558,36 +558,6 @@ class KothaEtAl2020SERA(KothaEtAl2020):
     7.000   1.486846474799   3.474332494304   0.408363526227    1.227180966945   -1.285471191423   0.260498715762   -0.069644614376   0.148649539627   0.522468807073   0.444894957763   0.234268694156   0.385888378683    2.39499327   -0.38989994    0.33074643   2.69365804   -0.42370171    0.43214765
     8.000   1.186154376927   3.447858314030   0.418038426054    1.258318646654   -1.329185530776   0.285751511968   -0.050512729714   0.152958209816   0.507682898129   0.440122399653   0.246895677579   0.387676375770    2.35979253   -0.38432385    0.32874669   2.64017872   -0.41521615    0.42722298
     """)
-
-
-#class KothaEtAl2020SERAHetero(KothaEtAl2020SERA):
-#    """
-#    Variant of the Kotha Et al 2020 GMPE with a heteroskedastic tau and phi0
-#    """
-#    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-#        """
-#        Returns the standard deviations, adopting different site-to-site
-#        standard deviations depending on whether the site has a measured
-#        or and inferred vs30. Relevant only in the ergodic case.
-#        """
-#        stddevs = []
-#        tau = get_tau(imt, mag)
-#        phi = get_phi_ss(imt, mag)
-#        if self.ergodic:
-#            phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
-#            phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
-#            phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
-#            phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
-#        for stddev_type in stddev_types:
-#            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-#            if stddev_type == const.StdDev.TOTAL:
-#                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-#                               np.zeros(stddev_shape))
-#            elif stddev_type == const.StdDev.INTRA_EVENT:
-#                stddevs.append(phi + np.zeros(stddev_shape))
-#            elif stddev_type == const.StdDev.INTER_EVENT:
-#                stddevs.append(tau + np.zeros(stddev_shape))
-#        return stddevs
 
 
 class KothaEtAl2020SERASlopeGeology(KothaEtAl2020SERA):
