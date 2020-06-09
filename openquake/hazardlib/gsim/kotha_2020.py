@@ -35,6 +35,8 @@ from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile,
                                                TAU_EXECUTION, TAU_SETUP)
 
 
+# Heteroskedastic values for single-station phi from measured and smoothed
+# distributions of event- and site- orrected within-event residuals
 HETERO_PHI0 = CoeffsTable(sa_damping=5, table="""\
   imt         a           b
   pgv    0.44654    0.38340
