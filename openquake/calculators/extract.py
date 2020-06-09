@@ -1148,7 +1148,7 @@ def extract_disagg_by_src(dstore, what):
     arr = numpy.zeros(len(src_id), [('src_id', '<S16'), ('max_poe', '<f8')])
     arr['src_id'] = src_id
     arr['max_poe'] = max_poe
-    return arr
+    return ArrayWrapper(arr, dict(json=json.dumps(filt)))
 
 
 @extract.add('disagg_layer')
