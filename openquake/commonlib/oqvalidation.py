@@ -501,6 +501,12 @@ class OqParam(valid.ParamSet):
             del mini['default']
         return F32([mini.get(imt, 0) for imt in self.imtls])
 
+    def levels_per_imt(self):
+        """
+        :returns: the number of levels per IMT (a.ka. L1)
+        """
+        return len(self.imtls.array) // len(self.imtls)
+
     def set_risk_imtls(self, risk_models):
         """
         :param risk_models:

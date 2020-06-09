@@ -42,6 +42,7 @@ def check_disagg_by_src(dstore):
     """
     Make sure that by composing disagg_by_src one gets the hazard curves
     """
+    extract(dstore, 'disagg_by_src?lvl_id=-1')  # check not broken
     mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
     dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
     poes = general.pprod(dbs, axis=4)  # N, R, M, L

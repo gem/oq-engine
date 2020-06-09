@@ -1124,6 +1124,31 @@ def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
     return dt
 
 
+def norm(qdict, params):
+    dic = {}
+    for par in params:
+        dic[par] = int(qdict[par][0]) if par in qdict else 0
+    return dic
+
+
+@extract.add('disagg_by_src')
+def extract_disagg_by_src(dstore, what):
+    """
+    Extract the disagg_by_src information Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/disagg_by_src?site_id=0&imt_id=0&rlz_id=0&lvl_id=-1
+    """
+    qdict = parse(what)
+    src_id = dstore['disagg_by_src'].attrs['src_id']
+    f = norm(qdict, 'site_id rlz_id lvl_id imt_id'.split())
+    poe = dstore['disagg_by_src'][
+        f['site_id'], f['rlz_id'], f['imt_id'], f['lvl_id']]
+    arr = numpy.zeros(len(src_id), [('src_id', '<S16'), ('poe', '<f8')])
+    arr['src_id'] = src_id
+    arr['poe'] = poe
+    arr.sort(order='poe')
+    return ArrayWrapper(arr[::-1], dict(json=json.dumps(f)))
+
+
 @extract.add('disagg_layer')
 def extract_disagg_layer(dstore, what):
     """
