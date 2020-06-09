@@ -199,7 +199,7 @@ class FABATaperGaussian(FABATaperStep):
     Implements tapering of x according to a truncated Gaussian function
 
     :param float sigma:
-        `Bandwidth of function (according to a Gaussian standard deviation)
+        Bandwidth of function (according to a Gaussian standard deviation)
     :param float a:
         Initiation point of tapering (km)
     :param float b:
