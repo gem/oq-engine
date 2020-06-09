@@ -112,14 +112,6 @@ scenario_risk module
     :undoc-members:
     :show-inheritance:
 
-ucerf_event_classical module
---------------------------------------------------
-
-.. automodule:: openquake.calculators.ucerf_classical
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 views module
 ----------------------------------
 
