@@ -28,7 +28,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, block_splitter, groupby, humansize, get_array_nbytes)
+    AccumDict, DictArray, block_splitter, groupby, humansize, get_array_nbytes)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -601,10 +601,14 @@ def build_hazard(pgetter, N, hstats, individual_curves,
         pgetter.init()
         if amplifier:
             ampcode = pgetter.dstore['sitecol'].ampcode
-    imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
+            imtls = DictArray({imt: amplifier.amplevels
+                               for imt in pgetter.imtls})
+        else:
+            imtls = pgetter.imtls
+    poes, weights = pgetter.poes, pgetter.weights
     M = len(imtls)
     P = len(poes)
-    L = len(imtls.array) if amplifier is None else len(amplifier.amplevels) * M
+    L = len(imtls.array)
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}
@@ -622,6 +626,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
             pcurves = pgetter.get_pcurves(sid)
             if amplifier:
                 pcurves = amplifier.amplify(ampcode[sid], pcurves)
+                # NB: the pcurves have soil levels != IMT levels
         if sum(pc.array.sum() for pc in pcurves) == 0:  # no data
             continue
         with compute_mon:
@@ -631,7 +636,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
                     pc = getters.build_stat_curve(arr, imtls, stat, weights)
                     pmap_by_kind['hcurves-stats'][s][sid] = pc
                     if poes:
-                        hmap = calc.make_hmap(pc, pgetter.imtls, poes, sid)
+                        hmap = calc.make_hmap(pc, imtls, poes, sid)
                         pmap_by_kind['hmaps-stats'][s].update(hmap)
             if R > 1 and individual_curves or not hstats:
                 for pmap, pc in zip(pmap_by_kind['hcurves-rlzs'], pcurves):
