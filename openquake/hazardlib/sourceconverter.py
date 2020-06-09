@@ -58,7 +58,7 @@ def fix_dupl(dist, fname=None, lineno=None):
     :param fname:
         the file which is being read; if it is None, it means you are writing
         the distribution: in that case raise an error for duplicated values
-    param lineno:
+    :param lineno:
         the line number of the file which is being read (None in writing mode)
     """
     n = len(dist)

@@ -846,7 +846,7 @@ class RuptureContext(BaseContext):
             rupture occurrence causes a ground shaking value exceeding a
             ground motion level at a site. First dimension represent sites,
             second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>
+            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
         """
         if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
             # Uses the formula
