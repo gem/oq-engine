@@ -1135,7 +1135,7 @@ def norm(qdict, params):
 def extract_disagg_by_src(dstore, what):
     """
     Extract the disagg_by_src information Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/disagg_by_src?site_id=0&imt_id=0&rlz_id=0&lvl_id=0
+    http://127.0.0.1:8800/v1/calc/30/extract/disagg_by_src?site_id=0&imt_id=0&rlz_id=0&lvl_id=-1
     """
     qdict = parse(what)
     src_id = dstore['disagg_by_src'].attrs['src_id']
