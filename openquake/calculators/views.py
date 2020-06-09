@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import io
 import ast
 import os.path
 import numbers
@@ -30,7 +32,8 @@ from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, calc
-from openquake.commonlib.writers import build_header, scientificformat
+from openquake.commonlib.writers import (
+    build_header, scientificformat, write_csv)
 from openquake.calculators import getters
 from openquake.calculators.extract import extract
 
@@ -839,3 +842,14 @@ def view_maximum_intensity(token, dstore):
     effect = extract(dstore, 'effect')
     data = zip(dstore['full_lt'].trts, effect[-1, -1], effect[-1, 0])
     return rst_table(data, ['trt', 'intensity1', 'intensity2'])
+
+
+@view.add('extreme_sites')
+def view_extreme(token, dstore):
+    """
+    Show sites where the mean hazard map reaches maximum values
+    """
+    mean = dstore.sel('hmaps-stats', stat='mean')[:, 0, 0, -1]  # shape N1MP
+    site_ids, = numpy.where(mean == mean.max())
+    arr = dstore['sitecol'][site_ids]
+    return write_csv(io.BytesIO(), arr).decode('utf8')
