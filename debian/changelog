@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Called `check_complex_fault` when serializing the source in XML
   * Restored scenario_damage with fractional asset number
   * Added a view `oq extract disagg_by_src`
   * Fixed error with large ShakeMap calculations ('events' not found)
