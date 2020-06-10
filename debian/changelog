@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Restored scenario_damage with fractional asset number
   * Added a view `oq extract disagg_by_src`
   * Fixed error with large ShakeMap calculations ('events' not found)
   * Raised an error when using `disagg_by_src` with too many point sources
