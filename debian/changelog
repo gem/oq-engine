@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Implements a heteroskedastic standard deviation model for the Kotha et al.
+    (2020) GMPE
+  
   [Michele Simionato]
   * Restored scenario_damage with fractional asset number
   * Added a view `oq extract disagg_by_src`
