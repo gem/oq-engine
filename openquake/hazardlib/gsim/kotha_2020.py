@@ -588,6 +588,8 @@ class KothaEtAl2020SERASlopeGeology(KothaEtAl2020SERA):
         geol_units = np.unique(sites.geology)
         t_slope = np.copy(sites.slope)
         t_slope[t_slope > 0.1] = 0.1
+        # Slope lower than 0.003 m/m takes value for 0.003 m/m
+        t_slope[t_slope < 0.003] = 0.003
         for geol_unit in geol_units:
             idx = sites.geology == geol_unit
             if geol_unit in self.GEOLOGICAL_UNITS:
