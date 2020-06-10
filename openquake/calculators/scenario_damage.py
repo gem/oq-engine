@@ -212,7 +212,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
-        dbe = numpy.zeros((self.E, L, D), U32)  # shape E, L, D
+        dt = F32 if self.param['approx_ddd'] else U32
+        dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
         for e, dmg_by_lt in result['d_event'].items():
             for l, dmg in enumerate(dmg_by_lt):
