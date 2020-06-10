@@ -141,6 +141,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.rupser.save(dic['rup_array'])
         self.rupser.close()
         if not self.rupser.nruptures:
+            if os.environ.get('OQ_SAMPLE_SOURCES'):
+                raise SystemExit(0)  # success even with no ruptures
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'investigation time is too short')
 
