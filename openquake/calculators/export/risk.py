@@ -364,7 +364,7 @@ def export_dmg_by_event(ekey, dstore):
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
     dmg_by_event = dstore[ekey[0]][()]  # shape E, L, D
     events = dstore['events'][()]
-    writer = writers.CsvWriter(fmt='%d')
+    writer = writers.CsvWriter(fmt='%g')
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
     writer.save(numpy.zeros(0, dt_list), fname)
     with open(fname, 'ab') as dest:
