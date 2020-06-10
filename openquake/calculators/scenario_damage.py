@@ -52,17 +52,6 @@ def bin_ddd(fractions, n, seed):
     return ddd
 
 
-def approx_ddd(fractions, n, seed=None):
-    """
-    Converting fractions into uint16 discrete damage distributions using round
-    """
-    ddd = U32(numpy.round(fractions * n))  # shape (E, D)
-    # fix the no-damage discrete damage distributions by making sure
-    # that the total sum is n: nodamage = n - sum(others)
-    ddd[:, 0] = n - ddd[:, 1:].sum(axis=1)
-    return ddd
-
-
 def scenario_damage(riskinputs, crmodel, param, monitor):
     """
     Core function for a damage computation.
@@ -87,15 +76,16 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     consequences = crmodel.get_consequences()
     haz_mon = monitor('getting hazard', measuremem=False)
     rsk_mon = monitor('aggregating risk', measuremem=False)
-    d_event = AccumDict(accum=numpy.zeros((L, D - 1), U32))
+    # algorithm used to compute the discrete damage distributions
+    approx_ddd = param['approx_ddd']
+    z = numpy.zeros((L, D - 1), F32 if approx_ddd else U32)
+    d_event = AccumDict(accum=z)
     res = {'d_event': d_event}
     for name in consequences:
         res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
         # using F64 here is necessary: with F32 the non-commutativity
         # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
-    # algorithm used to compute the discrete damage distributions
-    make_ddd = approx_ddd if param['approx_ddd'] else bin_ddd
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
@@ -111,15 +101,16 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                 for l, loss_type in enumerate(crmodel.loss_types):
                     for asset, fractions in zip(ri.assets, out[loss_type]):
                         aid = asset['ordinal']
-                        ddds = make_ddd(fractions, asset['number'], seed + aid)
+                        if approx_ddd:
+                            ddds = fractions * asset['number']
+                        else:
+                            ddds = bin_ddd(
+                                fractions, asset['number'], seed + aid)
                         for e, ddd in enumerate(ddds):
                             eid = out.eids[e]
                             ddic[aid, eid][l] = ddd[1:]
                             d_event[eid][l] += ddd[1:]
-                        if make_ddd is approx_ddd:
-                            tot = (fractions * asset['number']).sum(axis=0)
-                        else:
-                            tot = ddds.sum(axis=0)
+                        tot = ddds.sum(axis=0)
                         result['d_asset'].append((l, r, asset['ordinal'], tot))
                         # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
@@ -160,7 +151,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             logging.error("The asset %s has number=%s > 2^32-1!",
                           aref, ass['number'])
         self.param['approx_ddd'] = self.oqparam.approx_ddd or num_floats
-        self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt()
+        self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt(
+            self.oqparam.approx_ddd or num_floats)
         self.param['master_seed'] = self.oqparam.master_seed
         A = len(self.assetcol)
         self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
@@ -220,7 +212,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
-        dbe = numpy.zeros((self.E, L, D), U32)  # shape E, L, D
+        dt = F32 if self.param['approx_ddd'] else U32
+        dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
         for e, dmg_by_lt in result['d_event'].items():
             for l, dmg in enumerate(dmg_by_lt):
