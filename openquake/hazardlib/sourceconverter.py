@@ -966,12 +966,12 @@ class SourceConverter(RuptureConverter):
 
 
 Row = collections.namedtuple(
-    'Row', 'id name tectonicregion mfd magscalerel ruptaspectratio '
+    'Row', 'id name code tectonicregion mfd magscalerel ruptaspectratio '
     'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist wkt')
 
 
 NPRow = collections.namedtuple(  # used for nonParametric sources
-    'NPRow', 'id name tectonicregion ruptures wkt')
+    'NPRow', 'id name code tectonicregion ruptures wkt')
 
 
 def _planar(surface):
@@ -1028,6 +1028,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'A',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1043,6 +1044,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'P',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1059,6 +1061,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'M',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1076,6 +1079,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'S',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1096,6 +1100,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'C',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1124,6 +1129,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'X',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             numpy.nan,
@@ -1146,6 +1152,7 @@ class RowConverter(SourceConverter):
         return NPRow(
             node['id'],
             node['name'],
+            'N',
             node['tectonicRegion'],
             json.dumps(ruptures),
             nps.wkt())
