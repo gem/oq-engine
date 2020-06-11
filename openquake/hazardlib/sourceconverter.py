@@ -370,7 +370,7 @@ def convert_nonParametricSeismicSource(fname, node):
                 raise ValueError(
                     'prob_occurs=%s has %d elements, expected %s'
                     % (po, len(probs.data), num_probs))
-            rup = RuptureConverter(0).convert_node(rupnode)
+            rup = RuptureConverter(5.).convert_node(rupnode)
             rup.tectonic_region_type = trt
             rup.weight = None if rups_weights is None else rups_weights[i]
             nps.data.append((rup, probs))
