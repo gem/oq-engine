@@ -38,7 +38,7 @@ converter = sourceconverter.RowConverter()
 
 
 # https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
-def appendrow(row, rows):
+def appendrow(row, rows, chatty):
     wkt = row.wkt
     if wkt.startswith('POINT'):
         rows[row.code + '1'].append(row)
@@ -52,13 +52,14 @@ def appendrow(row, rows):
         rows[row.code + '5'].append(row)
     elif wkt.startswith('MULTIPOLYGON'):
         rows[row.code + '6'].append(row)
-    print('=' * 79)
-    for col in row._fields:
-        print(col, getattr(row, col))
+    if chatty:
+        print('=' * 79)
+        for col in row._fields:
+            print(col, getattr(row, col))
 
 
 @sap.Script
-def nrml_to_csv(fnames, outdir='.'):
+def nrml_to_csv(fnames, outdir='.', chatty=False):
     for fname in fnames:
         converter.fname = fname
         name = os.path.basename(fname)[:-4]  # strip .xml
@@ -66,13 +67,13 @@ def nrml_to_csv(fnames, outdir='.'):
         srcs = collections.defaultdict(list)  # geom_index -> rows
         if 'nrml/0.4' in root['xmlns']:
             for srcnode in root.sourceModel:
-                appendrow(converter.convert_node(srcnode), srcs)
+                appendrow(converter.convert_node(srcnode), srcs, chatty)
         else:
             for srcgroup in root.sourceModel:
                 trt = srcgroup['tectonicRegion']
                 for srcnode in srcgroup:
                     srcnode['tectonicRegion'] = trt
-                    appendrow(converter.convert_node(srcnode), srcs)
+                    appendrow(converter.convert_node(srcnode), srcs, chatty)
         for kind, rows in srcs.items():
             dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
             logging.info('Saving %s', dest)
@@ -81,3 +82,4 @@ def nrml_to_csv(fnames, outdir='.'):
 
 nrml_to_csv.arg('fnames', 'source model files in XML', nargs='+')
 nrml_to_csv.arg('outdir', 'output directory')
+nrml_to_csv.flg('chatty', 'display sources')
