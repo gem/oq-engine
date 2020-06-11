@@ -970,7 +970,7 @@ Row = collections.namedtuple(
     'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist wkt')
 
 
-NPRow = collections.namedtuple(  # used for nonParametric ruptures
+NPRow = collections.namedtuple(  # used for nonParametric sources
     'NPRow', 'id name tectonicregion ruptures wkt')
 
 
