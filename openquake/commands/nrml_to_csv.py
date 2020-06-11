@@ -60,6 +60,7 @@ def appendrow(row, rows):
 @sap.Script
 def nrml_to_csv(fnames, outdir='.'):
     for fname in fnames:
+        converter.fname = fname
         name = os.path.basename(fname)[:-4]  # strip .xml
         root = nrml.read(fname)
         srcs = collections.defaultdict(list)  # geom_index -> rows
