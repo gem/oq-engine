@@ -41,17 +41,17 @@ converter = sourceconverter.RowConverter()
 def appendrow(row, rows):
     wkt = row.wkt
     if wkt.startswith('POINT'):
-        rows[1].append(row)
+        rows[row.code + '1'].append(row)
     elif wkt.startswith('LINESTRING'):
-        rows[2].append(row)
+        rows[row.code + '2'].append(row)
     elif wkt.startswith('POLYGON'):
-        rows[3].append(row)
+        rows[row.code + '3'].append(row)
     elif wkt.startswith('MULTIPOINT'):
-        rows[4].append(row)
+        rows[row.code + '4'].append(row)
     elif wkt.startswith('MULTILINESTRING'):
-        rows[5].append(row)
+        rows[row.code + '5'].append(row)
     elif wkt.startswith('MULTIPOLYGON'):
-        rows[6].append(row)
+        rows[row.code + '6'].append(row)
     print('=' * 79)
     for col in row._fields:
         print(col, getattr(row, col))
@@ -73,8 +73,8 @@ def nrml_to_csv(fnames, outdir='.'):
                 for srcnode in srcgroup:
                     srcnode['tectonicRegion'] = trt
                     appendrow(converter.convert_node(srcnode), srcs)
-        for idx, rows in srcs.items():
-            dest = os.path.join(outdir, '%s_%d.csv' % (name, idx))
+        for kind, rows in srcs.items():
+            dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
             logging.info('Saving %s', dest)
             write_csv(dest, rows, header=rows[0]._fields)
 

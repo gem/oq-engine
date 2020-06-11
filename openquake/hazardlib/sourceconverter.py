@@ -966,12 +966,25 @@ class SourceConverter(RuptureConverter):
 
 
 Row = collections.namedtuple(
-    'Row', 'id name tectonicregion mfd magscalerel ruptaspectratio '
+    'Row', 'id name code tectonicregion mfd magscalerel ruptaspectratio '
     'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist wkt')
 
 
 NPRow = collections.namedtuple(  # used for nonParametric sources
-    'NPRow', 'id name tectonicregion ruptures wkt')
+    'NPRow', 'id name code tectonicregion ruptures wkt')
+
+
+def _planar(surface):
+    poly = []
+    tl = surface.topLeft
+    poly.append((tl['lon'], tl['lat'], tl['depth']))
+    tr = surface.topRight
+    poly.append((tr['lon'], tr['lat'], tr['depth']))
+    bl = surface.bottomLeft
+    poly.append((bl['lon'], bl['lat'], bl['depth']))
+    br = surface.bottomRight
+    poly.append((br['lon'], br['lat'], br['depth']))
+    return '(%s)' % ', '.join('%s %s %s ' % xyz for xyz in poly)
 
 
 class RowConverter(SourceConverter):
@@ -1015,6 +1028,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'A',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1030,6 +1044,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'P',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1046,6 +1061,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'M',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1063,6 +1079,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'S',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1083,6 +1100,7 @@ class RowConverter(SourceConverter):
         return Row(
             node['id'],
             node['name'],
+            'C',
             node['tectonicRegion'],
             self.convert_mfdist(node),
             ~node.magScaleRel,
@@ -1094,7 +1112,33 @@ class RowConverter(SourceConverter):
             wkt)
 
     def convert_characteristicFaultSource(self, node):
-        raise NotImplementedError
+        _, kind = node.surface[0].tag.split('}')
+        if kind == 'simpleFaultGeometry':
+            geom = node.surface.simpleFaultGeometry
+            wkt = 'LINESTRING(%s)' % ', '.join(
+                '%s %s' % (point.x, point.y) for point in self.geo_line(geom))
+        elif kind == 'complexFaultGeometry':
+            edges = []
+            for line in self.geo_lines(node.surface.complexFaultGeometry):
+                edges.append('(%s)' % ', '.join('%s %s %s' % (p.x, p.y, p.z)
+                                                for p in line))
+            wkt = 'MULTILINESTRING Z(%s)' % ', '.join(edges)
+        elif kind == 'planarSurface':
+            wkt = 'MULTIPOLYGON Z(%s)' % ', '.join(
+                _planar(surface) for surface in node.surface)
+        return Row(
+            node['id'],
+            node['name'],
+            'X',
+            node['tectonicRegion'],
+            self.convert_mfdist(node),
+            numpy.nan,
+            numpy.nan,
+            numpy.nan,
+            numpy.nan,
+            [{'rake': ~node.rake}],
+            [],
+            wkt)
 
     def convert_nonParametricSeismicSource(self, node):
         nps = convert_nonParametricSeismicSource(self.fname, node)
@@ -1108,9 +1152,11 @@ class RowConverter(SourceConverter):
         return NPRow(
             node['id'],
             node['name'],
+            'N',
             node['tectonicRegion'],
             json.dumps(ruptures),
             nps.wkt())
+
 
 # ################### MultiPointSource conversion ######################## #
 
