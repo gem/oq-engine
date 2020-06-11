@@ -845,7 +845,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         exposure, assets_by_site, oqparam.time_event)
     if 'site_id' in oqparam.aggregate_by:
         assetcol.tagcol.tagnames.append('site_id')
-        assetcol.array['site_id'] += 1
     if assetcol.occupancy_periods:
         missing = set(cost_types) - set(exposure.cost_types['name']) - set(
             ['occupants'])

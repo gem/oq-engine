@@ -99,6 +99,8 @@ def calc_risk(gmfs, param, monitor):
             eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
+            if 'site_id' in aggby:
+                assets['site_id'] = sid + 1  # must start from 1 for aggregation
             tagidxs = assets[aggby] if aggby else None
             acc['numlosses'] += lba.aggregate(
                 out, eidx, minimum_loss, tagidxs, ws)
