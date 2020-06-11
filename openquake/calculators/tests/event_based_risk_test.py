@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
-import unittest
 import numpy
 
 from openquake.baselib.general import gettemp
@@ -433,8 +431,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
 
         curves = self.calc.datastore.read_df('agg_curves-rlzs',
-                                             ['NAME_1', 'return_periods'])
-        self.assertEqual(len(curves), 6)  # 2 names x 3 periods
+                                             ['site_id', 'return_periods'])
+        self.assertEqual(len(curves), 21)  # 7 sites x 3 periods
 
         # regenerate loss curves and maps
         out = self.run_calc(
