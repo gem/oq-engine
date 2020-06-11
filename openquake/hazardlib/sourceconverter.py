@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import json
 import operator
 import collections
 import pickle
@@ -328,6 +329,55 @@ def split_coords_3d(seq):
     return list(zip(lons, lats, depths))
 
 
+def convert_nonParametricSeismicSource(fname, node):
+    """
+    Convert the given node into a non parametric source object.
+
+    :param fname:
+        full pathname to the XML file associated to the node
+    :param node:
+        a Node object coming from an XML file
+    :returns:
+        a :class:`openquake.hazardlib.source.NonParametricSeismicSource`
+        instance
+    """
+    trt = node.attrib.get('tectonicRegion')
+    rups_weights = None
+    if 'rup_weights' in node.attrib:
+        rups_weights = F64(node['rup_weights'].split())
+    nps = source.NonParametricSeismicSource(
+        node['id'], node['name'], trt, [], [])
+    nps.splittable = 'rup_weights' not in node.attrib
+    path = os.path.splitext(fname)[0] + '.hdf5'
+    hdf5_fname = path if os.path.exists(path) else None
+    if hdf5_fname:
+        # read the rupture data from the HDF5 file
+        assert node.text is None, node.text
+        with hdf5.File(hdf5_fname, 'r') as h:
+            dic = {k: d[:] for k, d in h[node['id']].items()}
+        nps.fromdict(dic, rups_weights)
+        num_probs = len(dic['probs_occur'])
+    else:
+        # read the rupture data from the XML nodes
+        num_probs = None
+        for i, rupnode in enumerate(node):
+            po = rupnode['probs_occur']
+            probs = pmf.PMF(valid.pmf(po))
+            if num_probs is None:  # first time
+                num_probs = len(probs.data)
+            elif len(probs.data) != num_probs:
+                # probs_occur must have uniform length for all ruptures
+                raise ValueError(
+                    'prob_occurs=%s has %d elements, expected %s'
+                    % (po, len(probs.data), num_probs))
+            rup = RuptureConverter(5.).convert_node(rupnode)
+            rup.tectonic_region_type = trt
+            rup.weight = None if rups_weights is None else rups_weights[i]
+            nps.data.append((rup, probs))
+    nps.num_probs_occur = num_probs
+    return nps
+
+
 class RuptureConverter(object):
     """
     Convert ruptures from nodes into Hazardlib ruptures.
@@ -559,14 +609,6 @@ class SourceConverter(RuptureConverter):
         self.spinning_floating = spinning_floating
         self.source_id = source_id
         self.discard_trts = discard_trts
-
-    @property
-    def hdf5_fname(self):
-        """
-        :returns: the associated hdf5 file name or None
-        """
-        path = os.path.splitext(self.fname)[0] + '.hdf5'
-        return path if os.path.exists(path) else None
 
     def convert_node(self, node):
         """
@@ -851,39 +893,7 @@ class SourceConverter(RuptureConverter):
             a :class:`openquake.hazardlib.source.NonParametricSeismicSource`
             instance
         """
-        trt = node.attrib.get('tectonicRegion')
-        rups_weights = None
-        if 'rup_weights' in node.attrib:
-            rups_weights = F64(node['rup_weights'].split())
-        nps = source.NonParametricSeismicSource(
-            node['id'], node['name'], trt, [], [])
-        nps.splittable = 'rup_weights' not in node.attrib
-        if self.hdf5_fname:
-            # read the rupture data from the HDF5 file
-            assert node.text is None, node.text
-            with hdf5.File(self.hdf5_fname, 'r') as h:
-                dic = {k: d[:] for k, d in h[node['id']].items()}
-            nps.fromdict(dic, rups_weights)
-            num_probs = len(dic['probs_occur'])
-        else:
-            # read the rupture data from the XML nodes
-            num_probs = None
-            for i, rupnode in enumerate(node):
-                po = rupnode['probs_occur']
-                probs = pmf.PMF(valid.pmf(po))
-                if num_probs is None:  # first time
-                    num_probs = len(probs.data)
-                elif len(probs.data) != num_probs:
-                    # probs_occur must have uniform length for all ruptures
-                    raise ValueError(
-                        'prob_occurs=%s has %d elements, expected %s'
-                        % (po, len(probs.data), num_probs))
-                rup = RuptureConverter.convert_node(self, rupnode)
-                rup.tectonic_region_type = trt
-                rup.weight = None if rups_weights is None else rups_weights[i]
-                nps.data.append((rup, probs))
-        nps.num_probs_occur = num_probs
-        return nps
+        return convert_nonParametricSeismicSource(self.fname, node)
 
     def convert_sourceModel(self, node):
         return [self.convert_node(subnode) for subnode in node]
@@ -958,6 +968,10 @@ class SourceConverter(RuptureConverter):
 Row = collections.namedtuple(
     'Row', 'id name tectonicregion mfd magscalerel ruptaspectratio '
     'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist wkt')
+
+
+NPRow = collections.namedtuple(  # used for nonParametric sources
+    'NPRow', 'id name tectonicregion ruptures wkt')
 
 
 class RowConverter(SourceConverter):
@@ -1083,7 +1097,20 @@ class RowConverter(SourceConverter):
         raise NotImplementedError
 
     def convert_nonParametricSeismicSource(self, node):
-        raise NotImplementedError
+        nps = convert_nonParametricSeismicSource(self.fname, node)
+        ruptures = []
+        for rup, pmf_ in nps.data:
+            probs = [p for p, i in pmf_.data]
+            hypo = [rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z]
+            dic = dict(mag=rup.mag, rake=rup.rake, weight=rup.weight,
+                       probs_occur=probs, hypo=hypo)
+            ruptures.append(dic)
+        return NPRow(
+            node['id'],
+            node['name'],
+            node['tectonicRegion'],
+            json.dumps(ruptures),
+            nps.wkt())
 
 # ################### MultiPointSource conversion ######################## #
 
