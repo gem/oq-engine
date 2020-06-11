@@ -843,6 +843,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
                      len(sitecol), sum(len(a) for a in assets_by_site))
     assetcol = asset.AssetCollection(
         exposure, assets_by_site, oqparam.time_event)
+    if 'site_id' in oqparam.aggregate_by:
+        site_id = numpy.array([b'?'] + [
+            str(s).encode('utf8') for s in numpy.unique(assetcol['site_id'])])
+        assetcol.tagcol.tagnames.append('site_id')
+        assetcol.tagcol.site_id = site_id
+        assetcol.array['site_id'] += 1
+        assetcol.tagcol.site_id_idx = {v: i for i, v in enumerate(site_id)}
     if assetcol.occupancy_periods:
         missing = set(cost_types) - set(exposure.cost_types['name']) - set(
             ['occupants'])

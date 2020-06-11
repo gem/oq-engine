@@ -422,7 +422,7 @@ class AssetCollection(object):
         :param array: an array with the same length as the asset collection
         :returns: an array of aggregate values with the proper shape
         """
-        missing = set(tagnames) - set(self.tagcol.tagnames)
+        missing = set(tagnames) - set(self.tagcol.tagnames) - {'site_id'}
         if missing:
             raise ValueError('Unknown tagname(s) %s' % missing)
         A, *shp = array.shape
