@@ -28,7 +28,8 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
-from openquake.hazardlib.source import NonParametricSeismicSource
+from openquake.hazardlib.source import (
+    NonParametricSeismicSource, check_complex_fault)
 from openquake.hazardlib.tom import PoissonTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
@@ -554,6 +555,8 @@ def build_complex_fault_source_node(fault_source):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
+    list(check_complex_fault(fault_source))  # check get_dip
+
     # Parse geometry
     source_nodes = [build_complex_fault_geometry(fault_source)]
     # Parse common fault source attributes
