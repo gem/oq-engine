@@ -612,7 +612,6 @@ celery_wait $GEM_MAXLOOP
         ssh "$lxc_ip" "oq engine --make-html-report today
         oq engine --show-log -1
         oq reset --yes"
-        scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
         # WebUI command check
         ssh "$lxc_ip" "webui_fail_msg=\"This command must be run by the proper user: see the documentation for details\"
