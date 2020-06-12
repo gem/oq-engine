@@ -55,20 +55,6 @@ class GeoPackager(object):
         self.crs = crs.from_string('+proj=longlat +ellps=WGS84 '
                                    '+datum=WGS84 +no_defs')
 
-    def save_dic(self, name, dic):
-        """
-        Useful for debugging. Example:
-        dic = {'geometry': {'type': 'Polygon',
-                            'coordinates': [(-0.5, -0.5), (-0.3, -0.1), (0.1, 0.2), (0.3, -0.8), (-0.5, -0.5)]},
-               'properties': {'id': '1', 'name': 'Area Source'}}
-        """
-        schema = {'geometry': dic['geometry']['type'],
-                  'properties': [(k, fiona_type(v))
-                                 for k, v in dic['properties'].items()]}
-        with fiona.open(self.fname, 'w', 'GPKG', schema,
-                        self.crs, 'utf8', layer=name) as f:
-            f.write(dic)
-
     def save_layer(self, name, rows):
         """
         :param name:
@@ -84,3 +70,17 @@ class GeoPackager(object):
                         self.crs, 'utf8', layer=name) as f:
             for row in rows:
                 f.write(geodict(row))
+
+    def _save(self, name, dic):
+        # Useful for debugging. Example:
+        # dic = {'geometry':
+        #          {'type': 'Polygon',
+        #           'coordinates': [[(-0.5, -0.5), (-0.3, -0.1),
+        #                            (0.1, 0.2), (0.3, -0.8), (-0.5, -0.5)]},
+        #        'properties': {'id': '1', 'name': 'Area Source'}}
+        schema = {'geometry': dic['geometry']['type'],
+                  'properties': [(k, fiona_type(v))
+                                 for k, v in dic['properties'].items()]}
+        with fiona.open(self.fname, 'w', 'GPKG', schema,
+                        self.crs, 'utf8', layer=name) as f:
+            f.write(dic)
