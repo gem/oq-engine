@@ -128,11 +128,12 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
+        # make sure ses_id >= 65536 is valid
+        high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
+        self.assertGreater(high_ses, 1000)
+
         [fname] = out['ruptures', 'xml']
         # self.assertEqualFiles('expected/ruptures.xml', fname)
-
-        [fname, _, _] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
