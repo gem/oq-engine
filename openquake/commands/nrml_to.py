@@ -32,7 +32,7 @@ import collections
 import shapely.wkt
 from openquake.baselib import sap
 from openquake.hazardlib import nrml, sourceconverter
-from openquake.hazardlib.geo.packager import GeoPackager
+from openquake.hazardlib.geo.packager import GeoPackager, fiona
 from openquake.commonlib.writers import write_csv
 
 
@@ -151,7 +151,8 @@ def nrml_to(what, fnames, outdir='.', chatty=False):
                 gpkg.save_layer(kind, rows)
 
 
-nrml_to.arg('what', 'csv or gpkg')
+nrml_to.arg('what', 'csv or gpkg',
+            choices=['csv', 'gpkg'] if fiona else ['csv'])
 nrml_to.arg('fnames', 'source model files in XML', nargs='+')
 nrml_to.arg('outdir', 'output directory')
 nrml_to.flg('chatty', 'display sources')
