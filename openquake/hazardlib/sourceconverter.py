@@ -984,7 +984,8 @@ def _planar(surface):
     poly.append((bl['lon'], bl['lat'], bl['depth']))
     br = surface.bottomRight
     poly.append((br['lon'], br['lat'], br['depth']))
-    return '(%s)' % ', '.join('%s %s %s ' % xyz for xyz in poly)
+    poly.append((tl['lon'], tl['lat'], tl['depth']))  # close the polygon
+    return '(%s)' % ', '.join('%.5f %.5f %.5f' % xyz for xyz in poly)
 
 
 class RowConverter(SourceConverter):
@@ -1024,6 +1025,7 @@ class RowConverter(SourceConverter):
     def convert_areaSource(self, node):
         geom = node.areaGeometry
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
+        coords += [coords[0]]  # close the polygon
         # TODO: area_discretization = geom.attrib.get('discretization')
         return Row(
             node['id'],
@@ -1053,7 +1055,7 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            'POINT(%s %s)' % ~geom.Point.pos)
+            'POINT(%.5f %.5f)' % ~geom.Point.pos)
 
     def convert_multiPointSource(self, node):
         geom = node.multiPointGeometry
@@ -1070,12 +1072,12 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            'MULTIPOINT((%s))' % ', '.join('%s %s' % xy for xy in coords))
+            'MULTIPOINT((%s))' % ', '.join('%.5f %.5f' % xy for xy in coords))
 
     def convert_simpleFaultSource(self, node):
         geom = node.simpleFaultGeometry
         wkt = 'LINESTRING(%s)' % ', '.join(
-            '%s %s' % (point.x, point.y) for point in self.geo_line(geom))
+            '%.5f %.5f' % (point.x, point.y) for point in self.geo_line(geom))
         return Row(
             node['id'],
             node['name'],
@@ -1094,7 +1096,7 @@ class RowConverter(SourceConverter):
         geom = node.complexFaultGeometry  # 1005
         edges = []
         for line in self.geo_lines(geom):
-            edges.append('(%s)' % ', '.join('%s %s %s' % (p.x, p.y, p.z)
+            edges.append('(%s)' % ', '.join('%.5f %.5f %.5f' % (p.x, p.y, p.z)
                                             for p in line))
         wkt = 'MULTILINESTRING Z(%s)' % ', '.join(edges)
         return Row(
@@ -1120,11 +1122,11 @@ class RowConverter(SourceConverter):
         elif kind == 'complexFaultGeometry':
             edges = []
             for line in self.geo_lines(node.surface.complexFaultGeometry):
-                edges.append('(%s)' % ', '.join('%s %s %s' % (p.x, p.y, p.z)
-                                                for p in line))
+                edges.append('(%s)' % ', '.join(
+                    '%.5f %.5f %.5f' % (p.x, p.y, p.z) for p in line))
             wkt = 'MULTILINESTRING Z(%s)' % ', '.join(edges)
         elif kind == 'planarSurface':
-            wkt = 'MULTIPOLYGON Z(%s)' % ', '.join(
+            wkt = 'MULTIPOLYGON Z((%s))' % ', '.join(
                 _planar(surface) for surface in node.surface)
         return Row(
             node['id'],

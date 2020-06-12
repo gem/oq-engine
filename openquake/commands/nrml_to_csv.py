@@ -29,6 +29,7 @@ one per geometry type, being
 import os
 import logging
 import collections
+import shapely.wkt
 from openquake.baselib import sap
 from openquake.hazardlib import nrml, sourceconverter
 from openquake.commonlib.writers import write_csv
@@ -56,6 +57,10 @@ def appendrow(row, rows, chatty):
         print('=' * 79)
         for col in row._fields:
             print(col, getattr(row, col))
+        try:
+            shapely.wkt.loads(wkt)  # sanity check
+        except Exception as exc:
+            raise exc.__class__(wkt)
 
 
 @sap.Script
