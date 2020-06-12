@@ -47,7 +47,7 @@ from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands.zip import zip as zip_cmd
 from openquake.commands.check_input import check_input
 from openquake.commands.prepare_site_model import prepare_site_model
-from openquake.commands.nrml_to_csv import nrml_to_csv
+from openquake.commands.nrml_to import nrml_to
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
 from openquake.commands.tests.data import to_reduce
@@ -577,10 +577,10 @@ class NRML2CSVTestCase(unittest.TestCase):
     def test_nrml_to_csv(self):
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
-            nrml_to_csv.func([MIXED_SRC_MODEL], temp_dir, chatty=True)
+            nrml_to.func('csv', [MIXED_SRC_MODEL], temp_dir, chatty=True)
         out = str(p)
-        self.assertIn('MULTIPOLYGON Z', out)
-        self.assertIn('MULTILINESTRING Z', out)
+        self.assertIn('3D MULTIPOLYGON', out)
+        self.assertIn('3D MULTILINESTRING', out)
         self.assertIn('POINT', out)
         shutil.rmtree(temp_dir)
 

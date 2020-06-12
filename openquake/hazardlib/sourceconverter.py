@@ -967,11 +967,12 @@ class SourceConverter(RuptureConverter):
 
 Row = collections.namedtuple(
     'Row', 'id name code tectonicregion mfd magscalerel ruptaspectratio '
-    'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist wkt')
+    'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist '
+    'geom coords')
 
 
 NPRow = collections.namedtuple(  # used for nonParametric sources
-    'NPRow', 'id name code tectonicregion ruptures wkt')
+    'NPRow', 'id name code tectonicregion ruptures geom coords')
 
 
 def _planar(surface):
@@ -985,7 +986,7 @@ def _planar(surface):
     br = surface.bottomRight
     poly.append((br['lon'], br['lat'], br['depth']))
     poly.append((tl['lon'], tl['lat'], tl['depth']))  # close the polygon
-    return '(%s)' % ', '.join('%.5f %.5f %.5f' % xyz for xyz in poly)
+    return poly
 
 
 class RowConverter(SourceConverter):
@@ -1039,7 +1040,7 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            'POLYGON((%s))' % ', '.join('%s %s' % xy for xy in coords))
+            'Polygon', [coords])
 
     def convert_pointSource(self, node):
         geom = node.pointGeometry
@@ -1055,7 +1056,7 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            'POINT(%.5f %.5f)' % ~geom.Point.pos)
+            'Point', ~geom.Point.pos)
 
     def convert_multiPointSource(self, node):
         geom = node.multiPointGeometry
@@ -1072,12 +1073,10 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
             self.convert_hddist(node),
-            'MULTIPOINT((%s))' % ', '.join('%.5f %.5f' % xy for xy in coords))
+            'MultiPoint', coords)
 
     def convert_simpleFaultSource(self, node):
         geom = node.simpleFaultGeometry
-        wkt = 'LINESTRING(%s)' % ', '.join(
-            '%.5f %.5f' % (point.x, point.y) for point in self.geo_line(geom))
         return Row(
             node['id'],
             node['name'],
@@ -1090,15 +1089,13 @@ class RowConverter(SourceConverter):
             ~geom.lowerSeismoDepth,
             [{'dip': ~geom.dip, 'rake': ~node.rake}],
             [],
-            wkt)
+            'LineString', [(p.x, p.y) for p in self.geo_line(geom)])
 
     def convert_complexFaultSource(self, node):
         geom = node.complexFaultGeometry  # 1005
         edges = []
         for line in self.geo_lines(geom):
-            edges.append('(%s)' % ', '.join('%.5f %.5f %.5f' % (p.x, p.y, p.z)
-                                            for p in line))
-        wkt = 'MULTILINESTRING Z(%s)' % ', '.join(edges)
+            edges.append([(p.x, p.y, p.z) for p in line])
         return Row(
             node['id'],
             node['name'],
@@ -1111,23 +1108,22 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
-            wkt)
+            '3D MultiLineString', edges)
 
     def convert_characteristicFaultSource(self, node):
         _, kind = node.surface[0].tag.split('}')
         if kind == 'simpleFaultGeometry':
-            geom = node.surface.simpleFaultGeometry
-            wkt = 'LINESTRING(%s)' % ', '.join(
-                '%s %s' % (point.x, point.y) for point in self.geo_line(geom))
+            geom = 'LineString'
+            coords = [(point.x, point.y) for point in self.geo_line(
+                node.surface.simpleFaultGeometry)]
         elif kind == 'complexFaultGeometry':
-            edges = []
+            geom = '3D MultiLineString'
+            coords = []
             for line in self.geo_lines(node.surface.complexFaultGeometry):
-                edges.append('(%s)' % ', '.join(
-                    '%.5f %.5f %.5f' % (p.x, p.y, p.z) for p in line))
-            wkt = 'MULTILINESTRING Z(%s)' % ', '.join(edges)
+                coords.append([(p.x, p.y, p.z) for p in line])
         elif kind == 'planarSurface':
-            wkt = 'MULTIPOLYGON Z((%s))' % ', '.join(
-                _planar(surface) for surface in node.surface)
+            geom = '3D MultiPolygon'
+            coords = [_planar(surface) for surface in node.surface]
         return Row(
             node['id'],
             node['name'],
@@ -1140,7 +1136,7 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
-            wkt)
+            geom, coords)
 
     def convert_nonParametricSeismicSource(self, node):
         nps = convert_nonParametricSeismicSource(self.fname, node)
@@ -1157,7 +1153,7 @@ class RowConverter(SourceConverter):
             'N',
             node['tectonicRegion'],
             json.dumps(ruptures),
-            nps.wkt())
+            'Polygon', [nps.polygon._polygon_2d.coords])
 
 
 # ################### MultiPointSource conversion ######################## #
