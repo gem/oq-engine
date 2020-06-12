@@ -29,6 +29,7 @@ one per geometry type, being
 import os
 import logging
 import collections
+import shapely.wkt
 from openquake.baselib import sap
 from openquake.hazardlib import nrml, sourceconverter
 from openquake.commonlib.writers import write_csv
@@ -56,13 +57,17 @@ def appendrow(row, rows, chatty):
         print('=' * 79)
         for col in row._fields:
             print(col, getattr(row, col))
+        try:
+            shapely.wkt.loads(wkt)  # sanity check
+        except Exception as exc:
+            raise exc.__class__(wkt)
 
 
 @sap.Script
 def nrml_to_csv(fnames, outdir='.', chatty=False):
     for fname in fnames:
         converter.fname = fname
-        name = os.path.basename(fname)[:-4]  # strip .xml
+        name, _ext = os.path.splitext(os.path.basename(fname))
         root = nrml.read(fname)
         srcs = collections.defaultdict(list)  # geom_index -> rows
         if 'nrml/0.4' in root['xmlns']:

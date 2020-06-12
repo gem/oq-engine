@@ -21,7 +21,6 @@ import csv
 import tempfile
 import numpy  # this is needed by the doctests, don't remove it
 from openquake.baselib.node import scientificformat
-from openquake.baselib.python3compat import encode
 
 FIVEDIGITS = '%.5E'
 
@@ -142,10 +141,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
         w.writerow(_header(someheader, renamedict))
 
     def format(val):
-        col = scientificformat(val, fmt)
-        if sep in col and not col.startswith('"'):
-            return '"%s"' % col
-        return col
+        return scientificformat(val, fmt)
 
     if autoheader:
         all_fields = [col.split(':', 1)[0].split('~')
