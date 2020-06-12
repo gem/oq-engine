@@ -240,7 +240,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # set event year and event ses starting from 1
         itime = int(self.oqparam.investigation_time)
         nses = self.oqparam.ses_per_logic_tree_path
-        extra = numpy.zeros(len(events), [('year', U16), ('ses_id', U16)])
+        extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
         numpy.random.seed(self.oqparam.ses_seed)
         extra['year'] = numpy.random.choice(itime, len(events)) + 1
         extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1

@@ -1,5 +1,6 @@
-  [Michele Simionato[
-  * Added command `oq nrml_to_csv`
+  [Michele Simionato]
+  * Supported year and ses_id >= 65536 in event based
+  * Added command `oq nrml_to csv`
 
   [Graeme Weatherill]
   * Implements a heteroskedastic standard deviation model for the Kotha et al.
