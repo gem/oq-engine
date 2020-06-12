@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import csv
 import tempfile
 import numpy  # this is needed by the doctests, don't remove it
 from openquake.baselib.node import scientificformat
@@ -91,16 +92,16 @@ def extract_from(data, fields):
     return data
 
 
-def _header(fields, sep, renamedict):
+def _header(fields, renamedict):
     if renamedict:
         fields = [renamedict.get(f, f) for f in fields]
-    return encode(sep.join(fields) + '\n')
+    return fields
 
 
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
               renamedict=None):
     """
-    :param dest: None, file, filename or io.BytesIO instance
+    :param dest: None, file, filename or io.StringIO instance
     :param data: array to save
     :param sep: separator to use (default comma)
     :param fmt: formatting string (default '%12.8E')
@@ -120,8 +121,9 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
         # it must be closed by client code
         close = False
     elif not hasattr(dest, 'getvalue'):
-        # not a BytesIO, assume dest is a filename
-        dest = open(dest, 'wb')
+        # assume dest is a filename
+        dest = open(dest, 'w')
+    w = csv.writer(dest, delimiter=sep)
     try:
         # see if data is a composite numpy array
         data.dtype.fields
@@ -133,14 +135,11 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
 
     nfields = len(autoheader) or len(data[0])
     if comment:
-        if '"' in comment:  # double quote
-            comment = comment.replace('"', '""')
-        com = '#%s"%s"\n' % (sep * (nfields - 1), comment)
-        dest.write(encode(com))
+        w.writerow(['#'] + [''] * (nfields - 2) + [comment])
 
     someheader = header or autoheader
     if header != 'no-header' and someheader:
-        dest.write(_header(someheader, sep, renamedict))
+        w.writerow(_header(someheader, renamedict))
 
     def format(val):
         col = scientificformat(val, fmt)
@@ -159,10 +158,10 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
                     row.append('%.5f' % val)
                 else:
                     row.append(format(val))
-            dest.write(_header(row, sep, renamedict))
+            w.writerow(_header(row, renamedict))
     else:
         for row in data:
-            dest.write(encode(sep.join(format(col) for col in row) + '\n'))
+            w.writerow([format(col) for col in row])
     if hasattr(dest, 'getvalue'):
         return dest.getvalue()[:-1]  # a newline is strangely added
     elif close:

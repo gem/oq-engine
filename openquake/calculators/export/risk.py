@@ -21,7 +21,6 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
@@ -367,7 +366,7 @@ def export_dmg_by_event(ekey, dstore):
     writer = writers.CsvWriter(fmt='%g')
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
     writer.save(numpy.zeros(0, dt_list), fname)
-    with open(fname, 'ab') as dest:
+    with open(fname, 'a') as dest:
         for rlz_id in numpy.unique(events['rlz_id']):
             ok, = numpy.where(events['rlz_id'] == rlz_id)
             arr = numpy.zeros(len(ok), dt_list)
