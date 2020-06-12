@@ -276,6 +276,11 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertEqual('__pyclass__ openquake.hazardlib.site.SiteCollection',
                          str(p))
 
+    def test_show_oqparam(self):
+        with Print.patch() as p:
+            show('oqparam', self.calc_id)
+        self.assertIn('"inputs": {', str(p))
+
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
