@@ -67,7 +67,7 @@ def appendrow(row, rows, chatty):
 def nrml_to_csv(fnames, outdir='.', chatty=False):
     for fname in fnames:
         converter.fname = fname
-        name = os.path.basename(fname)[:-4]  # strip .xml
+        name, _ext = os.path.splitext(os.path.basename(fname))
         root = nrml.read(fname)
         srcs = collections.defaultdict(list)  # geom_index -> rows
         if 'nrml/0.4' in root['xmlns']:
