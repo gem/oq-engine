@@ -69,7 +69,7 @@ def show(what='contents', calc_id=-1, extra=()):
     elif what.split('/', 1)[0] in extract:
         obj = extract(ds, what, *extra)
         if hasattr(obj, 'dtype') and obj.dtype.names:
-            print(write_csv(io.BytesIO(), obj).decode('utf8'))
+            print(write_csv(io.StringIO(), obj))
         else:
             print(obj)
     elif what in ds:
@@ -82,7 +82,7 @@ def show(what='contents', calc_id=-1, extra=()):
             if hasattr(aw, 'shape_descr'):
                 print(rst_table(aw.to_table()))
             else:
-                print(write_csv(io.BytesIO(), aw.array).decode('utf8'))
+                print(write_csv(io.StringIO(), aw.array))
     else:
         print('%s not found' % what)
 

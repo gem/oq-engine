@@ -429,7 +429,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
         arr = self.calc.datastore.getitem('sitecol')
-        tmp = gettemp(write_csv(io.BytesIO(), arr).decode('utf8'))
+        tmp = gettemp(write_csv(io.StringIO(), arr))
         self.assertEqualFiles('expected/sitecol.csv', tmp)
 
     def test_case_24(self):
