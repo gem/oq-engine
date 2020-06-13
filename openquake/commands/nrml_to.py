@@ -27,6 +27,7 @@ one per geometry type, being
 6 = multipolygon
 """
 import os
+import time
 import logging
 import collections
 import shapely.wkt
@@ -123,6 +124,7 @@ def appendrow(row, rows, chatty):
 
 @sap.Script
 def nrml_to(what, fnames, outdir='.', chatty=False):
+    t0 = time.time()
     for fname in fnames:
         converter.fname = fname
         name, _ext = os.path.splitext(os.path.basename(fname))
@@ -152,6 +154,7 @@ def nrml_to(what, fnames, outdir='.', chatty=False):
             for kind, rows in srcs.items():
                 logging.info('Saving %d sources on layer %s', len(rows), kind)
                 gpkg.save_layer(kind, rows)
+    logging.info('Finished in %d seconds', time.time() - t0)
 
 
 nrml_to.arg('what', 'csv or gpkg',
