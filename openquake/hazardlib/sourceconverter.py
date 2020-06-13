@@ -981,10 +981,10 @@ def _planar(surface):
     poly.append((tl['lon'], tl['lat'], tl['depth']))
     tr = surface.topRight
     poly.append((tr['lon'], tr['lat'], tr['depth']))
-    bl = surface.bottomLeft
-    poly.append((bl['lon'], bl['lat'], bl['depth']))
     br = surface.bottomRight
     poly.append((br['lon'], br['lat'], br['depth']))
+    bl = surface.bottomLeft
+    poly.append((bl['lon'], bl['lat'], bl['depth']))
     poly.append((tl['lon'], tl['lat'], tl['depth']))  # close the polygon
     return [poly]
 
