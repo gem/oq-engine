@@ -126,6 +126,7 @@ def appendrow(row, rows, chatty):
 def nrml_to(what, fnames, outdir='.', chatty=False):
     t0 = time.time()
     for fname in fnames:
+        logging.info('Reading %s', fname)
         converter.fname = fname
         name, _ext = os.path.splitext(os.path.basename(fname))
         root = nrml.read(fname)
@@ -142,7 +143,7 @@ def nrml_to(what, fnames, outdir='.', chatty=False):
         if what == 'csv':
             for kind, rows in srcs.items():
                 dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
-                logging.info('Saving %s', dest)
+                logging.info('Saving %d sources on %s', len(rows), dest)
                 tups = []
                 for row in rows:
                     tup = row[:-2] + (to_wkt(*row[-2:]),)
