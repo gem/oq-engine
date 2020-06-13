@@ -30,6 +30,7 @@ jobs:
   - stage: tests
     env: ENGINE
     before_script:
+        - pip install fiona
         - oq dbserver start -l DEBUG
     script:
         - pytest --doctest-modules -xv openquake/engine
