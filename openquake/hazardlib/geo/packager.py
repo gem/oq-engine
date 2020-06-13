@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+import json
 try:
     import fiona
     from fiona import crs
@@ -30,7 +30,8 @@ def geodict(row):
     prop = {}
     for f in row._fields:
         if f not in ('geom', 'coords'):
-            prop[f] = getattr(row, f)
+            val = getattr(row, f)
+            prop[f] = json.dumps(val) if isinstance(val, list) else val
     return {'geometry': {'type': row.geom.replace('3D ', ''),
                          'coordinates': row.coords},
             'properties': prop}

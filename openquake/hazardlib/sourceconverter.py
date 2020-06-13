@@ -986,7 +986,7 @@ def _planar(surface):
     br = surface.bottomRight
     poly.append((br['lon'], br['lat'], br['depth']))
     poly.append((tl['lon'], tl['lat'], tl['depth']))  # close the polygon
-    return poly
+    return [poly]
 
 
 class RowConverter(SourceConverter):
@@ -1152,8 +1152,8 @@ class RowConverter(SourceConverter):
             node['name'],
             'N',
             node['tectonicRegion'],
-            json.dumps(ruptures),
-            'Polygon', [nps.polygon._polygon_2d.coords])
+            ruptures,
+            'Polygon', [nps.polygon.coords])
 
 
 # ################### MultiPointSource conversion ######################## #

@@ -585,11 +585,13 @@ class NRML2CSVTestCase(unittest.TestCase):
         shutil.rmtree(temp_dir)
 
     def test_nrml_to_gpkg(self):
-        raise unittest.SkipTest
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
             nrml_to.func('gpkg', [MIXED_SRC_MODEL], temp_dir, chatty=True)
         out = str(p)
+        self.assertIn('3D MultiPolygon', out)
+        self.assertIn('3D MultiLineString', out)
+        self.assertIn('Point', out)
         shutil.rmtree(temp_dir)
 
 

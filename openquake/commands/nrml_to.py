@@ -40,6 +40,7 @@ converter = sourceconverter.RowConverter()
 
 
 def to_str(coords, ndim=2):
+    coords[0][0]  # sanity check
     if ndim == 2:
         return ', '. join('%.5f %5f' % tuple(point) for point in coords)
     else:  # 3D
@@ -47,6 +48,7 @@ def to_str(coords, ndim=2):
 
 
 def multi_str(coords, ndim=2):
+    coords[0][0][0]  # sanity check
     if ndim == 2:
         return ', '. join('(%s)' % to_str(p, 2) for p in coords)
     else:  # 3D
@@ -89,7 +91,7 @@ def to_wkt(geom, coords):
     elif geom == '3D MultiLineString':
         return 'MULTILINESTRING Z(%s)' % multi_str(coords, 3)
     elif geom == '3D MultiPolygon':
-        return 'MULTIPOLYGON Z((%s))' % multi_str(coords, 3)
+        return 'MULTIPOLYGON Z((%s))' % multi_str(coords[0], 3)
     else:
         raise NotImplementedError(geom)
 
@@ -148,6 +150,7 @@ def nrml_to(what, fnames, outdir='.', chatty=False):
         else:  # gpkg
             gpkg = GeoPackager(name + '.gpkg')
             for kind, rows in srcs.items():
+                logging.info('Saving %d sources on layer %s', len(rows), kind)
                 gpkg.save_layer(kind, rows)
 
 
