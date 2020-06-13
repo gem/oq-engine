@@ -69,8 +69,8 @@ class GeoPackager(object):
         schema = {'geometry': row.geom, 'properties': properties}
         with fiona.open(self.fname, 'w', 'GPKG', schema,
                         self.crs, 'utf8', layer=name) as f:
-            for row in rows:
-                f.write(geodict(row))
+            recs = [geodict(row) for row in rows]
+            f.writerecords(recs)
 
     def _save(self, name, dic):
         # Useful for debugging. Example:
