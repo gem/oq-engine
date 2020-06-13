@@ -124,6 +124,9 @@ def appendrow(row, rows, chatty):
 
 @sap.Script
 def nrml_to(what, fnames, outdir='.', chatty=False):
+    """
+    Convert source models into CSV files or a geopackage.
+    """
     t0 = time.time()
     for fname in fnames:
         logging.info('Reading %s', fname)
