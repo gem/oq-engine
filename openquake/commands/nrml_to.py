@@ -162,4 +162,4 @@ nrml_to.arg('what', 'csv or gpkg',
             choices=['csv', 'gpkg'] if fiona else ['csv'])
 nrml_to.arg('fnames', 'source model files in XML', nargs='+')
 nrml_to.arg('outdir', 'output directory')
-nrml_to.flg('chatty', 'display sources')
+nrml_to.flg('chatty', 'display sources in progress')
