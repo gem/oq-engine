@@ -1,9 +1,9 @@
-#,,,,,"generated_by='OpenQuake engine 3.9.0-git324fe792bf', start_date='2020-04-19T07:55:43', checksum=1631201394, investigation_time=1.0, risk_investigation_time=1.0"
+#,,,,,"generated_by='OpenQuake engine 3.10.0-git53e3b76de5', start_date='2020-06-15T06:37:28', checksum=1631201394, investigation_time=1.0, risk_investigation_time=1.0"
 asset_id,NAME_1,taxonomy,lon,lat,structural
-a3,"RegionB","tax1",-122.57000,38.11300,1.01310E+00
-a2,"Region A","tax1",-122.11400,38.11300,1.04236E+01
-a5,"RegionB","tax1",-122.00000,37.91000,8.30842E+00
-a4,"RegionB","tax1",-122.00000,38.00000,2.32974E+01
-a1,"Region A","tax1",-122.00000,38.11300,3.89907E+01
-a6,"RegionB","tax1",-122.00000,38.22500,1.80266E+01
-a7,"RegionB","tax1",-121.88600,38.11300,1.15618E+01
+a4,"""RegionB""","""tax1""",-122.00000,37.91000,6.69895E+00
+a5,"""RegionB""","""tax1""",-122.00000,37.91000,6.69895E+00
+a6,"""RegionB""","""tax1""",-122.00000,37.91000,6.69895E+00
+a1,"""Region A""","""tax1""",-122.00000,38.11300,4.46975E+01
+a2,"""Region A""","""tax1""",-122.00000,38.11300,4.46975E+01
+a3,"""RegionB""","""tax1""",-122.00000,38.11300,4.46975E+01
+a7,"""RegionB""","""tax1""",-121.88600,38.11300,1.12250E+01

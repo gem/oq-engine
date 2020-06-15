@@ -1,5 +1,14 @@
   [Michele Simionato]
   * Implemented aggregate_by=site_id
+  * Added commands `oq nrml_to csv` and  `oq nrml_to gpkg`
+  * Supported year and ses_id >= 65536 in event based
+
+  [Graeme Weatherill]
+  * Implements a heteroskedastic standard deviation model for the Kotha et al.
+    (2020) GMPE
+
+  [Michele Simionato]
+  * Called `check_complex_fault` when serializing the source in XML
   * Restored scenario_damage with fractional asset number
   * Added a view `oq extract disagg_by_src`
   * Fixed error with large ShakeMap calculations ('events' not found)
