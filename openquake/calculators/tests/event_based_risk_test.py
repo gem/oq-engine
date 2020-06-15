@@ -432,7 +432,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         curves = self.calc.datastore.read_df('agg_curves-rlzs',
                                              ['site_id', 'return_periods'])
-        self.assertEqual(len(curves), 21)  # 7 sites x 3 periods
+        self.assertEqual(len(curves), 9)  # 3 sites x 3 periods
 
         # regenerate loss curves and maps
         out = self.run_calc(
