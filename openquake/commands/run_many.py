@@ -27,7 +27,7 @@ oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
 
 
 @sap.script
-def run_many(job_ini, extra):
+def run_many(job_ini, extra, pdb):
     """
     Run multiple calculations by using extra parameters
     """
@@ -35,10 +35,11 @@ def run_many(job_ini, extra):
     oq = readinput.get_oqparam(job_ini)
     calc = base.calculators(oq, logs.init('job'))
     try:
-        calc.run_many(extra)
+        calc.run_many(extra, pdb)
     finally:
         parallel.Starmap.shutdown()
 
 
 run_many.arg('job_ini', 'calculation configuration file')
 run_many.arg('extra', 'parameters for the extra calculations', type=toml.loads)
+run_many.flg('pdb', 'debug flag')

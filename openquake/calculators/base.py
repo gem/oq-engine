@@ -220,63 +220,66 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
+    def _run(self, pre_execute=True, concurrent_tasks=None, remove=True, **kw):
+        self._monitor.username = kw.get('username', '')
+        if concurrent_tasks is None:  # use the job.ini parameter
+            ct = self.oqparam.concurrent_tasks
+        else:  # used the parameter passed in the command-line
+            ct = concurrent_tasks
+        if ct == 0:  # disable distribution temporarily
+            oq_distribute = os.environ.get('OQ_DISTRIBUTE')
+            os.environ['OQ_DISTRIBUTE'] = 'no'
+        if ct != self.oqparam.concurrent_tasks:
+            # save the used concurrent_tasks
+            self.oqparam.concurrent_tasks = ct
+        self.save_params(**kw)
+        try:
+            if pre_execute:
+                self.pre_execute()
+            self.result = self.execute()
+            if self.result is not None:
+                self.post_execute(self.result)
+            self.export(kw.get('exports', ''))
+        except Exception:
+            if kw.get('pdb'):  # post-mortem debug
+                tb = sys.exc_info()[2]
+                traceback.print_tb(tb)
+                pdb.post_mortem(tb)
+            else:
+                logging.critical('', exc_info=True)
+                raise
+        finally:
+            # cleanup globals
+            if ct == 0:  # restore OQ_DISTRIBUTE
+                if oq_distribute is None:  # was not set
+                    del os.environ['OQ_DISTRIBUTE']
+                else:
+                    os.environ['OQ_DISTRIBUTE'] = oq_distribute
+            readinput.pmap = None
+            readinput.exposure = None
+            readinput.gmfs = None
+            readinput.eids = None
+            readinput.gsim_lt_cache.clear()
+
+            # remove temporary hdf5 file, if any
+            if os.path.exists(self.datastore.tempname) and remove:
+                os.remove(self.datastore.tempname)
+
     def run(self, pre_execute=True, concurrent_tasks=None, remove=True, **kw):
         """
         Run the calculation and return the exported outputs.
         """
         with self._monitor:
-            self._monitor.username = kw.get('username', '')
-            if concurrent_tasks is None:  # use the job.ini parameter
-                ct = self.oqparam.concurrent_tasks
-            else:  # used the parameter passed in the command-line
-                ct = concurrent_tasks
-            if ct == 0:  # disable distribution temporarily
-                oq_distribute = os.environ.get('OQ_DISTRIBUTE')
-                os.environ['OQ_DISTRIBUTE'] = 'no'
-            if ct != self.oqparam.concurrent_tasks:
-                # save the used concurrent_tasks
-                self.oqparam.concurrent_tasks = ct
-            self.save_params(**kw)
-            try:
-                if pre_execute:
-                    self.pre_execute()
-                self.result = self.execute()
-                if self.result is not None:
-                    self.post_execute(self.result)
-                self.export(kw.get('exports', ''))
-            except Exception:
-                if kw.get('pdb'):  # post-mortem debug
-                    tb = sys.exc_info()[2]
-                    traceback.print_tb(tb)
-                    pdb.post_mortem(tb)
-                else:
-                    logging.critical('', exc_info=True)
-                    raise
-            finally:
-                # cleanup globals
-                if ct == 0:  # restore OQ_DISTRIBUTE
-                    if oq_distribute is None:  # was not set
-                        del os.environ['OQ_DISTRIBUTE']
-                    else:
-                        os.environ['OQ_DISTRIBUTE'] = oq_distribute
-                readinput.pmap = None
-                readinput.exposure = None
-                readinput.gmfs = None
-                readinput.eids = None
-                readinput.gsim_lt_cache.clear()
-
-                # remove temporary hdf5 file, if any
-                if os.path.exists(self.datastore.tempname) and remove:
-                    os.remove(self.datastore.tempname)
+            self._run(pre_execute, concurrent_tasks, remove, **kw)
         return getattr(self, 'exported', {})
 
-    def run_many(self, extra):
+    def run_many(self, extra, pdb=False):
         """
         Run multiple calculations.
 
         :param extra: dictionary param name -> list of param values
         """
-        self.run()
+        self.run(remove=False)
         keys = list(extra)
         oq = copy.copy(self.oqparam)
         oq.hazard_calculation_id = self.datastore.calc_id
@@ -285,12 +288,16 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 logging.info('Running with %s=%s', k, v)
                 setattr(oq, k, v)
                 calc = calculators(oq, logs.init('job'))
+                calc.store_source_info = lambda calc_times: None
+                calc.datastore.tempname = self.datastore.tempname
+                calc.datastore.parent = self.datastore
                 for n in vars(self):
-                    if n == 'R':
+                    if n in {'_monitor', 'datastore', 'R'}:
                         pass
                     else:
                         setattr(calc, n, getattr(self, n))
-                calc.run(pre_execute=False)
+                with calc._monitor:
+                    calc._run(pre_execute=False, remove=False, pdb=pdb)
 
     def core_task(*args):
         """
