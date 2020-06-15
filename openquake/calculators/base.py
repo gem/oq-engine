@@ -288,8 +288,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 for n in vars(self):
                     if n == 'R':
                         pass
-                    elif n == 'sitecol':
-                        pass
                     else:
                         setattr(calc, n, getattr(self, n))
                 calc.run(pre_execute=False)
