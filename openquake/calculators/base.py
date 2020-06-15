@@ -289,13 +289,18 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 setattr(oq, k, v)
                 calc = calculators(oq, logs.init('job'))
                 calc.store_source_info = lambda calc_times: None
-                calc.datastore.tempname = self.datastore.tempname
                 calc.datastore.parent = self.datastore
                 for n in vars(self):
                     if n in {'_monitor', 'datastore', 'R'}:
                         pass
                     else:
                         setattr(calc, n, getattr(self, n))
+                if k == 'site_model_file':
+                    with hdf5.File(calc.datastore.tempname, 'w') as tmp:
+                        tmp['sitecol'] = sc = readinput.get_site_collection(oq)
+                    calc.sitecol = sc
+                else:
+                    calc.datastore.tempname = self.datastore.tempname
                 with calc._monitor:
                     calc._run(pre_execute=False, remove=False, pdb=pdb)
 
