@@ -20,6 +20,7 @@ import re
 import sys
 import abc
 import pdb
+import copy
 import logging
 import operator
 import itertools
@@ -38,7 +39,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, util
+from openquake.commonlib import readinput, logictree, util, logs
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -268,6 +269,30 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 if os.path.exists(self.datastore.tempname) and remove:
                     os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
+
+    def run_many(self, extra):
+        """
+        Run multiple calculations.
+
+        :param extra: dictionary param name -> list of param values
+        """
+        self.run()
+        keys = list(extra)
+        oq = copy.copy(self.oqparam)
+        oq.hazard_calculation_id = self.datastore.calc_id
+        for vals in itertools.product(*extra.values()):
+            for k, v in zip(keys, vals):
+                logging.info('Running with %s=%s', k, v)
+                setattr(oq, k, v)
+                calc = calculators(oq, logs.init('job'))
+                for n in vars(self):
+                    if n == 'R':
+                        pass
+                    elif n == 'sitecol':
+                        pass
+                    else:
+                        setattr(calc, n, getattr(self, n))
+                calc.run(pre_execute=False)
 
     def core_task(*args):
         """
