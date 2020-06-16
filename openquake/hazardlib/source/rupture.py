@@ -777,7 +777,6 @@ class RuptureProxy(object):
     """
     def __init__(self, rec, nsites=None, samples=1):
         self.rec = rec
-        import pdb; pdb.set_trace()
         self.nsites = nsites
         self.samples = samples
 
