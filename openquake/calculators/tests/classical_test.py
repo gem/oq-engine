@@ -25,6 +25,7 @@ from openquake.hazardlib import lt
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.getters import PmapGetter
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
@@ -32,7 +33,22 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42, case_43, case_44, case_45, case_46, case_47, case_48)
+    case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49)
+
+aac = numpy.testing.assert_allclose
+
+
+def check_disagg_by_src(dstore):
+    """
+    Make sure that by composing disagg_by_src one gets the hazard curves
+    """
+    extract(dstore, 'disagg_by_src?lvl_id=-1')  # check not broken
+    mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
+    dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
+    poes = general.pprod(dbs, axis=4)  # N, R, M, L
+    weights = dstore['weights'][:]
+    mean2 = numpy.einsum('sr...,r->s...', poes, weights)  # N, M, L
+    aac(mean, mean2, atol=1E-6)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -109,6 +125,9 @@ class ClassicalTestCase(CalculatorTestCase):
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
 
+        # check disagg_by_src for a single realization
+        check_disagg_by_src(self.calc.datastore)
+
     def test_case_3(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -174,6 +193,14 @@ class ClassicalTestCase(CalculatorTestCase):
              'quantile_curve-0.9.csv'],
             case_11.__file__)
 
+        # checking PmapGetter.get_pcurve
+        pgetter = PmapGetter(self.calc.datastore, self.calc.weights)
+        poes = pgetter.get_hcurves(pgetter.init())[0]
+        mean = self.calc.datastore.sel('hcurves-stats', stat='mean', sid=0)
+        mean2 = poes.T @ numpy.array([w['weight'] for w in self.calc.weights])
+        aac(mean2.flat, mean.flat)
+        check_disagg_by_src(self.calc.datastore)
+
     def test_case_12(self):
         # test Modified GMPE
         self.assert_curves_ok(
@@ -194,6 +221,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
+        csv = general.gettemp(view('extreme_sites', self.calc.datastore))
+        self.assertEqualFiles('expected/extreme_sites.csv', csv)
+
         # test extract/hcurves/rlz-0, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
         self.assertEqual(sorted(haz), ['_extra', 'all', 'investigation_time'])
@@ -205,6 +235,9 @@ class ClassicalTestCase(CalculatorTestCase):
                          ('0.005', '0.007', '0.0098', '0.0137', '0.0192',
                           '0.0269', '0.0376', '0.0527', '0.0738', '0.103',
                           '0.145', '0.203', '0.284'))
+
+        # test disagg_by_src in a complex case with duplicated sources
+        check_disagg_by_src(self.calc.datastore)
 
     def test_case_14(self):
         # test classical with 2 gsims and 1 sample
@@ -266,7 +299,7 @@ hazard_uhs-std.csv
         # individual_curves was false
         with self.assertRaises(KeyError) as ctx:
             export(('hcurves/rlz-3', 'csv'), self.calc.datastore)
-        self.assertIn("No 'hcurves-rlzs' found", str(ctx.exception))
+        self.assertIn('hcurves-rlzs', str(ctx.exception))
 
     def test_case_17(self):  # oversampling
         # this is a test with 4 sources A and B with the same ID
@@ -321,6 +354,7 @@ hazard_uhs-std.csv
     def test_case_20(self):
         # Source geometry enumeration, apply_to_sources
         self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
             'hazard_curve-smltp_sm1_sg1_cog1_char_complex-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg1_cog1_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg1_cog1_char_simple-gsimltp_Sad1997.csv',
@@ -359,6 +393,14 @@ hazard_uhs-std.csv
         df = self.calc.datastore.read_df('source_info', 'source_id')
         dic = dict(df['multiplicity'])
         self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
+
+        # check pandas readability of hcurves-rlzs and hcurves-stats
+        df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
+        self.assertEqual(list(df.columns),
+                         ['site_id', 'rlz_id', 'imt', 'value'])
+        df = self.calc.datastore.read_df('hcurves-stats', 'lvl')
+        self.assertEqual(list(df.columns),
+                         ['site_id', 'stat', 'imt', 'value'])
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
@@ -566,6 +608,11 @@ hazard_uhs-std.csv
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_42.__file__)
 
+        # check pandas readability of hmaps-stats
+        df = self.calc.datastore.read_df('hmaps-stats', 'site_id',
+                                         dict(imt='PGA', stat='mean'))
+        self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
+
     def test_case_43(self):
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
@@ -624,3 +671,10 @@ hazard_uhs-std.csv
         # few-sites regime.
         # In the many-sites regime, small magnitude ruptures at distance close
         # to the maximum_distance may be discarded, instead.
+
+    def test_case_49(self):
+        # serious test of amplification + uhs
+        self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.21).csv',
+                               'hcurves-SA(1.057).csv', 'uhs.csv'],
+                              case_49.__file__)
+

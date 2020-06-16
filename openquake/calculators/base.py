@@ -38,7 +38,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, calc, util
+from openquake.commonlib import readinput, logictree, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -439,7 +439,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Rupture spinning factor = %s', s)
         if (f * s >= 1.5 and self.oqparam.pointsource_distance is None
                 and 'classical' in self.oqparam.calculation_mode):
-            logging.warning(
+            logging.info(
                 'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
 
@@ -459,6 +459,9 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
+        elif oq.disagg_by_src and len(self.sitecol) > oq.max_sites_disagg:
+            raise ValueError(
+                'There are too many sites to use disagg_by_src=true')
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             full_lt = readinput.get_full_lt(oq)
@@ -472,12 +475,6 @@ class HazardCalculator(BaseCalculator):
                 sids = self.src_filter().within_bbox(srcs)
                 if len(sids) == 0:
                     raise RuntimeError('All sources were discarded!?')
-                if oq.disagg_by_src and len(srcs) > 1000:
-                    j = oq.inputs['job_ini']
-                    raise InvalidFile(
-                        '%s: disagg_by_src can be set only if there are <=1000'
-                        ' sources, but %d were found in the model' %
-                        (j, len(srcs)))
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
 
@@ -878,17 +875,6 @@ class HazardCalculator(BaseCalculator):
         """For compatibility with the engine"""
 
 
-def build_hmaps(hcurves_by_kind, slice_, imtls, poes, monitor):
-    """
-    Build hazard maps from a slice of hazard curves.
-    :returns: a pair ({kind: hmaps}, slice)
-    """
-    dic = {}
-    for kind, hcurves in hcurves_by_kind.items():
-        dic[kind] = calc.make_hmap_array(hcurves, imtls, poes, len(hcurves))
-    return dic, slice_
-
-
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
@@ -966,7 +952,7 @@ class RiskCalculator(HazardCalculator):
         """
         if (self.oqparam.hazard_calculation_id and
                 'gmf_data' not in self.datastore):
-            # 'gmf_data' in self.datastore happens for ShakeMap calculations
+            # not ShakeMap calculations
             self.datastore.parent.close()  # make sure it is closed
             dstore = self.datastore.parent
         else:
@@ -980,9 +966,7 @@ class RiskCalculator(HazardCalculator):
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you set '
                     'ground_motion_fields=False or a large minimum_intensity')
-        if (self.oqparam.calculation_mode not in
-                'event_based_damage scenario_damage scenario_risk'
-                and dstore is self.datastore):
+        if dstore is self.datastore:
             # hack to make h5py happy; I could not get this to work with
             # the SWMR mode
             getter.init()

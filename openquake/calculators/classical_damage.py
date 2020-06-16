@@ -62,13 +62,13 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         :param result:
             a dictionary (l, r) -> asset_ordinal -> fractions per damage state
         """
-        damages_dt = numpy.dtype([(ds, numpy.float32)
-                                  for ds in self.crmodel.damage_states])
-        damages = numpy.zeros((self.A, self.R, self.L), damages_dt)
+        D = len(self.crmodel.damage_states)
+        damages = numpy.zeros((self.A, self.R, self.L, D), numpy.float32)
         for l, r in result:
             for aid, fractions in result[l, r].items():
-                damages[aid, r, l] = tuple(fractions)
+                damages[aid, r, l] = fractions
         self.datastore['damages-rlzs'] = damages
         stats.set_rlzs_stats(self.datastore, 'damages',
                              assets=self.assetcol['id'],
-                             loss_types=self.oqparam.loss_names)
+                             loss_types=self.oqparam.loss_names,
+                             dmg_state=self.crmodel.damage_states)

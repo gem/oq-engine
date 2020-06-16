@@ -1,4 +1,4 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.10.0-gita7ddf60184', start_date='2020-05-19T15:07:00', checksum=1405139117, investigation_time=50.0, risk_investigation_time=50.0"
+#,,,,,,,"generated_by='OpenQuake engine 3.10.0-gitc5935f7279', start_date='2020-05-21T06:49:58', checksum=1405139117, investigation_time=50.0, risk_investigation_time=50.0"
 asset_id,policy,taxonomy,lon,lat,structural~no_damage,structural~LS1,structural~LS2
 a0,"A","RM",81.29850,29.10980,3.500000E-01,5.000000E-01,5.000000E-01
 a1,"A","RC",83.08230,27.90060,5.075000E+01,2.855000E+01,2.070000E+01

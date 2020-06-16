@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import io
 import ast
 import os.path
 import numbers
@@ -28,10 +30,10 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg, fast_agg3)
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, calc
-from openquake.commonlib.writers import build_header, scientificformat
+from openquake.commonlib.writers import (
+    build_header, scientificformat, write_csv)
 from openquake.calculators import getters
 from openquake.calculators.extract import extract
 
@@ -593,27 +595,6 @@ def view_task_ebrisk(token, dstore):
     return msg
 
 
-@view.add('hmap')
-def view_hmap(token, dstore):
-    """
-    Display the highest 20 points of the mean hazard map. Called as
-    $ oq show hmap:0.1  # 10% PoE
-    """
-    try:
-        poe = valid.probability(token.split(':')[1])
-    except IndexError:
-        poe = 0.1
-    mean = dict(extract(dstore, 'hcurves?kind=mean'))['mean']
-    oq = dstore['oqparam']
-    hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
-    dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
-    array = numpy.zeros(len(hmap), dt)
-    for i, vals in enumerate(hmap):
-        array[i] = (i, ) + tuple(vals)
-    array.sort(order=list(oq.imtls)[0])
-    return rst_table(array[:20])
-
-
 @view.add('global_hcurves')
 def view_global_hcurves(token, dstore):
     """
@@ -699,11 +680,31 @@ def view_mean_disagg(token, dstore):
     Display mean quantities for the disaggregation. Useful for checking
     differences between two calculations.
     """
+    N, M, P, Z = dstore['iml4'].shape
     tbl = []
-    for key, dset in sorted(dstore['disagg'].items()):
-        vals = [ds[()].mean() for k, ds in sorted(dset.items())]
-        tbl.append([key] + vals)
-    header = ['key'] + sorted(dset)
+    kd = {key: dset[:] for key, dset in sorted(dstore['disagg'].items())}
+    oq = dstore['oqparam']
+    for s in range(N):
+        for m, imt in enumerate(oq.imtls):
+            for p in range(P):
+                row = ['%s-sid-%d-poe-%s' % (imt, s, p)]
+                for k, d in kd.items():
+                    row.append(d[s, m, p].mean())
+                tbl.append(row)
+    return rst_table(sorted(tbl), header=['key'] + list(kd))
+
+
+@view.add('disagg_times')
+def view_disagg_times(token, dstore):
+    """
+    Display slow tasks for disaggregation
+    """
+    data = dstore['disagg_task'][:]
+    info = dstore.read_df('task_info', 'taskname').loc[b'compute_disagg']
+    tbl = []
+    for duration, task_no in zip(info['duration'], info['task_no']):
+        tbl.append((duration, task_no) + tuple(data[task_no]))
+    header = ('duration', 'task_no') + data.dtype.names
     return rst_table(sorted(tbl), header=header)
 
 
@@ -841,3 +842,14 @@ def view_maximum_intensity(token, dstore):
     effect = extract(dstore, 'effect')
     data = zip(dstore['full_lt'].trts, effect[-1, -1], effect[-1, 0])
     return rst_table(data, ['trt', 'intensity1', 'intensity2'])
+
+
+@view.add('extreme_sites')
+def view_extreme(token, dstore):
+    """
+    Show sites where the mean hazard map reaches maximum values
+    """
+    mean = dstore.sel('hmaps-stats', stat='mean')[:, 0, 0, -1]  # shape N1MP
+    site_ids, = numpy.where(mean == mean.max())
+    arr = dstore['sitecol'][site_ids]
+    return write_csv(io.StringIO(), arr)

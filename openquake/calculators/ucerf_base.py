@@ -26,7 +26,7 @@ import h5py
 import zlib
 
 from openquake.baselib.general import random_filter, AccumDict, cached_property
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -66,7 +66,7 @@ def convert_UCERFSource(self, node):
         source_file,
         self.investigation_time,
         start_date,
-        float(node["minMag"]),
+        node["minMag"],
         npd=self.convert_npdist(node),
         hdd=self.convert_hddist(node),
         aspect=~node.ruptAspectRatio,
@@ -329,10 +329,12 @@ class UCERFSource(BaseSeismicSource):
         else:
             ridx = self.get_ridx(iloc)
         mag = self.mags[iloc - self.start]
+        if mag < self.min_mag:
+            return
         surface_set = []
         indices = self.src_filter.get_indices(self, ridx, mag)
         if len(indices) == 0:
-            return None
+            return
         for trace, plane in self.gen_trace_planes(ridx):
             # build simple fault surface
             for jloc in range(0, plane.shape[2]):

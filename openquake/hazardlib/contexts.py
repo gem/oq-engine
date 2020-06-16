@@ -23,6 +23,7 @@ import logging
 import warnings
 import operator
 import itertools
+import functools
 import collections
 import numpy
 from scipy.interpolate import interp1d
@@ -40,7 +41,6 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 bymag = operator.attrgetter('mag')
 bydist = operator.attrgetter('dist')
 I16 = numpy.int16
-F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
 
@@ -119,7 +119,7 @@ class RupData(object):
             if numpy.isnan(ctx.occurrence_rate):  # for nonparametric ruptures
                 probs_occur = ctx.probs_occur
             else:
-                probs_occur = numpy.zeros(0, F32)
+                probs_occur = numpy.zeros(0)
             self.data['occurrence_rate'].append(ctx.occurrence_rate)
             self.data['probs_occur'].append(probs_occur)
             self.data['weight'].append(ctx.weight or numpy.nan)
@@ -127,7 +127,7 @@ class RupData(object):
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
                 self.data[rup_param].append(getattr(ctx, rup_param))
             for dst_param in params:  # including clon, clat
-                dst = numpy.ones(N, F32) * 9999
+                dst = numpy.ones(N) * 9999
                 dst[sites.sids] = getattr(ctx, dst_param)
                 self.data[dst_param + '_'].append(dst)
 
@@ -330,6 +330,33 @@ class ContextMaker(object):
             ctxs.append(ctx)
         return ctxs
 
+    def collapse_the_ctxs(self, ctxs):
+        """
+        Collapse contexts with similar parameters and distances.
+
+        :param ctxs: a list of pairs (rup, dctx)
+        :returns: collapsed contexts
+        """
+        if self.collapse_level >= 3:  # hack, ignore everything except mag
+            rrp = ['mag']
+            rnd = 0  # round distances to 1 km
+        else:
+            rrp = self.REQUIRES_RUPTURE_PARAMETERS
+            rnd = 1  # round distances to 100 m
+
+        def params(ctx):
+            lst = []
+            for par in rrp:
+                lst.append(getattr(ctx, par))
+            for dst in self.REQUIRES_DISTANCES:
+                lst.extend(numpy.round(getattr(ctx, dst), rnd))
+            return tuple(lst)
+
+        out = []
+        for values in groupby(ctxs, params).values():
+            out.extend(_collapse(values))
+        return out
+
     def max_intensity(self, sitecol1, mags, dists):
         """
         :param sitecol1: a SiteCollection instance with a single site
@@ -365,13 +392,52 @@ class ContextMaker(object):
         return gmv
 
 
+# see contexts_tests.py for examples of collapse
+def combine_pmf(o1, o2):
+    """
+    Combine probabilities of occurrence; used to collapse nonparametric
+    ruptures.
+
+    :param o1: probability distribution of length n1
+    :param o2: probability distribution of length n2
+    :returns: probability distribution of length n1 + n2
+
+    >>> combine_pmf([.99, .01], [.98, .02])
+    array([9.702e-01, 2.960e-02, 2.000e-04])
+    """
+    n1 = len(o1)
+    n2 = len(o2)
+    o = numpy.zeros(n1 + n2 - 1)
+    for i in range(n1):
+        for j in range(n2):
+            o[i + j] += o1[i] * o2[j]
+    return o
+
+
 def _collapse(ctxs):
     # collapse a list of contexts into a single context
-    if len(ctxs) < 2:
+    if len(ctxs) < 2:  # nothing to collapse
         return ctxs
-    ctx = copy.copy(ctxs[0])
-    ctx.occurrence_rate = sum(r.occurrence_rate for r in ctxs)
-    return [ctx]
+    prups, nrups, out = [], [], []
+    for ctx in ctxs:
+        if numpy.isnan(ctx.occurrence_rate):  # nonparametric
+            nrups.append(ctx)
+        else:  # parametrix
+            prups.append(ctx)
+    if len(prups) > 1:
+        ctx = copy.copy(prups[0])
+        ctx.occurrence_rate = sum(r.occurrence_rate for r in prups)
+        out.append(ctx)
+    else:
+        out.extend(prups)
+    if len(nrups) > 1:
+        ctx = copy.copy(nrups[0])
+        ctx.probs_occur = functools.reduce(
+            combine_pmf, (n.probs_occur for n in nrups))
+        out.append(ctx)
+    else:
+        out.extend(nrups)
+    return out
 
 
 def print_finite_size(rups):
@@ -404,15 +470,14 @@ class PmapMaker(object):
 
     def _gen_ctxs(self, rups, sites, grp_ids):
         # generate triples (rup, sites, dctx)
-        rup_param = not numpy.isnan([r.occurrence_rate for r in rups]).any()
-        collapse_level = self.rup_indep and rup_param and self.collapse_level
-        if (collapse_level and len(sites.complete) == 1 and
+        if (self.rup_indep and self.collapse_level and
+                len(sites.complete) == 1 and
                 self.pointsource_distance != {}):
             rups = self.collapse_point_ruptures(rups, sites)
             # print_finite_size(rups)
         ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-        if collapse_level > 1:
-            ctxs = self.collapse_the_ctxs(ctxs)
+        if self.rup_indep and self.collapse_level > 1:
+            ctxs = self.cmaker.collapse_the_ctxs(ctxs)
         self.numrups += len(ctxs)
         if ctxs:
             self.rupdata.add(ctxs, sites, grp_ids)
@@ -432,6 +497,7 @@ class PmapMaker(object):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
             pmap = self.pmap
+        rup_indep = self.rup_indep
         for ctx in ctxs:
             # this must be fast since it is inside an inner loop
             with self.gmf_mon:
@@ -449,15 +515,13 @@ class PmapMaker(object):
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)
                 pnes = ctx.get_probability_no_exceedance(poes)
-                for grp_id in ctx.grp_ids:
-                    p = pmap[grp_id]
-                    if self.rup_indep:
-                        for sid, pne in zip(ctx.sids, pnes):
-                            p.setdefault(sid, 1.).array *= pne
-                    else:  # rup_mutex
-                        for sid, pne in zip(ctx.sids, pnes):
-                            p.setdefault(sid, 0.).array += (
-                                1.-pne) * ctx.weight
+                for sid, pne in zip(ctx.sids, pnes):
+                    for grp_id in ctx.grp_ids:
+                        probs = pmap[grp_id].setdefault(sid, rup_indep).array
+                        if rup_indep:
+                            probs *= pne
+                        else:  # rup_mutex
+                            probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
         with self.cmaker.mon('iter_ruptures', measuremem=False):
@@ -567,30 +631,6 @@ class PmapMaker(object):
                 # group together ruptures in the same distance bin
                 output.extend(_collapse(rs))
         return output
-
-    def collapse_the_ctxs(self, ctxs):
-        """
-        Collapse contexts with similar parameters and distances.
-
-        :param ctxs: a list of pairs (rup, dctx)
-        :returns: collapsed contexts
-        """
-        def params(ctx):
-            lst = []
-            for par in self.REQUIRES_RUPTURE_PARAMETERS:
-                lst.append(getattr(ctx, par))
-            for dst in self.REQUIRES_DISTANCES:
-                lst.extend(numpy.round(getattr(ctx, dst)))
-            return tuple(lst)
-
-        out = []
-        for values in groupby(ctxs, params).values():
-            if len(values) == 1:
-                out.append(values[0])
-            else:
-                [ctx] = _collapse(values)
-                out.append(ctx)
-        return out
 
     def _get_rups(self, srcs, sites):
         # returns a list of ruptures, each one with a .sites attribute
@@ -806,7 +846,7 @@ class RuptureContext(BaseContext):
             rupture occurrence causes a ground shaking value exceeding a
             ground motion level at a site. First dimension represent sites,
             second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>
+            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
         """
         if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
             # Uses the formula
@@ -820,14 +860,11 @@ class RuptureContext(BaseContext):
             #
             # `p(k|T)` is given by the attribute probs_occur and
             # `p(X<x|rup)` is computed as ``1 - poes``.
-            prob_no_exceed = numpy.array(
-                [v * ((1 - poes) ** i)
-                 for i, v in enumerate(self.probs_occur)])
-            prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-            if isinstance(prob_no_exceed, numpy.ndarray):
-                prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
-                prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
-            return prob_no_exceed
+            prob_no_exceed = numpy.float64(
+                [v * (1 - poes) ** i for i, v in enumerate(self.probs_occur)]
+            ).sum(axis=0)
+            return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
+
         # parametric rupture
         tom = self.temporal_occurrence_model
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)

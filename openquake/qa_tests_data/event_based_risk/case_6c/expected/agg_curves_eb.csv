@@ -1,8 +1,8 @@
-#,,,,,,"generated_by='OpenQuake engine 3.9.0-gitc9a4f7bc4f', start_date='2020-03-05T07:08:25', checksum=2742411261, kind='agg_curves-rlzs', risk_investigation_time=1.0"
+#,,,,,,"generated_by='OpenQuake engine 3.10.0-gitbb763e96b2', start_date='2020-06-15T09:27:22', checksum=4079935332, kind='agg_curves-rlzs', risk_investigation_time=1.0"
 return_period,rlz,loss_type,NAME_1,loss_value,loss_ratio,annual_frequency_of_exceedence
-50,0,structural,Region A,5.77686E+02,2.88843E-02,2.00000E-02
-50,0,structural,RegionB,5.74161E+02,1.14832E-02,2.00000E-02
-100,0,structural,Region A,7.73143E+02,3.86572E-02,1.00000E-02
-100,0,structural,RegionB,9.12244E+02,1.82449E-02,1.00000E-02
-200,0,structural,Region A,1.11514E+03,5.57572E-02,5.00000E-03
-200,0,structural,RegionB,2.85112E+03,5.70225E-02,5.00000E-03
+50,0,structural,Region A,1.01975E+03,5.09876E-02,2.00000E-02
+50,0,structural,RegionB,6.59048E+02,1.31810E-02,2.00000E-02
+100,0,structural,Region A,1.46158E+03,7.30791E-02,1.00000E-02
+100,0,structural,RegionB,1.96263E+03,3.92525E-02,1.00000E-02
+200,0,structural,Region A,4.45815E+03,2.22908E-01,5.00000E-03
+200,0,structural,RegionB,3.20539E+03,6.41078E-02,5.00000E-03

@@ -91,9 +91,10 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
         self.assertTrue(isinstance(source, mtkAreaSource))
         self.assertEqual(source.id, "1")
         self.assertEqual(source.name, "Quito")
-        self.assertEqual(source.geometry.wkt,
-                         'POLYGON((-122.5 38.0, -122.0 38.5, -121.5 38.0, '
-                         '-122.0 37.5, -122.5 38.0))')
+        self.assertEqual(
+            source.geometry.wkt,
+            'POLYGON((-122.50000 38.00000, -122.00000 38.50000, '
+            '-121.50000 38.00000, -122.00000 37.50000, -122.50000 38.00000))')
         self.assertAlmostEqual(source.upper_depth, 0.0)
         self.assertAlmostEqual(source.lower_depth, 10.0)
         self.assertAlmostEqual(source.rupt_aspect_ratio, 1.5)
@@ -210,9 +211,10 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertTrue(isinstance(source, mtkAreaSource))
         self.assertEqual(source.id, "1")
         self.assertEqual(source.name, "Quito")
-        self.assertEqual(source.geometry.wkt,
-                         'POLYGON((-122.5 38.0, -122.0 38.5, -121.5 38.0, '
-                         '-122.0 37.5, -122.5 38.0))')
+        self.assertEqual(
+            source.geometry.wkt,
+            'POLYGON((-122.50000 38.00000, -122.00000 38.50000, '
+            '-121.50000 38.00000, -122.00000 37.50000, -122.50000 38.00000))')
         self.assertAlmostEqual(source.upper_depth, 0.0)
         self.assertAlmostEqual(source.lower_depth, 10.0)
         self.assertFalse(source.rupt_aspect_ratio)
