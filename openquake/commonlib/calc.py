@@ -227,7 +227,7 @@ class RuptureSerializer(object):
         self.nruptures = 0
         datastore.create_dset('ruptures', calc.stochastic.rupture_dt,
                               attrs={'nbytes': 0})
-        datastore.create_dset('rupgeoms', calc.stochastic.point3d)
+        datastore.create_dset('rupgeoms', F32, (None, 3))
 
     def save(self, rup_array):
         """

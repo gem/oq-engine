@@ -29,7 +29,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
-from openquake.hazardlib.geo.mesh import surface_to_array, point3d
+from openquake.hazardlib.geo.mesh import surface_to_array
 
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
@@ -133,7 +133,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
                offset, offset + len(points), sy, sz, 0, 0)
         offset += len(points)
         rups.append(tup)
-        geoms.append(numpy.array([tuple(p) for p in points], point3d))
+        geoms.append(points)
         nbytes += rupture_dt.itemsize + mesh.nbytes
     if not rups:
         return ()

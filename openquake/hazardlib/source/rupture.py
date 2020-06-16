@@ -59,10 +59,10 @@ def _get_rupture(dic, geom=None, trt=None):
         mesh[1] = dic['lats']
         mesh[2] = dic['depths']
     else:
-        mesh = numpy.zeros((3,) + geom.shape, F32)
-        mesh[0] = geom['lon']
-        mesh[1] = geom['lat']
-        mesh[2] = geom['depth']
+        mesh = numpy.zeros(geom.shape, F32)
+        mesh[0] = geom[0]
+        mesh[1] = geom[1]
+        mesh[2] = geom[2]
     rupture_cls, surface_cls = code2cls[dic['code']]
     rupture = object.__new__(rupture_cls)
     rupture.rup_id = dic['serial']
@@ -777,6 +777,7 @@ class RuptureProxy(object):
     """
     def __init__(self, rec, nsites=None, samples=1):
         self.rec = rec
+        import pdb; pdb.set_trace()
         self.nsites = nsites
         self.samples = samples
 
