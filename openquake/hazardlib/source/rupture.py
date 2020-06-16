@@ -71,7 +71,10 @@ def _get_rupture(dic, geom=None, trt=None):
     rupture.rake = dic['rake']
     rupture.hypocenter = geo.Point(*dic['hypo'])
     rupture.occurrence_rate = dic['occurrence_rate']
-    rupture.probs_occur = dic.get('probs_occur', [])
+    try:
+        rupture.probs_occur = dic['probs_occur']
+    except (KeyError, ValueError):  # dic can be a numpy record
+        pass
     rupture.tectonic_region_type = trt or dic['trt']
     if surface_cls is geo.PlanarSurface:
         rupture.surface = geo.PlanarSurface.from_array(
