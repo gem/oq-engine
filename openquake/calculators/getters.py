@@ -631,7 +631,7 @@ class RuptureGetter(object):
                 if proxy['mag'] < min_mag:
                     continue
                 proxy.geom = rupgeoms[proxy['gidx1']:proxy['gidx2']].reshape(
-                    proxy['sx'], proxy['sy'])
+                    proxy['sy'], proxy['sz'])
                 proxies.append(proxy)
         return proxies
 
