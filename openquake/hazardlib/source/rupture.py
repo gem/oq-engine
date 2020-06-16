@@ -92,6 +92,9 @@ def to_array(ruptures):
 
 
 def from_array(aw):
+    """
+    :returns: a list of ruptures from an ArrayWrapper
+    """
     rups = []
     names = aw.array.dtype.names
     for rec in aw.array:
