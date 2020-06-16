@@ -59,10 +59,7 @@ def _get_rupture(dic, geom=None, trt=None):
         mesh[1] = dic['lats']
         mesh[2] = dic['depths']
     else:
-        mesh = numpy.zeros(geom.shape, F32)
-        mesh[0] = geom[0]
-        mesh[1] = geom[1]
-        mesh[2] = geom[2]
+        mesh = geom
     rupture_cls, surface_cls = code2cls[dic['code']]
     rupture = object.__new__(rupture_cls)
     rupture.rup_id = dic['serial']
