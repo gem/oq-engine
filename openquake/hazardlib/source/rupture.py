@@ -26,7 +26,7 @@ import math
 import itertools
 import json
 import toml
-from openquake.baselib import general
+from openquake.baselib import general, hdf5
 from openquake.hazardlib import geo, contexts
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import (
@@ -37,14 +37,58 @@ from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
 events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
+rupture_dt = numpy.dtype([('serial', U32),
+                          ('mag', F32),
+                          ('rake', F32),
+                          ('lon', F32),
+                          ('lat', F32),
+                          ('dep', F32),
+                          ('trti', U8),
+                          ('code', (numpy.string_, 1)),
+                          ('occurrence_rate', F64)])
+
 code2cls = {}
+
+
+def wrap(ruptures):
+    """
+    :param ruptures: a list of ruptures with the same TRT
+    :returns: an ArrayWrapper of ruptures
+    """
+    if not code2cls:
+        code2cls.update(BaseRupture.init())
+    arr = numpy.zeros(len(ruptures), rupture_dt)
+    extras = []
+    for rec, rup in zip(arr, ruptures):
+        mesh = surface_to_array(rup.surface)  # shape (3, sy, sz)
+        sy, sz = mesh.shape[1:]
+        rec['serial'] = rup.rup_id
+        rec['mag'] = rup.mag
+        rec['rake'] = rup.rake
+        rec['lon'] = rup.hypocenter.x
+        rec['lat'] = rup.hypocenter.y
+        rec['dep'] = rup.hypocenter.z
+        rec['code'] = rup.code
+        rec['occurrence_rate'] = rup.occurrence_rate
+        extra = {'lons': mesh[0],
+                 'lats': mesh[1],
+                 'depths': mesh[2]}
+        if hasattr(rup, 'probs_occur'):
+            extra['probs_occur'] = rup.probs_occur
+        if hasattr(rup, 'weight'):
+            extra['weight'] = rup.weight
+        _fixfloat32(extra)
+        extras.append(extra)
+    return hdf5.ArrayWrapper(arr, {'extras': extras})
 
 
 def _get_rupture(dic, geom=None, trt=None):
