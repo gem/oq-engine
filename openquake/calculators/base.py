@@ -20,6 +20,7 @@ import re
 import sys
 import abc
 import pdb
+import json
 import logging
 import operator
 import itertools
@@ -35,10 +36,12 @@ from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile, site
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.stochastic import (
+    BaseRupture, rupture_dt, point3d)
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, util
+from openquake.commonlib import readinput, logictree, util, calc
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -1046,6 +1049,64 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
         offset += n
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
+
+
+# this is really fast
+def get_rup_array(array_of_ruptures):
+    if not BaseRupture._code:
+        BaseRupture.init()  # initialize rupture codes
+
+    rups = []
+    geoms = []
+    nbytes = 0
+    offset = 0
+    for row in array_of_ruptures:
+        hypo = row['lon'], row['lat'], row['dep']
+        dic = json.loads(row['extra'])
+        lons = F32(dic['lons'])
+        lats = F32(dic['lats'])
+        deps = F32(dic['depths'])
+        sy = lons.shape[1]
+        try:
+            sz = lons.shape[2]
+        except IndexError:
+            sz = 1
+        points = list(zip(lons, lats, deps))
+        n = len(points)
+        rec = numpy.zeros(1, rupture_dt)[0]
+        rec['serial'] = row['serial']
+        rec['minlon'] = minlon = lons.min()
+        rec['minlat'] = minlat = lats.min()
+        rec['maxlon'] = maxlon = lons.max()
+        rec['maxlat'] = maxlat = lats.max()
+        rec['mag'] = row['mag']
+        rec['hypo'] = hypo
+        rate = row['occurrence_rate']
+        n_occ = 1
+        tup = (0, row['serial'], 'no-source', row['trti'],
+               row['code'], n_occ, row['mag'], row['rake'], rate,
+               minlon, minlat, maxlon, maxlat, hypo,
+               offset, offset + n, sy, sz, 0, 0)
+        offset += n
+        rups.append(tup)
+        geoms.append(numpy.array([tuple(p) for p in points], point3d))
+        nbytes += rupture_dt.itemsize + n * 4 * 3
+    if not rups:
+        return ()
+    dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes)
+    # NB: PMFs for nonparametric ruptures are not saved since they
+    # are useless for the GMF computation
+    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
+
+
+def import_rups(dstore, fname):
+    """
+    Import in the datastore a CSV file with ruptures
+    """
+    aw = hdf5.read_csv(fname, rupture.rupture_dt)
+    ser = calc.RuptureSerializer(dstore)
+    ser.save(get_rup_array(aw.array))
+    ser.close()
 
 
 def import_gmfs(dstore, fname, sids):

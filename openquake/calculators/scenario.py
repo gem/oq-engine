@@ -56,6 +56,8 @@ class ScenarioCalculator(base.HazardCalculator):
                                    {'maximum_distance': oq.maximum_distance,
                                     'filter_distance': oq.filter_distance})
         super().pre_execute()
+        if oq.inputs['rupture_model'].endswith('.csv'):
+            base.import_rups(self.datastore, oq.inputs['rupture_model'])
         self.datastore['oqparam'] = oq
         self.store_rlz_info({})
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
