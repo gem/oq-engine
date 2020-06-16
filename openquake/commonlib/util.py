@@ -171,7 +171,7 @@ def get_assets(dstore):
     dtlist.extend([('lon', F32), ('lat', F32)])
     asset_data = []
     for a in assetcol.array:
-        tup = tuple(b'"%s"' % tag[t][a[t]].encode('utf-8') for t in tagnames)
+        tup = tuple(b'%s' % tag[t][a[t]].encode('utf-8') for t in tagnames)
         asset_data.append((a['id'],) + tup + (a['lon'], a['lat']))
     return numpy.array(asset_data, dtlist)
 
