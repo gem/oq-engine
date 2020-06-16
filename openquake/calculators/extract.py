@@ -36,7 +36,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic
 from openquake.hazardlib.source import rupture
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation
+from openquake.commonlib import calc, util, oqvalidation, writers
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -1289,19 +1289,23 @@ def extract_ruptures(dstore, what):
         [min_mag] = qdict['min_mag']
     else:
         min_mag = 0
-    lst, extras = [], []
     trti = {}
+    bio = io.StringIO()
+    first = True
+    trts = list(dstore.getitem('full_lt').attrs['trts'])
     for rgetter in getters.gen_rgetters(dstore):
         rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
                 for proxy in rgetter.get_proxies(min_mag)]
-        aw = rupture.wrap(rups)
-        aw['trti'] = rgetter.trti
+        arr = rupture.to_array(rups)
+        arr['trti'] = rgetter.trti
         trti[rgetter.trt] = rgetter.trti
-        lst.append(aw.array)
-        extras.extend(aw.extras)
-    return ArrayWrapper(numpy.concatenate(lst),
-                        {'trts': numpy.array(list(trti)),
-                         'json': json.dumps(extras)})
+        if first:
+            comment = dict(trts=trts)
+            first = False
+        else:
+            comment = None
+        writers.write_csv(bio, arr, comment=comment)
+    return bio.getvalue()
 
 # #####################  extraction from the WebAPI ###################### #
 

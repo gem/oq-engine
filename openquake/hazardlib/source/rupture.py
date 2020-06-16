@@ -54,20 +54,20 @@ rupture_dt = numpy.dtype([('serial', U32),
                           ('dep', F32),
                           ('trti', U8),
                           ('code', (numpy.string_, 1)),
-                          ('occurrence_rate', F64)])
+                          ('occurrence_rate', F64),
+                          ('extra', hdf5.vstr)])
 
 code2cls = {}
 
 
-def wrap(ruptures):
+def to_array(ruptures):
     """
     :param ruptures: a list of ruptures with the same TRT
-    :returns: an ArrayWrapper of ruptures
+    :returns: an array of ruptures suitable for serialization in CSV
     """
     if not code2cls:
         code2cls.update(BaseRupture.init())
     arr = numpy.zeros(len(ruptures), rupture_dt)
-    extras = []
     for rec, rup in zip(arr, ruptures):
         mesh = surface_to_array(rup.surface)  # shape (3, sy, sz)
         sy, sz = mesh.shape[1:]
@@ -87,8 +87,8 @@ def wrap(ruptures):
         if hasattr(rup, 'weight'):
             extra['weight'] = rup.weight
         _fixfloat32(extra)
-        extras.append(extra)
-    return hdf5.ArrayWrapper(arr, {'extras': extras})
+        rec['extra'] = json.dumps(extra)
+    return arr
 
 
 def _get_rupture(dic, geom=None, trt=None):
