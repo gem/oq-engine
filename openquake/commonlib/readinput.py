@@ -572,6 +572,16 @@ def get_gsims(oqparam):
     return [rlz.value[0] for rlz in get_gsim_lt(oqparam)]
 
 
+def get_ruptures(rupture_model_fname):
+    """
+    :param rupture_model_fname: a CSV file containing ruptures
+    :returns: a list of hazardlib ruptures
+    """
+    dic = {'serial': U32, 'code': str, 'trti': U8, 'extra': str, None: float}
+    arr = hdf5.read_csv(rupture_model_fname, dic)
+    return rupture.from_array(arr)
+
+
 def get_rupture(oqparam):
     """
     Read the `rupture_model` file and by filter the site collection
@@ -582,6 +592,8 @@ def get_rupture(oqparam):
         an hazardlib rupture
     """
     rup_model = oqparam.inputs['rupture_model']
+    if rup_model.endswith('.csv'):
+        return rupture.from_array(hdf5.read_csv(rup_model))
     if rup_model.endswith('.xml'):
         [rup_node] = nrml.read(rup_model)
         conv = sourceconverter.RuptureConverter(

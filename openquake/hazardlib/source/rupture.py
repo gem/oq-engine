@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.source.rupture` defines classes
 :class:`ParametricProbabilisticRupture`
 """
 import abc
+import csv
 import numpy
 import math
 import itertools
@@ -89,6 +90,18 @@ def to_array(ruptures):
         _fixfloat32(extra)
         rec['extra'] = json.dumps(extra)
     return arr
+
+
+def from_csv(fname):
+    with open(fname) as f:
+        preheader = next(f).strip('#,').strip('\n"')
+        trts = toml.loads(preheader)['trts']
+        rups = []
+        for dic in csv.DictReader(f):
+            dic['trt'] = trts[int(dic.pop('trti'))]
+            dic.update(json.loads(dic.pop('extra')))
+            rups.append(_get_rupture(dic))
+    return rups
 
 
 def _get_rupture(dic, geom=None, trt=None):
