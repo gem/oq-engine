@@ -674,6 +674,7 @@ def _read_csv(fileobj, compositedt):
         cols = []
         for i, col in enumerate(row):
             if itemsize[i] and len(col) > itemsize[i]:
+                import pdb; pdb.set_trace()
                 raise ValueError(
                     'line %d: %s=%r has length %d > %d' %
                     (lineno, compositedt.names[i], col, len(col), itemsize[i]))
@@ -704,8 +705,12 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                 continue
             break
         header = first.strip().split(sep)
+        if isinstance(dtypedict, dict):
+            dt = build_dt(dtypedict, header)
+        else:
+            dt = dtypedict
         try:
-            arr = _read_csv(f, build_dt(dtypedict, header))
+            arr = _read_csv(f, dt)
         except KeyError:
             raise KeyError('Missing None -> default in dtypedict')
         except Exception as exc:

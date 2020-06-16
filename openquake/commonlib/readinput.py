@@ -577,9 +577,8 @@ def get_ruptures(rupture_model_fname):
     :param rupture_model_fname: a CSV file containing ruptures
     :returns: a list of hazardlib ruptures
     """
-    dic = {'serial': U32, 'code': str, 'trti': U8, 'extra': str, None: float}
-    arr = hdf5.read_csv(rupture_model_fname, dic)
-    return rupture.from_array(arr)
+    aw = hdf5.read_csv(rupture_model_fname, rupture.rupture_dt)
+    return rupture.from_array(aw)
 
 
 def get_rupture(oqparam):

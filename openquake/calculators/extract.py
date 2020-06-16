@@ -1300,11 +1300,13 @@ def extract_ruptures(dstore, what):
         arr['trti'] = rgetter.trti
         trti[rgetter.trt] = rgetter.trti
         if first:
+            header = None
             comment = dict(trts=trts)
             first = False
         else:
+            header = 'no-header'
             comment = None
-        writers.write_csv(bio, arr, comment=comment)
+        writers.write_csv(bio, arr, header=header, comment=comment)
     return bio.getvalue()
 
 # #####################  extraction from the WebAPI ###################### #
