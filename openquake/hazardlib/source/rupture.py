@@ -24,6 +24,7 @@ import abc
 import numpy
 import math
 import itertools
+import json
 import toml
 from openquake.baselib import general
 from openquake.hazardlib import geo, contexts
@@ -70,6 +71,7 @@ def _get_rupture(dic, geom=None, trt=None):
     rupture.rake = dic['rake']
     rupture.hypocenter = geo.Point(*dic['hypo'])
     rupture.occurrence_rate = dic['occurrence_rate']
+    rupture.probs_occur = dic.get('probs_occur', [])
     rupture.tectonic_region_type = trt or dic['trt']
     if surface_cls is geo.PlanarSurface:
         rupture.surface = geo.PlanarSurface.from_array(
@@ -96,6 +98,14 @@ def from_toml(toml_str):
     :returns: a rupture instance
     """
     return _get_rupture(toml.loads(toml_str))
+
+
+def from_json(json_str):
+    """
+    :param json_str: a string in JSON format
+    :returns: a rupture instance
+    """
+    return _get_rupture(json.loads(json_str))
 
 
 def float5(x):
@@ -213,12 +223,19 @@ class BaseRupture(metaclass=abc.ABCMeta):
         mesh = surface_to_array(self.surface)  # shape (3, sy, sz)
         sy, sz = mesh.shape[1:]
         dic = {'serial': int(self.rup_id),
-               'mag': self.mag, 'rake': self.rake, 'hypo': hypo,
+               'mag': self.mag,
+               'rake': self.rake,
+               'hypo': hypo,
                'trt': self.tectonic_region_type,
-               'code': self.code, 'occurrence_rate': self.occurrence_rate,
+               'code': self.code,
+               'occurrence_rate': self.occurrence_rate,
                'rupture_cls': self.__class__.__name__,
                'surface_cls': self.surface.__class__.__name__,
-               'lons': mesh[0], 'lats': mesh[1], 'depths': mesh[2]}
+               'lons': mesh[0],
+               'lats': mesh[1],
+               'depths': mesh[2]}
+        if hasattr(self, 'probs_occur'):
+            dic['probs_occur'] = self.probs_occur
         _fixfloat32(dic)
         return dic
 
