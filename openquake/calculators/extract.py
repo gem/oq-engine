@@ -1289,7 +1289,6 @@ def extract_ruptures(dstore, what):
         [min_mag] = qdict['min_mag']
     else:
         min_mag = 0
-    trti = {}
     bio = io.StringIO()
     first = True
     trts = list(dstore.getitem('full_lt').attrs['trts'])
@@ -1298,7 +1297,6 @@ def extract_ruptures(dstore, what):
                 for proxy in rgetter.get_proxies(min_mag)]
         arr = rupture.to_array(rups)
         arr['grp_id'] = rgetter.trti
-        trti[rgetter.trt] = rgetter.trti
         if first:
             header = None
             comment = dict(trts=trts)
