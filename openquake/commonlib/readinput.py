@@ -582,6 +582,8 @@ def get_rupture(oqparam):
         an hazardlib rupture
     """
     rup_model = oqparam.inputs['rupture_model']
+    if rup_model.endswith('.csv'):
+        return rupture.from_array(hdf5.read_csv(rup_model))
     if rup_model.endswith('.xml'):
         [rup_node] = nrml.read(rup_model)
         conv = sourceconverter.RuptureConverter(

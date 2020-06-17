@@ -232,9 +232,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         self.datastore.flush()  # just to be sure
         oq = self.oqparam
-        parent = self.datastore.parent
-        full_lt = parent['full_lt'] if parent else self.full_lt
-        self.init_logic_tree(full_lt)
         self.set_param(
             hdf5path=self.datastore.filename,
             tempname=cache_epsilons(

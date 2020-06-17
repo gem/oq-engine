@@ -34,8 +34,9 @@ from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic
+from openquake.hazardlib.source import rupture
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation
+from openquake.commonlib import calc, util, oqvalidation, writers
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -1274,6 +1275,37 @@ def extract_rupture_info(dstore, what):
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
     return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
                                   boundaries=geoms))
+
+
+@extract.add('ruptures')
+def extract_ruptures(dstore, what):
+    """
+    Extract some information about the ruptures, including the boundary.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/ruptures?min_mag=6
+    """
+    qdict = parse(what)
+    if 'min_mag' in qdict:
+        [min_mag] = qdict['min_mag']
+    else:
+        min_mag = 0
+    bio = io.StringIO()
+    first = True
+    trts = list(dstore.getitem('full_lt').attrs['trts'])
+    for rgetter in getters.gen_rgetters(dstore):
+        rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
+                for proxy in rgetter.get_proxies(min_mag)]
+        arr = rupture.to_array(rups)
+        arr['grp_id'] = rgetter.trti
+        if first:
+            header = None
+            comment = dict(trts=trts)
+            first = False
+        else:
+            header = 'no-header'
+            comment = None
+        writers.write_csv(bio, arr, header=header, comment=comment)
+    return bio.getvalue()
 
 # #####################  extraction from the WebAPI ###################### #
 
