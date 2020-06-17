@@ -29,7 +29,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
-from openquake.hazardlib.geo.mesh import surface_to_array, point3d
+from openquake.hazardlib.geo.mesh import surface_to_array
 
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
@@ -91,7 +91,7 @@ rupture_dt = numpy.dtype([
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
     ('hypo', (F32, 3)), ('gidx1', U32), ('gidx2', U32),
-    ('sx', U16), ('sy', U16), ('e0', U32), ('e1', U32)])
+    ('s1', U16), ('s2', U16), ('e0', U32), ('e1', U32)])
 
 
 # this is really fast
@@ -110,7 +110,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
         mesh = surface_to_array(rup.surface)
-        sy, sz = mesh.shape[1:]  # sanity checks
+        sy, sz = mesh.shape[1:]  # sanity checks;  sx == 3
         assert sy < TWO16, 'Too many multisurfaces: %d' % sy
         assert sz < TWO16, 'The rupture mesh spacing is too small'
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
@@ -133,7 +133,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
                offset, offset + len(points), sy, sz, 0, 0)
         offset += len(points)
         rups.append(tup)
-        geoms.append(numpy.array([tuple(p) for p in points], point3d))
+        geoms.append(points)
         nbytes += rupture_dt.itemsize + mesh.nbytes
     if not rups:
         return ()
