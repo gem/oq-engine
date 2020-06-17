@@ -603,8 +603,8 @@ class RuptureGetter(object):
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             rec = self.proxies[0].rec
-            geom = rupgeoms[rec['gidx1']:rec['gidx2']].T.reshape(
-                3, rec['s1'], rec['s2'])
+            geom = rupgeoms[rec['id']].reshape(
+                rec['s1'], rec['s2'], 3).transpose(2, 0, 1)
             dic['lons'] = geom[0]
             dic['lats'] = geom[1]
             dic['deps'] = geom[2]
@@ -630,8 +630,7 @@ class RuptureGetter(object):
             for proxy in self.proxies:
                 if proxy['mag'] < min_mag:
                     continue
-                geom = rupgeoms[proxy['gidx1']:proxy['gidx2']]  # (n, 3)
-                proxy.geom = geom.T.reshape(3, proxy['s1'], proxy['s2'])
+                proxy.geom = rupgeoms[proxy['geom_id']]
                 proxies.append(proxy)
         return proxies
 
