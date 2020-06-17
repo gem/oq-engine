@@ -627,11 +627,10 @@ class RuptureGetter(object):
         proxies = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            geom_ids = dstore['geom_ids'][:]
             for proxy in self.proxies:
                 if proxy['mag'] < min_mag:
                     continue
-                proxy.geom = rupgeoms[geom_ids[proxy['id']]]
+                proxy.geom = rupgeoms[proxy['geom_id']]
                 proxies.append(proxy)
         return proxies
 

@@ -164,8 +164,8 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures.sort(order='serial')
         nr = len(sorted_ruptures)
         assert len(numpy.unique(sorted_ruptures['serial'])) == nr  # sanity
+        sorted_ruptures['geom_id'] = sorted_ruptures['id']
         self.datastore['ruptures'] = sorted_ruptures
-        self.datastore['geom_ids'] = sorted_ruptures['id']
         self.datastore['ruptures']['id'] = numpy.arange(nr)
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)

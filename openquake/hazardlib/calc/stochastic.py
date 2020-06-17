@@ -90,7 +90,8 @@ rupture_dt = numpy.dtype([
     ('code', U8), ('n_occ', U16), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
-    ('hypo', (F32, 3)), ('s1', U16), ('s2', U16), ('e0', U32), ('e1', U32)])
+    ('hypo', (F32, 3)), ('geom_id', U32), ('s1', U16), ('s2', U16),
+    ('e0', U32), ('e1', U32)])
 
 
 # this is really fast
@@ -127,7 +128,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.grp_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat, hypo, sy, sz, 0, 0)
+               minlon, minlat, maxlon, maxlat, hypo, 0, sy, sz, 0, 0)
         rups.append(tup)
         geoms.append(points.flatten())
         nbytes += rupture_dt.itemsize + mesh.nbytes
