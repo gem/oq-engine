@@ -1297,7 +1297,7 @@ def extract_ruptures(dstore, what):
         rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
                 for proxy in rgetter.get_proxies(min_mag)]
         arr = rupture.to_array(rups)
-        arr['trti'] = rgetter.trti
+        arr['grp_id'] = rgetter.trti
         trti[rgetter.trt] = rgetter.trti
         if first:
             header = None

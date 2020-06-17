@@ -52,7 +52,7 @@ rupture_dt = numpy.dtype([('serial', U32),
                           ('lon', F32),
                           ('lat', F32),
                           ('dep', F32),
-                          ('trti', U8),
+                          ('grp_id', U8),
                           ('code', U8),
                           ('occurrence_rate', F64),
                           ('extra', hdf5.vstr)])
@@ -96,7 +96,7 @@ def from_array(aw):
     names = aw.array.dtype.names
     for rec in aw.array:
         dic = dict(zip(names, rec))
-        dic['trt'] = aw.trts[int(dic.pop('trti'))]
+        dic['trt'] = aw.trts[int(dic.pop('grp_id'))]
         dic['hypo'] = dic.pop('lon'), dic.pop('lat'), dic.pop('dep')
         dic.update(json.loads(dic.pop('extra')))
         rups.append(_get_rupture(dic))

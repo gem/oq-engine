@@ -1072,7 +1072,7 @@ def _rup_array(array_of_ruptures):
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = row['occurrence_rate']
-        tup = (u, row['serial'], 'no-source', row['trti'],
+        tup = (u, row['serial'], 'no-source', row['grp_id'],
                row['code'], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, s1, s2, 0, 0)
         rups.append(tup)

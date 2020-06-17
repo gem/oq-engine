@@ -674,7 +674,6 @@ def _read_csv(fileobj, compositedt):
         cols = []
         for i, col in enumerate(row):
             if itemsize[i] and len(col) > itemsize[i]:
-                import pdb; pdb.set_trace()
                 raise ValueError(
                     'line %d: %s=%r has length %d > %d' %
                     (lineno, compositedt.names[i], col, len(col), itemsize[i]))
