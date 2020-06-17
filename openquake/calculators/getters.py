@@ -467,7 +467,6 @@ def gen_rgetters(dstore, slc=slice(None)):
     :yields: unfiltered RuptureGetters
     """
     full_lt = dstore['full_lt']
-    trti = {trt: i for i, trt in enumerate(full_lt.trts)}
     trt_by_grp = full_lt.trt_by_grp
     samples = full_lt.get_samples_by_grp()
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
@@ -480,7 +479,6 @@ def gen_rgetters(dstore, slc=slice(None)):
             rgetter = RuptureGetter(
                 [RuptureProxy(rec) for rec in block], dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
-            rgetter.trti = trti[rgetter.trt]
             yield rgetter
 
 
