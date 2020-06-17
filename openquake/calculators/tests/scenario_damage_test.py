@@ -174,13 +174,11 @@ RM       4_000
         nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
         self.assertEqual(nodamage, 1041226.0)
 
-        fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
-        for i, fname in enumerate(fnames):
-            self.assertEqualFiles('expected/avg_damages-%d.csv' % i, fname)
+        [fname] = export(('avg_damages-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_damages.csv', fname)
 
-        fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
-        for i, fname in enumerate(fnames):
-            self.assertEqualFiles('expected/losses_asset-%d.csv' % i, fname)
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_asset.csv', fname)
 
     def test_case_10(self):
         # case with more IMTs in the imported GMFs than required
