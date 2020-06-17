@@ -40,9 +40,7 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer and seeds
         """
         oq = self.oqparam
-        full_lt = logictree.FullLogicTree.fake(readinput.get_gsim_lt(oq))
-        self.realizations = full_lt.get_realizations()
-        self.datastore['full_lt'] = full_lt
+        full_lt = self.init()
         if 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
@@ -86,7 +84,11 @@ class ScenarioCalculator(base.HazardCalculator):
         self.sig_eps_dt = getters.sig_eps_dt(self.oqparam.imtls)
 
     def init(self):
-        pass
+        gsim_lt = readinput.get_gsim_lt(self.oqparam)
+        fake = logictree.FullLogicTree.fake(gsim_lt)
+        self.realizations = fake.get_realizations()
+        self.datastore['full_lt'] = fake
+        return fake
 
     def execute(self):
         """
