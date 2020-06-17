@@ -326,11 +326,12 @@ class RuptureImporter(object):
         assert n_unique_events == len(events), (n_unique_events, len(events))
         events['id'] = numpy.arange(len(events))
         # set event year and event ses starting from 1
-        itime = int(self.oqparam.investigation_time)
         nses = self.oqparam.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
         numpy.random.seed(self.oqparam.ses_seed)
-        extra['year'] = numpy.random.choice(itime, len(events)) + 1
+        if self.oqparam.investigation_time:
+            itime = int(self.oqparam.investigation_time)
+            extra['year'] = numpy.random.choice(itime, len(events)) + 1
         extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
         eindices = get_indices(events['rup_id'])
