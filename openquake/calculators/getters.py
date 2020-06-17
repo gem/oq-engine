@@ -604,7 +604,7 @@ class RuptureGetter(object):
             rupgeoms = dstore['rupgeoms']
             rec = self.proxies[0].rec
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].T.reshape(
-                3, rec['sy'], rec['sz'])
+                3, rec['s1'], rec['s2'])
             dic['lons'] = geom[0]
             dic['lats'] = geom[1]
             dic['deps'] = geom[2]
@@ -631,7 +631,7 @@ class RuptureGetter(object):
                 if proxy['mag'] < min_mag:
                     continue
                 geom = rupgeoms[proxy['gidx1']:proxy['gidx2']]  # (n, 3)
-                proxy.geom = geom.T.reshape(3, proxy['sy'], proxy['sz'])
+                proxy.geom = geom.T.reshape(3, proxy['s1'], proxy['s2'])
                 proxies.append(proxy)
         return proxies
 
