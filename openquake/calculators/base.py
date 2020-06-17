@@ -1089,9 +1089,8 @@ def import_rups(dstore, fname):
     Import in the datastore a CSV file with ruptures
     """
     aw = hdf5.read_csv(fname, rupture.rupture_dt)
-    ser = calc.RuptureSerializer(dstore)
-    ser.save(_rup_array(aw.array))
-    ser.close()
+    imp = calc.RuptureImporter(dstore)
+    imp.import_array(_rup_array(aw.array))
 
 
 def import_gmfs(dstore, fname, sids):

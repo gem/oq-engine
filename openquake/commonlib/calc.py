@@ -262,9 +262,10 @@ class RuptureImporter(object):
     Import an array of ruptures correctly, i.e. by populating the datasets
     ruptures, rupgeoms, events.
     """
-    def __init__(self, dstore, full_lt):
+    def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
+        full_lt = dstore['full_lt']
         self.trt_by_grp = full_lt.trt_by_grp
         self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
         self.samples_by_grp = full_lt.get_samples_by_grp()

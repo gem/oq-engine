@@ -143,10 +143,10 @@ class EventBasedCalculator(base.HazardCalculator):
                                'investigation time is too short')
 
         # must be called before storing the events
-        self.store_rlz_info(eff_ruptures)
+        self.store_rlz_info(eff_ruptures)  # store full_lt
         with self.monitor('store source_info'):
             self.store_source_info(calc_times)
-        imp = calc.RuptureImporter(self.datastore, self.csm.full_lt)
+        imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
             imp.import_array(self.datastore.getitem('ruptures')[()])
 
