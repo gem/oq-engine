@@ -69,8 +69,7 @@ def to_array(ruptures):
         code2cls.update(BaseRupture.init())
     arr = numpy.zeros(len(ruptures), rupture_dt)
     for rec, rup in zip(arr, ruptures):
-        mesh = surface_to_array(rup.surface)  # shape (3, sy, sz)
-        sy, sz = mesh.shape[1:]
+        mesh = surface_to_array(rup.surface)  # shape (3, s1, s2)
         rec['serial'] = rup.rup_id
         rec['mag'] = rup.mag
         rec['rake'] = rup.rake
@@ -79,9 +78,7 @@ def to_array(ruptures):
         rec['dep'] = rup.hypocenter.z
         rec['code'] = rup.code
         rec['occurrence_rate'] = rup.occurrence_rate
-        extra = {'lons': mesh[0],
-                 'lats': mesh[1],
-                 'depths': mesh[2]}
+        extra = {'mesh': mesh}
         if hasattr(rup, 'probs_occur'):
             extra['probs_occur'] = rup.probs_occur
         if hasattr(rup, 'weight'):
@@ -180,7 +177,14 @@ def _fixfloat32(dic):
         elif isinstance(v, tuple):
             dic[k] = [float5(x) for x in v]
         elif isinstance(v, numpy.ndarray):
-            dic[k] = [[float5(y) for y in x] for x in v]
+            if len(v.shape) == 3:  # 3D array
+                dic[k] = [[[float5(z) for z in y] for y in x] for x in v]
+            elif len(v.shape) == 2:  # 2D array
+                dic[k] = [[float5(y) for y in x] for x in v]
+            elif len(v.shape) == 1:  # 1D array
+                dic[k] = [float5(x) for x in v]
+            else:
+                raise NotImplementedError
 
 
 def to_toml(rup):
