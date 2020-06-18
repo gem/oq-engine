@@ -139,9 +139,9 @@ class RiskInput(object):
         [sid] = hazard_getter.sids
         if haz is None:
             haz = hazard_getter.get_hazard()
-        if isinstance(haz, dict):
+        if isinstance(haz, dict):  # scenario, event_based
             items = haz.items()
-        else:  # list of length R
+        else:  # list of length R, classical
             items = enumerate(haz)
         with monitor('computing risk', measuremem=False):
             # this approach is slow for event_based_risk since a lot of

@@ -115,7 +115,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         tot = ddds.sum(axis=0)  # shape D
                         nodamage = asset['number'] * (ne - len(ddds))
                         tot[0] += nodamage
-                        result['d_asset'].append((l, r, asset['ordinal'], tot))
+                        result['d_asset'].append((l, r, aid, tot))
                         # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
