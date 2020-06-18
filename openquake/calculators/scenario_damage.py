@@ -215,7 +215,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
-        self.sanity_check()
+        if self.R > 1:
+            self.sanity_check()
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -282,4 +283,3 @@ class EventBasedDamageCalculator(ScenarioDamageCalculator):
         if dic['got'] != dic['expected']:
             logging.info('Due to numeric errors the total number of assets '
                          'is imprecise: %s', dic)
-
