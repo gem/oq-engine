@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the rlz->events association in scenario calculations to be
+    consistent with event based
   * Added commands `oq nrml_to csv` and  `oq nrml_to gpkg`
   * Supported year and ses_id >= 65536 in event based
 

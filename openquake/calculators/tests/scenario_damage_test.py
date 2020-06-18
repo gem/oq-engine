@@ -172,7 +172,7 @@ RM       4_000
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         df = read_csv(fname, index='event_id')
         nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
-        self.assertEqual(nodamage, 1041226.0)
+        self.assertEqual(nodamage, 939539.0)
 
         [fname] = export(('avg_damages-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_damages.csv', fname)

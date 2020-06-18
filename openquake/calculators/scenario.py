@@ -21,7 +21,7 @@ import numpy
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.stochastic import get_rup_array
-from openquake.hazardlib.source.rupture import EBRupture, events_dt
+from openquake.hazardlib.source.rupture import EBRupture
 from openquake.commonlib import readinput, logictree, calc
 from openquake.calculators import base, getters
 
@@ -40,7 +40,6 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer and seeds
         """
         oq = self.oqparam
-        full_lt = self.init()
         if 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
@@ -49,7 +48,6 @@ class ScenarioCalculator(base.HazardCalculator):
             return
         self.rup = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
-        R = len(self.gsims)
         self.cmaker = ContextMaker('*', self.gsims,
                                    {'maximum_distance': oq.maximum_distance,
                                     'filter_distance': oq.filter_distance})
@@ -58,26 +56,16 @@ class ScenarioCalculator(base.HazardCalculator):
             base.import_rups(self.datastore, oq.inputs['rupture_model'])
         self.datastore['oqparam'] = oq
         self.store_rlz_info({})
-        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
-        E = oq.number_of_ground_motion_fields
-        n_occ = numpy.array([E])
+        n_occ = numpy.array([oq.number_of_ground_motion_fields])
         ebr = EBRupture(self.rup, 0, 0, n_occ)
         ebr.e0 = 0
-        dtlist = events_dt.descr + [('ses_id', U16), ('year', U16)]
-        events = numpy.zeros(E * R, dtlist)
-        for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
-            events[rlz * E: rlz * E + E]['id'] = eids
-            events[rlz * E: rlz * E + E]['rlz_id'] = rlz
-        self.datastore['events'] = self.events = events
-        rupser = calc.RuptureSerializer(self.datastore)
-        rup_array = get_rup_array([ebr], self.src_filter())
+        rup_array = get_rup_array([ebr], self.src_filter()).array
         if len(rup_array) == 0:
             maxdist = oq.maximum_distance(
                 self.rup.tectonic_region_type, self.rup.mag)
             raise RuntimeError('There are no sites within the maximum_distance'
                                ' of %s km from the rupture' % maxdist)
-        rupser.save(rup_array)
-        rupser.close()
+        calc.RuptureImporter(self.datastore).import_array(rup_array)
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
             oq.correl_model, self.amplifier)
@@ -88,7 +76,6 @@ class ScenarioCalculator(base.HazardCalculator):
         fake = logictree.FullLogicTree.fake(gsim_lt)
         self.realizations = fake.get_realizations()
         self.datastore['full_lt'] = fake
-        return fake
 
     def execute(self):
         """
@@ -117,4 +104,4 @@ class ScenarioCalculator(base.HazardCalculator):
         with self.monitor('saving gmfs'):
             base.save_gmf_data(
                 self.datastore, self.sitecol, gmfa,
-                self.oqparam.imtls, self.events)
+                self.oqparam.imtls, self.datastore['events'])
