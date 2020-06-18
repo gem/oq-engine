@@ -116,7 +116,7 @@ class GmfComputer(object):
         # `rupture` is an EBRupture instance in the engine
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
-            self.source_id = rupture.source_id  # the source the rupture comes from
+            self.source_id = rupture.source_id  # the underlying source
             self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
@@ -191,7 +191,8 @@ class GmfComputer(object):
                      gs, num_events, imt)
             except Exception as exc:
                 raise exc.__class__(
-                    '%s for %s, %s, source_id=%s' % (exc, gs, imt, self.source_id)
+                    '%s for %s, %s, source_id=%s' %
+                    (exc, gs, imt, self.source_id)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
