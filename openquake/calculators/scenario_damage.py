@@ -19,7 +19,7 @@
 import logging
 import numpy
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, get_indices
+from openquake.baselib.general import AccumDict, get_indices, fast_agg
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.calculators import base
 
@@ -182,7 +182,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             return
         dstates = self.crmodel.damage_states
         ltypes = self.crmodel.loss_types
-        L = len(ltypes)
+        L = self.L = len(ltypes)
         R = self.R
         D = len(dstates)
         A = len(self.assetcol)
@@ -209,6 +209,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
+        self.sanity_check()
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -241,6 +242,21 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                     arr[i] = (eid, rlz[eid], loss)
                 self.datastore[name] = arr
 
+    def sanity_check(self):
+        """
+        Sanity check on the total number of assets
+        """
+        avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')
+        num_assets = avgdamages.sum(axis=(0, 1, 3))  # by loss_type
+        expected = self.assetcol['number'].sum()
+        nums = set(num_assets) | {expected}
+        if len(nums) > 1:
+            numdic = dict(expected=expected)
+            for lt, num in zip(self.oqparam.loss_names, num_assets):
+                numdic[lt] = num
+            logging.info('Due to numeric errors the total number of assets '
+                         'is imprecise: %s', numdic)
+
 
 @base.calculators.add('event_based_damage')
 class EventBasedDamageCalculator(ScenarioDamageCalculator):
@@ -251,3 +267,15 @@ class EventBasedDamageCalculator(ScenarioDamageCalculator):
     core_task = scenario_damage
     precalc = 'event_based'
     accept_precalc = ['event_based', 'event_based_risk']
+
+    def sanity_check(self):
+        avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')[
+            :, 0]  # shape A, S, L, D, -> A, L, D
+        avg = avgdamages.sum() / self.L
+        ebs = self.datastore['gmf_data/events_by_sid'][:]
+        arr = self.datastore['assetcol/array'][:]
+        number_by_sid = fast_agg(arr['site_id'], arr['number'])
+        exp = (number_by_sid * ebs).sum() / self.R * self.oqparam.ses_ratio
+        if avg != exp:
+            logging.info('Numeric errors in avg_damages-stats %s!=%s',
+                         avg, exp)
