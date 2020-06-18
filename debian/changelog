@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed bug in event_based_damage: the number of buildings in no damage
+    state was incorrect
   * Changed the rlz->events association in scenario calculations to be
     consistent with event based
   * Added commands `oq nrml_to csv` and  `oq nrml_to gpkg`
