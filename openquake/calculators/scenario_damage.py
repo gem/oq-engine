@@ -283,7 +283,8 @@ class EventBasedDamageCalculator(ScenarioDamageCalculator):
         else:
             avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')[
                 :, 0]  # shape A, S, L, D, -> A, L, D
-        dic = dict(got=avgdamages.sum() / self.L,
+        F = self.param['num_events'].mean()
+        dic = dict(got=avgdamages.sum() / self.L / F / self.oqparam.ses_ratio,
                    expected=self.assetcol['number'].sum())
         if dic['got'] != dic['expected']:
             logging.info('Due to numeric errors the total number of assets '
