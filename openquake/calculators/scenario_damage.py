@@ -115,7 +115,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         tot = ddds.sum(axis=0)  # shape D
                         nodamage = asset['number'] * (ne - len(ddds))
                         tot[0] += nodamage
-                        result['d_asset'].append((l, r, asset['ordinal'], tot))
+                        result['d_asset'].append((l, r, aid, tot))
                         # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
@@ -215,8 +215,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
-        if self.R > 1:
-            self.sanity_check()
+        self.sanity_check()
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -253,7 +252,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         """
         Sanity check on the total number of assets
         """
-        avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')
+        if self.R == 1:
+            avgdamages = self.datastore.sel('avg_damages-rlzs')
+        else:
+            avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')
         num_assets = avgdamages.sum(axis=(0, 1, 3))  # by loss_type
         expected = self.assetcol['number'].sum()
         nums = set(num_assets) | {expected}
@@ -276,9 +278,13 @@ class EventBasedDamageCalculator(ScenarioDamageCalculator):
     accept_precalc = ['event_based', 'event_based_risk']
 
     def sanity_check(self):
-        avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')[
-            :, 0]  # shape A, S, L, D, -> A, L, D
-        dic = dict(got=avgdamages.sum() / self.L,
+        if self.R == 1:
+            avgdamages = self.datastore.sel('avg_damages-rlzs')[:, 0]
+        else:
+            avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')[
+                :, 0]  # shape A, S, L, D, -> A, L, D
+        F = self.param['num_events'].mean()
+        dic = dict(got=avgdamages.sum() / self.L / F / self.oqparam.ses_ratio,
                    expected=self.assetcol['number'].sum())
         if dic['got'] != dic['expected']:
             logging.info('Due to numeric errors the total number of assets '
