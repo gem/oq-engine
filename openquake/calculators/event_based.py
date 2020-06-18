@@ -22,20 +22,18 @@ import operator
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, get_indices
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, logs
 from openquake.calculators import base
 from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, gen_rgetters, gen_rupture_getters,
-    sig_eps_dt, time_dt)
+    GmfGetter, gen_rupture_getters, sig_eps_dt, time_dt)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 
@@ -91,15 +89,6 @@ class EventBasedCalculator(base.HazardCalculator):
             self.rupser = calc.RuptureSerializer(self.datastore)
         self.srcfilter = self.src_filter(self.datastore.tempname)
 
-    def init_logic_tree(self, full_lt):
-        self.trt_by_grp = full_lt.trt_by_grp
-        self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = full_lt.get_samples_by_grp()
-        self.num_rlzs_by_grp = {
-            grp_id:
-            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-            for grp_id in self.rlzs_by_gsim_grp}
-
     def acc0(self):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
@@ -153,22 +142,13 @@ class EventBasedCalculator(base.HazardCalculator):
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'investigation time is too short')
 
-        # logic tree reduction, must be called before storing the events
-        self.store_rlz_info(eff_ruptures)
-        self.init_logic_tree(self.csm.full_lt)
+        # must be called before storing the events
+        self.store_rlz_info(eff_ruptures)  # store full_lt
         with self.monitor('store source_info'):
             self.store_source_info(calc_times)
-        logging.info('Reordering the ruptures and storing the events')
-        sorted_ruptures = self.datastore.getitem('ruptures')[()]
-        # order the ruptures by rup_id
-        sorted_ruptures.sort(order='serial')
-        nr = len(sorted_ruptures)
-        assert len(numpy.unique(sorted_ruptures['serial'])) == nr  # sanity
-        sorted_ruptures['geom_id'] = sorted_ruptures['id']
-        sorted_ruptures['id'] = numpy.arange(nr)
-        self.datastore['ruptures'] = sorted_ruptures
-        with self.monitor('saving events'):
-            self.save_events(sorted_ruptures)
+        imp = calc.RuptureImporter(self.datastore)
+        with self.monitor('saving ruptures and events'):
+            imp.import_array(self.datastore.getitem('ruptures')[()])
 
     def agg_dicts(self, acc, result):
         """
@@ -202,84 +182,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.flush()
         return acc
 
-    def save_events(self, rup_array):
-        """
-        :param rup_array: an array of ruptures with fields grp_id
-        :returns: a list of RuptureGetters
-        """
-        # this is very fast compared to saving the ruptures
-        eids = rupture.get_eids(
-            rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
-        self.check_overflow()  # check the number of events
-        events = numpy.zeros(len(eids), rupture.events_dt)
-        # when computing the events all ruptures must be considered,
-        # including the ones far away that will be discarded later on
-        rgetters = gen_rgetters(self.datastore)
-        # build the associations eid -> rlz sequentially or in parallel
-        # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Building assocs event_id -> rlz_id for {:_d} events'
-                     ' and {:_d} ruptures'.format(len(events), len(rup_array)))
-        if len(events) < 1E5:
-            it = map(RuptureGetter.get_eid_rlz, rgetters)
-        else:
-            it = parallel.Starmap(RuptureGetter.get_eid_rlz,
-                                  ((rgetter,) for rgetter in rgetters),
-                                  progress=logging.debug,
-                                  h5=self.datastore.hdf5)
-        i = 0
-        for eid_rlz in it:
-            for er in eid_rlz:
-                events[i] = er
-                i += 1
-                if i >= TWO32:
-                    raise ValueError('There are more than %d events!' % i)
-        events.sort(order='rup_id')  # fast too
-        # sanity check
-        n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
-        assert n_unique_events == len(events), (n_unique_events, len(events))
-        events['id'] = numpy.arange(len(events))
-        # set event year and event ses starting from 1
-        itime = int(self.oqparam.investigation_time)
-        nses = self.oqparam.ses_per_logic_tree_path
-        extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
-        numpy.random.seed(self.oqparam.ses_seed)
-        extra['year'] = numpy.random.choice(itime, len(events)) + 1
-        extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
-        self.datastore['events'] = util.compose_arrays(events, extra)
-        eindices = get_indices(events['rup_id'])
-        arr = numpy.array(list(eindices.values()))[:, 0, :]
-        self.datastore['ruptures']['e0'] = arr[:, 0]
-        self.datastore['ruptures']['e1'] = arr[:, 1]
-
-    def check_overflow(self):
-        """
-        Raise a ValueError if the number of sites is larger than 65,536 or the
-        number of IMTs is larger than 256 or the number of ruptures is larger
-        than 4,294,967,296. The limits are due to the numpy dtype used to
-        store the GMFs (gmv_dt). There also a limit of max_potential_gmfs on
-        the number of sites times the number of events, to avoid producing too
-        many GMFs. In that case split the calculation or be smarter.
-        """
-        oq = self.oqparam
-        max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
-        num_ = dict(events=self.E, imts=len(self.oqparam.imtls))
-        n = len(getattr(self, 'sitecol', ()) or ())
-        num_['sites'] = n
-        if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
-            if n > oq.max_sites_per_gmf:
-                raise ValueError(
-                    'You cannot compute the GMFs for %d > %d sites' %
-                    (n, oq.max_sites_per_gmf))
-            elif n * self.E > oq.max_potential_gmfs:
-                raise ValueError(
-                    'A GMF calculation with %d sites and %d events is '
-                    'impossibly large' % (n, self.E))
-        for var in num_:
-            if num_[var] > max_[var]:
-                raise ValueError(
-                    'The %s calculator is restricted to %d %s, got %d' %
-                    (oq.calculation_mode, max_[var], var, num_[var]))
-
     def set_param(self, **kw):
         oq = self.oqparam
         # set the minimum_intensity
@@ -306,7 +208,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.indices = AccumDict(accum=[])  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
-            self.init_logic_tree(self.datastore.parent['full_lt'])
         else:  # from sources
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and

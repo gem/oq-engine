@@ -189,7 +189,7 @@ class CsvWriter(object):
 
     def save_block(self, data, dest):
         """
-        Save data on dest, which is file open in 'a' mode
+        Save data on dest, which is a file open in 'a' mode
         """
         write_csv(dest, data, self.sep, self.fmt, 'no-header')
 
