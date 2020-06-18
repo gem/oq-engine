@@ -103,8 +103,6 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                 for l, loss_type in enumerate(crmodel.loss_types):
                     for asset, fractions in zip(ri.assets, out[loss_type]):
                         aid = asset['ordinal']
-                        full = numpy.zeros((ne, D), U32)
-                        full[:, 0] = asset['number']  # all in no damage
                         if approx_ddd:
                             ddds = fractions * asset['number']
                         else:
@@ -114,8 +112,9 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                             eid = out.eids[e]
                             ddic[aid, eid][l] = ddd[1:]
                             d_event[eid][l] += ddd[1:]
-                        full[:len(ddds)] = ddds
-                        tot = full.sum(axis=0)  # shape D
+                        tot = ddds.sum(axis=0)  # shape D
+                        nodamage = asset['number'] * (ne - len(ddds))
+                        tot[0] += nodamage
                         result['d_asset'].append((l, r, asset['ordinal'], tot))
                         # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
@@ -216,7 +215,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
-        import pdb; pdb.set_trace()
         self.sanity_check()
 
         # damage by event: make sure the sum of the buildings is consistent
@@ -279,11 +277,9 @@ class EventBasedDamageCalculator(ScenarioDamageCalculator):
     def sanity_check(self):
         avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')[
             :, 0]  # shape A, S, L, D, -> A, L, D
-        avg = avgdamages.sum() / self.L
-        ebs = self.datastore['gmf_data/events_by_sid'][:]
-        arr = self.datastore['assetcol/array'][:]
-        number_by_sid = fast_agg(arr['site_id'], arr['number'])
-        exp = (number_by_sid * ebs).sum() / self.R * self.oqparam.ses_ratio
-        if avg != exp:
-            logging.info('Numeric errors in avg_damages-stats %s!=%s',
-                         avg, exp)
+        dic = dict(got=avgdamages.sum() / self.L,
+                   expected=self.assetcol['number'].sum())
+        if dic['got'] != dic['expected']:
+            logging.info('Due to numeric errors the total number of assets '
+                         'is imprecise: %s', dic)
+
