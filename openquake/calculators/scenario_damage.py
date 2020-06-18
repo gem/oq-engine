@@ -19,7 +19,7 @@
 import logging
 import numpy
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, get_indices, fast_agg
+from openquake.baselib.general import AccumDict, get_indices
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.calculators import base
 
