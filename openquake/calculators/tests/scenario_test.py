@@ -21,6 +21,7 @@ from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12)
+from openquake.baselib.general import group_array
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
@@ -43,9 +44,12 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
 class ScenarioTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):
-        gmfa = self.execute(case.__file__, 'job.ini')
-        gmvs0 = gmfa[0, :, 0]
-        gmvs1 = gmfa[1, :, 0]
+        self.execute(case.__file__, 'job.ini')
+        gmfdata = self.calc.datastore['gmf_data/data'][:]
+        gmfa = group_array(gmfdata, 'sid')
+        gmvs0 = gmfa[0]['gmv'][:, 0]
+        gmvs1 = gmfa[1]['gmv'][:, 0]
+        import pdb; pdb.set_trace()
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmvs0, gmvs1)
         gmvs_within_range_snd = count_close(snd_value, gmvs0, gmvs1)
@@ -53,11 +57,13 @@ class ScenarioTestCase(CalculatorTestCase):
                 gmvs_within_range_snd / realizations)
 
     def medians(self, case):
-        gmfa = self.execute(case.__file__, 'job.ini')
+        self.execute(case.__file__, 'job.ini')
+        gmfdata = self.calc.datastore['gmf_data/data'][:]
+        gmfa = group_array(gmfdata, 'sid')
         median = {imt: [] for imt in self.calc.oqparam.imtls}
         for imti, imt in enumerate(self.calc.oqparam.imtls):
             for sid in self.calc.sitecol.sids:
-                gmvs = gmfa[sid, :, imti]
+                gmvs = gmfa[sid]['gmv'][:, imti]
                 median[imt].append(numpy.median(gmvs))
         return median
 

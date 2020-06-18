@@ -21,16 +21,19 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
+from openquake.hazardlib.calc.stochastic import get_rup_array
+from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.geo.mesh import surface_to_array
+from openquake.commonlib import calc, util, logs, readinput, logictree
 from openquake.risklib.riskinput import str2rsi
-from openquake.baselib import parallel
-from openquake.commonlib import calc, util, logs
 from openquake.calculators import base
 from openquake.calculators.getters import (
     GmfGetter, gen_rupture_getters, sig_eps_dt, time_dt)
@@ -85,9 +88,12 @@ class EventBasedCalculator(base.HazardCalculator):
     def init(self):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
+        if hasattr(self.oqparam, 'maximum_distance'):
+            self.srcfilter = self.src_filter(self.datastore.tempname)
+        else:
+            self.srcfilter = nofilter
         if not self.datastore.parent:
             self.rupser = calc.RuptureSerializer(self.datastore)
-        self.srcfilter = self.src_filter(self.datastore.tempname)
 
     def acc0(self):
         """
@@ -201,6 +207,33 @@ class EventBasedCalculator(base.HazardCalculator):
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path, **kw)
 
+    def _read_scenario_ruptures(self):
+        oq = self.oqparam
+        self.rup = readinput.get_rupture(oq)
+        self.gsims = readinput.get_gsims(oq)
+        self.cmaker = ContextMaker('*', self.gsims,
+                                   {'maximum_distance': oq.maximum_distance,
+                                    'filter_distance': oq.filter_distance})
+        if oq.inputs['rupture_model'].endswith('.csv'):
+            base.import_rups(self.datastore, oq.inputs['rupture_model'])
+        n_occ = numpy.array([oq.number_of_ground_motion_fields])
+        ebr = EBRupture(self.rup, 0, 0, n_occ)
+        ebr.e0 = 0
+        rup_array = get_rup_array([ebr], self.srcfilter).array
+        if len(rup_array) == 0:
+            maxdist = oq.maximum_distance(
+                self.rup.tectonic_region_type, self.rup.mag)
+            raise RuntimeError('There are no sites within the maximum_distance'
+                               ' of %s km from the rupture' % maxdist)
+        gsim_lt = readinput.get_gsim_lt(self.oqparam)
+        fake = logictree.FullLogicTree.fake(gsim_lt)
+        self.realizations = fake.get_realizations()
+        self.datastore['full_lt'] = fake
+        self.save_params()
+        calc.RuptureImporter(self.datastore).import_array(rup_array)
+        mesh = surface_to_array(self.rup.surface).transpose(1, 2, 0).flatten()
+        hdf5.extend(self.datastore['rupgeoms'], numpy.array([mesh], object))
+
     def execute(self):
         oq = self.oqparam
         self.set_param()
@@ -208,11 +241,18 @@ class EventBasedCalculator(base.HazardCalculator):
         self.indices = AccumDict(accum=[])  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
-        else:  # from sources
+        elif hasattr(self, 'csm'):  # from sources
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
+        elif 'rupture_model' not in oq.inputs:
+            logging.warning(
+                'There is no rupture_model, the calculator will just '
+                'import data without performing any calculation')
+            return {}
+        else:  # scenario
+            self._read_scenario_ruptures()
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
@@ -231,8 +271,9 @@ class EventBasedCalculator(base.HazardCalculator):
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
 
         # compute_gmfs in parallel
+        nr = len(self.datastore['ruptures'])
         self.datastore.swmr_on()
-        logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
+        logging.info('Reading %d ruptures', nr)
         iterargs = ((rgetter, self.srcfilter, self.param)
                     for rgetter in gen_rupture_getters(
                             self.datastore, self.srcfilter,
@@ -266,9 +307,9 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.ground_motion_fields and not oq.hazard_curves_from_gmfs:
             return
         N = len(self.sitecol.complete)
-        M = len(oq.imtls)
+        M = len(oq.imtls)  # 0 in scenario
         L = len(oq.imtls.array)
-        L1 = L // M
+        L1 = L // (M or 1)
         if result and oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
@@ -359,3 +400,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 logging.warning('Relative difference with the classical '
                                 'mean curves: %d%% at site index %d, imt=%s',
                                 self.rdiff * 100, index, imt)
+
+
+@base.calculators.add('scenario')
+class ScenarioCalculator(EventBasedCalculator):
+    """
+    Scenario hazard calculator
+    """

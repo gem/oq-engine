@@ -116,7 +116,7 @@ class GmfComputer(object):
         # `rupture` is an EBRupture instance in the engine
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
-            self.source_id = rupture.source_id  # the source the rupture comes from
+            self.source_id = rupture.source_id
             self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
