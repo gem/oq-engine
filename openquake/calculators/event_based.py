@@ -74,7 +74,7 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
 
 
-@base.calculators.add('event_based', 'ucerf_hazard')
+@base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
@@ -154,7 +154,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.store_source_info(calc_times)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
-            imp.import_array(self.datastore.getitem('ruptures')[()])
+            imp.import_rups(self.datastore.getitem('ruptures')[()])
 
     def agg_dicts(self, acc, result):
         """
@@ -215,7 +215,7 @@ class EventBasedCalculator(base.HazardCalculator):
                                    {'maximum_distance': oq.maximum_distance,
                                     'filter_distance': oq.filter_distance})
         if oq.inputs['rupture_model'].endswith('.csv'):
-            base.import_rups(self.datastore, oq.inputs['rupture_model'])
+            readinput.get_ruptures(oq.inputs['rupture_model'])
         n_occ = numpy.array([oq.number_of_ground_motion_fields])
         ebr = EBRupture(self.rup, 0, 0, n_occ)
         ebr.e0 = 0
@@ -231,7 +231,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()
-        calc.RuptureImporter(self.datastore).import_array(rup_array)
+        calc.RuptureImporter(self.datastore).import_rups(rup_array)
         mesh = surface_to_array(self.rup.surface).transpose(1, 2, 0).flatten()
         hdf5.extend(self.datastore['rupgeoms'], numpy.array([mesh], object))
 
@@ -401,10 +401,3 @@ class EventBasedCalculator(base.HazardCalculator):
                 logging.warning('Relative difference with the classical '
                                 'mean curves: %d%% at site index %d, imt=%s',
                                 self.rdiff * 100, index, imt)
-
-
-@base.calculators.add('scenario')
-class ScenarioCalculator(EventBasedCalculator):
-    """
-    Scenario hazard calculator
-    """

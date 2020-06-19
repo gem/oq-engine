@@ -52,17 +52,17 @@ rupture_dt = numpy.dtype([('serial', U32),
                           ('lon', F32),
                           ('lat', F32),
                           ('dep', F32),
-                          ('grp_id', U8),
-                          ('code', U8),
-                          ('occurrence_rate', F64),
+                          ('trt', hdf5.vstr),
+                          ('kind', hdf5.vstr),
+                          ('mesh', hdf5.vstr),
                           ('extra', hdf5.vstr)])
 
 code2cls = {}
 
 
-def to_array(ruptures):
+def to_csv_array(ruptures):
     """
-    :param ruptures: a list of ruptures with the same TRT
+    :param ruptures: a list of ruptures
     :returns: an array of ruptures suitable for serialization in CSV
     """
     if not code2cls:
@@ -76,11 +76,15 @@ def to_array(ruptures):
         rec['lon'] = rup.hypocenter.x
         rec['lat'] = rup.hypocenter.y
         rec['dep'] = rup.hypocenter.z
-        rec['code'] = rup.code
-        rec['occurrence_rate'] = rup.occurrence_rate
-        extra = {'mesh': mesh}
+        rec['trt'] = rup.tectonic_region_type
+        rec['kind'] = ' '.join(cls.__name__ for cls in code2cls[rup.code])
+        rec['mesh'] = json.dumps(
+            [[[float5(z) for z in y] for y in x] for x in mesh])
+        extra = {}
         if hasattr(rup, 'probs_occur'):
             extra['probs_occur'] = rup.probs_occur
+        else:
+            extra['occurrence_rate'] = rup.occurrence_rate
         if hasattr(rup, 'weight'):
             extra['weight'] = rup.weight
         _fixfloat32(extra)
@@ -195,7 +199,7 @@ def to_toml(rup):
     return toml.dumps(rup.todict())
 
 
-def to_checksum(cls1, cls2):
+def to_checksum8(cls1, cls2):
     """
     Convert a pair of classes into a numeric code (uint8)
     """
@@ -246,13 +250,15 @@ class BaseRupture(metaclass=abc.ABCMeta):
             general.gen_subclasses(BaseRupture))
         surface_classes = list(general.gen_subclasses(BaseSurface))
         code2cls = {}
+        BaseRupture.str2code = {}
         for rup, sur in itertools.product(rupture_classes, surface_classes):
-            chk = to_checksum(rup, sur)
+            chk = to_checksum8(rup, sur)
             if chk in code2cls and code2cls[chk] != (rup, sur):
                 raise ValueError('Non-unique checksum %d for %s, %s' %
                                  (chk, rup, sur))
             cls._code[rup, sur] = chk
             code2cls[chk] = rup, sur
+            BaseRupture.str2code['%s %s' % (rup.__name__, sur.__name__)] = chk
         return code2cls
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
