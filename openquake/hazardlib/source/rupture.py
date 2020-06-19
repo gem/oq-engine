@@ -78,7 +78,8 @@ def to_csv_array(ruptures):
         rec['dep'] = rup.hypocenter.z
         rec['trt'] = rup.tectonic_region_type
         rec['kind'] = ' '.join(cls.__name__ for cls in code2cls[rup.code])
-        rec['mesh'] = mesh
+        rec['mesh'] = json.dumps(
+            [[[float5(z) for z in y] for y in x] for x in mesh])
         extra = {}
         if hasattr(rup, 'probs_occur'):
             extra['probs_occur'] = rup.probs_occur

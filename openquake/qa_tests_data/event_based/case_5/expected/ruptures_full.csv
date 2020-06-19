@@ -1,4 +1,4 @@
 #,,,,,,,,,"trts=['Stable Shallow Crust', 'Volcanic']"
 serial,mag,rake,lon,lat,dep,trt,kind,mesh,extra
-2826,5.300000E+00,-9.000000E+01,10.94866,47.26678,9.000000E+00,Stable Shallow Crust,ParametricProbabilisticRupture PlanarSurface,1.094866E+01:1.094866E+01:1.094866E+01:1.094866E+01 4.724219E+01:4.729138E+01:4.724219E+01:4.729138E+01 6.264920E+00:6.264920E+00:1.173508E+01:1.173508E+01,"{""occurrence_rate"": 9e-05}"
-23,4.900000E+00,0.000000E+00,12.44109,50.23590,1.100000E+01,Volcanic,ParametricProbabilisticRupture PlanarSurface,1.244109E+01:1.244109E+01:1.244109E+01:1.244109E+01 5.022184E+01:5.024996E+01:5.022184E+01:5.024996E+01 9.436960E+00:9.436960E+00:1.256304E+01:1.256304E+01,"{""occurrence_rate"": 0.00529}"
+2826,5.300000E+00,-9.000000E+01,10.94866,47.26678,9.000000E+00,Stable Shallow Crust,ParametricProbabilisticRupture PlanarSurface,"[[[10.94866, 10.94866, 10.94866, 10.94866]], [[47.24219, 47.29138, 47.24219, 47.29138]], [[6.26492, 6.26492, 11.73508, 11.73508]]]","{""occurrence_rate"": 9e-05}"
+23,4.900000E+00,0.000000E+00,12.44109,50.23590,1.100000E+01,Volcanic,ParametricProbabilisticRupture PlanarSurface,"[[[12.44109, 12.44109, 12.44109, 12.44109]], [[50.22184, 50.24996, 50.22184, 50.24996]], [[9.43696, 9.43696, 12.56304, 12.56304]]]","{""occurrence_rate"": 0.00529}"
