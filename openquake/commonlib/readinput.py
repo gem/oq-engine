@@ -601,7 +601,7 @@ def get_ruptures(fname_csv):
         rec['hypo'] = hypo
         rate = row['occurrence_rate']
         tup = (u, row['serial'], 'no-source', trts.index(row['trt']),
-               code[row['code']], n_occ, row['mag'], row['rake'], rate,
+               code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, s1, s2, 0, 0)
         rups.append(tup)
         geoms.append(mesh.flatten())
