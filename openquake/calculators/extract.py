@@ -1207,7 +1207,7 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', U32), ('source_id', SOURCE_ID), ('multiplicity', U16),
+            ('rup_id', U32), ('source_id', SOURCE_ID), ('multiplicity', U32),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -1250,7 +1250,7 @@ def extract_rupture_info(dstore, what):
     else:
         min_mag = 0
     oq = dstore['oqparam']
-    dtlist = [('rup_id', U32), ('multiplicity', U16), ('mag', F32),
+    dtlist = [('rup_id', U32), ('multiplicity', U32), ('mag', F32),
               ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
