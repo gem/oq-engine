@@ -317,13 +317,6 @@ class OqParam(valid.ParamSet):
                 self.base_path, self.inputs['gsim_logic_tree'])
             gsim_lt = logictree.GsimLogicTree(path, ['*'])
 
-            # check the number of branchsets
-            branchsets = len(gsim_lt._ltnode)
-            if 'scenario' in self.calculation_mode and branchsets > 1:
-                raise InvalidFile(
-                    '%s: %s for a scenario calculation must contain a single '
-                    'branchset, found %d!' % (job_ini, path, branchsets))
-
             # check the IMTs vs the GSIMs
             self._gsims_by_trt = gsim_lt.values
             for gsims in gsim_lt.values.values():
