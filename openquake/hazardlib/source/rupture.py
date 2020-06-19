@@ -54,7 +54,7 @@ rupture_dt = numpy.dtype([('serial', U32),
                           ('dep', F32),
                           ('trt', hdf5.vstr),
                           ('kind', hdf5.vstr),
-                          ('occurrence_rate', F64),
+                          ('mesh', hdf5.vstr),
                           ('extra', hdf5.vstr)])
 
 code2cls = {}
@@ -78,10 +78,12 @@ def to_csv_array(ruptures):
         rec['dep'] = rup.hypocenter.z
         rec['trt'] = rup.tectonic_region_type
         rec['kind'] = ' '.join(cls.__name__ for cls in code2cls[rup.code])
-        rec['occurrence_rate'] = rup.occurrence_rate
-        extra = {'mesh': mesh}
+        rec['mesh'] = mesh
+        extra = {}
         if hasattr(rup, 'probs_occur'):
             extra['probs_occur'] = rup.probs_occur
+        else:
+            extra['occurrence_rate'] = rup.occurrence_rate
         if hasattr(rup, 'weight'):
             extra['weight'] = rup.weight
         _fixfloat32(extra)

@@ -589,7 +589,7 @@ def get_ruptures(fname_csv):
     for u, row in enumerate(aw.array):
         hypo = row['lon'], row['lat'], row['dep']
         dic = json.loads(row['extra'])
-        mesh = F32(dic['mesh'])
+        mesh = F32(row['mesh'])
         s1, s2 = mesh.shape[1:]
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['serial'] = row['serial']
@@ -599,7 +599,7 @@ def get_ruptures(fname_csv):
         rec['maxlat'] = maxlat = mesh[1].max()
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
-        rate = row['occurrence_rate']
+        rate = dic.get('occurrence_rate', numpy.nan)
         tup = (u, row['serial'], 'no-source', trts.index(row['trt']),
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, s1, s2, 0, 0)

@@ -74,7 +74,7 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
 
 
-@base.calculators.add('event_based', 'ucerf_hazard')
+@base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
@@ -401,10 +401,3 @@ class EventBasedCalculator(base.HazardCalculator):
                 logging.warning('Relative difference with the classical '
                                 'mean curves: %d%% at site index %d, imt=%s',
                                 self.rdiff * 100, index, imt)
-
-
-@base.calculators.add('scenario')
-class ScenarioCalculator(EventBasedCalculator):
-    """
-    Scenario hazard calculator
-    """
