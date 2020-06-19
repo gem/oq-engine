@@ -116,7 +116,7 @@ class GmfComputer(object):
         # `rupture` is an EBRupture instance in the engine
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
-            self.source_id = rupture.source_id
+            self.source_id = rupture.source_id  # the underlying source
             self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
@@ -163,6 +163,8 @@ class GmfComputer(object):
                     for sid, gmv in zip(sids, gmf):
                         if gmv.sum():
                             data.append((sid, eid, gmv))
+                        # gmv can be zero due to the minimum_intensity, coming
+                        # from the job.ini or from the vulnerability functions
                 n += e
         m = (len(min_iml),)
         d = numpy.array(data, [('sid', U32), ('eid', U32), ('gmv', (F32, m))])
@@ -191,7 +193,8 @@ class GmfComputer(object):
                      gs, num_events, imt)
             except Exception as exc:
                 raise exc.__class__(
-                    '%s for %s, %s, source_id=%s' % (exc, gs, imt, self.source_id)
+                    '%s for %s, %s, source_id=%s' %
+                    (exc, gs, imt, self.source_id)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(

@@ -86,7 +86,6 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
             ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             r = out.rlzi
-            slc = param['event_slice'](r)
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
                 if numpy.product(losses.shape) == 0:  # happens for all NaNs
@@ -99,7 +98,7 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
                     for loss, eid in zip(losses[a], out.eids):
                         acc[aid, eid][l] = loss
                 agglosses = losses.sum(axis=0)  # shape num_gmfs
-                result['agg'][slc, l] += agglosses
+                result['agg'][out.eids, l] += agglosses
 
     ael = [(aid, eid, loss) for (aid, eid), loss in sorted(acc.items())]
     result['ael'] = numpy.array(ael, param['ael_dt'])
@@ -136,7 +135,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.param['weights'] = self.datastore['weights'][()]
         except KeyError:
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
-        self.param['event_slice'] = self.event_slice
         self.param['ael_dt'] = dt = ael_dt(oq.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('loss_data/data', dt)

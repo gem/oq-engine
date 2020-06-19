@@ -253,6 +253,7 @@ class EventBasedCalculator(base.HazardCalculator):
             return {}
         else:  # scenario
             self._read_scenario_ruptures()
+            self.store_rlz_info({})  # store full_lt, weights
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])

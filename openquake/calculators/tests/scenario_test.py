@@ -49,7 +49,6 @@ class ScenarioTestCase(CalculatorTestCase):
         gmfa = group_array(gmfdata, 'sid')
         gmvs0 = gmfa[0]['gmv'][:, 0]
         gmvs1 = gmfa[1]['gmv'][:, 0]
-        import pdb; pdb.set_trace()
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmvs0, gmvs1)
         gmvs_within_range_snd = count_close(snd_value, gmvs0, gmvs1)

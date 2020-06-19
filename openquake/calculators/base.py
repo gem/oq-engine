@@ -621,7 +621,7 @@ class HazardCalculator(BaseCalculator):
                     oq, haz_sitecol, self.crmodel.loss_types))
             if len(discarded):
                 self.datastore['discarded'] = discarded
-                if hasattr(self, 'rup'):
+                if 'scenario' in oq.calculation_mode:
                     # this is normal for the case of scenario from rupture
                     logging.info('%d assets were discarded because too far '
                                  'from the rupture; use `oq show discarded` '
