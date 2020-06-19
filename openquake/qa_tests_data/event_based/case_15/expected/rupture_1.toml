@@ -4,6 +4,7 @@ rake = 90.0
 hypo = [ 146.02499, 42.89, 25.8,]
 trt = "Subduction Interface - North East Correction"
 code = 25
+n_occ = "1"
 occurrence_rate = nan
 rupture_cls = "NonParametricProbabilisticRupture"
 surface_cls = "GriddedSurface"

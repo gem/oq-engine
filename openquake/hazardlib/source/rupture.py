@@ -300,6 +300,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
                'hypo': hypo,
                'trt': self.tectonic_region_type,
                'code': self.code,
+               'n_occ': self.multiplicity,
                'occurrence_rate': self.occurrence_rate,
                'rupture_cls': self.__class__.__name__,
                'surface_cls': self.surface.__class__.__name__,
