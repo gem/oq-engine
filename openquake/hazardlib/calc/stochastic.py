@@ -107,6 +107,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
     geoms = []
     nbytes = 0
     for ebrupture in ebruptures:
+        assert ebrupture.n_occ < TWO16, ebrupture.n_occ
         rup = ebrupture.rupture
         mesh = surface_to_array(rup.surface)
         sy, sz = mesh.shape[1:]  # sanity checks;  sx == 3
