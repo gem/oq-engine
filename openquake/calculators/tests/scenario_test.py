@@ -20,7 +20,7 @@ from numpy.testing import assert_almost_equal as aae
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_9, case_10, case_11, case_12)
+    case_9, case_10, case_11, case_12, case_13)
 from openquake.baselib.general import group_array
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
@@ -150,3 +150,8 @@ class ScenarioTestCase(CalculatorTestCase):
         gmf_data, sig_eps, sitemesh = out['gmf_data', 'csv']
         self.assertEqualFiles('gmf.csv', gmf_data)
         self.assertEqualFiles('sig_eps.csv', sig_eps)
+
+    def test_case_13(self):
+        # multi-rupture scenario
+        self.run_calc(case_13.__file__, 'job.ini')
+        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 50)
