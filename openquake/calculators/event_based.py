@@ -229,6 +229,7 @@ class EventBasedCalculator(base.HazardCalculator):
         fake = logictree.FullLogicTree.fake(gsim_lt)
         self.realizations = fake.get_realizations()
         self.datastore['full_lt'] = fake
+        self.store_rlz_info({})  # store weights
         self.save_params()
         calc.RuptureImporter(self.datastore).import_array(rup_array)
         mesh = surface_to_array(self.rup.surface).transpose(1, 2, 0).flatten()
@@ -253,7 +254,6 @@ class EventBasedCalculator(base.HazardCalculator):
             return {}
         else:  # scenario
             self._read_scenario_ruptures()
-            self.store_rlz_info({})  # store full_lt, weights
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
