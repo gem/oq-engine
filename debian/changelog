@@ -1,10 +1,10 @@
   [Michele Simionato]
+  * Unified the scenario calculator with the event based one, with
+    minor differences in the numbers akin to a change of seed
   * Fixed a bug in event based when a rupture occurs more than 65535 times
   * Added a demo EventBasedDamage
   * Fixed bug in event_based_damage: the number of buildings in no damage
     state was incorrect
-  * Changed the rlz->events association in scenario calculations to be
-    consistent with event based
   * Added commands `oq nrml_to csv` and  `oq nrml_to gpkg`
   * Supported year and ses_id >= 65536 in event based
 

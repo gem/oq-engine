@@ -163,6 +163,8 @@ class GmfComputer(object):
                     for sid, gmv in zip(sids, gmf):
                         if gmv.sum():
                             data.append((sid, eid, gmv))
+                        # gmv can be zero due to the minimum_intensity, coming
+                        # from the job.ini or from the vulnerability functions
                 n += e
         m = (len(min_iml),)
         d = numpy.array(data, [('sid', U32), ('eid', U32), ('gmv', (F32, m))])
