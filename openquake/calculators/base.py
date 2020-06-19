@@ -20,7 +20,6 @@ import re
 import sys
 import abc
 import pdb
-import json
 import logging
 import operator
 import itertools
@@ -36,11 +35,10 @@ from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile, site
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.hazardlib.calc.stochastic import BaseRupture, rupture_dt
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, util, calc
+from openquake.commonlib import readinput, logictree, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -1048,49 +1046,6 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
         offset += n
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
-
-
-# this is really fast
-def _rup_array(array_of_ruptures):
-    if not BaseRupture._code:
-        BaseRupture.init()  # initialize rupture codes
-
-    rups = []
-    geoms = []
-    n_occ = 1
-    for u, row in enumerate(array_of_ruptures):
-        hypo = row['lon'], row['lat'], row['dep']
-        dic = json.loads(row['extra'])
-        mesh = F32(dic['mesh'])
-        s1, s2 = mesh.shape[1:]
-        rec = numpy.zeros(1, rupture_dt)[0]
-        rec['serial'] = row['serial']
-        rec['minlon'] = minlon = mesh[0].min()
-        rec['minlat'] = minlat = mesh[1].min()
-        rec['maxlon'] = maxlon = mesh[0].max()
-        rec['maxlat'] = maxlat = mesh[1].max()
-        rec['mag'] = row['mag']
-        rec['hypo'] = hypo
-        rate = row['occurrence_rate']
-        tup = (u, row['serial'], 'no-source', row['grp_id'],
-               row['code'], n_occ, row['mag'], row['rake'], rate,
-               minlon, minlat, maxlon, maxlat, hypo, u, s1, s2, 0, 0)
-        rups.append(tup)
-        geoms.append(mesh.flatten())
-    if not rups:
-        return ()
-    dic = dict(geom=numpy.array(geoms, object))
-    # NB: PMFs for nonparametric ruptures are missing
-    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
-
-
-def import_rups(dstore, fname):
-    """
-    Import in the datastore a CSV file with ruptures
-    """
-    aw = hdf5.read_csv(fname, rupture.rupture_dt)
-    imp = calc.RuptureImporter(dstore)
-    imp.import_array(_rup_array(aw.array))
 
 
 def import_gmfs(dstore, fname, sids):

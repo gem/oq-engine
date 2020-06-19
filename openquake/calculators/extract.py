@@ -1295,8 +1295,7 @@ def extract_ruptures(dstore, what):
     for rgetter in getters.gen_rgetters(dstore):
         rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
                 for proxy in rgetter.get_proxies(min_mag)]
-        arr = rupture.to_array(rups)
-        arr['grp_id'] = rgetter.grp_id
+        arr = rupture.to_csv_array(rups)
         if first:
             header = None
             comment = dict(trts=trts)

@@ -274,7 +274,7 @@ class RuptureImporter(object):
             sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
             for grp_id in self.rlzs_by_gsim_grp}
 
-    def import_array(self, rup_array):
+    def import_rups(self, rup_array):
         """
         Import an array of ruptures in the proper format
         """

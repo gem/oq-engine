@@ -154,7 +154,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.store_source_info(calc_times)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
-            imp.import_array(self.datastore.getitem('ruptures')[()])
+            imp.import_rups(self.datastore.getitem('ruptures')[()])
 
     def agg_dicts(self, acc, result):
         """
@@ -215,7 +215,7 @@ class EventBasedCalculator(base.HazardCalculator):
                                    {'maximum_distance': oq.maximum_distance,
                                     'filter_distance': oq.filter_distance})
         if oq.inputs['rupture_model'].endswith('.csv'):
-            base.import_rups(self.datastore, oq.inputs['rupture_model'])
+            readinput.get_ruptures(oq.inputs['rupture_model'])
         n_occ = numpy.array([oq.number_of_ground_motion_fields])
         ebr = EBRupture(self.rup, 0, 0, n_occ)
         ebr.e0 = 0
@@ -231,7 +231,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()
-        calc.RuptureImporter(self.datastore).import_array(rup_array)
+        calc.RuptureImporter(self.datastore).import_rups(rup_array)
         mesh = surface_to_array(self.rup.surface).transpose(1, 2, 0).flatten()
         hdf5.extend(self.datastore['rupgeoms'], numpy.array([mesh], object))
 

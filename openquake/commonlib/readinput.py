@@ -20,6 +20,7 @@ import re
 import ast
 import csv
 import copy
+import json
 import zlib
 import shutil
 import zipfile
@@ -41,6 +42,7 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
@@ -570,6 +572,44 @@ def get_gsims(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     return [rlz.value[0] for rlz in get_gsim_lt(oqparam)]
+
+
+def get_ruptures(fname_csv):
+    """
+    Read ruptures in CSV format and return an ArrayWrapper
+    """
+    if not rupture.BaseRupture._code:
+        rupture.BaseRupture.init()  # initialize rupture codes
+    code = rupture.BaseRupture.str2code
+    aw = hdf5.read_csv(fname_csv, rupture.rupture_dt)
+    trts = aw.trts
+    rups = []
+    geoms = []
+    n_occ = 1
+    for u, row in enumerate(aw.array):
+        hypo = row['lon'], row['lat'], row['dep']
+        dic = json.loads(row['extra'])
+        mesh = F32(dic['mesh'])
+        s1, s2 = mesh.shape[1:]
+        rec = numpy.zeros(1, rupture_dt)[0]
+        rec['serial'] = row['serial']
+        rec['minlon'] = minlon = mesh[0].min()
+        rec['minlat'] = minlat = mesh[1].min()
+        rec['maxlon'] = maxlon = mesh[0].max()
+        rec['maxlat'] = maxlat = mesh[1].max()
+        rec['mag'] = row['mag']
+        rec['hypo'] = hypo
+        rate = row['occurrence_rate']
+        tup = (u, row['serial'], 'no-source', trts.index(row['trt']),
+               code[row['code']], n_occ, row['mag'], row['rake'], rate,
+               minlon, minlat, maxlon, maxlat, hypo, u, s1, s2, 0, 0)
+        rups.append(tup)
+        geoms.append(mesh.flatten())
+    if not rups:
+        return ()
+    dic = dict(geom=numpy.array(geoms, object))
+    # NB: PMFs for nonparametric ruptures are missing
+    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
 def get_rupture(oqparam):
