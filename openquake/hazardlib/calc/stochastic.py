@@ -87,7 +87,7 @@ def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
 
 rupture_dt = numpy.dtype([
     ('id', U32), ('serial', U32), ('source_id', '<S16'), ('grp_id', U16),
-    ('code', U8), ('n_occ', U16), ('mag', F32), ('rake', F32),
+    ('code', U8), ('n_occ', U32), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
     ('hypo', (F32, 3)), ('geom_id', U32), ('s1', U16), ('s2', U16),
@@ -107,7 +107,6 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
     geoms = []
     nbytes = 0
     for ebrupture in ebruptures:
-        assert ebrupture.n_occ < TWO16, ebrupture.n_occ
         rup = ebrupture.rupture
         mesh = surface_to_array(rup.surface)
         sy, sz = mesh.shape[1:]  # sanity checks;  sx == 3
