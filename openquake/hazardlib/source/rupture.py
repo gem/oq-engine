@@ -52,6 +52,7 @@ rupture_dt = numpy.dtype([('serial', U32),
                           ('lon', F32),
                           ('lat', F32),
                           ('dep', F32),
+                          ('multiplicity', U32),
                           ('trt', hdf5.vstr),
                           ('kind', hdf5.vstr),
                           ('mesh', hdf5.vstr),
@@ -76,6 +77,7 @@ def to_csv_array(ruptures):
         rec['lon'] = rup.hypocenter.x
         rec['lat'] = rup.hypocenter.y
         rec['dep'] = rup.hypocenter.z
+        rec['multiplicity'] = rup.multiplicity
         rec['trt'] = rup.tectonic_region_type
         rec['kind'] = ' '.join(cls.__name__ for cls in code2cls[rup.code])
         rec['mesh'] = json.dumps(
@@ -107,32 +109,32 @@ def from_array(aw):
     return rups
 
 
-def _get_rupture(dic, geom=None, trt=None):
-    # dic: a dictionary or a record
-    # geom: if any, an array with fields lon, lat, depth
+def _get_rupture(rec, geom=None, trt=None):
+    # rec: a dictionary or a record
+    # geom: if any, an array of floats32 convertible into a mesh
     if not code2cls:
         code2cls.update(BaseRupture.init())
     if geom is None:
-        lons = dic['lons']
+        lons = rec['lons']
         mesh = numpy.zeros((3, len(lons), len(lons[0])), F32)
-        mesh[0] = dic['lons']
-        mesh[1] = dic['lats']
-        mesh[2] = dic['depths']
+        mesh[0] = rec['lons']
+        mesh[1] = rec['lats']
+        mesh[2] = rec['depths']
     else:
-        mesh = geom.reshape(dic['s1'], dic['s2'], 3).transpose(2, 0, 1)
-    rupture_cls, surface_cls = code2cls[dic['code']]
+        mesh = geom.reshape(rec['s1'], rec['s2'], 3).transpose(2, 0, 1)
+    rupture_cls, surface_cls = code2cls[rec['code']]
     rupture = object.__new__(rupture_cls)
-    rupture.rup_id = dic['serial']
+    rupture.rup_id = rec['serial']
     rupture.surface = object.__new__(surface_cls)
-    rupture.mag = dic['mag']
-    rupture.rake = dic['rake']
-    rupture.hypocenter = geo.Point(*dic['hypo'])
-    rupture.occurrence_rate = dic['occurrence_rate']
+    rupture.mag = rec['mag']
+    rupture.rake = rec['rake']
+    rupture.hypocenter = geo.Point(*rec['hypo'])
+    rupture.occurrence_rate = rec['occurrence_rate']
     try:
-        rupture.probs_occur = dic['probs_occur']
-    except (KeyError, ValueError):  # dic can be a numpy record
+        rupture.probs_occur = rec['probs_occur']
+    except (KeyError, ValueError):  # rec can be a numpy record
         pass
-    rupture.tectonic_region_type = trt or dic['trt']
+    rupture.tectonic_region_type = trt or rec['trt']
     if surface_cls is geo.PlanarSurface:
         rupture.surface = geo.PlanarSurface.from_array(
             mesh[:, 0, :])
@@ -149,6 +151,7 @@ def _get_rupture(dic, geom=None, trt=None):
         # fault surface, strike and dip will be computed
         rupture.surface.strike = rupture.surface.dip = None
         rupture.surface.__init__(RectangularMesh(*mesh))
+    rupture.multiplicity = rec['n_occ']
     return rupture
 
 
