@@ -220,43 +220,6 @@ def make_uhs(hmap, info):
     return uhs
 
 
-class RuptureSerializer(object):
-    """
-    Serialize event based ruptures on an HDF5 files. Populate the datasets
-    `ruptures` and `sids`.
-    """
-    def __init__(self, datastore):
-        self.datastore = datastore
-        self.nbytes = 0
-        self.nruptures = 0
-        datastore.create_dset('ruptures', calc.stochastic.rupture_dt,
-                              attrs={'nbytes': 0})
-        datastore.create_dset('rupgeoms', hdf5.vfloat32)
-
-    def save(self, rup_array):
-        """
-         Store the ruptures in array format.
-        """
-        n = len(rup_array)
-        rup_array['id'] = numpy.arange(self.nruptures, self.nruptures + n)
-        self.nruptures += n
-        hdf5.extend(self.datastore['ruptures'], rup_array)
-        hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
-        # NB: PMFs for nonparametric ruptures are not stored, but they are
-        # not needed after the ruptures have been sampled
-        self.datastore.flush()
-
-    def close(self):
-        """
-        Save information about the rupture codes as attributes of the
-        'ruptures' dataset.
-        """
-        codes = numpy.unique(self.datastore['ruptures']['code'])
-        attr = {'code_%d' % code: ' '.join(
-            cls.__name__ for cls in code2cls[code]) for code in codes}
-        self.datastore.set_attrs('ruptures', **attr)
-
-
 class RuptureImporter(object):
     """
     Import an array of ruptures correctly, i.e. by populating the datasets
