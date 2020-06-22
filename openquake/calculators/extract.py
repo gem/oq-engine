@@ -1000,20 +1000,6 @@ def _get(dstore, name):
         return dstore[name + '-rlzs'], ['mean']
 
 
-@extract.add('rupture')
-def extract_rupture(dstore, rup_id):
-    """
-    Extract information about the given event index.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/rupture/1066
-    """
-    ridx = list(dstore['ruptures']['id']).index(int(rup_id))
-    [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
-    [proxy] = getter.get_proxies()
-    ebr = proxy.to_ebr(getter.trt, getter.samples)
-    return ArrayWrapper((), ebr.rupture.todict())
-
-
 @extract.add('event_info')
 def extract_event_info(dstore, eidx):
     """

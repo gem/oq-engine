@@ -142,28 +142,23 @@ PointSources/AreaSources/MultiPointSources, fault sources are
 untouched.
 
 
-Ruptures in TOML format
+Ruptures in CSV format
 -------------------------------------------
 
-Since engine v3.8 there is a way to serialize ruptures in
-TOML_ format. The command to give is::
+Since engine v3.10 there is a way to serialize ruptures in
+CSV format. The command to give is::
   
-  $ oq extract rupture/<rup_id> <calc_id>`
+  $ oq extract ruptures?min_mag=<mag> <calc_id>`
 
 For instance, assuming there is an event based calculation with ID 42,
-we can extract the first rupture in the datastore with ``oq extract
-rupture/0 42``: this will generate a file named ``rupture-0_42.txt``. The
-extension is `.txt` so that it can be open with any text editor, but the
-format is actually TOML (the engine will accept both ``.txt`` and ``.toml``
-extensions). Then it is possible to run scenario
+we can extract the ruptures in the datastore with magnitude larger than
+6 with ``oq extract ruptures?min_mag=6 42``: this will generate a CSV file.
+Then it is possible to run scenario
 calculations starting from that rupture by simply setting
 
-``rupture_model_file = rupture-0_42.txt``
+``rupture_model_file = ruptures-min_mag=6_42.csv``
 
-in the ``job.ini`` file. There is an example in the test
-``openquake.qa_tests_data.event_based.case_15``.
-
-.. _TOML: https://github.com/toml-lang/toml
+in the ``job.ini`` file.
 
 
 ``max_sites_disagg``
