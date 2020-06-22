@@ -536,18 +536,6 @@ def get_ebruptures(dstore):
     return ebrs
 
 
-def get_rupdict(dstore):
-    """
-    :returns: a dictionary rup_id->rup_dict
-    """
-    dic = {}
-    for i, ebr in enumerate(get_ebruptures(dstore)):
-        dic['rup_%s' % i] = d = ebr.rupture.todict()
-        for attr in ['source_id', 'grp_id', 'n_occ', 'samples']:
-            d[attr] = int(getattr(ebr, attr))
-    return dic
-
-
 # this is never called directly; gen_rupture_getters is used instead
 class RuptureGetter(object):
     """

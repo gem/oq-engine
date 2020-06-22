@@ -25,7 +25,6 @@ import numpy
 import math
 import itertools
 import json
-import toml
 from openquake.baselib import general, hdf5
 from openquake.hazardlib import geo, contexts
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -155,22 +154,6 @@ def _get_rupture(rec, geom=None, trt=None):
     return rupture
 
 
-def from_toml(toml_str):
-    """
-    :param toml_str: a string in TOML format
-    :returns: a rupture instance
-    """
-    return _get_rupture(toml.loads(toml_str))
-
-
-def from_json(json_str):
-    """
-    :param json_str: a string in JSON format
-    :returns: a rupture instance
-    """
-    return _get_rupture(json.loads(json_str))
-
-
 def float5(x):
     # a float with 5 digits
     return round(float(x), 5)
@@ -192,14 +175,6 @@ def _fixfloat32(dic):
                 dic[k] = [float5(x) for x in v]
             else:
                 raise NotImplementedError
-
-
-def to_toml(rup):
-    """
-    :param rup: a rupture instance
-    :returns: a TOML string
-    """
-    return toml.dumps(rup.todict())
 
 
 def to_checksum8(cls1, cls2):
@@ -284,33 +259,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
 
     get_probability_no_exceedance = (
         contexts.RuptureContext.get_probability_no_exceedance)
-
-    def todict(self):
-        """
-        :returns: a representation of the rupture as a dict
-        """
-        if not code2cls:
-            code2cls.update(BaseRupture.init())
-        hypo = self.hypocenter.x, self.hypocenter.y, self.hypocenter.z
-        mesh = surface_to_array(self.surface)  # shape (3, sy, sz)
-        sy, sz = mesh.shape[1:]
-        dic = {'serial': int(self.rup_id),
-               'mag': self.mag,
-               'rake': self.rake,
-               'hypo': hypo,
-               'trt': self.tectonic_region_type,
-               'code': self.code,
-               'n_occ': self.multiplicity,
-               'occurrence_rate': self.occurrence_rate,
-               'rupture_cls': self.__class__.__name__,
-               'surface_cls': self.surface.__class__.__name__,
-               'lons': mesh[0],
-               'lats': mesh[1],
-               'depths': mesh[2]}
-        if hasattr(self, 'probs_occur'):
-            dic['probs_occur'] = self.probs_occur
-        _fixfloat32(dic)
-        return dic
 
     def sample_number_of_occurrences(self, n=1):
         """
