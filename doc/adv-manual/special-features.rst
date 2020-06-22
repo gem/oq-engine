@@ -148,11 +148,11 @@ Ruptures in CSV format
 Since engine v3.10 there is a way to serialize ruptures in
 CSV format. The command to give is::
   
-  $ oq extract ruptures?min_mag=<mag> <calc_id>`
+  $ oq extract "ruptures?min_mag=<mag>" <calc_id>`
 
 For instance, assuming there is an event based calculation with ID 42,
 we can extract the ruptures in the datastore with magnitude larger than
-6 with ``oq extract ruptures?min_mag=6 42``: this will generate a CSV file.
+6 with ``oq extract "ruptures?min_mag=6" 42``: this will generate a CSV file.
 Then it is possible to run scenario
 calculations starting from that rupture by simply setting
 
