@@ -29,7 +29,7 @@ from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.calc.stochastic import get_rup_array
+from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.geo.mesh import surface_to_array
 from openquake.commonlib import calc, util, logs, readinput, logictree
@@ -93,7 +93,8 @@ class EventBasedCalculator(base.HazardCalculator):
         else:
             self.srcfilter = nofilter
         if not self.datastore.parent:
-            self.rupser = calc.RuptureSerializer(self.datastore)
+            self.datastore.create_dset('ruptures', rupture_dt)
+            self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
 
     def acc0(self):
         """
@@ -133,16 +134,23 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
+        self.nruptures = 0
         for dic in smap:
+            rup_array = dic['rup_array']
+            if len(rup_array) == 0:
+                continue
             if dic['calc_times']:
                 calc_times += dic['calc_times']
             if dic['eff_ruptures']:
                 eff_ruptures += dic['eff_ruptures']
-            if dic['rup_array']:
-                with mon:
-                    self.rupser.save(dic['rup_array'])
-        self.rupser.close()
-        if not self.rupser.nruptures:
+            with mon:
+                n = len(rup_array)
+                rup_array['id'] = numpy.arange(
+                    self.nruptures, self.nruptures + n)
+                self.nruptures += n
+                hdf5.extend(self.datastore['ruptures'], rup_array)
+                hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
+        if len(self.datastore['ruptures']) == 0:
             if os.environ.get('OQ_SAMPLE_SOURCES'):
                 raise SystemExit(0)  # success even with no ruptures
             raise RuntimeError('No ruptures were generated, perhaps the '
