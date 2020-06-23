@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed `noDamageLimit` not being honored in continuous fragility functions
   * Unified the scenario calculator with the event based one, with
     minor differences in the numbers akin to a change of seed
   * Fixed a bug in event based when a rupture occurs more than 65535 times
