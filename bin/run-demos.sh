@@ -29,9 +29,6 @@ oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --reuse-hazard
 # extract disaggregation data
 oq extract "disagg_layer?" 14
 
-# extract -1
-oq extract sitecol -1 --local
-
 # do something with the generated data
 oq engine --lhc
 MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' -1
