@@ -1265,14 +1265,13 @@ def println(msg):
     sys.stdout.flush()
 
 
-def debug(templ, *args):
+def debug(line):
     """
     Append a debug line to the file /tmp/debug.txt
     """
-    msg = templ % args if args else templ
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
-        f.write(msg + '\n')
+        f.write(line + '\n')
 
 
 builtins.debug = debug

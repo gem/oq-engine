@@ -704,8 +704,12 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                 continue
             break
         header = first.strip().split(sep)
+        if isinstance(dtypedict, dict):
+            dt = build_dt(dtypedict, header)
+        else:
+            dt = dtypedict
         try:
-            arr = _read_csv(f, build_dt(dtypedict, header))
+            arr = _read_csv(f, dt)
         except KeyError:
             raise KeyError('Missing None -> default in dtypedict')
         except Exception as exc:

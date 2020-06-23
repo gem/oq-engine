@@ -16,13 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import warnings
+import logging
 import numpy
 
-from openquake.baselib import hdf5
-from openquake.hazardlib.source.rupture import BaseRupture
+from openquake.baselib import hdf5, parallel
+from openquake.baselib.general import get_indices
+from openquake.hazardlib.source import rupture
 from openquake.hazardlib import calc, probability_map
+from openquake.commonlib import util
 
 TWO16 = 2 ** 16
+TWO32 = numpy.float64(2 ** 32)
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
@@ -35,7 +39,7 @@ F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64
 
-code2cls = BaseRupture.init()
+code2cls = rupture.BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
 
@@ -216,39 +220,113 @@ def make_uhs(hmap, info):
     return uhs
 
 
-class RuptureSerializer(object):
+class RuptureImporter(object):
     """
-    Serialize event based ruptures on an HDF5 files. Populate the datasets
-    `ruptures` and `sids`.
+    Import an array of ruptures correctly, i.e. by populating the datasets
+    ruptures, rupgeoms, events.
     """
-    def __init__(self, datastore):
-        self.datastore = datastore
-        self.nbytes = 0
-        self.nruptures = 0
-        datastore.create_dset('ruptures', calc.stochastic.rupture_dt,
-                              attrs={'nbytes': 0})
-        datastore.create_dset('rupgeoms', calc.stochastic.point3d)
+    def __init__(self, dstore):
+        self.datastore = dstore
+        self.oqparam = dstore['oqparam']
+        full_lt = dstore['full_lt']
+        self.trt_by_grp = full_lt.trt_by_grp
+        self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
+        self.samples_by_grp = full_lt.get_samples_by_grp()
+        self.num_rlzs_by_grp = {
+            grp_id:
+            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
+            for grp_id in self.rlzs_by_gsim_grp}
 
-    def save(self, rup_array):
+    def import_rups(self, rup_array):
         """
-         Store the ruptures in array format.
+        Import an array of ruptures in the proper format
         """
-        self.nruptures += len(rup_array)
-        offset = len(self.datastore['rupgeoms'])
-        rup_array.array['gidx1'] += offset
-        rup_array.array['gidx2'] += offset
-        hdf5.extend(self.datastore['ruptures'], rup_array)
-        hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
-        # NB: PMFs for nonparametric ruptures are not stored, but they are
-        # not needed after the ruptures have been sampled
-        self.datastore.flush()
+        logging.info('Reordering the ruptures and storing the events')
+        # order the ruptures by serial
+        rup_array.sort(order='serial')
+        nr = len(rup_array)
+        assert len(numpy.unique(rup_array['serial'])) == nr  # sanity
+        rup_array['geom_id'] = rup_array['id']
+        rup_array['id'] = numpy.arange(nr)
+        self.datastore['ruptures'] = rup_array
+        self.save_events(rup_array)
 
-    def close(self):
+    def save_events(self, rup_array):
         """
-        Save information about the rupture codes as attributes of the
-        'ruptures' dataset.
+        :param rup_array: an array of ruptures with fields grp_id
+        :returns: a list of RuptureGetters
         """
-        codes = numpy.unique(self.datastore['ruptures']['code'])
-        attr = {'code_%d' % code: ' '.join(
-            cls.__name__ for cls in code2cls[code]) for code in codes}
-        self.datastore.set_attrs('ruptures', **attr)
+        from openquake.calculators.getters import RuptureGetter, gen_rgetters
+        # this is very fast compared to saving the ruptures
+        eids = rupture.get_eids(
+            rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
+        self.check_overflow(len(eids))  # check the number of events
+        events = numpy.zeros(len(eids), rupture.events_dt)
+        # when computing the events all ruptures must be considered,
+        # including the ones far away that will be discarded later on
+        rgetters = gen_rgetters(self.datastore)
+        # build the associations eid -> rlz sequentially or in parallel
+        # this is very fast: I saw 30 million events associated in 1 minute!
+        logging.info('Building assocs event_id -> rlz_id for {:_d} events'
+                     ' and {:_d} ruptures'.format(len(events), len(rup_array)))
+        if len(events) < 1E5:
+            it = map(RuptureGetter.get_eid_rlz, rgetters)
+        else:
+            it = parallel.Starmap(RuptureGetter.get_eid_rlz,
+                                  ((rgetter,) for rgetter in rgetters),
+                                  progress=logging.debug,
+                                  h5=self.datastore.hdf5)
+        i = 0
+        for eid_rlz in it:
+            for er in eid_rlz:
+                events[i] = er
+                i += 1
+                if i >= TWO32:
+                    raise ValueError('There are more than %d events!' % i)
+        events.sort(order='rup_id')  # fast too
+        # sanity check
+        n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
+        assert n_unique_events == len(events), (n_unique_events, len(events))
+        events['id'] = numpy.arange(len(events))
+        # set event year and event ses starting from 1
+        nses = self.oqparam.ses_per_logic_tree_path
+        extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
+        numpy.random.seed(self.oqparam.ses_seed)
+        if self.oqparam.investigation_time:
+            itime = int(self.oqparam.investigation_time)
+            extra['year'] = numpy.random.choice(itime, len(events)) + 1
+        extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
+        self.datastore['events'] = util.compose_arrays(events, extra)
+        eindices = get_indices(events['rup_id'])
+        arr = numpy.array(list(eindices.values()))[:, 0, :]
+        self.datastore['ruptures']['e0'] = arr[:, 0]
+        self.datastore['ruptures']['e1'] = arr[:, 1]
+
+    def check_overflow(self, E):
+        """
+        Raise a ValueError if the number of sites is larger than 65,536 or the
+        number of IMTs is larger than 256 or the number of ruptures is larger
+        than 4,294,967,296. The limits are due to the numpy dtype used to
+        store the GMFs (gmv_dt). There also a limit of max_potential_gmfs on
+        the number of sites times the number of events, to avoid producing too
+        many GMFs. In that case split the calculation or be smarter.
+        """
+        oq = self.oqparam
+        max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
+        num_ = dict(events=E, imts=len(self.oqparam.imtls))
+        n = len(getattr(self, 'sitecol', ()) or ())
+        num_['sites'] = n
+        if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
+            if n > oq.max_sites_per_gmf:
+                raise ValueError(
+                    'You cannot compute the GMFs for %d > %d sites' %
+                    (n, oq.max_sites_per_gmf))
+            elif n * E > oq.max_potential_gmfs:
+                raise ValueError(
+                    'A GMF calculation with %d sites and %d events is '
+                    'impossibly large' % (n, E))
+        for var in num_:
+            if num_[var] > max_[var]:
+                raise ValueError(
+                    'The %s calculator is restricted to %d %s, got %d' %
+                    (oq.calculation_mode, max_[var], var, num_[var]))
