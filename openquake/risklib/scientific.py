@@ -496,7 +496,7 @@ class VulnerabilityModel(dict):
 # ############################## fragility ############################### #
 
 class FragilityFunctionContinuous(object):
-    # FIXME (lp). Should be re-factored with LogNormalDistribution
+
     def __init__(self, limit_state, mean, stddev):
         self.limit_state = limit_state
         self.mean = mean
