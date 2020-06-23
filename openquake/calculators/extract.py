@@ -1370,8 +1370,6 @@ class WebExtractor(Extractor):
             raise WebAPIError('Not Found: %s' % url)
         elif resp.status_code != 200:
             raise WebAPIError(resp.text)
-        self.status = self.sess.get(
-            '%s/v1/calc/%d/status' % (self.server, calc_id)).json()
         self.oqparam = object.__new__(oqvalidation.OqParam)
         js = bytes(numpy.load(io.BytesIO(resp.content))['json'])
         vars(self.oqparam).update(json.loads(js))
