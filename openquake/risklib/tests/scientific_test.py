@@ -538,13 +538,13 @@ class FragilityFunctionTestCase(unittest.TestCase):
         self.assertEqual(pickle.loads(pickle.dumps(ffd)), ffd)
 
     def test_continuous_pickle(self):
-        ffs = scientific.FragilityFunctionContinuous('LS1', 0, 1)
+        ffs = scientific.FragilityFunctionContinuous('LS1', 0, 1, 0, 2.)
 
         pickle.loads(pickle.dumps(ffs))
 
     def test_call(self):
-        ffs = scientific.FragilityFunctionContinuous('LS1', 0.5, 1)
-        self._close_to(0.26293, ffs(0.1))
+        ffs = scientific.FragilityFunctionContinuous('LS1', 0.5, 1, 0, 2.)
+        self._close_to(0.26293, ffs(numpy.array([0.1])))
 
     def test_discrete_ne(self):
         ffd1 = scientific.FragilityFunctionDiscrete('LS1', [], [])
@@ -661,13 +661,13 @@ class ClassicalDamageTestCase(unittest.TestCase):
             [], imls=hazard_imls, steps_per_interval=None, format='continuous')
         fragility_functions.extend([
             scientific.FragilityFunctionContinuous(
-                'slight', 0.160, 0.104),
+                'slight', 0.160, 0.104, 0, 2.),
             scientific.FragilityFunctionContinuous(
-                'moderate', 0.225, 0.158),
+                'moderate', 0.225, 0.158, 0, 2.),
             scientific.FragilityFunctionContinuous(
-                'extreme', 0.400, 0.300),
+                'extreme', 0.400, 0.300, 0, 2.),
             scientific.FragilityFunctionContinuous(
-                'complete', 0.600, 0.480),
+                'complete', 0.600, 0.480, 0, 2.),
         ])
         hazard_poes = numpy.array([
             0.5917765421,

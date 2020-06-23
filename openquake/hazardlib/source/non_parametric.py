@@ -191,8 +191,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
         lats = numpy.concatenate(
             [rup.surface.mesh.lats.flatten() for rup, pmf in self.data])
         points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
-        points['lon'] = lons
-        points['lat'] = lats
+        points['lon'] = numpy.round(lons, 5)
+        points['lat'] = numpy.round(lats, 5)
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
         return mesh.get_convex_hull()

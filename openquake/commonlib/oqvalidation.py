@@ -317,13 +317,6 @@ class OqParam(valid.ParamSet):
                 self.base_path, self.inputs['gsim_logic_tree'])
             gsim_lt = logictree.GsimLogicTree(path, ['*'])
 
-            # check the number of branchsets
-            branchsets = len(gsim_lt._ltnode)
-            if 'scenario' in self.calculation_mode and branchsets > 1:
-                raise InvalidFile(
-                    '%s: %s for a scenario calculation must contain a single '
-                    'branchset, found %d!' % (job_ini, path, branchsets))
-
             # check the IMTs vs the GSIMs
             self._gsims_by_trt = gsim_lt.values
             for gsims in gsim_lt.values.values():
@@ -500,6 +493,12 @@ class OqParam(valid.ParamSet):
         if 'default' in mini:
             del mini['default']
         return F32([mini.get(imt, 0) for imt in self.imtls])
+
+    def levels_per_imt(self):
+        """
+        :returns: the number of levels per IMT (a.ka. L1)
+        """
+        return len(self.imtls.array) // len(self.imtls)
 
     def set_risk_imtls(self, risk_models):
         """

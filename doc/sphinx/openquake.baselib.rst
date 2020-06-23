@@ -72,11 +72,3 @@ sap
     :members:
     :undoc-members:
     :show-inheritance:
-
-slots
-------------------------------
-
-.. automodule:: openquake.baselib.slots
-    :members:
-    :undoc-members:
-    :show-inheritance:

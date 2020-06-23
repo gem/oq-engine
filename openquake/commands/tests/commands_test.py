@@ -29,6 +29,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib import parallel
 from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
+from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.readinput import get_oqparam
 from openquake.commands.info import info
@@ -46,6 +47,7 @@ from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands.zip import zip as zip_cmd
 from openquake.commands.check_input import check_input
 from openquake.commands.prepare_site_model import prepare_site_model
+from openquake.commands.nrml_to import nrml_to, fiona
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
 from openquake.commands.tests.data import to_reduce
@@ -62,6 +64,8 @@ from openquake.server import manage, dbapi, dbserver
 from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
+NRML_DIR = os.path.dirname(tests.__file__)
+MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
 
 
 class Print(object):
@@ -259,8 +263,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('sitecol', self.calc_id)
-        self.assertEqual(str(p), 'sids,lon,lat,depth,vs30,vs30measured\n'
-                         '0,0.00000,0.00000,-0.10000,8.000000E+02,1')
+        self.assertIn('sids,lon,lat,depth,vs30,vs30measured', str(p))
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
@@ -272,6 +275,11 @@ class RunShowExportTestCase(unittest.TestCase):
             show_attrs('sitecol', self.calc_id)
         self.assertEqual('__pyclass__ openquake.hazardlib.site.SiteCollection',
                          str(p))
+
+    def test_show_oqparam(self):
+        with Print.patch() as p:
+            show('oqparam', self.calc_id)
+        self.assertIn('"inputs": {', str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
@@ -561,6 +569,31 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         with mock.patch('logging.info') as info:
             reduce_sm(calc_id)
         self.assertIn('there are duplicated source IDs', info.call_args[0][0])
+        shutil.rmtree(temp_dir)
+
+
+class NRML2CSVTestCase(unittest.TestCase):
+
+    def test_nrml_to_csv(self):
+        temp_dir = tempfile.mkdtemp()
+        with Print.patch() as p:
+            nrml_to.func('csv', [MIXED_SRC_MODEL], temp_dir, chatty=True)
+        out = str(p)
+        self.assertIn('3D MultiPolygon', out)
+        self.assertIn('3D MultiLineString', out)
+        self.assertIn('Point', out)
+        shutil.rmtree(temp_dir)
+
+    def test_nrml_to_gpkg(self):
+        if not fiona:
+            raise unittest.SkipTest('fiona is missing')
+        temp_dir = tempfile.mkdtemp()
+        with Print.patch() as p:
+            nrml_to.func('gpkg', [MIXED_SRC_MODEL], temp_dir, chatty=True)
+        out = str(p)
+        self.assertIn('3D MultiPolygon', out)
+        self.assertIn('3D MultiLineString', out)
+        self.assertIn('Point', out)
         shutil.rmtree(temp_dir)
 
 

@@ -35,7 +35,7 @@ parallel, and then combine together the results. This is known as a
 of counting the letters in a text, by using the following `count`
 function:
 
-.. python::
+.. code-block:: python
 
   def count(word):
       return collections.Counter(word)

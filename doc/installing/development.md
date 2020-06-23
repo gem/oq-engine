@@ -1,4 +1,4 @@
-# Installing the OpenQuake Engine for development using Python 3.6
+# Installing the OpenQuake Engine for development
 
 To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
 

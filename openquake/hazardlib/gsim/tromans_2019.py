@@ -87,6 +87,7 @@ def get_heteroskedastic_tau(imt, mag):
     """
     Returns the magnitude dependent inter-event variability using the
     model of Abrahamson et al (2014).
+
     :param dict C:
         Coefficients dictionary
     :param float mag:

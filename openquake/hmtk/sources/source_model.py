@@ -93,7 +93,8 @@ class mtkSourceModel(object):
         '''
         return len(self.sources)
 
-    def serialise_to_nrml(self, filename, use_defaults=False):
+    def serialise_to_nrml(self, filename, complex_mesh_spacing=2,
+                          use_defaults=False):
         '''
         Writes the source model to a nrml source model file given by the
         filename
@@ -107,7 +108,8 @@ class mtkSourceModel(object):
             attribute is missing.
         '''
         source_model = self.convert_to_oqhazardlib(
-            PoissonTOM(1.0), 2.0, 2.0, 10.0, use_defaults=use_defaults)
+            PoissonTOM(1.0), 2.0, complex_mesh_spacing, 10.0,
+            use_defaults=use_defaults)
         write_source_model(filename, source_model, name=self.name)
 
     def convert_to_oqhazardlib(

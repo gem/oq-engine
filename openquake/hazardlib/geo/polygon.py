@@ -61,11 +61,21 @@ class Polygon(object):
         self._polygon2d = None
 
     @property
+    def coords(self):
+        """
+        Coordinates of the polygon as a linear ring, rounded to 5 digits
+        """
+        lons = numpy.round(self.lons, 5)
+        lats = numpy.round(self.lats, 5)
+        pairs = list(zip(lons, lats))
+        return pairs + [pairs[0]]
+
+    @property
     def wkt(self):
         """
         Generate WKT (Well-Known Text) to represent this polygon.
         """
-        pairs = ['%s %s' % (lon, lat)
+        pairs = ['%.5f %.5f' % (lon, lat)
                  for lon, lat in zip(self.lons, self.lats)]
         # the polygon must form a closed loop; first and last coord pairs
         # are the same

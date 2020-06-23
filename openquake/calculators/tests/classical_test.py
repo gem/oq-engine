@@ -33,7 +33,7 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42, case_43, case_44, case_45, case_46, case_47, case_48)
+    case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49)
 
 aac = numpy.testing.assert_allclose
 
@@ -42,6 +42,7 @@ def check_disagg_by_src(dstore):
     """
     Make sure that by composing disagg_by_src one gets the hazard curves
     """
+    extract(dstore, 'disagg_by_src?lvl_id=-1')  # check not broken
     mean = dstore.sel('hcurves-stats', stat='mean')[:, 0]  # N, M, L
     dbs = dstore.sel('disagg_by_src')  # N, R, M, L, Ns
     poes = general.pprod(dbs, axis=4)  # N, R, M, L
@@ -220,6 +221,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
+        csv = general.gettemp(view('extreme_sites', self.calc.datastore))
+        self.assertEqualFiles('expected/extreme_sites.csv', csv)
+
         # test extract/hcurves/rlz-0, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
         self.assertEqual(sorted(haz), ['_extra', 'all', 'investigation_time'])
@@ -295,7 +299,7 @@ hazard_uhs-std.csv
         # individual_curves was false
         with self.assertRaises(KeyError) as ctx:
             export(('hcurves/rlz-3', 'csv'), self.calc.datastore)
-        self.assertIn("No 'hcurves-rlzs' found", str(ctx.exception))
+        self.assertIn('hcurves-rlzs', str(ctx.exception))
 
     def test_case_17(self):  # oversampling
         # this is a test with 4 sources A and B with the same ID
@@ -667,3 +671,10 @@ hazard_uhs-std.csv
         # few-sites regime.
         # In the many-sites regime, small magnitude ruptures at distance close
         # to the maximum_distance may be discarded, instead.
+
+    def test_case_49(self):
+        # serious test of amplification + uhs
+        self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.21).csv',
+                               'hcurves-SA(1.057).csv', 'uhs.csv'],
+                              case_49.__file__)
+

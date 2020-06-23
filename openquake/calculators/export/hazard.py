@@ -27,7 +27,6 @@ from openquake.baselib.general import (
     group_array, deprecated, AccumDict, DictArray)
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
@@ -127,7 +126,7 @@ def add_imt(fname, imt):
 
 
 def export_hcurves_by_imt_csv(
-        key, kind, fname, sitecol, array, imtls, comment):
+        key, kind, fname, sitecol, array, imt, imls, comment):
     """
     Export the curves of the given realization into CSV.
 
@@ -135,28 +134,23 @@ def export_hcurves_by_imt_csv(
     :param kind: a string with the kind of output (realization or statistics)
     :param fname: name of the exported file
     :param sitecol: site collection
-    :param array: an array of shape (N, 1, M, L1) and dtype numpy.float32
-    :param imtls: intensity measure types and levels
+    :param array: an array of shape (N, 1, L1) and dtype numpy.float32
+    :param imt: intensity measure type
+    :param imls: intensity measure levels
     :param comment: comment dictionary
     """
     nsites = len(sitecol)
-    fnames = []
-    m = 0
-    for imt, imls in imtls.items():
-        dest = add_imt(fname, imt)
-        lst = [('lon', F32), ('lat', F32), ('depth', F32)]
-        for iml in imls:
-            lst.append(('poe-%.7f' % iml, F32))
-        hcurves = numpy.zeros(nsites, lst)
-        for sid, lon, lat, dep in zip(
-                range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
-            hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, m])
-        comment.update(imt=imt)
-        fnames.append(
-            writers.write_csv(dest, hcurves, comment=comment,
-                              header=[name for (name, dt) in lst]))
-        m += 1
-    return fnames
+    dest = add_imt(fname, imt)
+    lst = [('lon', F32), ('lat', F32), ('depth', F32)]
+    for iml in imls:
+        lst.append(('poe-%.7f' % iml, F32))
+    hcurves = numpy.zeros(nsites, lst)
+    for sid, lon, lat, dep in zip(
+            range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
+        hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
+    comment.update(imt=imt)
+    return writers.write_csv(dest, hcurves, comment=comment,
+                             header=[name for (name, dt) in lst])
 
 
 def hazard_curve_name(dstore, ekey, kind):
@@ -222,16 +216,19 @@ def export_hcurves_csv(ekey, dstore):
                 export_hmaps_csv(ekey, fname, sitemesh,
                                  hmap.flatten().view(hmap_dt), comment))
         elif key == 'hcurves':
-            hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
             # shape (N, R|S, M, L1)
             if 'amplification' in oq.inputs:
                 imtls = DictArray(
                     {imt: oq.soil_intensities for imt in oq.imtls})
             else:
                 imtls = oq.imtls
-            fnames.extend(
-                export_hcurves_by_imt_csv(
-                    ekey, kind, fname, sitecol, hcurves, imtls, comment))
+            for imt, imls in imtls.items():
+                hcurves = extract(
+                    dstore, 'hcurves?kind=%s&imt=%s' % (kind, imt))[kind]
+                fnames.append(
+                    export_hcurves_by_imt_csv(
+                        ekey, kind, fname, sitecol, hcurves, imt, imls,
+                        comment))
     return sorted(fnames)
 
 
@@ -284,7 +281,7 @@ def export_uhs_xml(ekey, dstore):
                 investigation_time=oq.investigation_time, **metadata)
             data = []
             for site, curve in zip(sitemesh, uhs):
-                data.append(UHS(curve[:, p], Location(site)))
+                data.append(UHS(curve[str(poe)], Location(site)))
             writer.serialize(data)
             fnames.append(fname)
     return sorted(fnames)

@@ -595,7 +595,7 @@ class AccumDict(dict):
      >>> acc - 1
      {'a': 1, 'b': 0}
 
-    The multiplication has been defined::
+    The multiplication has been defined:
 
      >>> prob1 = AccumDict(dict(a=0.4, b=0.5))
      >>> prob2 = AccumDict(dict(b=0.5))
@@ -606,7 +606,7 @@ class AccumDict(dict):
      >>> 1.2 * prob1
      {'a': 0.48, 'b': 0.6}
 
-    And even the power::
+    And even the power:
 
     >>> prob2 ** 2
     {'b': 0.25}
@@ -1265,14 +1265,13 @@ def println(msg):
     sys.stdout.flush()
 
 
-def debug(templ, *args):
+def debug(line):
     """
     Append a debug line to the file /tmp/debug.txt
     """
-    msg = templ % args if args else templ
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
-        f.write(msg + '\n')
+        f.write(line + '\n')
 
 
 builtins.debug = debug

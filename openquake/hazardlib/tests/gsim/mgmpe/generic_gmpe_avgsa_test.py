@@ -94,8 +94,8 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         stdt = [const.StdDev.TOTAL]
         expected_mean = np.array([-1.54075829, -2.0354957,
                                   -3.01841966, -4.01658804])
-        expected_stddev = np.array([0.61777807, 0.61777807,
-                                    0.61777807, 0.61777807])
+        expected_stddev = np.array([0.5532021, 0.5532021,
+                                    0.5532021, 0.5532021])
         imtype = imt.AvgSA()
         mean, [stddev] = gmm.get_mean_and_stddevs(sctx, rctx, dctx,
                                                   imtype, stdt)

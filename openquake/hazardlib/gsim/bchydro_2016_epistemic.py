@@ -172,8 +172,7 @@ class FABATaperSigmoid(FABATaperStep):
     Implements tapering of x according to a sigmoid function
     (Note that this only tends to 1, 0 it does not reach it)
 
-    :param float c:
-    `Bandwidth' (km) of the sigmoid function
+    :param float c: Bandwidth in km of the sigmoid function
     """
     def __init__(self, **kwargs):
         super().__init__()
@@ -200,7 +199,7 @@ class FABATaperGaussian(FABATaperStep):
     Implements tapering of x according to a truncated Gaussian function
 
     :param float sigma:
-        `Bandwidth' of function (according to a Gaussian standard deviation)
+        Bandwidth of function (according to a Gaussian standard deviation)
     :param float a:
         Initiation point of tapering (km)
     :param float b:
@@ -249,16 +248,16 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
     Introduces several configurable parameters:
 
     :param float theta6_adjustment:
-    The amount to increase or decrease the theta6 - should be +0.0015 (for
-    slower attenuation) and -0.0015 (for faster attenuation)
+        The amount to increase or decrease the theta6 - should be +0.0015 (for
+        slower attenuation) and -0.0015 (for faster attenuation)
 
     :param float sigma_mu_epsilon:
-    The number of standard deviations above or below the mean to apply the
-    statistical uncertainty sigma_mu term.
+        The number of standard deviations above or below the mean to apply the
+        statistical uncertainty sigma_mu term.
 
     :param faba_model:
-    Choice of model for the forearc/backarc tapering function, choice of
-    {"Step", "Linear", "SFunc", "Sigmoid", "Gaussian"}
+        Choice of model for the forearc/backarc tapering function, choice of
+        {"Step", "Linear", "SFunc", "Sigmoid", "Gaussian"}
 
     Depending on the choice of taper model, additional parameters may be passed
     """

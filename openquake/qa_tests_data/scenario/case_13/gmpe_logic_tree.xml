@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+xmlns="http://openquake.org/xmlns/nrml/0.4">
+<logicTree logicTreeID='lt1'>
+  
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2" applyToTectonicRegionType="Stable Shallow Crust">
+    
+    <logicTreeBranch branchID="b2_1">
+      <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
+      <uncertaintyWeight>0.20</uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="b2_2">
+      <uncertaintyModel>CauzziFaccioli2008</uncertaintyModel>
+      <uncertaintyWeight>0.20</uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="b2_3">
+      <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+      <uncertaintyWeight>0.20</uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="b2_4">
+      <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
+      <uncertaintyWeight>0.20</uncertaintyWeight>
+    </logicTreeBranch>
+    
+    <logicTreeBranch branchID="b2_5">
+      <uncertaintyModel>Campbell2003SHARE</uncertaintyModel>
+      <uncertaintyWeight>0.20</uncertaintyWeight>
+    </logicTreeBranch>
+    
+  </logicTreeBranchSet>
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4" applyToTectonicRegionType="Volcanic">
+    <logicTreeBranch branchID="b4_1">
+      <uncertaintyModel>FaccioliEtAl2010</uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>
