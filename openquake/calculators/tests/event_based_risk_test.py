@@ -16,19 +16,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
-import unittest
+import logging
+from unittest import mock
 import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
+from openquake.commonlib import logs
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_6c, case_master, case_miriam,
-    occupants, case_1f, case_1g, case_7a)
+    occupants, case_1f, case_1g, case_7a, recompute)
 
 
 def aae(data, expected):
@@ -442,3 +444,16 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
+
+    def test_recompute(self):
+        # test recomputing aggregate loss curves with post_risk
+        self.run_calc(recompute.__file__, 'job.ini')
+        parent = self.calc.datastore
+        # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
+        oq = parent['oqparam']
+        # oq.__dict__['aggregate_by'] = ['NAME_1']
+        job_id = logs.init('nojob', logging.INFO)  # requires the DbServer
+        prc = PostRiskCalculator(oq, job_id)
+        prc.datastore.parent = parent
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
+            prc.run()
