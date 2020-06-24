@@ -53,8 +53,8 @@ class CY14SiteTermTestCase(unittest.TestCase):
         self.assertTrue(mgmpe.REQUIRES_DISTANCES == expected,
                         msg='The assigned distance types are wrong')
 
-    def test_gm_calculation_soilBC(self):
-        """ Test mean and std calculation - CY14 on BC soil"""
+    def test_gm_calculation_soil_reference(self):
+        """ Test mean and std calculation - CY14 on reference rock"""
 
         # Modified gmpe
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
@@ -84,3 +84,76 @@ class CY14SiteTermTestCase(unittest.TestCase):
         # same results of the original gmpe
         np.testing.assert_almost_equal(mean, mean_expected)
         np.testing.assert_almost_equal(stds, stds_expected)
+
+    def test_gm_calculation_soil_BC(self):
+        """ Test mean and std calculation - CY14 on BC soil"""
+
+        # Modified gmpe
+        mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
+
+        # Set parameters
+        sites = Dummy.get_site_collection(4, vs30=760., vs30measured=True,
+                                          z1pt0=0.)
+        rup = Dummy.get_rupture(mag=6.0)
+        rup.dip = 90.
+        rup.ztor = 0.
+        dists = DistancesContext()
+        dists.rrup = np.array([1., 10., 30., 70.])
+        dists.rx = np.array([1., 10., 30., 70.])
+        dists.rjb = np.array([1., 10., 30., 70.])
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL]
+
+        # Compute results
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+
+        # Compute the expected results
+        gmpe = ChiouYoungs2014()
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
+                                                                 dists, imt,
+                                                                 stdt)
+
+        # Test that for reference soil conditions the modified GMPE gives the
+        # same results of the original gmpe
+        np.testing.assert_almost_equal(mean, mean_expected, decimal=7)
+        np.testing.assert_almost_equal(stds, stds_expected, decimal=2)
+
+    def test_gm_calculation_soil(self):
+        """ Test mean and std calculation - CY14 on BC soil"""
+
+        # Modified gmpe
+        mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
+
+        # Set parameters - Setting z1pt0 does not make sense but here we 
+        # want to make sure that the modified gmm provided GM amplified 
+        # by the site term exactly as the original model.
+        sites = Dummy.get_site_collection(4, vs30=400., vs30measured=True,
+                                          z1pt0=0.)
+        rup = Dummy.get_rupture(mag=6.0)
+        rup.dip = 90.
+        rup.ztor = 0.
+        dists = DistancesContext()
+        dists.rrup = np.array([1., 10., 30., 70.])
+        dists.rx = np.array([1., 10., 30., 70.])
+        dists.rjb = np.array([1., 10., 30., 70.])
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL]
+
+        # Compute results
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+
+        # Compute the expected results
+        gmpe = ChiouYoungs2014()
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
+                                                                 dists, imt,
+                                                                 stdt)
+
+        # Test that for reference soil conditions the modified GMPE gives the
+        # same results of the original gmpe
+        np.testing.assert_almost_equal(mean, mean_expected, decimal=7)
+
+        # Here we use a quite large tolerance since in the site term we take 
+        # the std from the calculation of motion on reference rock. This 
+        # does not match the std that the same GMM computes for soft soils 
+        # with the same remaining conditions 
+        np.testing.assert_almost_equal(stds, stds_expected, decimal=1)

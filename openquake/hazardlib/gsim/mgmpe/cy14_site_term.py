@@ -78,29 +78,15 @@ class CY14SiteTerm(GMPE):
 
         # Compute mean and standard deviation using the original GMM. These
         # values are used as ground-motion values on reference rock conditions.
+        # CHECK [MP]: The computed reference motion is equal to the one in the
+        #             CY14 model
         mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
                                                       imt, stds_types)
 
+        # Compute the site term correction factor
         cy14 = ChiouYoungs2014()
         vs30 = sites.vs30
-        sa1130 = np.exp(mean)
-        fa = self.site_term(cy14.COEFFS[imt], vs30, sa1130)
-        print(fa)
-        fa *= 0
+        fa = cy14._get_site_term(cy14.COEFFS[imt], vs30, mean)
         mean += fa
-        return mean, stddvs
 
-    def site_term(self, C, vs30, ln_y_ref):
-        """
-        This implements the site term of the CY14 GMM. See
-        :class:`openquake.hazardlib.gsim.chiou_youngs_2014.ChiouYoungs2014`
-        for additional information.
-        """
-        eta = 0
-        exp1 = np.exp(C['phi3'] * (vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-        af = (C['phi1'] * np.log(vs30 / 1130).clip(-np.inf, 0) +
-              C['phi2'] * (exp1 - exp2) *
-              np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) /
-                     C['phi4']))
-        return af
+        return mean, stddvs
