@@ -37,9 +37,12 @@ def recompute_losses(calc_id, aggregate_by):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     with logs.handle(job_id, logging.INFO):
         oqp.hazard_calculation_id = calc_id
+        parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, job_id)
-        prc.run(aggregate_by=aggby)
-    parallel.Starmap.shutdown()
+        try:
+            prc.run(aggregate_by=aggby)
+        finally:
+            parallel.Starmap.shutdown()
 
 
 recompute_losses.arg('calc_id', 'ID of the risk calculation', type=int)

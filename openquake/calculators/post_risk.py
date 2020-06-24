@@ -20,7 +20,6 @@ import ast
 import logging
 import itertools
 import numpy
-import pandas
 
 from openquake.baselib import general, parallel, datastore
 from openquake.baselib.python3compat import encode
@@ -38,6 +37,11 @@ def build_aggkeys(aggregate_by, tagcol, full_aggregate_by):
     :param tagcol: the TagCollection
     :param full_aggregate_by: maximum possible aggregation
     """
+    name2index = {n: i for i, n in enumerate(full_aggregate_by)}
+    indexes = [name2index[n] for n in aggregate_by]
+    if indexes != sorted(indexes):
+        raise ValueError('The aggregation tags must be an ordered subset of '
+                         '%s, got %s' % (full_aggregate_by, aggregate_by))
     tagids = []
     for tagname in full_aggregate_by:
         n1 = len(getattr(tagcol, tagname))
