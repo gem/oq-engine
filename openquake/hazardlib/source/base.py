@@ -317,8 +317,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         String representation of a source, displaying the source class name
         and the source id.
         """
-        return '<%s %s (%s)>' % (
-            self.__class__.__name__, self.source_id, self.name)
+        return '<%s %s>' % (self.__class__.__name__, self.source_id)
 
     def get_one_rupture(self, rupture_mutex=False):
         """
