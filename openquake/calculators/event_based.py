@@ -229,7 +229,8 @@ class EventBasedCalculator(base.HazardCalculator):
             ebr.e0 = 0
             rup_array = get_rup_array([ebr], self.srcfilter).array
             mesh = surface_to_array(rup.surface).transpose(1, 2, 0).flatten()
-            hdf5.extend(self.datastore['rupgeoms'], numpy.array([mesh]))
+            hdf5.extend(self.datastore['rupgeoms'],
+                        numpy.array([mesh], object))
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
             rup_array = aw.array
