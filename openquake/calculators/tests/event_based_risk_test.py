@@ -451,9 +451,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         parent = self.calc.datastore
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
-        # oq.__dict__['aggregate_by'] = ['NAME_1']
+        oq.__dict__['aggregate_by'] = ['NAME_1']
         job_id = logs.init('nojob', logging.INFO)  # requires the DbServer
         prc = PostRiskCalculator(oq, job_id)
-        prc.datastore.parent = parent
+        oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             prc.run()

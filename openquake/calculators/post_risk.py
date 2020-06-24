@@ -100,7 +100,7 @@ def post_ebrisk(dstore, aggkey, monitor):
     builder = get_loss_builder(dstore)
     out = {}
     for rlzi, losses in acc.items():
-        array = numpy.array(list(losses.values()))
+        array = numpy.array(list(losses.values()))  # shape (E, L)
         out[rlzi] = dict(agg_curves=builder.build_curves(array, rlzi),
                          agg_losses=array.sum(axis=0) * ses_ratio,
                          idx=idx)
