@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import ast
 import logging
+import itertools
 import numpy
 
 from openquake.baselib import general, parallel, datastore
@@ -29,6 +29,31 @@ from openquake.calculators import base
 
 F32 = numpy.float32
 U32 = numpy.uint32
+
+
+def build_aggkeys(aggregate_by, tagcol, full_aggregate_by):
+    """
+    :param aggregate_by: what to aggregate
+    :param tagcol: the TagCollection
+    :param full_aggregate_by: maximum possible aggregation
+    """
+    name2index = {n: i for i, n in enumerate(full_aggregate_by)}
+    indexes = [name2index[n] for n in aggregate_by]
+    if indexes != sorted(indexes):
+        raise ValueError('The aggregation tags must be an ordered subset of '
+                         '%s, got %s' % (full_aggregate_by, aggregate_by))
+    tagids = []
+    for tagname in full_aggregate_by:
+        n1 = len(getattr(tagcol, tagname))
+        lst = list(range(1, n1))
+        if tagname in aggregate_by:
+            tagids.append(lst)
+        else:
+            tagids.append([lst])
+    aggkeys = []
+    for ids in itertools.product(*tagids):
+        aggkeys.append(','.join(map(str, ids)) + ',')
+    return sorted(aggkeys)
 
 
 def get_loss_builder(dstore, return_periods=None, loss_dt=None):
@@ -48,6 +73,15 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
         eff_time, oq.risk_investigation_time)
 
 
+def accumdict(elt):
+    shp = elt.dtype['loss'].shape
+    acc = general.AccumDict(
+        accum=general.AccumDict(accum=numpy.zeros(shp, F32)))
+    for rec in elt:
+        acc[rec['rlzi']][rec['event_id']] += rec['loss']
+    return acc
+
+
 def post_ebrisk(dstore, aggkey, monitor):
     """
     :param dstore: a DataStore instance
@@ -56,20 +90,24 @@ def post_ebrisk(dstore, aggkey, monitor):
     :returns: a dictionary rlzi -> {agg_curves, agg_losses, idx}
     """
     dstore.open('r')
-    oq = dstore['oqparam']
-    try:
-        df = dstore.read_df('event_loss_table/' + aggkey,
-                            ['event_id', 'rlzi'])
-    except (KeyError, dstore.EmptyDataset):   # no data for this realization
-        return {}
-    if ',' in aggkey:
-        idx = tuple(idx - 1 for idx in ast.literal_eval(aggkey))
-    else:
-        idx = (int(aggkey) - 1,)
+    ses_ratio = dstore['oqparam'].ses_ratio
+    agglist = [x if isinstance(x, list) else [x]
+               for x in ast.literal_eval(aggkey)]
+    idx = tuple(x[0] - 1 for x in agglist if len(x) == 1)
+    acc = {}
+    for ids in itertools.product(*agglist):
+        key = ','.join(map(str, ids)) + ','
+        try:
+            acc += accumdict(dstore['event_loss_table/' + key][:])
+        except dstore.EmptyDataset:   # no data
+            continue
     builder = get_loss_builder(dstore)
     out = {}
-    for rlzi, curves, losses in builder.gen_curves_by_rlz(df, oq.ses_ratio):
-        out[rlzi] = dict(agg_curves=curves, agg_losses=losses, idx=idx)
+    for rlzi, losses in acc.items():
+        array = numpy.array(list(losses.values()))  # shape (E, L)
+        out[rlzi] = dict(agg_curves=builder.build_curves(array, rlzi),
+                         agg_losses=array.sum(axis=0) * ses_ratio,
+                         idx=idx)
     return out
 
 
@@ -142,21 +180,21 @@ class PostRiskCalculator(base.RiskCalculator):
             self.build_datasets(builder, oq.aggregate_by, 'agg_')
         self.build_datasets(builder, [], 'app_')
         self.build_datasets(builder, [], 'tot_')
-        ds = self.datastore
+        ds = (self.datastore.parent if oq.hazard_calculation_id
+              else self.datastore)
         if oq.aggregate_by:
-            aggkeys = list(ds['event_loss_table'])
-            if os.environ.get('OQ_DISTRIBUTE') != 'no':
+            aggkeys = sorted(ds['event_loss_table'])
+            aggkeys = build_aggkeys(oq.aggregate_by, self.tagcol,
+                                    ds['oqparam'].aggregate_by)
+            if not oq.hazard_calculation_id:  # no parent
                 ds.swmr_on()
             smap = parallel.Starmap(
-                post_ebrisk, [(self.datastore, aggkey) for aggkey in aggkeys],
+                post_ebrisk, [(ds, aggkey) for aggkey in aggkeys],
                 h5=self.datastore.hdf5)
         else:
             smap = ()
         # do everything in process since it is really fast
-        elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
-        for r, curves, losses in builder.gen_curves_by_rlz(elt, oq.ses_ratio):
-            ds['tot_curves-rlzs'][:, r] = curves  # PL
-            ds['tot_losses-rlzs'][:, r] = losses  # L
+        ds = self.datastore
         for res in smap:
             if not res:
                 continue
@@ -170,6 +208,10 @@ class PostRiskCalculator(base.RiskCalculator):
                     ] = dic['agg_losses']
                     ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
 
+        elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
+        for r, curves, losses in builder.gen_curves_by_rlz(elt, oq.ses_ratio):
+            ds['tot_curves-rlzs'][:, r] = curves  # PL
+            ds['tot_losses-rlzs'][:, r] = losses  # L
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         aggby = {tagname: encode(getattr(self.tagcol, tagname)[1:])
                  for tagname in oq.aggregate_by}
@@ -187,9 +229,9 @@ class PostRiskCalculator(base.RiskCalculator):
                            loss_types=oq.loss_names, **aggby, units=units)
             set_rlzs_stats(self.datastore, 'agg_losses',
                            loss_types=oq.loss_names, **aggby, units=units)
-        return oq.aggregate_by
+        return 1
 
-    def post_execute(self, aggregate_by):
+    def post_execute(self, dummy):
         """
         Sanity check on tot_losses
         """

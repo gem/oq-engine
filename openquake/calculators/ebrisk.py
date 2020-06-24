@@ -202,7 +202,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
         for idxs, attrs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
-            idx = ','.join(map(str, idxs))
+            idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
                                        attrs=attrs)
         self.param.pop('oqparam', None)  # unneeded
