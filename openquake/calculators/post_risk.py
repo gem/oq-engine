@@ -153,7 +153,6 @@ class PostRiskCalculator(base.RiskCalculator):
         else:
             smap = ()
         # do everything in process since it is really fast
-        #import pdb; pdb.set_trace()
         elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
         for r, curves, losses in builder.gen_curves_by_rlz(elt, oq.ses_ratio):
             ds['tot_curves-rlzs'][:, r] = curves  # PL
