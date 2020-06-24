@@ -31,7 +31,7 @@ def recompute_losses(calc_id, aggregate_by):
     aggby = aggregate_by.split(',')
     for tagname in aggby:
         if tagname not in oqp.aggregate_by:
-            raise ValueError('%s not in %s' % (tagname, oqp.aggregate_by))
+            raise ValueError('%r not in %s' % (tagname, oqp.aggregate_by))
     job_id = logs.init('job', level=logging.INFO)
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
