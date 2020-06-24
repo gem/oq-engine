@@ -229,7 +229,7 @@ class EventBasedCalculator(base.HazardCalculator):
             ebr.e0 = 0
             rup_array = get_rup_array([ebr], self.srcfilter).array
             mesh = surface_to_array(rup.surface).transpose(1, 2, 0).flatten()
-            hdf5.extend(self.datastore['rupgeoms'], numpy.array([mesh], object))
+            hdf5.extend(self.datastore['rupgeoms'], numpy.array([mesh]))
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
             rup_array = aw.array
@@ -275,6 +275,9 @@ class EventBasedCalculator(base.HazardCalculator):
             return {}
         else:  # scenario
             self._read_scenario_ruptures()
+            if (oq.ground_motion_fields is False and
+                    oq.hazard_curves_from_gmfs is False):
+                return {}
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])

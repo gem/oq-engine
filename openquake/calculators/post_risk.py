@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import ast
 import logging
 import numpy
@@ -144,13 +145,15 @@ class PostRiskCalculator(base.RiskCalculator):
         ds = self.datastore
         if oq.aggregate_by:
             aggkeys = list(ds['event_loss_table'])
-            ds.swmr_on()
+            if os.environ.get('OQ_DISTRIBUTE') != 'no':
+                ds.swmr_on()
             smap = parallel.Starmap(
                 post_ebrisk, [(self.datastore, aggkey) for aggkey in aggkeys],
                 h5=self.datastore.hdf5)
         else:
             smap = ()
         # do everything in process since it is really fast
+        #import pdb; pdb.set_trace()
         elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
         for r, curves, losses in builder.gen_curves_by_rlz(elt, oq.ses_ratio):
             ds['tot_curves-rlzs'][:, r] = curves  # PL

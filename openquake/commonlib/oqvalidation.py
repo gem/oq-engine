@@ -883,8 +883,7 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-            'multi_peril' in self.inputs or self.calculation_mode.startswith(
-                'scenario')):
+            'multi_peril' in self.inputs or 'rupture_model' in self.inputs):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and
