@@ -23,10 +23,10 @@ import copy
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
+from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
-class ASK14SiteTerm(GMPE):
+class CY14SiteTerm(GMPE):
     """
     Implements a modified GMPE class that can be used to account for local
     soil conditions in the estimation of ground motion.
@@ -61,8 +61,8 @@ class ASK14SiteTerm(GMPE):
         #
         # Check compatibility of reference velocity
         if hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY'):
-            assert (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 760 and
-                    self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 800)
+            assert (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 1100 and
+                    self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 1160)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
@@ -70,21 +70,37 @@ class ASK14SiteTerm(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        #
+
         # Prepare sites
         sites_rock = copy.copy(sites)
-        sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 760.
+        sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 1130.
+        sites_rock.z1pt0 = np.zeros_like(sites_rock.vs30)
 
-        #
         # Compute mean and standard deviation using the original GMM. These
-        # values are used ad ground-motion values on reference rock conditions.
+        # values are used as ground-motion values on reference rock conditions.
         mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
                                                       imt, stds_types)
 
-        ask14 = AbrahamsonEtAl2014()
+        cy14 = ChiouYoungs2014()
         vs30 = sites.vs30
-        sa1180 = np.exp(mean)
-        fa = ask14._get_site_response_term(ask14.COEFFS, imt, vs30, sa1180)
-
+        sa1130 = np.exp(mean)
+        fa = self.site_term(cy14.COEFFS[imt], vs30, sa1130)
+        print(fa)
+        fa *= 0
         mean += fa
         return mean, stddvs
+
+    def site_term(self, C, vs30, ln_y_ref):
+        """
+        This implements the site term of the CY14 GMM. See
+        :class:`openquake.hazardlib.gsim.chiou_youngs_2014.ChiouYoungs2014`
+        for additional information.
+        """
+        eta = 0
+        exp1 = np.exp(C['phi3'] * (vs30.clip(-np.inf, 1130) - 360))
+        exp2 = np.exp(C['phi3'] * (1130 - 360))
+        af = (C['phi1'] * np.log(vs30 / 1130).clip(-np.inf, 0) +
+              C['phi2'] * (exp1 - exp2) *
+              np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) /
+                     C['phi4']))
+        return af

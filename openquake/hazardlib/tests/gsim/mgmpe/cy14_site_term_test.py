@@ -19,19 +19,18 @@ import unittest
 
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.const import TRT, IMC
-from openquake.hazardlib.gsim.mgmpe.ask14_site_term import ASK14SiteTerm
+from openquake.hazardlib.gsim.mgmpe.cy14_site_term import CY14SiteTerm
+from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
-class ASK14SiteTermTestCase(unittest.TestCase):
+class CY14SiteTermTestCase(unittest.TestCase):
 
     def test_instantiation(self):
         """ Tests the instantiation """
-        mgmpe = ASK14SiteTerm(gmpe_name='AbrahamsonEtAl2014')
+        mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
         #
         # Check the assigned IMTs
         expected = set([PGA, SA, PGV])
@@ -50,25 +49,34 @@ class ASK14SiteTermTestCase(unittest.TestCase):
         self.assertTrue(mgmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES == expected,
                         msg='The standard deviations assigned are wrong')
         # Check the required distances
-        expected = set(['rrup', 'rjb', 'rx', 'ry0'])
+        expected = set(['rrup', 'rjb', 'rx'])
         self.assertTrue(mgmpe.REQUIRES_DISTANCES == expected,
                         msg='The assigned distance types are wrong')
 
     def test_gm_calculation_soilBC(self):
-        """ Test mean and std calculation - ASK14 on BC soil"""
+        """ Test mean and std calculation - CY14 on BC soil"""
+
         # Modified gmpe
-        mgmpe = ASK14SiteTerm(gmpe_name='AtkinsonBoore2006')
+        mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
+
         # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=760.)
+        sites = Dummy.get_site_collection(4, vs30=1130., vs30measured=True,
+                                          z1pt0=0.)
         rup = Dummy.get_rupture(mag=6.0)
+        rup.dip = 90.
+        rup.ztor = 0.
         dists = DistancesContext()
         dists.rrup = np.array([1., 10., 30., 70.])
+        dists.rx = np.array([1., 10., 30., 70.])
+        dists.rjb = np.array([1., 10., 30., 70.])
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
-        # Computes results
+
+        # Compute results
         mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+
         # Compute the expected results
-        gmpe = AtkinsonBoore2006()
+        gmpe = ChiouYoungs2014()
         mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
                                                                  dists, imt,
                                                                  stdt)
