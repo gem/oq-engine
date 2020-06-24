@@ -1529,7 +1529,7 @@ class LossesByAsset(object):
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
-                    idx = ','.join(map(str, tagidxs[a]))
+                    idx = ','.join(map(str, tagidxs[a])) + ','
                     kept = 0
                     for loss, eid in zip(losses[a], out.eids):
                         if loss >= minimum_loss[lni]:

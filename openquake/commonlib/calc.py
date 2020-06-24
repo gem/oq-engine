@@ -19,10 +19,10 @@ import warnings
 import logging
 import numpy
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import parallel
 from openquake.baselib.general import get_indices
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import calc, probability_map
+from openquake.hazardlib import probability_map
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16

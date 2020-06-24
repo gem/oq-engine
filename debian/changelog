@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added command `oq recompute_losses <calc_id> <aggregate_by>`
   * Fixed `noDamageLimit`, `minIML`, `maxIML` not being honored in continuous
     fragility functions
   * Unified the scenario calculator with the event based one, with
