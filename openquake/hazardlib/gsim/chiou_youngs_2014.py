@@ -107,11 +107,8 @@ class ChiouYoungs2014(GMPE):
         ln_y = (
             # first line of eq. 12
             ln_y_ref + eta
-            # second line
-            + C['phi1'] * np.log(sites.vs30 / 1130).clip(-np.inf, 0)
-            # third line
-            + C['phi2'] * (exp1 - exp2)
-            * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
+            # second + 3rd line
+            + self._get_site_term(C, sites.vs30, ln_y_ref, exp1, exp2)
             # fourth line
             + C['phi5']
             * (1.0 - np.exp(-1. * centered_z1pt0 / C['phi6']))
@@ -120,6 +117,19 @@ class ChiouYoungs2014(GMPE):
         )
 
         return ln_y
+
+    def _get_site_term(self, C, vs30, ln_y_ref, exp1, exp2):
+        """
+        This implements the site term of the CY14 GMM. See
+        :class:`openquake.hazardlib.gsim.chiou_youngs_2014.ChiouYoungs2014`
+        for additional information.
+        """
+        eta = 0
+        af = (C['phi1'] * np.log(vs30 / 1130).clip(-np.inf, 0) +
+              C['phi2'] * (exp1 - exp2) *
+              np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) /
+                     C['phi4']))
+        return af
 
     def _get_stddevs(self, sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
         """
