@@ -16,11 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import ast
 import logging
 import itertools
 import numpy
+import pandas
 
 from openquake.baselib import general, parallel, datastore
 from openquake.baselib.python3compat import encode
@@ -33,6 +33,11 @@ U32 = numpy.uint32
 
 
 def build_aggkeys(aggregate_by, tagcol, full_aggregate_by):
+    """
+    :param aggregate_by: what to aggregate
+    :param tagcol: the TagCollection
+    :param full_aggregate_by: maximum possible aggregation
+    """
     tagids = []
     for tagname in full_aggregate_by:
         n1 = len(getattr(tagcol, tagname))
@@ -64,6 +69,15 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
         eff_time, oq.risk_investigation_time)
 
 
+def accumdict(elt):
+    shp = elt.dtype['loss'].shape
+    acc = general.AccumDict(
+        accum=general.AccumDict(accum=numpy.zeros(shp, F32)))
+    for rec in elt:
+        acc[rec['rlzi']][rec['event_id']] += rec['loss']
+    return acc
+
+
 def post_ebrisk(dstore, aggkey, monitor):
     """
     :param dstore: a DataStore instance
@@ -72,17 +86,24 @@ def post_ebrisk(dstore, aggkey, monitor):
     :returns: a dictionary rlzi -> {agg_curves, agg_losses, idx}
     """
     dstore.open('r')
-    oq = dstore['oqparam']
-    try:
-        df = dstore.read_df('event_loss_table/' + aggkey,
-                            ['event_id', 'rlzi'])
-    except (KeyError, dstore.EmptyDataset):   # no data for this realization
-        return {}
-    idx = tuple(idx - 1 for idx in ast.literal_eval(aggkey))
+    ses_ratio = dstore['oqparam'].ses_ratio
+    agglist = [x if isinstance(x, list) else [x]
+               for x in ast.literal_eval(aggkey)]
+    idx = tuple(x[0] - 1 for x in agglist if len(x) == 1)
+    acc = {}
+    for ids in itertools.product(*agglist):
+        key = ','.join(map(str, ids)) + ','
+        try:
+            acc += accumdict(dstore['event_loss_table/' + key][:])
+        except dstore.EmptyDataset:   # no data
+            continue
     builder = get_loss_builder(dstore)
     out = {}
-    for rlzi, curves, losses in builder.gen_curves_by_rlz(df, oq.ses_ratio):
-        out[rlzi] = dict(agg_curves=curves, agg_losses=losses, idx=idx)
+    for rlzi, losses in acc.items():
+        array = numpy.array(list(losses.values()))
+        out[rlzi] = dict(agg_curves=builder.build_curves(array, rlzi),
+                         agg_losses=array.sum(axis=0) * ses_ratio,
+                         idx=idx)
     return out
 
 
@@ -155,19 +176,21 @@ class PostRiskCalculator(base.RiskCalculator):
             self.build_datasets(builder, oq.aggregate_by, 'agg_')
         self.build_datasets(builder, [], 'app_')
         self.build_datasets(builder, [], 'tot_')
-        ds = self.datastore
+        ds = (self.datastore.parent if oq.hazard_calculation_id
+              else self.datastore)
         if oq.aggregate_by:
-            tagcol = self.datastore['assetcol/tagcol']
             aggkeys = sorted(ds['event_loss_table'])
-            aggkeys = build_aggkeys(oq.aggregate_by, tagcol, oq.aggregate_by)
-            if os.environ.get('OQ_DISTRIBUTE') != 'no':
+            aggkeys = build_aggkeys(oq.aggregate_by, self.tagcol,
+                                    ds['oqparam'].aggregate_by)
+            if not oq.hazard_calculation_id:  # no parent
                 ds.swmr_on()
             smap = parallel.Starmap(
-                post_ebrisk, [(self.datastore, aggkey) for aggkey in aggkeys],
+                post_ebrisk, [(ds, aggkey) for aggkey in aggkeys],
                 h5=self.datastore.hdf5)
         else:
             smap = ()
         # do everything in process since it is really fast
+        ds = self.datastore
         elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
         for r, curves, losses in builder.gen_curves_by_rlz(elt, oq.ses_ratio):
             ds['tot_curves-rlzs'][:, r] = curves  # PL
