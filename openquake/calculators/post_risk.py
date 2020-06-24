@@ -191,10 +191,6 @@ class PostRiskCalculator(base.RiskCalculator):
             smap = ()
         # do everything in process since it is really fast
         ds = self.datastore
-        elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
-        for r, curves, losses in builder.gen_curves_by_rlz(elt, oq.ses_ratio):
-            ds['tot_curves-rlzs'][:, r] = curves  # PL
-            ds['tot_losses-rlzs'][:, r] = losses  # L
         for res in smap:
             if not res:
                 continue
@@ -208,6 +204,10 @@ class PostRiskCalculator(base.RiskCalculator):
                     ] = dic['agg_losses']
                     ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
 
+        elt = ds.read_df('losses_by_event', ['event_id', 'rlzi'])
+        for r, curves, losses in builder.gen_curves_by_rlz(elt, oq.ses_ratio):
+            ds['tot_curves-rlzs'][:, r] = curves  # PL
+            ds['tot_losses-rlzs'][:, r] = losses  # L
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         aggby = {tagname: encode(getattr(self.tagcol, tagname)[1:])
                  for tagname in oq.aggregate_by}
@@ -225,9 +225,9 @@ class PostRiskCalculator(base.RiskCalculator):
                            loss_types=oq.loss_names, **aggby, units=units)
             set_rlzs_stats(self.datastore, 'agg_losses',
                            loss_types=oq.loss_names, **aggby, units=units)
-        return oq.aggregate_by
+        return 1
 
-    def post_execute(self, aggregate_by):
+    def post_execute(self, dummy):
         """
         Sanity check on tot_losses
         """

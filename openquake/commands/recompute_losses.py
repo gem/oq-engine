@@ -39,14 +39,11 @@ def recompute_losses(calc_id, aggregate_by):
         oqp.hazard_calculation_id = calc_id
         prc = PostRiskCalculator(oqp, job_id)
         prc.run(aggregate_by=aggby)
+    parallel.Starmap.shutdown()
 
 
 recompute_losses.arg('calc_id', 'ID of the risk calculation', type=int)
 recompute_losses.arg('aggregate_by', 'comma-separated list of tag names')
 
 if __name__ == '__main__':
-    parallel.Starmap.init()
-    try:
-        recompute_losses.callfunc()
-    finally:
-        parallel.Starmap.shutdown()
+    recompute_losses.callfunc()
