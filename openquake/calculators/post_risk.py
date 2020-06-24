@@ -19,6 +19,7 @@
 import os
 import ast
 import logging
+import itertools
 import numpy
 
 from openquake.baselib import general, parallel, datastore
@@ -29,6 +30,21 @@ from openquake.calculators import base
 
 F32 = numpy.float32
 U32 = numpy.uint32
+
+
+def build_aggkeys(aggregate_by, tagcol, full_aggregate_by):
+    tagids = []
+    for tagname in full_aggregate_by:
+        n1 = len(getattr(tagcol, tagname))
+        lst = list(range(1, n1))
+        if tagname in aggregate_by:
+            tagids.append(lst)
+        else:
+            tagids.append([lst])
+    aggkeys = []
+    for ids in itertools.product(*tagids):
+        aggkeys.append(','.join(map(str, ids)) + ',')
+    return sorted(aggkeys)
 
 
 def get_loss_builder(dstore, return_periods=None, loss_dt=None):
@@ -62,10 +78,7 @@ def post_ebrisk(dstore, aggkey, monitor):
                             ['event_id', 'rlzi'])
     except (KeyError, dstore.EmptyDataset):   # no data for this realization
         return {}
-    if ',' in aggkey:
-        idx = tuple(idx - 1 for idx in ast.literal_eval(aggkey))
-    else:
-        idx = (int(aggkey) - 1,)
+    idx = tuple(idx - 1 for idx in ast.literal_eval(aggkey))
     builder = get_loss_builder(dstore)
     out = {}
     for rlzi, curves, losses in builder.gen_curves_by_rlz(df, oq.ses_ratio):
@@ -144,7 +157,9 @@ class PostRiskCalculator(base.RiskCalculator):
         self.build_datasets(builder, [], 'tot_')
         ds = self.datastore
         if oq.aggregate_by:
-            aggkeys = list(ds['event_loss_table'])
+            tagcol = self.datastore['assetcol/tagcol']
+            aggkeys = sorted(ds['event_loss_table'])
+            aggkeys = build_aggkeys(oq.aggregate_by, tagcol, oq.aggregate_by)
             if os.environ.get('OQ_DISTRIBUTE') != 'no':
                 ds.swmr_on()
             smap = parallel.Starmap(
