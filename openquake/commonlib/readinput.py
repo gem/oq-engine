@@ -22,6 +22,7 @@ import csv
 import copy
 import json
 import zlib
+import pickle
 import shutil
 import zipfile
 import logging
@@ -698,6 +699,25 @@ def get_full_lt(oqparam):
     return full_lt
 
 
+def get_csm_cached(oq, full_lt, h5=None):
+    """
+    Build the composite source model or read it them from the cache
+    """
+    if oq.csm_cache:
+        if not os.path.exists(oq.csm_cache):
+            os.makedirs(oq.csm_cache)
+        checksum = get_checksum32(oq, hazard=True)
+        fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
+        if os.path.exists(fname):
+            with open(fname, 'rb') as f:
+                return pickle.load(f)
+        csm = get_csm(oq, full_lt, h5)
+        with open(fname, 'wb') as f:
+            pickle.dump(csm, f)
+        return csm
+    return get_csm(oq, full_lt, h5)
+
+
 def get_composite_source_model(oqparam, full_lt=None, h5=None):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -711,7 +731,7 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
     """
     if full_lt is None:
         full_lt = get_full_lt(oqparam)
-    csm = get_csm(oqparam, full_lt, h5)
+    csm = get_csm_cached(oqparam, full_lt, h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():
