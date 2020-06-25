@@ -706,7 +706,7 @@ def get_csm_cached(oq, full_lt, h5=None):
     if oq.csm_cache:
         if not os.path.exists(oq.csm_cache):
             os.makedirs(oq.csm_cache)
-        checksum = get_checksum32(oq, hazard=True)
+        checksum = get_checksum32(oq)
         fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
         if os.path.exists(fname):
             with open(fname, 'rb') as f:
@@ -1111,31 +1111,24 @@ def _checksum(fname, checksum):
     return zlib.adler32(data, checksum)
 
 
-def get_checksum32(oqparam, hazard=False):
+def get_checksum32(oqparam):
     """
-    Build an unsigned 32 bit integer from the input files of a calculation.
+    Build an unsigned 32 bit integer from the hazard input files
 
     :param oqparam: an OqParam instance
-    :param hazard: if True, consider only the hazard files
-    :returns: the checkume
     """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
     checksum = 0
-    for fname in get_input_files(oqparam, hazard):
+    for fname in get_input_files(oqparam, hazard=True):
         checksum = _checksum(fname, checksum)
-    if hazard:
-        hazard_params = []
-        for key, val in vars(oqparam).items():
-            if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
-                       'width_of_mfd_bin', 'area_source_discretization',
-                       'random_seed', 'ses_seed', 'truncation_level',
-                       'maximum_distance', 'investigation_time',
-                       'number_of_logic_tree_samples', 'imtls',
-                       'pointsource_distance',
-                       'ses_per_logic_tree_path', 'minimum_magnitude',
-                       'sites', 'filter_distance'):
-                hazard_params.append('%s = %s' % (key, val))
+    hazard_params = []
+    for key, val in vars(oqparam).items():
+        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
+                   'width_of_mfd_bin', 'area_source_discretization',
+                   'random_seed', 'number_of_logic_tree_samples',
+                   'pointsource_distance', 'minimum_magnitude'):
+            hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff
     return checksum
