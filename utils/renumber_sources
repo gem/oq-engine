@@ -26,7 +26,7 @@ class ObsoleteFormat(Exception):
     pass
 
 
-def renumber(paths, number):
+def _renumber(paths, number):
     srcs = []
     roots = []
     for path in paths:
@@ -47,6 +47,7 @@ def renumber(paths, number):
                 number += 1
         with open(path, 'wb') as f:
             nrml.write(root, f)
+    return number
 
 
 @sap.Script
@@ -57,8 +58,9 @@ def renumber_sources(smlt_file):
     XML files in place, without making a backup, so be careful.
     """
     logging.basicConfig(level=logging.INFO)
+    number = 1
     for info in logictree.collect_info(smlt_file):
-        renumber(info.smpaths, number=1)
+        number = renumber(info.smpaths, number)
 
 
 renumber_sources.arg('smlt_file', 'source model logic tree file')
