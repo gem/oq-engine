@@ -707,6 +707,8 @@ def get_csm_cached(oq, full_lt, h5=None):
         if not os.path.exists(oq.csm_cache):
             os.makedirs(oq.csm_cache)
         checksum = get_checksum32(oq)
+        if h5:
+            h5.attrs['checksum32'] = checksum
         fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
         if os.path.exists(fname):
             with open(fname, 'rb') as f:
