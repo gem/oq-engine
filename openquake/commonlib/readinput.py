@@ -724,19 +724,16 @@ def get_csm_cached(oq, full_lt, h5=None):
     return get_csm(oq, full_lt, h5)
 
 
-def get_composite_source_model(oqparam, full_lt=None, h5=None):
+def get_composite_source_model(oqparam, h5):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param full_lt:
-        a :class:`openquake.commonlib.logictree.FullLogicTree` or None
     :param h5:
          an open hdf5.File where to store the source info
     """
-    if full_lt is None:
-        full_lt = get_full_lt(oqparam)
+    full_lt = get_full_lt(oqparam)
     csm = get_csm_cached(oqparam, full_lt, h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
