@@ -74,7 +74,6 @@ class CY14SiteTerm(GMPE):
         # Prepare sites
         sites_rock = copy.copy(sites)
         sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 1130.
-        sites_rock.z1pt0 = np.zeros_like(sites_rock.vs30)
 
         # Compute mean and standard deviation using the original GMM. These
         # values are used as ground-motion values on reference rock conditions.
