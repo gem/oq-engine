@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.hazardlib.mgmp.nrcan15_site_term` implements
-:class:`~openquake.hazardlib.mgmpe.ask14_site_term.ASK14SiteTerm`
+Module :mod:`openquake.hazardlib.mgmpe.cy14_site_term` implements
+:class:`~openquake.hazardlib.mgmpe.cy14_site_term.CY14SiteTerm`
 """
 
 import copy
@@ -29,7 +29,8 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 class CY14SiteTerm(GMPE):
     """
     Implements a modified GMPE class that can be used to account for local
-    soil conditions in the estimation of ground motion.
+    soil conditions in the estimation of ground motion using the site term
+    from :class:`openquake.hazardlib.gsim.chiou_youngs_2014.ChiouYoungs2014`
 
     :param gmpe_name:
         The name of a GMPE class
@@ -82,8 +83,8 @@ class CY14SiteTerm(GMPE):
 
         # Compute mean and standard deviation using the original GMM. These
         # values are used as ground-motion values on reference rock conditions.
-        # CHECK [MP]: The computed reference motion is equal to the one in the
-        #             CY14 model
+        # CHECKED [MP]: The computed reference motion is equal to the one in the
+        #               CY14 model
         mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
                                                       imt, stds_types)
 

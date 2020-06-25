@@ -206,7 +206,7 @@ class CY14SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected, decimal=1)
 
     def test_raise_error(self):
-        """ raise error when DEFINED_FOR_REFERENCE_VELOCITY misses """
+        """ raise error when DEFINED_FOR_REFERENCE_VELOCITY is missing """
 
         arg = 'AbrahamsonEtAl2014'
         self.assertRaises(ValueError, CY14SiteTerm, arg)
