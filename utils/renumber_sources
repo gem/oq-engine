@@ -18,7 +18,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 from openquake.baselib import sap
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import logictree
 from openquake.hazardlib import nrml
 
 
@@ -26,9 +26,10 @@ class ObsoleteFormat(Exception):
     pass
 
 
-def _renumber(paths, number):
+def _renumber(paths):
     srcs = []
     roots = []
+    number = 1
     for path in paths:
         logging.info('Reading %s', path)
         root = nrml.read(path)
@@ -58,9 +59,8 @@ def renumber_sources(smlt_file):
     XML files in place, without making a backup, so be careful.
     """
     logging.basicConfig(level=logging.INFO)
-    number = 1
-    for info in logictree.collect_info(smlt_file):
-        number = renumber(info.smpaths, number)
+    smpaths = logictree.collect_info(smlt_file).smpaths
+    _renumber(smpaths)
 
 
 renumber_sources.arg('smlt_file', 'source model logic tree file')
