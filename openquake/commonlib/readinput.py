@@ -1061,7 +1061,7 @@ def get_input_files(oqparam, hazard=False):
     fnames = set()  # files entering in the checksum
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
-        if hazard and key not in ('site_model', 'source_model_logic_tree',
+        if hazard and key not in ('source_model_logic_tree',
                                   'gsim_logic_tree', 'source'):
             continue
         # collect .hdf5 tables for the GSIMs, if any
