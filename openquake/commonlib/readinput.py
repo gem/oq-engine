@@ -699,45 +699,41 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def get_csm_cached(oq, full_lt, h5=None):
-    """
-    Build the composite source model or read it them from the cache
-    """
-    if oq.csm_cache:
-        if not os.path.exists(oq.csm_cache):
-            os.makedirs(oq.csm_cache)
-        checksum = get_checksum32(oq)
-        if h5:
-            h5.attrs['checksum32'] = checksum
-        fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
-        if os.path.exists(fname):
-            with open(fname, 'rb') as f:
-                return pickle.load(f)
-        csm = get_csm(oq, full_lt, h5)
-        logging.info('Weighting the sources')
-        for sg in csm.src_groups:
-            for src in sg:
-                src.weight  # cache .num_ruptures
-        with open(fname, 'wb') as f:
-            pickle.dump(csm, f)
-        return csm
-    return get_csm(oq, full_lt, h5)
+def _get_csm_cached(oq, full_lt, h5=None):
+    # read the composite source model from the cache
+    if not os.path.exists(oq.csm_cache):
+        os.makedirs(oq.csm_cache)
+    checksum = get_checksum32(oq)
+    if h5:
+        h5.attrs['checksum32'] = checksum
+    fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
+    if os.path.exists(fname):
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
+    csm = get_csm(oq, full_lt, h5)
+    logging.info('Weighting the sources')
+    for sg in csm.src_groups:
+        for src in sg:
+            src.weight  # cache .num_ruptures
+    with open(fname, 'wb') as f:
+        pickle.dump(csm, f)
+    return csm
 
 
-def get_composite_source_model(oqparam, full_lt=None, h5=None):
+def get_composite_source_model(oqparam, h5=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param full_lt:
-        a :class:`openquake.commonlib.logictree.FullLogicTree` or None
     :param h5:
          an open hdf5.File where to store the source info
     """
-    if full_lt is None:
-        full_lt = get_full_lt(oqparam)
-    csm = get_csm_cached(oqparam, full_lt, h5)
+    full_lt = get_full_lt(oqparam)
+    if oqparam.csm_cache:
+        csm = _get_csm_cached(oqparam, full_lt, h5)
+    else:
+        csm = get_csm(oqparam, full_lt, h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():
