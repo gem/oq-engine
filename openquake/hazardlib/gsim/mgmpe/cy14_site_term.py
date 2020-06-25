@@ -60,9 +60,14 @@ class CY14SiteTerm(GMPE):
                 self.gmpe.REQUIRES_SITES_PARAMETERS | {'vs30'})
         #
         # Check compatibility of reference velocity
-        if hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY'):
-            assert (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 1100 and
-                    self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 1160)
+        if not hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY'):
+            fmt = 'The original GMPE must have the {:s} param defined'
+            msg = fmt.format('DEFINED_FOR_REFERENCE_VELOCITY')
+            raise ValueError(msg)
+        if not (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 1100 and
+                self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 1160)):
+            msg = 'DEFINED_FOR_REFERENCE_VELOCITY outside of range'
+            raise ValueError(msg)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
