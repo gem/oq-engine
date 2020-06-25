@@ -204,3 +204,9 @@ class CY14SiteTermTestCase(unittest.TestCase):
         # does not match the std that the same GMM computes for soft soils
         # with the same remaining conditions
         np.testing.assert_almost_equal(stds, stds_expected, decimal=1)
+
+    def test_raise_error(self):
+        """ raise error when DEFINED_FOR_REFERENCE_VELOCITY misses """
+
+        arg = 'AbrahamsonEtAl2014'
+        self.assertRaises(ValueError, CY14SiteTerm, arg)

@@ -68,6 +68,9 @@ class ChiouYoungs2014(GMPE):
     #: Required distance measures are RRup, Rjb and Rx.
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
+    #: Reference shear wave velocity
+    DEFINED_FOR_REFERENCE_VELOCITY = 1130
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
