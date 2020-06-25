@@ -712,6 +712,10 @@ def get_csm_cached(oq, full_lt, h5=None):
             with open(fname, 'rb') as f:
                 return pickle.load(f)
         csm = get_csm(oq, full_lt, h5)
+        logging.info('Weighting the sources')
+        for sg in csm.src_groups:
+            for src in sg:
+                src.weight  # cache .num_ruptures
         with open(fname, 'wb') as f:
             pickle.dump(csm, f)
         return csm
