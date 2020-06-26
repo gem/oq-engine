@@ -178,9 +178,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             # init logs before calling get_oqparam
             logs.init('nojob', getattr(logging, log_level.upper()))
             # not using logs.handle that logs on the db
-            oq = readinput.get_oqparam(job_inis[0])
-            run_job(job_inis[0], oq, log_level, log_file,
-                    exports, reuse_hazard, **pars)
+            run_job(job_inis[0], log_level, log_file, exports, **pars)
             return
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
