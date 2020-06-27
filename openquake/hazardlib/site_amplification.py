@@ -33,6 +33,8 @@ class AmplFunction():
 
     :param df:
         A :class:`pandas.DataFrame` instance
+    :param soil:
+        A string with the code of the site to be used
     """
 
     def __init__(self, df, soil=None):
@@ -48,6 +50,8 @@ class AmplFunction():
         """
         :param df:
             A :class:`pandas.DataFrame` instance
+        :param soil:
+            A string
         :returns:
             A :class:`openquake.hazardlib.site_amplification.AmplFunction`
             instance
