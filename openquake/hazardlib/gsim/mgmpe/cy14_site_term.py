@@ -30,7 +30,10 @@ class CY14SiteTerm(GMPE):
     """
     Implements a modified GMPE class that can be used to account for local
     soil conditions in the estimation of ground motion using the site term
-    from :class:`openquake.hazardlib.gsim.chiou_youngs_2014.ChiouYoungs2014`
+    from :class:`openquake.hazardlib.gsim.chiou_youngs_2014.ChiouYoungs2014`.
+    The CY14SiteTerm can be applied to any GMPE that natively uses the vs30
+    parameter or, if vs30 is not used, the GMPE must specify a reference
+    velocity (i.e. DEFINED_FOR_REFERENCE_VELOCITY) between 1100 and 1160m/s.
 
     :param gmpe_name:
         The name of a GMPE class
