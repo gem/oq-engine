@@ -57,6 +57,10 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
+    #: Vs30 value representing typical rock conditions in Switzerland.
+    #: confirmed by the Swiss GMPE group
+    DEFINED_FOR_REFERENCE_VELOCITY = 1105.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         sites.vs30 = 620 * np.ones(len(sites.vs30))
