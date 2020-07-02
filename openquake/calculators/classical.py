@@ -425,7 +425,8 @@ class ClassicalCalculator(base.HazardCalculator):
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_level=oq.collapse_level,
             max_sites_disagg=oq.max_sites_disagg,
-            num_probs_occur=self.csm.get_num_probs_occur())
+            num_probs_occur=self.csm.get_num_probs_occur(),
+            af=self.af)
         srcfilter = self.src_filter(self.datastore.tempname)
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]

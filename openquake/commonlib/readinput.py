@@ -431,6 +431,7 @@ def get_site_model(oqparam):
     """
     req_site_params = get_gsim_lt(oqparam).req_site_params
     if 'amplification' in oqparam.inputs:
+        print(oqparam.amplification_)
         req_site_params.add('ampcode')
     arrays = []
     dtypedic = {None: float, 'vs30measured': numpy.uint8,

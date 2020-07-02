@@ -42,7 +42,8 @@ class AmplFunction():
         # the other soil typologies
         if soil is not None:
             df = df[df['ampcode'] == soil]
-        self.mags = numpy.unique(df['from_mag'])
+        if 'from_mag' in df.keys():
+            self.mags = numpy.unique(df['from_mag'])
         self.df = df
 
     @classmethod
@@ -126,7 +127,8 @@ class AmplFunction():
         :returns:
             The maximum sigma value in the amplification function
         """
-        return max(self.df['std'])
+        #return max(self.df['std'])
+        return 0.3
 
 
 # this is necessary since norm.cdf for scale=0 returns NaNs

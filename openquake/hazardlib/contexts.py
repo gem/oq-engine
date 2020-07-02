@@ -149,6 +149,9 @@ class ContextMaker(object):
 
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
+
+        self.af = param.get('af', None)
+
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
@@ -505,7 +508,20 @@ class PmapMaker(object):
                 mean_std = ctx.get_mean_std(self.imts, self.gsims)
             with self.poe_mon:
                 ll = self.loglevels
-                poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
+
+                af = self.cmaker.af
+                mag = ctx.mag
+                sitecode = None
+                
+                try:
+                    sitecode = ctx.sites['ampcode'][0]
+                except:
+                    sitecode = None
+                rrup = ctx.rrup
+            
+                poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims,
+                                     af, mag, sitecode, rrup)
+
                 for g, gsim in enumerate(self.gsims):
                     for m, imt in enumerate(ll):
                         if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
