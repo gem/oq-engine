@@ -22,7 +22,7 @@ import logging
 from openquake.baselib import sap, config, datastore, parallel
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
-from openquake.commonlib import logs, readinput, oqvalidation
+from openquake.commonlib import logs, oqvalidation
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm

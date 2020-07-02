@@ -708,6 +708,7 @@ def _get_csm_cached(oq, full_lt, h5=None):
         h5.attrs['checksum32'] = checksum
     fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
     if os.path.exists(fname):
+        logging.info('Reading %s', fname)
         with open(fname, 'rb') as f:
             return pickle.load(f)
     csm = get_csm(oq, full_lt, h5)
@@ -715,6 +716,7 @@ def _get_csm_cached(oq, full_lt, h5=None):
     for sg in csm.src_groups:
         for src in sg:
             src.weight  # cache .num_ruptures
+    logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
         pickle.dump(csm, f)
     return csm
