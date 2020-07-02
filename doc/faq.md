@@ -82,7 +82,7 @@ Starting with OpenQuake Engine 3.8, Celery is not needed anymore, so if you have
 
 ### MPI support
 
-MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is done via *zmq*. The worker nodes must have read access to a shared file system writeable from the master node. Data transfer is made on mmq TCP/IP connection.
+MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is done via *zmq*. The worker nodes must have read access to a shared file system writeable from the master node. Data transfer is made on TCP/IP connection.
 
 MPI support may be added in the future if sponsored by someone. If you would like to help support development of OpenQuake, please contact us at [partnership@globalquakemodel.org](mailto:partnership@globalquakemodel.org).
 
