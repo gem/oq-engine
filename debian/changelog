@@ -1,3 +1,6 @@
+  [Robin Gee]
+  * Set DEFINED_FOR_REFERENCE_VELOCITY for GMPEs modified for Switzerland
+
   [Michele Simionato]
   * Added parameter `max_num_loss_curves` to the job.ini file
   * Changed `oq engine --reuse-hazard` to just reuse the source model, if
