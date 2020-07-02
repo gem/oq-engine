@@ -154,6 +154,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
+    max_num_loss_curves = valid.Param(valid.positiveint, 10_000)
     max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
