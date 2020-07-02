@@ -216,11 +216,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def check_number_loss_curves(self):
         """
-        Raise an error if generating too many loss curves (>10,000)
+        Raise an error if generating too many loss curves (>max_num_loss_curves)
         """
         shp = self.assetcol.tagcol.agg_shape(
             (self.L,), aggregate_by=self.oqparam.aggregate_by)
-        if numpy.prod(shp) > 10_000:
+        if numpy.prod(shp) > self.oqparam.max_num_loss_curves:
             dic = dict(loss_types=self.L)
             for aggby in self.oqparam.aggregate_by:
                 dic[aggby] = len(getattr(self.assetcol.tagcol, aggby)) - 1

@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Added parameter `max_num_loss_curves` to the job.ini file
+  * Changed `oq engine --reuse-hazard` to just reuse the source model, if
+    possible
   * Added command `oq recompute_losses <calc_id> <aggregate_by>`
   * Fixed `noDamageLimit`, `minIML`, `maxIML` not being honored in continuous
     fragility functions

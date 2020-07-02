@@ -22,6 +22,7 @@ import csv
 import copy
 import json
 import zlib
+import pickle
 import shutil
 import zipfile
 import logging
@@ -698,20 +699,41 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def get_composite_source_model(oqparam, full_lt=None, h5=None):
+def _get_csm_cached(oq, full_lt, h5=None):
+    # read the composite source model from the cache
+    if not os.path.exists(oq.csm_cache):
+        os.makedirs(oq.csm_cache)
+    checksum = get_checksum32(oq)
+    if h5:
+        h5.attrs['checksum32'] = checksum
+    fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
+    if os.path.exists(fname):
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
+    csm = get_csm(oq, full_lt, h5)
+    logging.info('Weighting the sources')
+    for sg in csm.src_groups:
+        for src in sg:
+            src.weight  # cache .num_ruptures
+    with open(fname, 'wb') as f:
+        pickle.dump(csm, f)
+    return csm
+
+
+def get_composite_source_model(oqparam, h5=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param full_lt:
-        a :class:`openquake.commonlib.logictree.FullLogicTree` or None
     :param h5:
          an open hdf5.File where to store the source info
     """
-    if full_lt is None:
-        full_lt = get_full_lt(oqparam)
-    csm = get_csm(oqparam, full_lt, h5)
+    full_lt = get_full_lt(oqparam)
+    if oqparam.csm_cache:
+        csm = _get_csm_cached(oqparam, full_lt, h5)
+    else:
+        csm = get_csm(oqparam, full_lt, h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():
@@ -1035,7 +1057,7 @@ def get_input_files(oqparam, hazard=False):
     fnames = set()  # files entering in the checksum
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
-        if hazard and key not in ('site_model', 'source_model_logic_tree',
+        if hazard and key not in ('source_model_logic_tree',
                                   'gsim_logic_tree', 'source'):
             continue
         # collect .hdf5 tables for the GSIMs, if any
@@ -1087,31 +1109,24 @@ def _checksum(fname, checksum):
     return zlib.adler32(data, checksum)
 
 
-def get_checksum32(oqparam, hazard=False):
+def get_checksum32(oqparam):
     """
-    Build an unsigned 32 bit integer from the input files of a calculation.
+    Build an unsigned 32 bit integer from the hazard input files
 
     :param oqparam: an OqParam instance
-    :param hazard: if True, consider only the hazard files
-    :returns: the checkume
     """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
     checksum = 0
-    for fname in get_input_files(oqparam, hazard):
+    for fname in get_input_files(oqparam, hazard=True):
         checksum = _checksum(fname, checksum)
-    if hazard:
-        hazard_params = []
-        for key, val in vars(oqparam).items():
-            if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
-                       'width_of_mfd_bin', 'area_source_discretization',
-                       'random_seed', 'ses_seed', 'truncation_level',
-                       'maximum_distance', 'investigation_time',
-                       'number_of_logic_tree_samples', 'imtls',
-                       'pointsource_distance',
-                       'ses_per_logic_tree_path', 'minimum_magnitude',
-                       'sites', 'filter_distance'):
-                hazard_params.append('%s = %s' % (key, val))
+    hazard_params = []
+    for key, val in vars(oqparam).items():
+        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
+                   'width_of_mfd_bin', 'area_source_discretization',
+                   'random_seed', 'number_of_logic_tree_samples',
+                   'pointsource_distance', 'minimum_magnitude'):
+            hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff
     return checksum
