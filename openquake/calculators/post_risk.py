@@ -182,7 +182,7 @@ class PostRiskCalculator(base.RiskCalculator):
         self.build_datasets(builder, [], 'tot_')
         ds = self.datastore
         full_aggregate_by = (ds.parent['oqparam'].aggregate_by if ds.parent
-                             else oq.aggregate_by)
+                             else ()) or oq.aggregate_by
         if oq.aggregate_by:
             aggkeys = build_aggkeys(oq.aggregate_by, self.tagcol,
                                     full_aggregate_by)
