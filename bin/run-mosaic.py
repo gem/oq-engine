@@ -11,8 +11,8 @@ def main(mosaic_root):
     for name in glob.glob(mosaic_root + '/*/*/job*.ini'):
         if 'AUS' in name or 'CAN' in name:
             continue
-        print('%s oq engine -r --run %s -p %s -l %s' % (o, name, p, lf))
-        print('%s oq engine -r --run %s -p %s -l %s' % (o, name, e, lf))
+        print('%s oq engine -r --run %s -p %s -L %s' % (o, name, p, lf))
+        print('%s oq engine -r --run %s -p %s -L %s' % (o, name, e, lf))
 
 
 if __name__ == '__main__':
