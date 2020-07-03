@@ -11,11 +11,13 @@ def main(mosaic_root):
     lf = '%s/x.log' % mosaic_root
     if os.path.exists(lf):
         os.remove(lf)
-    for name in glob.glob(mosaic_root + '/*/*/job*.ini'):
-        if 'AUS' in name or 'CAN' in name:
+    for country in os.listdir(mosaic_root):
+        if 'AUS' in country or 'CAN' in country:
             continue
-        print('%s oq engine -r --run %s -p %s -L %s' % (o, name, p, lf))
-        print('%s oq engine -r --run %s -p %s -L %s' % (o, name, e, lf))
+        j = ' '.join(glob.glob('%s/%s/in/job*.ini' % (mosaic_root, country)))
+        if j:
+            print('%s oq engine -r --run %s -p %s -L %s' % (o, j, p, lf))
+            print('%s oq engine -r --run %s -p %s -L %s' % (o, j, e, lf))
 
 
 if __name__ == '__main__':

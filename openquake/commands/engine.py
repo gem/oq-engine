@@ -184,7 +184,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             open(job_ini, 'rb').read()  # IOError if the file does not exist
             job_id = run_job(job_ini, log_level, log_file,
                              exports, hazard_calculation_id=hc_id, **pars)
-            if not hc_id:  # use the first calculation as base for the others
+            if not hc_id and not reuse_hazard:
+                # use the first calculation as base for the others
                 hc_id = job_id
     # hazard
     elif list_hazard_calculations:
