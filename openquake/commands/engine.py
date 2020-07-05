@@ -67,7 +67,7 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     with logs.handle(job_id, log_level, log_file):
         oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
                                     username, **kw)
-        eng.run_calc(job_id, oqparam, exports)
+    eng.run_calc(job_id, oqparam, exports, log_level, log_file)
     return job_id
 
 
