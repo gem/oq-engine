@@ -279,7 +279,8 @@ def poll_queue(job_id, pid, poll_time):
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
-    if config.distribution.serialize_jobs:
+    offset = config.distribution.serialize_jobs - 1
+    if offset >= 0:
         first_time = True
         while True:
             jobs = logs.dbcmd(GET_JOBS)
@@ -288,10 +289,11 @@ def poll_queue(job_id, pid, poll_time):
                 for job in failed:
                     logs.dbcmd('update_job', job,
                                {'status': 'failed', 'is_running': 0})
-            elif any(job.id < job_id for job in jobs):
+            elif any(j.id < job_id - offset for j in jobs):
                 if first_time:
                     logging.warning(
-                        'Waiting for jobs %s', [j.id for j in jobs])
+                        'Waiting for jobs %s', [j.id for j in jobs
+                                                if j.id < job_id - offset])
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': pid})
                     first_time = False

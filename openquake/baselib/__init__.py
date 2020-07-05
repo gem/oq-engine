@@ -97,21 +97,24 @@ def read(*paths, **validators):
 config.read = read
 
 
-def boolean(flag):
+def positiveint(flag):
     """
-    Convert string in boolean
+    Convert string into integer
     """
     s = flag.lower()
     if s in ('1', 'yes', 'true'):
-        return True
+        return 1
     elif s in ('0', 'no', 'false'):
-        return False
-    raise ValueError('Unknown flag %r' % s)
+        return 0
+    i = int(s)
+    if i < 0:
+        raise ValueError('Invalid %r' % s)
+    return i
 
 
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
-            multi_user=boolean,
-            serialize_jobs=boolean, strict=boolean, code=exec)
+            multi_user=positiveint, serialize_jobs=positiveint,
+            strict=positiveint, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
