@@ -290,6 +290,9 @@ def poll_queue(job_id, pid, poll_time):
                     logs.dbcmd('update_job', job,
                                {'status': 'failed', 'is_running': 0})
             elif any(j.id < job_id - offset for j in jobs):
+                logging.warning(
+                    'Waiting for jobs %s', [j.id for j in jobs
+                                            if j.id < job_id - offset])
                 if first_time:
                     logging.warning(
                         'Waiting for jobs %s', [j.id for j in jobs
