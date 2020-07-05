@@ -301,7 +301,7 @@ def poll_queue(job_id, pid, poll_time):
     logs.dbcmd('update_job', job_id, {'status': 'executing', 'pid': _PID})
 
 
-def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
+def run_calc(job_id, oqparam, exports, **kw):
     """
     Run a calculation.
 
@@ -341,8 +341,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             logs.dbcmd('zmq_wait')  # wait for them to go up
         set_concurrent_tasks_default(calc)
         t0 = time.time()
-        calc.run(exports=exports,
-                 hazard_calculation_id=hazard_calculation_id, **kw)
+        calc.run(exports=exports, **kw)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         logging.info('Calculation %d finished correctly in %d seconds',
