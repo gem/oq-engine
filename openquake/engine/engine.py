@@ -349,6 +349,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
                      job_id, time.time() - t0)
         logs.dbcmd('finish', job_id, 'complete')
         calc.datastore.close()
+        for line in logs.dbcmd('list_outputs', job_id, False):
+            general.safeprint(line)
     except BaseException as exc:
         if isinstance(exc, MasterKilled):
             msg = 'aborted'

@@ -68,10 +68,7 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         with logs.handle(job_id, log_level, log_file):
             job_ini = os.path.abspath(job_ini)
             oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
-            kw['username'] = username
             eng.run_calc(job_id, oqparam, exports)
-            for line in logs.dbcmd('list_outputs', job_id, False):
-                safeprint(line)
     finally:
         parallel.Starmap.shutdown()
     return job_id
