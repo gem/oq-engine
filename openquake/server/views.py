@@ -548,11 +548,10 @@ if __name__ == '__main__':
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     oqparam = pickle.loads(%(pik)r)
     logs.init(%(job_id)s)
-    with logs.handle(%(job_id)s):
-        engine.run_calc(
-            %(job_id)s, oqparam, '',
-           hazard_calculation_id=%(hazard_job_id)s,
-           username='%(username)s')
+    engine.run_calc(
+        %(job_id)s, oqparam, '',
+       hazard_calculation_id=%(hazard_job_id)s,
+       username='%(username)s')
     os.remove(__file__)
 '''
 
