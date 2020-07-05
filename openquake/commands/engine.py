@@ -64,16 +64,10 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         Extra parameters like hazard_calculation_id and calculation_mode
     """
     job_id = logs.init('job', getattr(logging, log_level.upper()))
-    try:
-        with logs.handle(job_id, log_level, log_file):
-            job_ini = os.path.abspath(job_ini)
-            oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
-            kw['username'] = username
-            eng.run_calc(job_id, oqparam, exports)
-            for line in logs.dbcmd('list_outputs', job_id, False):
-                safeprint(line)
-    finally:
-        parallel.Starmap.shutdown()
+    with logs.handle(job_id, log_level, log_file):
+        oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
+                                    username, **kw)
+        eng.run_calc(job_id, oqparam, exports)
     return job_id
 
 
