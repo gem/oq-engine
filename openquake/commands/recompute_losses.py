@@ -18,25 +18,35 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap, datastore, parallel
 from openquake.commonlib import logs
 from openquake.calculators.post_risk import PostRiskCalculator
 
 
 @sap.Script
-def recompute_losses(calc_id):
+def recompute_losses(calc_id, aggregate_by):
     """Re-run the postprocessing after an event based risk calculation"""
     parent = datastore.read(calc_id)
+    oqp = parent['oqparam']
+    aggby = aggregate_by.split(',')
+    for tagname in aggby:
+        if tagname not in oqp.aggregate_by:
+            raise ValueError('%r not in %s' % (tagname, oqp.aggregate_by))
     job_id = logs.init('job', level=logging.INFO)
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     with logs.handle(job_id, logging.INFO):
-        prc = PostRiskCalculator(parent['oqparam'], job_id)
-        prc.datastore.parent = parent
-        prc.run()
+        oqp.hazard_calculation_id = calc_id
+        parallel.Starmap.init()
+        prc = PostRiskCalculator(oqp, job_id)
+        try:
+            prc.run(aggregate_by=aggby)
+        finally:
+            parallel.Starmap.shutdown()
 
 
 recompute_losses.arg('calc_id', 'ID of the risk calculation', type=int)
+recompute_losses.arg('aggregate_by', 'comma-separated list of tag names')
 
 if __name__ == '__main__':
     recompute_losses.callfunc()

@@ -477,10 +477,9 @@ class HazardCalculator(BaseCalculator):
                 'There are too many sites to use disagg_by_src=true')
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            full_lt = readinput.get_full_lt(oq)
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, full_lt, self.datastore.hdf5)
+                    oq, self.datastore.hdf5)
                 srcs = [src for sg in csm.src_groups for src in sg]
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')

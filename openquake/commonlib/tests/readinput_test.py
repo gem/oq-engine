@@ -87,7 +87,6 @@ export_dir = %s
             """ % (os.path.basename(sites_csv), TMP))
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
-
             expected_params = {
                 'export_dir': TMP,
                 'base_path': exp_base_path,

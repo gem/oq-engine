@@ -314,6 +314,10 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         const.StdDev.TOTAL
     ])
 
+    #: Vs30 value representing typical rock conditions in Switzerland.
+    #: confirmed by the Swiss GMPE group
+    DEFINED_FOR_REFERENCE_VELOCITY = 1105.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method

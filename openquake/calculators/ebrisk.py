@@ -202,7 +202,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
         for idxs, attrs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
-            idx = ','.join(map(str, idxs))
+            idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
                                        attrs=attrs)
         self.param.pop('oqparam', None)  # unneeded
@@ -216,11 +216,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def check_number_loss_curves(self):
         """
-        Raise an error if generating too many loss curves (>10,000)
+        Raise an error if generating too many loss curves (>max_num_loss_curves)
         """
         shp = self.assetcol.tagcol.agg_shape(
             (self.L,), aggregate_by=self.oqparam.aggregate_by)
-        if numpy.prod(shp) > 10_000:
+        if numpy.prod(shp) > self.oqparam.max_num_loss_curves:
             dic = dict(loss_types=self.L)
             for aggby in self.oqparam.aggregate_by:
                 dic[aggby] = len(getattr(self.assetcol.tagcol, aggby)) - 1

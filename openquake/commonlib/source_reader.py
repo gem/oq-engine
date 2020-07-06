@@ -29,6 +29,7 @@ from openquake.hazardlib import nrml, sourceconverter, calc, InvalidFile
 from openquake.hazardlib.lt import apply_uncertainties
 
 TWO16 = 2 ** 16  # 65,536
+by_id = operator.attrgetter('source_id')
 
 
 def random_filtered_sources(sources, srcfilter, seed):
@@ -60,6 +61,30 @@ def read_source_model(fname, converter, srcfilter, monitor):
         for i, sg in enumerate(sm.src_groups):
             sg.sources = random_filtered_sources(sg.sources, srcfilter, i)
     return {fname: sm}
+
+
+def check_dupl_ids(smdict):
+    """
+    Print a warning in case of duplicate source IDs referring to different
+    sources
+    """
+    sources = general.AccumDict(accum=[])
+    for sm in smdict.values():
+        for sg in sm.src_groups:
+            for src in sg.sources:
+                sources[src.source_id].append(src)
+    first = True
+    for src_id, srcs in sources.items():
+        if len(srcs) > 1:  # duplicate IDs must have all the same checksum
+            checksums = set()
+            for src in srcs:
+                dic = {k: v for k, v in vars(src).items()
+                       if k not in 'grp_id samples'}
+                checksums.add(zlib.adler32(pickle.dumps(dic, protocol=4)))
+            if len(checksums) > 1 and first:
+                logging.warning('There are multiple different sources with the'
+                                ' same ID %s', srcs)
+                first = False
 
 
 def get_csm(oq, full_lt, h5=None):
@@ -123,6 +148,7 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
+    check_dupl_ids(smdict)
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
