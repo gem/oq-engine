@@ -63,11 +63,22 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     :param kw:
         Extra parameters like hazard_calculation_id and calculation_mode
     """
-    job_id = logs.init('job', getattr(logging, log_level.upper()))
-    with logs.handle(job_id, log_level, log_file):
-        oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
-                                    username, **kw)
-    eng.run_calc(job_id, oqparam, exports, log_level, log_file)
+    dist = parallel.oq_distribute()
+    if dist == 'zmq' and config.zworkers['host_cores']:
+        logging.info('Asking the DbServer to start the workers')
+        logs.dbcmd('zmq_start')  # start the zworkers
+        logs.dbcmd('zmq_wait')  # wait for them to go up
+    try:
+        job_id = logs.init('job', getattr(logging, log_level.upper()))
+        with logs.handle(job_id, log_level, log_file):
+            oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
+                                        username, **kw)
+        eng.run_calc(job_id, oqparam, exports, log_level, log_file)
+    finally:
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logs.dbcmd('zmq_stop')  # stop the zworkers
+        if dist.startswith('celery'):
+            eng.celery_cleanup(config.distribution.terminate_workers_on_revoke)
     return job_id
 
 
