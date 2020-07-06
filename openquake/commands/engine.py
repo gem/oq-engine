@@ -66,6 +66,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     dist = parallel.oq_distribute()
     jobparams = []
     for job_ini in job_inis:
+        # NB: the logs must be initialized BEFORE everything
         job_id = logs.init('job', getattr(logging, log_level.upper()))
         with logs.handle(job_id, log_level, log_file):
             oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
