@@ -34,8 +34,8 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import multiprocessing
 from contextlib import contextmanager
-from multiprocessing import Process
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
@@ -46,6 +46,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+mp = multiprocessing.get_context('spawn')
 
 
 def duplicated(items):
@@ -465,7 +466,7 @@ def start_many(func, allargs, **kw):
     """
     procs = []
     for args in allargs:
-        proc = Process(target=func, args=args, kwargs=kw)
+        proc = mp.Process(target=func, args=args, kwargs=kw)
         proc.start()
         procs.append(proc)
     try:
