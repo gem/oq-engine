@@ -454,15 +454,14 @@ class HazardCalculator(BaseCalculator):
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
 
-        if 'amplification' in oq.inputs:
-            print(oq.amplification_method)
+        if ('amplification' in oq.inputs and
+                oq.amplification_method == 'kernel'):
             logging.info('Reading %s', oq.inputs['amplification'])
             df = readinput.get_amplification(oq)
             check_amplification(df, self.sitecol)
-
-            if oq.amplification_method == 'kernel':
-                df.reset_index(drop=False, inplace=True)
-                self.af = AmplFunction.from_compact(df)
+            # if oq.amplification_method == 'kernel':
+            df.reset_index(drop=False, inplace=True)
+            self.af = AmplFunction.from_compact(df)
 
         if getattr(self, 'sitecol', None):
             # can be None for the ruptures-only calculator
@@ -807,13 +806,20 @@ class HazardCalculator(BaseCalculator):
             self.datastore['sitecol'] = self.sitecol.complete
 
         # store amplification functions if any
+        self.af = None
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
             df = readinput.get_amplification(oq)
             check_amplification(df, self.sitecol)
             self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
-            self.af = AmplFunction(df)
+            if oq.amplification_method == 'kernel':
+                # TODO need to add additional checks on the main calculation
+                # methodology since the kernel method is currently tested only
+                # for classical PSHA
+                df.reset_index(drop=False, inplace=True)
+                self.af = AmplFunction.from_compact(df)
+                self.amplifier = None
         else:
             self.amplifier = None
 

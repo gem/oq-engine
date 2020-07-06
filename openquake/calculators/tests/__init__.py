@@ -251,7 +251,6 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         parallel.Starmap.shutdown()
-        print('durations =', cls.duration)
         builtins.open = orig_open
         export.sanity_check = False
         if OQ_CALC_OUTPUTS:
