@@ -65,6 +65,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     """
     dist = parallel.oq_distribute()
     if dist == 'zmq' and config.zworkers['host_cores']:
+        logs.init('nojob', getattr(logging, log_level.upper()))  # init logs
         logging.info('Asking the DbServer to start the workers')
         logs.dbcmd('zmq_start')  # start the zworkers
         logs.dbcmd('zmq_wait')  # wait for them to go up
