@@ -19,7 +19,7 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import sap, config, datastore
+from openquake.baselib import sap, config, datastore, parallel
 from openquake.baselib.general import safeprint, start_many
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, oqvalidation
@@ -78,14 +78,18 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         logging.info('Asking the DbServer to start the workers')
         logs.dbcmd('zmq_start')  # start the zworkers
         logs.dbcmd('zmq_wait')  # wait for them to go up
-    try:
-        for job_id, oqparam in jobparams:
-            eng.run_calc(job_id, oqparam, exports, log_level, log_file)
-    finally:
-        if dist == 'zmq' and config.zworkers['host_cores']:
-            logs.dbcmd('zmq_stop')  # stop the zworkers
-        if dist.startswith('celery'):
-            eng.celery_cleanup(config.distribution.terminate_workers_on_revoke)
+    allargs = [(job_id, oqparam, exports, log_level, log_file)
+               for job_id, oqparam in jobparams]
+    if 'csm_cache' in kw:
+        with start_many(eng.run_calc, allargs):
+            pass
+    else:  # sequential
+        for args in allargs:
+            eng.run_calc(*args)
+    if dist == 'zmq' and config.zworkers['host_cores']:
+        logs.dbcmd('zmq_stop')  # stop the zworkers
+    if dist.startswith('celery'):
+        eng.celery_cleanup(config.distribution.terminate_workers_on_revoke)
     return jobparams
 
 
