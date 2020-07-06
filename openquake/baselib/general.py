@@ -34,6 +34,8 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+from contextlib import contextmanager
+from multiprocessing import Process
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
@@ -454,6 +456,23 @@ def run_in_process(code, *args):
         # produce escape sequences in stdout, see for instance
         # https://bugs.python.org/issue19884
         return eval(out, {}, {})
+
+
+@contextmanager
+def start_many(func, allargs, **kw):
+    """
+    Start multiple processes simultaneously
+    """
+    procs = []
+    for args in allargs:
+        proc = Process(target=func, args=args, kwargs=kw)
+        proc.start()
+        procs.append(proc)
+    try:
+        yield
+    finally:
+        for proc in procs:
+            proc.join()
 
 
 class CodeDependencyError(Exception):

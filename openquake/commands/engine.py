@@ -19,8 +19,8 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import sap, config, datastore, parallel
-from openquake.baselib.general import safeprint
+from openquake.baselib import sap, config, datastore
+from openquake.baselib.general import safeprint, start_many
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, oqvalidation
 from openquake.engine import engine as eng
