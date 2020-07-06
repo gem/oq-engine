@@ -20,7 +20,9 @@ import re
 import ast
 import csv
 import copy
+import json
 import zlib
+import pickle
 import shutil
 import zipfile
 import logging
@@ -41,6 +43,7 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
@@ -572,6 +575,44 @@ def get_gsims(oqparam):
     return [rlz.value[0] for rlz in get_gsim_lt(oqparam)]
 
 
+def get_ruptures(fname_csv):
+    """
+    Read ruptures in CSV format and return an ArrayWrapper
+    """
+    if not rupture.BaseRupture._code:
+        rupture.BaseRupture.init()  # initialize rupture codes
+    code = rupture.BaseRupture.str2code
+    aw = hdf5.read_csv(fname_csv, rupture.rupture_dt)
+    trts = aw.trts
+    rups = []
+    geoms = []
+    n_occ = 1
+    for u, row in enumerate(aw.array):
+        hypo = row['lon'], row['lat'], row['dep']
+        dic = json.loads(row['extra'])
+        mesh = F32(json.loads(row['mesh']))
+        s1, s2 = mesh.shape[1:]
+        rec = numpy.zeros(1, rupture_dt)[0]
+        rec['serial'] = row['serial']
+        rec['minlon'] = minlon = mesh[0].min()
+        rec['minlat'] = minlat = mesh[1].min()
+        rec['maxlon'] = maxlon = mesh[0].max()
+        rec['maxlat'] = maxlat = mesh[1].max()
+        rec['mag'] = row['mag']
+        rec['hypo'] = hypo
+        rate = dic.get('occurrence_rate', numpy.nan)
+        tup = (u, row['serial'], 'no-source', trts.index(row['trt']),
+               code[row['kind']], n_occ, row['mag'], row['rake'], rate,
+               minlon, minlat, maxlon, maxlat, hypo, u, s1, s2, 0, 0)
+        rups.append(tup)
+        geoms.append(mesh.transpose(1, 2, 0).flatten())
+    if not rups:
+        return ()
+    dic = dict(geom=numpy.array(geoms, object))
+    # NB: PMFs for nonparametric ruptures are missing
+    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
+
+
 def get_rupture(oqparam):
     """
     Read the `rupture_model` file and by filter the site collection
@@ -582,6 +623,8 @@ def get_rupture(oqparam):
         an hazardlib rupture
     """
     rup_model = oqparam.inputs['rupture_model']
+    if rup_model.endswith('.csv'):
+        return rupture.from_array(hdf5.read_csv(rup_model))
     if rup_model.endswith('.xml'):
         [rup_node] = nrml.read(rup_model)
         conv = sourceconverter.RuptureConverter(
@@ -656,20 +699,43 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def get_composite_source_model(oqparam, full_lt=None, h5=None):
+def _get_csm_cached(oq, full_lt, h5=None):
+    # read the composite source model from the cache
+    if not os.path.exists(oq.csm_cache):
+        os.makedirs(oq.csm_cache)
+    checksum = get_checksum32(oq)
+    if h5:
+        h5.attrs['checksum32'] = checksum
+    fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
+    if os.path.exists(fname):
+        logging.info('Reading %s', fname)
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
+    csm = get_csm(oq, full_lt, h5)
+    logging.info('Weighting the sources')
+    for sg in csm.src_groups:
+        for src in sg:
+            src.weight  # cache .num_ruptures
+    logging.info('Saving %s', fname)
+    with open(fname, 'wb') as f:
+        pickle.dump(csm, f)
+    return csm
+
+
+def get_composite_source_model(oqparam, h5=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param full_lt:
-        a :class:`openquake.commonlib.logictree.FullLogicTree` or None
     :param h5:
          an open hdf5.File where to store the source info
     """
-    if full_lt is None:
-        full_lt = get_full_lt(oqparam)
-    csm = get_csm(oqparam, full_lt, h5)
+    full_lt = get_full_lt(oqparam)
+    if oqparam.csm_cache:
+        csm = _get_csm_cached(oqparam, full_lt, h5)
+    else:
+        csm = get_csm(oqparam, full_lt, h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():
@@ -700,12 +766,7 @@ def get_composite_source_model(oqparam, full_lt=None, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-    logging.info('There are %d sources with %d unique IDs', ns + 1, len(data))
-    false_duplicates = [src_id for src_id in data
-                        if data[src_id][MULTIPLICITY] > 1]
-    if false_duplicates:
-        logging.info('Found different sources with same ID: %s',
-                     numpy.array(false_duplicates))
+    logging.info('There are %d sources', ns + 1)
     if h5:
         attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
         # avoid hdf5 damned bug by creating source_info in advance
@@ -998,7 +1059,7 @@ def get_input_files(oqparam, hazard=False):
     fnames = set()  # files entering in the checksum
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
-        if hazard and key not in ('site_model', 'source_model_logic_tree',
+        if hazard and key not in ('source_model_logic_tree',
                                   'gsim_logic_tree', 'source'):
             continue
         # collect .hdf5 tables for the GSIMs, if any
@@ -1050,31 +1111,24 @@ def _checksum(fname, checksum):
     return zlib.adler32(data, checksum)
 
 
-def get_checksum32(oqparam, hazard=False):
+def get_checksum32(oqparam):
     """
-    Build an unsigned 32 bit integer from the input files of a calculation.
+    Build an unsigned 32 bit integer from the hazard input files
 
     :param oqparam: an OqParam instance
-    :param hazard: if True, consider only the hazard files
-    :returns: the checkume
     """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
     checksum = 0
-    for fname in get_input_files(oqparam, hazard):
+    for fname in get_input_files(oqparam, hazard=True):
         checksum = _checksum(fname, checksum)
-    if hazard:
-        hazard_params = []
-        for key, val in vars(oqparam).items():
-            if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
-                       'width_of_mfd_bin', 'area_source_discretization',
-                       'random_seed', 'ses_seed', 'truncation_level',
-                       'maximum_distance', 'investigation_time',
-                       'number_of_logic_tree_samples', 'imtls',
-                       'pointsource_distance',
-                       'ses_per_logic_tree_path', 'minimum_magnitude',
-                       'sites', 'filter_distance'):
-                hazard_params.append('%s = %s' % (key, val))
+    hazard_params = []
+    for key, val in vars(oqparam).items():
+        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
+                   'width_of_mfd_bin', 'area_source_discretization',
+                   'random_seed', 'number_of_logic_tree_samples',
+                   'pointsource_distance', 'minimum_magnitude'):
+            hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff
     return checksum

@@ -23,7 +23,6 @@ import inspect
 import tempfile
 import importlib
 import itertools
-from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
 import json
@@ -333,7 +332,10 @@ class File(h5py.File):
         elif (isinstance(obj, numpy.ndarray) and obj.shape and
               len(obj) and isinstance(obj[0], str)):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
-        elif (isinstance(obj, numpy.ndarray) and not obj.shape and
+        elif isinstance(obj, numpy.ndarray) and obj.shape:
+            d = self.create_dataset(path, obj.shape, obj.dtype, fillvalue=None)
+            d[:] = obj
+        elif (isinstance(obj, numpy.ndarray) and
               obj.dtype.name.startswith('bytes')):
             self._set(path, numpy.void(bytes(obj)))
         elif isinstance(obj, list) and len(obj) and isinstance(
@@ -468,7 +470,10 @@ class ArrayWrapper(object):
             array, attrs = obj[()], dict(obj.attrs)
             shape_descr = attrs.get('shape_descr', [])
             for descr in map(decode, shape_descr):
-                attrs[descr] = list(attrs[descr])
+                val = attrs[descr]
+                if isinstance(val, numpy.int64):
+                    val = range(val)
+                attrs[descr] = list(val)
         else:  # assume obj is an array
             array, attrs = obj, {}
         return cls(array, attrs, (extra,))
@@ -610,7 +615,7 @@ class ArrayWrapper(object):
         An ArrayWrapper is good if it only contains arrays
         """
         return all(isinstance(v, numpy.ndarray) for k, v in vars(self).items()
-                   if not k.startswith('_'))
+                   if k != 'json' and not k.startswith('_'))
 
 
 def decode_array(values):
@@ -624,54 +629,6 @@ def decode_array(values):
         except AttributeError:
             out.append(val)
     return out
-
-
-def extract(dset, *d_slices):
-    """
-    :param dset: a D-dimensional dataset or array
-    :param d_slices: D slice objects (or similar)
-    :returns: a reduced D-dimensional array
-
-    >>> a = numpy.array([[1, 2, 3], [4, 5, 6]])  # shape (2, 3)
-    >>> extract(a, slice(None), 1)
-    array([[2],
-           [5]])
-    >>> extract(a, [0, 1], slice(1, 3))
-    array([[2, 3],
-           [5, 6]])
-    """
-    shp = list(dset.shape)
-    if len(shp) != len(d_slices):
-        raise ValueError('Array with %d dimensions but %d slices' %
-                         (len(shp), len(d_slices)))
-    sizes = []
-    slices = []
-    for i, slc in enumerate(d_slices):
-        if slc == slice(None):
-            size = shp[i]
-            slices.append([slice(None)])
-        elif hasattr(slc, 'start'):
-            size = slc.stop - slc.start
-            slices.append([slice(slc.start, slc.stop, 0)])
-        elif isinstance(slc, list):
-            size = len(slc)
-            slices.append([slice(s, s + 1, j) for j, s in enumerate(slc)])
-        elif isinstance(slc, Number):
-            size = 1
-            slices.append([slice(slc, slc + 1, 0)])
-        else:
-            size = shp[i]
-            slices.append([slc])
-        sizes.append(size)
-    array = numpy.zeros(sizes, dset.dtype)
-    for tup in itertools.product(*slices):
-        aidx = tuple(s if s.step is None
-                     else slice(s.step, s.step + s.stop - s.start)
-                     for s in tup)
-        sel = tuple(s if s.step is None else slice(s.start, s.stop)
-                    for s in tup)
-        array[aidx] = dset[sel]
-    return array
 
 
 def parse_comment(comment):
@@ -747,8 +704,12 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                 continue
             break
         header = first.strip().split(sep)
+        if isinstance(dtypedict, dict):
+            dt = build_dt(dtypedict, header)
+        else:
+            dt = dtypedict
         try:
-            arr = _read_csv(f, build_dt(dtypedict, header))
+            arr = _read_csv(f, dt)
         except KeyError:
             raise KeyError('Missing None -> default in dtypedict')
         except Exception as exc:

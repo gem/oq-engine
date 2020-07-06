@@ -31,6 +31,77 @@ from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
+from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile,
+                                               TAU_EXECUTION, TAU_SETUP)
+
+
+# Heteroskedastic values for single-station phi from measured and smoothed
+# distributions of event- and site- orrected within-event residuals
+HETERO_PHI0 = CoeffsTable(sa_damping=5, table="""\
+  imt         a           b
+  pgv    0.44654    0.38340
+  pga    0.46719    0.36079
+0.010    0.46725    0.36104
+0.025    0.46874    0.36515
+0.040    0.47377    0.37658
+0.050    0.47995    0.38890
+0.070    0.48709    0.39474
+0.100    0.49618    0.39219
+0.150    0.49784    0.37381
+0.200    0.49409    0.34159
+0.250    0.48895    0.34269
+0.300    0.48217    0.33936
+0.350    0.48025    0.33843
+0.400    0.47515    0.34693
+0.450    0.46967    0.34665
+0.500    0.46318    0.34085
+0.600    0.45123    0.33823
+0.700    0.44672    0.35944
+0.750    0.44428    0.35283
+0.800    0.43930    0.34529
+0.900    0.43301    0.34187
+1.000    0.42666    0.34207
+1.200    0.41647    0.35920
+1.400    0.40957    0.37407
+1.600    0.40494    0.38140
+1.800    0.39905    0.36336
+2.000    0.39648    0.35648
+2.500    0.39329    0.36285
+3.000    0.39085    0.36192
+3.500    0.38808    0.38585
+4.000    0.38696    0.38696
+4.500    0.37283    0.37283
+5.000    0.37743    0.37743
+6.000    0.38494    0.38494
+7.000    0.38589    0.38589
+8.000    0.38768    0.38768
+""")
+
+
+def get_tau(imt, mag):
+    """
+    Heteroskedastic Tau model adopts the "global" model from Al Atik (2015)
+    """
+    tau_model = TAU_SETUP["global"]
+    tau = get_tau_at_quantile(tau_model["MEAN"], tau_model["STD"], None)
+    return TAU_EXECUTION["global"](imt, mag, tau)
+
+
+def get_phi_ss(imt, mag):
+    """
+    Returns the single station phi (or it's variance) for a given magnitude
+    and intensity measure type according to equation 5.14 of Al Atik (2015)
+    with coefficients calibrated on the ESM data set and Kotha et al. (2020)
+    GMPE
+    """
+    C = HETERO_PHI0[imt]
+    if mag <= 5.0:
+        phi = C["a"]
+    elif mag > 6.5:
+        phi = C["b"]
+    else:
+        phi = C["a"] + (mag - 5.0) * ((C["b"] - C["a"]) / 1.5)
+    return phi
 
 
 BASE_PATH = os.path.join(os.path.dirname(__file__), "kotha_2020_tables")
@@ -158,7 +229,8 @@ class KothaEtAl2020(GMPE):
         # GMPE originally in cm/s/s - convert to g
         if imt.name in "PGA SA":
             mean -= np.log(100.0 * g)
-        stddevs = self.get_stddevs(C, dists.rjb.shape, stddev_types, sites)
+        stddevs = self.get_stddevs(C, dists.rjb.shape, stddev_types,
+                                   sites, imt, rup.mag)
         if self.sigma_mu_epsilon:
             # Apply the epistemic uncertainty factor (sigma_mu) multiplied by
             # the number of standard deviations
@@ -257,13 +329,13 @@ class KothaEtAl2020(GMPE):
                           fill_value=(sigma_mu_t[0], sigma_mu_t[-1]))
         return intpl3(dists.rjb)
 
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites):
+    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
         """
         Returns the standard deviations
         """
         stddevs = []
-        tau = C["tau_event"]
-        phi = C["phi0"]
+        tau = get_tau(imt, mag)
+        phi = get_phi_ss(imt, mag)
         if self.ergodic:
             phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
         for stddev_type in stddev_types:
@@ -337,13 +409,15 @@ class KothaEtAl2020Site(KothaEtAl2020):
         sref = np.log(sites.vs30 / 800.)
         return C["g0_vs30"] + C["g1_vs30"] * sref + C["g2_vs30"] * (sref ** 2.)
 
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites):
+    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
         """
         Returns the standard deviations
         """
         stddevs = []
-        tau = C["tau_event"]
-        phi = np.sqrt(C["phi0"] ** 2.0 + C["phi_s2s_vs30"] ** 2.)
+        tau = get_tau(imt, mag)
+        phi = get_phi_ss(imt, mag)
+        if self.ergodic:
+            phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
@@ -373,13 +447,13 @@ class KothaEtAl2020Slope(KothaEtAl2020):
         return C["g0_slope"] + C["g1_slope"] * sref +\
             C["g2_slope"] * (sref ** 2.)
 
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites):
+    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
         """
         Returns the standard deviations
         """
         stddevs = []
-        tau = C["tau_event"]
-        phi = C["phi0"]
+        tau = get_tau(imt, mag)
+        phi = get_phi_ss(imt, mag)
         if self.ergodic:
             phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
         for stddev_type in stddev_types:
@@ -422,15 +496,15 @@ class KothaEtAl2020SERA(KothaEtAl2020):
         ampl[idx] = (C["d0_inf"] + C["d1_inf"] * np.log(vs30[idx]))
         return ampl
 
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites):
+    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
         """
         Returns the standard deviations, adopting different site-to-site
         standard deviations depending on whether the site has a measured
         or and inferred vs30. Relevant only in the ergodic case.
         """
         stddevs = []
-        tau = C["tau_event"]
-        phi = C["phi0"]
+        tau = get_tau(imt, mag)
+        phi = get_phi_ss(imt, mag)
         if self.ergodic:
             phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
             phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
@@ -514,6 +588,8 @@ class KothaEtAl2020SERASlopeGeology(KothaEtAl2020SERA):
         geol_units = np.unique(sites.geology)
         t_slope = np.copy(sites.slope)
         t_slope[t_slope > 0.1] = 0.1
+        # Slope lower than 0.003 m/m takes value for 0.003 m/m
+        t_slope[t_slope < 0.003] = 0.003
         for geol_unit in geol_units:
             idx = sites.geology == geol_unit
             if geol_unit in self.GEOLOGICAL_UNITS:
@@ -527,14 +603,14 @@ class KothaEtAl2020SERASlopeGeology(KothaEtAl2020SERA):
             ampl[idx] = v1 + v2 * np.log(t_slope[idx])
         return ampl
 
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites):
+    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
         """
         Returns the ergodic standard deviation with phi_s2s_inf based on
         that of the inferred Vs30
         """
         stddevs = []
-        tau = C["tau_event"]
-        phi = C["phi0"]
+        tau = get_tau(imt, mag)
+        phi = get_phi_ss(imt, mag)
         if self.ergodic:
             phi = np.sqrt(phi ** 2. + C["phi_s2s_inf"] ** 2.)
         for stddev_type in stddev_types:

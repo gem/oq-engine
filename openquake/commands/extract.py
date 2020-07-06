@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 from openquake.baselib import performance, sap, hdf5
+from openquake.commonlib import logs
 from openquake.calculators.extract import Extractor, WebExtractor
 
 
@@ -29,13 +30,19 @@ def extract(what, calc_id=-1, webapi=False, local=False, extract_dir='.'):
     """
     with performance.Monitor('extract', measuremem=True) as mon:
         if local:
+            if calc_id == -1:
+                calc_id = logs.dbcmd('get_job', calc_id).id
             aw = WebExtractor(calc_id, 'http://localhost:8800', '').get(what)
         elif webapi:
             aw = WebExtractor(calc_id).get(what)
         else:
             aw = Extractor(calc_id).get(what)
         w = what.replace('/', '-').replace('?', '-')
-        if aw.is_good():  # a regular ArrayWrapper
+        if isinstance(aw.array, str):  # a big string
+            fname = os.path.join(extract_dir, '%s_%d.csv' % (w, calc_id))
+            with open(fname, 'w', encoding='utf-8') as f:
+                f.write(aw.array)
+        elif aw.is_good():  # a regular ArrayWrapper
             fname = os.path.join(extract_dir, '%s_%d.npz' % (w, calc_id))
             hdf5.save_npz(aw, fname)
         else:  # ArrayWrapper of strings, dictionaries or other types

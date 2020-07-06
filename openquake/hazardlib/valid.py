@@ -537,7 +537,12 @@ def positiveint(value):
     :param value: input string
     :returns: positive integer
     """
-    i = int(not_empty(value))
+    val = value.lower()
+    if val == 'true':
+        return 1
+    elif val == 'false':
+        return 0
+    i = int(not_empty(val))
     if i < 0:
         raise ValueError('integer %d < 0' % i)
     return i
@@ -993,7 +998,8 @@ def pmf(value):
     [(0.157, 0), (0.843, 1)]
     """
     probs = probabilities(value)
-    if abs(1.-sum(map(float, value.split()))) > 1e-12:
+    if sum(probs) != 1:
+        # avoid https://github.com/gem/oq-engine/issues/5901
         raise ValueError('The probabilities %s do not sum up to 1!' % value)
     return [(p, i) for i, p in enumerate(probs)]
 
@@ -1282,14 +1288,18 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
         Check if a dictionary name->string can be converted into a dictionary
         name->value. If the name does not correspond to a known parameter,
         print a warning.
+
+        :returns: a dictionary of converted parameters
         """
+        out = {}
         for name, text in dic.items():
             try:
                 p = getattr(cls, name)
             except AttributeError:
                 logging.warning('Ignored unknown parameter %s', name)
             else:
-                p.validator(text)
+                out[name] = p.validator(text)
+        return out
 
     @classmethod
     def from_(cls, dic):

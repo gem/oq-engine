@@ -198,8 +198,8 @@ class PmapGetter(object):
             for sid, pc in pmap.items():
                 for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
                     poes = pc.array[:, gsim_idx]
-                    for rlzi in rlzis:
-                        res[sid, rlzi] = general.agg_probs(res[sid, rlzi], poes)
+                    for rlz in rlzis:
+                        res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
         return res.reshape(self.N, self.R, self.M, -1)
 
     def items(self, kind=''):
@@ -536,18 +536,6 @@ def get_ebruptures(dstore):
     return ebrs
 
 
-def get_rupdict(dstore):
-    """
-    :returns: a dictionary rup_id->rup_dict
-    """
-    dic = {}
-    for i, ebr in enumerate(get_ebruptures(dstore)):
-        dic['rup_%s' % i] = d = ebr.rupture.todict()
-        for attr in ['source_id', 'grp_id', 'n_occ', 'samples']:
-            d[attr] = int(getattr(ebr, attr))
-    return dic
-
-
 # this is never called directly; gen_rupture_getters is used instead
 class RuptureGetter(object):
     """
@@ -603,11 +591,11 @@ class RuptureGetter(object):
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             rec = self.proxies[0].rec
-            geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
-                rec['sx'], rec['sy'])
-            dic['lons'] = geom['lon']
-            dic['lats'] = geom['lat']
-            dic['deps'] = geom['depth']
+            geom = rupgeoms[rec['id']].reshape(
+                rec['s1'], rec['s2'], 3).transpose(2, 0, 1)
+            dic['lons'] = geom[0]
+            dic['lats'] = geom[1]
+            dic['deps'] = geom[2]
             rupclass, surclass = code2cls[rec['code']]
             dic['rupture_class'] = rupclass.__name__
             dic['surface_class'] = surclass.__name__
@@ -630,8 +618,7 @@ class RuptureGetter(object):
             for proxy in self.proxies:
                 if proxy['mag'] < min_mag:
                     continue
-                proxy.geom = rupgeoms[proxy['gidx1']:proxy['gidx2']].reshape(
-                    proxy['sx'], proxy['sy'])
+                proxy.geom = rupgeoms[proxy['geom_id']]
                 proxies.append(proxy)
         return proxies
 

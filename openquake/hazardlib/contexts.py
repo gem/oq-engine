@@ -41,7 +41,6 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 bymag = operator.attrgetter('mag')
 bydist = operator.attrgetter('dist')
 I16 = numpy.int16
-F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
 
@@ -498,6 +497,7 @@ class PmapMaker(object):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
             pmap = self.pmap
+        rup_indep = self.rup_indep
         for ctx in ctxs:
             # this must be fast since it is inside an inner loop
             with self.gmf_mon:
@@ -515,15 +515,13 @@ class PmapMaker(object):
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)
                 pnes = ctx.get_probability_no_exceedance(poes)
-                for grp_id in ctx.grp_ids:
-                    p = pmap[grp_id]
-                    if self.rup_indep:
-                        for sid, pne in zip(ctx.sids, pnes):
-                            p.setdefault(sid, 1.).array *= pne
-                    else:  # rup_mutex
-                        for sid, pne in zip(ctx.sids, pnes):
-                            p.setdefault(sid, 0.).array += (
-                                1.-pne) * ctx.weight
+                for sid, pne in zip(ctx.sids, pnes):
+                    for grp_id in ctx.grp_ids:
+                        probs = pmap[grp_id].setdefault(sid, rup_indep).array
+                        if rup_indep:
+                            probs *= pne
+                        else:  # rup_mutex
+                            probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
         with self.cmaker.mon('iter_ruptures', measuremem=False):
@@ -848,7 +846,7 @@ class RuptureContext(BaseContext):
             rupture occurrence causes a ground shaking value exceeding a
             ground motion level at a site. First dimension represent sites,
             second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>
+            calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
         """
         if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
             # Uses the formula
@@ -862,9 +860,9 @@ class RuptureContext(BaseContext):
             #
             # `p(k|T)` is given by the attribute probs_occur and
             # `p(X<x|rup)` is computed as ``1 - poes``.
-            prob_no_exceed = numpy.array(
-                [v * ((1 - poes) ** i)
-                 for i, v in enumerate(self.probs_occur)]).sum(axis=0)
+            prob_no_exceed = numpy.float64(
+                [v * (1 - poes) ** i for i, v in enumerate(self.probs_occur)]
+            ).sum(axis=0)
             return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
 
         # parametric rupture

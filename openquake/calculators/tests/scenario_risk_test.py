@@ -172,7 +172,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2611.7144]])  # extracted from avg_losses-stats
+        aac(obj.array, [[2611.7139]])  # extracted from avg_losses-stats
 
     def test_case_7(self):
         # check independence from concurrent_tasks

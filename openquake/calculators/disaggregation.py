@@ -113,7 +113,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param dstore
+    :param dstore:
         a DataStore instance
     :param idxs:
         an array of indices to ruptures

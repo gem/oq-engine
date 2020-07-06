@@ -496,11 +496,14 @@ class VulnerabilityModel(dict):
 # ############################## fragility ############################### #
 
 class FragilityFunctionContinuous(object):
-    # FIXME (lp). Should be re-factored with LogNormalDistribution
-    def __init__(self, limit_state, mean, stddev):
+
+    def __init__(self, limit_state, mean, stddev, minIML, maxIML, nodamage=0):
         self.limit_state = limit_state
         self.mean = mean
         self.stddev = stddev
+        self.minIML = minIML
+        self.maxIML = maxIML
+        self.no_damage_limit = nodamage
 
     def __call__(self, imls):
         """
@@ -514,11 +517,14 @@ class FragilityFunctionContinuous(object):
         mu = self.mean ** 2.0 / numpy.sqrt(
             variance + self.mean ** 2.0)
 
-        return stats.lognorm.cdf(imls, sigma, scale=mu)
-
-    def __getstate__(self):
-        return dict(limit_state=self.limit_state,
-                    mean=self.mean, stddev=self.stddev)
+        if self.maxIML:
+            imls[imls > self.maxIML] = self.maxIML
+        if self.minIML:
+            imls[imls < self.minIML] = self.minIML
+        result = stats.lognorm.cdf(imls, sigma, scale=mu)
+        if self.no_damage_limit:
+            result[imls < self.no_damage_limit] = 0
+        return result
 
     def __repr__(self):
         return '<%s(%s, %s, %s)>' % (
@@ -619,7 +625,8 @@ class FragilityFunctionList(list):
                         ls, self.imls, data, self.nodamage))
             else:  # continuous
                 new.append(FragilityFunctionContinuous(
-                    ls, data['mean'], data['stddev']))
+                    ls, data['mean'], data['stddev'],
+                    self.minIML, self.maxIML, self.nodamage))
         return new
 
     def __toh5__(self):
@@ -966,11 +973,8 @@ def classical_damage(
         pairwise_mean([afe[0]] + list(afe) + [afe[-1]]))
     poes_per_damage_state = []
     for ff in fragility_functions:
-        frequency_of_exceedence_per_damage_state = numpy.dot(
-            annual_frequency_of_occurrence, list(map(ff, imls)))
-        poe_per_damage_state = 1. - numpy.exp(
-            - frequency_of_exceedence_per_damage_state *
-            risk_investigation_time)
+        fx = annual_frequency_of_occurrence @ ff(imls)
+        poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
         poes_per_damage_state.append(poe_per_damage_state)
     poos = pairwise_diff([1] + poes_per_damage_state + [0])
     return poos
@@ -1525,7 +1529,7 @@ class LossesByAsset(object):
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
-                    idx = ','.join(map(str, tagidxs[a]))
+                    idx = ','.join(map(str, tagidxs[a])) + ','
                     kept = 0
                     for loss, eid in zip(losses[a], out.eids):
                         if loss >= minimum_loss[lni]:

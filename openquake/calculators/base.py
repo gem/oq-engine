@@ -38,7 +38,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, calc, util
+from openquake.commonlib import readinput, logictree, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -464,10 +464,9 @@ class HazardCalculator(BaseCalculator):
                 'There are too many sites to use disagg_by_src=true')
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            full_lt = readinput.get_full_lt(oq)
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, full_lt, self.datastore.hdf5)
+                    oq, self.datastore.hdf5)
                 srcs = [src for sg in csm.src_groups for src in sg]
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')
@@ -619,7 +618,7 @@ class HazardCalculator(BaseCalculator):
                     oq, haz_sitecol, self.crmodel.loss_types))
             if len(discarded):
                 self.datastore['discarded'] = discarded
-                if hasattr(self, 'rup'):
+                if 'scenario' in oq.calculation_mode:
                     # this is normal for the case of scenario from rupture
                     logging.info('%d assets were discarded because too far '
                                  'from the rupture; use `oq show discarded` '
@@ -952,7 +951,7 @@ class RiskCalculator(HazardCalculator):
         """
         if (self.oqparam.hazard_calculation_id and
                 'gmf_data' not in self.datastore):
-            # 'gmf_data' in self.datastore happens for ShakeMap calculations
+            # not ShakeMap calculations
             self.datastore.parent.close()  # make sure it is closed
             dstore = self.datastore.parent
         else:
@@ -966,9 +965,7 @@ class RiskCalculator(HazardCalculator):
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you set '
                     'ground_motion_fields=False or a large minimum_intensity')
-        if (self.oqparam.calculation_mode not in
-                'event_based_damage scenario_damage scenario_risk'
-                and dstore is self.datastore):
+        if dstore is self.datastore:
             # hack to make h5py happy; I could not get this to work with
             # the SWMR mode
             getter.init()

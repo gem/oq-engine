@@ -438,13 +438,13 @@ class AssetCollection(object):
             # fast_agg2(assets[['taxonomy']], values) => 1.4 s
             [tagname] = tagnames
             avalues = general.fast_agg(self.array[tagname], array)[1:]
-            tags = [(i + 1,) for i in range(len(avalues))]
+            tagids = [(i + 1,) for i in range(len(avalues))]
         else:  # multi-tag aggregation
-            tags, avalues = general.fast_agg2(self.array[tagnames], array)
+            tagids, avalues = general.fast_agg2(self.array[tagnames], array)
         shape = [len(getattr(self.tagcol, tagname))-1 for tagname in tagnames]
         arr = numpy.zeros(shape, (F32, tuple(shp)) if shp else F32)
-        for tag, aval in zip(tags, avalues):
-            arr[tuple(i - 1 for i in tag)] = aval
+        for tagid, aval in zip(tagids, avalues):
+            arr[tuple(i - 1 for i in tagid)] = aval
         return arr
 
     def arr_value(self, loss_types):

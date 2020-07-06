@@ -45,7 +45,6 @@ from openquake.calculators import base, export
 from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
-TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
 MB = 1024 ** 2
@@ -279,7 +278,8 @@ def poll_queue(job_id, pid, poll_time):
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
-    if config.distribution.serialize_jobs:
+    offset = config.distribution.serialize_jobs - 1
+    if offset >= 0:
         first_time = True
         while True:
             jobs = logs.dbcmd(GET_JOBS)
@@ -288,10 +288,11 @@ def poll_queue(job_id, pid, poll_time):
                 for job in failed:
                     logs.dbcmd('update_job', job,
                                {'status': 'failed', 'is_running': 0})
-            elif any(job.id < job_id for job in jobs):
+            elif any(j.id < job_id - offset for j in jobs):
                 if first_time:
                     logging.warning(
-                        'Waiting for jobs %s', [j.id for j in jobs])
+                        'Waiting for jobs %s', [j.id for j in jobs
+                                                if j.id < job_id - offset])
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': pid})
                     first_time = False
@@ -301,7 +302,7 @@ def poll_queue(job_id, pid, poll_time):
     logs.dbcmd('update_job', job_id, {'status': 'executing', 'pid': _PID})
 
 
-def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
+def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
     """
     Run a calculation.
 
@@ -314,67 +315,54 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     """
     register_signals()
     setproctitle('oq-job-%d' % job_id)
-    calc = base.calculators(oqparam, calc_id=job_id)
-    logging.info('%s running %s [--hc=%s]',
-                 getpass.getuser(),
-                 calc.oqparam.inputs['job_ini'],
-                 calc.oqparam.hazard_calculation_id)
-    logging.info('Using engine version %s', __version__)
-    msg = check_obsolete_version(oqparam.calculation_mode)
-    if msg:
-        logging.warning(msg)
-    calc.from_engine = True
-    tb = 'None\n'
-    try:
-        poll_queue(job_id, _PID, poll_time=15)
-    except BaseException:
-        # the job aborted even before starting
-        logs.dbcmd('finish', job_id, 'aborted')
-        return
-    try:
-        if OQ_DISTRIBUTE.endswith('pool'):
-            logging.warning('Using %d cores on %s',
-                            parallel.CT // 2, platform.node())
-        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
-            logging.info('Asking the DbServer to start the workers')
-            logs.dbcmd('zmq_start')  # start the zworkers
-            logs.dbcmd('zmq_wait')  # wait for them to go up
-        set_concurrent_tasks_default(calc)
-        t0 = time.time()
-        calc.run(exports=exports,
-                 hazard_calculation_id=hazard_calculation_id, **kw)
-        logging.info('Exposing the outputs to the database')
-        expose_outputs(calc.datastore)
-        logging.info('Calculation %d finished correctly in %d seconds',
-                     job_id, time.time() - t0)
-        logs.dbcmd('finish', job_id, 'complete')
-        calc.datastore.close()
-    except BaseException as exc:
-        if isinstance(exc, MasterKilled):
-            msg = 'aborted'
-        else:
-            msg = 'failed'
-        tb = traceback.format_exc()
+    logs.init(job_id, getattr(logging, log_level.upper()))
+    with logs.handle(job_id, log_level, log_file):
+        calc = base.calculators(oqparam, calc_id=job_id)
+        logging.info('%s running %s [--hc=%s]',
+                     getpass.getuser(),
+                     calc.oqparam.inputs['job_ini'],
+                     calc.oqparam.hazard_calculation_id)
+        logging.info('Using engine version %s', __version__)
+        msg = check_obsolete_version(oqparam.calculation_mode)
+        if msg:
+            logging.warning(msg)
+        calc.from_engine = True
+        tb = 'None\n'
         try:
-            logging.critical(tb)
-            logs.dbcmd('finish', job_id, msg)
-        except BaseException:  # an OperationalError may always happen
-            sys.stderr.write(tb)
-        raise
-    finally:
-        parallel.Starmap.shutdown()
-        # if there was an error in the calculation, this part may fail;
-        # in such a situation, we simply log the cleanup error without
-        # taking further action, so that the real error can propagate
-        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
-            logs.dbcmd('zmq_stop')  # stop the zworkers
-        try:
-            if OQ_DISTRIBUTE.startswith('celery'):
-                celery_cleanup(TERMINATE)
+            poll_queue(job_id, _PID, poll_time=15)
         except BaseException:
-            # log the finalization error only if there is no real error
-            if tb == 'None\n':
-                logging.error('finalizing', exc_info=True)
+            # the job aborted even before starting
+            logs.dbcmd('finish', job_id, 'aborted')
+            return
+        try:
+            if OQ_DISTRIBUTE.endswith('pool'):
+                logging.warning('Using %d cores on %s',
+                                parallel.CT // 2, platform.node())
+            set_concurrent_tasks_default(calc)
+            t0 = time.time()
+            calc.run(exports=exports, **kw)
+            logging.info('Exposing the outputs to the database')
+            expose_outputs(calc.datastore)
+            logging.info('Calculation %d finished correctly in %d seconds',
+                         job_id, time.time() - t0)
+            logs.dbcmd('finish', job_id, 'complete')
+            calc.datastore.close()
+            for line in logs.dbcmd('list_outputs', job_id, False):
+                general.safeprint(line)
+        except BaseException as exc:
+            if isinstance(exc, MasterKilled):
+                msg = 'aborted'
+            else:
+                msg = 'failed'
+            tb = traceback.format_exc()
+            try:
+                logging.critical(tb)
+                logs.dbcmd('finish', job_id, msg)
+            except BaseException:  # an OperationalError may always happen
+                sys.stderr.write(tb)
+            raise
+        finally:
+            parallel.Starmap.shutdown()
     return calc
 
 
