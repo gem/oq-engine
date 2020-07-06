@@ -454,14 +454,15 @@ class HazardCalculator(BaseCalculator):
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
 
-        self.af = None
         if 'amplification' in oq.inputs:
+            print(oq.amplification_method)
             logging.info('Reading %s', oq.inputs['amplification'])
             df = readinput.get_amplification(oq)
             check_amplification(df, self.sitecol)
 
-            df.reset_index(drop=False, inplace=True)
-            self.af = AmplFunction.from_compact(df)
+            if oq.amplification_method == 'kernel':
+                df.reset_index(drop=False, inplace=True)
+                self.af = AmplFunction.from_compact(df)
 
         if getattr(self, 'sitecol', None):
             # can be None for the ruptures-only calculator
