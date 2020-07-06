@@ -65,17 +65,17 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     """
     dist = parallel.oq_distribute()
     jobparams = []
+    nor = 'csm_cache' not in kw  # -r not given
     for job_ini in job_inis:
         # NB: the logs must be initialized BEFORE everything
         job_id = logs.init('job', getattr(logging, log_level.upper()))
         with logs.handle(job_id, log_level, log_file):
             oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
                                         username, **kw)
-        if (not jobparams and 'csm_cache' not in kw and
-                'hazard_calculation_id' not in kw):  # first time
+        if not jobparams and nor and 'hazard_calculation_id' not in kw:
             kw['hazard_calculation_id'] = job_id
         jobparams.append((job_id, oqparam))
-    if dist == 'zmq' and config.zworkers['host_cores']:
+    if nor and dist == 'zmq' and config.zworkers['host_cores']:
         logging.info('Asking the DbServer to start the workers')
         logs.dbcmd('zmq_start')  # start the zworkers
         logs.dbcmd('zmq_wait')  # wait for them to go up
@@ -83,7 +83,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                for job_id, oqparam in jobparams]
     for args in allargs:
         eng.run_calc(*args)
-    if dist == 'zmq' and config.zworkers['host_cores']:
+    if nor and dist == 'zmq' and config.zworkers['host_cores']:
         logs.dbcmd('zmq_stop')  # stop the zworkers
     if dist.startswith('celery'):
         eng.celery_cleanup(config.distribution.terminate_workers_on_revoke)
