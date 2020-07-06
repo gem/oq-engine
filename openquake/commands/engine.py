@@ -182,7 +182,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         if reuse_hazard:
             pars['csm_cache'] = datadir
         if hc_id:
-            pars['hazard_calculation_id'] = hc_id
+            pars['hazard_calculation_id'] = str(hc_id)
         oqvalidation.OqParam.check(pars)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
