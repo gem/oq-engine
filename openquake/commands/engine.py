@@ -45,13 +45,13 @@ def get_job_id(job_id, username=None):
     return job.id
 
 
-def run_job(job_ini, log_level='info', log_file=None, exports='',
-            username=getpass.getuser(), **kw):
+def run_jobs(job_inis, log_level='info', log_file=None, exports='',
+             username=getpass.getuser(), **kw):
     """
-    Run a job using the specified config file and other options.
+    Run jobs using the specified config file and other options.
 
-    :param str job_ini:
-        Path to calculation config (INI-style) files.
+    :param str job_inis:
+        A list of paths to .ini files.
     :param str log_level:
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
@@ -68,18 +68,24 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         logging.info('Asking the DbServer to start the workers')
         logs.dbcmd('zmq_start')  # start the zworkers
         logs.dbcmd('zmq_wait')  # wait for them to go up
+    jobparams = []
     try:
-        job_id = logs.init('job', getattr(logging, log_level.upper()))
-        with logs.handle(job_id, log_level, log_file):
-            oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
-                                        username, **kw)
-        eng.run_calc(job_id, oqparam, exports, log_level, log_file)
+        for job_ini in job_inis:
+            job_id = logs.init('job', getattr(logging, log_level.upper()))
+            with logs.handle(job_id, log_level, log_file):
+                oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
+                                            username, **kw)
+            eng.run_calc(job_id, oqparam, exports, log_level, log_file)
+            if (not jobparams and 'csm_cache' not in kw and
+                    'hazard_calculation_id' not in kw):  # first time
+                kw['hazard_calculation_id'] = job_id
+            jobparams.append((job_id, oqparam))
     finally:
         if dist == 'zmq' and config.zworkers['host_cores']:
             logs.dbcmd('zmq_stop')  # stop the zworkers
         if dist.startswith('celery'):
             eng.celery_cleanup(config.distribution.terminate_workers_on_revoke)
-    return job_id
+    return jobparams
 
 
 def del_calculation(job_id, confirmed=False):
@@ -175,23 +181,14 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
         if reuse_hazard:
             pars['csm_cache'] = datadir
+        if hc_id:
+            pars['hazard_calculation_id'] = hc_id
         oqvalidation.OqParam.check(pars)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        if len(job_inis) == 1 and not hc_id:
-            # init logs before calling get_oqparam
-            logs.init('nojob', getattr(logging, log_level.upper()))
-            # not using logs.handle that logs on the db
-            run_job(job_inis[0], log_level, log_file, exports, **pars)
-            return
-        for i, job_ini in enumerate(job_inis):
-            open(job_ini, 'rb').read()  # IOError if the file does not exist
-            job_id = run_job(job_ini, log_level, log_file,
-                             exports, hazard_calculation_id=hc_id, **pars)
-            if not hc_id and not reuse_hazard:
-                # use the first calculation as base for the others
-                hc_id = job_id
+        run_jobs(job_inis, log_level, log_file, exports, **pars)
+
     # hazard
     elif list_hazard_calculations:
         for line in logs.dbcmd(
