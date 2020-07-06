@@ -64,23 +64,23 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         Extra parameters like hazard_calculation_id and calculation_mode
     """
     dist = parallel.oq_distribute()
+    jobparams = []
+    for job_ini in job_inis:
+        job_id = logs.init('job', getattr(logging, log_level.upper()))
+        with logs.handle(job_id, log_level, log_file):
+            oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
+                                        username, **kw)
+        if (not jobparams and 'csm_cache' not in kw and
+                'hazard_calculation_id' not in kw):  # first time
+            kw['hazard_calculation_id'] = job_id
+        jobparams.append((job_id, oqparam))
     if dist == 'zmq' and config.zworkers['host_cores']:
-        logs.init('nojob', getattr(logging, log_level.upper()))  # init logs
         logging.info('Asking the DbServer to start the workers')
         logs.dbcmd('zmq_start')  # start the zworkers
         logs.dbcmd('zmq_wait')  # wait for them to go up
-    jobparams = []
     try:
-        for job_ini in job_inis:
-            job_id = logs.init('job', getattr(logging, log_level.upper()))
-            with logs.handle(job_id, log_level, log_file):
-                oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
-                                            username, **kw)
+        for job_id, oqparam in jobparams:
             eng.run_calc(job_id, oqparam, exports, log_level, log_file)
-            if (not jobparams and 'csm_cache' not in kw and
-                    'hazard_calculation_id' not in kw):  # first time
-                kw['hazard_calculation_id'] = job_id
-            jobparams.append((job_id, oqparam))
     finally:
         if dist == 'zmq' and config.zworkers['host_cores']:
             logs.dbcmd('zmq_stop')  # stop the zworkers
