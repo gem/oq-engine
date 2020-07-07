@@ -20,6 +20,7 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
 
+import copy
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const
@@ -57,11 +58,9 @@ class ModifiableGMPE(GMPE):
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
 
-        print('params', params)
         self.params = params
 
         self.mean = None
-        self.stds = None
         self.stds_types = self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
@@ -71,12 +70,19 @@ class ModifiableGMPE(GMPE):
         for spec of input and result values.
         """
 
+        working_std_types = copy.copy(stds_types)
+
+        if 'set_between_epsilon' in [self.params[k]['meth'] for k in
+                                     self.params]:
+            working_std_types.append(const.StdDev.INTER_EVENT)
+            working_std_types.append(const.StdDev.INTRA_EVENT)
+
         # Compute the original mean and standard deviations
         omean, ostds = self.gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                      stds_types)
+                                                      working_std_types)
 
         # Save the stds
-        for key, val in zip(stds_types, ostds):
+        for key, val in zip(working_std_types, ostds):
             setattr(self, key, val)
         self.mean = omean
 
@@ -85,7 +91,7 @@ class ModifiableGMPE(GMPE):
             meth = getattr(self, self.params[key]['meth'])
             meth(self.params[key]['params'])
 
-        # Save the standard deviations
+        # Return the standard deviation types as originally requested
         outs = []
         for key in stds_types:
             outs.append(getattr(self, key))
@@ -101,7 +107,6 @@ class ModifiableGMPE(GMPE):
         if const.StdDev.INTER_EVENT not in self.stds_types:
             raise ValueError('The GMPE does not have between event std')
 
-        print(params)
         epsilon = params['epsilon_tau']
 
         # Index for the between event standard deviation
