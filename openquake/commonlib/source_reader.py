@@ -73,6 +73,7 @@ def check_dupl_ids(smdict):
         for sg in sm.src_groups:
             for src in sg.sources:
                 sources[src.source_id].append(src)
+    first = True
     for src_id, srcs in sources.items():
         if len(srcs) > 1:  # duplicate IDs must have all the same checksum
             checksums = set()
@@ -80,9 +81,10 @@ def check_dupl_ids(smdict):
                 dic = {k: v for k, v in vars(src).items()
                        if k not in 'grp_id samples'}
                 checksums.add(zlib.adler32(pickle.dumps(dic, protocol=4)))
-            if len(checksums) > 1:
+            if len(checksums) > 1 and first:
                 logging.warning('There are multiple different sources with the'
                                 ' same ID %s', srcs)
+                first = False
 
 
 def get_csm(oq, full_lt, h5=None):

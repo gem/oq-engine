@@ -1,4 +1,10 @@
+  [Robin Gee]
+  * Set DEFINED_FOR_REFERENCE_VELOCITY for GMPEs modified for Switzerland
+
   [Michele Simionato]
+  * Added parameter `max_num_loss_curves` to the job.ini file
+  * Changed `oq engine --reuse-hazard` to just reuse the source model, if
+    possible
   * Added command `oq recompute_losses <calc_id> <aggregate_by>`
   * Fixed `noDamageLimit`, `minIML`, `maxIML` not being honored in continuous
     fragility functions
@@ -81,6 +87,7 @@
   * Fixed a bug in the ParseNDKtoGCMT parser + updated tests.
   * Ported the method serialise_to_hmtk_csv implemented in the corresponding
     class of the catalogue toolkit + added a test into the GCMTCatalogue class.
+  * Added a modifiable GMPE using the site term of CY14.
 
   [Michele Simionato]
   * Introduced a mixed XML+HDF5 format for gridded sources
