@@ -71,13 +71,22 @@ class ModifiableGMPE(GMPE):
         # Compute the original mean and standard deviations
         omean, ostds = self.gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
                                                       stds_types)
+
+        # Save the stds
+        for key, val in zip(stds_types, ostds):
+            setattr(self, key, val)
         self.mean = omean
-        self.stds = ostds
+
+        # Apply sequentially the modifications
         for key in self.params:
             meth = getattr(self, key)
             meth(self.params[key])
 
-        return self.mean, self.stds
+        outs = []
+        for key in stds_types:
+            outs.append(getattr(self, key))
+
+        return self.mean, outs
 
     def set_between_epsilon(self, par):
         """
@@ -89,16 +98,13 @@ class ModifiableGMPE(GMPE):
             raise ValueError('The GMPE does not have between event std')
 
         # Index for the between event standard deviation
-        types = list(self.stds_types)
-        idx = types.index(const.StdDev.INTER_EVENT)
-        print(idx, types)
-        print('function', self.stds[idx])
-        self.mean = self.mean + par[0] * self.stds[idx]
+        key = const.StdDev.INTER_EVENT
+        self.mean = self.mean + par[0] * getattr(self, key)
 
         # Set between event variability to 0
-        self.stds[idx] = np.zeros_like(self.stds[idx])
+        keya = const.StdDev.TOTAL
+        setattr(self, key, np.zeros_like(getattr(self, keya)))
 
         # Set total variability equal to the within-event one
-        idxa = types.index(const.StdDev.TOTAL)
-        idxb = types.index(const.StdDev.INTRA_EVENT)
-        self.stds[idxa] = self.stds[idxb]
+        keyb = const.StdDev.INTRA_EVENT
+        setattr(self, keya, getattr(self, keyb))

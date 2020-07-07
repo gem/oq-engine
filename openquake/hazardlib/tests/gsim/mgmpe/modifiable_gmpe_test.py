@@ -64,6 +64,5 @@ class ModifiableGMPETest(unittest.TestCase):
                                                  self.dists,
                                                  self.imt, stds_types)
         idx = stds_types.index(const.StdDev.INTER_EVENT)
-        print(estds[idx])
         exp_mean = emean + estds[idx] * 0.5
         np.testing.assert_almost_equal(mean, exp_mean)
