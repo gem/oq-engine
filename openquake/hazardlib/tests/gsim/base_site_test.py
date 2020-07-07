@@ -97,13 +97,14 @@ class GetPoesSiteTestCase(unittest.TestCase):
                              squeeze=False)
         print(time.process_time() - start)
 
-        import matplotlib.pyplot as plt
-        plt.plot(numpy.exp(imls_soil), res[0, 0:len(imls_soil), 0], '-o',
-                 label='soil')
-        plt.plot(numpy.exp(imls_soil), tmp[0, 0:len(imls_soil), 0], '-o',
-                 label='rock')
-        plt.legend()
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.grid(which='both')
-        plt.show()
+        if False:
+            import matplotlib.pyplot as plt
+            plt.plot(numpy.exp(imls_soil), res[0, 0:len(imls_soil), 0], '-o',
+                     label='soil')
+            plt.plot(numpy.exp(imls_soil), tmp[0, 0:len(imls_soil), 0], '-o',
+                     label='rock')
+            plt.legend()
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.grid(which='both')
+            plt.show()

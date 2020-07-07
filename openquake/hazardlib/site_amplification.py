@@ -305,7 +305,6 @@ class Amplifier(object):
             # Compute the probability of occurrence of GM within a number of
             # intervals
             p_occ = -numpy.diff(poes[:, g])
-            # print(p_occ.flatten())
             #
             # Setting the amplification function
             if mag is not None and dst is not None:
