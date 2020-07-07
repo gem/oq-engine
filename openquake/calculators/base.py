@@ -461,7 +461,7 @@ class HazardCalculator(BaseCalculator):
             check_amplification(df, self.sitecol)
             # if oq.amplification_method == 'kernel':
             df.reset_index(drop=False, inplace=True)
-            self.af = AmplFunction.from_compact(df)
+            self.af = AmplFunction.from_dframe(df)
 
         if getattr(self, 'sitecol', None):
             # can be None for the ruptures-only calculator
@@ -818,7 +818,7 @@ class HazardCalculator(BaseCalculator):
                 # methodology since the kernel method is currently tested only
                 # for classical PSHA
                 df.reset_index(drop=False, inplace=True)
-                self.af = AmplFunction.from_compact(df)
+                self.af = AmplFunction.from_dframe(df)
                 self.amplifier = None
         else:
             self.amplifier = None

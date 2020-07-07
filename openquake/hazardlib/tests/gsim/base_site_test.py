@@ -69,13 +69,12 @@ class GetPoesSiteTestCase(unittest.TestCase):
         self.meastd = get_mean_std(sites, rup, dists, imts, [gmmA, gmmB])
 
     def test01(self):
-        import time
 
         fname = gettemp(ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         df.reset_index(drop=False, inplace=True)
-        af = AmplFunction.from_compact(df)
+        af = AmplFunction.from_dframe(df)
 
         truncation_level = 3
         sitecode = b'A'
@@ -86,16 +85,12 @@ class GetPoesSiteTestCase(unittest.TestCase):
 
         # The output in this case will be (1, x, 2) i.e. 1 site, number
         # intensity measure levels times 2 and 2 GMMs
-        start = time.process_time()
         tmp = _get_poes(self.meastd, imtls_soil, truncation_level)
-        print(time.process_time() - start)
 
-        start = time.process_time()
         # This function is rather slow at the moment
         res = _get_poes_site(self.meastd, imtls_soil, truncation_level,
                              af, self.mag, sitecode, self.rrup[0],
                              squeeze=False)
-        print(time.process_time() - start)
 
         if False:
             import matplotlib.pyplot as plt
