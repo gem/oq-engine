@@ -48,15 +48,18 @@ class ModifiableGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, params=None):
+    def __init__(self, gmpe_name, params=None, **kwargs):
 
         # Initialize the superclass
         super().__init__(gmpe_name=gmpe_name)
 
         # Create the original GMPE
-        self.gmpe = registry[gmpe_name]()
+        self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
+
+        print('params', params)
         self.params = params
+
         self.mean = None
         self.stds = None
         self.stds_types = self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -79,16 +82,17 @@ class ModifiableGMPE(GMPE):
 
         # Apply sequentially the modifications
         for key in self.params:
-            meth = getattr(self, key)
-            meth(self.params[key])
+            meth = getattr(self, self.params[key]['meth'])
+            meth(self.params[key]['params'])
 
+        # Save the standard deviations
         outs = []
         for key in stds_types:
             outs.append(getattr(self, key))
 
         return self.mean, outs
 
-    def set_between_epsilon(self, par):
+    def set_between_epsilon(self, params):
         """
         :param par:
             A list of parameters. In this case it contains the epsilon value
@@ -97,9 +101,12 @@ class ModifiableGMPE(GMPE):
         if const.StdDev.INTER_EVENT not in self.stds_types:
             raise ValueError('The GMPE does not have between event std')
 
+        print(params)
+        epsilon = params['epsilon_tau']
+
         # Index for the between event standard deviation
         key = const.StdDev.INTER_EVENT
-        self.mean = self.mean + par[0] * getattr(self, key)
+        self.mean = self.mean + epsilon * getattr(self, key)
 
         # Set between event variability to 0
         keya = const.StdDev.TOTAL

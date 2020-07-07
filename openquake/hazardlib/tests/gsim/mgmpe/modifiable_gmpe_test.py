@@ -41,7 +41,9 @@ class ModifiableGMPETest(unittest.TestCase):
 
         stds_types = [const.StdDev.TOTAL]
 
-        params = {'set_between_epsilon': [0.5]}
+        params = {'mod1': {'meth': 'set_between_epsilon',
+                           'params': {'epsilon_tau': 0.5}}}
+
         gmm = ModifiableGMPE(gmpe_name='Campbell2003', params=params)
         with self.assertRaises(ValueError):
             _, _ = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
@@ -53,8 +55,10 @@ class ModifiableGMPETest(unittest.TestCase):
         stds_types = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
                       const.StdDev.INTRA_EVENT]
 
+        params = {'mod1': {'meth': 'set_between_epsilon', 
+                           'params': {'epsilon_tau': 0.5}}}
         gmpe_name = 'AkkarEtAlRjb2014'
-        params = {'set_between_epsilon': [0.5]}
+        
         gmm = ModifiableGMPE(gmpe_name=gmpe_name, params=params)
         mean, stds = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
                                               self.imt, stds_types)
