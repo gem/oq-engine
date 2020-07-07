@@ -732,7 +732,7 @@ def get_composite_source_model(oqparam, h5=None):
          an open hdf5.File where to store the source info
     """
     full_lt = get_full_lt(oqparam)
-    if oqparam.csm_cache:
+    if oqparam.csm_cache and not oqparam.is_ucerf():
         csm = _get_csm_cached(oqparam, full_lt, h5)
     else:
         csm = get_csm(oqparam, full_lt, h5)
