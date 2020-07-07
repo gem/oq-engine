@@ -65,4 +65,10 @@ class ModifiableGMPETest(unittest.TestCase):
                                                  self.imt, stds_types)
         idx = stds_types.index(const.StdDev.INTER_EVENT)
         exp_mean = emean + estds[idx] * 0.5
+
+        # Check the computed mean + between event variability
         np.testing.assert_almost_equal(mean, exp_mean)
+
+        # Check that the total std now corresponds to the within event
+        # standard deviation
+        np.testing.assert_almost_equal(stds[0], estds[2])
