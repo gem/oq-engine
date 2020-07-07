@@ -73,6 +73,8 @@ class GetPoesSiteTestCase(unittest.TestCase):
         fname = gettemp(ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
+        # We reset the index to avoid a KeyError problem in the call to the
+        # method `from_dframe` in the site_amplification.py module
         df.reset_index(drop=False, inplace=True)
         af = AmplFunction.from_dframe(df)
 
