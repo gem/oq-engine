@@ -6,7 +6,7 @@ from openquake.commonlib import logictree
 from openquake.hazardlib import nrml
 
 
-Source = collections.namedtuple('Source', 'id node value')
+Source = collections.namedtuple('Source', 'node value')
 
 
 def read_sm(fname):
@@ -17,8 +17,8 @@ def read_sm(fname):
     else:
         for srcgroup in root[0]:
             srcs.extend(srcgroup)
-    sources = [Source(src['id'], src, src.to_str()) for src in srcs]
-    return root[0], fname, sources
+    sources = [Source(src, src.to_str()) for src in srcs]
+    return root, fname, sources
 
 
 @sap.Script
@@ -35,15 +35,17 @@ def renumber_sm(smlt_file):
     for sm, fname, sources in smap:
         smodel[fname] = sm
         srcs.extend(sources)
-    dic = general.groupby(srcs, operator.attrgetter('id', 'value'))
+    parallel.Starmap.shutdown()
+    dic = general.groupby(srcs, operator.attrgetter('value'))
     n = 1
     for sources in dic.values():
         for src in sources:
             src.node['id'] = str(n)
         n += 1
-    for fname, sm in smodel.items():
+    for fname, root in smodel.items():
+        logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
-            nrml.write([sm], f)
+            nrml.write(root, f, xmlns=root['xmlns'])
 
 
 renumber_sm.arg('smlt_file', 'source model logic tree file')
