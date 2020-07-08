@@ -966,6 +966,9 @@ def classical_damage(
         numpy.putmask(imls, imls > max_val, max_val)
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
+        # it is essentially to make a copy of the intensity measure levels,
+        # otherwise the minIML feature in continuous fragility functions will
+        # change the levels, thus breaking case_master for OQ_DISTRIBUTE=no
         imls = numpy.array(hazard_imls)
         poes = numpy.array(hazard_poes)
     afe = annual_frequency_of_exceedence(poes, investigation_time)
