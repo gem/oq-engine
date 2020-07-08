@@ -36,14 +36,18 @@ def classical_damage(riskinputs, crmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
-        a nested dictionary lt_idx, rlz_idx -> asset_idx -> <damage array>
+        a dictionary l, r, a -> <damage array>
     """
-    result = AccumDict(accum=AccumDict())
+    result = {}   # l, r, a -> array
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor):
+            r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
-                ordinals = ri.assets['ordinal']
-                result[l, out.rlzi] += dict(zip(ordinals, out[loss_type]))
+                for a, frac in zip(ri.assets['ordinal'], out[loss_type]):
+                    if (l, r, a) in result:
+                        result[l, r, a] += frac
+                    else:
+                        result[l, r, a] = numpy.array(frac)
     return result
 
 
@@ -60,13 +64,12 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         Export the result in CSV format.
 
         :param result:
-            a dictionary (l, r) -> asset_ordinal -> fractions per damage state
+            a dictionary (l, r, a) -> fractions per damage state
         """
         D = len(self.crmodel.damage_states)
         damages = numpy.zeros((self.A, self.R, self.L, D), numpy.float32)
-        for l, r in result:
-            for aid, fractions in result[l, r].items():
-                damages[aid, r, l] = fractions
+        for l, r, a in result:
+            damages[a, r, l] = result[l, r, a]
         self.datastore['damages-rlzs'] = damages
         stats.set_rlzs_stats(self.datastore, 'damages',
                              assets=self.assetcol['id'],
