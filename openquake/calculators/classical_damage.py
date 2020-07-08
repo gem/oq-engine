@@ -37,8 +37,8 @@ def classical_damage(riskinputs, crmodel, param, monitor):
         dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
-    :returns:
-        a dictionary l, r, a -> <damage array>
+    :yields:
+        dictionaries asset_ordinal -> damage(R, L, D)
     """
     for ri in riskinputs:
         R = ri.hazard_getter.num_rlzs
