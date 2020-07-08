@@ -941,7 +941,7 @@ def annual_frequency_of_exceedence(poe, t_haz):
 
 def classical_damage(
         fragility_functions, hazard_imls, hazard_poes,
-        investigation_time, risk_investigation_time):
+        investigation_time, risk_investigation_time, debug=False):
     """
     :param fragility_functions:
         a list of fragility functions for each damage state
@@ -966,7 +966,7 @@ def classical_damage(
         numpy.putmask(imls, imls > max_val, max_val)
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
-        imls = hazard_imls
+        imls = numpy.array(hazard_imls)
         poes = numpy.array(hazard_poes)
     afe = annual_frequency_of_exceedence(poes, investigation_time)
     annual_frequency_of_occurrence = pairwise_diff(
@@ -974,6 +974,8 @@ def classical_damage(
     poes_per_damage_state = []
     for ff in fragility_functions:
         fx = annual_frequency_of_occurrence @ ff(imls)
+        if debug:
+            print(fx)
         poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
         poes_per_damage_state.append(poe_per_damage_state)
     poos = pairwise_diff([1] + poes_per_damage_state + [0])

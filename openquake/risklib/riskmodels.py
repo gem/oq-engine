@@ -406,10 +406,11 @@ class RiskModel(object):
         """
         ffl = self.risk_functions[loss_type, 'fragility']
         hazard_imls = self.hazard_imtls[ffl.imt]
+        debug = False  # assets['id'] == b'a5' to debug case_master
         damage = scientific.classical_damage(
             ffl, hazard_imls, hazard_curve,
             investigation_time=self.investigation_time,
-            risk_investigation_time=self.risk_investigation_time)
+            risk_investigation_time=self.risk_investigation_time, debug=debug)
         res = numpy.array([a['number'] * damage for a in assets])
         return res
 
