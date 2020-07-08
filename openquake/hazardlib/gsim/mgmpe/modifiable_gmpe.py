@@ -59,9 +59,7 @@ class ModifiableGMPE(GMPE):
         self.set_parameters()
 
         self.params = params
-
         self.mean = None
-        self.stds_types = self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
@@ -74,6 +72,9 @@ class ModifiableGMPE(GMPE):
 
         if 'set_between_epsilon' in [self.params[k]['meth'] for k in
                                      self.params]:
+            if (const.StdDev.INTER_EVENT not in 
+                    self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
+                raise ValueError('The GMPE does not have between event std')
             working_std_types.append(const.StdDev.INTER_EVENT)
             working_std_types.append(const.StdDev.INTRA_EVENT)
 
@@ -104,8 +105,6 @@ class ModifiableGMPE(GMPE):
             A list of parameters. In this case it contains the epsilon value
             used to constrain the between event variability
         """
-        if const.StdDev.INTER_EVENT not in self.stds_types:
-            raise ValueError('The GMPE does not have between event std')
 
         epsilon = params['epsilon_tau']
 
