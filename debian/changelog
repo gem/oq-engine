@@ -88,6 +88,7 @@
   * Ported the method serialise_to_hmtk_csv implemented in the corresponding
     class of the catalogue toolkit + added a test into the GCMTCatalogue class.
   * Added a modifiable GMPE using the site term of CY14.
+  * Added a prototype implementation of the kernel method
 
   [Michele Simionato]
   * Introduced a mixed XML+HDF5 format for gridded sources
