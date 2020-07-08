@@ -510,6 +510,11 @@ class FragilityFunctionContinuous(object):
         Compute the Probability of Exceedance (PoE) for the given
         Intensity Measure Levels (IMLs).
         """
+        # it is essentially to make a copy of the intensity measure levels,
+        # otherwise the minIML feature in continuous fragility functions will
+        # change the levels, thus breaking case_master for OQ_DISTRIBUTE=no
+        if self.minIML or self.maxIML:
+            imls = numpy.array(imls)
         variance = self.stddev ** 2.0
         sigma = numpy.sqrt(numpy.log(
             (variance / self.mean ** 2.0) + 1.0))
@@ -966,10 +971,7 @@ def classical_damage(
         numpy.putmask(imls, imls > max_val, max_val)
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
-        # it is essentially to make a copy of the intensity measure levels,
-        # otherwise the minIML feature in continuous fragility functions will
-        # change the levels, thus breaking case_master for OQ_DISTRIBUTE=no
-        imls = numpy.array(hazard_imls)
+        imls = hazard_imls
         poes = numpy.array(hazard_poes)
     afe = annual_frequency_of_exceedence(poes, investigation_time)
     annual_frequency_of_occurrence = pairwise_diff(
