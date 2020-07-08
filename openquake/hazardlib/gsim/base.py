@@ -253,16 +253,8 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
     mean, stddev = mean_std  # shape (N, M, G)
     N, LS, G = len(mean), len(loglevels.array), mean.shape[-1]
 
-    # List of the IMTs
-    imts = [s for s in loglevels]
-
     # This is the array where we store the output results i.e. poes on soil
     out_s = numpy.zeros((N, LS) if squeeze else (N, LS, G))
-
-    # Get the values of ground-motion used to compute the probability of
-    # exceedance on soil. NOTE we assume they are the same for all the
-    # IMTs considered.
-    soillevels = loglevels[imts[0]]
 
     # `nsamp` is the number of IMLs per IMT used to compute the hazard on rock
     # while 'L' is total number of ground-motion values
@@ -272,12 +264,16 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
     # measure type IMT
     lvl = 0
     clm = 0
+    sigma = ampfun.get_max_sigma()
     for m, imt in enumerate(loglevels):
+
+        # Get the values of ground-motion used to compute the probability of
+        # exceedance on soil.
+        soillevels = loglevels[imt]
 
         # Here we set automatically the IMLs that will be used to compute
         # the probability of occurrence of GM on rock within discrete
         # intervals
-        sigma = ampfun.get_max_sigma()
         ll = numpy.linspace(min(soillevels)-sigma*4.,
                             max(soillevels)+sigma*4., num=nsamp)
 

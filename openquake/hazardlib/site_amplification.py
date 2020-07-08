@@ -128,9 +128,7 @@ class AmplFunction():
         :returns:
             The maximum sigma value in the amplification function
         """
-        # TODO - this must be improved
-        # return max(self.df['std'])
-        return 0.3
+        return max(self.df['std'])
 
 
 def check_unique(df, kfields, fname):

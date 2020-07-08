@@ -75,7 +75,7 @@ B,      5.5,     20.0,     0.010,1.1,1.0,    0.3,      0.2
 B,      5.5,     20.0,     0.050,1.2,1.0,    0.3,      0.2
 B,      5.5,     20.0,     0.100,1.3,1.0,    0.3,      0.2
 B,      5.5,     20.0,     0.500,1.4,1.0,    0.3,      0.2
-B,      5.5,     20.0,     1.000,1.5,1.0,    0.3,      0.2
+B,      5.5,     20.0,     1.000,1.5,1.0,    0.31,      0.2
 '''
 
 
@@ -92,7 +92,7 @@ class AmplificationFunctionTestCase(unittest.TestCase):
         """ Calculation of mmax """
         msg = 'Getting wrong max sigma'
         computed = self.af.get_max_sigma()
-        self.assertEqual(computed, 0.3, msg)
+        self.assertEqual(computed, 0.31, msg)
 
     def test_get_median_std(self):
         """ Calculation of median amplification + std """
