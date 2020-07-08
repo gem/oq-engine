@@ -66,7 +66,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         Export the result in CSV format.
 
         :param result:
-            a dictionary (l, r, a) -> fractions per damage state
+            a dictionary asset_ordinal -> array(R, L, D)
         """
         D = len(self.crmodel.damage_states)
         damages = numpy.zeros((self.A, self.R, self.L, D), numpy.float32)
