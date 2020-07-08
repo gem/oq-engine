@@ -22,6 +22,8 @@ from openquake.baselib.general import AccumDict
 from openquake.hazardlib import stats
 from openquake.calculators import base, classical_risk
 
+F32 = numpy.float32
+
 
 def classical_damage(riskinputs, crmodel, param, monitor):
     """
@@ -38,17 +40,17 @@ def classical_damage(riskinputs, crmodel, param, monitor):
     :returns:
         a dictionary l, r, a -> <damage array>
     """
-    result = {}   # l, r, a -> array
     for ri in riskinputs:
+        R = ri.hazard_getter.num_rlzs
+        L = len(crmodel.lti)
+        D = len(crmodel.damage_states)
+        result = AccumDict(accum=numpy.zeros((R, L, D), F32))
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
                 for a, frac in zip(ri.assets['ordinal'], out[loss_type]):
-                    if (l, r, a) in result:
-                        result[l, r, a] += frac
-                    else:
-                        result[l, r, a] = numpy.array(frac)
-    return result
+                    result[a][r, l] = frac
+        yield result
 
 
 @base.calculators.add('classical_damage')
@@ -68,8 +70,8 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         """
         D = len(self.crmodel.damage_states)
         damages = numpy.zeros((self.A, self.R, self.L, D), numpy.float32)
-        for l, r, a in result:
-            damages[a, r, l] = result[l, r, a]
+        for a in result:
+            damages[a] = result[a]
         self.datastore['damages-rlzs'] = damages
         stats.set_rlzs_stats(self.datastore, 'damages',
                              assets=self.assetcol['id'],
