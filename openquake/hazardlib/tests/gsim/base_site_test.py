@@ -19,13 +19,12 @@
 import numpy
 import unittest
 
-from openquake.hazardlib import const
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.base import get_mean_std, _get_poes_site, _get_poes
+from openquake.hazardlib.gsim.base import (
+    get_mean_std, _get_poes_site, _get_poes)
 from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.contexts import DistancesContext
-from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
@@ -73,9 +72,6 @@ class GetPoesSiteTestCase(unittest.TestCase):
         fname = gettemp(ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
-        # We reset the index to avoid a KeyError problem in the call to the
-        # method `from_dframe` in the site_amplification.py module
-        df.reset_index(drop=False, inplace=True)
         af = AmplFunction.from_dframe(df)
 
         truncation_level = 3

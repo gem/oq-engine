@@ -58,33 +58,27 @@ class AmplFunction():
             A :class:`openquake.hazardlib.site_amplification.AmplFunction`
             instance
         """
-
         # Get IMTs
         imts = []
+        # example of df.keys():
+        # ampcode  from_mag  from_rrup  level  PGA sigma_PGA
         for key in df.keys():
             if re.search('^SA', key) or re.search('^PGA', key):
                 imts.append(key)
 
         # Create the temporary list of lists
         out = []
-        for _, row in df.iterrows():
-            tmp = [row['ampcode'], row['from_mag'],
-                   row['from_rrup'], row['level']]
+        for _, row in df.reset_index().iterrows():
             for imt in imts:
-                med = row[imt]
-                std = row['sigma_'+imt]
-                out.append([tmp[0], tmp[1], tmp[2], tmp[3],
-                            imt, med, std])
+                out.append([row['ampcode'], row['from_mag'], row['from_rrup'],
+                            row['level'], imt, row[imt], row['sigma_' + imt]])
 
         # Create the dataframe
         dtypes = {'ampcode': ampcode_dt, 'from_mag': float,
                   'from_rrup': float, 'level': float, 'imt': str,
                   'median': float, 'std': float}
-        columns = [k for k in dtypes]
-        df = pd.DataFrame(out, columns=columns)
-        df = df.astype(dtypes)
-
-        return AmplFunction(df, soil)
+        df = pd.DataFrame(out, columns=dtypes).astype(dtypes)
+        return AmplFunction(df, soil)  # requires reset_index
 
     def get_mean_std(self, site, imt, iml, mag, dst):
         """
@@ -104,7 +98,6 @@ class AmplFunction():
             A tuple with the median amplification factor and the std of the
             logarithm
         """
-
         df = copy.copy(self.df)
         df = df[(df['ampcode'] == site) & (df['imt'] == imt)]
 
@@ -132,6 +125,10 @@ class AmplFunction():
 
 
 def check_unique(df, kfields, fname):
+    """
+    Check if there are duplicate records with the respect to the
+    composite primary key defined by the kfields
+    """
     for k, rows in df.groupby(kfields):
         if len(rows) > 1:
             msg = 'Found duplicates for %s' % str(k)
@@ -283,6 +280,7 @@ class Amplifier(object):
             #
             # Setting the amplification function
             if mag is not None and dst is not None:
+                1/0  # ERROR: it never goes here
                 d = dst[g] if len(dst) else dst
                 self._set_alpha_sigma(mag, d)
 

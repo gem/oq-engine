@@ -29,7 +29,6 @@ import numpy
 from scipy.special import ndtr
 
 from openquake.hazardlib.stats import norm_cdf
-from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
@@ -190,15 +189,14 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=(), af=None,
                 ms = mean_std[:, :, :, g]
                 arr[:, :, g] = _get_poes(ms, loglevels, tl, squeeze=1)
         return arr
+    elif af:
+        # kernel amplification function
+        res = _get_poes_site(mean_std, loglevels, truncation_level, af,
+                             mag, sitecode, rrup)
+        return res
     else:
-        if af is not None:
-            # kernel amplification function
-            res = _get_poes_site(mean_std, loglevels, truncation_level, af,
-                                 mag, sitecode, rrup)
-            return res
-        else:
-            # regular case
-            return _get_poes(mean_std, loglevels, truncation_level)
+        # regular case
+        return _get_poes(mean_std, loglevels, truncation_level)
 
 
 # this is the critical function for the performance of the classical calculator
@@ -248,13 +246,16 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
 
     # Mean and std of ground motion for the IMTs considered in this analysis
     # N  - Number of sites
-    # LS - Number of intensity measure levels
+    # L - Number of intensity measure levels
     # G  - Number of GMMs
     mean, stddev = mean_std  # shape (N, M, G)
-    N, LS, G = len(mean), len(loglevels.array), mean.shape[-1]
+    N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
+    assert N == 1, N
+    M = len(loglevels)
+    L1 = L // M
 
     # This is the array where we store the output results i.e. poes on soil
-    out_s = numpy.zeros((N, LS) if squeeze else (N, LS, G))
+    out_s = numpy.zeros((N, L) if squeeze else (N, L, G))
 
     # `nsamp` is the number of IMLs per IMT used to compute the hazard on rock
     # while 'L' is total number of ground-motion values
@@ -262,8 +263,6 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
 
     # Compute the probability of exceedance for each in intensity
     # measure type IMT
-    lvl = 0
-    clm = 0
     sigma = ampfun.get_max_sigma()
     for m, imt in enumerate(loglevels):
 
@@ -274,8 +273,9 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
         # Here we set automatically the IMLs that will be used to compute
         # the probability of occurrence of GM on rock within discrete
         # intervals
-        ll = numpy.linspace(min(soillevels)-sigma*4.,
-                            max(soillevels)+sigma*4., num=nsamp)
+        ll = numpy.linspace(min(soillevels) - sigma * 4.,
+                            max(soillevels) + sigma * 4.,
+                            num=nsamp)
 
         # Calculate for each ground motion interval the probability
         # of occurrence on rock for all the sites
@@ -289,7 +289,6 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
             else:
                 out_l = (iml_l - mean[:, m]) / stddev[:, m]
                 out_u = (iml_u - mean[:, m]) / stddev[:, m]
-            lvl += 1
 
             # Probability of occurrence on rock - The shape of this array
             # is: number of sites x number of IMLs x GMMs. This corresponds
@@ -306,13 +305,12 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
 
             # Get mean and std of the amplification function for this
             # magnitude, distance and IML
-            median_af, std_af = ampfun.get_mean_std(sitecode, imt,
-                                                    numpy.exp(iml_mid),
-                                                    mag, rrup)
+            median_af, std_af = ampfun.get_mean_std(
+                sitecode, imt, numpy.exp(iml_mid), mag, rrup)
 
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
-            logaf = numpy.log(numpy.exp(soillevels)/numpy.exp(iml_mid))
+            logaf = numpy.log(numpy.exp(soillevels) / numpy.exp(iml_mid))
             tmp = 1. - norm_cdf(logaf, numpy.log(median_af), std_af)
             poex_af = numpy.reshape(numpy.tile(tmp, N), (-1, len(logaf)))
             # The probability of occurrence on rock has shape:
@@ -320,16 +318,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
             poex = poex_af.T * pocc_rock
 
             # Updating output
-            upp = len(loglevels[imt])
-            out_s[:, clm:clm+upp, :] += poex
-            
-        clm += len(loglevels[imt])
-
-    # The output must have shape [1, LS, G] since we consider just one
-    # site
-    assert out_s.shape[0] == 1
-    assert out_s.shape[1] == LS
-    assert out_s.shape[2] == G
+            out_s[:, m * L1: (m + 1) * L1, :] += poex
 
     return out_s
 

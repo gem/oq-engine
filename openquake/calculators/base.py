@@ -459,8 +459,6 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading %s', oq.inputs['amplification'])
             df = readinput.get_amplification(oq)
             check_amplification(df, self.sitecol)
-            # if oq.amplification_method == 'kernel':
-            df.reset_index(drop=False, inplace=True)
             self.af = AmplFunction.from_dframe(df)
 
         if getattr(self, 'sitecol', None):
@@ -814,10 +812,9 @@ class HazardCalculator(BaseCalculator):
             self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
             if oq.amplification_method == 'kernel':
-                # TODO need to add additional checks on the main calculation
+                # TODO: need to add additional checks on the main calculation
                 # methodology since the kernel method is currently tested only
                 # for classical PSHA
-                df.reset_index(drop=False, inplace=True)
                 self.af = AmplFunction.from_dframe(df)
                 self.amplifier = None
         else:

@@ -85,7 +85,6 @@ class AmplificationFunctionTestCase(unittest.TestCase):
         fname = gettemp(ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
-        df.reset_index(drop=False, inplace=True)
         self.af = AmplFunction.from_dframe(df)
 
     def test_get_max_sigma(self):

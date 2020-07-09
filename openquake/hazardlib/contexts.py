@@ -508,26 +508,20 @@ class PmapMaker(object):
                 mean_std = ctx.get_mean_std(self.imts, self.gsims)
             with self.poe_mon:
                 ll = self.loglevels
-
                 af = self.cmaker.af
-                mag = ctx.mag
-                sitecode = None
-                
-                try:
-                    sitecode = ctx.sites['ampcode'][0]
-                except:
+                if af:
+                    [sitecode] = ctx.sites['ampcode']  # single-site only
+                else:
                     sitecode = None
-                rrup = ctx.rrup
-            
                 poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims,
-                                     af, mag, sitecode, rrup)
-
+                                     af, ctx.mag, sitecode, ctx.rrup)
                 for g, gsim in enumerate(self.gsims):
                     for m, imt in enumerate(ll):
                         if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
                             # set by the engine when parsing the gsim logictree
                             # when 0 ignore the gsim: see _build_trts_branches
                             poes[:, ll(imt), g] = 0
+
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)
                 pnes = ctx.get_probability_no_exceedance(poes)
