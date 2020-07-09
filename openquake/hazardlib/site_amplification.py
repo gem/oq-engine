@@ -16,39 +16,119 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
+import copy
 import numpy
-from scipy.stats import norm
+import pandas as pd
+
+from openquake.hazardlib.stats import norm_cdf
+from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import ProbabilityCurve
 from openquake.commonlib.oqvalidation import check_same_levels
 
 
-# this is necessary since norm.cdf for scale=0 returns NaNs
-def norm_cdf(x, a, s):
+class AmplFunction():
     """
-    Gaussian cumulative distribution function; if s=0, returns an
-    Heaviside function instead. NB: for x=a, 0.5 is returned for all s.
+    Class for managing an amplification function DataFrame.
 
-    >>> norm_cdf(1.2, 1, .1)
-    0.9772498680518208
-    >>> norm_cdf(1.2, 1, 0)
-    1.0
-    >>> norm_cdf(.8, 1, .1)
-    0.022750131948179216
-    >>> norm_cdf(.8, 1, 0)
-    0.0
-    >>> norm_cdf(1, 1, .1)
-    0.5
-    >>> norm_cdf(1, 1, 0)
-    0.5
+    :param df:
+        A :class:`pandas.DataFrame` instance
+    :param soil:
+        A string with the code of the site to be used
     """
-    if s == 0:
-        return numpy.heaviside(x - a, .5)
-    else:
-        return norm.cdf(x, loc=a, scale=s)
+
+    def __init__(self, df, soil=None):
+        # If the function is used only for one soil type, then we filter out
+        # the other soil typologies
+        if soil is not None:
+            df = df[df['ampcode'] == soil]
+        if 'from_mag' in df.keys():
+            self.mags = numpy.unique(df['from_mag'])
+        self.df = df
+
+    @classmethod
+    def from_dframe(cls, df, soil=None):
+        """
+        :param df:
+            A :class:`pandas.DataFrame` instance
+        :param soil:
+            A string
+        :returns:
+            A :class:`openquake.hazardlib.site_amplification.AmplFunction`
+            instance
+        """
+        # Get IMTs
+        imts = []
+        # example of df.keys():
+        # ampcode  from_mag  from_rrup  level  PGA sigma_PGA
+        for key in df.keys():
+            if re.search('^SA', key) or re.search('^PGA', key):
+                imts.append(key)
+
+        # Create the temporary list of lists
+        out = []
+        for _, row in df.reset_index().iterrows():
+            for imt in imts:
+                out.append([row['ampcode'], row['from_mag'], row['from_rrup'],
+                            row['level'], imt, row[imt], row['sigma_' + imt]])
+
+        # Create the dataframe
+        dtypes = {'ampcode': ampcode_dt, 'from_mag': float,
+                  'from_rrup': float, 'level': float, 'imt': str,
+                  'median': float, 'std': float}
+        df = pd.DataFrame(out, columns=dtypes).astype(dtypes)
+        return AmplFunction(df, soil)  # requires reset_index
+
+    def get_mean_std(self, site, imt, iml, mag, dst):
+        """
+        :param site:
+            A string specifying the site
+        :param imt:
+            A string specifying the intensity measure type e.g. 'PGA' or
+            'SA(1.0)'
+        :param iml:
+            A float with the shaking level on rock for which we need the
+            amplification factor
+        :param mag:
+            A float with the magnitude of the rupture
+        :param dst:
+            A float defining the rupture-site distance
+        :returns:
+            A tuple with the median amplification factor and the std of the
+            logarithm
+        """
+        df = copy.copy(self.df)
+        df = df[(df['ampcode'] == site) & (df['imt'] == imt)]
+
+        # Filtering magnitude
+        idx = numpy.argmin((self.mags - mag) > 0)
+        df = df[df['from_mag'] == self.mags[idx]]
+
+        # Filtering distance
+        tmp_dsts = numpy.array(sorted(df['from_rrup']))
+        idx = numpy.argmin((tmp_dsts - dst) > 0)
+        df = df[df['from_rrup'] == tmp_dsts[idx]]
+
+        # Interpolating
+        median = numpy.interp(iml, df['level'], df['median'])
+        std = numpy.interp(iml, df['level'], df['std'])
+
+        return median, std
+
+    def get_max_sigma(self):
+        """
+        :returns:
+            The maximum sigma value in the amplification function
+        """
+        return max(self.df['std'])
 
 
 def check_unique(df, kfields, fname):
+    """
+    Check if there are duplicate records with the respect to the
+    composite primary key defined by the kfields
+    """
     for k, rows in df.groupby(kfields):
         if len(rows) > 1:
             msg = 'Found duplicates for %s' % str(k)
@@ -67,21 +147,38 @@ class Amplifier(object):
         A DataFrame containing amplification functions.
     :param amplevels:
         Intensity levels used for the amplified curves (if None, use the
-        levels from the imtls dictionary)
+        levels from the imtls dictionary). It's an array.
     """
     def __init__(self, imtls, ampl_df, amplevels=None):
+        # Check input
         if not imtls:
             raise ValueError('There are no intensity_measure_types!')
+        # If available, get the filename containing the amplification function
         fname = getattr(ampl_df, 'fname', None)
+        # Set the intensity measure types and levels on rock
         self.imtls = imtls
+        # Set the intensity levels for which we compute poes on soil. Note
+        # that we assume they are the same for all the intensity measure types
+        # considered
         self.amplevels = amplevels
+        # This is the reference Vs30 for the amplification function
         self.vs30_ref = ampl_df.vs30_ref
         has_levels = 'level' in ampl_df.columns
-        if has_levels:
+        has_mags = 'from_mag' in ampl_df.columns
+        # Checking the input dataframe. The first case is for amplification
+        # functions that depend on magnitude, distance and iml (the latter
+        # in this case can be probably removed since is closely correlated
+        # to the other two variables
+        if has_levels and 'from_mag' in ampl_df.keys():
+            keys = ['ampcode', 'level', 'from_mag', 'from_rrup']
+            check_unique(ampl_df, keys, fname)
+        elif has_levels and 'level' in ampl_df.keys():
             check_unique(ampl_df, ['ampcode', 'level'], fname)
         else:
             check_unique(ampl_df, ['ampcode'], fname)
         missing = set(imtls) - set(ampl_df.columns[has_levels:])
+        # Raise an error in case the hazard on rock does not contain
+        # all the IMTs included in the amplification function
         if missing:
             raise ValueError('The amplification table does not contain %s'
                              % missing)
@@ -89,28 +186,61 @@ class Amplifier(object):
             self.periods = [from_string(imt).period for imt in imtls]
         else:
             self.periods, levels = check_same_levels(imtls)
+        # Create a dictionary containing for each site-category [key] a
+        # dataframe [value] with the corresponding amplification function
         self.coeff = {}  # code -> dataframe
         self.ampcodes = []
+        # This is a list with the names of the columns we will use to filter
+        # the dataframe with the amplification function
         cols = list(imtls)
+        if has_mags:
+            cols.extend(['from_mag', 'from_rrup'])
         if has_levels:
             cols.append('level')
+        # Appending to the list, the column names for sigma
         for col in ampl_df.columns:
             if col.startswith('sigma_'):
                 cols.append(col)
+        # Now we populate the dictionary containing for each site class the
+        # corresponding dataframe with the amplification
         for code, df in ampl_df.groupby('ampcode'):
             self.ampcodes.append(code)
             if has_levels:
                 self.coeff[code] = df[cols].set_index('level')
             else:
                 self.coeff[code] = df[cols]
-        if amplevels is not None:  # PoEs amplification
-            self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # shape I-1
-            self.ialphas = {}  # code -> array of length I-1
-            self.isigmas = {}  # code -> array of length I-1
-            for code in self.coeff:
-                for imt in imtls:
-                    self.ialphas[code, imt], self.isigmas[code, imt] = (
-                        self._interp(code, imt, self.midlevels))
+        # This is used in the case of the convolution method. We compute the
+        # probability of occurrence for discrete intervals of ground motion
+        # and we prepare values of median amplification and std for the
+        # midlevels (i.e. ground motion on rock) for each IMT
+        if amplevels is not None:
+            self.imtls = imtls
+            self.levels = levels
+            self._set_alpha_sigma(mag=None, dst=None)
+
+    def _set_alpha_sigma(self, mag, dst):
+        """
+        This sets the median amplification and std
+        """
+        imtls = self.imtls
+        levels = self.levels
+        self.midlevels = numpy.diff(levels) / 2 + levels[:-1]  # shape I-1
+        self.ialphas = {}  # code -> array of length I-1
+        self.isigmas = {}  # code -> array of length I-1
+        for code in self.coeff:
+            df = self.coeff[code]
+            if mag is not None:
+                # Reducing the initial dataframe by keeping information just
+                # for the given magnitude and distance
+                magu = numpy.sort(numpy.unique(df['from_mag']))
+                magsel = magu[max(numpy.argwhere(magu < mag))[0]]
+                df = df.loc[df['from_mag'] == magsel, :]
+                dstu = numpy.sort(numpy.unique(df['from_rrup']))
+                dstsel = dstu[max(numpy.argwhere(dstu < dst))[0]]
+                df = df.loc[df['from_rrup'] == dstsel, :]
+            for imt in imtls:
+                self.ialphas[code, imt], self.isigmas[code, imt] = (
+                    self._interp(code, imt, self.midlevels, df))
 
     def check(self, vs30, vs30_tolerance):
         """
@@ -131,15 +261,23 @@ class Amplifier(object):
         """
         if isinstance(poes, list):  # in the tests
             poes = numpy.array(poes).reshape(-1, 1)
+        # Manage the case of a site collection with empty ampcode
         if ampl_code == b'' and len(self.ampcodes) == 1:
-            # manage the case of a site collection with empty ampcode
             ampl_code = self.ampcodes[0]
+
         ialphas = self.ialphas[ampl_code, imt]
         isigmas = self.isigmas[ampl_code, imt]
+
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
+
+        # Amplify, for each site i.e. distance
         for g in range(G):
+
+            # Compute the probability of occurrence of GM within a number of
+            # intervals
             p_occ = -numpy.diff(poes[:, g])
+
             for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 #
                 # This computes the conditional probabilities of exceeding
@@ -176,9 +314,11 @@ class Amplifier(object):
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
 
-    def _interp(self, ampl_code, imt_str, imls):
+    def _interp(self, ampl_code, imt_str, imls, coeff=None):
         # returns ialpha, isigma for the given levels
-        coeff = self.coeff[ampl_code]
+        if coeff is None:
+            coeff = self.coeff[ampl_code]
+
         if len(coeff) == 1:  # there is single coefficient for all levels
             ones = numpy.ones_like(imls)
             ialpha = float(coeff[imt_str]) * ones

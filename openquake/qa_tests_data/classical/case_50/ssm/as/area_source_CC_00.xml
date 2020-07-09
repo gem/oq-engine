@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Model CC_00"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaSource
+            id="CC_00"
+            name="CC_00"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry
+                >
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -77.4187947226 8.56968537356 -78.2365962032 7.93685734731 -78.8669878731 7.30683471568 -80.3194667218 7.26520922989 -81.0260193168 7.48533154962 -80.8488195699 8.88926389871 -79.9810179871 9.30263144809 -79.6656251585 9.45994410598 -79.0985395522 9.53763974787 -78.5756989187 9.368415214 -77.984136337 9.11475009002 -77.5001776705 8.6671638779 -77.4187947226 8.56968537356
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        40.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.90261022835" bValue="1.02516415781" maxMag="7.2" minMag="5.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="47.0" probability="0.75" rake="-16.0" strike="193.0"/>
+                    <nodalPlane dip="47.0" probability="0.25" rake="115.0" strike="219.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0" probability="0.36"/>
+                    <hypoDepth depth="20.0" probability="0.42"/>
+                    <hypoDepth depth="35.0" probability="0.22"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

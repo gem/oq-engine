@@ -149,6 +149,9 @@ class ContextMaker(object):
 
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
+
+        self.af = param.get('af', None)
+
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
@@ -505,13 +508,20 @@ class PmapMaker(object):
                 mean_std = ctx.get_mean_std(self.imts, self.gsims)
             with self.poe_mon:
                 ll = self.loglevels
-                poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims)
+                af = self.cmaker.af
+                if af:
+                    [sitecode] = ctx.sites['ampcode']  # single-site only
+                else:
+                    sitecode = None
+                poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims,
+                                     af, ctx.mag, sitecode, ctx.rrup)
                 for g, gsim in enumerate(self.gsims):
                     for m, imt in enumerate(ll):
                         if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
                             # set by the engine when parsing the gsim logictree
                             # when 0 ignore the gsim: see _build_trts_branches
                             poes[:, ll(imt), g] = 0
+
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)
                 pnes = ctx.get_probability_no_exceedance(poes)

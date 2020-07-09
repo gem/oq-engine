@@ -217,7 +217,8 @@ def export_hcurves_csv(ekey, dstore):
                                  hmap.flatten().view(hmap_dt), comment))
         elif key == 'hcurves':
             # shape (N, R|S, M, L1)
-            if 'amplification' in oq.inputs:
+            if ('amplification' in oq.inputs and
+                    oq.amplification_method == 'convolution'):
                 imtls = DictArray(
                     {imt: oq.soil_intensities for imt in oq.imtls})
             else:
