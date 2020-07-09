@@ -252,7 +252,7 @@ class Amplifier(object):
                              'from vs30_ref=%d over the tolerance of %d' %
                              (self.vs30_ref, vs30_tolerance))
 
-    def amplify_one(self, ampl_code, imt, poes, mag=None, dst=None):
+    def amplify_one(self, ampl_code, imt, poes):
         """
         :param ampl_code: code for the amplification function
         :param imt: an intensity measure type
@@ -264,28 +264,19 @@ class Amplifier(object):
         # Manage the case of a site collection with empty ampcode
         if ampl_code == b'' and len(self.ampcodes) == 1:
             ampl_code = self.ampcodes[0]
-        # Get median amplification an std of the logarithm
-        if mag is None and dst is None:
-            ialphas = self.ialphas[ampl_code, imt]
-            isigmas = self.isigmas[ampl_code, imt]
+
+        ialphas = self.ialphas[ampl_code, imt]
+        isigmas = self.isigmas[ampl_code, imt]
 
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
-        #
+
         # Amplify, for each site i.e. distance
         for g in range(G):
+
             # Compute the probability of occurrence of GM within a number of
             # intervals
             p_occ = -numpy.diff(poes[:, g])
-            #
-            # Setting the amplification function
-            if mag is not None and dst is not None:
-                1/0  # ERROR: it never goes here
-                d = dst[g] if len(dst) else dst
-                self._set_alpha_sigma(mag, d)
-
-                ialphas = self.ialphas[ampl_code, imt]
-                isigmas = self.isigmas[ampl_code, imt]
 
             for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 #
@@ -307,7 +298,7 @@ class Amplifier(object):
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
-    def amplify(self, ampl_code, pcurves, mag=None, dst=None):
+    def amplify(self, ampl_code, pcurves):
         """
         :param ampl_code: 2-letter code for the amplification function
         :param pcurves: a list of ProbabilityCurves containing PoEs
@@ -318,8 +309,7 @@ class Amplifier(object):
             lst = []
             for imt in self.imtls:
                 slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc],
-                                       mag, dst)
+                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
                 lst.append(new)
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out

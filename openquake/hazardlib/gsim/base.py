@@ -222,8 +222,7 @@ def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
 def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
                    mag, sitecode, rrup, squeeze=False):
     """
-    NOTE: this works for a single site. We also assume that the loglevels
-    are the same for all the IMTs
+    NOTE: this works for a single site
 
     :param mean_std:
         See :function:`openquake.hazardlib.gsim.base.get_poes`
