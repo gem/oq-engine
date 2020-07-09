@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added command `oq renumber_sm ssmLT.xml`
+
   [Robin Gee]
   * Set DEFINED_FOR_REFERENCE_VELOCITY for GMPEs modified for Switzerland
 
