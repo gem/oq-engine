@@ -44,7 +44,7 @@ class DifferentFiles(Exception):
 
 def strip_calc_id(fname):
     name = os.path.basename(fname)
-    return re.sub(r'_\d+\.', '.', name)
+    return re.sub(r'_\d+', '', name)
 
 
 def columns(line):
