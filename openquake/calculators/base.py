@@ -33,7 +33,10 @@ from openquake.baselib import (
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile, site
+
 from openquake.hazardlib.site_amplification import Amplifier
+from openquake.hazardlib.site_amplification import AmplFunction
+
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
@@ -450,6 +453,14 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
+
+        if ('amplification' in oq.inputs and
+                oq.amplification_method == 'kernel'):
+            logging.info('Reading %s', oq.inputs['amplification'])
+            df = readinput.get_amplification(oq)
+            check_amplification(df, self.sitecol)
+            self.af = AmplFunction.from_dframe(df)
+
         if getattr(self, 'sitecol', None):
             # can be None for the ruptures-only calculator
             with hdf5.File(self.datastore.tempname, 'w') as tmp:
@@ -793,12 +804,19 @@ class HazardCalculator(BaseCalculator):
             self.datastore['sitecol'] = self.sitecol.complete
 
         # store amplification functions if any
+        self.af = None
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
             df = readinput.get_amplification(oq)
             check_amplification(df, self.sitecol)
             self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
+            if oq.amplification_method == 'kernel':
+                # TODO: need to add additional checks on the main calculation
+                # methodology since the kernel method is currently tested only
+                # for classical PSHA
+                self.af = AmplFunction.from_dframe(df)
+                self.amplifier = None
         else:
             self.amplifier = None
 

@@ -180,12 +180,12 @@ class PostRiskCalculator(base.RiskCalculator):
             self.build_datasets(builder, oq.aggregate_by, 'agg_')
         self.build_datasets(builder, [], 'app_')
         self.build_datasets(builder, [], 'tot_')
-        ds = (self.datastore.parent if oq.hazard_calculation_id
-              else self.datastore)
+        ds = self.datastore
+        full_aggregate_by = (ds.parent['oqparam'].aggregate_by if ds.parent
+                             else ()) or oq.aggregate_by
         if oq.aggregate_by:
-            aggkeys = sorted(ds['event_loss_table'])
             aggkeys = build_aggkeys(oq.aggregate_by, self.tagcol,
-                                    ds['oqparam'].aggregate_by)
+                                    full_aggregate_by)
             if not oq.hazard_calculation_id:  # no parent
                 ds.swmr_on()
             smap = parallel.Starmap(

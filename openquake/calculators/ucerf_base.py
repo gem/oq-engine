@@ -26,7 +26,7 @@ import h5py
 import zlib
 
 from openquake.baselib.general import random_filter, AccumDict, cached_property
-from openquake.hazardlib.calc.filters import SourceFilter, getdefault
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface

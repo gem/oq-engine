@@ -31,7 +31,6 @@ from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
-from openquake.commonlib.readinput import get_oqparam
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
@@ -40,7 +39,7 @@ from openquake.commands.export import export
 from openquake.commands.extract import extract
 from openquake.commands.sample import sample
 from openquake.commands.reduce_sm import reduce_sm
-from openquake.commands.engine import run_job
+from openquake.commands.engine import run_jobs
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
@@ -479,12 +478,12 @@ class DbTestCase(unittest.TestCase):
 
 class EngineRunJobTestCase(unittest.TestCase):
     def test_ebr(self):
-        # test a single case of `run_job`, but it is the most complex one,
+        # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
-            job_id = run_job(job_ini, log_level='error')
+            [(job_id, oqparam)] = run_jobs([job_ini], log_level='error')
         self.assertIn('id | name', str(p))
 
         # sanity check on the performance views: make sure that the most
@@ -500,7 +499,7 @@ class EngineRunJobTestCase(unittest.TestCase):
         tempdir = tempfile.mkdtemp()
         dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
-            job_id = run_job(job_ini, log_level='error')
+            [(job_id, oq)] = run_jobs([job_ini], log_level='error')
             job = commonlib.logs.dbcmd('get_job', job_id)
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)

@@ -708,6 +708,7 @@ def _get_csm_cached(oq, full_lt, h5=None):
         h5.attrs['checksum32'] = checksum
     fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
     if os.path.exists(fname):
+        logging.info('Reading %s', fname)
         with open(fname, 'rb') as f:
             return pickle.load(f)
     csm = get_csm(oq, full_lt, h5)
@@ -715,6 +716,7 @@ def _get_csm_cached(oq, full_lt, h5=None):
     for sg in csm.src_groups:
         for src in sg:
             src.weight  # cache .num_ruptures
+    logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
         pickle.dump(csm, f)
     return csm
@@ -730,7 +732,7 @@ def get_composite_source_model(oqparam, h5=None):
          an open hdf5.File where to store the source info
     """
     full_lt = get_full_lt(oqparam)
-    if oqparam.csm_cache:
+    if oqparam.csm_cache and not oqparam.is_ucerf():
         csm = _get_csm_cached(oqparam, full_lt, h5)
     else:
         csm = get_csm(oqparam, full_lt, h5)

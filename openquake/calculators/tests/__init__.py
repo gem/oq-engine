@@ -44,7 +44,7 @@ class DifferentFiles(Exception):
 
 def strip_calc_id(fname):
     name = os.path.basename(fname)
-    return re.sub(r'_\d+\.', '.', name)
+    return re.sub(r'_\d+', '', name)
 
 
 def columns(line):
@@ -251,7 +251,6 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         parallel.Starmap.shutdown()
-        print('durations =', cls.duration)
         builtins.open = orig_open
         export.sanity_check = False
         if OQ_CALC_OUTPUTS:

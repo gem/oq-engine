@@ -537,7 +537,12 @@ def positiveint(value):
     :param value: input string
     :returns: positive integer
     """
-    i = int(not_empty(value))
+    val = value.lower()
+    if val == 'true':
+        return 1
+    elif val == 'false':
+        return 0
+    i = int(not_empty(val))
     if i < 0:
         raise ValueError('integer %d < 0' % i)
     return i

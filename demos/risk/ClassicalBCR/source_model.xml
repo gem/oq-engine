@@ -11,7 +11,7 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Active Shallow Crust"
         >
             <areaSource
-            id="224"
+            id="1"
             name="Source 8.CH.244"
             >
                 <areaGeometry>
@@ -46,7 +46,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="226"
+            id="12"
             name="Source 8.CH.249"
             >
                 <areaGeometry>
@@ -81,7 +81,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="227"
+            id="17"
             name="Source 8.CH.250"
             >
                 <areaGeometry>
@@ -116,7 +116,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="228"
+            id="18"
             name="Source 8.CH.251"
             >
                 <areaGeometry>
@@ -151,7 +151,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="229"
+            id="19"
             name="Source 8.CH.252"
             >
                 <areaGeometry>
@@ -186,7 +186,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="230"
+            id="20"
             name="Source 8.CH.253"
             >
                 <areaGeometry>
@@ -221,7 +221,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="231"
+            id="21"
             name="Source 8.CH.254"
             >
                 <areaGeometry>
@@ -256,7 +256,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="232"
+            id="22"
             name="Source 8.CH.255"
             >
                 <areaGeometry>
@@ -291,7 +291,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="233"
+            id="23"
             name="Source 8.CH.256"
             >
                 <areaGeometry>
@@ -326,7 +326,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="234"
+            id="2"
             name="Source 8.CH.257"
             >
                 <areaGeometry>
@@ -361,7 +361,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="235"
+            id="3"
             name="Source 8.CH.258"
             >
                 <areaGeometry>
@@ -396,7 +396,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="236"
+            id="4"
             name="Source 8.CH.259"
             >
                 <areaGeometry>
@@ -431,7 +431,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="238"
+            id="5"
             name="Source 8.CH.261"
             >
                 <areaGeometry>
@@ -466,7 +466,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="239"
+            id="6"
             name="Source 8.CH.262"
             >
                 <areaGeometry>
@@ -501,7 +501,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="240"
+            id="7"
             name="Source 8.CH.263"
             >
                 <areaGeometry>
@@ -536,7 +536,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="243"
+            id="8"
             name="Source 8.CH.267"
             >
                 <areaGeometry>
@@ -571,7 +571,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="244"
+            id="9"
             name="Source 8.CH.268"
             >
                 <areaGeometry>
@@ -606,7 +606,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="272"
+            id="10"
             name="Source 8.CH.300"
             >
                 <areaGeometry>
@@ -641,7 +641,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="279"
+            id="11"
             name="Source 8.CH.404"
             >
                 <areaGeometry>
@@ -676,7 +676,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="280"
+            id="13"
             name="Source 8.CH.405"
             >
                 <areaGeometry>
@@ -711,7 +711,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="374"
+            id="14"
             name="Source 8.CH.248"
             >
                 <areaGeometry>
@@ -746,7 +746,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="376"
+            id="15"
             name="Source 8.CH.265"
             >
                 <areaGeometry>
@@ -781,7 +781,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
             <areaSource
-            id="386"
+            id="16"
             name="Source 8.CH.245"
             >
                 <areaGeometry>
