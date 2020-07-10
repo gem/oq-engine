@@ -132,7 +132,6 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     :returns:
         a dictionary sid -> 7D-array
     """
-    res = {'trti': trti, 'magi': magi}
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
@@ -172,8 +171,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         matrix = disagg.disaggregate(
             ctxs, mean_std, zs_by_g, iml2dict, eps3, s, bins, pne_mon, mat_mon)
         if matrix.any():
-            res[s] = matrix
-    return res
+            yield {'trti': trti, 'magi': magi, s: matrix}
 
 
 # the weight is the number of sites within 100 km from the rupture
