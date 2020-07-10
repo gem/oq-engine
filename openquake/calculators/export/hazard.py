@@ -318,12 +318,12 @@ def export_hcurves_xml(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         name = hazard_curve_name(dstore, ekey, kind)
-        hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
         for im in oq.imtls:
-            slc = oq.imtls(im)
+            key = 'hcurves?kind=%s&imt=%s' % (kind, im)
+            hcurves = extract(dstore, key)[kind]  # shape (N, 1, L1)
             imt = from_string(im)
             fname = name[:-len_ext] + '-' + im + '.' + fmt
-            data = [HazardCurve(Location(site), poes[slc])
+            data = [HazardCurve(Location(site), poes[0])
                     for site, poes in zip(sitemesh, hcurves)]
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
