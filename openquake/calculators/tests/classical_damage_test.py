@@ -146,3 +146,7 @@ class ClassicalDamageTestCase(CalculatorTestCase):
     def test_case_master(self):
         if NOT_DARWIN:  # skip on macOS
             self.check(case_master)
+            fnames = export(('hcurves', 'csv'), self.calc.datastore)
+            for fname in fnames:
+                self.assertEqualFiles(
+                    'expected/%s' % strip_calc_id(fname), fname)
