@@ -4,24 +4,6 @@
 
 The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters. DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
-<!-- GEM BEGIN: apply the following patch with the proper values for the next release
--[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
- 
--### Current stable
-+## OpenQuake Engine version 2.6 (Gutenberg)
- 
--Current stable version is the **OpenQuake Engine 2.5** 'Fourier'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.5#openquake-engine.
--* [What's new](https://github.com/gem/oq-engine/blob/engine-2.5/doc/whats-new.md)
--
-+Starting from OpenQuake version 2.0 we have introduced a "code name" to honour earthquake scientists.
- 
-+The code name for version 2.6 is **Gutenberg**, in memory of [Beno Gutenberg](https://en.wikipedia.org/wiki/Beno_Gutenberg).
-+* [What's new](https://github.com/gem/oq-engine/blob/engine-2.6/doc/whats-new.md)
-+ 
-+## Documentation
--## Documentation (master tree)
--->
-
 [![AGPLv3](https://www.gnu.org/graphics/agplv3-88x31.png)](https://www.gnu.org/licenses/agpl.html)
 [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
@@ -36,8 +18,6 @@ Current stable version is the **OpenQuake Engine 3.9** 'Taylor'. The documentati
 * [What's new](https://github.com/gem/oq-engine/blob/engine-3.9/doc/whats-new.md)
 
 ## Documentation (master tree)
-
-<!-- GEM END -->
 
 ### General overview
 
