@@ -181,6 +181,8 @@ class PoissonTOM(BaseTOM):
             second dimension intensity measure levels. ``poes`` can be obtained
             calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`.
         :return:
-            2D array containing probabilities of no exceedance.
+            2D numpy array containing probabilities of no exceedance. First
+￼            dimension represents sites, second dimension intensity measure
+￼            levels.
         """
         return numpy.exp(- occurrence_rate * self.time_span * poes)
