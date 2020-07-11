@@ -379,7 +379,7 @@ def disaggregation(
     for trt in cmaker:
         gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            mean_std = get_mean_std(ctxs, [str(imt)], [gsim])
+            mean_std = get_mean_std(ctxs, [imt], [gsim])
             bdata[trt, magi] = disaggregate(
                 ctxs, mean_std, {0: [0]}, {imt: iml2}, eps3)
 

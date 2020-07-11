@@ -141,11 +141,14 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         rupdata = {k: dstore['rup/' + k][a:b][idxs-a] for k in dstore['rup']}
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
+    pre_mon = monitor('prepare contexts', measuremem=False)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
-    ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
+    with pre_mon:
+        ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
+    rupdata.clear()
     res = {'trti': trti, 'magi': magi}
     for m, im in enumerate(oq.imtls):
         imt = from_string(im)
@@ -176,6 +179,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             if matrix.any():
                 res[s, m] = matrix
     return res
+
 
 # the weight is the number of sites within 100 km from the rupture
 RupIndex = collections.namedtuple('RupIndex', 'index weight')
@@ -386,7 +390,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                                 trti, magi, self.bin_edges[1:], oq))
                 task_inputs.append((trti, magi, len(idxs)))
 
-        nbytes, msg = get_array_nbytes(dict(N=self.N, M=self.M, G=G, U=U))
+        nbytes, msg = get_array_nbytes(dict(N=self.N, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
         sd = self.shapedic.copy()
         sd.pop('trt')
@@ -484,6 +488,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         for (s, m), mat8 in results.items():
             if s not in self.ok_sites:
                 continue
+            imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat7 = mat8[..., p, :]
                 poe2 = pprod(mat7, axis=(0, 1, 2, 3, 4, 5))
@@ -491,9 +496,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                 poe_agg = poe2.mean()
                 if poe and abs(1 - poe_agg / poe) > .1:
                     logging.warning(
-                        'Site #%d: poe_agg=%s is quite different from the '
-                        'expected poe=%s; perhaps the number of intensity '
-                        'measure levels is too small?', s, poe_agg, poe)
+                        'Site #%d, IMT=%s: poe_agg=%s is quite different from '
+                        'the expected poe=%s; perhaps the number of intensity '
+                        'measure levels is too small?', s, imt, poe_agg, poe)
                 mat6 = agg_probs(*mat7)  # 6D
                 for key in outputs:
                     pmf = disagg.pmf_map[key](
