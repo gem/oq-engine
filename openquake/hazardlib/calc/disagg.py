@@ -36,7 +36,6 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import (
     ContextMaker, to_distribution_values)
 
@@ -171,7 +170,6 @@ def get_mean_std(ctxs, imts, gsims):
     """
     U, N, M, G = len(ctxs), len(ctxs[0].sids), len(imts), len(gsims)
     mean_std = numpy.zeros((2, U, N, M, G), numpy.float32)
-    imts = [from_string(imt) for imt in imts]
     for u, ctx in enumerate(ctxs):
         mean_std[:, u, ctx.sids] = ctx.get_mean_std(imts, gsims)
     return mean_std
