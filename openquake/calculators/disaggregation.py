@@ -146,7 +146,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     with ms_mon:
         ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
-        mean_std = disagg.get_mean_std(ctxs, oq.imtls, cmaker.gsims)
+        disagg.set_mean_std(ctxs, oq.imtls, cmaker.gsims)
 
     for s, iml3 in enumerate(iml4):
         iml2dict = {imt: iml3[m] for m, imt in enumerate(oq.imtls)}
@@ -168,8 +168,11 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = bin_edges[0], bin_edges[1][s], bin_edges[2][s], bin_edges[3]
         # build 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
+        close_ctxs = [ctx for ctx in ctxs if ctx.rrup[s] < 9999.]
+        if not close_ctxs:
+            continue
         matrix = disagg.disaggregate(
-            ctxs, mean_std, zs_by_g, iml2dict, eps3, s, bins, pne_mon, mat_mon)
+            close_ctxs, zs_by_g, iml2dict, eps3, s, bins, pne_mon, mat_mon)
         if matrix.any():
             yield {'trti': trti, 'magi': magi, s: matrix}
 

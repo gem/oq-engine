@@ -114,7 +114,7 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, mean_std, zs_by_g, iml2dict, eps3, sid=0, bin_edges=(),
+def disaggregate(ctxs, zs_by_g, iml2dict, eps3, sid=0, bin_edges=(),
                  pne_mon=performance.Monitor(),
                  mat_mon=performance.Monitor()):
     """
@@ -141,18 +141,21 @@ def disaggregate(ctxs, mean_std, zs_by_g, iml2dict, eps3, sid=0, bin_edges=(),
 
     truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
+    G = ctxs[0].mean_std.shape[-1]
+    mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
         dists[u] = ctx.rrup[sid]  # distance to the site
         lons[u] = ctx.clon[sid]  # closest point of the rupture lon
         lats[u] = ctx.clat[sid]  # closest point of the rupture lat
+        mean_std[:, u] = ctx.mean_std[:, 0]  # (2, N, M, G) => (2, M, G)
     with pne_mon:
         poes = numpy.zeros((U, E, M, P, Z))
         pnes = numpy.ones((U, E, M, P, Z))
         for g, zs in zs_by_g.items():
             for (m, p, z), iml in numpy.ndenumerate(iml3):
                 if z in zs:
-                    lvls = (iml - mean_std[0, :, sid, m, g]) / (
-                        mean_std[1, :, sid, m, g])
+                    lvls = (iml - mean_std[0, :, m, g]) / (
+                        mean_std[1, :, m, g])
                     idxs = numpy.searchsorted(epsilons, lvls)
                     poes[:, :, m, p, z] = _disagg_eps(
                         truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
@@ -165,16 +168,10 @@ def disaggregate(ctxs, mean_std, zs_by_g, iml2dict, eps3, sid=0, bin_edges=(),
         return _build_disagg_matrix(bindata, bin_edges)
 
 
-def get_mean_std(ctxs, imts, gsims):
-    """
-    :returns: array of shape (2, U, N, M, G)
-    """
-    U, N, M, G = len(ctxs), len(ctxs[0].sids), len(imts), len(gsims)
-    mean_std = numpy.zeros((2, U, N, M, G), numpy.float32)
+def set_mean_std(ctxs, imts, gsims):
     imts = [from_string(imt) for imt in imts]
     for u, ctx in enumerate(ctxs):
-        mean_std[:, u, ctx.sids] = ctx.get_mean_std(imts, gsims)
-    return mean_std
+        ctx.mean_std = ctx.get_mean_std(imts, gsims)  # (2, N, M, G)
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -381,9 +378,9 @@ def disaggregation(
     for trt in cmaker:
         gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            mean_std = get_mean_std(ctxs, [str(imt)], [gsim])
+            set_mean_std(ctxs, [str(imt)], [gsim])
             bdata[trt, magi] = disaggregate(
-                ctxs, mean_std, {0: [0]}, {imt: iml2}, eps3)
+                ctxs, {0: [0]}, {imt: iml2}, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
