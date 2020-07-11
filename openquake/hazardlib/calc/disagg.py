@@ -29,7 +29,6 @@ import numpy
 import scipy.stats
 
 from openquake.hazardlib import contexts
-from openquake.baselib import performance
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -113,9 +112,7 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, mean_std, zs_by_g, iml2dict, eps3, sid=0, bin_edges=(),
-                 pne_mon=performance.Monitor(),
-                 mat_mon=performance.Monitor()):
+def disaggregate(ctxs, mean_std, zs_by_g, iml2dict, eps3, sid=0, bin_edges=()):
     """
     :param ctxs: a list of U fat RuptureContexts
     :param imts: a list of Intensity Measure Type objects
@@ -123,7 +120,6 @@ def disaggregate(ctxs, mean_std, zs_by_g, iml2dict, eps3, sid=0, bin_edges=(),
     :param imt: an Intensity Measure Type
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
-    :param pne_mon: monitor for the probabilities of no exceedance
     """
     # disaggregate (separate) PoE in different contributions
     U, E, M = len(ctxs), len(eps3[2]), len(iml2dict)
@@ -144,24 +140,23 @@ def disaggregate(ctxs, mean_std, zs_by_g, iml2dict, eps3, sid=0, bin_edges=(),
         dists[u] = ctx.rrup[sid]  # distance to the site
         lons[u] = ctx.clon[sid]  # closest point of the rupture lon
         lats[u] = ctx.clat[sid]  # closest point of the rupture lat
-    with pne_mon:
-        poes = numpy.zeros((U, E, M, P, Z))
-        pnes = numpy.ones((U, E, M, P, Z))
-        for g, zs in zs_by_g.items():
-            for (m, p, z), iml in numpy.ndenumerate(iml3):
-                if z in zs:
-                    lvls = (iml - mean_std[0, :, sid, m, g]) / (
-                        mean_std[1, :, sid, m, g])
-                    idxs = numpy.searchsorted(epsilons, lvls)
-                    poes[:, :, m, p, z] = _disagg_eps(
-                        truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
-        for u, ctx in enumerate(ctxs):
-            pnes[u] *= ctx.get_probability_no_exceedance(poes[u])
+
+    poes = numpy.zeros((U, E, M, P, Z))
+    pnes = numpy.ones((U, E, M, P, Z))
+    for g, zs in zs_by_g.items():
+        for (m, p, z), iml in numpy.ndenumerate(iml3):
+            if z in zs:
+                lvls = (iml - mean_std[0, :, sid, m, g]) / (
+                    mean_std[1, :, sid, m, g])
+                idxs = numpy.searchsorted(epsilons, lvls)
+                poes[:, :, m, p, z] = _disagg_eps(
+                    truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+    for u, ctx in enumerate(ctxs):
+        pnes[u] *= ctx.get_probability_no_exceedance(poes[u])  # this is slow
     bindata = BinData(dists, lons, lats, pnes)
     if not bin_edges:
         return bindata
-    with mat_mon:
-        return _build_disagg_matrix(bindata, bin_edges)
+    return _build_disagg_matrix(bindata, bin_edges)
 
 
 def get_mean_std(ctxs, imts, gsims):

@@ -141,13 +141,10 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         rupdata = {k: dstore['rup/' + k][a:b][idxs-a] for k in dstore['rup']}
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
-    pre_mon = monitor('prepare contexts', measuremem=False)
-    pne_mon = monitor('disaggregate_pne', measuremem=False)
-    mat_mon = monitor('build_disagg_matrix', measuremem=False)
+    dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
-    with pre_mon:
-        ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
+    ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
     rupdata.clear()
     res = {'trti': trti, 'magi': magi}
     for m, im in enumerate(oq.imtls):
@@ -173,9 +170,10 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             # dist_bins, lon_bins, lat_bins, eps_bins
             bins = bin_edges[0], bin_edges[1][s], bin_edges[2][s], bin_edges[3]
             # build 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
-            matrix = disagg.disaggregate(
-                ctxs, mean_std, zs_by_g, {imt: iml3[m]}, eps3, s, bins,
-                pne_mon, mat_mon)[..., 0, :, :]  # 6D-matrix
+            with dis_mon:
+                matrix = disagg.disaggregate(
+                    ctxs, mean_std, zs_by_g, {imt: iml3[m]}, eps3, s,
+                    bins)[..., 0, :, :]  # 6D-matrix
             if matrix.any():
                 res[s, m] = matrix
     return res
