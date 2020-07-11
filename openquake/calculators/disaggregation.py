@@ -146,13 +146,17 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
     rupdata.clear()
-    res = {'trti': trti, 'magi': magi}
     for m, im in enumerate(oq.imtls):
+        res = {'trti': trti, 'magi': magi}
         imt = from_string(im)
         with ms_mon:
+            # compute mean and std for a single IMT to save memory
+            # the size is N * U * G * 8 bytes
             mean_std = disagg.get_mean_std(ctxs, [imt], cmaker.gsims)
 
+        # disaggregate by site, IMT
         for s, iml3 in enumerate(iml4):
+
             # z indices by gsim
             M, P, Z = iml3.shape
             zs_by_g = AccumDict(accum=[])
@@ -169,14 +173,14 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
 
             # dist_bins, lon_bins, lat_bins, eps_bins
             bins = bin_edges[0], bin_edges[1][s], bin_edges[2][s], bin_edges[3]
-            # build 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
+            # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
             with dis_mon:
                 matrix = disagg.disaggregate(
                     ctxs, mean_std, zs_by_g, {imt: iml3[m]}, eps3, s,
                     bins)[..., 0, :, :]  # 6D-matrix
             if matrix.any():
                 res[s, m] = matrix
-    return res
+        yield res
 
 
 # the weight is the number of sites within 100 km from the rupture
