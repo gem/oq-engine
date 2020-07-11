@@ -1,6 +1,10 @@
+  [Michele Simionato]
+  * Fixed multi-site disaggregation: ruptures far away were not discarded,
+    just considered distant 9999 km
+
   [Marco Pagani]
   * Added a prototype implementation of the kernel method
-  
+
   [Michele Simionato]
   * Added zipcode site parameter
   * Added command `oq renumber_sm ssmLT.xml`

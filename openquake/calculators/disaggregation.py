@@ -55,15 +55,13 @@ F32 = numpy.float32
 def _check_curves(sid, rlzs, curves, imtls, poes_disagg):
     # there may be sites where the sources are too small to produce
     # an effect at the given poes_disagg
-    bad = 0
     for rlz, curve in zip(rlzs, curves):
         for imt in imtls:
             max_poe = curve[imt].max()
             for poe in poes_disagg:
                 if poe > max_poe:
                     logging.warning(POE_TOO_BIG, sid, poe, max_poe, rlz, imt)
-                    bad += 1
-    return bool(bad)
+                    return True
 
 
 def _matrix(matrices, num_trts, num_mag_bins):
@@ -145,14 +143,13 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     ms_mon = monitor('disagg mean_std', measuremem=True)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
-    rupdata.clear()
     for m, im in enumerate(oq.imtls):
         res = {'trti': trti, 'magi': magi}
         imt = from_string(im)
         with ms_mon:
             # compute mean and std for a single IMT to save memory
             # the size is N * U * G * 8 bytes
-            mean_std = disagg.get_mean_std(ctxs, [imt], cmaker.gsims)
+            disagg.set_mean_std(ctxs, [imt], cmaker.gsims)
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(iml4):
@@ -174,12 +171,15 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             # dist_bins, lon_bins, lat_bins, eps_bins
             bins = bin_edges[0], bin_edges[1][s], bin_edges[2][s], bin_edges[3]
             # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
+            close_ctxs = [ctx for ctx in ctxs if ctx.rrup[s] < 9999.]
+            if not close_ctxs:
+                continue
             with dis_mon:
                 matrix = disagg.disaggregate(
-                    ctxs, mean_std, zs_by_g, {imt: iml3[m]}, eps3, s,
+                    close_ctxs, zs_by_g, {imt: iml3[m]}, eps3, s,
                     bins)[..., 0, :, :]  # 6D-matrix
-            if matrix.any():
-                res[s, m] = matrix
+                if matrix.any():
+                    res[s, m] = matrix
         yield res
 
 
@@ -487,6 +487,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             a dict kind -> PMF matrix to be populated
         """
         outputs = self.oqparam.disagg_outputs
+        count = numpy.zeros(len(self.sitecol), U16)
         for (s, m), mat8 in results.items():
             if s not in self.ok_sites:
                 continue
@@ -496,11 +497,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                 poe2 = pprod(mat7, axis=(0, 1, 2, 3, 4, 5))
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
                 poe_agg = poe2.mean()
-                if poe and abs(1 - poe_agg / poe) > .1:
+                if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
                     logging.warning(
                         'Site #%d, IMT=%s: poe_agg=%s is quite different from '
                         'the expected poe=%s; perhaps the number of intensity '
                         'measure levels is too small?', s, imt, poe_agg, poe)
+                    count[s] += 1
                 mat6 = agg_probs(*mat7)  # 6D
                 for key in outputs:
                     pmf = disagg.pmf_map[key](
