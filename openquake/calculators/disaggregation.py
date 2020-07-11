@@ -141,9 +141,14 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         oq.investigation_time)
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
-    chk_mon = monitor('checking', measuremem=False)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
+    N, M, P, Z = iml4.shape
+    g_by_z = numpy.zeros((N, Z), numpy.uint8)
+    for g, rlzs in enumerate(cmaker.gsims.values()):
+        for (s, z), r in numpy.ndenumerate(iml4.rlzs):
+            if r in rlzs:
+                g_by_z[s, z] = g
     for m, im in enumerate(oq.imtls):
         res = {'trti': trti, 'magi': magi}
         imt = from_string(im)
@@ -154,31 +159,16 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(iml4):
-            with chk_mon:
-                # z indices by gsim
-                M, P, Z = iml3.shape
-                zs_by_g = AccumDict(accum=[])
-                for g, rlzs in enumerate(cmaker.gsims.values()):
-                    for z in range(Z):
-                        if iml4.rlzs[s, z] in rlzs:
-                            zs_by_g[g].append(z)
-
-                # sanity check: the zs are disjoint
-                counts = numpy.zeros(Z, numpy.uint8)
-                for zs in zs_by_g.values():
-                    counts[zs] += 1
-                assert (counts <= 1).all(), counts
-
-                # dist_bins, lon_bins, lat_bins, eps_bins
-                bins = (bin_edges[0], bin_edges[1][s], bin_edges[2][s],
-                        bin_edges[3])
-                # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
-                close_ctxs = [ctx for ctx in ctxs if ctx.rrup[s] < 9999.]
-                if not close_ctxs:
-                    continue
+            # dist_bins, lon_bins, lat_bins, eps_bins
+            bins = (bin_edges[0], bin_edges[1][s], bin_edges[2][s],
+                    bin_edges[3])
+            # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
+            close_ctxs = [ctx for ctx in ctxs if ctx.rrup[s] < 9999.]
+            if not close_ctxs:
+                continue
             with dis_mon:
                 matrix = disagg.disaggregate(
-                    close_ctxs, zs_by_g, {imt: iml3[m]}, eps3, s,
+                    close_ctxs, g_by_z[s], {imt: iml3[m]}, eps3, s,
                     bins)[..., 0, :, :]  # 6D-matrix
                 if matrix.any():
                     res[s, m] = matrix
