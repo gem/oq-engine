@@ -112,11 +112,11 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, zs_by_g, iml2dict, eps3, sid=0, bin_edges=()):
+def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     """
     :param ctxs: a list of U fat RuptureContexts
     :param imts: a list of Intensity Measure Type objects
-    :param zs_by_g: a dictionary g -> Z indices
+    :param g_by_z: an array of gsim indices
     :param imt: an Intensity Measure Type
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
@@ -145,13 +145,12 @@ def disaggregate(ctxs, zs_by_g, iml2dict, eps3, sid=0, bin_edges=()):
         mean_std[:, u] = ctx.mean_std[:, 0]  # (2, N, M, G) => (2, M, G)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
-    for g, zs in zs_by_g.items():
-        for (m, p, z), iml in numpy.ndenumerate(iml3):
-            if z in zs:
-                lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
-                idxs = numpy.searchsorted(epsilons, lvls)
-                poes[:, :, m, p, z] = _disagg_eps(
-                    truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+    for (m, p, z), iml in numpy.ndenumerate(iml3):
+        g = g_by_z[z]
+        lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
+        idxs = numpy.searchsorted(epsilons, lvls)
+        poes[:, :, m, p, z] = _disagg_eps(
+            truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     for u, ctx in enumerate(ctxs):
         pnes[u] *= ctx.get_probability_no_exceedance(poes[u])  # this is slow
     bindata = BinData(dists, lons, lats, pnes)
@@ -370,8 +369,7 @@ def disaggregation(
         gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
             set_mean_std(ctxs, [imt], [gsim])
-            bdata[trt, magi] = disaggregate(
-                ctxs, {0: [0]}, {imt: iml2}, eps3)
+            bdata[trt, magi] = disaggregate(ctxs, [0], {imt: iml2}, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(
