@@ -55,15 +55,13 @@ F32 = numpy.float32
 def _check_curves(sid, rlzs, curves, imtls, poes_disagg):
     # there may be sites where the sources are too small to produce
     # an effect at the given poes_disagg
-    bad = 0
     for rlz, curve in zip(rlzs, curves):
         for imt in imtls:
             max_poe = curve[imt].max()
             for poe in poes_disagg:
                 if poe > max_poe:
                     logging.warning(POE_TOO_BIG, sid, poe, max_poe, rlz, imt)
-                    bad += 1
-    return bool(bad)
+                    return True
 
 
 def _matrix(matrices, num_trts, num_mag_bins):
