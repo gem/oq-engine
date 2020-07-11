@@ -129,7 +129,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary sid -> 7D-array
+        a dictionary sid, imti -> 6D-array
     """
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
@@ -165,11 +165,11 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             # dist_bins, lon_bins, lat_bins, eps_bins
             bins = (bin_edges[0], bin_edges[1][s], bin_edges[2][s],
                     bin_edges[3])
-            # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
             close_ctxs = ctxs[mask[s]]
             if len(close_ctxs) == 0:
                 continue
             with dis_mon:
+                # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
                 matrix = disagg.disaggregate(
                     close_ctxs, g_by_z[s], {imt: iml3[m]}, eps3, s,
                     bins)[..., 0, :, :]  # 6D-matrix
