@@ -185,5 +185,4 @@ class PoissonTOM(BaseTOM):
             dimension represents sites, second dimensions intensity measure
             levels.
         """
-        p = self.get_probability_one_or_more_occurrences(occurrence_rate)
-        return (1 - p) ** poes
+        return numpy.exp(- occurrence_rate * self.time_span * poes)
