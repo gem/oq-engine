@@ -104,7 +104,7 @@ def _prepare_ctxs(rupdata, cmaker, sitecol):
             setattr(ctx, par, sitecol[par])
         ctx.sids = sitecol.sids
         ctxs.append(ctx)
-    return ctxs
+    return numpy.array(ctxs)
 
 
 def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
@@ -150,6 +150,8 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         for (s, z), r in numpy.ndenumerate(iml4.rlzs):
             if r in rlzs:
                 g_by_z[s, z] = g
+    with fil_mon:
+        mask = numpy.array([ctx.rrup < 9999. for ctx in ctxs]).T  # (N, U)
     for m, im in enumerate(oq.imtls):
         res = {'trti': trti, 'magi': magi}
         imt = from_string(im)
@@ -164,10 +166,9 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             bins = (bin_edges[0], bin_edges[1][s], bin_edges[2][s],
                     bin_edges[3])
             # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
-            with fil_mon:
-                close_ctxs = [ctx for ctx in ctxs if ctx.rrup[s] < 9999.]
-                if not close_ctxs:
-                    continue
+            close_ctxs = ctxs[mask[s]]
+            if len(close_ctxs) == 0:
+                continue
             with dis_mon:
                 matrix = disagg.disaggregate(
                     close_ctxs, g_by_z[s], {imt: iml3[m]}, eps3, s,
