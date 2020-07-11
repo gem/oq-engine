@@ -131,27 +131,26 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     :returns:
         a dictionary sid -> 7D-array
     """
+    RuptureContext.temporal_occurrence_model = PoissonTOM(
+        oq.investigation_time)
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
         # NB: using dstore['rup/' + k][idxs] would be ultraslow!
         a, b = idxs.min(), idxs.max() + 1
         rupdata = {k: dstore['rup/' + k][a:b][idxs-a] for k in dstore['rup']}
-    RuptureContext.temporal_occurrence_model = PoissonTOM(
-        oq.investigation_time)
-    fil_mon = monitor('filtering ruptures', measuremem=False)
+        eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
+        ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
+        close = numpy.array([ctx.rrup < 9999. for ctx in ctxs]).T  # (N, U)
+
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
-    eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
-    ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
     N, M, P, Z = iml4.shape
     g_by_z = numpy.zeros((N, Z), numpy.uint8)
     for g, rlzs in enumerate(cmaker.gsims.values()):
         for (s, z), r in numpy.ndenumerate(iml4.rlzs):
             if r in rlzs:
                 g_by_z[s, z] = g
-    with fil_mon:
-        mask = numpy.array([ctx.rrup < 9999. for ctx in ctxs]).T  # (N, U)
     for m, im in enumerate(oq.imtls):
         res = {'trti': trti, 'magi': magi}
         imt = from_string(im)
@@ -166,7 +165,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             bins = (bin_edges[0], bin_edges[1][s], bin_edges[2][s],
                     bin_edges[3])
             # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
-            close_ctxs = ctxs[mask[s]]
+            close_ctxs = ctxs[close[s]]
             if len(close_ctxs) == 0:
                 continue
             with dis_mon:
