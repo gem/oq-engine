@@ -208,6 +208,63 @@ def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
     return np.array(new_comp_table)
 
 
+def get_counts_corrected(catalogue, completeness, d_m, last_year=None):
+
+    delta = 1e-8
+    assert np.abs(np.round(completeness[0, 1] / d_m) * d_m -
+                  completeness[0, 1]) < delta
+
+    if last_year is None:
+        last_year = max(catalogue.data["year"])+1
+    assert last_year > np.max(completeness[:, 0])
+
+    # Create filtering window
+    compl = np.zeros((len(completeness[:, 0])+1, 2))
+    compl[1:, 0] = completeness[:, 0]
+    compl[:-1, 1] = completeness[:, 1]
+    compl[0, 0] = last_year
+    compl[-1, 1] = 20  # A super-large magnitude
+
+    mags = catalogue.data["magnitude"]
+    times = catalogue.data["dtime"]
+
+    # Purging the catalogue
+    for low_year, low_mag in zip(compl[:, 0], completeness[:, 1]):
+        idx = ((times < low_year) & (mags < low_mag))
+        idx = np.argwhere(idx > 0)
+        if len(idx):
+            mags = np.delete(mags, idx)
+            times = np.delete(times, idx)
+
+    # Find the index of the completeness interval for each magnitude value
+    tmp = np.argsort(compl[:, 0])
+    idx = np.searchsorted(compl[:, 0], times, sorter=tmp)
+    idx = tmp[idx]
+
+    # Find the magnitude defining the upper boundary of the bin just above
+    # (or across) the magnitude completeness interval
+    upp = np.floor_divide(compl[idx, 1], d_m) * d_m + d_m
+
+    # Compute the weight of each earthquake in the completeness window. For
+    # the earthquakes falling inside incomplete bins, their weight is adjusted
+    # accordingly.
+    tmp = np.where((mags < upp) & (abs(upp - compl[idx, 1]) < d_m*0.99))
+    weights = np.ones_like(mags)
+    delta = last_year-compl[idx[tmp], 0]
+    weights[tmp] = 1/(last_year-compl[idx[tmp]+1, 0]) * delta
+
+    # Count occurrences using weights
+    tmp = (np.floor_divide(max(mags), d_m) + 2) * d_m
+    mag_bins = np.arange(min(compl[:, 1]), tmp, d_m)
+    count, _ = np.histogram(mags, mag_bins, weights=weights)
+
+    mid_mag = mag_bins[:-1]+d_m/2
+    idx = np.searchsorted(compl[:, 1], mid_mag)
+    delta = last_year - compl[idx, 0]
+
+    return mid_mag, delta, count
+
+
 def get_completeness_counts(catalogue, completeness, d_m):
     """
     Returns the number of earthquakes in a set of magnitude bins of specified
@@ -226,9 +283,16 @@ def get_completeness_counts(catalogue, completeness, d_m):
         * t_per - array indicating total duration (in years) of completeness
         * n_obs - number of events in completeness period
     """
+
+    # Get the maxmum magnitude
     mmax_obs = np.max(catalogue.data["magnitude"])
-    # thw line below was added by Nick Ackerley but it breaks the tests
+
+    # The line below was added by Nick Ackerley but it breaks the tests
     # catalogue.data["dtime"] = catalogue.get_decimal_time()
+
+    # If the maximum magnitude in the catalogue is larger than the maximum
+    # magnitude set in the completeness table we add to this table one row
+    # with the
     if mmax_obs > np.max(completeness[:, 1]):
         cmag = np.hstack([completeness[:, 1], mmax_obs])
     else:
@@ -246,6 +310,8 @@ def get_completeness_counts(catalogue, completeness, d_m):
                             d_m)
     count_rates = np.zeros(len(master_bins) - 1)
     count_years = np.zeros_like(count_rates)
+
+    # Loop over the completeness periods
     for i in range(len(cyear) - 1):
         time_idx = np.logical_and(catalogue.data["dtime"] < cyear[i],
                                   catalogue.data["dtime"] >= cyear[i + 1])
@@ -257,10 +323,14 @@ def get_completeness_counts(catalogue, completeness, d_m):
             sel_mags,
             bins=m_bins)[0].astype(float)
         count_years[m_idx[:-1]] += float(nyrs)
-    # Removes any zero rates greater than
+
+    # Removes any zero rates from the right tail
+    if not any(count_rates):
+        return None, None, None
     last_loc = np.where(count_rates > 0)[0][-1]
     n_obs = count_rates[:(last_loc + 1)]
     t_per = count_years[:(last_loc + 1)]
     cent_mag = (master_bins[:-1] + master_bins[1:]) / 2.
     cent_mag = np.around(cent_mag[:(last_loc + 1)], 3)
+
     return cent_mag, t_per, n_obs
