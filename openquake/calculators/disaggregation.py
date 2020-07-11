@@ -139,6 +139,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         rupdata = {k: dstore['rup/' + k][a:b][idxs-a] for k in dstore['rup']}
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
+    fil_mon = monitor('filtering ruptures', measuremem=False)
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
@@ -163,9 +164,10 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             bins = (bin_edges[0], bin_edges[1][s], bin_edges[2][s],
                     bin_edges[3])
             # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
-            close_ctxs = [ctx for ctx in ctxs if ctx.rrup[s] < 9999.]
-            if not close_ctxs:
-                continue
+            with fil_mon:
+                close_ctxs = [ctx for ctx in ctxs if ctx.rrup[s] < 9999.]
+                if not close_ctxs:
+                    continue
             with dis_mon:
                 matrix = disagg.disaggregate(
                     close_ctxs, g_by_z[s], {imt: iml3[m]}, eps3, s,
