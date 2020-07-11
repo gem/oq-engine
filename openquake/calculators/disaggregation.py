@@ -487,6 +487,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             a dict kind -> PMF matrix to be populated
         """
         outputs = self.oqparam.disagg_outputs
+        count = numpy.zeros(len(self.sitecol), U16)
         for (s, m), mat8 in results.items():
             if s not in self.ok_sites:
                 continue
@@ -496,11 +497,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                 poe2 = pprod(mat7, axis=(0, 1, 2, 3, 4, 5))
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
                 poe_agg = poe2.mean()
-                if poe and abs(1 - poe_agg / poe) > .1:
+                if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
                     logging.warning(
                         'Site #%d, IMT=%s: poe_agg=%s is quite different from '
                         'the expected poe=%s; perhaps the number of intensity '
                         'measure levels is too small?', s, imt, poe_agg, poe)
+                    count[s] += 1
                 mat6 = agg_probs(*mat7)  # 6D
                 for key in outputs:
                     pmf = disagg.pmf_map[key](
