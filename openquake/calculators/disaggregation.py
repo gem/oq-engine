@@ -98,7 +98,7 @@ def _prepare_ctxs(rupdata, cmaker, sitecol):
         for par in rupdata:
             if not par.endswith('_'):
                 setattr(ctx, par, rupdata[par][u])
-            else:  # site-dependent parameter
+            else:  # distance parameters
                 setattr(ctx, par[:-1], rupdata[par][u])
         for par in cmaker.REQUIRES_SITES_PARAMETERS:
             setattr(ctx, par, sitecol[par])
