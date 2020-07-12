@@ -27,7 +27,8 @@ import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes, humansize, pprod, agg_probs)
+    AccumDict, block_splitter, split_in_slices,
+    get_array_nbytes, humansize, pprod, agg_probs)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -107,6 +108,21 @@ def _prepare_ctxs(rupdata, cmaker, sitecol):
     return numpy.array(ctxs)
 
 
+def block_read(dstore, k, idxs, blocksize=10000):
+    """
+    >>> dic = {'rup/mag': numpy.arange(10)}
+    >>> block_read(dic, 'mag', numpy.array([2, 4, 6, 7]), 3)
+    array([2, 4, 6, 7])
+    """
+    dset = dstore['rup/' + k]
+    n = len(dset)
+    lst = []
+    for slc in split_in_slices(n, numpy.ceil(n / blocksize)):
+        idx = idxs[(idxs >= slc.start) & (idxs < slc.stop)]
+        lst.append(dset[slc][idx - slc.start])
+    return numpy.concatenate(lst)
+
+
 def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
@@ -136,9 +152,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
-        # NB: using dstore['rup/' + k][idxs] would be ultraslow!
-        a, b = idxs.min(), idxs.max() + 1
-        rupdata = {k: dstore['rup/' + k][a:b][idxs-a] for k in dstore['rup']}
+        rupdata = {k: block_read(dstore, k, idxs) for k in dstore['rup']}
         ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
         del rupdata
         close = numpy.array([ctx.rrup < 9999. for ctx in ctxs]).T  # (N, U)
