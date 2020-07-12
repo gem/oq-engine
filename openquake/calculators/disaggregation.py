@@ -152,8 +152,8 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
             if r in rlzs:
                 g_by_z[s, z] = g
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
+    res = {'trti': trti, 'magi': magi}
     for m, im in enumerate(oq.imtls):
-        res = {'trti': trti, 'magi': magi}
         imt = from_string(im)
         with ms_mon:
             # compute mean and std for a single IMT to save memory
@@ -175,7 +175,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
                     bins)[..., 0, :, :]  # 6D-matrix
                 if matrix.any():
                     res[s, m] = matrix
-        yield res
+    return res
 
 
 # the weight is the number of sites within 100 km from the rupture
