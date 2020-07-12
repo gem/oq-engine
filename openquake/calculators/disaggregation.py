@@ -139,8 +139,8 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         # NB: using dstore['rup/' + k][idxs] would be ultraslow!
         a, b = idxs.min(), idxs.max() + 1
         rupdata = {k: dstore['rup/' + k][a:b][idxs-a] for k in dstore['rup']}
-        eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
         ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
+        del rupdata
         close = numpy.array([ctx.rrup < 9999. for ctx in ctxs]).T  # (N, U)
 
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -151,6 +151,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         for (s, z), r in numpy.ndenumerate(iml4.rlzs):
             if r in rlzs:
                 g_by_z[s, z] = g
+    eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     for m, im in enumerate(oq.imtls):
         res = {'trti': trti, 'magi': magi}
         imt = from_string(im)
