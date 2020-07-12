@@ -108,12 +108,14 @@ def _prepare_ctxs(rupdata, cmaker, sitecol):
     return numpy.array(ctxs)
 
 
-def block_read(dstore, k, idxs, blocksize=10000):
+def block_read(dstore, k, idxs, blocksize=100000):
     """
-    >>> dic = {'rup/mag': numpy.arange(10)}
-    >>> block_read(dic, 'mag', numpy.array([2, 4, 6, 7]), 3)
+    >>> dstore = {'rup/rrup_': numpy.arange(10)}
+    >>> block_read(dstore, 'rrup_', numpy.array([2, 4, 6, 7]), 3)
     array([2, 4, 6, 7])
     """
+    if not k.endswith('_'):  # rupture parameter
+        return dstore['rup/' + k][:][idxs]
     dset = dstore['rup/' + k]
     n = len(dset)
     lst = []
