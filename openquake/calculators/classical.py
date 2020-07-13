@@ -190,7 +190,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # store rup_data if there are few sites
             rup_data = dic['rup_data']
-            nr = len(rup_data['grp_id'])
+            nr = len(rup_data.get('grp_id', []))
             if nr == 0:
                 return acc
             for k in self.rparams:
