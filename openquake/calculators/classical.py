@@ -190,24 +190,26 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # store rup_data if there are few sites
             rup_data = dic['rup_data']
-            for mag, k in rup_data:
+            mags = set(mag for mag, k in rup_data)
+            for mag in sorted(mags):
                 nr = len(rup_data[mag, 'gidx'])
-                if nr == 0 or k not in self.rparams:
+                if nr == 0:
                     continue
-                name = 'rup_%s/%s' % (mag, k)
-                try:
-                    v = rup_data[mag, k]
-                except KeyError:
-                    if k == 'probs_occur':
-                        v = [numpy.zeros(0)] * nr
-                    elif k.endswith('_'):
-                        v = numpy.ones((nr, self.N)) * numpy.nan
-                    else:
-                        v = numpy.ones(nr) * numpy.nan
-                if k == 'probs_occur':  # variable lenght arrays
-                    self.datastore.hdf5.save_vlen(name, v)
-                    continue
-                hdf5.extend(self.datastore[name], v)
+                for k in self.rparams:
+                    name = 'rup_%s/%s' % (mag, k)
+                    try:
+                        v = rup_data[mag, k]
+                    except KeyError:
+                        if k == 'probs_occur':
+                            v = [numpy.zeros(0)] * nr
+                        elif k.endswith('_'):
+                            v = numpy.ones((nr, self.N)) * numpy.nan
+                        else:
+                            v = numpy.ones(nr) * numpy.nan
+                    if k == 'probs_occur':  # variable lenght arrays
+                        self.datastore.hdf5.save_vlen(name, v)
+                        continue
+                    hdf5.extend(self.datastore[name], v)
         return acc
 
     def acc0(self):
