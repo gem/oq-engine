@@ -380,8 +380,11 @@ def extract_sitecol(dstore, what):
     """
     Extracts the site collection array (not the complete object, otherwise it
     would need to be pickled).
-    Use it as /extract/sitecol
+    Use it as /extract/sitecol?param=vs30
     """
+    qdict = parse(what)
+    if 'field' in qdict:
+        return dstore['sitecol'][qdict['field']]
     return dstore['sitecol'].array
 
 
