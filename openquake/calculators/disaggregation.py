@@ -20,15 +20,11 @@
 Disaggregation calculator core functionality
 """
 import logging
-import operator
-import collections
 import numpy
-import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, split_in_slices,
-    get_array_nbytes, humansize, pprod, agg_probs)
+    AccumDict, block_splitter, get_array_nbytes, humansize, pprod, agg_probs)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -40,7 +36,6 @@ from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators import base
 
-weight = operator.attrgetter('weight')
 POE_TOO_BIG = '''\
 Site #%d: you are trying to disaggregate for poe=%s.
 However the source model produces at most probabilities
@@ -108,24 +103,7 @@ def _prepare_ctxs(rupdata, cmaker, sitecol):
     return numpy.array(ctxs)
 
 
-def block_read(dstore, k, idxs, blocksize=100000):
-    """
-    >>> dstore = {'rup/rrup_': numpy.arange(10)}
-    >>> block_read(dstore, 'rrup_', numpy.array([2, 4, 6, 7]), 3)
-    array([2, 4, 6, 7])
-    """
-    if not k.endswith('_'):  # rupture parameter
-        return dstore['rup/' + k][:][idxs]
-    dset = dstore['rup/' + k]
-    n = len(dset)
-    lst = []
-    for slc in split_in_slices(n, numpy.ceil(n / blocksize)):
-        idx = idxs[(idxs >= slc.start) & (idxs < slc.stop)]
-        lst.append(dset[slc][idx - slc.start])
-    return numpy.concatenate(lst)
-
-
-def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
+def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -154,11 +132,12 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
         sitecol = dstore['sitecol']
-        rupdata = {k: block_read(dstore, k, idxs) for k in dstore['rup']}
+        rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
         ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
         del rupdata
         close = numpy.array([ctx.rrup < 9999. for ctx in ctxs]).T  # (N, U)
 
+    magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = iml4.shape
@@ -179,8 +158,8 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
         # disaggregate by site, IMT
         for s, iml3 in enumerate(iml4):
             # dist_bins, lon_bins, lat_bins, eps_bins
-            bins = (bin_edges[0], bin_edges[1][s], bin_edges[2][s],
-                    bin_edges[3])
+            bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
+                    bin_edges[4])
             close_ctxs = ctxs[close[s]]
             if len(close_ctxs) == 0:
                 continue
@@ -192,28 +171,6 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magi, bin_edges, oq,
                 if matrix.any():
                     res[s, m] = matrix
     return res
-
-
-# the weight is the number of sites within 100 km from the rupture
-RupIndex = collections.namedtuple('RupIndex', 'index weight')
-
-
-def get_indices_by_gidx_mag(dstore, mag_edges):
-    """
-    :returns: a dictionary gidx, magi -> indices
-    """
-    acc = AccumDict(accum=[])  # gidx, magi -> indices
-    close = dstore['rup/rrup_'][:] < 9999.  # close sites
-    logging.info('Reading {:_d} ruptures'.format(len(close)))
-    df = pandas.DataFrame(dict(gidx=dstore['rup/gidx'][:],
-                               mag=dstore['rup/mag'][:]))
-    for (gidx, mag), d in df.groupby(['gidx', 'mag']):
-        magi = numpy.searchsorted(mag_edges, mag) - 1
-        for idx in d.index:
-            weight = close[idx].sum()
-            if weight:
-                acc[gidx, magi].append(RupIndex(idx, weight))
-    return acc
 
 
 def get_outputs_size(shapedic, disagg_outputs):
@@ -374,19 +331,21 @@ class DisaggregationCalculator(base.HazardCalculator):
         # submit disaggregation tasks
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        mag_edges = self.bin_edges[0]
-        indices = get_indices_by_gidx_mag(dstore, mag_edges)
+        mags = set()
+        for trt, dset in self.datastore['source_mags'].items():
+            mags.update(dset[:])
+        mags = sorted(mags)
         allargs = []
-        totweight = sum(sum(ri.weight for ri in indices[gm])
-                        for gm in indices)
-        maxweight = int(numpy.ceil(totweight / (oq.concurrent_tasks or 1)))
+        totrups = sum(len(dset['gidx']) for name, dset in dstore.items()
+                      if name.startswith('rup_'))  # total number of ruptures
         grp_ids = dstore['grp_ids'][:]
+        maxweight = int(numpy.ceil(totrups / (oq.concurrent_tasks or 1)))
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
-        G, U = 0, 0
-        for gidx, magi in indices:
-            trti = grp_ids[gidx][0] // num_eff_rlzs
+        U, G = 0, 0
+        for gidx, gids in enumerate(grp_ids):
+            trti = gids[0] // num_eff_rlzs
             trt = self.trts[trti]
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim[gidx],
@@ -395,13 +354,16 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
             G = max(G, len(cmaker.gsims))
-            for rupidxs in block_splitter(
-                    indices[gidx, magi], maxweight, weight):
-                idxs = numpy.array([ri.index for ri in rupidxs])
-                U = max(U, len(idxs))
-                allargs.append((dstore, idxs, cmaker, self.iml4,
-                                trti, magi, self.bin_edges[1:], oq))
-                task_inputs.append((trti, magi, len(idxs)))
+            for mag in mags:
+                arr = dstore['rup_%s/gidx' % mag][:]
+                indices, = numpy.where(arr == gidx)
+                for rupidxs in block_splitter(indices, maxweight):
+                    idxs = numpy.sort(rupidxs)
+                    nr = len(idxs)
+                    U = max(U, nr)
+                    allargs.append((dstore, idxs, cmaker, self.iml4,
+                                    trti, mag, self.bin_edges, oq))
+                    task_inputs.append((trti, mag, nr))
 
         nbytes, msg = get_array_nbytes(dict(N=self.N, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
@@ -415,7 +377,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer:\n%s', msg)
-        dt = numpy.dtype([('trti', U8), ('magi', U8), ('nrups', U32)])
+        dt = numpy.dtype([('trti', U8), ('mag', '|S4'), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         self.datastore.swmr_on()
         smap = parallel.Starmap(
