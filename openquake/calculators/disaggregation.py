@@ -205,7 +205,7 @@ def get_indices_by_gidx_mag(dstore, mag_edges):
     acc = AccumDict(accum=[])  # gidx, magi -> indices
     close = dstore['rup/rrup_'][:] < 9999.  # close sites
     logging.info('Reading {:_d} ruptures'.format(len(close)))
-    df = pandas.DataFrame(dict(gidx=dstore['rup/grp_id'][:],
+    df = pandas.DataFrame(dict(gidx=dstore['rup/gidx'][:],
                                mag=dstore['rup/mag'][:]))
     for (gidx, mag), d in df.groupby(['gidx', 'mag']):
         magi = numpy.searchsorted(mag_edges, mag) - 1

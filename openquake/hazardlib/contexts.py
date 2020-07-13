@@ -123,7 +123,7 @@ class RupData(object):
             self.data['occurrence_rate'].append(ctx.occurrence_rate)
             self.data['probs_occur'].append(probs_occur)
             self.data['weight'].append(ctx.weight or numpy.nan)
-            self.data['grp_id'].append(gidx)
+            self.data['gidx'].append(gidx)
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
                 self.data[rup_param].append(getattr(ctx, rup_param))
             for dst_param in params:  # including clon, clat

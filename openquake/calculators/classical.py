@@ -134,7 +134,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
             [src.num_ruptures, src.nsites, dt])
         for grp_id in src.grp_ids:
             pmap[grp_id] += 0
-    return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
+    return dict(pmap=pmap, calc_times=calc_times, rup_data={'gidx': []},
                 extra=dict(task_no=monitor.task_no, totrups=totrups,
                            trt=src.tectonic_region_type, maxradius=maxradius))
 
@@ -190,7 +190,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # store rup_data if there are few sites
             rup_data = dic['rup_data']
-            nr = len(rup_data.get('grp_id', []))
+            nr = len(rup_data.get('gidx', []))
             if nr == 0:
                 return acc
             for k in self.rparams:
@@ -215,7 +215,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
-        rparams = {'grp_id', 'occurrence_rate',
+        rparams = {'gidx', 'occurrence_rate',
                    'weight', 'probs_occur', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         n = len(self.full_lt.sm_rlzs)
@@ -233,7 +233,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.rparams = sorted(rparams)
             for k in self.rparams:
                 # variable length arrays
-                if k == 'grp_id':
+                if k == 'gidx':
                     self.datastore.create_dset('rup/' + k, U16)
                 elif k == 'probs_occur':  # vlen
                     self.datastore.create_dset('rup/' + k, hdf5.vfloat64)
