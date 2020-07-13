@@ -102,12 +102,13 @@ class AmplFunction():
         df = df[(df['ampcode'] == site) & (df['imt'] == imt)]
 
         # Filtering magnitude
-        idx = numpy.argmin((self.mags - mag) > 0)
-        df = df[df['from_mag'] == self.mags[idx]]
+        tmp_mags = numpy.sort(numpy.unique(numpy.array(df['from_mag'])))
+        idx = (numpy.searchsorted(tmp_mags, mag)) - 1
+        df = df[df['from_mag'] == tmp_mags[idx]]
 
         # Filtering distance
-        tmp_dsts = numpy.array(sorted(df['from_rrup']))
-        idx = numpy.argmin((tmp_dsts - dst) > 0)
+        tmp_dsts = numpy.sort(numpy.unique(numpy.array(df['from_rrup'])))
+        idx = numpy.searchsorted(tmp_dsts, dst) - 1 
         df = df[df['from_rrup'] == tmp_dsts[idx]]
 
         # Interpolating

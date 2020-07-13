@@ -169,6 +169,9 @@ def calc_hazard_curves(
         The distance used to filter the ruptures (default rjb)
     :param reqv:
         If not None, an instance of RjbEquivalent
+    :param kwargs:
+        - Keyword 'af' accepts an instance of
+        :class:`openquake.hazardlib.site_amplification.AmplFunction`
     :returns:
         An array of size N, where N is the number of sites, which elements
         are records with fields given by the intensity measure types; the
@@ -188,10 +191,11 @@ def calc_hazard_curves(
             src.id = idx
             idx += 1
     imtls = DictArray(imtls)
+    af = getattr(kwargs, 'af', None)
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level,
                  filter_distance=filter_distance, reqv=reqv,
-                 cluster=grp.cluster, shift_hypo=shift_hypo)
+                 cluster=grp.cluster, shift_hypo=shift_hypo, af=af)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
