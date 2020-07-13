@@ -123,7 +123,7 @@ class RupData(object):
             self.data['occurrence_rate'].append(ctx.occurrence_rate)
             self.data['probs_occur'].append(probs_occur)
             self.data['weight'].append(ctx.weight or numpy.nan)
-            self.data['grp_id'].append(gidx)
+            self.data['gidx'].append(gidx)
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
                 self.data[rup_param].append(getattr(ctx, rup_param))
             for dst_param in params:  # including clon, clat
@@ -496,7 +496,7 @@ class PmapMaker(object):
             self.numsites += len(r_sites)
             yield ctx
 
-    def _update_pmap(self, ctxs, pmap=None):
+    def _update_pmap(self, ctxs, gidx, pmap=None):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
             pmap = self.pmap
@@ -553,7 +553,7 @@ class PmapMaker(object):
                 # print_finite_size(rups)
                 with self.ctx_mon:
                     ctxs = list(self._gen_ctxs(rups, sites, gidx, grp_ids))
-                self._update_pmap(ctxs)
+                self._update_pmap(ctxs, gidx)
             else:
                 # many sites: keep in memory less ruptures
                 for src in srcs:
@@ -563,7 +563,7 @@ class PmapMaker(object):
                                 [rup], rup.sites, grp_ids, filt=True)
                         self.numrups += len(ctxs)
                         self.numsites += sum(len(ctx.sids) for ctx in ctxs)
-                        self._update_pmap(ctxs)
+                        self._update_pmap(ctxs, gidx)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
@@ -593,7 +593,7 @@ class PmapMaker(object):
                         rups, sites, numpy.array(src.grp_ids), filt=True)
                     self.numsites += sum(len(ctx.sids) for ctx in ctxs)
                 self.numrups += len(ctxs)
-            self._update_pmap(ctxs, pmap)
+            self._update_pmap(ctxs, getattr(src, 'gidx', 0), pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
                 if self.rup_indep:

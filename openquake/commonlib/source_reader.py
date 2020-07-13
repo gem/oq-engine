@@ -239,9 +239,9 @@ def _get_csm(full_lt, groups):
             atomic.append(grp)
         elif grp:
             acc[grp.trt].extend(grp)
-    dic = {}
     key = operator.attrgetter('source_id', 'code')
     idx = 0
+    src_groups = []
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
@@ -252,13 +252,13 @@ def _get_csm(full_lt, groups):
                 src._wkt = src.wkt()
                 idx += 1
                 lst.append(src)
-        dic[trt] = sourceconverter.SourceGroup(trt, lst)
+        src_groups.append(sourceconverter.SourceGroup(trt, lst))
     for ag in atomic:
         for src in ag:
             src.id = idx
             src._wkt = src.wkt()
             idx += 1
-    src_groups = list(dic.values()) + atomic
+    src_groups.extend(atomic)
     return CompositeSourceModel(full_lt, src_groups)
 
 
