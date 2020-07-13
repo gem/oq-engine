@@ -240,7 +240,6 @@ def _get_csm(full_lt, groups):
         elif grp:
             acc[grp.trt].extend(grp)
     key = operator.attrgetter('source_id', 'code')
-    bygrp = operator.attrgetter('grp_id')
     idx = 0
     src_groups = []
     for trt in acc:
@@ -253,8 +252,7 @@ def _get_csm(full_lt, groups):
                 src._wkt = src.wkt()
                 idx += 1
                 lst.append(src)
-        for ls in general.groupby(lst, bygrp).values():
-            src_groups.append(sourceconverter.SourceGroup(trt, ls))
+        src_groups.append(sourceconverter.SourceGroup(trt, lst))
     for ag in atomic:
         for src in ag:
             src.id = idx

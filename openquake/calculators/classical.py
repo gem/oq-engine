@@ -439,7 +439,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 blocks = list(blks)
                 nb = len(blocks)
                 for block in blocks:
-                    assert len(set(src.gidx for src in block)) == 1
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block),
                                   sum(srcweight(src) for src in block))
