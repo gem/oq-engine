@@ -343,7 +343,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
-        U, G = 0
+        U, G = 0, 0
         for gidx, gids in enumerate(grp_ids):
             trti = gids[0] // num_eff_rlzs
             trt = self.trts[trti]
