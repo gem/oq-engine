@@ -34,7 +34,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_51)
+    case_50, case_51)
 
 aac = numpy.testing.assert_allclose
 
@@ -458,7 +458,7 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['rup/rrup_']), 174)
+        self.assertEqual(len(self.calc.datastore['rup_5.25/rrup_']), 34)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
@@ -471,13 +471,11 @@ hazard_uhs-std.csv
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
         # make sure probs_occur are stored as expected
-        probs_occur = self.calc.datastore['rup/probs_occur'][:]
+        probs_occur = self.calc.datastore['rup_8.20/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
-        self.assertEqual(tot_probs_occur, 28)  # 14 nonparam rups x 2
+        self.assertEqual(tot_probs_occur, 4)  # 2 nonparam rups x 2
         npo = self.calc.csm.get_num_probs_occur()  # 2 probs_occur per rupture
         self.assertEqual(npo, 2)
-        num_point_ruptures = sum(1 for po in probs_occur if len(po) == 0)
-        self.assertEqual(num_point_ruptures, 26)
 
         # make sure there is an error when trying to disaggregate
         with self.assertRaises(NotImplementedError):
@@ -514,15 +512,15 @@ hazard_uhs-std.csv
                                   case_30.__file__)
             # check rupdata
             nruptures = []
-            for par, rupdata in sorted(self.calc.datastore['rup'].items()):
-                nruptures.append((par, len(rupdata)))
+            for par, rdata in sorted(self.calc.datastore['rup_5.05'].items()):
+                nruptures.append((par, len(rdata)))
             self.assertEqual(
                 nruptures,
-                [('clat_', 3202), ('clon_', 3202), ('dip', 3202),
-                 ('grp_id', 3202), ('hypo_depth', 3202), ('mag', 3202),
-                 ('occurrence_rate', 3202), ('probs_occur', 3202),
-                 ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
-                 ('rx_', 3202), ('weight', 3202), ('ztor', 3202)])
+                [('clat_', 28), ('clon_', 28), ('dip', 28),
+                 ('gidx', 28), ('hypo_depth', 28), ('mag', 28),
+                 ('occurrence_rate', 28), ('probs_occur', 28),
+                 ('rake', 28), ('rjb_', 28), ('rrup_', 28),
+                 ('rx_', 28), ('weight', 28), ('ztor', 28)])
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling by cheating
@@ -646,12 +644,12 @@ hazard_uhs-std.csv
     def test_case_48(self):
         # pointsource_distance effects on a simple point source
         self.run_calc(case_48.__file__, 'job.ini')
-        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup_5.10/rrup_'],
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/exact_dists.txt', tmp)
 
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
-        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup_5.10/rrup_'],
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/approx_dists.txt', tmp)
         # this test shows in detail what happens to the distances in presence
@@ -679,8 +677,14 @@ hazard_uhs-std.csv
                                'hcurves-SA(1.057).csv', 'uhs.csv'],
                               case_49.__file__)
 
+    def test_case_50(self):
+        # serious test of amplification + uhs
+        self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(1.0).csv',
+                               'uhs.csv'],
+                              case_50.__file__)
     def test_case_51(self):
         # Modifiable GMPE
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.2).csv',
                                'hcurves-SA(2.0).csv', 'uhs.csv'],
                               case_51.__file__)
+>>>>>>> origin

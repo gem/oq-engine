@@ -92,6 +92,8 @@ class OqParam(valid.ParamSet):
         siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
+    amplification_method = valid.Param(
+        valid.Choice('convolution', 'kernel'), None)
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
@@ -914,6 +916,4 @@ class OqParam(valid.ParamSet):
         """
         if 'gmfs' in self.inputs or 'hazard_curves' in self.inputs:
             return True
-        elif self.hazard_calculation_id:
-            parent = list(util.read(self.hazard_calculation_id))
-            return 'gmf_data' in parent or 'poes' in parent
+        return self.hazard_calculation_id

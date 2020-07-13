@@ -149,26 +149,27 @@ investigation time.
 For instance run the event based risk demo as follows:
 ```bash
 $ oq engine --run job.ini
-
+```
 and export the output "Source Loss Table".
 You should see a table like the one below:
-```
-source,loss_type,loss_value,trt
-231,nonstructural,1.07658E+10,Active Shallow Crust
-231,structural,1.63773E+10,Active Shallow Crust
-386,nonstructural,3.82246E+07,Active Shallow Crust
-386,structural,6.18172E+07,Active Shallow Crust
-238,nonstructural,2.75016E+08,Active Shallow Crust
-238,structural,4.58682E+08,Active Shallow Crust
-239,nonstructural,4.51321E+05,Active Shallow Crust
-239,structural,7.62048E+05,Active Shallow Crust
-240,nonstructural,9.49753E+04,Active Shallow Crust
-240,structural,1.58884E+05,Active Shallow Crust
-280,nonstructural,6.44677E+03,Active Shallow Crust
-280,structural,1.14898E+04,Active Shallow Crust
-374,nonstructural,8.14875E+07,Active Shallow Crust
-374,structural,1.35158E+08,Active Shallow Crust
-...
-```
+
+| source | loss_type     | loss_value  | trt                  |
+|--------|---------------|-------------|----------------------|
+| 231    | nonstructural | 1.07658E+10 | Active Shallow Crust |
+| 231    | structural    | 1.63773E+10 | Active Shallow Crust |
+| 386    | nonstructural | 3.82246E+07 | Active Shallow Crust |
+| 386    | structural    | 6.18172E+07 | Active Shallow Crust |
+| 238    | nonstructural | 2.75016E+08 | Active Shallow Crust |
+| 238    | structural    | 4.58682E+08 | Active Shallow Crust |
+| 239    | nonstructural | 4.51321E+05 | Active Shallow Crust |
+| 239    | structural    | 7.62048E+05 | Active Shallow Crust |
+| 240    | nonstructural | 9.49753E+04 | Active Shallow Crust |
+| 240    | structural    | 1.58884E+05 | Active Shallow Crust |
+| 280    | nonstructural | 6.44677E+03 | Active Shallow Crust |
+| 280    | structural    | 1.14898E+04 | Active Shallow Crust |
+| 374    | nonstructural | 8.14875E+07 | Active Shallow Crust |
+| 374    | structural    | 1.35158E+08 | Active Shallow Crust |
+| ⋮      | ⋮             | ⋮           | ⋮                    |
+
 from which one can infer the sources causing the highest total losses for
 the portfolio of assets within the specified effective investigation time.

@@ -143,7 +143,10 @@ site_param_dt = {
     'dr': numpy.float64,
     'dwb': numpy.float64,
     'hwater': numpy.float64,
-    'precip': numpy.float64
+    'precip': numpy.float64,
+
+    # other parameters
+    'custom_site_id': numpy.uint32,
 }
 
 
@@ -472,7 +475,7 @@ class SiteCollection(object):
 
     def geohash(self, length):
         """
-        :param length: length of the geohash
+        :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
         lst = [geohash(lon, lat, length)
@@ -481,7 +484,7 @@ class SiteCollection(object):
 
     def num_geohashes(self, length):
         """
-        :param length: length of the geohash
+        :param length: length of the geohash in the range 1..8
         :returns: number of distinct geohashes in the site collection
         """
         return len(numpy.unique(self.geohash(length)))

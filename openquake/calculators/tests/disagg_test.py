@@ -87,16 +87,13 @@ class DisaggregationTestCase(CalculatorTestCase):
             raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok(
             ['rlz-0-SA(0.1)-sid-0.xml',
-             'rlz-0-SA(0.1)-sid-1.xml',
              'rlz-1-SA(0.1)-sid-0.xml',
-             'rlz-1-SA(0.1)-sid-1.xml',
-             'rlz-2-SA(0.1)-sid-1.xml',
-             'rlz-3-SA(0.1)-sid-1.xml'],
+             'rlz-2-SA(0.1)-sid-0.xml',
+             'rlz-3-SA(0.1)-sid-0.xml'],
             case_2.__file__)
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 6)  # number of CSV files
         for fname in fnames:
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
@@ -135,10 +132,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         # there is a collapsed nonparametric source with len(probs_occur)==3
-        # the other sizes are 2
-        sizes = [len(po) for po in self.calc.datastore['rup/probs_occur']]
-        self.assertTrue(any(size == 3 for size in sizes),
-                        'No collapse of probs_occur')
 
     def test_case_6(self):
         # test with international date line

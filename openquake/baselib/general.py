@@ -34,6 +34,8 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import multiprocessing
+from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
@@ -44,6 +46,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+mp = multiprocessing.get_context('spawn')
 
 
 def duplicated(items):
@@ -454,6 +457,23 @@ def run_in_process(code, *args):
         # produce escape sequences in stdout, see for instance
         # https://bugs.python.org/issue19884
         return eval(out, {}, {})
+
+
+@contextmanager
+def start_many(func, allargs, **kw):
+    """
+    Start multiple processes simultaneously
+    """
+    procs = []
+    for args in allargs:
+        proc = mp.Process(target=func, args=args, kwargs=kw)
+        proc.start()
+        procs.append(proc)
+    try:
+        yield
+    finally:
+        for proc in procs:
+            proc.join()
 
 
 class CodeDependencyError(Exception):
@@ -1343,14 +1363,14 @@ def get_duplicates(array, *fields):
 def add_columns(a, b, on, cols=None):
     """
     >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
-    >>> b_dt = [('ordinal', int), ('zipcode', int)]
+    >>> b_dt = [('ordinal', int), ('custom_site_id', int)]
     >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
     ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
     >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
-    >>> add_columns(a, b, 'aid', ['zipcode'])
+    >>> add_columns(a, b, 'aid', ['custom_site_id'])
     array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
            (2, 1, 2.3, 20128)],
-          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('zipcode', '<i8')])
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('custom_site_id', '<i8')])
     """
     if cols is None:
         cols = b.dtype.names
