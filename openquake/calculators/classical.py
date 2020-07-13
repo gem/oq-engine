@@ -206,10 +206,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 if k == 'probs_occur':  # variable lenght arrays
                     self.datastore.hdf5.save_vlen('rup/' + k, v)
                     continue
-                if k == 'grp_id':
-                    # store indices to the grp_ids table
-                    tuples = map(ast.literal_eval, v)
-                    v = U16([self.gidx[tup] for tup in tuples])
                 hdf5.extend(self.datastore['rup/' + k], v)
         return acc
 

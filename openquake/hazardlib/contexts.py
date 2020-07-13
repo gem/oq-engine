@@ -104,13 +104,13 @@ class RupData(object):
         self.num_probs_occur = num_probs_occur
         self.data = AccumDict(accum=[]) if data is None else data
 
-    def add(self, ctxs, sites, grp_ids):
+    def add(self, ctxs, sites, gidx):
         """
         Populate the inner AccumDict
 
         :param ctxs: a list of pairs (rctx, dctx) associated to U ruptures
         :param sites: a filtered site collection with N'<=N sites
-        :param grp_ids: a tuple of indices associated to the ruptures
+        :param gidx: index to grp_ids
         """
         N = len(sites.complete)
         params = (sorted(self.cmaker.REQUIRES_DISTANCES | {'rrup'}) +
@@ -123,7 +123,7 @@ class RupData(object):
             self.data['occurrence_rate'].append(ctx.occurrence_rate)
             self.data['probs_occur'].append(probs_occur)
             self.data['weight'].append(ctx.weight or numpy.nan)
-            self.data['grp_id'].append(','.join(map(str, grp_ids)) + ',')
+            self.data['grp_id'].append(gidx)
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
                 self.data[rup_param].append(getattr(ctx, rup_param))
             for dst_param in params:  # including clon, clat
@@ -471,7 +471,7 @@ class PmapMaker(object):
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
 
-    def _gen_ctxs(self, rups, sites, grp_ids):
+    def _gen_ctxs(self, rups, sites, gidx, grp_ids):
         # generate triples (rup, sites, dctx)
         if (self.rup_indep and self.collapse_level and
                 len(sites.complete) == 1 and
@@ -483,7 +483,7 @@ class PmapMaker(object):
             ctxs = self.cmaker.collapse_the_ctxs(ctxs)
         self.numrups += len(ctxs)
         if ctxs:
-            self.rupdata.add(ctxs, sites, grp_ids)
+            self.rupdata.add(ctxs, sites, gidx)
         for ctx in ctxs:
             mask = (ctx.rrup <= self.maximum_distance(
                 ctx.tectonic_region_type, ctx.mag))
@@ -544,6 +544,7 @@ class PmapMaker(object):
             t0 = time.time()
             src_id = srcs[0].source_id
             grp_ids = numpy.array(srcs[0].grp_ids)
+            gidx = srcs[0].gidx
             self.numrups = 0
             self.numsites = 0
             if self.fewsites:
@@ -551,7 +552,7 @@ class PmapMaker(object):
                 rups = self._get_rups(srcs, sites)
                 # print_finite_size(rups)
                 with self.ctx_mon:
-                    ctxs = list(self._gen_ctxs(rups, sites, grp_ids))
+                    ctxs = list(self._gen_ctxs(rups, sites, gidx, grp_ids))
                 self._update_pmap(ctxs)
             else:
                 # many sites: keep in memory less ruptures
@@ -584,7 +585,7 @@ class PmapMaker(object):
                 if self.fewsites:
                     ctxs = self.cmaker.make_ctxs(
                         rups, sites, numpy.array(src.grp_ids), filt=False)
-                    self.rupdata.add(ctxs, sites.complete, src.grp_ids)
+                    self.rupdata.add(ctxs, sites.complete, src.gidx)
                     self.numsites += N * len(ctxs)
                 else:
                     ctxs = self.cmaker.make_ctxs(  # rctx, sctx, dctx

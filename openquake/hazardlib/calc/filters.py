@@ -195,6 +195,7 @@ def split_sources(srcs):
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
                 split.grp_id = src.grp_id
+                split.gidx = src.gidx
                 split.id = src.id
                 if has_samples:
                     split.samples = src.samples
@@ -204,6 +205,7 @@ def split_sources(srcs):
             [s] = splits
             s.source_id = src.source_id
             s.grp_id = src.grp_id
+            s.gidx = src.gidx
             s.id = src.id
             if has_samples:
                 s.samples = src.samples
