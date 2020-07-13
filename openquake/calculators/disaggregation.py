@@ -336,14 +336,14 @@ class DisaggregationCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         allargs = []
-        U = sum(len(dset['gidx']) for name, dset in dstore.items()
-                if name.startswith('rup_'))  # total number of ruptures
+        totrups = sum(len(dset['gidx']) for name, dset in dstore.items()
+                      if name.startswith('rup_'))  # total number of ruptures
         grp_ids = dstore['grp_ids'][:]
-        maxweight = int(numpy.ceil(U / (oq.concurrent_tasks or 1)))
+        maxweight = int(numpy.ceil(totrups / (oq.concurrent_tasks or 1)))
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
-        G = 0
+        U, G = 0
         for gidx, gids in enumerate(grp_ids):
             trti = gids[0] // num_eff_rlzs
             trt = self.trts[trti]
@@ -359,9 +359,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                 indices, = numpy.where(arr == gidx)
                 for rupidxs in block_splitter(indices, maxweight):
                     idxs = numpy.sort(rupidxs)
+                    nr = len(idxs)
+                    U = max(U, nr)
                     allargs.append((dstore, idxs, cmaker, self.iml4,
                                     trti, mag, self.bin_edges, oq))
-                    task_inputs.append((trti, mag, len(idxs)))
+                    task_inputs.append((trti, mag, nr))
 
         nbytes, msg = get_array_nbytes(dict(N=self.N, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
