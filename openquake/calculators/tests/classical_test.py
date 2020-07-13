@@ -519,7 +519,7 @@ hazard_uhs-std.csv
             self.assertEqual(
                 nruptures,
                 [('clat_', 3202), ('clon_', 3202), ('dip', 3202),
-                 ('grp_id', 3202), ('hypo_depth', 3202), ('mag', 3202),
+                 ('gidx', 3202), ('hypo_depth', 3202), ('mag', 3202),
                  ('occurrence_rate', 3202), ('probs_occur', 3202),
                  ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
                  ('rx_', 3202), ('weight', 3202), ('ztor', 3202)])
