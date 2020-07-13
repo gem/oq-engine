@@ -155,12 +155,6 @@ class EngineServerTestCase(unittest.TestCase):
 
         extract_url = '/v1/calc/%s/extract/' % job_id
 
-        # check extract vs30
-        resp = self.c.get(
-            extract_url + 'assetcol?field=v30')
-        got = loadnpz(resp.streaming_content)
-        self.assertEqual(len(got['array']), 3)
-
         # check extract/composite_risk_model.attrs
         url = extract_url + 'composite_risk_model.attrs'
         self.assertEqual(self.c.get(url).status_code, 200)
