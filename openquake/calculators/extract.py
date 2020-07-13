@@ -713,8 +713,8 @@ def extract_agg_curves(dstore, what):
 def extract_agg_losses(dstore, what):
     """
     Aggregate losses of the given loss type and tags. Use it as
-    /extract/agg_losses/structural?taxonomy=RC&zipcode=20126
-    /extract/agg_losses/structural?taxonomy=RC&zipcode=*
+    /extract/agg_losses/structural?taxonomy=RC&custom_site_id=20126
+    /extract/agg_losses/structural?taxonomy=RC&custom_site_id=*
 
     :returns:
         an array of shape (T, R) if one of the tag names has a `*` value
@@ -740,7 +740,7 @@ def extract_agg_losses(dstore, what):
 def extract_agg_damages(dstore, what):
     """
     Aggregate damages of the given loss type and tags. Use it as
-    /extract/agg_damages/structural?taxonomy=RC&zipcode=20126
+    /extract/agg_damages/structural?taxonomy=RC&custom_site_id=20126
 
     :returns:
         array of shape (R, D), being R the number of realizations and D the
