@@ -45,7 +45,6 @@ from openquake.calculators import base, export
 from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
-TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
 MB = 1024 ** 2
@@ -290,9 +289,6 @@ def poll_queue(job_id, pid, poll_time):
                     logs.dbcmd('update_job', job,
                                {'status': 'failed', 'is_running': 0})
             elif any(j.id < job_id - offset for j in jobs):
-                logging.warning(
-                    'Waiting for jobs %s', [j.id for j in jobs
-                                            if j.id < job_id - offset])
                 if first_time:
                     logging.warning(
                         'Waiting for jobs %s', [j.id for j in jobs
@@ -319,6 +315,7 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
     """
     register_signals()
     setproctitle('oq-job-%d' % job_id)
+    logs.init(job_id, getattr(logging, log_level.upper()))
     with logs.handle(job_id, log_level, log_file):
         calc = base.calculators(oqparam, calc_id=job_id)
         logging.info('%s running %s [--hc=%s]',
@@ -341,10 +338,6 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
             if OQ_DISTRIBUTE.endswith('pool'):
                 logging.warning('Using %d cores on %s',
                                 parallel.CT // 2, platform.node())
-            if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
-                logging.info('Asking the DbServer to start the workers')
-                logs.dbcmd('zmq_start')  # start the zworkers
-                logs.dbcmd('zmq_wait')  # wait for them to go up
             set_concurrent_tasks_default(calc)
             t0 = time.time()
             calc.run(exports=exports, **kw)
@@ -370,18 +363,6 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
             raise
         finally:
             parallel.Starmap.shutdown()
-            # if there was an error in the calculation, this part may fail;
-            # in such a situation, we simply log the cleanup error without
-            # taking further action, so that the real error can propagate
-            if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
-                logs.dbcmd('zmq_stop')  # stop the zworkers
-            try:
-                if OQ_DISTRIBUTE.startswith('celery'):
-                    celery_cleanup(TERMINATE)
-            except BaseException:
-                # log the finalization error only if there is no real error
-                if tb == 'None\n':
-                    logging.error('finalizing', exc_info=True)
     return calc
 
 

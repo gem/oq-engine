@@ -29,14 +29,12 @@ import numpy
 import scipy.stats
 
 from openquake.hazardlib import contexts
-from openquake.baselib import performance
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import (
     ContextMaker, to_distribution_values)
 
@@ -114,17 +112,14 @@ def _eps3(truncation_level, n_epsilons):
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, mean_std, zs_by_g, iml2dict, eps3, sid=0, bin_edges=(),
-                 pne_mon=performance.Monitor(),
-                 mat_mon=performance.Monitor()):
+def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     """
     :param ctxs: a list of U fat RuptureContexts
     :param imts: a list of Intensity Measure Type objects
-    :param zs_by_g: a dictionary g -> Z indices
+    :param g_by_z: an array of gsim indices
     :param imt: an Intensity Measure Type
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
-    :param pne_mon: monitor for the probabilities of no exceedance
     """
     # disaggregate (separate) PoE in different contributions
     U, E, M = len(ctxs), len(eps3[2]), len(iml2dict)
@@ -141,40 +136,32 @@ def disaggregate(ctxs, mean_std, zs_by_g, iml2dict, eps3, sid=0, bin_edges=(),
 
     truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
+    G = ctxs[0].mean_std.shape[-1]
+    mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
         dists[u] = ctx.rrup[sid]  # distance to the site
         lons[u] = ctx.clon[sid]  # closest point of the rupture lon
         lats[u] = ctx.clat[sid]  # closest point of the rupture lat
-    with pne_mon:
-        poes = numpy.zeros((U, E, M, P, Z))
-        pnes = numpy.ones((U, E, M, P, Z))
-        for g, zs in zs_by_g.items():
-            for (m, p, z), iml in numpy.ndenumerate(iml3):
-                if z in zs:
-                    lvls = (iml - mean_std[0, :, sid, m, g]) / (
-                        mean_std[1, :, sid, m, g])
-                    idxs = numpy.searchsorted(epsilons, lvls)
-                    poes[:, :, m, p, z] = _disagg_eps(
-                        truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
-        for u, ctx in enumerate(ctxs):
-            pnes[u] *= ctx.get_probability_no_exceedance(poes[u])
+        mean_std[:, u] = ctx.mean_std[:, 0]  # (2, N, M, G) => (2, M, G)
+    poes = numpy.zeros((U, E, M, P, Z))
+    pnes = numpy.ones((U, E, M, P, Z))
+    for (m, p, z), iml in numpy.ndenumerate(iml3):
+        g = g_by_z[z]
+        lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
+        idxs = numpy.searchsorted(epsilons, lvls)
+        poes[:, :, m, p, z] = _disagg_eps(
+            truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+    for u, ctx in enumerate(ctxs):
+        pnes[u] *= ctx.get_probability_no_exceedance(poes[u])  # this is slow
     bindata = BinData(dists, lons, lats, pnes)
     if not bin_edges:
         return bindata
-    with mat_mon:
-        return _build_disagg_matrix(bindata, bin_edges)
+    return _build_disagg_matrix(bindata, bin_edges)
 
 
-def get_mean_std(ctxs, imts, gsims):
-    """
-    :returns: array of shape (2, U, N, M, G)
-    """
-    U, N, M, G = len(ctxs), len(ctxs[0].sids), len(imts), len(gsims)
-    mean_std = numpy.zeros((2, U, N, M, G), numpy.float32)
-    imts = [from_string(imt) for imt in imts]
+def set_mean_std(ctxs, imts, gsims):
     for u, ctx in enumerate(ctxs):
-        mean_std[:, u, ctx.sids] = ctx.get_mean_std(imts, gsims)
-    return mean_std
+        ctx.mean_std = ctx.get_mean_std(imts, gsims)  # (2, N, M, G)
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -381,9 +368,8 @@ def disaggregation(
     for trt in cmaker:
         gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            mean_std = get_mean_std(ctxs, [str(imt)], [gsim])
-            bdata[trt, magi] = disaggregate(
-                ctxs, mean_std, {0: [0]}, {imt: iml2}, eps3)
+            set_mean_std(ctxs, [imt], [gsim])
+            bdata[trt, magi] = disaggregate(ctxs, [0], {imt: iml2}, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(

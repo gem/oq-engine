@@ -25,7 +25,7 @@ from operator import attrgetter
 from collections import namedtuple
 from openquake.baselib.general import (
     block_splitter, split_in_blocks, assert_close,
-    deprecated, DeprecationWarning, cached_property)
+    deprecated, DeprecationWarning, cached_property, start_many)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -192,3 +192,13 @@ class CachedPropertyTestCase(unittest.TestCase):
         self.__dict__['one'] = 2
         self.assertEqual(self.one, 2)
         self.assertEqual(self.ncalls, 1)
+
+
+def double(calc_id, val):
+    print((calc_id, val * 2))
+
+
+class StartManyTestCase(unittest.TestCase):
+    def test(self):
+        with start_many(double, [(1, 1), (2, 2), (3, 3)]):
+            pass
