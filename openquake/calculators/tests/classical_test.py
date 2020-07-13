@@ -458,7 +458,7 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['rup/rrup_']), 174)
+        self.assertEqual(len(self.calc.datastore['rup_5.25/rrup_']), 34)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
@@ -514,15 +514,15 @@ hazard_uhs-std.csv
                                   case_30.__file__)
             # check rupdata
             nruptures = []
-            for par, rupdata in sorted(self.calc.datastore['rup'].items()):
-                nruptures.append((par, len(rupdata)))
+            for par, rdata in sorted(self.calc.datastore['rup_5.05'].items()):
+                nruptures.append((par, len(rdata)))
             self.assertEqual(
                 nruptures,
-                [('clat_', 3202), ('clon_', 3202), ('dip', 3202),
-                 ('gidx', 3202), ('hypo_depth', 3202), ('mag', 3202),
-                 ('occurrence_rate', 3202), ('probs_occur', 3202),
-                 ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
-                 ('rx_', 3202), ('weight', 3202), ('ztor', 3202)])
+                [('clat_', 28), ('clon_', 28), ('dip', 28),
+                 ('gidx', 28), ('hypo_depth', 28), ('mag', 28),
+                 ('occurrence_rate', 28), ('probs_occur', 28),
+                 ('rake', 28), ('rjb_', 28), ('rrup_', 28),
+                 ('rx_', 28), ('weight', 28), ('ztor', 28)])
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling by cheating

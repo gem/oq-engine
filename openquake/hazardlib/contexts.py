@@ -120,16 +120,17 @@ class RupData(object):
                 probs_occur = ctx.probs_occur
             else:
                 probs_occur = numpy.zeros(0)
-            self.data['occurrence_rate'].append(ctx.occurrence_rate)
-            self.data['probs_occur'].append(probs_occur)
-            self.data['weight'].append(ctx.weight or numpy.nan)
-            self.data['gidx'].append(gidx)
+            mag = '%.2f' % ctx.mag
+            self.data[mag, 'occurrence_rate'].append(ctx.occurrence_rate)
+            self.data[mag, 'probs_occur'].append(probs_occur)
+            self.data[mag, 'weight'].append(ctx.weight or numpy.nan)
+            self.data[mag, 'gidx'].append(gidx)
             for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
-                self.data[rup_param].append(getattr(ctx, rup_param))
+                self.data[mag, rup_param].append(getattr(ctx, rup_param))
             for dst_param in params:  # including clon, clat
                 dst = numpy.ones(N) * 9999
                 dst[sites.sids] = getattr(ctx, dst_param)
-                self.data[dst_param + '_'].append(dst)
+                self.data[mag, dst_param + '_'].append(dst)
 
     def dictarray(self):
         """
