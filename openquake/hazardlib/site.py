@@ -146,7 +146,7 @@ site_param_dt = {
     'precip': numpy.float64,
 
     # other parameters
-    'zipcode': numpy.uint32,
+    'custom_site_id': numpy.uint32,
 }
 
 

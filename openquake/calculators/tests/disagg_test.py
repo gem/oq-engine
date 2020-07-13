@@ -132,10 +132,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         # there is a collapsed nonparametric source with len(probs_occur)==3
-        # the other sizes are 2
-        sizes = [len(po) for po in self.calc.datastore['rup/probs_occur']]
-        self.assertTrue(any(size == 3 for size in sizes),
-                        'No collapse of probs_occur')
 
     def test_case_6(self):
         # test with international date line
