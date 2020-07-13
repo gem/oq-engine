@@ -206,10 +206,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 if k == 'probs_occur':  # variable lenght arrays
                     self.datastore.hdf5.save_vlen('rup/' + k, v)
                     continue
-                if k == 'grp_id':
-                    # store indices to the grp_ids table
-                    tuples = map(ast.literal_eval, v)
-                    v = U16([self.gidx[tup] for tup in tuples])
                 hdf5.extend(self.datastore['rup/' + k], v)
         return acc
 
@@ -252,12 +248,11 @@ class ClassicalCalculator(base.HazardCalculator):
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0
-        self.gidx = {tuple(grp_ids): i
-                     for i, grp_ids in enumerate(self.datastore['grp_ids'])}
 
         # estimate max memory per core
         max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
-        max_num_grp_ids = max(len(grp_ids) for grp_ids in self.gidx)
+        max_num_grp_ids = max(
+            len(grp_ids) for grp_ids in self.datastore['grp_ids'])
         pmapbytes = self.N * num_levels * max_num_gsims * max_num_grp_ids * 8
         if pmapbytes > TWO32:
             logging.warning(

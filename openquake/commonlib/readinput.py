@@ -753,7 +753,8 @@ def get_composite_source_model(oqparam, h5=None):
             else:
                 multiplicity = 1
                 ns += 1
-            row = [src.source_id, gidx[tuple(src.grp_ids)], src.code,
+            src.gidx = gidx[tuple(src.grp_ids)]
+            row = [src.source_id, src.gidx, src.code,
                    multiplicity, 0, 0, 0, src.checksum, src.serial or ns,
                    full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
