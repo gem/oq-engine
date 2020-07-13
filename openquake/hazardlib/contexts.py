@@ -593,7 +593,7 @@ class PmapMaker(object):
                         rups, sites, numpy.array(src.grp_ids), filt=True)
                     self.numsites += sum(len(ctx.sids) for ctx in ctxs)
                 self.numrups += len(ctxs)
-            self._update_pmap(ctxs, src.gidx, pmap)
+            self._update_pmap(ctxs, getattr(src, 'gidx', 0), pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
                 if self.rup_indep:
