@@ -462,7 +462,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     :param task_no: the task number
     :param mon: a monitor
     """
-    os.environ['OQ_DISTRIBUTE'] = 'no'
     isgenfunc = inspect.isgeneratorfunction(func)
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
