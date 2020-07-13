@@ -190,26 +190,27 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # store rup_data if there are few sites
             rup_data = dic['rup_data']
-            nr = len(rup_data.get('grp_id', []))
-            if nr:
-                for k in self.rparams:
-                    try:
-                        v = rup_data[k]
-                    except KeyError:
-                        if k == 'probs_occur':
-                            v = [numpy.zeros(0)] * nr
-                        elif k.endswith('_'):
-                            v = numpy.ones((nr, self.N)) * numpy.nan
-                        else:
-                            v = numpy.ones(nr) * numpy.nan
-                    if k == 'probs_occur':  # variable lenght arrays
-                        self.datastore.hdf5.save_vlen('rup/' + k, v)
-                        continue
-                    if k == 'grp_id':
-                        # store indices to the grp_ids table
-                        tuples = map(ast.literal_eval, v)
-                        v = U16([self.gidx[tup] for tup in tuples])
-                    hdf5.extend(self.datastore['rup/' + k], v)
+            nr = len(rup_data['grp_id'])
+            if nr == 0:
+                return acc
+            for k in self.rparams:
+                try:
+                    v = rup_data[k]
+                except KeyError:
+                    if k == 'probs_occur':
+                        v = [numpy.zeros(0)] * nr
+                    elif k.endswith('_'):
+                        v = numpy.ones((nr, self.N)) * numpy.nan
+                    else:
+                        v = numpy.ones(nr) * numpy.nan
+                if k == 'probs_occur':  # variable lenght arrays
+                    self.datastore.hdf5.save_vlen('rup/' + k, v)
+                    continue
+                if k == 'grp_id':
+                    # store indices to the grp_ids table
+                    tuples = map(ast.literal_eval, v)
+                    v = U16([self.gidx[tup] for tup in tuples])
+                hdf5.extend(self.datastore['rup/' + k], v)
         return acc
 
     def acc0(self):
