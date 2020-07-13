@@ -544,7 +544,7 @@ class PmapMaker(object):
             t0 = time.time()
             src_id = srcs[0].source_id
             grp_ids = numpy.array(srcs[0].grp_ids)
-            gidx = srcs[0].gidx
+            gidx = getattr(srcs[0], 'gidx', 0)
             self.numrups = 0
             self.numsites = 0
             if self.fewsites:
@@ -585,7 +585,8 @@ class PmapMaker(object):
                 if self.fewsites:
                     ctxs = self.cmaker.make_ctxs(
                         rups, sites, numpy.array(src.grp_ids), filt=False)
-                    self.rupdata.add(ctxs, sites.complete, src.gidx)
+                    self.rupdata.add(
+                        ctxs, sites.complete, getattr(src, 'gidx', 0))
                     self.numsites += N * len(ctxs)
                 else:
                     ctxs = self.cmaker.make_ctxs(  # rctx, sctx, dctx
