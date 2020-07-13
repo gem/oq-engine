@@ -687,4 +687,3 @@ hazard_uhs-std.csv
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.2).csv',
                                'hcurves-SA(2.0).csv', 'uhs.csv'],
                               case_51.__file__)
->>>>>>> origin
