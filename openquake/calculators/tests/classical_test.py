@@ -471,13 +471,11 @@ hazard_uhs-std.csv
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
         # make sure probs_occur are stored as expected
-        probs_occur = self.calc.datastore['rup/probs_occur'][:]
+        probs_occur = self.calc.datastore['rup_8.20/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
-        self.assertEqual(tot_probs_occur, 28)  # 14 nonparam rups x 2
+        self.assertEqual(tot_probs_occur, 4)  # 2 nonparam rups x 2
         npo = self.calc.csm.get_num_probs_occur()  # 2 probs_occur per rupture
         self.assertEqual(npo, 2)
-        num_point_ruptures = sum(1 for po in probs_occur if len(po) == 0)
-        self.assertEqual(num_point_ruptures, 26)
 
         # make sure there is an error when trying to disaggregate
         with self.assertRaises(NotImplementedError):
@@ -646,12 +644,12 @@ hazard_uhs-std.csv
     def test_case_48(self):
         # pointsource_distance effects on a simple point source
         self.run_calc(case_48.__file__, 'job.ini')
-        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup_5.10/rrup_'],
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/exact_dists.txt', tmp)
 
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
-        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
+        tmp = general.gettemp(rst_table(self.calc.datastore['rup_5.10/rrup_'],
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/approx_dists.txt', tmp)
         # this test shows in detail what happens to the distances in presence
