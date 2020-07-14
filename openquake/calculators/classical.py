@@ -494,6 +494,10 @@ class ClassicalCalculator(base.HazardCalculator):
         :param pmap_by_key:
             a dictionary key -> hazard curves
         """
+        nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
+              if name.startswith('rup_')}
+        if nr:  # few sites, log the number of ruptures per magnitude
+            logging.info('%s', nr)
         oq = self.oqparam
         data = []
         weights = [rlz.weight for rlz in self.realizations]
