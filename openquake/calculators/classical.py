@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
-import ast
 import time
 import copy
 import logging
@@ -189,20 +188,20 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
-            for mag, ctxs in dic['rup_data'].items():
+            for mag, d in dic['rup_data'].items():
                 for k in self.rparams:
+                    U = len(d['gidx'])
                     name = 'rup_%s/%s' % (mag, k)
                     if k.endswith('_'):  # distance parameter
-                        k1 = k.rstrip('_')
-                        lst = []
-                        for ctx in ctxs:
-                            arr = numpy.ones(self.N, F32) * 9999.
-                            arr[ctx.sids] = getattr(ctx, k1, 9999.)
-                            lst.append(arr)
-                        v = numpy.array(lst, F32)
+                        try:
+                            v = d[k.rstrip('_')]
+                        except KeyError:
+                            v = numpy.ones((U, self.N), numpy.float32) * 9999.
                     else:
-                        v = numpy.array([getattr(ctx, k, numpy.nan)
-                                         for ctx in ctxs])
+                        try:
+                            v = d[k]
+                        except KeyError:
+                            v = numpy.ones(U) * numpy.nan
                     if k == 'probs_occur':  # variable lenght arrays
                         self.datastore.hdf5.save_vlen(name, v)
                         continue

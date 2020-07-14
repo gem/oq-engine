@@ -148,6 +148,17 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
 
+    def get_ctx_params(self):
+        """
+        :returns: the interesting attributes of the context
+        """
+        params = {'gidx', 'occurrence_rate',
+                  'probs_occur', 'clon', 'clat', 'rrup'}
+        params.update(self.REQUIRES_RUPTURE_PARAMETERS)
+        for dparam in self.REQUIRES_DISTANCES:
+            params.add(dparam)
+        return params
+
     def from_srcs(self, srcs, site1):  # used in disagg.disaggregation
         """
         :returns: a list RuptureContexts
@@ -528,6 +539,7 @@ class PmapMaker(object):
         self.rupdata = []
         imtls = self.cmaker.imtls
         L, G = len(imtls.array), len(self.gsims)
+        N = len(self.srcfilter.sitecol.complete)
         self.pmap = AccumDict(accum=ProbabilityMap(L, G))  # grp_id -> pmap
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
@@ -536,8 +548,24 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        return (pmap, groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag),
-                self.calc_times, dict(totrups=self.totrups))
+        rupdata = groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag)
+        cparams = self.cmaker.get_ctx_params()
+        dparams = self.cmaker.REQUIRES_DISTANCES | {'clon', 'clat'}
+        ddic = AccumDict(accum={})
+        for mag, ctxs in rupdata.items():
+            for k in cparams:
+                if k in dparams:
+                    lst = []
+                    for ctx in ctxs:
+                        arr = numpy.ones(N, numpy.float32) * 9999.
+                        arr[ctx.sids] = getattr(ctx, k, 9999.)
+                        lst.append(arr)
+                    v = numpy.array(lst, numpy.float32)
+                else:
+                    v = numpy.array([getattr(ctx, k, numpy.nan)
+                                     for ctx in ctxs])
+                ddic[mag][k] = v
+        return (pmap, ddic, self.calc_times, dict(totrups=self.totrups))
 
     def collapse_point_ruptures(self, rups, sites):
         """
