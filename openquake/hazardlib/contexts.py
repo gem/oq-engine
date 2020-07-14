@@ -521,7 +521,7 @@ class PmapMaker(object):
                 if self.fewsites:
                     for ctx in ctxs:
                         ctx.gidx = gidx
-                        self.rupdata.add(ctx)
+                        self.rupdata.append(ctx)
                 self.numsites += sum(len(ctx.sids) for ctx in ctxs)
                 self.numrups += len(ctxs)
             self._update_pmap(ctxs, getattr(src, 'gidx', 0), pmap)
