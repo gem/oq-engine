@@ -345,10 +345,6 @@ class ClassicalCalculator(base.HazardCalculator):
                                 num_cores=oq.num_cores)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
-        dic = {name: len(dset) for name, dset in self.datastore.items()
-               if name.startswith('rup_')}
-        if dic:  # few sites
-            logging.info('%s', dic)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -498,6 +494,10 @@ class ClassicalCalculator(base.HazardCalculator):
         :param pmap_by_key:
             a dictionary key -> hazard curves
         """
+        nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
+              if name.startswith('rup_')}
+        if nr:  # few sites, log the number of ruptures per magnitude
+            logging.info('%s', nr)
         oq = self.oqparam
         data = []
         weights = [rlz.weight for rlz in self.realizations]

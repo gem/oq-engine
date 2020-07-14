@@ -336,6 +336,14 @@ class OqParam(valid.ParamSet):
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
+            if not self.poes_disagg and self.poes:
+                self.poes_disagg = self.poes
+            elif not self.poes and self.poes_disagg:
+                self.poes = self.poes_disagg
+            elif self.poes != self.poes_disagg:
+                raise InvalidFile(
+                    'poes_disagg != poes: %s!=%s in %s' %
+                    (self.poes_disagg, self.poes, self.inputs['job_ini']))
             if not self.poes_disagg and not self.iml_disagg:
                 raise InvalidFile('poes_disagg or iml_disagg must be set '
                                   'in %(job_ini)s' % self.inputs)
