@@ -189,23 +189,20 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
-            rup_data = dic['rup_data']
-            mags = set(mag for mag, k in rup_data)
-            for mag in sorted(mags):
-                nr = len(rup_data[mag, 'gidx'])
-                if nr == 0:
-                    continue
+            for mag, ctxs in dic['rup_data'].items():
                 for k in self.rparams:
                     name = 'rup_%s/%s' % (mag, k)
-                    try:
-                        v = rup_data[mag, k]
-                    except KeyError:
-                        if k == 'probs_occur':
-                            v = [numpy.zeros(0)] * nr
-                        elif k.endswith('_'):
-                            v = numpy.ones((nr, self.N)) * numpy.nan
-                        else:
-                            v = numpy.ones(nr) * numpy.nan
+                    if k.endswith('_'):  # distance parameter
+                        k1 = k.rstrip('_')
+                        lst = []
+                        for ctx in ctxs:
+                            arr = numpy.ones(self.N, F32) * 9999.
+                            arr[ctx.sids] = getattr(ctx, k1, 9999.)
+                            lst.append(arr)
+                        v = numpy.array(lst, F32)
+                    else:
+                        v = numpy.array([getattr(ctx, k, numpy.nan)
+                                         for ctx in ctxs])
                     if k == 'probs_occur':  # variable lenght arrays
                         self.datastore.hdf5.save_vlen(name, v)
                         continue
@@ -219,7 +216,7 @@ class ClassicalCalculator(base.HazardCalculator):
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'gidx', 'occurrence_rate',
-                   'weight', 'probs_occur', 'clon_', 'clat_', 'rrup_'}
+                   'probs_occur', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         n = len(self.full_lt.sm_rlzs)
         trts = list(self.full_lt.gsim_lt.values)

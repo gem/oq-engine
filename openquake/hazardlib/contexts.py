@@ -95,53 +95,6 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-class RupData(object):
-    """
-    A class to collect rupture information into an AccumDict
-    """
-    def __init__(self, cmaker, num_probs_occur, data=None):
-        self.cmaker = cmaker
-        self.num_probs_occur = num_probs_occur
-        self.data = AccumDict(accum=[]) if data is None else data
-
-    def add(self, ctxs, sites, gidx):
-        """
-        Populate the inner AccumDict
-
-        :param ctxs: a list of pairs (rctx, dctx) associated to U ruptures
-        :param sites: a filtered site collection with N'<=N sites
-        :param gidx: index to grp_ids
-        """
-        N = len(sites.complete)
-        params = (sorted(self.cmaker.REQUIRES_DISTANCES | {'rrup'}) +
-                  ['clon', 'clat'])
-        for r, ctx in enumerate(ctxs):
-            if numpy.isnan(ctx.occurrence_rate):  # for nonparametric ruptures
-                probs_occur = ctx.probs_occur
-            else:
-                probs_occur = numpy.zeros(0)
-            mag = '%.2f' % ctx.mag
-            self.data[mag, 'occurrence_rate'].append(ctx.occurrence_rate)
-            self.data[mag, 'probs_occur'].append(probs_occur)
-            self.data[mag, 'weight'].append(ctx.weight or numpy.nan)
-            self.data[mag, 'gidx'].append(gidx)
-            for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
-                self.data[mag, rup_param].append(getattr(ctx, rup_param))
-            for dst_param in params:  # including clon, clat
-                dst = numpy.ones(N) * 9999
-                dst[sites.sids] = getattr(ctx, dst_param)
-                self.data[mag, dst_param + '_'].append(dst)
-
-    def dictarray(self):
-        """
-        :returns: key -> array
-        """
-        dic = {}
-        for k, v in self.data.items():
-            dic[k] = numpy.array(v)
-        return dic
-
-
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
@@ -472,31 +425,6 @@ class PmapMaker(object):
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
 
-    def _gen_ctxs(self, rups, sites, gidx, grp_ids):
-        # generate triples (rup, sites, dctx)
-        if (self.rup_indep and self.collapse_level and
-                len(sites.complete) == 1 and
-                self.pointsource_distance != {}):
-            rups = self.collapse_point_ruptures(rups, sites)
-            # print_finite_size(rups)
-        ctxs = self.cmaker.make_ctxs(rups, sites, grp_ids, filt=False)
-        if self.rup_indep and self.collapse_level > 1:
-            ctxs = self.cmaker.collapse_the_ctxs(ctxs)
-        self.numrups += len(ctxs)
-        if ctxs:
-            self.rupdata.add(ctxs, sites, gidx)
-        for ctx in ctxs:
-            mask = (ctx.rrup <= self.maximum_distance(
-                ctx.tectonic_region_type, ctx.mag))
-            r_sites = sites.filter(mask)
-            for k in self.REQUIRES_SITES_PARAMETERS:
-                setattr(ctx, k, r_sites[k])
-            ctx.sids = r_sites.sids
-            for name in self.REQUIRES_DISTANCES:
-                setattr(ctx, name, getattr(ctx, name)[mask])
-            self.numsites += len(r_sites)
-            yield ctx
-
     def _update_pmap(self, ctxs, gidx, pmap=None):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
@@ -548,23 +476,21 @@ class PmapMaker(object):
             gidx = getattr(srcs[0], 'gidx', 0)
             self.numrups = 0
             self.numsites = 0
-            if self.fewsites:
-                # we can afford using a lot of memory to store the ruptures
-                rups = self._get_rups(srcs, sites)
-                # print_finite_size(rups)
-                with self.ctx_mon:
-                    ctxs = list(self._gen_ctxs(rups, sites, gidx, grp_ids))
-                self._update_pmap(ctxs, gidx)
-            else:
-                # many sites: keep in memory less ruptures
-                for src in srcs:
-                    for rup in self._get_rups([src], sites):
-                        with self.ctx_mon:
-                            ctxs = self.cmaker.make_ctxs(
-                                [rup], rup.sites, grp_ids, filt=True)
-                        self.numrups += len(ctxs)
-                        self.numsites += sum(len(ctx.sids) for ctx in ctxs)
-                        self._update_pmap(ctxs, gidx)
+            for src in srcs:
+                for rup in self._get_rups([src], sites):
+                    with self.ctx_mon:
+                        ctxs = self.cmaker.make_ctxs(
+                            [rup], rup.sites, grp_ids, filt=True)
+                    if self.fewsites:  # keep the contexts in memory
+                        for ctx in ctxs:
+                            ctx.gidx = gidx
+                            closest = rup.surface.get_closest_points(rup.sites)
+                            ctx.clon = closest.lons
+                            ctx.clat = closest.lats
+                            self.rupdata.append(ctx)
+                    self.numrups += len(ctxs)
+                    self.numsites += sum(len(ctx.sids) for ctx in ctxs)
+                    self._update_pmap(ctxs, gidx)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
@@ -606,7 +532,7 @@ class PmapMaker(object):
         return self.pmap
 
     def make(self):
-        self.rupdata = RupData(self.cmaker, self.num_probs_occur)
+        self.rupdata = []
         imtls = self.cmaker.imtls
         L, G = len(imtls.array), len(self.gsims)
         self.pmap = AccumDict(accum=ProbabilityMap(L, G))  # grp_id -> pmap
@@ -617,8 +543,8 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        return (pmap, self.rupdata.dictarray(), self.calc_times,
-                dict(totrups=self.totrups))
+        return (pmap, groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag),
+                self.calc_times, dict(totrups=self.totrups))
 
     def collapse_point_ruptures(self, rups, sites):
         """
