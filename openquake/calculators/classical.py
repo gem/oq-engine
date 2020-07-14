@@ -201,7 +201,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         try:
                             v = d[k]
                         except KeyError:
-                            v = numpy.ones(U) * numpy.nan
+                            v = numpy.ones(U, numpy.float32) * numpy.nan
                     if k == 'probs_occur':  # variable lenght arrays
                         self.datastore.hdf5.save_vlen(name, v)
                         continue

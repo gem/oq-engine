@@ -274,7 +274,7 @@ class ContextMaker(object):
                 dctx.rrup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
         return self.make_rctx(rupture), sites, dctx
 
-    def make_ctxs(self, ruptures, sites, grp_ids, fewsites):
+    def make_ctxs(self, ruptures, sites, gidx, grp_ids, fewsites):
         """
         :returns:
             a list of fat RuptureContexts
@@ -291,6 +291,7 @@ class ContextMaker(object):
             for par in self.REQUIRES_DISTANCES | {'rrup'}:
                 setattr(ctx, par, getattr(dctx, par))
             ctx.grp_ids = grp_ids
+            ctx.gidx = gidx
             if fewsites:
                 closest = rup.surface.get_closest_points(sites.complete)
                 ctx.clon = closest.lons[ctx.sids]
@@ -428,6 +429,7 @@ class PmapMaker(object):
         vars(self).update(vars(cmaker))
         self.cmaker = cmaker
         self.srcfilter = srcfilter
+        self.N = len(self.srcfilter.sitecol.complete)
         self.group = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
@@ -436,7 +438,7 @@ class PmapMaker(object):
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
 
-    def _update_pmap(self, ctxs, gidx, pmap=None):
+    def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
             pmap = self.pmap
@@ -478,6 +480,18 @@ class PmapMaker(object):
             return list(src.iter_ruptures(shift_hypo=self.shift_hypo,
                                           mag=filtermag))
 
+    def _make_ctxs(self, rups, sites, gidx, grp_ids):
+        with self.ctx_mon:
+            ctxs = self.cmaker.make_ctxs(
+                rups, sites, gidx, grp_ids, self.fewsites)
+            if self.fewsites:  # keep the contexts in memory
+                for ctx in ctxs:
+                    ctx.gidx = gidx
+                    self.rupdata.append(ctx)
+            self.numrups += len(ctxs)
+            self.numsites += sum(len(ctx.sids) for ctx in ctxs)
+        return ctxs
+
     def _make_src_indep(self):
         # srcs with the same source_id and grp_ids
         for srcs, sites in self.srcfilter.get_sources_sites(self.group):
@@ -489,17 +503,9 @@ class PmapMaker(object):
             self.numsites = 0
             for src in srcs:
                 for rup in self._get_rups([src], sites):
-                    with self.ctx_mon:
-                        ctxs = self.cmaker.make_ctxs(
-                            [rup], rup.sites, grp_ids, self.fewsites)
-                    if self.fewsites:  # keep the contexts in memory
-                        sites = rup.sites.complete
-                        for ctx in ctxs:
-                            ctx.gidx = gidx
-                            self.rupdata.append(ctx)
-                    self.numrups += len(ctxs)
-                    self.numsites += sum(len(ctx.sids) for ctx in ctxs)
-                    self._update_pmap(ctxs, gidx)
+                    ctxs = self._make_ctxs(
+                        [rup], rup.sites, gidx, grp_ids)
+                    self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
@@ -516,15 +522,11 @@ class PmapMaker(object):
             with self.ctx_mon:
                 L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
                 pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
-                ctxs = self.cmaker.make_ctxs(
-                    rups, sites, numpy.array(src.grp_ids), self.fewsites)
-                if self.fewsites:
-                    for ctx in ctxs:
-                        ctx.gidx = gidx
-                        self.rupdata.append(ctx)
+                ctxs = self._make_ctxs(
+                    rups, sites, gidx, numpy.array(src.grp_ids))
                 self.numsites += sum(len(ctx.sids) for ctx in ctxs)
                 self.numrups += len(ctxs)
-            self._update_pmap(ctxs, getattr(src, 'gidx', 0), pmap)
+            self._update_pmap(ctxs, pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]
                 if self.rup_indep:
@@ -539,7 +541,6 @@ class PmapMaker(object):
         self.rupdata = []
         imtls = self.cmaker.imtls
         L, G = len(imtls.array), len(self.gsims)
-        N = len(self.srcfilter.sitecol.complete)
         self.pmap = AccumDict(accum=ProbabilityMap(L, G))  # grp_id -> pmap
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
@@ -557,7 +558,7 @@ class PmapMaker(object):
                 if k in dparams:
                     lst = []
                     for ctx in ctxs:
-                        arr = numpy.ones(N, numpy.float32) * 9999.
+                        arr = numpy.ones(self.N, numpy.float32) * 9999.
                         arr[ctx.sids] = getattr(ctx, k, 9999.)
                         lst.append(arr)
                     v = numpy.array(lst, numpy.float32)
