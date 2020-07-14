@@ -99,9 +99,8 @@ class RupData(object):
     """
     A class to collect rupture information into an AccumDict
     """
-    def __init__(self, cmaker, num_probs_occur, data=None):
+    def __init__(self, cmaker, data=None):
         self.cmaker = cmaker
-        self.num_probs_occur = num_probs_occur
         self.data = AccumDict(accum=[]) if data is None else data
 
     def add(self, ctxs, sites, gidx):
@@ -156,7 +155,6 @@ class ContextMaker(object):
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
-        self.num_probs_occur = param.get('num_probs_occur', 0)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
@@ -606,7 +604,7 @@ class PmapMaker(object):
         return self.pmap
 
     def make(self):
-        self.rupdata = RupData(self.cmaker, self.num_probs_occur)
+        self.rupdata = RupData(self.cmaker)
         imtls = self.cmaker.imtls
         L, G = len(imtls.array), len(self.gsims)
         self.pmap = AccumDict(accum=ProbabilityMap(L, G))  # grp_id -> pmap
