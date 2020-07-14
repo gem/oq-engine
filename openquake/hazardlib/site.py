@@ -258,7 +258,9 @@ class SiteCollection(object):
     def _set(self, param, value):
         if param not in self.array.dtype.names:
             self.add_col(param, site_param_dt[param])
-        self.array[param] = value
+            # will be set later, by sitecol.assoc()
+        else:
+            self.array[param] = value
 
     xyz = Mesh.xyz
 

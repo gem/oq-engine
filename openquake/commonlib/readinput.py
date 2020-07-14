@@ -396,9 +396,7 @@ def get_mesh(oqparam, h5=None):
         elif 'site_model' in oqparam.inputs:
             # this happens in event_based/case_19, where there is an implicit
             # grid over the site model
-            sm = get_site_model(oqparam)
-            if h5:
-                h5['site_model'] = sm
+            sm = get_site_model(oqparam)  # do not store in h5!
             poly = geo.Mesh(sm['lon'], sm['lat']).get_convex_hull()
         else:
             raise InvalidFile('There is a grid spacing but not a region, '
@@ -513,7 +511,7 @@ def get_site_collection(oqparam, h5=None):
         if 'amplification' in oqparam.inputs:
             req_site_params.add('ampcode')
         if h5 and 'site_model' in h5:  # comes from a site_model.csv
-            sm = h5['site_model']
+            sm = h5['site_model'][:]
         else:
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
