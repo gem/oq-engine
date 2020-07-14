@@ -256,10 +256,9 @@ class SiteCollection(object):
         return self
 
     def _set(self, param, value):
-        # param comes from the file site_model.xml file which usually contains
-        # a lot of parameters; the parameters that are not required are ignored
-        if param in self.array.dtype.names:  # is required
-            self.array[param] = value
+        if param not in self.array.dtype.names:
+            self.add_col(param, site_param_dt[param])
+        self.array[param] = value
 
     xyz = Mesh.xyz
 
