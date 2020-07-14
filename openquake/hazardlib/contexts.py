@@ -482,8 +482,12 @@ class PmapMaker(object):
 
     def _make_ctxs(self, rups, sites, gidx, grp_ids):
         with self.ctx_mon:
+            if self.rup_indep and self.pointsource_distance != {}:
+                rups = self.collapse_point_ruptures(rups, sites)
             ctxs = self.cmaker.make_ctxs(
                 rups, sites, gidx, grp_ids, self.fewsites)
+            if self.collapse_level > 1:
+                ctxs = self.cmaker.collapse_the_ctxs(ctxs)
             if self.fewsites:  # keep the contexts in memory
                 for ctx in ctxs:
                     ctx.gidx = gidx
@@ -501,10 +505,14 @@ class PmapMaker(object):
             gidx = getattr(srcs[0], 'gidx', 0)
             self.numrups = 0
             self.numsites = 0
-            for src in srcs:
-                for rup in self._get_rups([src], sites):
-                    ctxs = self._make_ctxs(
-                        [rup], rup.sites, gidx, grp_ids)
+            if self.N == 1:  # plenty of memory, collapse all sources together
+                rups = self._get_rups(srcs, sites)
+                ctxs = self._make_ctxs(rups, sites, gidx, grp_ids)
+                self._update_pmap(ctxs)
+            else:  # collapse one source at the time
+                for src in srcs:
+                    rups = self._get_rups([src], sites)
+                    ctxs = self._make_ctxs(rups, sites, gidx, grp_ids)
                     self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
@@ -519,13 +527,9 @@ class PmapMaker(object):
             self.numsites = 0
             rups = self._ruptures(src)
             gidx = getattr(src, 'gidx', 0)
-            with self.ctx_mon:
-                L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
-                pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
-                ctxs = self._make_ctxs(
-                    rups, sites, gidx, numpy.array(src.grp_ids))
-                self.numsites += sum(len(ctx.sids) for ctx in ctxs)
-                self.numrups += len(ctxs)
+            L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
+            pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
+            ctxs = self._make_ctxs(rups, sites, gidx, numpy.array(src.grp_ids))
             self._update_pmap(ctxs, pmap)
             for grp_id in src.grp_ids:
                 p = pmap[grp_id]

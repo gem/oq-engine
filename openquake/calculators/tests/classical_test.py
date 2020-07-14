@@ -458,8 +458,7 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        # should be 34 but by removing the collapse is 156
-        self.assertEqual(len(self.calc.datastore['rup_5.25/rrup_']), 156)
+        self.assertEqual(len(self.calc.datastore['rup_5.25/rrup_']), 34)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
