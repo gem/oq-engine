@@ -416,7 +416,9 @@ def get_mesh(oqparam):
     elif 'site_model' in oqparam.inputs:
         logging.info('Extracting the hazard sites from the site model')
         sm = get_site_model(oqparam)
-        return geo.Mesh(sm['lon'], sm['lat'])
+        mesh = geo.Mesh(sm['lon'], sm['lat'])
+        mesh.site_model = sm
+        return mesh
     elif 'exposure' in oqparam.inputs:
         return exposure.mesh
 
@@ -488,7 +490,7 @@ def get_site_model(oqparam):
     return numpy.concatenate(arrays)
 
 
-def get_site_collection(oqparam):
+def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
@@ -507,8 +509,14 @@ def get_site_collection(oqparam):
         req_site_params = get_gsim_lt(oqparam).req_site_params
         if 'amplification' in oqparam.inputs:
             req_site_params.add('ampcode')
+        if hasattr(mesh, 'site_model'):  # comes from a site_model.csv
+            sm = mesh.site_model
+            if h5:
+                h5['site_model'] = sm
+        else:
+            sm = oqparam
         sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
+            mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
         # debugging tip to reduce the size of a calculation
