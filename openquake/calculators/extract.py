@@ -389,20 +389,6 @@ def extract_sitecol(dstore, what):
     return dstore['sitecol'].array
 
 
-@extract.add('site_model')
-def extract_site_model(dstore, what):
-    """
-    Extracts the site collection array (not the complete object, otherwise it
-    would need to be pickled).
-    Use it as /extract/site_model?field=custom_site_id
-    """
-    qdict = parse(what)
-    if 'field' in qdict:
-        [f] = qdict['field']
-        return dstore['site_model'][f]
-    return dstore['site_model'].array
-
-
 def _items(dstore, name, what, info):
     params = parse(what, info)
     filt = {}

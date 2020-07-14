@@ -107,7 +107,7 @@ class DisaggregationTestCase(CalculatorTestCase):
                           'iml-SA(0.1)-None'))
 
         # check the custom_site_id
-        aw = extract(self.calc.datastore, 'site_model?field=custom_site_id')
+        aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
         self.assertEqual(list(aw), [100, 200])
 
     def test_case_3(self):
