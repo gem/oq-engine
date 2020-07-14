@@ -345,6 +345,10 @@ class ClassicalCalculator(base.HazardCalculator):
                                 num_cores=oq.num_cores)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
+        dic = {name: len(dset) for name, dset in self.datastore.items()
+               if name.startswith('rup_')}
+        if dic:  # few sites
+            logging.info('%s', dic)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
