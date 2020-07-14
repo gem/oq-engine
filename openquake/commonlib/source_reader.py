@@ -113,7 +113,7 @@ def get_csm(oq, full_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            sg.mags = numpy.unique(numpy.round(src.mags))
+            sg.mags = numpy.unique(numpy.round(src.mags, 2))
             del src.__dict__['mags']  # remove cache
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
@@ -239,9 +239,9 @@ def _get_csm(full_lt, groups):
             atomic.append(grp)
         elif grp:
             acc[grp.trt].extend(grp)
-    dic = {}
     key = operator.attrgetter('source_id', 'code')
     idx = 0
+    src_groups = []
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
@@ -252,13 +252,13 @@ def _get_csm(full_lt, groups):
                 src._wkt = src.wkt()
                 idx += 1
                 lst.append(src)
-        dic[trt] = sourceconverter.SourceGroup(trt, lst)
+        src_groups.append(sourceconverter.SourceGroup(trt, lst))
     for ag in atomic:
         for src in ag:
             src.id = idx
             src._wkt = src.wkt()
             idx += 1
-    src_groups = list(dic.values()) + atomic
+    src_groups.extend(atomic)
     return CompositeSourceModel(full_lt, src_groups)
 
 

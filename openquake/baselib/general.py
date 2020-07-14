@@ -1363,14 +1363,14 @@ def get_duplicates(array, *fields):
 def add_columns(a, b, on, cols=None):
     """
     >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
-    >>> b_dt = [('ordinal', int), ('zipcode', int)]
+    >>> b_dt = [('ordinal', int), ('custom_site_id', int)]
     >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
     ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
     >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
-    >>> add_columns(a, b, 'aid', ['zipcode'])
+    >>> add_columns(a, b, 'aid', ['custom_site_id'])
     array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
            (2, 1, 2.3, 20128)],
-          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('zipcode', '<i8')])
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('custom_site_id', '<i8')])
     """
     if cols is None:
         cols = b.dtype.names

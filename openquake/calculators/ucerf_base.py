@@ -200,7 +200,8 @@ class UCERFSource(BaseSeismicSource):
     def mags(self):
         # read from FM0_0/MEANFS/MEANMSR/Magnitude
         with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["mag"]][self.start: self.stop]
+            arr = hdf5[self.idx_set["mag"]][self.start: self.stop]
+        return arr
 
     @cached_property
     def rate(self):

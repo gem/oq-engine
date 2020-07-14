@@ -134,7 +134,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
             [src.num_ruptures, src.nsites, dt])
         for grp_id in src.grp_ids:
             pmap[grp_id] += 0
-    return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
+    return dict(pmap=pmap, calc_times=calc_times, rup_data={},
                 extra=dict(task_no=monitor.task_no, totrups=totrups,
                            trt=src.tectonic_region_type, maxradius=maxradius))
 
@@ -190,11 +190,15 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # store rup_data if there are few sites
             rup_data = dic['rup_data']
-            nr = len(rup_data.get('grp_id', []))
-            if nr:
+            mags = set(mag for mag, k in rup_data)
+            for mag in sorted(mags):
+                nr = len(rup_data[mag, 'gidx'])
+                if nr == 0:
+                    continue
                 for k in self.rparams:
+                    name = 'rup_%s/%s' % (mag, k)
                     try:
-                        v = rup_data[k]
+                        v = rup_data[mag, k]
                     except KeyError:
                         if k == 'probs_occur':
                             v = [numpy.zeros(0)] * nr
@@ -203,13 +207,9 @@ class ClassicalCalculator(base.HazardCalculator):
                         else:
                             v = numpy.ones(nr) * numpy.nan
                     if k == 'probs_occur':  # variable lenght arrays
-                        self.datastore.hdf5.save_vlen('rup/' + k, v)
+                        self.datastore.hdf5.save_vlen(name, v)
                         continue
-                    if k == 'grp_id':
-                        # store indices to the grp_ids table
-                        tuples = map(ast.literal_eval, v)
-                        v = U16([self.gidx[tup] for tup in tuples])
-                    hdf5.extend(self.datastore['rup/' + k], v)
+                    hdf5.extend(self.datastore[name], v)
         return acc
 
     def acc0(self):
@@ -218,7 +218,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
-        rparams = {'grp_id', 'occurrence_rate',
+        rparams = {'gidx', 'occurrence_rate',
                    'weight', 'probs_occur', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         n = len(self.full_lt.sm_rlzs)
@@ -232,31 +232,36 @@ class ClassicalCalculator(base.HazardCalculator):
                 for dparam in cm.REQUIRES_DISTANCES:
                     rparams.add(dparam + '_')
         zd.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
+        mags = set()
+        for trt, dset in self.datastore['source_mags'].items():
+            mags.update(dset[:])
+        mags = sorted(mags)
         if self.few_sites:
             self.rparams = sorted(rparams)
             for k in self.rparams:
-                # variable length arrays
-                if k == 'grp_id':
-                    self.datastore.create_dset('rup/' + k, U16)
-                elif k == 'probs_occur':  # vlen
-                    self.datastore.create_dset('rup/' + k, hdf5.vfloat64)
-                elif k.endswith('_'):  # array of shape (U, N)
-                    self.datastore.create_dset(
-                        'rup/' + k, F32, shape=(None, self.N),
-                        compression='gzip')
-                else:
-                    self.datastore.create_dset('rup/' + k, F32)
+                for mag in mags:
+                    name = 'rup_%s/%s' % (mag, k)
+                    # variable length arrays
+                    if k == 'gidx':
+                        self.datastore.create_dset(name, U16)
+                    elif k == 'probs_occur':  # vlen
+                        self.datastore.create_dset(name, hdf5.vfloat64)
+                    elif k.endswith('_'):  # array of shape (U, N)
+                        self.datastore.create_dset(
+                            name, F32, shape=(None, self.N),
+                            compression='gzip')
+                    else:
+                        self.datastore.create_dset(name, F32)
         else:
             self.rparams = {}
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0
-        self.gidx = {tuple(grp_ids): i
-                     for i, grp_ids in enumerate(self.datastore['grp_ids'])}
 
         # estimate max memory per core
         max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
-        max_num_grp_ids = max(len(grp_ids) for grp_ids in self.gidx)
+        max_num_grp_ids = max(
+            len(grp_ids) for grp_ids in self.datastore['grp_ids'])
         pmapbytes = self.N * num_levels * max_num_gsims * max_num_grp_ids * 8
         if pmapbytes > TWO32:
             logging.warning(
