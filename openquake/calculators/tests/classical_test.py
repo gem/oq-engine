@@ -458,7 +458,8 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['rup_5.25/rrup_']), 34)
+        # should be 34 but by removing the collapse is 156
+        self.assertEqual(len(self.calc.datastore['rup_5.25/rrup_']), 156)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
@@ -520,7 +521,7 @@ hazard_uhs-std.csv
                  ('gidx', 28), ('hypo_depth', 28), ('mag', 28),
                  ('occurrence_rate', 28), ('probs_occur', 28),
                  ('rake', 28), ('rjb_', 28), ('rrup_', 28),
-                 ('rx_', 28), ('weight', 28), ('ztor', 28)])
+                 ('rx_', 28), ('ztor', 28)])
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling by cheating

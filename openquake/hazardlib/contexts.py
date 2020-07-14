@@ -158,7 +158,7 @@ class ContextMaker(object):
             ctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 ctxs.append(self.make_rctx(rup))
-            allctxs.extend(self.make_ctxs(ctxs, site1, grp_ids, False))
+            allctxs.extend(self.make_ctxs(ctxs, site1, grp_ids, True))
         return allctxs
 
     def filter(self, sites, rup):
@@ -263,7 +263,7 @@ class ContextMaker(object):
                 dctx.rrup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
         return self.make_rctx(rupture), sites, dctx
 
-    def make_ctxs(self, ruptures, sites, grp_ids, filt):
+    def make_ctxs(self, ruptures, sites, grp_ids, fewsites):
         """
         :returns:
             a list of fat RuptureContexts
@@ -271,7 +271,7 @@ class ContextMaker(object):
         ctxs = []
         for rup in ruptures:
             try:
-                ctx, r_sites, dctx = self.make_contexts(sites, rup, filt)
+                ctx, r_sites, dctx = self.make_contexts(sites, rup, True)
             except FarAwayRupture:
                 continue
             for par in self.REQUIRES_SITES_PARAMETERS:
@@ -280,10 +280,10 @@ class ContextMaker(object):
             for par in self.REQUIRES_DISTANCES | {'rrup'}:
                 setattr(ctx, par, getattr(dctx, par))
             ctx.grp_ids = grp_ids
-            if not filt:
-                closest = rup.surface.get_closest_points(sites)
-                ctx.clon = closest.lons
-                ctx.clat = closest.lats
+            if fewsites:
+                closest = rup.surface.get_closest_points(sites.complete)
+                ctx.clon = closest.lons[ctx.sids]
+                ctx.clat = closest.lats[ctx.sids]
             ctxs.append(ctx)
         return ctxs
 
@@ -480,13 +480,11 @@ class PmapMaker(object):
                 for rup in self._get_rups([src], sites):
                     with self.ctx_mon:
                         ctxs = self.cmaker.make_ctxs(
-                            [rup], rup.sites, grp_ids, filt=True)
+                            [rup], rup.sites, grp_ids, self.fewsites)
                     if self.fewsites:  # keep the contexts in memory
+                        sites = rup.sites.complete
                         for ctx in ctxs:
                             ctx.gidx = gidx
-                            closest = rup.surface.get_closest_points(rup.sites)
-                            ctx.clon = closest.lons
-                            ctx.clat = closest.lats
                             self.rupdata.append(ctx)
                     self.numrups += len(ctxs)
                     self.numsites += sum(len(ctx.sids) for ctx in ctxs)
@@ -499,26 +497,21 @@ class PmapMaker(object):
     def _make_src_mutex(self):
         for src, sites in self.srcfilter(self.group):
             t0 = time.time()
-            N = len(sites.complete)
             self.totrups += src.num_ruptures
             self.numrups = 0
             self.numsites = 0
             rups = self._ruptures(src)
+            gidx = getattr(src, 'gidx', 0)
             with self.ctx_mon:
                 L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
                 pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
                 ctxs = self.cmaker.make_ctxs(
-                    rups, sites, numpy.array(src.grp_ids), filt=True)
+                    rups, sites, numpy.array(src.grp_ids), self.fewsites)
                 if self.fewsites:
-                    ctxs = self.cmaker.make_ctxs(
-                        rups, sites, numpy.array(src.grp_ids), filt=False)
-                    self.rupdata.add(
-                        ctxs, sites.complete, getattr(src, 'gidx', 0))
-                    self.numsites += N * len(ctxs)
-                else:
-                    ctxs = self.cmaker.make_ctxs(  # rctx, sctx, dctx
-                        rups, sites, numpy.array(src.grp_ids), filt=True)
-                    self.numsites += sum(len(ctx.sids) for ctx in ctxs)
+                    for ctx in ctxs:
+                        ctx.gidx = gidx
+                        self.rupdata.add(ctx)
+                self.numsites += sum(len(ctx.sids) for ctx in ctxs)
                 self.numrups += len(ctxs)
             self._update_pmap(ctxs, getattr(src, 'gidx', 0), pmap)
             for grp_id in src.grp_ids:
