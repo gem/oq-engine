@@ -49,16 +49,14 @@ class ModifiableGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, params=None, **kwargs):
-
-        # Initialize the superclass
-        super().__init__(gmpe_name=gmpe_name)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         # Create the original GMPE
-        self.gmpe = registry[gmpe_name](**kwargs)
+        [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
+        self.params = kwargs  # non-gmpe parameters
+        self.gmpe = registry[gmpe_name](**kw)
         self.set_parameters()
-
-        self.params = params
         self.mean = None
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
@@ -70,9 +68,8 @@ class ModifiableGMPE(GMPE):
 
         working_std_types = copy.copy(stds_types)
 
-        if 'set_between_epsilon' in [self.params[k]['meth'] for k in
-                                     self.params]:
-            if (const.StdDev.INTER_EVENT not in 
+        if 'set_between_epsilon' in self.params:
+            if (const.StdDev.INTER_EVENT not in
                     self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
                 raise ValueError('The GMPE does not have between event std')
             working_std_types.append(const.StdDev.INTER_EVENT)
@@ -88,9 +85,8 @@ class ModifiableGMPE(GMPE):
         self.mean = omean
 
         # Apply sequentially the modifications
-        for key in self.params:
-            meth = getattr(self, self.params[key]['meth'])
-            meth(self.params[key]['params'])
+        for methname, kw in self.params.items():
+            getattr(self, methname)(**kw)
 
         # Return the standard deviation types as originally requested
         outs = []
@@ -99,18 +95,14 @@ class ModifiableGMPE(GMPE):
 
         return self.mean, outs
 
-    def set_between_epsilon(self, params):
+    def set_between_epsilon(self, epsilon_tau):
         """
-        :param par:
-            A list of parameters. In this case it contains the epsilon value
-            used to constrain the between event variability
+        :param epsilon_tau:
+            the epsilon value used to constrain the between event variability
         """
-
-        epsilon = params['epsilon_tau']
-
         # Index for the between event standard deviation
         key = const.StdDev.INTER_EVENT
-        self.mean = self.mean + epsilon * getattr(self, key)
+        self.mean = self.mean + epsilon_tau * getattr(self, key)
 
         # Set between event variability to 0
         keya = const.StdDev.TOTAL
