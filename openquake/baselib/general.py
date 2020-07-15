@@ -1458,7 +1458,8 @@ def compress(obj):
     """
     gzip a Python object
     """
-    return zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    # level=1: compress the least, but fast
+    return zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL), level=1)
 
 
 def decompress(cbytes):
