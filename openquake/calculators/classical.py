@@ -190,18 +190,21 @@ class ClassicalCalculator(base.HazardCalculator):
             # store rup_data if there are few sites
             for mag, d in dic['rup_data'].items():
                 for k in self.rparams:
-                    U = len(d['gidx'])
+                    nr = len(d['gidx'])
                     name = 'rup_%s/%s' % (mag, k)
                     if k.endswith('_'):  # distance parameter
                         try:
                             v = d[k.rstrip('_')]
                         except KeyError:
-                            v = numpy.ones((U, self.N), numpy.float32) * 9999.
+                            v = numpy.ones((nr, self.N)) * numpy.nan
                     else:
                         try:
                             v = d[k]
                         except KeyError:
-                            v = numpy.ones(U, numpy.float32) * numpy.nan
+                            if k == 'probs_occur':
+                                v = [numpy.zeros(0)] * nr
+                            else:
+                                v = numpy.ones(nr) * numpy.nan
                     if k == 'probs_occur':  # variable lenght arrays
                         self.datastore.hdf5.save_vlen(name, v)
                         continue
@@ -239,9 +242,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     name = 'rup_%s/%s' % (mag, k)
                     # variable length arrays
                     if k == 'gidx':
-                        self.datastore.create_dset(name, U16)
+                        self.datastore.create_dset(
+                            name, U16, compression='gzip')
                     elif k == 'probs_occur':  # vlen
-                        self.datastore.create_dset(name, hdf5.vfloat64)
+                        self.datastore.create_dset(
+                            name, hdf5.vfloat64, compression='gzip')
                     elif k.endswith('_'):  # array of shape (U, N)
                         self.datastore.create_dset(
                             name, F32, shape=(None, self.N),
@@ -426,7 +431,6 @@ class ClassicalCalculator(base.HazardCalculator):
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_level=oq.collapse_level,
             max_sites_disagg=oq.max_sites_disagg,
-            num_probs_occur=self.csm.get_num_probs_occur(),
             af=self.af)
         srcfilter = self.src_filter(self.datastore.tempname)
         for sg in src_groups:
@@ -491,6 +495,10 @@ class ClassicalCalculator(base.HazardCalculator):
         :param pmap_by_key:
             a dictionary key -> hazard curves
         """
+        nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
+              if name.startswith('rup_')}
+        if nr:  # few sites, log the number of ruptures per magnitude
+            logging.info('%s', nr)
         oq = self.oqparam
         data = []
         weights = [rlz.weight for rlz in self.realizations]

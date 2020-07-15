@@ -109,7 +109,6 @@ class ContextMaker(object):
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
-        self.num_probs_occur = param.get('num_probs_occur', 0)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
@@ -566,6 +565,8 @@ class PmapMaker(object):
                         arr[ctx.sids] = getattr(ctx, k, 9999.)
                         lst.append(arr)
                     v = numpy.array(lst, numpy.float32)
+                elif k == 'probs_occur':
+                    v = [numpy.zeros(0)] * len(ctxs)
                 else:
                     v = numpy.array([getattr(ctx, k, numpy.nan)
                                      for ctx in ctxs])
