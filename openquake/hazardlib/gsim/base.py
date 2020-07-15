@@ -353,6 +353,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     This class is not intended to be subclassed directly, instead
     the actual GSIMs should subclass :class:`GMPE`
 
+
     Subclasses of both must implement :meth:`get_mean_and_stddevs`
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
