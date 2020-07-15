@@ -340,6 +340,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['effect_by_mag_dst'] = aw
         elif oq.pointsource_distance:
             self.psd = oq.pointsource_distance.interp(mags_by_trt)
+            for trt, dic in self.psd.items():
+                it = list(dic.items())
+                md = '%s->%d ... %s->%d' % (it[0] + it[-1])
+                logging.info('ps_dist %s: %s', trt, md)
         else:
             self.psd = {}
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,

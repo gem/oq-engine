@@ -566,12 +566,9 @@ class PmapMaker(object):
                         lst.append(arr)
                     v = numpy.array(lst, numpy.float32)
                 elif k == 'probs_occur':
-                    default = numpy.zeros(0)
-                    v = numpy.array([getattr(ctx, k, default)
-                                     for ctx in ctxs])
+                    v = numpy.array([getattr(c, k, []) for c in ctxs])
                 else:
-                    v = numpy.array([getattr(ctx, k, numpy.nan)
-                                     for ctx in ctxs])
+                    v = numpy.array([getattr(c, k, numpy.nan) for c in ctxs])
                 ddic[mag][k] = v
         return (pmap, ddic, self.calc_times, dict(totrups=self.totrups))
 
