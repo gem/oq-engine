@@ -19,6 +19,7 @@ import os
 import re
 import time
 import copy
+import pprint
 import logging
 import operator
 from datetime import datetime
@@ -336,6 +337,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     imts_ok and oq.minimum_intensity):
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
+            dic = {trt: [(float(mag), int(dst))
+                         for mag, dst in self.psd[trt].items()]
+                   for trt in self.psd if trt != 'default'}
+            logging.info('Using pointsource_distance=\n%s', pprint.pformat(dic))
             if len(vars(aw)) > 1:  # more than _extra
                 self.datastore['effect_by_mag_dst'] = aw
         elif oq.pointsource_distance:

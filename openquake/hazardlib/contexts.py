@@ -18,7 +18,6 @@
 import abc
 import copy
 import time
-import pprint
 import logging
 import warnings
 import operator
@@ -944,9 +943,6 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
             if psd and set(psd[trt].values()) == {-1}:
                 maxdist = oq.maximum_distance[trt]
                 psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
-        dic = {trt: [(float(mag), int(dst)) for mag, dst in psd[trt].items()]
-               for trt in psd if trt != 'default'}
-        logging.info('Using pointsource_distance=\n%s', pprint.pformat(dic))
     return aw, psd
 
 
