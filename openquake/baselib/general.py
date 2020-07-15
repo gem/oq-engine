@@ -1459,8 +1459,8 @@ def agg_probs(*probs):
 # do that, except in one case. The case if when you have a lot of workers
 # (say 320) sending a lot of data (say 320 GB) to a master node which is
 # not able to keep up. Then the zmq queue fills all of the avalaible RAM
-# until the master node blows. With compression you can reduce the queue
-# size a lot (for the contexts data that can be one order of magnitude).
+# until the master node blows up. With compression you can reduce the queue
+# size a lot (say one order of magnitude).
 # Therefore by losing a bit of speed (say 3%) you can convert a failing
 # calculation into a successful one.
 
