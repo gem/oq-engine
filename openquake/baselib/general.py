@@ -21,8 +21,10 @@ Utility functions of general interest.
 """
 import os
 import sys
+import gzip
 import copy
 import math
+import pickle
 import socket
 import random
 import atexit
@@ -1450,3 +1452,17 @@ def agg_probs(*probs):
     for prob in probs[1:]:
         acc *= 1. - prob
     return 1. - acc
+
+
+def compress(obj):
+    """
+    gzip a Python object
+    """
+    return gzip.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+
+
+def decompress(cbytes):
+    """
+    gunzip compressed bytes into a Python object
+    """
+    return pickle.loads(gzip.decompress(cbytes))
