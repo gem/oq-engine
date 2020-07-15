@@ -183,7 +183,8 @@ def calc_hazard_curves(
         odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
-    # ensure the sources have the right grp_id
+
+    # Ensure the sources have the right grp_id
     idx = 0
     for i, grp in enumerate(groups):
         for src in grp:
@@ -191,12 +192,15 @@ def calc_hazard_curves(
             src.id = idx
             idx += 1
     imtls = DictArray(imtls)
-    af = getattr(kwargs, 'af', None)
+
+    # Set the parameters e.g. the amplification function
+    af = kwargs['af'] if 'af' in kwargs else None
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level,
                  filter_distance=filter_distance, reqv=reqv,
                  cluster=grp.cluster, shift_hypo=shift_hypo, af=af)
     pmap = ProbabilityMap(len(imtls.array), 1)
+
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     for group in groups:

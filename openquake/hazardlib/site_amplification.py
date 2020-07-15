@@ -104,11 +104,13 @@ class AmplFunction():
         # Filtering magnitude
         tmp_mags = numpy.sort(numpy.unique(numpy.array(df['from_mag'])))
         idx = (numpy.searchsorted(tmp_mags, mag)) - 1
+        idx = idx - 1 if idx > 0 else 0
         df = df[df['from_mag'] == tmp_mags[idx]]
 
         # Filtering distance
         tmp_dsts = numpy.sort(numpy.unique(numpy.array(df['from_rrup'])))
-        idx = numpy.searchsorted(tmp_dsts, dst) - 1 
+        idx = numpy.searchsorted(tmp_dsts, dst) - 1
+        idx = idx - 1 if idx > 0 else 0
         df = df[df['from_rrup'] == tmp_dsts[idx]]
 
         # Interpolating
@@ -217,9 +219,9 @@ class Amplifier(object):
         if amplevels is not None:
             self.imtls = imtls
             self.levels = levels
-            self._set_alpha_sigma(mag=None, dst=None)
+            self._set_alpha_sigma()
 
-    def _set_alpha_sigma(self, mag, dst):
+    def _set_alpha_sigma(self):
         """
         This sets the median amplification and std
         """
@@ -230,15 +232,6 @@ class Amplifier(object):
         self.isigmas = {}  # code -> array of length I-1
         for code in self.coeff:
             df = self.coeff[code]
-            if mag is not None:
-                # Reducing the initial dataframe by keeping information just
-                # for the given magnitude and distance
-                magu = numpy.sort(numpy.unique(df['from_mag']))
-                magsel = magu[max(numpy.argwhere(magu < mag))[0]]
-                df = df.loc[df['from_mag'] == magsel, :]
-                dstu = numpy.sort(numpy.unique(df['from_rrup']))
-                dstsel = dstu[max(numpy.argwhere(dstu < dst))[0]]
-                df = df.loc[df['from_rrup'] == dstsel, :]
             for imt in imtls:
                 self.ialphas[code, imt], self.isigmas[code, imt] = (
                     self._interp(code, imt, self.midlevels, df))
@@ -285,7 +278,7 @@ class Amplifier(object):
                 # defined values of shaking on soil given a value of shaking
                 # on rock. 'mid' is the value of ground motion on rock to
                 # which we associate the probability of occurrence 'p'. 'a'
-                # is the median amplification factor and 's' is the standard
+                #  is the median amplification factor and 's' is the standard
                 # deviation of the logarithm of amplification.
                 #
                 # In the case of an amplification function without uncertainty
