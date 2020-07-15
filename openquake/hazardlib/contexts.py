@@ -481,9 +481,7 @@ class PmapMaker(object):
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
             if self.fewsites:  # keep the contexts in memory
-                for ctx in ctxs:
-                    ctx.gidx = gidx
-                    self.rupdata.append(ctx)
+                self.rupdata.extend(ctxs)
             self.numrups += len(ctxs)
             self.numsites += sum(len(ctx.sids) for ctx in ctxs)
         return ctxs
@@ -548,7 +546,7 @@ class PmapMaker(object):
         rupdata = groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag)
         cparams = self.cmaker.get_ctx_params()
         dparams = self.cmaker.REQUIRES_DISTANCES | {'clon', 'clat'}
-        ddic = AccumDict(accum={})
+        ddic = AccumDict(accum={})  # double dict mag -> k -> array
         for mag, ctxs in rupdata.items():
             for k in cparams:
                 if k in dparams:
