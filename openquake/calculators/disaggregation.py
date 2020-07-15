@@ -393,9 +393,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param acc: dictionary sid -> trti, magi -> 6D array
         :param result: dictionary with the result coming from a task
         """
-        result = decompress(compressed_result)
         # 7D array of shape (#distbins, #lonbins, #latbins, #epsbins, M, P, Z)
         with self.monitor('aggregating disagg matrices'):
+            result = decompress(compressed_result)
             trti = result.pop('trti')
             magi = result.pop('magi')
             for (s, m), probs in result.items():

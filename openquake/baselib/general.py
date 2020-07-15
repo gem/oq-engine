@@ -21,7 +21,7 @@ Utility functions of general interest.
 """
 import os
 import sys
-import gzip
+import zlib
 import copy
 import math
 import pickle
@@ -1458,11 +1458,11 @@ def compress(obj):
     """
     gzip a Python object
     """
-    return gzip.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    return zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
 
 
 def decompress(cbytes):
     """
     gunzip compressed bytes into a Python object
     """
-    return pickle.loads(gzip.decompress(cbytes))
+    return pickle.loads(zlib.decompress(cbytes))
