@@ -544,7 +544,7 @@ class PmapMaker(object):
             pmap = self._make_src_indep()
         rupdata = groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag)
         cparams = self.cmaker.get_ctx_params()
-        dparams = self.cmaker.REQUIRES_DISTANCES | {'clon', 'clat'}
+        dparams = self.cmaker.REQUIRES_DISTANCES | {'clon', 'clat', 'rrup'}
         ddic = AccumDict(accum={})  # double dict mag -> k -> array
         for mag, ctxs in rupdata.items():
             for k in cparams:
