@@ -8,9 +8,8 @@
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>
                         [ModifiableGMPE]
-                            gmpe_name="AkkarEtAlRjb2014"
-                            params.mod1.meth="set_between_epsilon"
-                            params.mod1.params.epsilon_tau=0.5
+                        gmpe.AkkarEtAlRjb2014 = {}
+                        set_between_epsilon.epsilon_tau = 0.5
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>

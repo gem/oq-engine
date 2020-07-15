@@ -96,6 +96,16 @@ def to_toml(uncertainty):
     return text
 
 
+def _fix_toml(v):
+    # horrible hack to remove a pickle error with
+    # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
+    # using toml.loads(s, _dict=dict) would be the right way, but it does
+    # not work :-(
+    if hasattr(v, 'items'):
+        return {k1: _fix_toml(v1) for k1, v1 in v.items()}
+    return v
+
+
 # more tests are in tests/valid_test.py
 def gsim(value, basedir=''):
     """
@@ -106,6 +116,7 @@ def gsim(value, basedir=''):
     """
     value = to_toml(value)  # convert to TOML
     [(gsim_name, kwargs)] = toml.loads(value).items()
+    kwargs = _fix_toml(kwargs)
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))
