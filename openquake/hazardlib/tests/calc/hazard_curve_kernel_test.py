@@ -144,7 +144,7 @@ class HazardCurvesKernelTestCase(unittest.TestCase):
         # Compute hazard using the convolution approach
         hc_con = ampl.amplify(b'A', pcurves)
         
-        if True:
+        if False:
             import matplotlib.pyplot as plt
             _ = plt.figure()
             plt.plot(imls_rock, hc_rock[0][0], '--', label='rock1')
