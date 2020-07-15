@@ -70,6 +70,14 @@ class OpenQuake(object):
         finally:
             ex.close()
 
+    def read_ruptures(self, calc_id, field):
+        dstore = read(calc_id)
+        lst = []
+        for name, dset in dstore.items():
+            if name.startswith('rup_'):
+                lst.append(dset[field][:])
+        return numpy.concatenate(lst)
+
 
 @sap.script
 def shell(script=None, args=()):

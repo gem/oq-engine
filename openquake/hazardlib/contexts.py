@@ -566,7 +566,9 @@ class PmapMaker(object):
                         lst.append(arr)
                     v = numpy.array(lst, numpy.float32)
                 elif k == 'probs_occur':
-                    v = [numpy.zeros(0)] * len(ctxs)
+                    default = numpy.zeros(0)
+                    v = numpy.array([getattr(ctx, k, default)
+                                     for ctx in ctxs])
                 else:
                     v = numpy.array([getattr(ctx, k, numpy.nan)
                                      for ctx in ctxs])
