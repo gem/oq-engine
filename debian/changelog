@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * Reduced tremendously the memory and disk space occupation in classical
-    calculations with few sites; also changed slightly the rupture collapsing
+  * Reduced the memory and disk space occupation in classical calculations with
+    few sites; also changed slightly the rupture collapsing mechanism
   * In disaggregation, force poes_disagg == poes
   * Fixed multi-site disaggregation: ruptures far away were not discarded,
     just considered distant 9999 km
