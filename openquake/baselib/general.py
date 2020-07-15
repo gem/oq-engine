@@ -1453,12 +1453,23 @@ def agg_probs(*probs):
         acc *= 1. - prob
     return 1. - acc
 
+# ###########]]]###### COMPRESSION/DECOMPRESSION ##################### #
+
+# Compressing the task outputs makes everything slower, so you should NOT
+# do that, except in one case. The case if when you have a lot of workers
+# (say 320) sending a lot of data (say 320 GB) to a master node which is
+# not able to keep up. Then the zmq queue fills all of the avalaible RAM
+# until the master node blows. With compression you can reduce the queue
+# size a lot (for the contexts data that can be one order of magnitude).
+# Therefore by losing a bit of speed (say 3%) you can convert a failing
+# calculation into a successful one.
+
 
 def compress(obj):
     """
     gzip a Python object
     """
-    # level=1: compress the least, but fast
+    # level=1: compress the least, but fast, good choice for us
     return zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL), level=1)
 
 

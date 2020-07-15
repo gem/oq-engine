@@ -29,7 +29,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, groupby_bin, compress)
+    AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import const, imt as imt_module
 from openquake.hazardlib.gsim import base
@@ -560,8 +560,7 @@ class PmapMaker(object):
                 else:
                     v = numpy.array([getattr(c, k, numpy.nan) for c in ctxs])
                 ddic[mag][k] = v
-        return (pmap, compress(ddic),
-                self.calc_times, dict(totrups=self.totrups))
+        return (pmap, ddic, self.calc_times, dict(totrups=self.totrups))
 
     def collapse_point_ruptures(self, rups, sites):
         """

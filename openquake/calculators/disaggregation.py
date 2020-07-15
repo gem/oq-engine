@@ -24,8 +24,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes, humansize, pprod, agg_probs,
-    compress, decompress)
+    AccumDict, block_splitter, get_array_nbytes, humansize, pprod, agg_probs)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -171,7 +170,9 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
                     bins)[..., 0, :, :]  # 6D-matrix
                 if matrix.any():
                     res[s, m] = matrix
-    return compress(res)
+    return res
+    # NB: compressing the results is not worth it since the aggregation of
+    # the matrices is fast and the data are not queuing up
 
 
 def get_outputs_size(shapedic, disagg_outputs):
@@ -386,7 +387,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # imti, sid -> trti, magi -> 6D array
 
-    def agg_result(self, acc, compressed_result):
+    def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results.
 
@@ -395,7 +396,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         # 7D array of shape (#distbins, #lonbins, #latbins, #epsbins, M, P, Z)
         with self.monitor('aggregating disagg matrices'):
-            result = decompress(compressed_result)
             trti = result.pop('trti')
             magi = result.pop('magi')
             for (s, m), probs in result.items():

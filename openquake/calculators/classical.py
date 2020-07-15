@@ -190,10 +190,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
-            data = dic['rup_data']
-            if not data:
-                return acc
-            for mag, d in decompress(data).items():
+            for mag, d in dic['rup_data'].items():
+                d = decompress(d)
                 for k in self.rparams:
                     nr = len(d['gidx'])
                     name = 'rup_%s/%s' % (mag, k)
