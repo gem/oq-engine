@@ -106,6 +106,10 @@ class DisaggregationTestCase(CalculatorTestCase):
                           'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None',
                           'iml-SA(0.1)-None'))
 
+        # check the custom_site_id
+        aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
+        self.assertEqual(list(aw), [100, 200])
+
     def test_case_3(self):
         # a case with poes_disagg too large
         with self.assertRaises(SystemExit) as ctx:

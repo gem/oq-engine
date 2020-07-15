@@ -356,7 +356,6 @@ class OqParamTestCase(unittest.TestCase):
                 gsim='BooreAtkinson2008',
                 reference_vs30_value='200',
                 sites='0.1 0.2',
-                poes='0.2',
                 maximum_distance='400',
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1')
@@ -375,5 +374,5 @@ class OqParamTestCase(unittest.TestCase):
                 iml_disagg="{'PGV': [0.1, 0.2, 0.3]}",
                 poes_disagg="0.1",
                 uniform_hazard_spectra='1')
-        self.assertIn("iml_disagg and poes_disagg cannot be set at the "
-                      "same time", str(ctx.exception))
+        self.assertIn("poes_disagg != poes: [0.1]!=[0.2] in job.ini",
+                      str(ctx.exception))
