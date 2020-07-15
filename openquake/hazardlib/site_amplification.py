@@ -104,14 +104,19 @@ class AmplFunction():
         # Filtering magnitude
         tmp_mags = numpy.sort(numpy.unique(numpy.array(df['from_mag'])))
         idx = (numpy.searchsorted(tmp_mags, mag)) - 1
-        idx = idx - 1 if idx > 0 else 0
-        df = df[df['from_mag'] == tmp_mags[idx]]
 
         # Filtering distance
         tmp_dsts = numpy.sort(numpy.unique(numpy.array(df['from_rrup'])))
         idx = numpy.searchsorted(tmp_dsts, dst) - 1
-        idx = idx - 1 if idx > 0 else 0
-        df = df[df['from_rrup'] == tmp_dsts[idx]]
+
+        try:
+            rrup = tmp_dsts[idx][0]
+            mag = tmp_mags[idx][0]
+        except:
+            rrup = tmp_dsts[idx]
+            mag = tmp_mags[idx]
+
+        df = df[(df['from_rrup'] == rrup) & (df['from_mag'] == mag)]
 
         # Interpolating
         median = numpy.interp(iml, df['level'], df['median'])

@@ -112,5 +112,7 @@ class AmplificationFunctionTestCase(unittest.TestCase):
         imls = 0.104
         rrups = 22.
         med, std = self.af.get_mean_std(site, imt, imls, mag, rrups)
-        self.assertEqual(med, 1.33, 'wrong median af')
+        expected = 1.33
+        msg = 'Median af computed: {:f} expected: {:f}'.format(med, expected)
+        self.assertEqual(med, expected, msg)
         self.assertEqual(std, 0.33, 'wrong std af')
