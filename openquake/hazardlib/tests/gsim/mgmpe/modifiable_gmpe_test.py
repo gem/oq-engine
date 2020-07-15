@@ -40,11 +40,8 @@ class ModifiableGMPETest(unittest.TestCase):
         """ Check that error is raised for GMPEs with only total std """
 
         stds_types = [const.StdDev.TOTAL]
-
-        params = {'mod1': {'meth': 'set_between_epsilon',
-                           'params': {'epsilon_tau': 0.5}}}
-
-        gmm = ModifiableGMPE(gmpe_name='Campbell2003', params=params)
+        gmm = ModifiableGMPE(gmpe={'Campbell2003': {}},
+                             set_between_epsilon={'epsilon_tau': 0.5})
         with self.assertRaises(ValueError):
             _, _ = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
                                             self.imt, stds_types)
@@ -55,11 +52,9 @@ class ModifiableGMPETest(unittest.TestCase):
         stds_types = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
                       const.StdDev.INTRA_EVENT]
 
-        params = {'mod1': {'meth': 'set_between_epsilon', 
-                           'params': {'epsilon_tau': 0.5}}}
         gmpe_name = 'AkkarEtAlRjb2014'
-        
-        gmm = ModifiableGMPE(gmpe_name=gmpe_name, params=params)
+        gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
+                             set_between_epsilon={'epsilon_tau': 0.5})
         mean, stds = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
                                               self.imt, stds_types)
 
