@@ -162,13 +162,12 @@ class ContextMaker(object):
         """
         :returns: a list RuptureContexts
         """
-        grp_ids = [0]
         allctxs = []
         for src in srcs:
             ctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 ctxs.append(self.make_rctx(rup))
-            allctxs.extend(self.make_ctxs(ctxs, site1, grp_ids, True))
+            allctxs.extend(self.make_ctxs(ctxs, site1, 0, [0], True))
         return allctxs
 
     def filter(self, sites, rup):
@@ -235,7 +234,7 @@ class ContextMaker(object):
             setattr(ctx, param, value)
         return ctx
 
-    def make_contexts(self, sites, rupture, filt=True):
+    def make_contexts(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -247,9 +246,6 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
-        :param boolean filt:
-            If True filter the sites
-
         :returns:
             Tuple of two items: sites and distances context.
 
@@ -257,10 +253,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        if filt:
-            sites, dctx = self.filter(sites, rupture)
-        else:
-            dctx = self.get_dctx(sites, rupture)
+        sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -281,7 +274,7 @@ class ContextMaker(object):
         ctxs = []
         for rup in ruptures:
             try:
-                ctx, r_sites, dctx = self.make_contexts(sites, rup, True)
+                ctx, r_sites, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             for par in self.REQUIRES_SITES_PARAMETERS:
