@@ -91,14 +91,15 @@ def _prepare_ctxs(rupdata, cmaker, sitecol):
     ctxs = []
     for u in range(len(rupdata['mag'])):
         ctx = RuptureContext()
+        ctx.sids, = numpy.where(rupdata['rrup_'][u] < 9999.)
+        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         for par in rupdata:
             if not par.endswith('_'):
                 setattr(ctx, par, rupdata[par][u])
             else:  # distance parameters
-                setattr(ctx, par[:-1], rupdata[par][u])
+                setattr(ctx, par[:-1], rupdata[par][u, ctx.sids])
         for par in cmaker.REQUIRES_SITES_PARAMETERS:
-            setattr(ctx, par, sitecol[par])
-        ctx.sids = sitecol.sids
+            setattr(ctx, par, sitecol[par][ctx.sids])
         ctxs.append(ctx)
     # sorting for debugging convenience
     ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
@@ -137,7 +138,6 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
         rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
         ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
         del rupdata
-        close = numpy.array([ctx.rrup < 9999. for ctx in ctxs]).T  # (N, U)
 
     magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
     if magi == -1:  # when the magnitude is on the edge
@@ -164,14 +164,11 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
             # dist_bins, lon_bins, lat_bins, eps_bins
             bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
                     bin_edges[4])
-            close_ctxs = ctxs[close[s]]
-            if len(close_ctxs) == 0:
-                continue
             with dis_mon:
                 # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
                 matrix = disagg.disaggregate(
-                    close_ctxs, g_by_z[s], {imt: iml3[m]}, eps3, s,
-                    bins)[..., 0, :, :]  # 6D-matrix
+                    ctxs, g_by_z[s], {imt: iml3[m]}, eps3, s, bins)[
+                        ..., 0, :, :]  # 6D-matrix
                 if matrix.any():
                     res[s, m] = matrix
     return res
