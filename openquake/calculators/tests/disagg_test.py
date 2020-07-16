@@ -89,7 +89,11 @@ class DisaggregationTestCase(CalculatorTestCase):
             ['rlz-0-SA(0.1)-sid-0.xml',
              'rlz-1-SA(0.1)-sid-0.xml',
              'rlz-2-SA(0.1)-sid-0.xml',
-             'rlz-3-SA(0.1)-sid-0.xml'],
+             'rlz-3-SA(0.1)-sid-0.xml',
+             'rlz-0-SA(0.1)-sid-1.xml',
+             'rlz-1-SA(0.1)-sid-1.xml',
+             'rlz-2-SA(0.1)-sid-1.xml',
+             'rlz-3-SA(0.1)-sid-1.xml'],
             case_2.__file__)
 
         # check that the CSV exporter does not break
