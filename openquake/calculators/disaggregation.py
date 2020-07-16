@@ -480,4 +480,4 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for key in outputs:
                     pmf = disagg.pmf_map[key](
                         mat7 if key.endswith('TRT') else mat6)
-                    out[key][s, m, p, :] = pmf
+                    out[key][s, m, p, :] = pmf  # shape NMP..Z
