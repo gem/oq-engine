@@ -140,6 +140,8 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
         close = numpy.array([ctx.rrup < 9999. for ctx in ctxs]).T  # (N, U)
 
     magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
+    if magi == -1:  # when the magnitude is on the edge
+        magi = 0
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = iml4.shape
@@ -439,7 +441,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         to save is #sites * #rlzs * #disagg_poes * #IMTs.
 
         :param results:
-            a dictionary sid -> trti -> disagg matrix
+            a dictionary sid, imti -> trti -> disagg matrix
         """
         # the DEBUG dictionary is populated only for OQ_DISTRIBUTE=no
         for sid, pnes in disagg.DEBUG.items():
