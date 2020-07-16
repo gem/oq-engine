@@ -100,6 +100,8 @@ def _prepare_ctxs(rupdata, cmaker, sitecol):
             setattr(ctx, par, sitecol[par])
         ctx.sids = sitecol.sids
         ctxs.append(ctx)
+    # sorting for debugging convenience
+    ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
     return numpy.array(ctxs)
 
 
@@ -439,6 +441,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             a dictionary sid -> trti -> disagg matrix
         """
+        # the DEBUG dictionary is populated only for OQ_DISTRIBUTE=no
+        for sid, pnes in disagg.DEBUG.items():
+            print('site %d, mean pnes=%s' % (sid, pnes))
         T = len(self.trts)
         Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
         # build a dictionary s, m -> 9D matrix of shape (T, Ma, ..., E, P, Z)

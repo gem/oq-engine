@@ -111,6 +111,9 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
+DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
+
+
 # this is inside an inner loop
 def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     """
@@ -154,6 +157,7 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     for u, ctx in enumerate(ctxs):
         pnes[u] *= ctx.get_probability_no_exceedance(poes[u])  # this is slow
     bindata = BinData(dists, lons, lats, pnes)
+    DEBUG[sid].append(pnes.mean())
     if not bin_edges:
         return bindata
     return _build_disagg_matrix(bindata, bin_edges)
