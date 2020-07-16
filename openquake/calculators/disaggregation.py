@@ -100,8 +100,8 @@ def _prepare_ctxs(rupdata, cmaker, sitecol):
             setattr(ctx, par, sitecol[par])
         ctx.sids = sitecol.sids
         ctxs.append(ctx)
-        # sorting for debugging convenience
-        ctxs.sort(key=lambda ctx: (ctx.mag, ctx.occurrence_rate))
+    # sorting for debugging convenience
+    ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
     return numpy.array(ctxs)
 
 
