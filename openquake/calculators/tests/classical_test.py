@@ -34,7 +34,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50)
+    case_50, case_51)
 
 aac = numpy.testing.assert_allclose
 
@@ -50,6 +50,14 @@ def check_disagg_by_src(dstore):
     weights = dstore['weights'][:]
     mean2 = numpy.einsum('sr...,r->s...', poes, weights)  # N, M, L
     aac(mean, mean2, atol=1E-6)
+
+
+def get_dists(dstore):
+    lst = []
+    for name, dset in dstore.items():
+        if name.startswith('rup_'):
+            lst.append(dset['rrup_'][:])
+    return numpy.concatenate(lst)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -520,7 +528,7 @@ hazard_uhs-std.csv
                  ('gidx', 28), ('hypo_depth', 28), ('mag', 28),
                  ('occurrence_rate', 28), ('probs_occur', 28),
                  ('rake', 28), ('rjb_', 28), ('rrup_', 28),
-                 ('rx_', 28), ('weight', 28), ('ztor', 28)])
+                 ('rx_', 28), ('ztor', 28)])
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling by cheating
@@ -616,7 +624,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 499)  # effective ruptures
+        self.assertEqual(self.calc.numrups, 634)  # effective ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
@@ -644,32 +652,29 @@ hazard_uhs-std.csv
     def test_case_48(self):
         # pointsource_distance effects on a simple point source
         self.run_calc(case_48.__file__, 'job.ini')
-        tmp = general.gettemp(rst_table(self.calc.datastore['rup_5.10/rrup_'],
+        tmp = general.gettemp(rst_table(get_dists(self.calc.datastore),
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/exact_dists.txt', tmp)
 
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
-        tmp = general.gettemp(rst_table(self.calc.datastore['rup_5.10/rrup_'],
+        tmp = general.gettemp(rst_table(get_dists(self.calc.datastore),
                                         ['sid0', 'sid1']))
         self.assertEqualFiles('expected/approx_dists.txt', tmp)
         # this test shows in detail what happens to the distances in presence
         # of a magnitude-dependent pointsource_distance: just look at the
         # files expected/exact_dists.txt and expected/approx_dists.txt
-        # the exact distances for the first site are 54, 53, 53, ... 38, 32 km
+        # the exact distances for the first site are 54, 53, 53, ... 38, 32 km;
         # they decrease with the magnitude, since big magnitude -> big size ->
         # smaller distance from the site.
         # When the pointsource_distance is on, the approximated distances are
-        # 55, 55, 55, ..., 38, 32 km: the difference is in the first three
-        # values, corresponding to the small magnitudes.
+        # 9_999, 9_999, 9_999, ..., 38, 32 km: the difference is in the first
+        # three values, corresponding to the small magnitudes.
         # For small magnitudes the planar ruptures are replaced by points
-        # and thus the distances become larger (and constant).
+        # and thus the distances become larger and possibly over the maxdist.
         # The maximum_distance here is 110 km and the second site
         # was chosen very carefully, so that the exact distance for the highest
         # magnitude is 109 km (within) while the approx distance is 111 km
-        # (outside): still the rupture is not discarded because we are in the
-        # few-sites regime.
-        # In the many-sites regime, small magnitude ruptures at distance close
-        # to the maximum_distance may be discarded, instead.
+        # (outside)
 
     def test_case_49(self):
         # serious test of amplification + uhs
@@ -682,3 +687,8 @@ hazard_uhs-std.csv
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(1.0).csv',
                                'uhs.csv'],
                               case_50.__file__)
+    def test_case_51(self):
+        # Modifiable GMPE
+        self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.2).csv',
+                               'hcurves-SA(2.0).csv', 'uhs.csv'],
+                              case_51.__file__)
