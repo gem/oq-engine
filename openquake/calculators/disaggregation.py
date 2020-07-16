@@ -437,8 +437,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             a dictionary sid -> trti -> disagg matrix
         """
-        for sid, values in disagg.DEBUG.items():
-            print('----', sid, numpy.mean(values), len(values))
         T = len(self.trts)
         Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
         # build a dictionary s, m -> 9D matrix of shape (T, Ma, ..., E, P, Z)
@@ -482,4 +480,4 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for key in outputs:
                     pmf = disagg.pmf_map[key](
                         mat7 if key.endswith('TRT') else mat6)
-                    out[key][s, m, p, :] = pmf
+                    out[key][s, m, p, :] = pmf  # shape NMP..Z
