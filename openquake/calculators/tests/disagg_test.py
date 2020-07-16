@@ -106,7 +106,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
                      'imt=SA(0.1)&poe_id=0')
         self.assertEqual(aw.dtype.names, ('site_id', 'lon', 'lat', 'poes'))
-        self.assertEqual(aw['poes'].shape, (2, 15))  # 2 rows
+        self.assertEqual(aw['poes'].shape, (2, 10))  # 2 rows
 
     def test_case_3(self):
         # a case with poes_disagg too large
