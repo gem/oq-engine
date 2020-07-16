@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: introduced compress/decompress utilities
   * Reduced the memory and disk space occupation in classical calculations with
     few sites; also changed slightly the rupture collapsing mechanism
   * In disaggregation, force poes_disagg == poes

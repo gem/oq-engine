@@ -171,6 +171,8 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
                 if matrix.any():
                     res[s, m] = matrix
     return res
+    # NB: compressing the results is not worth it since the aggregation of
+    # the matrices is fast and the data are not queuing up
 
 
 def get_outputs_size(shapedic, disagg_outputs):

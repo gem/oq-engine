@@ -28,7 +28,8 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize, get_array_nbytes)
+    AccumDict, DictArray, block_splitter, groupby, humansize,
+    get_array_nbytes, decompress)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -189,7 +190,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
-            for mag, d in dic['rup_data'].items():
+            for mag, c in dic['rup_data'].items():
+                d = decompress(c)
                 for k in self.rparams:
                     nr = len(d['gidx'])
                     name = 'rup_%s/%s' % (mag, k)
