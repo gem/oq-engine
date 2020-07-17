@@ -155,27 +155,28 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
                 g_by_z[s, z] = g
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     res = {'trti': trti, 'magi': magi}
-    for m, im in enumerate(oq.imtls):
-        imt = from_string(im)
-        with ms_mon:
-            # compute mean and std for a single IMT to save memory
-            # the size is N * U * G * 8 bytes
-            disagg.set_mean_std(ctxs, [imt], cmaker.gsims)
+    imts = [from_string(im) for im in oq.imtls]
+    with ms_mon:
+        # compute mean and std for a single IMT to save memory
+        # the size is N * U * G * 8 bytes
+        disagg.set_mean_std(ctxs, imts, cmaker.gsims)
 
-        # disaggregate by site, IMT
-        for s, iml3 in enumerate(iml4):
-            if not close_ctxs[s]:
-                continue
-            # dist_bins, lon_bins, lat_bins, eps_bins
-            bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
-                    bin_edges[4])
-            with dis_mon:
-                # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
-                matrix = disagg.disaggregate(
-                    close_ctxs[s], g_by_z[s], {imt: iml3[m]}, eps3, s, bins)[
-                        ..., 0, :, :]  # 6D-matrix
-                if matrix.any():
-                    res[s, m] = matrix
+    # disaggregate by site, IMT
+    for s, iml3 in enumerate(iml4):
+        if not close_ctxs[s]:
+            continue
+        # dist_bins, lon_bins, lat_bins, eps_bins
+        bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
+                bin_edges[4])
+        iml2 = dict(zip(imts, iml3))
+        with dis_mon:
+            # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
+            matrix = disagg.disaggregate(
+                close_ctxs[s], g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
+            for m in range(M):
+                mat6 = matrix[..., m, :, :]
+                if mat6.any():
+                    res[s, m] = mat6
     return res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
