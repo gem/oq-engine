@@ -105,7 +105,11 @@ def _prepare_ctxs(dstore, idxs, magstr, cmaker):
         ctxs.append(ctx)
     # sorting for debugging convenience
     ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
-    return sitecol, ctxs
+    close_ctxs = [[] for sid in sitecol.sids]
+    for ctx in ctxs:
+        for sid in ctx.idx:
+            close_ctxs[sid].append(ctx)
+    return ctxs, close_ctxs
 
 
 def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
@@ -136,11 +140,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
         oq.investigation_time)
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
-        sitecol, ctxs = _prepare_ctxs(dstore, idxs, magstr, cmaker)  # fast
-        close_ctxs = [[] for sid in sitecol.sids]
-        for ctx in ctxs:
-            for sid in ctx.idx:
-                close_ctxs[sid].append(ctx)
+        ctxs, close_ctxs = _prepare_ctxs(dstore, idxs, magstr, cmaker)  # fast
 
     magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
     if magi == -1:  # when the magnitude is on the edge
@@ -385,6 +385,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer:\n%s', msg)
+
+        sd.pop('tasks')
+        sd['mags_trt'] = sum(len(mags) for mags in
+                             self.datastore['source_mags'].values())
+        nbytes, msg = get_array_nbytes(sd)
+        logging.info('Estimated memory on the master:\n%s', msg)
         dt = numpy.dtype([('trti', U8), ('mag', '|S4'), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         self.datastore.swmr_on()
