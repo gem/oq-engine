@@ -87,22 +87,29 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def _prepare_ctxs(rupdata, cmaker, sitecol):
+def _prepare_ctxs(dstore, idxs, magstr, cmaker):
+    sitecol = dstore['sitecol']
+    rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
     ctxs = []
     for u in range(len(rupdata['mag'])):
         ctx = RuptureContext()
+        ctx.sids, = numpy.where(rupdata['rrup_'][u] < 9999.)
+        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         for par in rupdata:
             if not par.endswith('_'):
                 setattr(ctx, par, rupdata[par][u])
             else:  # distance parameters
-                setattr(ctx, par[:-1], rupdata[par][u])
+                setattr(ctx, par[:-1], rupdata[par][u, ctx.sids])
         for par in cmaker.REQUIRES_SITES_PARAMETERS:
-            setattr(ctx, par, sitecol[par])
-        ctx.sids = sitecol.sids
+            setattr(ctx, par, sitecol[par][ctx.sids])
         ctxs.append(ctx)
     # sorting for debugging convenience
     ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
-    return numpy.array(ctxs)
+    close_ctxs = [[] for sid in sitecol.sids]
+    for ctx in ctxs:
+        for sid in ctx.idx:
+            close_ctxs[sid].append(ctx)
+    return ctxs, close_ctxs
 
 
 def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
@@ -133,11 +140,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
         oq.investigation_time)
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
-        sitecol = dstore['sitecol']
-        rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
-        ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
-        del rupdata
-        close = numpy.array([ctx.rrup < 9999. for ctx in ctxs]).T  # (N, U)
+        ctxs, close_ctxs = _prepare_ctxs(dstore, idxs, magstr, cmaker)  # fast
 
     magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
     if magi == -1:  # when the magnitude is on the edge
@@ -161,17 +164,16 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(iml4):
+            if not close_ctxs[s]:
+                continue
             # dist_bins, lon_bins, lat_bins, eps_bins
             bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
                     bin_edges[4])
-            close_ctxs = ctxs[close[s]]
-            if len(close_ctxs) == 0:
-                continue
             with dis_mon:
                 # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
                 matrix = disagg.disaggregate(
-                    close_ctxs, g_by_z[s], {imt: iml3[m]}, eps3, s,
-                    bins)[..., 0, :, :]  # 6D-matrix
+                    close_ctxs[s], g_by_z[s], {imt: iml3[m]}, eps3, s, bins)[
+                        ..., 0, :, :]  # 6D-matrix
                 if matrix.any():
                     res[s, m] = matrix
     return res
@@ -383,6 +385,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
                 (msg, humansize(oq.max_data_transfer)))
         logging.info('Estimated data transfer:\n%s', msg)
+
+        sd.pop('tasks')
+        sd['mags_trt'] = sum(len(mags) for mags in
+                             self.datastore['source_mags'].values())
+        nbytes, msg = get_array_nbytes(sd)
+        logging.info('Estimated memory on the master:\n%s', msg)
         dt = numpy.dtype([('trti', U8), ('mag', '|S4'), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         self.datastore.swmr_on()
