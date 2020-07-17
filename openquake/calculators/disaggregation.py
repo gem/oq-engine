@@ -336,8 +336,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for p, poe in enumerate(self.poes_disagg):
                     for m, imt in enumerate(oq.imtls):
                         self.imldic[s, rlz, poe, imt] = iml3[m, p, z]
+        return self.compute()
 
-        # submit disaggregation tasks
+    def compute(self):
+        """
+        Submit disaggregation tasks and return the results
+        """
+        oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         mags = set()
@@ -374,7 +379,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                                     trti, mag, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
 
-        nbytes, msg = get_array_nbytes(dict(N=self.N, G=G, U=U))
+        nbytes, msg = get_array_nbytes(dict(N=self.N, M=self.M, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
         sd = self.shapedic.copy()
         sd.pop('trt')
