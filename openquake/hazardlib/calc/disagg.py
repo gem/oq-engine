@@ -142,7 +142,10 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     G = ctxs[0].mean_std.shape[-1]
     mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
-        idx = ctx.idx[sid]
+        if not hasattr(ctx, 'idx'):  # assume single site
+            idx = 0
+        else:
+            idx = ctx.idx[sid]
         dists[u] = ctx.rrup[idx]  # distance to the site
         lons[u] = ctx.clon[idx]  # closest point of the rupture lon
         lats[u] = ctx.clat[idx]  # closest point of the rupture lat

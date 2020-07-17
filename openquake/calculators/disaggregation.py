@@ -87,7 +87,9 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def _prepare_ctxs(rupdata, cmaker, sitecol):
+def _prepare_ctxs(dstore, idxs, magstr, cmaker):
+    sitecol = dstore['sitecol']
+    rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
     ctxs = []
     for u in range(len(rupdata['mag'])):
         ctx = RuptureContext()
@@ -103,7 +105,7 @@ def _prepare_ctxs(rupdata, cmaker, sitecol):
         ctxs.append(ctx)
     # sorting for debugging convenience
     ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
-    return numpy.array(ctxs)
+    return sitecol, ctxs
 
 
 def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
@@ -134,10 +136,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
         oq.investigation_time)
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
-        sitecol = dstore['sitecol']
-        rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
-        ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
-        del rupdata
+        sitecol, ctxs = _prepare_ctxs(dstore, idxs, magstr, cmaker)  # fast
         close_ctxs = [[] for sid in sitecol.sids]
         for ctx in ctxs:
             for sid in ctx.idx:
