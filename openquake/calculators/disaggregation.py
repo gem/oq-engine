@@ -112,6 +112,14 @@ def _prepare_ctxs(dstore, idxs, magstr, cmaker):
     return ctxs, close_ctxs
 
 
+def output(mat6):
+    """
+    :param mat6: a 6D matrix with axis (D, Lo, La, E, P, Z)
+    :returns: two matrices of shape (D, E, P, Z) and (Lo, La, P, Z)
+    """
+    return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
+
+
 def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
@@ -176,7 +184,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
             for m in range(M):
                 mat6 = matrix[..., m, :, :]
                 if mat6.any():
-                    res[s, m] = mat6
+                    res[s, m] = output(mat6)
     return res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
@@ -382,9 +390,9 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         nbytes, msg = get_array_nbytes(dict(N=self.N, M=self.M, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
-        sd = self.shapedic.copy()
-        sd.pop('trt')
-        sd.pop('mag')
+        s = self.shapedic
+        size = s['dist'] * s['eps'] + s['lon'] * s['lat']
+        sd = dict(N=s['N'], M=s['M'], P=s['P'], Z=s['Z'], size=size)
         sd['tasks'] = numpy.ceil(len(allargs))
         nbytes, msg = get_array_nbytes(sd)
         if nbytes > oq.max_data_transfer:
@@ -418,9 +426,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         with self.monitor('aggregating disagg matrices'):
             trti = result.pop('trti')
             magi = result.pop('magi')
-            for (s, m), probs in result.items():
-                before = acc[s, m].get((trti, magi), 0)
-                acc[s, m][trti, magi] = agg_probs(before, probs)
+            for (s, m), out in result.items():
+                for k in (0, 1):
+                    x = acc[s, m, k].get((trti, magi), 0)
+                    acc[s, m, k][trti, magi] = agg_probs(x, out[k])
         return acc
 
     def save_bin_edges(self):
@@ -457,42 +466,40 @@ class DisaggregationCalculator(base.HazardCalculator):
         to save is #sites * #rlzs * #disagg_poes * #IMTs.
 
         :param results:
-            a dictionary sid, imti -> trti -> disagg matrix
+            a dictionary sid, imti, kind -> trti -> disagg matrix
         """
         # the DEBUG dictionary is populated only for OQ_DISTRIBUTE=no
         for sid, pnes in disagg.DEBUG.items():
             print('site %d, mean pnes=%s' % (sid, pnes))
         T = len(self.trts)
         Ma = len(self.bin_edges[0]) - 1  # num_mag_bins
-        # build a dictionary s, m -> 9D matrix of shape (T, Ma, ..., E, P, Z)
-        results = {sm: _matrix(dic, T, Ma) for sm, dic in results.items()}
+        # build a dictionary s, m, k -> matrices
+        results = {smk: _matrix(dic, T, Ma) for smk, dic in results.items()}
         # get the number of outputs
         shp = (self.N, len(self.poes_disagg), len(self.imts), self.Z)
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
-            odict = output_dict(self.shapedic, self.oqparam.disagg_outputs)
-            self.save_disagg_results(results, odict)
-            self.datastore['disagg'] = odict
+            self.save_disagg_results(results)
 
-    def save_disagg_results(self, results, out):
+    def save_disagg_results(self, results):
         """
         Save the computed PMFs in the datastore
 
         :param results:
-            a dict s, m -> 8D-matrix of shape (T, Ma, D, Lo, La, E, P, Z)
-        :para out:
-            a dict kind -> PMF matrix to be populated
+            a dict s, m, k -> 6D-matrix of shape (T, Ma, Lo, La, P, Z) or
+            (T, Ma, D, E, P, Z) depending if k is 0 or k is 1
         """
         outputs = self.oqparam.disagg_outputs
+        out = output_dict(self.shapedic, outputs)
         count = numpy.zeros(len(self.sitecol), U16)
-        for (s, m), mat8 in results.items():
+        for (s, m, k), mat6 in results.items():
             if s not in self.ok_sites:
                 continue
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
-                mat7 = mat8[..., p, :]
-                poe2 = pprod(mat7, axis=(0, 1, 2, 3, 4, 5))
+                mat5 = mat6[..., p, :]
+                poe2 = pprod(mat5, axis=(0, 1, 2, 3))
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
                 poe_agg = poe2.mean()
                 if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
@@ -501,8 +508,24 @@ class DisaggregationCalculator(base.HazardCalculator):
                         'the expected poe=%s; perhaps the number of intensity '
                         'measure levels is too small?', s, imt, poe_agg, poe)
                     count[s] += 1
-                mat6 = agg_probs(*mat7)  # 6D
+                mat4 = agg_probs(*mat5)  # shape (Ma D E Z) or (Ma Lo La Z)
                 for key in outputs:
-                    pmf = disagg.pmf_map[key](
-                        mat7 if key.endswith('TRT') else mat6)
-                    out[key][s, m, p, :] = pmf  # shape NMP..Z
+                    if key == 'Mag' and k == 0:
+                        out[key][s, m, p, :] = pprod(mat4, axis=(1, 2))
+                    elif key == 'Dist' and k == 0:
+                        out[key][s, m, p, :] = pprod(mat4, axis=(0, 2))
+                    elif key == 'TRT' and k == 0:
+                        out[key][s, m, p, :] = pprod(mat5, axis=(1, 2, 3))
+                    elif key == 'Mag_Dist' and k == 0:
+                        out[key][s, m, p, :] = pprod(mat4, axis=2)
+                    elif key == 'Mag_Dist_Eps' and k == 0:
+                        out[key][s, m, p, :] = mat4
+                    elif key == 'Lon_Lat' and k == 1:
+                        out[key][s, m, p, :] = pprod(mat4, axis=0)
+                    elif key == 'Mag_Lon_Lat' and k == 1:
+                        out[key][s, m, p, :] = mat4
+                    elif key == 'Lon_Lat_TRT' and k == 1:
+                        out[key][s, m, p, :] = pprod(mat5, axis=1).transpose(
+                            1, 2, 0, 3)  # T Lo La Z -> Lo La T Z
+                    # shape NMP..Z
+        self.datastore['disagg'] = out
