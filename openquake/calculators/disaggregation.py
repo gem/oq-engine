@@ -362,7 +362,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                       if name.startswith('rup_'))  # total number of ruptures
         grp_ids = dstore['grp_ids'][:]
         maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
-                        oq.ruptures_per_block * 10)  # at maximum 5000
+                        oq.ruptures_per_block * 8)  # at maximum 4000
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
