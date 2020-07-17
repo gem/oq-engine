@@ -137,6 +137,10 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
         sitecol = dstore['sitecol']
         rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
         ctxs = _prepare_ctxs(rupdata, cmaker, sitecol)  # ultra-fast
+        all_ctxs = [[] for sid in sitecol.sids]
+        for ctx in ctxs:
+            for sid in ctx.idx:
+                all_ctxs[sid].append(ctx)
         del rupdata
 
     magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
@@ -161,13 +165,16 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(iml4):
+            close_ctxs = all_ctxs[s]
+            if not close_ctxs:
+                continue
             # dist_bins, lon_bins, lat_bins, eps_bins
             bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
                     bin_edges[4])
             with dis_mon:
                 # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
                 matrix = disagg.disaggregate(
-                    ctxs, g_by_z[s], {imt: iml3[m]}, eps3, s, bins)[
+                    close_ctxs, g_by_z[s], {imt: iml3[m]}, eps3, s, bins)[
                         ..., 0, :, :]  # 6D-matrix
                 if matrix.any():
                     res[s, m] = matrix
