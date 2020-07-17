@@ -155,27 +155,28 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
                 g_by_z[s, z] = g
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     res = {'trti': trti, 'magi': magi}
-    for m, im in enumerate(oq.imtls):
-        imt = from_string(im)
-        with ms_mon:
-            # compute mean and std for a single IMT to save memory
-            # the size is N * U * G * 8 bytes
-            disagg.set_mean_std(ctxs, [imt], cmaker.gsims)
+    imts = [from_string(im) for im in oq.imtls]
+    with ms_mon:
+        # compute mean and std for a single IMT to save memory
+        # the size is N * U * G * 8 bytes
+        disagg.set_mean_std(ctxs, imts, cmaker.gsims)
 
-        # disaggregate by site, IMT
-        for s, iml3 in enumerate(iml4):
-            if not close_ctxs[s]:
-                continue
-            # dist_bins, lon_bins, lat_bins, eps_bins
-            bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
-                    bin_edges[4])
-            with dis_mon:
-                # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M=1, P, Z
-                matrix = disagg.disaggregate(
-                    close_ctxs[s], g_by_z[s], {imt: iml3[m]}, eps3, s, bins)[
-                        ..., 0, :, :]  # 6D-matrix
-                if matrix.any():
-                    res[s, m] = matrix
+    # disaggregate by site, IMT
+    for s, iml3 in enumerate(iml4):
+        if not close_ctxs[s]:
+            continue
+        # dist_bins, lon_bins, lat_bins, eps_bins
+        bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
+                bin_edges[4])
+        iml2 = dict(zip(imts, iml3))
+        with dis_mon:
+            # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
+            matrix = disagg.disaggregate(
+                close_ctxs[s], g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
+            for m in range(M):
+                mat6 = matrix[..., m, :, :]
+                if mat6.any():
+                    res[s, m] = mat6
     return res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
@@ -335,8 +336,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for p, poe in enumerate(self.poes_disagg):
                     for m, imt in enumerate(oq.imtls):
                         self.imldic[s, rlz, poe, imt] = iml3[m, p, z]
+        return self.compute()
 
-        # submit disaggregation tasks
+    def compute(self):
+        """
+        Submit disaggregation tasks and return the results
+        """
+        oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         mags = set()
@@ -347,7 +353,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         totrups = sum(len(dset['gidx']) for name, dset in dstore.items()
                       if name.startswith('rup_'))  # total number of ruptures
         grp_ids = dstore['grp_ids'][:]
-        maxweight = int(numpy.ceil(totrups / (oq.concurrent_tasks or 1)))
+        maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
+                        oq.ruptures_per_block * 10)  # at maximum 5000
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
@@ -373,7 +380,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                                     trti, mag, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
 
-        nbytes, msg = get_array_nbytes(dict(N=self.N, G=G, U=U))
+        nbytes, msg = get_array_nbytes(dict(N=self.N, M=self.M, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
         sd = self.shapedic.copy()
         sd.pop('trt')
@@ -391,6 +398,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                              self.datastore['source_mags'].values())
         nbytes, msg = get_array_nbytes(sd)
         logging.info('Estimated memory on the master:\n%s', msg)
+
         dt = numpy.dtype([('trti', U8), ('mag', '|S4'), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         self.datastore.swmr_on()
