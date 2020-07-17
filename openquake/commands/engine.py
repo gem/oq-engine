@@ -80,6 +80,12 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         logs.dbcmd('zmq_start')  # start the zworkers
         logs.dbcmd('zmq_wait')  # wait for them to go up
     try:
+        engine.poll_queue(job_id, poll_time=15)
+    except BaseException:
+        # the job aborted even before starting
+        logs.dbcmd('finish', job_id, 'aborted')
+        return []
+    try:
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
         for args in allargs:
