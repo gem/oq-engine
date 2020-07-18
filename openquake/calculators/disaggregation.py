@@ -493,14 +493,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         outputs = self.oqparam.disagg_outputs
         out = output_dict(self.shapedic, outputs)
         count = numpy.zeros(len(self.sitecol), U16)
-        _disagg_trt = numpy.zeros((self.N, len(self.trts)))
+        _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         for (s, m, k), mat6 in results.items():
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat5 = mat6[..., p, :]
                 if k == 0 and m == 0 and poe == self.poes_disagg[-1]:
                     # mat5 has shape (T, Ma, D, E, Z)
-                    _disagg_trt[s, :] = pprod(mat5[..., 0], axis=(1, 2, 3))
+                    _disagg_trt[s] = tuple(pprod(mat5[..., 0], axis=(1, 2, 3)))
                 poe2 = pprod(mat5, axis=(0, 1, 2, 3))
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
                 poe_agg = poe2.mean()
