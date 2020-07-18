@@ -504,7 +504,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 poe2 = pprod(mat5, axis=(0, 1, 2, 3))
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
                 poe_agg = poe2.mean()
-                if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
+                if (poe and abs(1 - poe_agg / poe) > .1 and not count[s]
+                        and s in self.ok_sites):
                     logging.warning(
                         'Site #%d, IMT=%s: poe_agg=%s is quite different from '
                         'the expected poe=%s; perhaps the number of intensity '
