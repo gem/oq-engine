@@ -494,7 +494,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         out = output_dict(self.shapedic, outputs)
         count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
-        for (s, m, k), mat6 in results.items():
+        for (s, m, k), mat6 in sorted(results.items()):
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat5 = mat6[..., p, :]
