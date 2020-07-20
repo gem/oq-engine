@@ -171,8 +171,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         check_disagg_by_src(self.calc.datastore)
 
     def test_case_master(self):
-        # this tests exercise the case of a complex logic tree; it also
-        # prints the warning on poe_agg very different from the expected poe
+        # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')
         fname = gettemp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)

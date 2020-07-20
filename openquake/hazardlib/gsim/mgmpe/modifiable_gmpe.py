@@ -59,14 +59,13 @@ class ModifiableGMPE(GMPE):
         self.set_parameters()
         self.mean = None
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-
-        working_std_types = copy.copy(stds_types)
+        working_std_types = copy.copy(stddev_types)
 
         if 'set_between_epsilon' in self.params:
             if (const.StdDev.INTER_EVENT not in
@@ -74,10 +73,11 @@ class ModifiableGMPE(GMPE):
                 raise ValueError('The GMPE does not have between event std')
             working_std_types.append(const.StdDev.INTER_EVENT)
             working_std_types.append(const.StdDev.INTRA_EVENT)
+            working_std_types.append(const.StdDev.TOTAL)
 
         # Compute the original mean and standard deviations
-        omean, ostds = self.gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                      working_std_types)
+        omean, ostds = self.gmpe.get_mean_and_stddevs(
+            sites, rup, dists, imt, working_std_types)
 
         # Save the stds
         for key, val in zip(working_std_types, ostds):
@@ -90,7 +90,7 @@ class ModifiableGMPE(GMPE):
 
         # Return the standard deviation types as originally requested
         outs = []
-        for key in stds_types:
+        for key in stddev_types:
             outs.append(getattr(self, key))
 
         return self.mean, outs
