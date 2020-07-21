@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes, humansize, pprod, agg_probs)
+    AccumDict, get_array_nbytes, humansize, pprod, agg_probs)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -366,18 +366,18 @@ class DisaggregationCalculator(base.HazardCalculator):
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
         U, G = 0, 0
-        for gidx, gids in enumerate(grp_ids):
-            trti = gids[0] // num_eff_rlzs
-            trt = self.trts[trti]
-            cmaker = ContextMaker(
-                trt, rlzs_by_gsim[gidx],
-                {'truncation_level': oq.truncation_level,
-                 'maximum_distance': oq.maximum_distance,
-                 'collapse_level': oq.collapse_level,
-                 'imtls': oq.imtls})
-            G = max(G, len(cmaker.gsims))
-            for mag in mags:
-                rctx = dstore['mag_%s/rctx' % mag][:]
+        for mag in mags:
+            rctx = dstore['mag_%s/rctx' % mag][:]
+            for gidx, gids in enumerate(grp_ids):
+                trti = gids[0] // num_eff_rlzs
+                trt = self.trts[trti]
+                cmaker = ContextMaker(
+                    trt, rlzs_by_gsim[gidx],
+                    {'truncation_level': oq.truncation_level,
+                     'maximum_distance': oq.maximum_distance,
+                     'collapse_level': oq.collapse_level,
+                     'imtls': oq.imtls})
+                G = max(G, len(cmaker.gsims))
                 array = rctx[rctx['gidx'] == gidx]
                 if len(array) == 0:
                     continue
