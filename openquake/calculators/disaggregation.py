@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes, humansize, pprod, agg_probs)
+    AccumDict, get_array_nbytes, humansize, pprod, agg_probs)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -380,8 +380,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'imtls': oq.imtls})
                 G = max(G, len(cmaker.gsims))
                 indices, = numpy.where(arr == gidx)
-                for rupidxs in block_splitter(indices, maxweight):
-                    idxs = numpy.sort(rupidxs)
+                n = len(indices)
+                if n == 0:
+                    continue
+                nsplits = numpy.ceil(n / maxweight)
+                for idxs in numpy.array_split(indices, nsplits):
+                    idxs.sort()
                     nr = len(idxs)
                     U = max(U, nr)
                     allargs.append((dstore, idxs, cmaker, self.iml4,
