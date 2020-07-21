@@ -87,21 +87,20 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def _prepare_ctxs(dstore, idxs, magstr, cmaker):
+def _prepare_ctxs(dstore, rctx, magstr, cmaker):
     sitecol = dstore['sitecol']
-    rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
+    dset = dstore['mag_%s/dctx' % magstr]
     ctxs = []
-    for u in range(len(rupdata['mag'])):
+    for rec in rctx:
+        dctx = dset[rec['idx1']:rec['idx2']]
         ctx = RuptureContext()
-        ctx.sids, = numpy.where(rupdata['rrup_'][u] < 9999.)
-        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
-        for par in rupdata:
-            if not par.endswith('_'):
-                setattr(ctx, par, rupdata[par][u])
-            else:  # distance parameters
-                setattr(ctx, par[:-1], rupdata[par][u, ctx.sids])
+        for par in rctx.dtype.names:
+            setattr(ctx, par, rec[par])
+        for par in dctx.dtype.names:
+            setattr(ctx, par, dctx[par])
         for par in cmaker.REQUIRES_SITES_PARAMETERS:
             setattr(ctx, par, sitecol[par][ctx.sids])
+        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         ctxs.append(ctx)
     # sorting for debugging convenience
     ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
@@ -120,15 +119,15 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
+def compute_disagg(dstore, rctx, cmaker, iml4, trti, magstr, bin_edges, oq,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dstore:
         a DataStore instance
-    :param idxs:
-        an array of indices to ruptures
+    :param rctx:
+        an array of rupture parameters
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param iml4:
@@ -148,7 +147,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
         oq.investigation_time)
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
-        ctxs, close_ctxs = _prepare_ctxs(dstore, idxs, magstr, cmaker)  # fast
+        ctxs, close_ctxs = _prepare_ctxs(dstore, rctx, magstr, cmaker)  # fast
 
     magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
     if magi == -1:  # when the magnitude is on the edge
@@ -358,8 +357,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         allargs = []
-        totrups = sum(len(dset['gidx']) for name, dset in dstore.items()
-                      if name.startswith('rup_'))  # total number of ruptures
+        totrups = sum(len(dset['rctx']) for name, dset in dstore.items()
+                      if name.startswith('mag_'))  # total number of ruptures
         grp_ids = dstore['grp_ids'][:]
         maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
                         oq.ruptures_per_block * 8)  # at maximum 4000
@@ -378,13 +377,15 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'imtls': oq.imtls})
             G = max(G, len(cmaker.gsims))
             for mag in mags:
-                arr = dstore['rup_%s/gidx' % mag][:]
-                indices, = numpy.where(arr == gidx)
-                for rupidxs in block_splitter(indices, maxweight):
-                    idxs = numpy.sort(rupidxs)
-                    nr = len(idxs)
+                rctx = dstore['mag_%s/rctx' % mag][:]
+                array = rctx[rctx['gidx'] == gidx]
+                if len(array) == 0:
+                    continue
+                nsplits = numpy.ceil(len(array) / maxweight)
+                for arr in numpy.array_split(array, nsplits):
+                    nr = len(arr)
                     U = max(U, nr)
-                    allargs.append((dstore, idxs, cmaker, self.iml4,
+                    allargs.append((dstore, arr, cmaker, self.iml4,
                                     trti, mag, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
 
