@@ -369,6 +369,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
             for gidx, gids in enumerate(grp_ids):
+                array = rctx[rctx['gidx'] == gidx]
+                if len(array) == 0:
+                    continue
                 trti = gids[0] // num_eff_rlzs
                 trt = self.trts[trti]
                 cmaker = ContextMaker(
@@ -378,9 +381,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'collapse_level': oq.collapse_level,
                      'imtls': oq.imtls})
                 G = max(G, len(cmaker.gsims))
-                array = rctx[rctx['gidx'] == gidx]
-                if len(array) == 0:
-                    continue
                 nsplits = numpy.ceil(len(array) / maxweight)
                 for arr in numpy.array_split(array, nsplits):
                     nr = len(arr)

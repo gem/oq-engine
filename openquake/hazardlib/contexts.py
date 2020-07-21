@@ -757,10 +757,7 @@ class RuptureContext(BaseContext):
             for m, imt in enumerate(imts):
                 mean, [std] = gsim.get_mean_and_stddevs(self, self, new, imt,
                                                         [const.StdDev.TOTAL])
-                try:
-                    arr[0, :, m, g] = mean
-                except:
-                    import pdb; pdb.set_trace()
+                arr[0, :, m, g] = mean
                 arr[1, :, m, g] = std
                 if base.CoeffsTable.num_instances > num_tables:
                     raise RuntimeError('Instantiating CoeffsTable inside '
