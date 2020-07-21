@@ -543,24 +543,7 @@ class PmapMaker(object):
         else:
             pmap = self._make_src_indep()
         rupdata = groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag)
-        cparams = self.cmaker.get_ctx_params()
-        dparams = self.cmaker.REQUIRES_DISTANCES | {'clon', 'clat', 'rrup'}
-        ddic = AccumDict(accum={})  # double dict mag -> k -> array
-        for mag, ctxs in rupdata.items():
-            for k in cparams:
-                if k in dparams:
-                    lst = []
-                    for ctx in ctxs:
-                        arr = numpy.ones(self.N, numpy.float32) * 9999.
-                        arr[ctx.sids] = getattr(ctx, k, 9999.)
-                        lst.append(arr)
-                    v = numpy.array(lst, numpy.float32)
-                elif k == 'probs_occur':
-                    v = numpy.array([getattr(c, k, []) for c in ctxs])
-                else:
-                    v = numpy.array([getattr(c, k, numpy.nan) for c in ctxs])
-                ddic[mag][k] = v
-        return (pmap, ddic, self.calc_times, dict(totrups=self.totrups))
+        return (pmap, rupdata, self.calc_times, dict(totrups=self.totrups))
 
     def collapse_point_ruptures(self, rups, sites):
         """

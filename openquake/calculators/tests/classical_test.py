@@ -53,11 +53,12 @@ def check_disagg_by_src(dstore):
 
 
 def get_dists(dstore):
-    lst = []
+    dic = general.AccumDict(accum=[])  # site_id -> distances
     for name, dset in dstore.items():
-        if name.startswith('rup_'):
-            lst.append(dset['rrup_'][:])
-    return numpy.concatenate(lst)
+        if name.startswith('mag_'):
+            for sid, dst in dset['dctx']['sids', 'rrup']:
+                dic[sid].append(int(round(dst)))
+    return dic
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -466,7 +467,7 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['rup_5.25/rrup_']), 34)
+        self.assertEqual(len(self.calc.datastore['mag_5.25/dctx']), 34)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
@@ -479,7 +480,7 @@ hazard_uhs-std.csv
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
         # make sure probs_occur are stored as expected
-        probs_occur = self.calc.datastore['rup_8.20/probs_occur'][:]
+        probs_occur = self.calc.datastore['mag_8.20/rctx']['probs_occur']
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 4)  # 2 nonparam rups x 2
         npo = self.calc.csm.get_num_probs_occur()  # 2 probs_occur per rupture
@@ -519,16 +520,8 @@ hazard_uhs-std.csv
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
             # check rupdata
-            nruptures = []
-            for par, rdata in sorted(self.calc.datastore['rup_5.05'].items()):
-                nruptures.append((par, len(rdata)))
-            self.assertEqual(
-                nruptures,
-                [('clat_', 28), ('clon_', 28), ('dip', 28),
-                 ('gidx', 28), ('hypo_depth', 28), ('mag', 28),
-                 ('occurrence_rate', 28), ('probs_occur', 28),
-                 ('rake', 28), ('rjb_', 28), ('rrup_', 28),
-                 ('rx_', 28), ('ztor', 28)])
+            nruptures = len(self.calc.datastore['mag_5.05/rctx'])
+            self.assertEqual(nruptures, 28)
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling by cheating
@@ -652,14 +645,16 @@ hazard_uhs-std.csv
     def test_case_48(self):
         # pointsource_distance effects on a simple point source
         self.run_calc(case_48.__file__, 'job.ini')
-        tmp = general.gettemp(rst_table(get_dists(self.calc.datastore),
-                                        ['sid0', 'sid1']))
-        self.assertEqualFiles('expected/exact_dists.txt', tmp)
+        dst = get_dists(self.calc.datastore)
+        self.assertEqual(  # exact distances
+            dst[0], [54, 54, 53, 53, 52, 51, 48, 44, 38, 33])
+        self.assertEqual(  # exact distances
+            dst[1], [110, 109, 109, 108, 107, 106, 103, 99, 92, 82])
 
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
-        tmp = general.gettemp(rst_table(get_dists(self.calc.datastore),
-                                        ['sid0', 'sid1']))
-        self.assertEqualFiles('expected/approx_dists.txt', tmp)
+        dst = get_dists(self.calc.datastore)
+        self.assertEqual(dst[0], [56, 56, 56, 53, 52, 51, 48, 44, 38, 33])
+        self.assertEqual(dst[1], [108, 107, 106, 103, 99, 92, 82])
         # this test shows in detail what happens to the distances in presence
         # of a magnitude-dependent pointsource_distance: just look at the
         # files expected/exact_dists.txt and expected/approx_dists.txt
