@@ -91,7 +91,7 @@ def _prepare_ctxs(dstore, idxs, magstr, cmaker):
     sitecol = dstore['sitecol']
     rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
     ctxs = []
-    for u in range(len(rupdata['mag'])):
+    for u in range(len(idxs)):
         ctx = RuptureContext()
         ctx.sids, = numpy.where(rupdata['rrup_'][u] < 9999.)
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
