@@ -367,18 +367,18 @@ class DisaggregationCalculator(base.HazardCalculator):
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
         U, G = 0, 0
-        for gidx, gids in enumerate(grp_ids):
-            trti = gids[0] // num_eff_rlzs
-            trt = self.trts[trti]
-            cmaker = ContextMaker(
-                trt, rlzs_by_gsim[gidx],
-                {'truncation_level': oq.truncation_level,
-                 'maximum_distance': oq.maximum_distance,
-                 'collapse_level': oq.collapse_level,
-                 'imtls': oq.imtls})
-            G = max(G, len(cmaker.gsims))
-            for mag in mags:
-                arr = dstore['rup_%s/gidx' % mag][:]
+        for mag in mags:
+            arr = dstore['rup_%s/gidx' % mag][:]
+            for gidx, gids in enumerate(grp_ids):
+                trti = gids[0] // num_eff_rlzs
+                trt = self.trts[trti]
+                cmaker = ContextMaker(
+                    trt, rlzs_by_gsim[gidx],
+                    {'truncation_level': oq.truncation_level,
+                     'maximum_distance': oq.maximum_distance,
+                     'collapse_level': oq.collapse_level,
+                     'imtls': oq.imtls})
+                G = max(G, len(cmaker.gsims))
                 indices, = numpy.where(arr == gidx)
                 for rupidxs in block_splitter(indices, maxweight):
                     idxs = numpy.sort(rupidxs)
