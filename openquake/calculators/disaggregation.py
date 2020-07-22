@@ -365,15 +365,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
-        U, G, S = 0, 0, 0
+        U, G = 0, 0
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
             nsids = numpy.array(
                 [len(sids) for sids in dstore['mag_%s/sids_' % mag]])
-            S = max(S, nsids.max())
             for gidx, gids in enumerate(grp_ids):
-                array = rctx[rctx['gidx'] == gidx]
-                if len(array) == 0:
+                idxs, = numpy.where(rctx['gidx'] == gidx)
+                if len(idxs) == 0:
                     continue
                 trti = gids[0] // num_eff_rlzs
                 trt = self.trts[trti]
@@ -384,15 +383,15 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'collapse_level': oq.collapse_level,
                      'imtls': oq.imtls})
                 G = max(G, len(cmaker.gsims))
-                nsplits = numpy.ceil(len(array) / maxweight)
-                for arr in numpy.array_split(array, nsplits):
-                    nr = len(arr)
-                    U = max(U, nr)
-                    allargs.append((dstore, arr, cmaker, self.iml4,
+                nsplits = numpy.ceil(len(idxs) / maxweight)
+                for idx in numpy.array_split(idxs, nsplits):
+                    nr = len(idx)
+                    U = max(U, nsids[idx].sum())
+                    allargs.append((dstore, rctx[idx], cmaker, self.iml4,
                                     trti, mag, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
 
-        nbytes, msg = get_array_nbytes(dict(S=S, M=self.M, G=G, U=U))
+        nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
         s = self.shapedic
