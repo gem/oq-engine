@@ -56,7 +56,7 @@ the engine manages all the realizations at once.
 import operator
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
-from openquake.baselib.general import DictArray, groupby, AccumDict
+from openquake.baselib.general import DictArray, groupby, AccumDict, compress
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -132,8 +132,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(param['imtls'], tom, gsims, pmap)
-    return dict(pmap=pmap, calc_times=calc_times, rup_data=rup_data,
-                extra=extra)
+    return dict(pmap=pmap, calc_times=calc_times,
+                rup_data=rup_data, extra=extra)
 
 
 def calc_hazard_curves(

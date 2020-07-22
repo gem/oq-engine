@@ -29,6 +29,7 @@ from openquake.hazardlib import nrml, sourceconverter, calc, InvalidFile
 from openquake.hazardlib.lt import apply_uncertainties
 
 TWO16 = 2 ** 16  # 65,536
+by_id = operator.attrgetter('source_id')
 
 
 def random_filtered_sources(sources, srcfilter, seed):
@@ -62,6 +63,30 @@ def read_source_model(fname, converter, srcfilter, monitor):
     return {fname: sm}
 
 
+def check_dupl_ids(smdict):
+    """
+    Print a warning in case of duplicate source IDs referring to different
+    sources
+    """
+    sources = general.AccumDict(accum=[])
+    for sm in smdict.values():
+        for sg in sm.src_groups:
+            for src in sg.sources:
+                sources[src.source_id].append(src)
+    first = True
+    for src_id, srcs in sources.items():
+        if len(srcs) > 1:  # duplicate IDs must have all the same checksum
+            checksums = set()
+            for src in srcs:
+                dic = {k: v for k, v in vars(src).items()
+                       if k not in 'grp_id samples'}
+                checksums.add(zlib.adler32(pickle.dumps(dic, protocol=4)))
+            if len(checksums) > 1 and first:
+                logging.warning('There are multiple different sources with the'
+                                ' same ID %s', srcs)
+                first = False
+
+
 def get_csm(oq, full_lt, h5=None):
     """
     Build source models from the logic tree and to store
@@ -88,7 +113,7 @@ def get_csm(oq, full_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            sg.mags = numpy.unique(numpy.round(src.mags))
+            sg.mags = numpy.unique(numpy.round(src.mags, 2))
             del src.__dict__['mags']  # remove cache
             src.checksum = src.grp_id = src.id = grp_id
             src.samples = sm_rlz.samples
@@ -123,6 +148,7 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
+    check_dupl_ids(smdict)
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -213,9 +239,9 @@ def _get_csm(full_lt, groups):
             atomic.append(grp)
         elif grp:
             acc[grp.trt].extend(grp)
-    dic = {}
     key = operator.attrgetter('source_id', 'code')
     idx = 0
+    src_groups = []
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
@@ -226,13 +252,13 @@ def _get_csm(full_lt, groups):
                 src._wkt = src.wkt()
                 idx += 1
                 lst.append(src)
-        dic[trt] = sourceconverter.SourceGroup(trt, lst)
+        src_groups.append(sourceconverter.SourceGroup(trt, lst))
     for ag in atomic:
         for src in ag:
             src.id = idx
             src._wkt = src.wkt()
             idx += 1
-    src_groups = list(dic.values()) + atomic
+    src_groups.extend(atomic)
     return CompositeSourceModel(full_lt, src_groups)
 
 

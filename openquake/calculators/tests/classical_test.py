@@ -22,7 +22,7 @@ import unittest.mock as mock
 import numpy
 from openquake.baselib import parallel, general
 from openquake.hazardlib import lt
-from openquake.calculators.views import view, rst_table
+from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.getters import PmapGetter
@@ -33,7 +33,8 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49)
+    case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
+    case_50, case_51)
 
 aac = numpy.testing.assert_allclose
 
@@ -49,6 +50,16 @@ def check_disagg_by_src(dstore):
     weights = dstore['weights'][:]
     mean2 = numpy.einsum('sr...,r->s...', poes, weights)  # N, M, L
     aac(mean, mean2, atol=1E-6)
+
+
+def get_dists(dstore):
+    dic = general.AccumDict(accum=[])  # site_id -> distances
+    for name, dset in dstore.items():
+        if name.startswith('mag_'):
+            for sids, dsts in zip(dset['sids_'], dset['rrup_']):
+                for sid, dst in zip(sids, dsts):
+                    dic[sid].append(int(round(dst)))
+    return dic
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -445,7 +456,7 @@ hazard_uhs-std.csv
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'], case_23.__file__)
         checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 3211843635)
+        self.assertEqual(checksum, 3309200309)
 
     def test_case_24(self):  # UHS
         # this is a case with rjb and an hypocenter distribution
@@ -457,7 +468,7 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['rup/rrup_']), 174)
+        self.assertEqual(len(self.calc.datastore['mag_5.25/rctx']), 34)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
@@ -470,13 +481,11 @@ hazard_uhs-std.csv
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
         # make sure probs_occur are stored as expected
-        probs_occur = self.calc.datastore['rup/probs_occur'][:]
+        probs_occur = self.calc.datastore['mag_8.20/rctx']['probs_occur']
         tot_probs_occur = sum(len(po) for po in probs_occur)
-        self.assertEqual(tot_probs_occur, 28)  # 14 nonparam rups x 2
+        self.assertEqual(tot_probs_occur, 4)  # 2 nonparam rups x 2
         npo = self.calc.csm.get_num_probs_occur()  # 2 probs_occur per rupture
         self.assertEqual(npo, 2)
-        num_point_ruptures = sum(1 for po in probs_occur if len(po) == 0)
-        self.assertEqual(num_point_ruptures, 26)
 
         # make sure there is an error when trying to disaggregate
         with self.assertRaises(NotImplementedError):
@@ -512,16 +521,8 @@ hazard_uhs-std.csv
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
             # check rupdata
-            nruptures = []
-            for par, rupdata in sorted(self.calc.datastore['rup'].items()):
-                nruptures.append((par, len(rupdata)))
-            self.assertEqual(
-                nruptures,
-                [('clat_', 3202), ('clon_', 3202), ('dip', 3202),
-                 ('grp_id', 3202), ('hypo_depth', 3202), ('mag', 3202),
-                 ('occurrence_rate', 3202), ('probs_occur', 3202),
-                 ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
-                 ('rx_', 3202), ('weight', 3202), ('ztor', 3202)])
+            nruptures = len(self.calc.datastore['mag_5.05/rctx'])
+            self.assertEqual(nruptures, 28)
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling by cheating
@@ -617,7 +618,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 499)  # effective ruptures
+        self.assertEqual(self.calc.numrups, 634)  # effective ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
@@ -645,32 +646,31 @@ hazard_uhs-std.csv
     def test_case_48(self):
         # pointsource_distance effects on a simple point source
         self.run_calc(case_48.__file__, 'job.ini')
-        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
-                                        ['sid0', 'sid1']))
-        self.assertEqualFiles('expected/exact_dists.txt', tmp)
+        dst = get_dists(self.calc.datastore)
+        self.assertEqual(  # exact distances
+            dst[0], [54, 54, 53, 53, 52, 51, 48, 44, 38, 33])
+        self.assertEqual(  # exact distances
+            dst[1], [110, 109, 109, 108, 107, 106, 103, 99, 92, 82])
 
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
-        tmp = general.gettemp(rst_table(self.calc.datastore['rup/rrup_'],
-                                        ['sid0', 'sid1']))
-        self.assertEqualFiles('expected/approx_dists.txt', tmp)
+        dst = get_dists(self.calc.datastore)
+        self.assertEqual(dst[0], [56, 56, 56, 53, 52, 51, 48, 44, 38, 33])
+        self.assertEqual(dst[1], [108, 107, 106, 103, 99, 92, 82])
         # this test shows in detail what happens to the distances in presence
         # of a magnitude-dependent pointsource_distance: just look at the
         # files expected/exact_dists.txt and expected/approx_dists.txt
-        # the exact distances for the first site are 54, 53, 53, ... 38, 32 km
+        # the exact distances for the first site are 54, 53, 53, ... 38, 32 km;
         # they decrease with the magnitude, since big magnitude -> big size ->
         # smaller distance from the site.
         # When the pointsource_distance is on, the approximated distances are
-        # 55, 55, 55, ..., 38, 32 km: the difference is in the first three
-        # values, corresponding to the small magnitudes.
+        # 9_999, 9_999, 9_999, ..., 38, 32 km: the difference is in the first
+        # three values, corresponding to the small magnitudes.
         # For small magnitudes the planar ruptures are replaced by points
-        # and thus the distances become larger (and constant).
+        # and thus the distances become larger and possibly over the maxdist.
         # The maximum_distance here is 110 km and the second site
         # was chosen very carefully, so that the exact distance for the highest
         # magnitude is 109 km (within) while the approx distance is 111 km
-        # (outside): still the rupture is not discarded because we are in the
-        # few-sites regime.
-        # In the many-sites regime, small magnitude ruptures at distance close
-        # to the maximum_distance may be discarded, instead.
+        # (outside)
 
     def test_case_49(self):
         # serious test of amplification + uhs
@@ -678,3 +678,13 @@ hazard_uhs-std.csv
                                'hcurves-SA(1.057).csv', 'uhs.csv'],
                               case_49.__file__)
 
+    def test_case_50(self):
+        # serious test of amplification + uhs
+        self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(1.0).csv',
+                               'uhs.csv'],
+                              case_50.__file__)
+    def test_case_51(self):
+        # Modifiable GMPE
+        self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.2).csv',
+                               'hcurves-SA(2.0).csv', 'uhs.csv'],
+                              case_51.__file__)

@@ -28,6 +28,7 @@ import functools
 import numpy
 from scipy.special import ndtr
 
+from openquake.hazardlib.stats import norm_cdf
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
@@ -106,7 +107,8 @@ def get_mean_std(sctx, rctx, dctx, imts, gsims):
     return arr
 
 
-def get_poes(mean_std, loglevels, truncation_level, gsims=()):
+def get_poes(mean_std, loglevels, truncation_level, gsims=(), af=None,
+             mag=None, sitecode=None, rrup=None):
     """
     Calculate and return probabilities of exceedance (PoEs) of one or more
     intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -177,9 +179,9 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
         for g, gsim in enumerate(gsims):
             if "mixture_model" in gsim.kwargs:
                 for fact, wgt in zip(
-                    gsim.kwargs["mixture_model"]["factors"],
-                    gsim.kwargs["mixture_model"]["weights"]):
-                    mean_stdi = numpy.array(mean_std[:, :, :, g]) # make a copy
+                        gsim.kwargs["mixture_model"]["factors"],
+                        gsim.kwargs["mixture_model"]["weights"]):
+                    mean_stdi = numpy.array(mean_std[:, :, :, g])  # a copy
                     mean_stdi[1] *= fact
                     arr[:, :, g] += (wgt * _get_poes(mean_stdi, loglevels, tl,
                                                      squeeze=1))
@@ -187,6 +189,11 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
                 ms = mean_std[:, :, :, g]
                 arr[:, :, g] = _get_poes(ms, loglevels, tl, squeeze=1)
         return arr
+    elif af:
+        # kernel amplification function
+        res = _get_poes_site(mean_std, loglevels, truncation_level, af,
+                             mag, sitecode, rrup)
+        return res
     else:
         # regular case
         return _get_poes(mean_std, loglevels, truncation_level)
@@ -195,7 +202,8 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=()):
 # this is the critical function for the performance of the classical calculator
 # it is dominated by memory allocations (i.e. _truncnorm_sf is ultra-fast)
 # the only way to speedup is to reduce the maximum_distance, then the array
-# will become shorted in the N dimension (number of affected sites)
+# will become shorter in the N dimension (number of affected sites), or to
+# collapse the ruptures, then _get_poes will be called less times
 def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
     mean, stddev = mean_std  # shape (N, M, G) each
     N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
@@ -209,6 +217,109 @@ def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
                 out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
     return _truncnorm_sf(truncation_level, out)
+
+
+def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
+                   mag, sitecode, rrup, squeeze=False):
+    """
+    NOTE: this works for a single site
+
+    :param mean_std:
+        See :function:`openquake.hazardlib.gsim.base.get_poes`
+    :param loglevels:
+        Intensity measure level per intensity measure type. See
+        :function:`openquake.hazardlib.gsim.base.get_poes`
+    :param truncation_level:
+        The level of truncation of the normal distribution of ground-motion
+        on rock
+    :param ampl:
+        Site amplification function instance of
+        :class:openquake.hazardlib.site_amplification.AmpFunction
+    :param mag:
+        The magnitude of the earthquake
+    :param rrup:
+        The rrup distances
+    :param squeeze:
+        A boolean. Should be True when ...
+    """
+
+    # Mean and std of ground motion for the IMTs considered in this analysis
+    # N  - Number of sites
+    # L - Number of intensity measure levels
+    # G  - Number of GMMs
+    mean, stddev = mean_std  # shape (N, M, G)
+    N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
+    assert N == 1, N
+    M = len(loglevels)
+    L1 = L // M
+
+    # This is the array where we store the output results i.e. poes on soil
+    out_s = numpy.zeros((N, L) if squeeze else (N, L, G))
+
+    # `nsamp` is the number of IMLs per IMT used to compute the hazard on rock
+    # while 'L' is total number of ground-motion values
+    nsamp = 40
+
+    # Compute the probability of exceedance for each in intensity
+    # measure type IMT
+    sigma = ampfun.get_max_sigma()
+    for m, imt in enumerate(loglevels):
+
+        # Get the values of ground-motion used to compute the probability of
+        # exceedance on soil.
+        soillevels = loglevels[imt]
+
+        # Here we set automatically the IMLs that will be used to compute
+        # the probability of occurrence of GM on rock within discrete
+        # intervals
+        ll = numpy.linspace(min(soillevels) - sigma * 4.,
+                            max(soillevels) + sigma * 4.,
+                            num=nsamp)
+
+        # Calculate for each ground motion interval the probability
+        # of occurrence on rock for all the sites
+        for iml_l, iml_u in zip(ll[:-1], ll[1:]):
+
+            # Set the arguments of the truncated normal distribution
+            # function
+            if truncation_level == 0:
+                out_l = iml_l <= mean[:, m]
+                out_u = iml_u <= mean[:, m]
+            else:
+                out_l = (iml_l - mean[:, m]) / stddev[:, m]
+                out_u = (iml_u - mean[:, m]) / stddev[:, m]
+
+            # Probability of occurrence on rock - The shape of this array
+            # is: number of sites x number of IMLs x GMMs. This corresponds
+            # to 1 x 1 x number of GMMs
+            pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
+                         _truncnorm_sf(truncation_level, out_u))
+
+            # Skipping cases where the pocc on rock is negligible
+            if numpy.all(pocc_rock < 1e-10):
+                continue
+
+            # Ground-motion value in the middle of each interval
+            iml_mid = numpy.log((numpy.exp(iml_l) + numpy.exp(iml_u)) / 2.)
+
+            # Get mean and std of the amplification function for this
+            # magnitude, distance and IML
+            median_af, std_af = ampfun.get_mean_std(
+                sitecode, imt, numpy.exp(iml_mid), mag, rrup)
+
+            # Computing the probability of exceedance of the levels of
+            # ground-motion loglevels on soil
+            logaf = numpy.log(numpy.exp(soillevels) / numpy.exp(iml_mid))
+            tmp = 1. - norm_cdf(logaf, numpy.log(median_af), std_af)
+            poex_af = numpy.reshape(numpy.tile(tmp, N), (-1, len(logaf)))
+            # The probability of occurrence on rock has shape:
+            # 1 x 1 x number of GMMs
+            poex = poex_af.T * pocc_rock
+
+            # Updating output
+            out_s[:, m * L1: (m + 1) * L1, :] += poex
+
+    return out_s
 
 
 class MetaGSIM(abc.ABCMeta):
@@ -241,6 +352,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     This class is not intended to be subclassed directly, instead
     the actual GSIMs should subclass :class:`GMPE`
+
 
     Subclasses of both must implement :meth:`get_mean_and_stddevs`
     and all the class attributes with names starting from ``DEFINED_FOR``

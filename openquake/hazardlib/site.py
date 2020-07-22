@@ -143,7 +143,10 @@ site_param_dt = {
     'dr': numpy.float64,
     'dwb': numpy.float64,
     'hwater': numpy.float64,
-    'precip': numpy.float64
+    'precip': numpy.float64,
+
+    # other parameters
+    'custom_site_id': numpy.uint32,
 }
 
 
@@ -253,10 +256,9 @@ class SiteCollection(object):
         return self
 
     def _set(self, param, value):
-        # param comes from the file site_model.xml file which usually contains
-        # a lot of parameters; the parameters that are not required are ignored
-        if param in self.array.dtype.names:  # is required
-            self.array[param] = value
+        if param not in self.array.dtype.names:
+            self.add_col(param, site_param_dt[param])
+        self.array[param] = value
 
     xyz = Mesh.xyz
 
@@ -369,6 +371,7 @@ class SiteCollection(object):
         for seq in split_in_blocks(range(len(self)), hint or 1):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.array[numpy.array(seq, int)]
+            sc.complete = self
             tiles.append(sc)
         return tiles
 
@@ -472,7 +475,7 @@ class SiteCollection(object):
 
     def geohash(self, length):
         """
-        :param length: length of the geohash
+        :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
         lst = [geohash(lon, lat, length)
@@ -481,7 +484,7 @@ class SiteCollection(object):
 
     def num_geohashes(self, length):
         """
-        :param length: length of the geohash
+        :param length: length of the geohash in the range 1..8
         :returns: number of distinct geohashes in the site collection
         """
         return len(numpy.unique(self.geohash(length)))

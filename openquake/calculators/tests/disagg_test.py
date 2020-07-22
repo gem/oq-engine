@@ -90,13 +90,14 @@ class DisaggregationTestCase(CalculatorTestCase):
              'rlz-0-SA(0.1)-sid-1.xml',
              'rlz-1-SA(0.1)-sid-0.xml',
              'rlz-1-SA(0.1)-sid-1.xml',
+             'rlz-2-SA(0.1)-sid-0.xml',
              'rlz-2-SA(0.1)-sid-1.xml',
+             'rlz-3-SA(0.1)-sid-0.xml',
              'rlz-3-SA(0.1)-sid-1.xml'],
             case_2.__file__)
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 6)  # number of CSV files
         for fname in fnames:
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
@@ -108,6 +109,10 @@ class DisaggregationTestCase(CalculatorTestCase):
                          ('site_id', 'lon', 'lat',
                           'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None',
                           'iml-SA(0.1)-None'))
+
+        # check the custom_site_id
+        aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
+        self.assertEqual(list(aw), [100, 200])
 
     def test_case_3(self):
         # a case with poes_disagg too large
@@ -135,10 +140,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         # there is a collapsed nonparametric source with len(probs_occur)==3
-        # the other sizes are 2
-        sizes = [len(po) for po in self.calc.datastore['rup/probs_occur']]
-        self.assertTrue(any(size == 3 for size in sizes),
-                        'No collapse of probs_occur')
 
     def test_case_6(self):
         # test with international date line
@@ -170,8 +171,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         check_disagg_by_src(self.calc.datastore)
 
     def test_case_master(self):
-        # this tests exercise the case of a complex logic tree; it also
-        # prints the warning on poe_agg very different from the expected poe
+        # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')
         fname = gettemp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)

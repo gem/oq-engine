@@ -21,8 +21,10 @@ Utility functions of general interest.
 """
 import os
 import sys
+import zlib
 import copy
 import math
+import pickle
 import socket
 import random
 import atexit
@@ -34,6 +36,8 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import multiprocessing
+from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
@@ -44,6 +48,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+mp = multiprocessing.get_context('spawn')
 
 
 def duplicated(items):
@@ -454,6 +459,23 @@ def run_in_process(code, *args):
         # produce escape sequences in stdout, see for instance
         # https://bugs.python.org/issue19884
         return eval(out, {}, {})
+
+
+@contextmanager
+def start_many(func, allargs, **kw):
+    """
+    Start multiple processes simultaneously
+    """
+    procs = []
+    for args in allargs:
+        proc = mp.Process(target=func, args=args, kwargs=kw)
+        proc.start()
+        procs.append(proc)
+    try:
+        yield
+    finally:
+        for proc in procs:
+            proc.join()
 
 
 class CodeDependencyError(Exception):
@@ -1265,14 +1287,13 @@ def println(msg):
     sys.stdout.flush()
 
 
-def debug(templ, *args):
+def debug(line):
     """
     Append a debug line to the file /tmp/debug.txt
     """
-    msg = templ % args if args else templ
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
-        f.write(msg + '\n')
+        f.write(line + '\n')
 
 
 builtins.debug = debug
@@ -1344,14 +1365,14 @@ def get_duplicates(array, *fields):
 def add_columns(a, b, on, cols=None):
     """
     >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
-    >>> b_dt = [('ordinal', int), ('zipcode', int)]
+    >>> b_dt = [('ordinal', int), ('custom_site_id', int)]
     >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
     ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
     >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
-    >>> add_columns(a, b, 'aid', ['zipcode'])
+    >>> add_columns(a, b, 'aid', ['custom_site_id'])
     array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
            (2, 1, 2.3, 20128)],
-          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('zipcode', '<i8')])
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('custom_site_id', '<i8')])
     """
     if cols is None:
         cols = b.dtype.names
@@ -1431,3 +1452,29 @@ def agg_probs(*probs):
     for prob in probs[1:]:
         acc *= 1. - prob
     return 1. - acc
+
+# ###########]]]###### COMPRESSION/DECOMPRESSION ##################### #
+
+# Compressing the task outputs makes everything slower, so you should NOT
+# do that, except in one case. The case if when you have a lot of workers
+# (say 320) sending a lot of data (say 320 GB) to a master node which is
+# not able to keep up. Then the zmq queue fills all of the avalaible RAM
+# until the master node blows up. With compression you can reduce the queue
+# size a lot (say one order of magnitude).
+# Therefore by losing a bit of speed (say 3%) you can convert a failing
+# calculation into a successful one.
+
+
+def compress(obj):
+    """
+    gzip a Python object
+    """
+    # level=1: compress the least, but fast, good choice for us
+    return zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL), level=1)
+
+
+def decompress(cbytes):
+    """
+    gunzip compressed bytes into a Python object
+    """
+    return pickle.loads(zlib.decompress(cbytes))

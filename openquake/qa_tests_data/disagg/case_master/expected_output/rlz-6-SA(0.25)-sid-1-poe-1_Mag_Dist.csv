@@ -1,4 +1,4 @@
-#,,"generated_by='OpenQuake engine 3.9.0-gitb9e2f04ebe', start_date='2020-03-30T06:14:39', checksum=712602648, smlt_path='b2', gsimlt_path='b12_b21', imt='SA', investigation_time=50.0, lon=-121.5, lat=38.3, poe='0.0500000', iml='5.1799827e-01', rlz=6"
+#,,"generated_by='OpenQuake engine 3.10.0-gitaea17c617b', start_date='2020-07-16T06:06:23', checksum=2023352324, investigation_time=50.0, imt='SA', smlt_path='b2', gsimlt_path='b12_b21', lon=-121.5, lat=38.3, mag_bin_edges=[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0], dist_bin_edges=[0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0, 55.0, 60.0], lon_bin_edges=[-122.18757421892607, -121.5, -120.81242578107393], lat_bin_edges=[37.760408, 38.3, 38.839591999999996], eps_bin_edges=[-3.0, -1.5, 0.0, 1.5, 3.0], tectonic_region_types=['Active Shallow Crust', 'Stable Shallow Crust'], poe=0.048874233719459426"
 mag,dist,poe
 4.25000E+00,2.50000E+00,0.00000E+00
 4.25000E+00,7.50000E+00,0.00000E+00

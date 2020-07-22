@@ -187,6 +187,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+
         [gmfs, sig_eps, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', gmfs)
         # this is a case with truncation_level=0: sig-eps.csv must be empty
@@ -234,6 +235,9 @@ class EventBasedTestCase(CalculatorTestCase):
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
+
+        tmp = gettemp(extract(self.calc.datastore, 'ruptures').array)
+        self.assertEqualFiles('expected/ruptures_full.csv', tmp, delta=1E-6)  
 
         # check MFD
         aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
@@ -326,17 +330,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures.csv', fname)
         [fname] = export(('ruptures', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.xml', fname)
-
-        # testing extracting ruptures
-        rup0 = extract(self.calc.datastore, 'rupture/0').toml()
-        self.assertGot(  # planar rupture
-            rup0, os.path.join(self.testdir, 'expected/rupture_0.toml'))
-        rup1 = extract(self.calc.datastore, 'rupture/1').toml()
-        self.assertGot(  # gridded rupture
-            rup1, os.path.join(self.testdir, 'expected/rupture_1.toml'))
-
-        # test running scenario from event based, reading TOML
-        self.run_calc(case_15.__file__, 'scenario.ini')
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure

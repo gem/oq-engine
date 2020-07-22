@@ -1,4 +1,35 @@
   [Michele Simionato]
+  * Reduced tremendously the data transfer in disaggregation calculations
+  * Internal: introduced compress/decompress utilities
+  * Reduced the memory and disk space occupation in classical calculations with
+    few sites; also changed slightly the rupture collapsing mechanism
+  * In disaggregation, force poes_disagg == poes
+  * Fixed multi-site disaggregation: ruptures far away were not discarded,
+    just considered distant 9999 km
+
+  [Marco Pagani]
+  * Added a prototype implementation of the kernel method
+
+  [Michele Simionato]
+  * Added zipcode site parameter
+  * Added command `oq renumber_sm ssmLT.xml`
+
+  [Robin Gee]
+  * Set DEFINED_FOR_REFERENCE_VELOCITY for GMPEs modified for Switzerland
+
+  [Michele Simionato]
+  * Added parameter `max_num_loss_curves` to the job.ini file
+  * Changed `oq engine --reuse-hazard` to just reuse the source model, if
+    possible
+  * Added command `oq recompute_losses <calc_id> <aggregate_by>`
+  * Fixed `noDamageLimit`, `minIML`, `maxIML` not being honored in continuous
+    fragility functions
+  * Unified the scenario calculator with the event based one, with
+    minor differences in the numbers akin to a change of seed
+  * Fixed a bug in event based when a rupture occurs more than 65535 times
+  * Added a demo EventBasedDamage
+  * Fixed bug in event_based_damage: the number of buildings in no damage
+    state was incorrect
   * Added commands `oq nrml_to csv` and  `oq nrml_to gpkg`
   * Supported year and ses_id >= 65536 in event based
 
@@ -72,6 +103,9 @@
   * Fixed a bug in the ParseNDKtoGCMT parser + updated tests.
   * Ported the method serialise_to_hmtk_csv implemented in the corresponding
     class of the catalogue toolkit + added a test into the GCMTCatalogue class.
+  * Added a modifiable GMPE using the site term of CY14.
+  * Added a generalised modificable GMPE. This first version allows the 
+    definition of the epsilon of the within event residual.
 
   [Michele Simionato]
   * Introduced a mixed XML+HDF5 format for gridded sources

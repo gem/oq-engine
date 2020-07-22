@@ -34,8 +34,9 @@ from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic
+from openquake.hazardlib.source import rupture
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation
+from openquake.commonlib import calc, util, oqvalidation, writers
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -379,8 +380,12 @@ def extract_sitecol(dstore, what):
     """
     Extracts the site collection array (not the complete object, otherwise it
     would need to be pickled).
-    Use it as /extract/sitecol
+    Use it as /extract/sitecol?field=vs30
     """
+    qdict = parse(what)
+    if 'field' in qdict:
+        [f] = qdict['field']
+        return dstore['sitecol'][f]
     return dstore['sitecol'].array
 
 
@@ -709,8 +714,8 @@ def extract_agg_curves(dstore, what):
 def extract_agg_losses(dstore, what):
     """
     Aggregate losses of the given loss type and tags. Use it as
-    /extract/agg_losses/structural?taxonomy=RC&zipcode=20126
-    /extract/agg_losses/structural?taxonomy=RC&zipcode=*
+    /extract/agg_losses/structural?taxonomy=RC&custom_site_id=20126
+    /extract/agg_losses/structural?taxonomy=RC&custom_site_id=*
 
     :returns:
         an array of shape (T, R) if one of the tag names has a `*` value
@@ -736,7 +741,7 @@ def extract_agg_losses(dstore, what):
 def extract_agg_damages(dstore, what):
     """
     Aggregate damages of the given loss type and tags. Use it as
-    /extract/agg_damages/structural?taxonomy=RC&zipcode=20126
+    /extract/agg_damages/structural?taxonomy=RC&custom_site_id=20126
 
     :returns:
         array of shape (R, D), being R the number of realizations and D the
@@ -999,20 +1004,6 @@ def _get(dstore, name):
         return dstore[name + '-rlzs'], ['mean']
 
 
-@extract.add('rupture')
-def extract_rupture(dstore, rup_id):
-    """
-    Extract information about the given event index.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/rupture/1066
-    """
-    ridx = list(dstore['ruptures']['id']).index(int(rup_id))
-    [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
-    [proxy] = getter.get_proxies()
-    ebr = proxy.to_ebr(getter.trt, getter.samples)
-    return ArrayWrapper((), ebr.rupture.todict())
-
-
 @extract.add('event_info')
 def extract_event_info(dstore, eidx):
     """
@@ -1206,7 +1197,7 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', U32), ('source_id', SOURCE_ID), ('multiplicity', U16),
+            ('rup_id', U32), ('source_id', SOURCE_ID), ('multiplicity', U32),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -1249,7 +1240,7 @@ def extract_rupture_info(dstore, what):
     else:
         min_mag = 0
     oq = dstore['oqparam']
-    dtlist = [('rup_id', U32), ('multiplicity', U16), ('mag', F32),
+    dtlist = [('rup_id', U32), ('multiplicity', U32), ('mag', F32),
               ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
@@ -1274,6 +1265,36 @@ def extract_rupture_info(dstore, what):
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
     return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
                                   boundaries=geoms))
+
+
+@extract.add('ruptures')
+def extract_ruptures(dstore, what):
+    """
+    Extract some information about the ruptures, including the boundary.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/ruptures?min_mag=6
+    """
+    qdict = parse(what)
+    if 'min_mag' in qdict:
+        [min_mag] = qdict['min_mag']
+    else:
+        min_mag = 0
+    bio = io.StringIO()
+    first = True
+    trts = list(dstore.getitem('full_lt').attrs['trts'])
+    for rgetter in getters.gen_rgetters(dstore):
+        rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
+                for proxy in rgetter.get_proxies(min_mag)]
+        arr = rupture.to_csv_array(rups)
+        if first:
+            header = None
+            comment = dict(trts=trts)
+            first = False
+        else:
+            header = 'no-header'
+            comment = None
+        writers.write_csv(bio, arr, header=header, comment=comment)
+    return bio.getvalue()
 
 # #####################  extraction from the WebAPI ###################### #
 
@@ -1353,8 +1374,6 @@ class WebExtractor(Extractor):
             raise WebAPIError('Not Found: %s' % url)
         elif resp.status_code != 200:
             raise WebAPIError(resp.text)
-        self.status = self.sess.get(
-            '%s/v1/calc/%d/status' % (self.server, calc_id)).json()
         self.oqparam = object.__new__(oqvalidation.OqParam)
         js = bytes(numpy.load(io.BytesIO(resp.content))['json'])
         vars(self.oqparam).update(json.loads(js))

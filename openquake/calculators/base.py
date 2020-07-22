@@ -33,7 +33,10 @@ from openquake.baselib import (
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile, site
+
 from openquake.hazardlib.site_amplification import Amplifier
+from openquake.hazardlib.site_amplification import AmplFunction
+
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
@@ -450,6 +453,14 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
+
+        if ('amplification' in oq.inputs and
+                oq.amplification_method == 'kernel'):
+            logging.info('Reading %s', oq.inputs['amplification'])
+            df = readinput.get_amplification(oq)
+            check_amplification(df, self.sitecol)
+            self.af = AmplFunction.from_dframe(df)
+
         if getattr(self, 'sitecol', None):
             # can be None for the ruptures-only calculator
             with hdf5.File(self.datastore.tempname, 'w') as tmp:
@@ -464,10 +475,9 @@ class HazardCalculator(BaseCalculator):
                 'There are too many sites to use disagg_by_src=true')
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            full_lt = readinput.get_full_lt(oq)
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, full_lt, self.datastore.hdf5)
+                    oq, self.datastore.hdf5)
                 srcs = [src for sg in csm.src_groups for src in sg]
                 if not srcs:
                     raise RuntimeError('All sources were discarded!?')
@@ -619,7 +629,7 @@ class HazardCalculator(BaseCalculator):
                     oq, haz_sitecol, self.crmodel.loss_types))
             if len(discarded):
                 self.datastore['discarded'] = discarded
-                if hasattr(self, 'rup'):
+                if 'scenario' in oq.calculation_mode:
                     # this is normal for the case of scenario from rupture
                     logging.info('%d assets were discarded because too far '
                                  'from the rupture; use `oq show discarded` '
@@ -703,7 +713,7 @@ class HazardCalculator(BaseCalculator):
                         'ampcode' not in haz_sitecol.array.dtype.names):
                     haz_sitecol.add_col('ampcode', site.ampcode_dt)
         else:
-            haz_sitecol = readinput.get_site_collection(oq)
+            haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
@@ -794,12 +804,19 @@ class HazardCalculator(BaseCalculator):
             self.datastore['sitecol'] = self.sitecol.complete
 
         # store amplification functions if any
+        self.af = None
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
             df = readinput.get_amplification(oq)
             check_amplification(df, self.sitecol)
             self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
+            if oq.amplification_method == 'kernel':
+                # TODO: need to add additional checks on the main calculation
+                # methodology since the kernel method is currently tested only
+                # for classical PSHA
+                self.af = AmplFunction.from_dframe(df)
+                self.amplifier = None
         else:
             self.amplifier = None
 

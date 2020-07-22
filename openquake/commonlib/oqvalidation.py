@@ -92,6 +92,8 @@ class OqParam(valid.ParamSet):
         siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
+    amplification_method = valid.Param(
+        valid.Choice('convolution', 'kernel'), None)
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
@@ -112,6 +114,7 @@ class OqParam(valid.ParamSet):
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
+    csm_cache = valid.Param(valid.utf8, '')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
@@ -153,6 +156,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
+    max_num_loss_curves = valid.Param(valid.positiveint, 10_000)
     max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
@@ -317,13 +321,6 @@ class OqParam(valid.ParamSet):
                 self.base_path, self.inputs['gsim_logic_tree'])
             gsim_lt = logictree.GsimLogicTree(path, ['*'])
 
-            # check the number of branchsets
-            branchsets = len(gsim_lt._ltnode)
-            if 'scenario' in self.calculation_mode and branchsets > 1:
-                raise InvalidFile(
-                    '%s: %s for a scenario calculation must contain a single '
-                    'branchset, found %d!' % (job_ini, path, branchsets))
-
             # check the IMTs vs the GSIMs
             self._gsims_by_trt = gsim_lt.values
             for gsims in gsim_lt.values.values():
@@ -339,6 +336,14 @@ class OqParam(valid.ParamSet):
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
+            if not self.poes_disagg and self.poes:
+                self.poes_disagg = self.poes
+            elif not self.poes and self.poes_disagg:
+                self.poes = self.poes_disagg
+            elif self.poes != self.poes_disagg:
+                raise InvalidFile(
+                    'poes_disagg != poes: %s!=%s in %s' %
+                    (self.poes_disagg, self.poes, self.inputs['job_ini']))
             if not self.poes_disagg and not self.iml_disagg:
                 raise InvalidFile('poes_disagg or iml_disagg must be set '
                                   'in %(job_ini)s' % self.inputs)
@@ -890,8 +895,8 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-            'multi_peril' in self.inputs or self.calculation_mode.startswith(
-                'scenario')):
+            'multi_peril' in self.inputs or 'rupture_model' in self.inputs
+            or 'scenario' in self.calculation_mode):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and
@@ -919,6 +924,4 @@ class OqParam(valid.ParamSet):
         """
         if 'gmfs' in self.inputs or 'hazard_curves' in self.inputs:
             return True
-        elif self.hazard_calculation_id:
-            parent = list(util.read(self.hazard_calculation_id))
-            return 'gmf_data' in parent or 'poes' in parent
+        return self.hazard_calculation_id
