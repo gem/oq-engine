@@ -88,8 +88,10 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
 
 
 def _prepare_ctxs(dstore, rctx, magstr, cmaker):
+    dstore.open('r')
     sitecol = dstore['sitecol']
-    grp = {n: d[rctx['idx']] for n, d in dstore['mag_%s' % magstr].items()
+    # in h5py 2.10 I could write d[rctx['idx']] directly
+    grp = {n: d[:][rctx['idx']] for n, d in dstore['mag_%s' % magstr].items()
            if n.endswith('_')}
     ctxs = []
     for u, rec in enumerate(rctx):
@@ -146,8 +148,7 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, magstr, bin_edges, oq,
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     with monitor('reading rupdata', measuremem=True):
-        dstore.open('r')
-        ctxs, close_ctxs = _prepare_ctxs(dstore, rctx, magstr, cmaker)  # fast
+        ctxs, close_ctxs = _prepare_ctxs(dstore, rctx, magstr, cmaker)
 
     magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
     if magi == -1:  # when the magnitude is on the edge
