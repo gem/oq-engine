@@ -89,15 +89,16 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
 
 def _prepare_ctxs(dstore, rctx, magstr, cmaker):
     sitecol = dstore['sitecol']
-    dset = dstore['mag_%s/dctx' % magstr]
+    grp = {n: dset for n, dset in dstore['mag_%s' % magstr].items()
+           if n.endswith('_')}
     ctxs = []
     for rec in rctx:
-        dctx = dset[rec['idx1']:rec['idx2']]
+        idx = rec['idx']
         ctx = RuptureContext()
         for par in rctx.dtype.names:
             setattr(ctx, par, rec[par])
-        for par in dctx.dtype.names:
-            setattr(ctx, par, dctx[par])
+        for par in grp:
+            setattr(ctx, par[:-1], grp[par][idx])
         for par in cmaker.REQUIRES_SITES_PARAMETERS:
             setattr(ctx, par, sitecol[par][ctx.sids])
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}

@@ -150,11 +150,11 @@ class ContextMaker(object):
         """
         :returns: the interesting attributes of the context
         """
-        params = {'gidx', 'occurrence_rate',
-                  'probs_occur', 'clon', 'clat', 'rrup'}
+        params = {'gidx', 'occurrence_rate', 'sids_',
+                  'probs_occur', 'clon_', 'clat_', 'rrup_'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
-            params.add(dparam)
+            params.add(dparam + '_')
         return params
 
     def from_srcs(self, srcs, site1):  # used in disagg.disaggregation
@@ -530,6 +530,14 @@ class PmapMaker(object):
                 [self.numrups, self.numsites, time.time() - t0])
         return self.pmap
 
+    def dictarray(self, ctxs):
+        dic = {}  # par -> array
+        z = numpy.zeros(0)
+        for par in self.cmaker.get_ctx_params():
+            pa = par[:-1] if par.endswith('_') else par
+            dic[par] = numpy.array([getattr(ctx, pa, z) for ctx in ctxs])
+        return dic
+
     def make(self):
         self.rupdata = []
         imtls = self.cmaker.imtls
@@ -543,6 +551,8 @@ class PmapMaker(object):
         else:
             pmap = self._make_src_indep()
         rupdata = groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag)
+        for mag, ctxs in rupdata.items():
+            rupdata[mag] = self.dictarray(ctxs)
         return (pmap, rupdata, self.calc_times, dict(totrups=self.totrups))
 
     def collapse_point_ruptures(self, rups, sites):
