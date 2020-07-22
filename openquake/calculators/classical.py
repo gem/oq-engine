@@ -151,10 +151,11 @@ def store_ctxs(dstore, rdt, dic):
     rdata = numpy.zeros(nr, rdt)
     rdata['idx'] = numpy.arange(offset, offset + nr)
     rdt_names = set(dic) & set(n[0] for n in rdt)
-    for name in rdt_names - {'probs_occur'}:
-        rdata[name] = dic[name]
-    for u, arr in enumerate(dic['probs_occur']):
-        rdata[u]['probs_occur'] = arr
+    for name in rdt_names:
+        if name == 'probs_occur':
+            rdata[name] = list(dic[name])
+        else:
+            rdata[name] = dic[name]
     hdf5.extend(rctx, rdata)
     for name in dstore['mag_%s' % magstr]:
         if name.endswith('_'):
