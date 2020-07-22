@@ -218,7 +218,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # store rup_data if there are few sites
             for mag, c in dic['rup_data'].items():
-                store_ctxs(self.datastore, self.rdt, decompress(c))
+                store_ctxs(self.datastore, self.rdt, c)
         return acc
 
     def acc0(self):

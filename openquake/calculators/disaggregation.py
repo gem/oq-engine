@@ -89,16 +89,15 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
 
 def _prepare_ctxs(dstore, rctx, magstr, cmaker):
     sitecol = dstore['sitecol']
-    grp = {n: dset for n, dset in dstore['mag_%s' % magstr].items()
+    grp = {n: d[:][rctx['idx']] for n, d in dstore['mag_%s' % magstr].items()
            if n.endswith('_')}
     ctxs = []
-    for rec in rctx:
-        idx = rec['idx']
+    for u, rec in enumerate(rctx):
         ctx = RuptureContext()
         for par in rctx.dtype.names:
             setattr(ctx, par, rec[par])
         for par in grp:
-            setattr(ctx, par[:-1], grp[par][idx])
+            setattr(ctx, par[:-1], grp[par][u])
         for par in cmaker.REQUIRES_SITES_PARAMETERS:
             setattr(ctx, par, sitecol[par][ctx.sids])
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
@@ -362,7 +361,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                       if name.startswith('mag_'))  # total number of ruptures
         grp_ids = dstore['grp_ids'][:]
         maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
-                        oq.ruptures_per_block * 8)  # at maximum 4000
+                        oq.ruptures_per_block * 10)  # at maximum 5000
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
