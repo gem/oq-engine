@@ -156,10 +156,14 @@ def store_ctxs(dstore, rdt, dic):
     for u, arr in enumerate(dic['probs_occur']):
         rdata[u]['probs_occur'] = arr
     hdf5.extend(rctx, rdata)
-    for name in dic:
+    for name in dstore['mag_%s' % magstr]:
         if name.endswith('_'):
             n = 'mag_%s/%s' % (magstr, name)
-            dstore.hdf5.save_vlen(n, dic[name])
+            if name in dic:
+                dstore.hdf5.save_vlen(n, dic[name])
+            else:
+                zs = [numpy.zeros(0, numpy.float32)] * nr
+                dstore.hdf5.save_vlen(n, zs)
 
 
 @base.calculators.add('classical', 'ucerf_classical')
