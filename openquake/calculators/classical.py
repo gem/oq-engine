@@ -258,7 +258,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for mag in mags:
                 name = 'mag_%s/' % mag
                 self.datastore.create_dset(name + 'rctx', self.rdt, (None,),
-                                           fillvalue=None, compression='gzip')
+                                           compression='gzip')
                 for dparam in dparams:
                     dt = hdf5.vuint32 if dparam == 'sids_' else hdf5.vfloat32
                     self.datastore.create_dset(name + dparam, dt, (None,),
