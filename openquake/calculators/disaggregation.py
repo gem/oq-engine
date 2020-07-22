@@ -89,7 +89,7 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
 
 def _prepare_ctxs(dstore, rctx, magstr, cmaker):
     sitecol = dstore['sitecol']
-    grp = {n: d[:][rctx['idx']] for n, d in dstore['mag_%s' % magstr].items()
+    grp = {n: d[rctx['idx']] for n, d in dstore['mag_%s' % magstr].items()
            if n.endswith('_')}
     ctxs = []
     for u, rec in enumerate(rctx):
