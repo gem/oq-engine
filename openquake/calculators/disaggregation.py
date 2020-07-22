@@ -368,7 +368,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         U, G, S = 0, 0, 0
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
-            S = max(S, max(len(sids) for sids in dstore['mag_%s/sids_' % mag]))
+            nsids = numpy.array(
+                [len(sids) for sids in dstore['mag_%s/sids_' % mag]])
+            S = max(S, nsids.max())
             for gidx, gids in enumerate(grp_ids):
                 array = rctx[rctx['gidx'] == gidx]
                 if len(array) == 0:
