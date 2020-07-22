@@ -361,13 +361,14 @@ class DisaggregationCalculator(base.HazardCalculator):
                       if name.startswith('mag_'))  # total number of ruptures
         grp_ids = dstore['grp_ids'][:]
         maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
-                        oq.ruptures_per_block * 10)  # at maximum 5000
+                        oq.ruptures_per_block * 14)  # at maximum 7000
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
-        U, G = 0, 0
+        U, G, S = 0, 0, 0
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
+            S = max(S, max(len(sids) for sids in dstore['mag_%s/sids_' % mag]))
             for gidx, gids in enumerate(grp_ids):
                 array = rctx[rctx['gidx'] == gidx]
                 if len(array) == 0:
@@ -389,8 +390,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                                     trti, mag, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
 
-        nbytes, msg = get_array_nbytes(dict(N=self.N, M=self.M, G=G, U=U))
+        nbytes, msg = get_array_nbytes(dict(S=S, M=self.M, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
+
         s = self.shapedic
         size = s['dist'] * s['eps'] + s['lon'] * s['lat']
         sd = dict(N=s['N'], M=s['M'], P=s['P'], Z=s['Z'], size=size)
