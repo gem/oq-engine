@@ -22,7 +22,7 @@ import unittest.mock as mock
 import numpy
 from openquake.baselib import parallel, general
 from openquake.hazardlib import lt
-from openquake.calculators.views import view, rst_table
+from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.getters import PmapGetter
@@ -56,8 +56,9 @@ def get_dists(dstore):
     dic = general.AccumDict(accum=[])  # site_id -> distances
     for name, dset in dstore.items():
         if name.startswith('mag_'):
-            for sid, dst in dset['dctx']['sids', 'rrup']:
-                dic[sid].append(int(round(dst)))
+            for sids, dsts in zip(dset['sids_'], dset['rrup_']):
+                for sid, dst in zip(sids, dsts):
+                    dic[sid].append(int(round(dst)))
     return dic
 
 
@@ -467,7 +468,7 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['mag_5.25/dctx']), 34)
+        self.assertEqual(len(self.calc.datastore['mag_5.25/rctx']), 34)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
