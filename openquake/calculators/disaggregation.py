@@ -513,8 +513,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                         and s in self.ok_sites):
                     logging.warning(
                         'Site #%d, IMT=%s: poe_agg=%s is quite different from '
-                        'the expected poe=%s; perhaps the number of intensity '
-                        'measure levels is too small?', s, imt, poe_agg, poe)
+                        'the expected poe=%s', s, imt, poe_agg, poe)
                     count[s] += 1
                 mat4 = agg_probs(*mat5)  # shape (Ma D E Z) or (Ma Lo La Z)
                 for key in outputs:
