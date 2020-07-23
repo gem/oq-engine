@@ -543,9 +543,6 @@ from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.engine import engine
 if __name__ == '__main__':
-    if config.distribution.serialize_jobs:
-        # assume the zmq workerpools are not available
-        os.environ['OQ_DISTRIBUTE'] = 'processpool'
     oqparam = pickle.loads(%(pik)r)
     logs.init(%(job_id)s)
     engine.run_calc(

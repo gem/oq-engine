@@ -20,7 +20,7 @@ import sys
 import getpass
 import logging
 from openquake.baselib import sap, config, datastore, parallel
-from openquake.baselib.general import safeprint
+from openquake.baselib.general import safeprint, start_many
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, oqvalidation
 from openquake.engine import engine as eng
@@ -83,6 +83,10 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         for job_id, oqparam in jobparams:
             logs.dbcmd('finish', job_id, 'aborted')
         return jobparams
+    else:
+        for job_id, oqparam in jobparams:
+            logs.dbcmd('update_job', job_id,
+                       {'status': 'executing', 'pid': eng._PID})
     try:
         if dist == 'zmq' and config.zworkers['host_cores']:
             logging.info('Asking the DbServer to start the workers')
@@ -90,8 +94,12 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
             logs.dbcmd('zmq_wait')  # wait for them to go up
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
-        for args in allargs:
-            eng.run_calc(*args)
+        if len(allargs) > 1 and 'csm_cache' in kw:
+            with start_many(eng.run_calc, allargs):
+                pass
+        else:
+            for args in allargs:
+                eng.run_calc(*args)
     finally:
         if dist == 'zmq' and config.zworkers['host_cores']:
             logging.info('Stopping the zworkers')
