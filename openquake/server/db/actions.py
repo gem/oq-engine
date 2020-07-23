@@ -345,7 +345,12 @@ def del_calc(db, job_id, user, force=False):
     dependent = db(
         "SELECT id FROM job WHERE hazard_calculation_id=?x "
         "AND status != 'deleted'", job_id)
-    if not force and dependent:
+    job_ids = [dep.id for dep in dependent]
+    if not force and job_id in job_ids:  # jobarray
+        for jid in job_ids:
+            del_calc(db, jid, user, force=True)
+        return {"success": 'children_of_%s' % job_id}
+    elif not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent])}
