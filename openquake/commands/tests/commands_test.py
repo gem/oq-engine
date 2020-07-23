@@ -477,6 +477,18 @@ class DbTestCase(unittest.TestCase):
 
 
 class EngineRunJobTestCase(unittest.TestCase):
+    def test_multi_run(self):
+        job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
+        jobparams = run_jobs([job_ini, job_ini], log_level='error',
+                             csm_cache='/tmp/cache')
+        jobs, params = zip(*jobparams)
+        with Print.patch():
+            [r1, r2] = commonlib.logs.dbcmd(
+                'select id, hazard_calculation_id from job '
+                'where id in (?S) order by id', jobs)
+        self.assertEqual(r1.hazard_calculation_id, r1.id)
+        self.assertEqual(r2.hazard_calculation_id, r1.id)
+
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
