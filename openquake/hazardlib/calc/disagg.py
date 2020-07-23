@@ -111,6 +111,9 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
+DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
+
+
 # this is inside an inner loop
 def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     """
@@ -139,10 +142,14 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     G = ctxs[0].mean_std.shape[-1]
     mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
-        dists[u] = ctx.rrup[sid]  # distance to the site
-        lons[u] = ctx.clon[sid]  # closest point of the rupture lon
-        lats[u] = ctx.clat[sid]  # closest point of the rupture lat
-        mean_std[:, u] = ctx.mean_std[:, 0]  # (2, N, M, G) => (2, M, G)
+        if not hasattr(ctx, 'idx'):  # assume single site
+            idx = 0
+        else:
+            idx = ctx.idx[sid]
+        dists[u] = ctx.rrup[idx]  # distance to the site
+        lons[u] = ctx.clon[idx]  # closest point of the rupture lon
+        lats[u] = ctx.clat[idx]  # closest point of the rupture lat
+        mean_std[:, u] = ctx.mean_std[:, idx]  # (2, N, M, G) => (2, M, G)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     for (m, p, z), iml in numpy.ndenumerate(iml3):
@@ -154,6 +161,7 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     for u, ctx in enumerate(ctxs):
         pnes[u] *= ctx.get_probability_no_exceedance(poes[u])  # this is slow
     bindata = BinData(dists, lons, lats, pnes)
+    DEBUG[idx].append(pnes.mean())
     if not bin_edges:
         return bindata
     return _build_disagg_matrix(bindata, bin_edges)

@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Internal: implemented multi-run functionality
+  * Reduced tremendously the data transfer in disaggregation calculations
+  * Internal: introduced compress/decompress utilities
+  * Reduced the memory and disk space occupation in classical calculations with
+    few sites; also changed slightly the rupture collapsing mechanism
+  * In disaggregation, force poes_disagg == poes
   * Fixed multi-site disaggregation: ruptures far away were not discarded,
     just considered distant 9999 km
 
@@ -99,6 +105,8 @@
   * Ported the method serialise_to_hmtk_csv implemented in the corresponding
     class of the catalogue toolkit + added a test into the GCMTCatalogue class.
   * Added a modifiable GMPE using the site term of CY14.
+  * Added a generalised modificable GMPE. This first version allows the 
+    definition of the epsilon of the within event residual.
 
   [Michele Simionato]
   * Introduced a mixed XML+HDF5 format for gridded sources

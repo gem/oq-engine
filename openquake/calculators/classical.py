@@ -17,9 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
-import ast
 import time
 import copy
+import pprint
 import logging
 import operator
 from datetime import datetime
@@ -28,7 +28,8 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize, get_array_nbytes)
+    AccumDict, DictArray, block_splitter, groupby, humansize,
+    get_array_nbytes, decompress)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -139,6 +140,33 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
                            trt=src.tectonic_region_type, maxradius=maxradius))
 
 
+def store_ctxs(dstore, rdt, dic):
+    """
+    Store contexts with the same magnitude in the datastore
+    """
+    magstr = '%.2f' % dic['mag'][0]
+    rctx = dstore['mag_%s/rctx' % magstr]
+    offset = len(rctx)
+    nr = len(dic['mag'])
+    rdata = numpy.zeros(nr, rdt)
+    rdata['idx'] = numpy.arange(offset, offset + nr)
+    rdt_names = set(dic) & set(n[0] for n in rdt)
+    for name in rdt_names:
+        if name == 'probs_occur':
+            rdata[name] = list(dic[name])
+        else:
+            rdata[name] = dic[name]
+    hdf5.extend(rctx, rdata)
+    for name in dstore['mag_%s' % magstr]:
+        if name.endswith('_'):
+            n = 'mag_%s/%s' % (magstr, name)
+            if name in dic:
+                dstore.hdf5.save_vlen(n, dic[name])
+            else:
+                zs = [numpy.zeros(0, numpy.float32)] * nr
+                dstore.hdf5.save_vlen(n, zs)
+
+
 @base.calculators.add('classical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -189,27 +217,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
-            rup_data = dic['rup_data']
-            mags = set(mag for mag, k in rup_data)
-            for mag in sorted(mags):
-                nr = len(rup_data[mag, 'gidx'])
-                if nr == 0:
-                    continue
-                for k in self.rparams:
-                    name = 'rup_%s/%s' % (mag, k)
-                    try:
-                        v = rup_data[mag, k]
-                    except KeyError:
-                        if k == 'probs_occur':
-                            v = [numpy.zeros(0)] * nr
-                        elif k.endswith('_'):
-                            v = numpy.ones((nr, self.N)) * numpy.nan
-                        else:
-                            v = numpy.ones(nr) * numpy.nan
-                    if k == 'probs_occur':  # variable lenght arrays
-                        self.datastore.hdf5.save_vlen(name, v)
-                        continue
-                    hdf5.extend(self.datastore[name], v)
+            for mag, c in dic['rup_data'].items():
+                store_ctxs(self.datastore, self.rdt, c)
         return acc
 
     def acc0(self):
@@ -218,8 +227,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
-        rparams = {'gidx', 'occurrence_rate',
-                   'weight', 'probs_occur', 'clon_', 'clat_', 'rrup_'}
+        rparams = {'gidx', 'occurrence_rate', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         n = len(self.full_lt.sm_rlzs)
         trts = list(self.full_lt.gsim_lt.values)
@@ -237,23 +245,25 @@ class ClassicalCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         if self.few_sites:
-            self.rparams = sorted(rparams)
-            for k in self.rparams:
-                for mag in mags:
-                    name = 'rup_%s/%s' % (mag, k)
-                    # variable length arrays
-                    if k == 'gidx':
-                        self.datastore.create_dset(name, U16)
-                    elif k == 'probs_occur':  # vlen
-                        self.datastore.create_dset(name, hdf5.vfloat64)
-                    elif k.endswith('_'):  # array of shape (U, N)
-                        self.datastore.create_dset(
-                            name, F32, shape=(None, self.N),
-                            compression='gzip')
-                    else:
-                        self.datastore.create_dset(name, F32)
-        else:
-            self.rparams = {}
+            self.rdt = []
+            dparams = ['sids_']
+            for rparam in rparams:
+                if rparam.endswith('_'):
+                    dparams.append(rparam)
+                elif rparam == 'gidx':
+                    self.rdt.append((rparam, U32))
+                else:
+                    self.rdt.append((rparam, F32))
+            self.rdt.append(('idx', U32))
+            self.rdt.append(('probs_occur', hdf5.vfloat64))
+            for mag in mags:
+                name = 'mag_%s/' % mag
+                self.datastore.create_dset(name + 'rctx', self.rdt, (None,),
+                                           compression='gzip')
+                for dparam in dparams:
+                    dt = hdf5.vuint32 if dparam == 'sids_' else hdf5.vfloat32
+                    self.datastore.create_dset(name + dparam, dt, (None,),
+                                               compression='gzip')
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0
@@ -335,10 +345,20 @@ class ClassicalCalculator(base.HazardCalculator):
                     imts_ok and oq.minimum_intensity):
             aw, self.psd = get_effect(
                 mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
+            dic = {trt: [(float(mag), int(dst))
+                         for mag, dst in self.psd[trt].items()]
+                   for trt in self.psd if trt != 'default'}
+            logging.info('pointsource_distance=\n%s', pprint.pformat(dic))
             if len(vars(aw)) > 1:  # more than _extra
                 self.datastore['effect_by_mag_dst'] = aw
         elif oq.pointsource_distance:
             self.psd = oq.pointsource_distance.interp(mags_by_trt)
+            for trt, dic in self.psd.items():
+                # the sum is zero for {'default': [(1, 0), (10, 0)]}
+                if sum(dic.values()):
+                    it = list(dic.items())
+                    md = '%s->%d ... %s->%d' % (it[0] + it[-1])
+                    logging.info('ps_dist %s: %s', trt, md)
         else:
             self.psd = {}
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
@@ -430,7 +450,6 @@ class ClassicalCalculator(base.HazardCalculator):
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_level=oq.collapse_level,
             max_sites_disagg=oq.max_sites_disagg,
-            num_probs_occur=self.csm.get_num_probs_occur(),
             af=self.af)
         srcfilter = self.src_filter(self.datastore.tempname)
         for sg in src_groups:
@@ -495,6 +514,10 @@ class ClassicalCalculator(base.HazardCalculator):
         :param pmap_by_key:
             a dictionary key -> hazard curves
         """
+        nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
+              if name.startswith('rup_')}
+        if nr:  # few sites, log the number of ruptures per magnitude
+            logging.info('%s', nr)
         oq = self.oqparam
         data = []
         weights = [rlz.weight for rlz in self.realizations]

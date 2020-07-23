@@ -87,9 +87,13 @@ class DisaggregationTestCase(CalculatorTestCase):
             raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok(
             ['rlz-0-SA(0.1)-sid-0.xml',
+             'rlz-0-SA(0.1)-sid-1.xml',
              'rlz-1-SA(0.1)-sid-0.xml',
+             'rlz-1-SA(0.1)-sid-1.xml',
              'rlz-2-SA(0.1)-sid-0.xml',
-             'rlz-3-SA(0.1)-sid-0.xml'],
+             'rlz-2-SA(0.1)-sid-1.xml',
+             'rlz-3-SA(0.1)-sid-0.xml',
+             'rlz-3-SA(0.1)-sid-1.xml'],
             case_2.__file__)
 
         # check that the CSV exporter does not break
@@ -105,6 +109,10 @@ class DisaggregationTestCase(CalculatorTestCase):
                          ('site_id', 'lon', 'lat',
                           'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None',
                           'iml-SA(0.1)-None'))
+
+        # check the custom_site_id
+        aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
+        self.assertEqual(list(aw), [100, 200])
 
     def test_case_3(self):
         # a case with poes_disagg too large
@@ -163,8 +171,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         check_disagg_by_src(self.calc.datastore)
 
     def test_case_master(self):
-        # this tests exercise the case of a complex logic tree; it also
-        # prints the warning on poe_agg very different from the expected poe
+        # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')
         fname = gettemp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)

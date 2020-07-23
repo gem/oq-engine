@@ -46,7 +46,7 @@ def init_performance(hdf5file, swmr=False):
     :param hdf5file: file name of hdf5.File instance
     """
     fname = isinstance(hdf5file, str)
-    h5 = hdf5.File(hdf5file) if fname else hdf5file
+    h5 = hdf5.File(hdf5file, 'a') if fname else hdf5file
     if 'performance_data' not in h5:
         hdf5.create(h5, 'performance_data', perf_dt)
     if 'task_info' not in h5:
