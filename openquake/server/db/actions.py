@@ -347,9 +347,15 @@ def del_calc(db, job_id, user, force=False):
         "AND status != 'deleted'", job_id)
     job_ids = [dep.id for dep in dependent]
     if not force and job_id in job_ids:  # jobarray
+        err = []
         for jid in job_ids:
-            del_calc(db, jid, user, force=True)
-        return {"success": 'children_of_%s' % job_id}
+            res = del_calc(db, jid, user, force=True)
+            if "error" in res:
+                err.append(res["error"])
+        if err:
+            return {"error": ' '.join(err)}
+        else:
+            return {"success": 'children_of_%s' % job_id}
     elif not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
