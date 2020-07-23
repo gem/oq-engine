@@ -309,7 +309,6 @@ def poll_queue(job_id, poll_time):
                 time.sleep(poll_time)
             else:
                 break
-    logs.dbcmd('update_job', job_id, {'status': 'executing', 'pid': _PID})
 
 
 def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):

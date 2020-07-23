@@ -83,6 +83,10 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         for job_id, oqparam in jobparams:
             logs.dbcmd('finish', job_id, 'aborted')
         return jobparams
+    else:
+        for job_id, oqparam in jobparams:
+            logs.dbcmd('update_job', job_id,
+                       {'status': 'executing', 'pid': eng._PID})
     try:
         if dist == 'zmq' and config.zworkers['host_cores']:
             logging.info('Asking the DbServer to start the workers')

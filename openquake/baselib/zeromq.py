@@ -101,7 +101,7 @@ class Socket(object):
                     # NB: will raise a ZMQBindError if no port is available
                     port = self.zsocket.bind_to_random_port(end_point, p1, p2)
                 except zmq.error.ZMQBindError:
-                    logging.info('Waiting for a zmq port...')
+                    logging.info('Waiting for a zmq port')
                     time.sleep(30)
                 else:
                     break
