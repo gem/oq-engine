@@ -30,6 +30,7 @@ import logging
 import traceback
 import platform
 import psutil
+import numpy
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -54,6 +55,15 @@ _PPID = os.getppid()  # the controlling terminal PID
 GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
 AND is_running=1 AND pid > 0 ORDER BY id'''
+
+
+def get_zmq_ports():
+    """
+    :returns: an array with the receiver ports
+    """
+    start, stop = config.dbserver.receiver_ports.split('-')
+    return numpy.arange(int(start), int(stop))
+
 
 if OQ_DISTRIBUTE == 'zmq':
 
