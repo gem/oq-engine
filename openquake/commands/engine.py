@@ -76,7 +76,8 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
             kw['hazard_calculation_id'] = job_id
         jobparams.append((job_id, oqparam))
     try:
-        engine.poll_queue(job_id, poll_time=15)
+        eng.poll_queue(job_id, poll_time=15)
+        # wait for an empty slot or a CTRL-C
     except BaseException:
         # the job aborted even before starting
         for job_id, oqparam in jobparams:
