@@ -75,17 +75,18 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                 and 'hazard_calculation_id' not in kw):
             kw['hazard_calculation_id'] = job_id
         jobparams.append((job_id, oqparam))
-    if dist == 'zmq' and config.zworkers['host_cores']:
-        logging.info('Asking the DbServer to start the workers')
-        logs.dbcmd('zmq_start')  # start the zworkers
-        logs.dbcmd('zmq_wait')  # wait for them to go up
     try:
         engine.poll_queue(job_id, poll_time=15)
     except BaseException:
         # the job aborted even before starting
-        logs.dbcmd('finish', job_id, 'aborted')
-        return []
+        for job_id, oqparam in jobparams:
+            logs.dbcmd('finish', job_id, 'aborted')
+        return jobparams
     try:
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Asking the DbServer to start the workers')
+            logs.dbcmd('zmq_start')  # start the zworkers
+            logs.dbcmd('zmq_wait')  # wait for them to go up
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
         for args in allargs:
