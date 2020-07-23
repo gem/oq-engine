@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, block_splitter, get_array_nbytes, humansize, pprod, agg_probs)
+    AccumDict, get_array_nbytes, humansize, pprod, agg_probs)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -87,21 +87,22 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def _prepare_ctxs(dstore, idxs, magstr, cmaker):
+def _prepare_ctxs(dstore, rctx, magstr, cmaker):
+    dstore.open('r')
     sitecol = dstore['sitecol']
-    rupdata = {k: d[:][idxs] for k, d in dstore['rup_%s' % magstr].items()}
+    # in h5py 2.10 I could write d[rctx['idx']] directly
+    grp = {n: d[:][rctx['idx']] for n, d in dstore['mag_%s' % magstr].items()
+           if n.endswith('_')}
     ctxs = []
-    for u in range(len(rupdata['mag'])):
+    for u, rec in enumerate(rctx):
         ctx = RuptureContext()
-        ctx.sids, = numpy.where(rupdata['rrup_'][u] < 9999.)
-        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
-        for par in rupdata:
-            if not par.endswith('_'):
-                setattr(ctx, par, rupdata[par][u])
-            else:  # distance parameters
-                setattr(ctx, par[:-1], rupdata[par][u, ctx.sids])
+        for par in rctx.dtype.names:
+            setattr(ctx, par, rec[par])
+        for par in grp:
+            setattr(ctx, par[:-1], grp[par][u])
         for par in cmaker.REQUIRES_SITES_PARAMETERS:
             setattr(ctx, par, sitecol[par][ctx.sids])
+        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         ctxs.append(ctx)
     # sorting for debugging convenience
     ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
@@ -120,15 +121,15 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
+def compute_disagg(dstore, rctx, cmaker, iml4, trti, magstr, bin_edges, oq,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dstore:
         a DataStore instance
-    :param idxs:
-        an array of indices to ruptures
+    :param rctx:
+        an array of rupture parameters
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param iml4:
@@ -147,8 +148,7 @@ def compute_disagg(dstore, idxs, cmaker, iml4, trti, magstr, bin_edges, oq,
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     with monitor('reading rupdata', measuremem=True):
-        dstore.open('r')
-        ctxs, close_ctxs = _prepare_ctxs(dstore, idxs, magstr, cmaker)  # fast
+        ctxs, close_ctxs = _prepare_ctxs(dstore, rctx, magstr, cmaker)
 
     magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
     if magi == -1:  # when the magnitude is on the edge
@@ -358,38 +358,43 @@ class DisaggregationCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         allargs = []
-        totrups = sum(len(dset['gidx']) for name, dset in dstore.items()
-                      if name.startswith('rup_'))  # total number of ruptures
+        totrups = sum(len(dset['rctx']) for name, dset in dstore.items()
+                      if name.startswith('mag_'))  # total number of ruptures
         grp_ids = dstore['grp_ids'][:]
         maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
-                        oq.ruptures_per_block * 10)  # at maximum 5000
+                        oq.ruptures_per_block * 14)  # at maximum 7000
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
         U, G = 0, 0
-        for gidx, gids in enumerate(grp_ids):
-            trti = gids[0] // num_eff_rlzs
-            trt = self.trts[trti]
-            cmaker = ContextMaker(
-                trt, rlzs_by_gsim[gidx],
-                {'truncation_level': oq.truncation_level,
-                 'maximum_distance': oq.maximum_distance,
-                 'collapse_level': oq.collapse_level,
-                 'imtls': oq.imtls})
-            G = max(G, len(cmaker.gsims))
-            for mag in mags:
-                arr = dstore['rup_%s/gidx' % mag][:]
-                indices, = numpy.where(arr == gidx)
-                for rupidxs in block_splitter(indices, maxweight):
-                    idxs = numpy.sort(rupidxs)
-                    nr = len(idxs)
-                    U = max(U, nr)
-                    allargs.append((dstore, idxs, cmaker, self.iml4,
+        for mag in mags:
+            rctx = dstore['mag_%s/rctx' % mag][:]
+            nsids = numpy.array(
+                [len(sids) for sids in dstore['mag_%s/sids_' % mag]])
+            for gidx, gids in enumerate(grp_ids):
+                idxs, = numpy.where(rctx['gidx'] == gidx)
+                if len(idxs) == 0:
+                    continue
+                trti = gids[0] // num_eff_rlzs
+                trt = self.trts[trti]
+                cmaker = ContextMaker(
+                    trt, rlzs_by_gsim[gidx],
+                    {'truncation_level': oq.truncation_level,
+                     'maximum_distance': oq.maximum_distance,
+                     'collapse_level': oq.collapse_level,
+                     'imtls': oq.imtls})
+                G = max(G, len(cmaker.gsims))
+                nsplits = numpy.ceil(len(idxs) / maxweight)
+                for idx in numpy.array_split(idxs, nsplits):
+                    nr = len(idx)
+                    U = max(U, nsids[idx].sum())
+                    allargs.append((dstore, rctx[idx], cmaker, self.iml4,
                                     trti, mag, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
 
-        nbytes, msg = get_array_nbytes(dict(N=self.N, M=self.M, G=G, U=U))
+        nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
+
         s = self.shapedic
         size = s['dist'] * s['eps'] + s['lon'] * s['lat']
         sd = dict(N=s['N'], M=s['M'], P=s['P'], Z=s['Z'], size=size)
@@ -493,16 +498,19 @@ class DisaggregationCalculator(base.HazardCalculator):
         outputs = self.oqparam.disagg_outputs
         out = output_dict(self.shapedic, outputs)
         count = numpy.zeros(len(self.sitecol), U16)
-        for (s, m, k), mat6 in results.items():
-            if s not in self.ok_sites:
-                continue
+        _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
+        for (s, m, k), mat6 in sorted(results.items()):
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat5 = mat6[..., p, :]
+                if k == 0 and m == 0 and poe == self.poes_disagg[-1]:
+                    # mat5 has shape (T, Ma, D, E, Z)
+                    _disagg_trt[s] = tuple(pprod(mat5[..., 0], axis=(1, 2, 3)))
                 poe2 = pprod(mat5, axis=(0, 1, 2, 3))
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
                 poe_agg = poe2.mean()
-                if poe and abs(1 - poe_agg / poe) > .1 and not count[s]:
+                if (poe and abs(1 - poe_agg / poe) > .1 and not count[s]
+                        and s in self.ok_sites):
                     logging.warning(
                         'Site #%d, IMT=%s: poe_agg=%s is quite different from '
                         'the expected poe=%s; perhaps the number of intensity '
@@ -529,3 +537,5 @@ class DisaggregationCalculator(base.HazardCalculator):
                             1, 2, 0, 3)  # T Lo La Z -> Lo La T Z
                     # shape NMP..Z
         self.datastore['disagg'] = out
+        # below a dataset useful for debugging, at minimum IMT and maximum RP
+        self.datastore['_disagg_trt'] = _disagg_trt
