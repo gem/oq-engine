@@ -273,7 +273,7 @@ def job_from_file(job_ini, job_id, username, **kw):
     return oq
 
 
-def poll_queue(job_id, pid, poll_time):
+def poll_queue(job_id, poll_time):
     """
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
@@ -294,7 +294,7 @@ def poll_queue(job_id, pid, poll_time):
                         'Waiting for jobs %s', [j.id for j in jobs
                                                 if j.id < job_id - offset])
                     logs.dbcmd('update_job', job_id,
-                               {'status': 'submitted', 'pid': pid})
+                               {'status': 'submitted', 'pid': _PID})
                     first_time = False
                 time.sleep(poll_time)
             else:
@@ -328,12 +328,6 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
             logging.warning(msg)
         calc.from_engine = True
         tb = 'None\n'
-        try:
-            poll_queue(job_id, _PID, poll_time=15)
-        except BaseException:
-            # the job aborted even before starting
-            logs.dbcmd('finish', job_id, 'aborted')
-            return
         try:
             if OQ_DISTRIBUTE.endswith('pool'):
                 logging.warning('Using %d cores on %s',
