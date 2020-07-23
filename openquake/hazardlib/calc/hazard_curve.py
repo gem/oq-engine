@@ -133,8 +133,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(param['imtls'], tom, gsims, pmap)
     return dict(pmap=pmap, calc_times=calc_times,
-                rup_data={k: compress(v) for k, v in rup_data.items()},
-                extra=extra)
+                rup_data=rup_data, extra=extra)
 
 
 def calc_hazard_curves(

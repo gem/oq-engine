@@ -150,11 +150,11 @@ class ContextMaker(object):
         """
         :returns: the interesting attributes of the context
         """
-        params = {'gidx', 'occurrence_rate',
-                  'probs_occur', 'clon', 'clat', 'rrup'}
+        params = {'gidx', 'occurrence_rate', 'sids_',
+                  'probs_occur', 'clon_', 'clat_', 'rrup_'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
-            params.add(dparam)
+            params.add(dparam + '_')
         return params
 
     def from_srcs(self, srcs, site1):  # used in disagg.disaggregation
@@ -530,6 +530,14 @@ class PmapMaker(object):
                 [self.numrups, self.numsites, time.time() - t0])
         return self.pmap
 
+    def dictarray(self, ctxs):
+        dic = {}  # par -> array
+        z = numpy.zeros(0)
+        for par in self.cmaker.get_ctx_params():
+            pa = par[:-1] if par.endswith('_') else par
+            dic[par] = numpy.array([getattr(ctx, pa, z) for ctx in ctxs])
+        return dic
+
     def make(self):
         self.rupdata = []
         imtls = self.cmaker.imtls
@@ -543,24 +551,9 @@ class PmapMaker(object):
         else:
             pmap = self._make_src_indep()
         rupdata = groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag)
-        cparams = self.cmaker.get_ctx_params()
-        dparams = self.cmaker.REQUIRES_DISTANCES | {'clon', 'clat', 'rrup'}
-        ddic = AccumDict(accum={})  # double dict mag -> k -> array
         for mag, ctxs in rupdata.items():
-            for k in cparams:
-                if k in dparams:
-                    lst = []
-                    for ctx in ctxs:
-                        arr = numpy.ones(self.N, numpy.float32) * 9999.
-                        arr[ctx.sids] = getattr(ctx, k, 9999.)
-                        lst.append(arr)
-                    v = numpy.array(lst, numpy.float32)
-                elif k == 'probs_occur':
-                    v = numpy.array([getattr(c, k, []) for c in ctxs])
-                else:
-                    v = numpy.array([getattr(c, k, numpy.nan) for c in ctxs])
-                ddic[mag][k] = v
-        return (pmap, ddic, self.calc_times, dict(totrups=self.totrups))
+            rupdata[mag] = self.dictarray(ctxs)
+        return (pmap, rupdata, self.calc_times, dict(totrups=self.totrups))
 
     def collapse_point_ruptures(self, rups, sites):
         """
@@ -774,10 +767,7 @@ class RuptureContext(BaseContext):
             for m, imt in enumerate(imts):
                 mean, [std] = gsim.get_mean_and_stddevs(self, self, new, imt,
                                                         [const.StdDev.TOTAL])
-                try:
-                    arr[0, :, m, g] = mean
-                except:
-                    import pdb; pdb.set_trace()
+                arr[0, :, m, g] = mean
                 arr[1, :, m, g] = std
                 if base.CoeffsTable.num_instances > num_tables:
                     raise RuntimeError('Instantiating CoeffsTable inside '
