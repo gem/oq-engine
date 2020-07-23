@@ -28,8 +28,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_array_nbytes, decompress)
+    AccumDict, DictArray, block_splitter, groupby, humansize, get_array_nbytes)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -149,6 +148,7 @@ def store_ctxs(dstore, rdt, dic):
     offset = len(rctx)
     nr = len(dic['mag'])
     rdata = numpy.zeros(nr, rdt)
+    rdata['nsites'] = [len(s) for s in dic['sids_']]
     rdata['idx'] = numpy.arange(offset, offset + nr)
     rdt_names = set(dic) & set(n[0] for n in rdt)
     for name in rdt_names:
@@ -245,7 +245,7 @@ class ClassicalCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         if self.few_sites:
-            self.rdt = []
+            self.rdt = [('nsites', U16)]
             dparams = ['sids_']
             for rparam in rparams:
                 if rparam.endswith('_'):

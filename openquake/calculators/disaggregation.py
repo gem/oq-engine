@@ -369,8 +369,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         U, G = 0, 0
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
-            nsids = numpy.array(
-                [len(sids) for sids in dstore['mag_%s/sids_' % mag]])
+            nsites = rctx['nsites']
             for gidx, gids in enumerate(grp_ids):
                 idxs, = numpy.where(rctx['gidx'] == gidx)
                 if len(idxs) == 0:
@@ -387,7 +386,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 nsplits = numpy.ceil(len(idxs) / maxweight)
                 for idx in numpy.array_split(idxs, nsplits):
                     nr = len(idx)
-                    U = max(U, nsids[idx].sum())
+                    U = max(U, nsites[idx].sum())
                     allargs.append((dstore, rctx[idx], cmaker, self.iml4,
                                     trti, mag, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
