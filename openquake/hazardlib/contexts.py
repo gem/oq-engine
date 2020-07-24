@@ -729,6 +729,21 @@ class RuptureContext(BaseContext):
         'hypo_depth', 'width', 'hypo_loc')
     temporal_occurrence_model = None  # to be set
 
+    @classmethod
+    def full(cls, rup, sites, dctx=None):
+        """
+        :returns: a full context with all the relevant attributes
+        """
+        self = cls()
+        for par, val in vars(rup).items():
+            setattr(self, par, val)
+        for par in sites.array.dtype.names:
+            setattr(self, par, sites[par])
+        if dctx:
+            for par, val in vars(dctx).items():
+                setattr(self, par, val)
+        return self
+
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
             setattr(self, param, value)
