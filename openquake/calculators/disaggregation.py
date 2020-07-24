@@ -244,7 +244,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         poes = []
         for z, rlz in enumerate(rlzs):
             pmap = self.pgetter.get(rlz)
-            if z == 0:
+            if z == 0 and sid in pmap:
                 self.curves.append(pmap[sid].array[:, 0])
             poes.append(pmap[sid].convert(self.oqparam.imtls)
                         if sid in pmap else None)
