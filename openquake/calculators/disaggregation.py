@@ -242,8 +242,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         :returns: a list of Z arrays of PoEs
         """
         poes = []
-        for rlz in rlzs:
+        for z, rlz in enumerate(rlzs):
             pmap = self.pgetter.get(rlz)
+            if z == 0:
+                self.curves.append(pmap[sid].array[:, 0])
             poes.append(pmap[sid].convert(self.oqparam.imtls)
                         if sid in pmap else None)
         return poes
@@ -318,6 +320,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         assert Z <= self.R, (Z, self.R)
         self.Z = Z
         self.rlzs = rlzs
+        self.curves = []
 
         if oq.iml_disagg:
             # no hazard curves are needed
@@ -360,6 +363,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         allargs = []
         totrups = sum(len(dset['rctx']) for name, dset in dstore.items()
                       if name.startswith('mag_'))  # total number of ruptures
+        logging.info('There are %d ruptures', totrups)
         grp_ids = dstore['grp_ids'][:]
         maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
                         oq.ruptures_per_block * 14)  # at maximum 7000
@@ -498,6 +502,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         out = output_dict(self.shapedic, outputs)
         count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
+        vcurves = []  # hazard curves with a vertical section for large poes
         for (s, m, k), mat6 in sorted(results.items()):
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
@@ -513,6 +518,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     logging.warning(
                         'Site #%d, IMT=%s: poe_agg=%s is quite different from '
                         'the expected poe=%s', s, imt, poe_agg, poe)
+                    vcurves.append(self.curves[s])
                     count[s] += 1
                 mat4 = agg_probs(*mat5)  # shape (Ma D E Z) or (Ma Lo La Z)
                 for key in outputs:
@@ -537,3 +543,5 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore['disagg'] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
+        self.datastore['_vcurves'] = numpy.array(vcurves)
+        self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
