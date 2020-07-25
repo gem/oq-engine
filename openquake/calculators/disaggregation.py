@@ -30,7 +30,7 @@ from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import read_ctxs, RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import util
 from openquake.calculators import getters
@@ -87,32 +87,6 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
-def _prepare_ctxs(dstore, rctx, magstr, cmaker):
-    dstore.open('r')
-    sitecol = dstore['sitecol']
-    # in h5py 2.10 I could write d[rctx['idx']] directly
-    grp = {n: d[:][rctx['idx']] for n, d in dstore['mag_%s' % magstr].items()
-           if n.endswith('_')}
-    ctxs = []
-    for u, rec in enumerate(rctx):
-        ctx = RuptureContext()
-        for par in rctx.dtype.names:
-            setattr(ctx, par, rec[par])
-        for par in grp:
-            setattr(ctx, par[:-1], grp[par][u])
-        for par in cmaker.REQUIRES_SITES_PARAMETERS:
-            setattr(ctx, par, sitecol[par][ctx.sids])
-        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
-        ctxs.append(ctx)
-    # sorting for debugging convenience
-    ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
-    close_ctxs = [[] for sid in sitecol.sids]
-    for ctx in ctxs:
-        for sid in ctx.idx:
-            close_ctxs[sid].append(ctx)
-    return ctxs, close_ctxs
-
-
 def output(mat6):
     """
     :param mat6: a 6D matrix with axis (D, Lo, La, E, P, Z)
@@ -121,8 +95,7 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, rctx, cmaker, iml4, trti, magstr, bin_edges, oq,
-                   monitor):
+def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -148,9 +121,10 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, magstr, bin_edges, oq,
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
     with monitor('reading rupdata', measuremem=True):
-        ctxs, close_ctxs = _prepare_ctxs(dstore, rctx, magstr, cmaker)
+        dstore.open('r')
+        ctxs, close_ctxs = read_ctxs(dstore, rctx)
 
-    magi = numpy.searchsorted(bin_edges[0], float(magstr)) - 1
+    magi = numpy.searchsorted(bin_edges[0], rctx[0]['mag']) - 1
     if magi == -1:  # when the magnitude is on the edge
         magi = 0
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -392,7 +366,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     nr = len(idx)
                     U = max(U, nsites[idx].sum())
                     allargs.append((dstore, rctx[idx], cmaker, self.iml4,
-                                    trti, mag, self.bin_edges, oq))
+                                    trti, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
 
         nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U))

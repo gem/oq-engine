@@ -32,7 +32,9 @@ from openquake.baselib.general import (
     AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import const, imt as imt_module
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim import base
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -92,6 +94,60 @@ def get_num_distances(gsims):
     for gsim in gsims:
         dists.update(gsim.REQUIRES_DISTANCES)
     return len(dists)
+
+
+def make_pmap(ctxs, gsims, imtls, trunclevel, investigation_time):
+    RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
+    # easy case of independent ruptures, useful for debugging
+    imts = [from_string(im) for im in imtls]
+    loglevels = DictArray(imtls)
+    for imt, imls in imtls.items():
+        if imt != 'MMI':
+            loglevels[imt] = numpy.log(imls)
+    pmap = ProbabilityMap(len(loglevels.array), len(gsims))
+    for ctx in ctxs:
+        mean_std = ctx.get_mean_std(imts, gsims)  # shape (2, N, M, G)
+        poes = base.get_poes(mean_std, loglevels, trunclevel, gsims,
+                             None, ctx.mag, None, ctx.rrup)  # (N, L, G)
+        pnes = ctx.get_probability_no_exceedance(poes)
+        for sid, pne in zip(ctx.sids, pnes):
+            pmap.setdefault(sid, 1.).array *= pne
+    return ~pmap
+
+
+def read_ctxs(dstore, rctx_or_magstr, gidx=0):
+    """
+    Use it as `read_ctxs(dstore, 'mag_5.50')`.
+    """
+    sitecol = dstore['sitecol']
+    if isinstance(rctx_or_magstr, str):
+        rctx = dstore[rctx_or_magstr]['rctx'][:]
+        rctx = rctx[rctx['gidx'] == gidx]
+    else:
+        # in disaggregation
+        rctx = rctx_or_magstr
+    magstr = 'mag_%.2f' % rctx[0]['mag']
+    # in h5py 2.10 I could write d[rctx['idx']] directly
+    grp = {n: d[:][rctx['idx']] for n, d in dstore[magstr].items()
+           if n.endswith('_')}
+    ctxs = []
+    for u, rec in enumerate(rctx):
+        ctx = RuptureContext()
+        for par in rctx.dtype.names:
+            setattr(ctx, par, rec[par])
+        for par in grp:
+            setattr(ctx, par[:-1], grp[par][u])
+        for par in sitecol.array.dtype.names:
+            setattr(ctx, par, sitecol[par][ctx.sids])
+        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
+        ctxs.append(ctx)
+    # sorting for debugging convenience
+    ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
+    close_ctxs = [[] for sid in sitecol.sids]
+    for ctx in ctxs:
+        for sid in ctx.idx:
+            close_ctxs[sid].append(ctx)
+    return ctxs, close_ctxs
 
 
 class ContextMaker(object):
