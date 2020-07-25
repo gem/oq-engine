@@ -153,11 +153,12 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     for (m, p, z), iml in numpy.ndenumerate(iml3):
-        g = g_by_z[z]
-        lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
-        idxs = numpy.searchsorted(epsilons, lvls)
-        poes[:, :, m, p, z] = _disagg_eps(
-            truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+        g, o = g_by_z[z]
+        if o:
+            lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
+            idxs = numpy.searchsorted(epsilons, lvls)
+            poes[:, :, m, p, z] = _disagg_eps(
+                truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     for u, ctx in enumerate(ctxs):
         pnes[u] *= ctx.get_probability_no_exceedance(poes[u])  # this is slow
     bindata = BinData(dists, lons, lats, pnes)
