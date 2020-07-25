@@ -113,6 +113,39 @@ def _make_pmap(ctxs, imtls, gsims, trunclevel):
     return ~pmap
 
 
+def read_ctxs(dstore, rctx_or_magstr):
+    """
+    Use it as `read_ctxs(dstore, 'mag_5.50')`.
+    """
+    sitecol = dstore['sitecol']
+    if isinstance(rctx_or_magstr, str):
+        rctx = dstore[rctx_or_magstr]['rctx'][:]
+    else:
+        rctx = rctx_or_magstr
+    magstr = 'mag_%.2f' % rctx[0]['mag']
+    # in h5py 2.10 I could write d[rctx['idx']] directly
+    grp = {n: d[:][rctx['idx']] for n, d in dstore[magstr].items()
+           if n.endswith('_')}
+    ctxs = []
+    for u, rec in enumerate(rctx):
+        ctx = RuptureContext()
+        for par in rctx.dtype.names:
+            setattr(ctx, par, rec[par])
+        for par in grp:
+            setattr(ctx, par[:-1], grp[par][u])
+        for par in sitecol.array.dtype.names:
+            setattr(ctx, par, sitecol[par][ctx.sids])
+        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
+        ctxs.append(ctx)
+    # sorting for debugging convenience
+    ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
+    close_ctxs = [[] for sid in sitecol.sids]
+    for ctx in ctxs:
+        for sid in ctx.idx:
+            close_ctxs[sid].append(ctx)
+    return ctxs, close_ctxs
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
