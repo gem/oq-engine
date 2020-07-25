@@ -21,7 +21,7 @@ import numpy
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, RuptureContext, _collapse, _make_pmap)
+    Effect, RuptureContext, _collapse, make_pmap)
 from openquake.hazardlib import valid
 
 aac = numpy.testing.assert_allclose
@@ -103,5 +103,5 @@ class CollapseTestCase(unittest.TestCase):
             ctx.rrup = numpy.array([100.])
             ctx.rjb = numpy.array([99.])
             ctxs.append(ctx)
-        pmap = _make_pmap(ctxs, gsims, imtls, trunclevel, 50.)
+        pmap = make_pmap(ctxs, gsims, imtls, trunclevel, 50.)
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
