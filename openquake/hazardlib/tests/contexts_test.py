@@ -103,5 +103,5 @@ class CollapseTestCase(unittest.TestCase):
             ctx.rrup = numpy.array([100.])
             ctx.rjb = numpy.array([99.])
             ctxs.append(ctx)
-        pmap = _make_pmap(ctxs, imtls, gsims, trunclevel)
+        pmap = _make_pmap(ctxs, gsims, imtls, trunclevel, 50.)
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)

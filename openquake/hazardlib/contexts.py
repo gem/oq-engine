@@ -34,6 +34,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import const, imt as imt_module
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim import base
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -95,14 +96,15 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def _make_pmap(ctxs, imtls, gsims, trunclevel):
+def make_pmap(ctxs, gsims, imtls, trunclevel, investigation_time):
+    RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
     # easy case of independent ruptures, useful for debugging
     imts = [from_string(im) for im in imtls]
     loglevels = DictArray(imtls)
     for imt, imls in imtls.items():
         if imt != 'MMI':
             loglevels[imt] = numpy.log(imls)
-    pmap = ProbabilityMap(len(imtls.array), len(gsims))
+    pmap = ProbabilityMap(len(loglevels.array), len(gsims))
     for ctx in ctxs:
         mean_std = ctx.get_mean_std(imts, gsims)  # shape (2, N, M, G)
         poes = base.get_poes(mean_std, loglevels, trunclevel, gsims,
@@ -113,14 +115,16 @@ def _make_pmap(ctxs, imtls, gsims, trunclevel):
     return ~pmap
 
 
-def read_ctxs(dstore, rctx_or_magstr):
+def read_ctxs(dstore, rctx_or_magstr, gidx=0):
     """
     Use it as `read_ctxs(dstore, 'mag_5.50')`.
     """
     sitecol = dstore['sitecol']
     if isinstance(rctx_or_magstr, str):
         rctx = dstore[rctx_or_magstr]['rctx'][:]
+        rctx = rctx[rctx['gidx'] == gidx]
     else:
+        # in disaggregation
         rctx = rctx_or_magstr
     magstr = 'mag_%.2f' % rctx[0]['mag']
     # in h5py 2.10 I could write d[rctx['idx']] directly
