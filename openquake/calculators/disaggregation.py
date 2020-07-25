@@ -498,8 +498,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             a dict s, m, k -> 6D-matrix of shape (T, Ma, Lo, La, P, Z) or
             (T, Ma, D, E, P, Z) depending if k is 0 or k is 1
         """
-        outputs = self.oqparam.disagg_outputs
-        out = output_dict(self.shapedic, outputs)
+        oq = self.oqparam
+        out = output_dict(self.shapedic, oq.disagg_outputs)
         count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         vcurves = []  # hazard curves with a vertical section for large poes
@@ -521,7 +521,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     vcurves.append(self.curves[s])
                     count[s] += 1
                 mat4 = agg_probs(*mat5)  # shape (Ma D E Z) or (Ma Lo La Z)
-                for key in outputs:
+                for key in oq.disagg_outputs:
                     if key == 'Mag' and k == 0:
                         out[key][s, m, p, :] = pprod(mat4, axis=(1, 2))
                     elif key == 'Dist' and k == 0:
@@ -543,5 +543,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore['disagg'] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
-        self.datastore['_vcurves'] = numpy.array(vcurves)
-        self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
+        if len(vcurves):
+            NML1 = len(vcurves), self.M, len(oq.imtls.array) // self.M
+            self.datastore['_vcurves'] = numpy.array(vcurves).reshape(NML1)
+            self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
