@@ -96,12 +96,12 @@ class CollapseTestCase(unittest.TestCase):
         for occ_rate in (.001, .002):
             ctx = RuptureContext()
             ctx.mag = 5.5
+            ctx.rake = 90
             ctx.occurrence_rate = occ_rate
             ctx.sids = numpy.array([0.])
             ctx.vs30 = numpy.array([760.])
-            ctx.rake = numpy.array([90.])
             ctx.rrup = numpy.array([100.])
             ctx.rjb = numpy.array([99.])
             ctxs.append(ctx)
         pmap = _make_pmap(ctxs, imtls, gsims, trunclevel)
-        numpy.testing.assert_almost_equal(pmap[0].array, [[0.066381]])
+        numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)
