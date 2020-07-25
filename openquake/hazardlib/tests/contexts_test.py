@@ -18,8 +18,11 @@
 
 import unittest
 import numpy
+from openquake.baselib.general import DictArray
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.contexts import Effect, RuptureContext, _collapse
+from openquake.hazardlib.contexts import (
+    Effect, RuptureContext, _collapse, _make_pmap)
+from openquake.hazardlib import valid
 
 aac = numpy.testing.assert_allclose
 dists = numpy.array([0, 10, 20, 30, 40, 50])
@@ -49,9 +52,11 @@ def compose(ctxs, poe):
 
 
 class CollapseTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        RuptureContext.temporal_occurrence_model = PoissonTOM(50.)
 
     def test_param(self):
-        RuptureContext.temporal_occurrence_model = PoissonTOM(50.)
         ctxs = [RuptureContext([('occurrence_rate', .001)]),
                 RuptureContext([('occurrence_rate', .002)])]
         for poe in (.1, .5, .9):
@@ -72,7 +77,6 @@ class CollapseTestCase(unittest.TestCase):
             aac(c1, c2)  # the same
 
     def test_mixed(self):
-        RuptureContext.temporal_occurrence_model = PoissonTOM(50.)
         ctxs = [RuptureContext([('occurrence_rate', .001)]),
                 RuptureContext([('occurrence_rate', .002)]),
                 RuptureContext([('occurrence_rate', numpy.nan),
@@ -83,3 +87,21 @@ class CollapseTestCase(unittest.TestCase):
             c1, pnes1 = compose(ctxs, poe)
             c2, pnes2 = compose(_collapse(ctxs), poe)
             aac(c1, c2)  # the same
+
+    def test_make_pmap(self):
+        trunclevel = 3
+        imtls = DictArray({'PGA': [0.01]})
+        gsims = [valid.gsim('AkkarBommer2010')]
+        ctxs = []
+        for occ_rate in (.001, .002):
+            ctx = RuptureContext()
+            ctx.mag = 5.5
+            ctx.occurrence_rate = occ_rate
+            ctx.sids = numpy.array([0.])
+            ctx.vs30 = numpy.array([760.])
+            ctx.rake = numpy.array([90.])
+            ctx.rrup = numpy.array([100.])
+            ctx.rjb = numpy.array([99.])
+            ctxs.append(ctx)
+        pmap = _make_pmap(ctxs, imtls, gsims, trunclevel)
+        numpy.testing.assert_almost_equal(pmap[0].array, [[0.066381]])

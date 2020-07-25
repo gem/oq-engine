@@ -32,6 +32,7 @@ from openquake.baselib.general import (
     AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import const, imt as imt_module
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim import base
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -92,6 +93,24 @@ def get_num_distances(gsims):
     for gsim in gsims:
         dists.update(gsim.REQUIRES_DISTANCES)
     return len(dists)
+
+
+def _make_pmap(ctxs, imtls, gsims, trunclevel):
+    # easy case of independent ruptures, useful for debugging
+    imts = [from_string(im) for im in imtls]
+    loglevels = DictArray(imtls)
+    for imt, imls in imtls.items():
+        if imt != 'MMI':
+            loglevels[imt] = numpy.log(imls)
+    pmap = ProbabilityMap(len(imtls.array), len(gsims))
+    for ctx in ctxs:
+        mean_std = ctx.get_mean_std(imts, gsims)  # shape (2, N, M, G)
+        poes = base.get_poes(mean_std, loglevels, trunclevel, gsims,
+                             None, ctx.mag, None, ctx.rrup)  # (N, L, G)
+        pnes = ctx.get_probability_no_exceedance(poes)
+        for sid, pne in zip(ctx.sids, pnes):
+            pmap.setdefault(sid, 1.).array *= pne
+    return ~pmap
 
 
 class ContextMaker(object):
