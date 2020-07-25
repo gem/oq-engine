@@ -136,7 +136,6 @@ def compute_hazard_maps(curves, imls, poes):
                 val = numpy.exp(
                     numpy.interp(
                         numpy.log(poe), numpy.log(curve_cutoff), imls))
-                print('========', val)
                 hmap_val.append(val)
 
         result.append(hmap_val)
