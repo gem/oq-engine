@@ -143,7 +143,7 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
     imts = [from_string(im) for im in oq.imtls]
     with ms_mon:
         # compute mean and std for a single IMT to save memory
-        # the size is N * U * G * 8 bytes
+        # the size is N * U * G * 16 bytes
         disagg.set_mean_std(ctxs, imts, cmaker.gsims)
 
     # disaggregate by site, IMT
@@ -331,6 +331,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         Submit disaggregation tasks and return the results
         """
+        logging.info('Reading ruptures')
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
@@ -344,7 +345,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         grp_ids = dstore['grp_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
-        maxw = 1024**3 / (8 * G * self.M)  # at max 1 GB
+        maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
             numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
@@ -367,14 +368,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'collapse_level': oq.collapse_level,
                      'imtls': oq.imtls})
                 for blk in block_splitter(rctx[idxs], maxweight, nsites):
-                    arr = numpy.array(blk)
-                    nr = len(arr)
+                    nr = len(blk)
                     U = max(U, blk.weight)
-                    allargs.append((dstore, arr, cmaker, self.iml4,
-                                    trti, self.bin_edges, oq))
+                    allargs.append((dstore, numpy.array(blk), cmaker,
+                                    self.iml4, trti, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
         logging.info('There are {:_d} ruptures'.format(totrups))
-        nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U))
+        nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
         s = self.shapedic
