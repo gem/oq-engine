@@ -22,6 +22,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib.probability_map import combine
+from openquake.hazardlib.contexts import read_ctxs
 from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.export import export
@@ -29,7 +30,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_master)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -167,6 +168,18 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
 
         check_disagg_by_src(self.calc.datastore)
+
+    def test_case_7(self):
+        # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
+        self.run_calc(case_7.__file__, 'job.ini')
+        ctxs0 = read_ctxs(self.calc.datastore, 'mag_7.70', gidx=0)[0]
+        ctxs1 = read_ctxs(self.calc.datastore, 'mag_7.70', gidx=1)[0]
+        self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
+        self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
+        # checking that the wrong realization is indeed discarded
+        pd = self.calc.datastore['performance_data'][:]
+        pd = pd[pd['operation'] == b'disaggregate']
+        self.assertEqual(pd['counts'], 1)  # because g_by_z is empty
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree

@@ -147,6 +147,7 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
     # disaggregate by site, IMT
     for s, iml3 in enumerate(iml4):
         if not g_by_z[s] or not close_ctxs[s]:
+            # g_by_z[s] is empty in test case_7
             continue
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],

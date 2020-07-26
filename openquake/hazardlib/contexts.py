@@ -118,6 +118,7 @@ def make_pmap(ctxs, gsims, imtls, trunclevel, investigation_time):
 def read_ctxs(dstore, rctx_or_magstr, gidx=0, req_site_params=None):
     """
     Use it as `read_ctxs(dstore, 'mag_5.50')`.
+    :returns: a pair (contexts, [contexts close to site for each site])
     """
     sitecol = dstore['sitecol']
     site_params = {par: sitecol[par]
