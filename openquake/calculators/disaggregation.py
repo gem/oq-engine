@@ -120,7 +120,7 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
     """
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
-    with monitor('reading rupdata', measuremem=True):
+    with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs, close_ctxs = read_ctxs(
             dstore, rctx, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
