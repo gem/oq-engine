@@ -20,11 +20,12 @@
 Disaggregation calculator core functionality
 """
 import logging
+import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, get_array_nbytes, humansize, pprod, agg_probs)
+    AccumDict, get_array_nbytes, humansize, pprod, agg_probs, block_splitter)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -46,6 +47,7 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+nsites = operator.itemgetter('nsites')
 
 
 def _check_curves(sid, rlzs, curves, imtls, poes_disagg):
@@ -351,7 +353,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         totrups = 0
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
-            nsites = rctx['nsites']
             totrups += len(rctx)
             for gidx, gids in enumerate(grp_ids):
                 idxs, = numpy.where(rctx['gidx'] == gidx)
@@ -365,14 +366,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'maximum_distance': oq.maximum_distance,
                      'collapse_level': oq.collapse_level,
                      'imtls': oq.imtls})
-                nsplits = numpy.ceil(rctx[idxs]['nsites'].sum() / maxweight)
-                for idx in numpy.array_split(idxs, nsplits):
-                    nr = len(idx)
-                    U = max(U, nsites[idx].sum())
-                    allargs.append((dstore, rctx[idx], cmaker, self.iml4,
+                for blk in block_splitter(rctx[idxs], maxweight, nsites):
+                    arr = numpy.array(blk)
+                    nr = len(arr)
+                    U = max(U, blk.weight)
+                    allargs.append((dstore, arr, cmaker, self.iml4,
                                     trti, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
-
         logging.info('There are {:_d} ruptures'.format(totrups))
         nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
