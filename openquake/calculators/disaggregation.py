@@ -337,16 +337,17 @@ class DisaggregationCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         allargs = []
-        totrups = sum(len(dset['rctx']) for name, dset in dstore.items()
-                      if name.startswith('mag_'))  # total number of ruptures
-        logging.info('There are {:_d} ruptures'.format(totrups))
+        totweight = sum(d['rctx']['nsites'].sum() for n, d in dstore.items()
+                        if n.startswith('mag_'))  # total number of ruptures
         grp_ids = dstore['grp_ids'][:]
-        maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
-                        oq.ruptures_per_block * 14)  # at maximum 7000
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
+        G = max(len(rbg) for rbg in rlzs_by_gsim)
+        maxw = 2 * 1024**3 / (8 * G * self.M)  # at max 2 GB
+        maxweight = min(
+            numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
-        U, G = 0, 0
+        U = 0
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
             nsites = rctx['nsites']
@@ -362,7 +363,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'maximum_distance': oq.maximum_distance,
                      'collapse_level': oq.collapse_level,
                      'imtls': oq.imtls})
-                G = max(G, len(cmaker.gsims))
                 nsplits = numpy.ceil(len(idxs) / maxweight)
                 for idx in numpy.array_split(idxs, nsplits):
                     nr = len(idx)
