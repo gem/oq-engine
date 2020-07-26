@@ -342,7 +342,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         grp_ids = dstore['grp_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
-        maxw = 2 * 1024**3 / (8 * G * self.M)  # at max 2 GB
+        maxw = 1024**3 / (8 * G * self.M)  # at max 1 GB
         maxweight = min(
             numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
