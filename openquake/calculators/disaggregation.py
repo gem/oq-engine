@@ -131,11 +131,11 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = iml4.shape
-    g_by_z = numpy.zeros((N, Z, 2), numpy.uint8)
+    g_by_z = AccumDict(accum={})  # dict s -> z -> g
     for g, rlzs in enumerate(cmaker.gsims.values()):
         for (s, z), r in numpy.ndenumerate(iml4.rlzs):
             if r in rlzs:
-                g_by_z[s, z] = [g, 1]
+                g_by_z[s][z] = g
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     res = {'trti': trti, 'magi': magi}
     imts = [from_string(im) for im in oq.imtls]
@@ -146,7 +146,7 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
 
     # disaggregate by site, IMT
     for s, iml3 in enumerate(iml4):
-        if not close_ctxs[s]:
+        if not g_by_z[s] or not close_ctxs[s]:
             continue
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
