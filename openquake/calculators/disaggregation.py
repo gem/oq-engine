@@ -348,9 +348,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
         U = 0
+        totrups = 0
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
             nsites = rctx['nsites']
+            totrups += len(rctx)
             for gidx, gids in enumerate(grp_ids):
                 idxs, = numpy.where(rctx['gidx'] == gidx)
                 if len(idxs) == 0:
@@ -363,7 +365,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'maximum_distance': oq.maximum_distance,
                      'collapse_level': oq.collapse_level,
                      'imtls': oq.imtls})
-                nsplits = numpy.ceil(len(idxs) / maxweight)
+                nsplits = numpy.ceil(rctx[idxs]['nsites'].sum() / maxweight)
                 for idx in numpy.array_split(idxs, nsplits):
                     nr = len(idx)
                     U = max(U, nsites[idx].sum())
@@ -371,6 +373,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                                     trti, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
 
+        logging.info('There are {:_d} ruptures'.format(totrups))
         nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
