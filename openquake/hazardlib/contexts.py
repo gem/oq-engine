@@ -25,6 +25,7 @@ import itertools
 import functools
 import collections
 import numpy
+import h5py
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
@@ -130,9 +131,15 @@ def read_ctxs(dstore, rctx_or_magstr, gidx=0, req_site_params=None):
         # in disaggregation
         rctx = rctx_or_magstr
     magstr = 'mag_%.2f' % rctx[0]['mag']
-    # in h5py 2.10 I could write d[rctx['idx']] directly
-    grp = {n: d[:][rctx['idx']] for n, d in dstore[magstr].items()
-           if n.endswith('_')}
+    if h5py.version.version_tuple >= (2, 10, 0):
+        # this version is spectacularly better in cluster1; for
+        # Colombia with 1.2M ruptures I measured a speedup of 8.5x
+        grp = {n: d[rctx['idx']] for n, d in dstore[magstr].items()
+               if n.endswith('_')}
+    else:
+        # for old h5py read the whole array and then filter on the indices
+        grp = {n: d[:][rctx['idx']] for n, d in dstore[magstr].items()
+               if n.endswith('_')}
     ctxs = []
     for u, rec in enumerate(rctx):
         ctx = RuptureContext()
