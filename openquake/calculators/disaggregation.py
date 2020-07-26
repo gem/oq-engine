@@ -120,9 +120,10 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
     """
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oq.investigation_time)
-    with monitor('reading rupdata', measuremem=True):
+    with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        ctxs, close_ctxs = read_ctxs(dstore, rctx)
+        ctxs, close_ctxs = read_ctxs(
+            dstore, rctx, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
 
     magi = numpy.searchsorted(bin_edges[0], rctx[0]['mag']) - 1
     if magi == -1:  # when the magnitude is on the edge
@@ -130,11 +131,11 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = iml4.shape
-    g_by_z = numpy.zeros((N, Z), numpy.uint8)
+    g_by_z = AccumDict(accum={})  # dict s -> z -> g
     for g, rlzs in enumerate(cmaker.gsims.values()):
         for (s, z), r in numpy.ndenumerate(iml4.rlzs):
             if r in rlzs:
-                g_by_z[s, z] = g
+                g_by_z[s][z] = g
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
     res = {'trti': trti, 'magi': magi}
     imts = [from_string(im) for im in oq.imtls]
@@ -145,7 +146,8 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
 
     # disaggregate by site, IMT
     for s, iml3 in enumerate(iml4):
-        if not close_ctxs[s]:
+        if not g_by_z[s] or not close_ctxs[s]:
+            # g_by_z[s] is empty in test case_7
             continue
         # dist_bins, lon_bins, lat_bins, eps_bins
         bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
@@ -337,7 +339,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         allargs = []
         totrups = sum(len(dset['rctx']) for name, dset in dstore.items()
                       if name.startswith('mag_'))  # total number of ruptures
-        logging.info('There are %d ruptures', totrups)
+        logging.info('There are {:_d} ruptures'.format(totrups))
         grp_ids = dstore['grp_ids'][:]
         maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
                         oq.ruptures_per_block * 14)  # at maximum 7000
@@ -491,7 +493,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                         and s in self.ok_sites):
                     logging.warning(
                         'Site #%d, IMT=%s: poe_agg=%s is quite different from '
-                        'the expected poe=%s', s, imt, poe_agg, poe)
+                        'the expected poe=%s, perhaps not enough levels',
+                        s, imt, poe_agg, poe)
                     vcurves.append(self.curves[s])
                     count[s] += 1
                 mat4 = agg_probs(*mat5)  # shape (Ma D E Z) or (Ma Lo La Z)

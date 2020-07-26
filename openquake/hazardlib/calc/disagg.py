@@ -153,7 +153,12 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     for (m, p, z), iml in numpy.ndenumerate(iml3):
-        g = g_by_z[z]
+        # discard the z contributions coming from wrong realizations: see
+        # the test disagg/case_2
+        try:
+            g = g_by_z[z]
+        except KeyError:
+            continue
         lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
         idxs = numpy.searchsorted(epsilons, lvls)
         poes[:, :, m, p, z] = _disagg_eps(
