@@ -339,7 +339,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         allargs = []
         totrups = sum(len(dset['rctx']) for name, dset in dstore.items()
                       if name.startswith('mag_'))  # total number of ruptures
-        logging.info('There are %d ruptures', totrups)
+        logging.info('There are {:_d} ruptures'.format(totrups))
         grp_ids = dstore['grp_ids'][:]
         maxweight = min(int(numpy.ceil(totrups / (oq.concurrent_tasks or 1))),
                         oq.ruptures_per_block * 14)  # at maximum 7000
