@@ -115,11 +115,13 @@ def make_pmap(ctxs, gsims, imtls, trunclevel, investigation_time):
     return ~pmap
 
 
-def read_ctxs(dstore, rctx_or_magstr, gidx=0):
+def read_ctxs(dstore, rctx_or_magstr, gidx=0, req_site_params=None):
     """
     Use it as `read_ctxs(dstore, 'mag_5.50')`.
     """
     sitecol = dstore['sitecol']
+    site_params = {par: sitecol[par]
+                   for par in req_site_params or sitecol.array.dtype.names}
     if isinstance(rctx_or_magstr, str):
         rctx = dstore[rctx_or_magstr]['rctx'][:]
         rctx = rctx[rctx['gidx'] == gidx]
@@ -135,10 +137,10 @@ def read_ctxs(dstore, rctx_or_magstr, gidx=0):
         ctx = RuptureContext()
         for par in rctx.dtype.names:
             setattr(ctx, par, rec[par])
-        for par in grp:
-            setattr(ctx, par[:-1], grp[par][u])
-        for par in sitecol.array.dtype.names:
-            setattr(ctx, par, sitecol[par][ctx.sids])
+        for par, arr in grp.items():
+            setattr(ctx, par[:-1], arr[u])
+        for par, arr in site_params.items():
+            setattr(ctx, par, arr[ctx.sids])
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         ctxs.append(ctx)
     # sorting for debugging convenience
