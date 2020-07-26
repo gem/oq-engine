@@ -122,7 +122,8 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
         oq.investigation_time)
     with monitor('reading rupdata', measuremem=True):
         dstore.open('r')
-        ctxs, close_ctxs = read_ctxs(dstore, rctx)
+        ctxs, close_ctxs = read_ctxs(
+            dstore, rctx, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
 
     magi = numpy.searchsorted(bin_edges[0], rctx[0]['mag']) - 1
     if magi == -1:  # when the magnitude is on the edge
