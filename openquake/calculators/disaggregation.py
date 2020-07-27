@@ -33,7 +33,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.contexts import read_ctxs, RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.commonlib import util
+from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -83,9 +83,8 @@ def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
             if poes_disagg == (None,):
                 arr[s, m, 0, z] = imtls[imt]
             elif curve:
-                poes = curve[imt][::-1]
-                imls = imtls[imt][::-1]
-                arr[s, m, :, z] = numpy.interp(poes_disagg, poes, imls)
+                arr[s, m, :, z] = calc.compute_hazard_maps(
+                    curve[imt], imtls[imt], poes_disagg)
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
