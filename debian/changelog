@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * In the disaggregation calculation use the hazard maps to get the
-    disaggregation IML from the disaggregation PoE
+  * Used the hazard map to get the disaggregation IML from the disaggregation
+    PoE and added a warning for zero hazard
   * Internal: implemented multi-run functionality
   * Reduced tremendously the data transfer in disaggregation calculations
   * Internal: introduced compress/decompress utilities
