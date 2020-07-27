@@ -50,18 +50,6 @@ F32 = numpy.float32
 nsites = operator.itemgetter('nsites')
 
 
-def _check_curves(sid, rlzs, curves, imtls, poes_disagg):
-    # there may be sites where the sources are too small to produce
-    # an effect at the given poes_disagg
-    for rlz, curve in zip(rlzs, curves):
-        for imt in imtls:
-            max_poe = curve[imt].max()
-            for poe in poes_disagg:
-                if poe > max_poe:
-                    logging.warning(POE_TOO_BIG, sid, poe, max_poe, rlz, imt)
-                    return True
-
-
 def _matrix(matrices, num_trts, num_mag_bins):
     # convert a dict trti, magi -> matrix into a single matrix
     trti, magi = next(iter(matrices))
@@ -83,8 +71,18 @@ def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
             if poes_disagg == (None,):
                 arr[s, m, 0, z] = imtls[imt]
             elif curve:
+                rlz = rlzs[s, z]
+                max_poe = curve[imt].max()
                 arr[s, m, :, z] = calc.compute_hazard_maps(
                     curve[imt], imtls[imt], poes_disagg)
+                for iml, poe in zip(arr[s, m, :, z], poes_disagg):
+                    if iml == 0:
+                        logging.warning('Cannot disaggregate for site %d, %s, '
+                                        'poe=%s, rlz=%d: the hazard is zero',
+                                        s, imt, poe, rlz)
+                    elif poe > max_poe:
+                        logging.warning(
+                            POE_TOO_BIG, s, poe, max_poe, rlz, imt)
     return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
@@ -227,29 +225,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                         if sid in pmap else None)
         return poes
 
-    def check_poes_disagg(self, curves, rlzs):
-        """
-        Raise an error if the given poes_disagg are too small compared to
-        the hazard curves.
-        """
-        oq = self.oqparam
-        # there may be sites where the sources are too small to produce
-        # an effect at the given poes_disagg
-        ok_sites = []
-        for sid in self.sitecol.sids:
-            if all(curve is None for curve in curves[sid]):
-                ok_sites.append(sid)
-                continue
-            bad = _check_curves(sid, rlzs[sid], curves[sid],
-                                oq.imtls, oq.poes_disagg)
-            if not bad:
-                ok_sites.append(sid)
-        if len(ok_sites) == 0:
-            raise SystemExit('Cannot do any disaggregation')
-        elif len(ok_sites) < self.N:
-            logging.warning('Doing the disaggregation on %s', self.sitecol)
-        return ok_sites
-
     def full_disaggregation(self):
         """
         Run the disaggregation phase.
@@ -303,27 +278,20 @@ class DisaggregationCalculator(base.HazardCalculator):
             # no hazard curves are needed
             self.poe_id = {None: 0}
             curves = [[None for z in range(Z)] for s in range(self.N)]
-            self.ok_sites = set(self.sitecol.sids)
         else:
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs[sid])
                       for sid in self.sitecol.sids]
-            self.ok_sites = set(self.check_poes_disagg(curves, rlzs))
         self.hmap4 = _hmap4(rlzs, oq.iml_disagg, oq.imtls,
                             self.poes_disagg, curves)
+        if self.hmap4.array.sum() == 0:
+            raise SystemExit('Cannot do any disaggregation: zero hazard')
         self.datastore['hmap4'] = self.hmap4
         self.datastore['poe4'] = numpy.zeros_like(self.hmap4.array)
 
         self.save_bin_edges()
         tot = get_outputs_size(self.shapedic, oq.disagg_outputs)
         logging.info('Total output size: %s', humansize(sum(tot.values())))
-        self.imldic = {}  # sid, rlz, poe, imt -> iml
-        for s in self.sitecol.sids:
-            iml3 = self.hmap4[s]
-            for z, rlz in enumerate(rlzs[s]):
-                for p, poe in enumerate(self.poes_disagg):
-                    for m, imt in enumerate(oq.imtls):
-                        self.imldic[s, rlz, poe, imt] = iml3[m, p, z]
         return self.compute()
 
     def compute(self):
@@ -372,7 +340,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     allargs.append((dstore, numpy.array(blk), cmaker,
                                     self.hmap4, trti, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
-        logging.info('There are {:_d} ruptures'.format(totrups))
+        logging.info('Found {:_d} ruptures'.format(totrups))
         nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
@@ -492,7 +460,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 self.datastore['poe4'][s, m, p] = poe2  # shape Z
                 poe_agg = poe2.mean()
                 if (poe and abs(1 - poe_agg / poe) > .1 and not count[s]
-                        and s in self.ok_sites):
+                        and self.hmap4[s, m, p].any()):
                     logging.warning(
                         'Site #%d, IMT=%s: poe_agg=%s is quite different from '
                         'the expected poe=%s, perhaps not enough levels',
