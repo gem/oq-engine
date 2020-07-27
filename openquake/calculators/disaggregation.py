@@ -71,7 +71,7 @@ def _matrix(matrices, num_trts, num_mag_bins):
     return mat
 
 
-def _iml4(rlzs, iml_disagg, imtls, poes_disagg, curves):
+def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
     # an ArrayWrapper of shape (N, M, P, Z)
     N, Z = rlzs.shape
     P = len(poes_disagg)
@@ -96,7 +96,7 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
+def compute_disagg(dstore, rctx, cmaker, hmap4, trti, bin_edges, oq, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -106,7 +106,7 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
         an array of rupture parameters
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param iml4:
+    :param hmap4:
         an ArrayWrapper of shape (N, M, P, Z)
     :param trti:
         tectonic region type index
@@ -131,10 +131,10 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
         magi = 0
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
-    N, M, P, Z = iml4.shape
+    N, M, P, Z = hmap4.shape
     g_by_z = AccumDict(accum={})  # dict s -> z -> g
     for g, rlzs in enumerate(cmaker.gsims.values()):
-        for (s, z), r in numpy.ndenumerate(iml4.rlzs):
+        for (s, z), r in numpy.ndenumerate(hmap4.rlzs):
             if r in rlzs:
                 g_by_z[s][z] = g
     eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
@@ -146,7 +146,7 @@ def compute_disagg(dstore, rctx, cmaker, iml4, trti, bin_edges, oq, monitor):
         disagg.set_mean_std(ctxs, imts, cmaker.gsims)
 
     # disaggregate by site, IMT
-    for s, iml3 in enumerate(iml4):
+    for s, iml3 in enumerate(hmap4):
         if not g_by_z[s] or not close_ctxs[s]:
             # g_by_z[s] is empty in test case_7
             continue
@@ -309,17 +309,17 @@ class DisaggregationCalculator(base.HazardCalculator):
             curves = [self.get_curve(sid, rlzs[sid])
                       for sid in self.sitecol.sids]
             self.ok_sites = set(self.check_poes_disagg(curves, rlzs))
-        self.iml4 = _iml4(rlzs, oq.iml_disagg, oq.imtls,
-                          self.poes_disagg, curves)
-        self.datastore['iml4'] = self.iml4
-        self.datastore['poe4'] = numpy.zeros_like(self.iml4.array)
+        self.hmap4 = _hmap4(rlzs, oq.iml_disagg, oq.imtls,
+                            self.poes_disagg, curves)
+        self.datastore['hmap4'] = self.hmap4
+        self.datastore['poe4'] = numpy.zeros_like(self.hmap4.array)
 
         self.save_bin_edges()
         tot = get_outputs_size(self.shapedic, oq.disagg_outputs)
         logging.info('Total output size: %s', humansize(sum(tot.values())))
         self.imldic = {}  # sid, rlz, poe, imt -> iml
         for s in self.sitecol.sids:
-            iml3 = self.iml4[s]
+            iml3 = self.hmap4[s]
             for z, rlz in enumerate(rlzs[s]):
                 for p, poe in enumerate(self.poes_disagg):
                     for m, imt in enumerate(oq.imtls):
@@ -370,7 +370,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     nr = len(blk)
                     U = max(U, blk.weight)
                     allargs.append((dstore, numpy.array(blk), cmaker,
-                                    self.iml4, trti, self.bin_edges, oq))
+                                    self.hmap4, trti, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
         logging.info('There are {:_d} ruptures'.format(totrups))
         nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U, F=2))
