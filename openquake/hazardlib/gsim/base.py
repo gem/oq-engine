@@ -84,29 +84,6 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-def get_mean_std(sctx, rctx, dctx, imts, gsims):
-    """
-    :returns: an array of shape (2, N, M, G) with means and stddevs
-    """
-    N = len(sctx.sids)
-    M = len(imts)
-    G = len(gsims)
-    arr = numpy.zeros((2, N, M, G))
-    num_tables = CoeffsTable.num_instances
-    for g, gsim in enumerate(gsims):
-        d = dctx.roundup(gsim.minimum_distance)
-        for m, imt in enumerate(imts):
-            mean, [std] = gsim.get_mean_and_stddevs(sctx, rctx, d, imt,
-                                                    [const.StdDev.TOTAL])
-            arr[0, :, m, g] = mean
-            arr[1, :, m, g] = std
-            if CoeffsTable.num_instances > num_tables:
-                raise RuntimeError('Instantiating CoeffsTable inside '
-                                   '%s.get_mean_and_stddevs' %
-                                   gsim.__class__.__name__)
-    return arr
-
-
 def get_poes(mean_std, loglevels, truncation_level, gsims=(), af=None,
              mag=None, sitecode=None, rrup=None):
     """
