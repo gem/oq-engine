@@ -29,6 +29,7 @@ urlpatterns = [
     url(r'^(\d+)/datastore$', views.calc_datastore),
     url(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
     url(r'^(\d+)/results$', views.calc_results),
+    url(r'^(\d+)/hmap_(\d+)_(\d+)$', views.hmap_png),
     url(r'^(\d+)/traceback$', views.calc_traceback),
     url(r'^(\d+)/log/size$', views.calc_log_size),
     url(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log),

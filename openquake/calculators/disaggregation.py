@@ -308,7 +308,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         mags = sorted(mags)
         allargs = []
         totweight = sum(d['rctx']['nsites'].sum() for n, d in dstore.items()
-                        if n.startswith('mag_'))  # total number of ruptures
+                        if n.startswith('mag_') and len(d['rctx']))
         grp_ids = dstore['grp_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
