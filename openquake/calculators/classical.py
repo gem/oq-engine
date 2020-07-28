@@ -25,7 +25,10 @@ import logging
 import operator
 from datetime import datetime
 import numpy
-
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
@@ -601,6 +604,8 @@ class ClassicalCalculator(base.HazardCalculator):
             maxhaz = hmaps.max(axis=(0, 1, 3))
             mh = dict(zip(self.oqparam.imtls, maxhaz))
             logging.info('The maximum hazard map values are %s', mh)
+            if Image is None:  # missing PIL
+                return
             M, P = hmaps.shape[2:]
             logging.info('Saving %dx%d mean hazard maps', M, P)
             inv_time = oq.investigation_time
@@ -625,7 +630,6 @@ def make_hmap_png(hmap, lons, lats):
     :returns: an Image object containing the hazard map
     """
     import matplotlib.pyplot as plt
-    from PIL import Image
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.grid(True)
