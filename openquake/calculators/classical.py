@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import io
 import os
 import re
 import time
@@ -600,6 +601,41 @@ class ClassicalCalculator(base.HazardCalculator):
             maxhaz = hmaps.max(axis=(0, 1, 3))
             mh = dict(zip(self.oqparam.imtls, maxhaz))
             logging.info('The maximum hazard map values are %s', mh)
+            M, P = hmaps.shape[2:]
+            logging.info('Saving %dx%d mean hazard maps', M, P)
+            inv_time = oq.investigation_time
+            allargs = []
+            for m, imt in enumerate(self.oqparam.imtls):
+                for p, poe in enumerate(self.oqparam.poes):
+                    dic = dict(m=m, p=p, imt=imt, poe=poe, inv_time=inv_time,
+                               calc_id=self.datastore.calc_id,
+                               array=hmaps[:, 0, m, p])
+                    allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
+            smap = parallel.Starmap(make_hmap_png, allargs)
+            for dic in smap:
+                self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
+
+
+def make_hmap_png(hmap, lons, lats):
+    """
+    :param hmap:
+        a dictionary with keys calc_id, m, p, imt, poe, inv_time, array
+    :param lons: an array of longitudes
+    :param lats: an array of latitudes
+    :returns: an Image object containing the hazard map
+    """
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.grid(True)
+    ax.set_title('hmap for IMT=%(imt)s, poe=%(poe)s\ncalculation %(calc_id)d,'
+                 'inv_time=%(inv_time)dy' % hmap)
+    ax.set_ylabel('Longitude')
+    ax.scatter(lons, lats, c=hmap['array'], cmap='jet')
+    bio = io.BytesIO()
+    plt.savefig(bio, format='png')
+    return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
 
 
 @base.calculators.add('preclassical')
