@@ -79,8 +79,8 @@ EPSILON = 1E-30
 
 def compute_hazard_maps(curves, imls, poes):
     """
-    Given a set of hazard curve poes, interpolate a hazard map at the specified
-    ``poe``.
+    Given a set of hazard curve poes, interpolate hazard maps at the specified
+    ``poes``.
 
     :param curves:
         2D array of floats. Each row represents a curve, where the values
@@ -96,50 +96,44 @@ def compute_hazard_maps(curves, imls, poes):
         An array of shape N x P, where N is the number of curves and P the
         number of poes.
     """
-    poes = numpy.array(poes)
-
-    if len(poes.shape) == 0:
+    log_poes = numpy.log(poes)
+    if len(log_poes.shape) == 0:
         # `poes` was passed in as a scalar;
         # convert it to 1D array of 1 element
-        poes = poes.reshape(1)
+        log_poes = log_poes.reshape(1)
+    P = len(log_poes)
 
     if len(curves.shape) == 1:
         # `curves` was passed as 1 dimensional array, there is a single site
         curves = curves.reshape((1,) + curves.shape)  # 1 x L
 
-    L = curves.shape[1]  # number of levels
+    N, L = curves.shape  # number of levels
     if L != len(imls):
         raise ValueError('The curves have %d levels, %d were passed' %
                          (L, len(imls)))
-    result = []
+
+    hmap = numpy.zeros((N, P))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        # avoid RuntimeWarning: divide by zero encountered in log
-        # happening in the classical_tiling tests
+        # avoid RuntimeWarning: divide by zero for zero levels
         imls = numpy.log(numpy.array(imls[::-1]))
-    for curve in curves:
+    for n, curve in enumerate(curves):
         # the hazard curve, having replaced the too small poes with EPSILON
-        curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
-        hmap_val = []
-        for poe in poes:
-            # special case when the interpolation poe is bigger than the
-            # maximum, i.e the iml must be smaller than the minumum
-            if poe > curve_cutoff[-1]:  # the greatest poes in the curve
+        log_cutoff = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
+        for p, log_poe in enumerate(log_poes):
+            if log_poe > log_cutoff[-1]:
+                # special case when the interpolation poe is bigger than the
+                # maximum, i.e the iml must be smaller than the minumum
                 # extrapolate the iml to zero as per
                 # https://bugs.launchpad.net/oq-engine/+bug/1292093
                 # a consequence is that if all poes are zero any poe > 0
                 # is big and the hmap goes automatically to zero
-                hmap_val.append(0)
+                pass
             else:
                 # exp-log interpolation, to reduce numerical errors
                 # see https://bugs.launchpad.net/oq-engine/+bug/1252770
-                val = numpy.exp(
-                    numpy.interp(
-                        numpy.log(poe), numpy.log(curve_cutoff), imls))
-                hmap_val.append(val)
-
-        result.append(hmap_val)
-    return numpy.array(result)
+                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_cutoff, imls))
+    return hmap
 
 
 # #########################  GMF->curves #################################### #

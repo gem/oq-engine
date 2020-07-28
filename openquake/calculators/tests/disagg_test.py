@@ -117,7 +117,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # a case with poes_disagg too large
         with self.assertRaises(SystemExit) as ctx:
             self.run_calc(case_3.__file__, 'job.ini')
-        self.assertEqual(str(ctx.exception), 'Cannot do any disaggregation')
+        self.assertEqual(str(ctx.exception),
+                         'Cannot do any disaggregation: zero hazard')
 
     def test_case_4(self):
         # this is case with number of lon/lat bins different for site 0/site 1
@@ -181,6 +182,10 @@ class DisaggregationTestCase(CalculatorTestCase):
         pd = pd[pd['operation'] == b'disaggregate']
         self.assertEqual(pd['counts'], 1)  # because g_by_z is empty
 
+        haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
+        self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
+        self.assertEqual(haz[1], 0.18757115242025785)
+        
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')

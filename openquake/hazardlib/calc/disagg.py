@@ -135,6 +135,7 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     # switch to logarithmic intensities
     iml3 = numpy.zeros((M, P, Z))
     for m, (imt, iml2) in enumerate(iml2dict.items()):
+        # 0 values are converted into -inf
         iml3[m] = to_distribution_values(iml2, imt)
 
     truncnorm, epsilons, eps_bands = eps3
@@ -153,6 +154,8 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     for (m, p, z), iml in numpy.ndenumerate(iml3):
+        if iml == -numpy.inf:  # zero hazard
+            continue
         # discard the z contributions coming from wrong realizations: see
         # the test disagg/case_2
         try:

@@ -680,7 +680,7 @@ def view_mean_disagg(token, dstore):
     Display mean quantities for the disaggregation. Useful for checking
     differences between two calculations.
     """
-    N, M, P, Z = dstore['iml4'].shape
+    N, M, P, Z = dstore['hmap4'].shape
     tbl = []
     kd = {key: dset[:] for key, dset in sorted(dstore['disagg'].items())}
     oq = dstore['oqparam']
