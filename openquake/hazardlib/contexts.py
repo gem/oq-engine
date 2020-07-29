@@ -1020,7 +1020,7 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
                 oq.maximum_distance.ddic[trt] = eff.dist_by_mag(minint)
             # build a dict trt -> mag -> dst
             if psd and set(psd[trt].values()) == {-1}:
-                maxdist = oq.maximum_distance[trt]
+                maxdist = oq.maximum_distance(trt)
                 psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
     return aw
 
