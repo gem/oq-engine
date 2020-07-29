@@ -486,6 +486,9 @@ class HazardCalculator(BaseCalculator):
                 if len(sids) == 0:
                     raise RuntimeError('All sources were discarded!?')
                 self.full_lt = csm.full_lt
+                if self.amplifier:
+                    self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
+                                         self.csm.full_lt.gsim_lt.values)
         self.init()  # do this at the end of pre-execute
 
         if (not oq.hazard_calculation_id
@@ -810,7 +813,6 @@ class HazardCalculator(BaseCalculator):
             df = readinput.get_amplification(oq)
             check_amplification(df, self.sitecol)
             self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
-            self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
             if oq.amplification_method == 'kernel':
                 # TODO: need to add additional checks on the main calculation
                 # methodology since the kernel method is currently tested only

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
   * Displaying the hazard maps in the WebUI for debugging purposes
   * Used the hazard map to get the disaggregation IML from the disaggregation
     PoE and added a warning for zero hazard
