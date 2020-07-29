@@ -22,7 +22,6 @@ import sys
 import time
 import logging
 import operator
-import collections.abc
 from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree, distance
@@ -152,12 +151,12 @@ class MagDepDistance(dict):
         self.ddic = ddic
 
     def __call__(self, trt, mag=None):
-        if mag is None or not hasattr(self, 'ddic'):
+        if not self:
+            return MAX_DISTANCE
+        elif mag is None or not hasattr(self, 'ddic'):
             return getdefault(self, trt)[-1][1]
         elif mag and trt in self.ddic:
             return self.ddic[trt]['%.2f' % mag]
-        else:
-            return MAX_DISTANCE
 
     def max(self):
         """

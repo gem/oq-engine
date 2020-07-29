@@ -350,13 +350,14 @@ class ClassicalCalculator(base.HazardCalculator):
         imts_with_period = [imt for imt in oq.imtls
                             if imt == 'PGA' or imt.startswith('SA')]
         imts_ok = len(imts_with_period) == len(oq.imtls)
-        if (imts_ok and psd and psd.suggested() or
-                (imts_ok and oq.minimum_intensity)):
+        if (imts_ok and psd and psd.suggested()) or (
+                imts_ok and oq.minimum_intensity):
             aw = get_effect(mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
-            dic = {trt: [(float(mag), int(dst))
-                         for mag, dst in psd[trt].items()]
-                   for trt in psd if trt != 'default'}
-            logging.info('pointsource_distance=\n%s', pprint.pformat(dic))
+            if psd:
+                dic = {trt: [(float(mag), int(dst))
+                             for mag, dst in psd.ddic[trt].items()]
+                       for trt in psd.ddic if trt != 'default'}
+                logging.info('pointsource_distance=\n%s', pprint.pformat(dic))
             if len(vars(aw)) > 1:  # more than _extra
                 self.datastore['effect_by_mag_dst'] = aw
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
