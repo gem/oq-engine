@@ -21,7 +21,7 @@ import shapely
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
+from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
 from openquake.calculators.extract import Extractor, WebExtractor
 
 
@@ -470,7 +470,7 @@ def make_figure_effect_by_mag(extractors, what):
         effect = ex.get('effect')
     except KeyError:
         onesite = ex.get('sitecol').one()
-        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
+        maximum_distance = MagDepDistance(ex.oqparam.maximum_distance)
         imtls = ex.oqparam.imtls
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)

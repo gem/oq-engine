@@ -36,7 +36,7 @@ from openquake.hazardlib import const, imt as imt_module
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim import base
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
@@ -177,7 +177,7 @@ class ContextMaker(object):
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
-            param.get('maximum_distance') or IntegrationDistance({}))
+            param.get('maximum_distance') or MagDepDistance({}))
         self.trunclevel = param.get('truncation_level')
         self.effect = param.get('effect')
         for req in self.REQUIRES:
@@ -248,10 +248,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rup, sites, self.filter_distance)
-        if self.collapse_level >= 2 and self.pointsource_distance:
-            mdist = self.pointsource_distance['%.2f' % rup.mag]
-        else:
-            mdist = self.maximum_distance(self.trt, rup.mag)
+        mdist = self.maximum_distance(self.trt, rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
@@ -958,7 +955,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     :param mags: an ordered list of magnitude strings with format %.2f
     :param sitecol1: a SiteCollection with a single site
     :param gsims_by_trt: a dictionary trt -> gsims
-    :param maximum_distance: an IntegrationDistance object
+    :param maximum_distance: an MagDepDistance object
     :param imtls: a DictArray with intensity measure types and levels
     :returns: a dict magnitude-string -> array(#dists, #trts)
     """
@@ -998,8 +995,9 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
     aw = hdf5.ArrayWrapper((), {})
     # computing the effect make sense only if all IMTs have the same
     # unity of measure; for simplicity we will consider only PGA and SA
-    psd = (oq.pointsource_distance.interp(mags)
-           if oq.pointsource_distance is not None else {})
+    psd = oq.pointsource_distance
+    if psd is not None:
+        psd.interp(mags)
     if psd:
         logging.info('Computing effect of the ruptures')
         allmags = set()
@@ -1018,12 +1016,12 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
         minint = oq.minimum_intensity.get('default', 0)
         for trt, eff in effect.items():
             if minint:
-                oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
+                oq.maximum_distance.ddic[trt] = eff.dist_by_mag(minint)
             # build a dict trt -> mag -> dst
             if psd and set(psd[trt].values()) == {-1}:
                 maxdist = oq.maximum_distance[trt]
                 psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
-    return aw, psd
+    return aw
 
 
 # not used right now

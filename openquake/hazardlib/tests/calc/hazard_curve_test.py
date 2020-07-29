@@ -23,7 +23,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
+from openquake.hazardlib.calc.filters import SourceFilter, MagDepDistance
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -38,7 +38,7 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014PEER
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
     def test_MagnitudeDistance_pickleable(self):
-        md = IntegrationDistance(
+        md = MagDepDistance(
             dict(default=[(1, 10), (2, 20), (3, 30), (4, 40), (5, 100),
                           (6, 200), (7, 400), (8, 800)]))
         md2 = pickle.loads(pickle.dumps(md))

@@ -152,7 +152,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
-    maximum_distance = valid.Param(valid.maximum_distance)  # km
+    maximum_distance = valid.Param(valid.MagDepDistance.new)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
@@ -173,7 +173,7 @@ class OqParam(valid.ParamSet):
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    pointsource_distance = valid.Param(valid.MagDist.new, None)
+    pointsource_distance = valid.Param(valid.MagDepDistance.new, None)
     point_rupture_bins = valid.Param(valid.positiveint, 20)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
