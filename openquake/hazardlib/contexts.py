@@ -248,7 +248,10 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rup, sites, self.filter_distance)
-        mdist = self.maximum_distance(self.trt, rup.mag)
+        if self.collapse_level >= 2 and self.pointsource_distance:
+            mdist = self.pointsource_distance['%.2f' % rup.mag]
+        else:
+            mdist = self.maximum_distance(self.trt, rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
@@ -363,6 +366,9 @@ class ContextMaker(object):
         :param ctxs: a list of pairs (rup, dctx)
         :returns: collapsed contexts
         """
+        if len(ctxs) == 1:
+            return ctxs
+
         if self.collapse_level >= 3:  # hack, ignore everything except mag
             rrp = ['mag']
             rnd = 0  # round distances to 1 km
