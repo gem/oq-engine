@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Restored magnitude-dependent maximum distance
   * Displaying the hazard maps in the WebUI for debugging purposes
   * Used the hazard map to get the disaggregation IML from the disaggregation
     PoE and added a warning for zero hazard
