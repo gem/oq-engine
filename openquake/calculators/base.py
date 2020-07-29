@@ -486,15 +486,17 @@ class HazardCalculator(BaseCalculator):
                 if len(sids) == 0:
                     raise RuntimeError('All sources were discarded!?')
                 self.full_lt = csm.full_lt
-                if self.amplifier:
-                    self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
-                                         self.csm.full_lt.gsim_lt.values)
         self.init()  # do this at the end of pre-execute
 
         if (not oq.hazard_calculation_id
                 and oq.calculation_mode != 'preclassical'
                 and not oq.save_disk_space):
             self.gzip_inputs()
+
+        # check DEFINED_FOR_REFERENCE_VELOCITY
+        if self.amplifier:
+            self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
+                                 self.full_lt.gsim_lt.values)
 
     def save_multi_peril(self):
         """Defined in MultiRiskCalculator"""
