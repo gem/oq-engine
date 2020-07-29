@@ -250,7 +250,7 @@ class Amplifier(object):
         for gsims in gsims_by_trt.values():
             for gsim in gsims:
                 gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
-                if numpy.abs(self.vs30ref - gsim_ref) > vs30_tolerance:
+                if abs(self.vs30ref - gsim_ref) > vs30_tolerance:
                     raise ValueError(
                         '%s.DEFINED_FOR_REFERENCE_VELOCITY=%s != %s'
                         % (gsim.__class__.__name__, gsim_ref, self.vs30ref))
