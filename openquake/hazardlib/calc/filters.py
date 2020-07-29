@@ -209,13 +209,6 @@ class MagDepDistance(dict):
         """
         return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
-    def __toh5__(self):
-        dic = {trt: numpy.array(dist) for trt, dist in self.items()}
-        return dic, {}
-
-    def __fromh5__(self, dic, attrs):
-        self.__init__({trt: dic[trt][()] for trt in dic})
-
 
 def split_sources(srcs):
     """

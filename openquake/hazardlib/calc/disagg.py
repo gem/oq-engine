@@ -74,7 +74,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
         int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
 
     # build dist_edges
-    maxdist = max(filters.getdefault(oq.maximum_distance, trt) for trt in trts)
+    maxdist = max(oq.maximum_distance(trt) for trt in trts)
     dist_edges = oq.distance_bin_width * numpy.arange(
         0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
 

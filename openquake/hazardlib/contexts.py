@@ -998,6 +998,7 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
     psd = oq.pointsource_distance
     if psd is not None:
         psd.interp(mags)
+        psd = psd.ddic
     if psd:
         logging.info('Computing effect of the ruptures')
         allmags = set()
