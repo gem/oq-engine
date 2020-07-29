@@ -20,7 +20,7 @@ import sys
 import getpass
 import logging
 from openquake.baselib import sap, config, datastore, parallel
-from openquake.baselib.general import safeprint
+from openquake.baselib.general import safeprint, start_many
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, oqvalidation
 from openquake.engine import engine as eng
@@ -75,15 +75,34 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                 and 'hazard_calculation_id' not in kw):
             kw['hazard_calculation_id'] = job_id
         jobparams.append((job_id, oqparam))
-    if dist == 'zmq' and config.zworkers['host_cores']:
-        logging.info('Asking the DbServer to start the workers')
-        logs.dbcmd('zmq_start')  # start the zworkers
-        logs.dbcmd('zmq_wait')  # wait for them to go up
+    jobarray = len(jobparams) > 1 and 'csm_cache' in kw
     try:
+        eng.poll_queue(job_id, poll_time=15)
+        # wait for an empty slot or a CTRL-C
+    except BaseException:
+        # the job aborted even before starting
+        for job_id, oqparam in jobparams:
+            logs.dbcmd('finish', job_id, 'aborted')
+        return jobparams
+    else:
+        for job_id, oqparam in jobparams:
+            dic = {'status': 'executing', 'pid': eng._PID}
+            if jobarray:
+                dic['hazard_calculation_id'] = jobparams[0][0]
+            logs.dbcmd('update_job', job_id, dic)
+    try:
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Asking the DbServer to start the workers')
+            logs.dbcmd('zmq_start')  # start the zworkers
+            logs.dbcmd('zmq_wait')  # wait for them to go up
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
-        for args in allargs:
-            eng.run_calc(*args)
+        if jobarray:
+            with start_many(eng.run_calc, allargs):
+                pass
+        else:
+            for args in allargs:
+                eng.run_calc(*args)
     finally:
         if dist == 'zmq' and config.zworkers['host_cores']:
             logging.info('Stopping the zworkers')

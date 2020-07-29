@@ -21,17 +21,17 @@ import unittest
 
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.base import (
-    get_mean_std, _get_poes_site, _get_poes)
+from openquake.hazardlib.gsim.base import _get_poes_site, _get_poes
 from openquake.baselib.general import gettemp, DictArray
-from openquake.hazardlib.contexts import DistancesContext
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import AmplFunction
-from openquake.hazardlib.tests.site_amplification_function_test import ampl_func
+from openquake.hazardlib.tests.site_amplification_function_test import \
+    ampl_func
 
 
 class GetPoesSiteTestCase(unittest.TestCase):
@@ -56,16 +56,16 @@ class GetPoesSiteTestCase(unittest.TestCase):
         sites = Dummy.get_site_collection(len(dsts), vs30=760.0)
         self.mag = 5.5
         rup = Dummy.get_rupture(mag=self.mag)
-        dists = DistancesContext()
-        dists.rjb = numpy.array(dsts)
-        dists.rrup = numpy.array(dsts)
-        self.rrup = dists.rrup
+        ctx = RuptureContext.full(rup, sites)
+        ctx.rjb = numpy.array(dsts)
+        ctx.rrup = numpy.array(dsts)
+        self.rrup = ctx.rrup
 
         # Compute GM on rock
         # Shape: 2 x 4 (distances) x 2 (IMTs) x 1 (GMMs)
-        self.meastd = get_mean_std(sites, rup, dists, imts, [gmmA])
+        self.meastd = ctx.get_mean_std(imts, [gmmA])
         # Shape: 2 x 4 (distances) x 2 (IMTs) x 2 (GMMs)
-        self.meastd = get_mean_std(sites, rup, dists, imts, [gmmA, gmmB])
+        self.meastd = ctx.get_mean_std(imts, [gmmA, gmmB])
 
     def test01(self):
 

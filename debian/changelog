@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Displaying the hazard maps in the WebUI for debugging purposes
+  * Used the hazard map to get the disaggregation IML from the disaggregation
+    PoE and added a warning for zero hazard
+  * Internal: implemented multi-run functionality
   * Reduced tremendously the data transfer in disaggregation calculations
   * Internal: introduced compress/decompress utilities
   * Reduced the memory and disk space occupation in classical calculations with

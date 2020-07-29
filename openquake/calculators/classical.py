@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import io
 import os
 import re
 import time
@@ -24,12 +25,14 @@ import logging
 import operator
 from datetime import datetime
 import numpy
-
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_array_nbytes, decompress)
+    AccumDict, DictArray, block_splitter, groupby, humansize, get_array_nbytes)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, getdefault
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -149,6 +152,7 @@ def store_ctxs(dstore, rdt, dic):
     offset = len(rctx)
     nr = len(dic['mag'])
     rdata = numpy.zeros(nr, rdt)
+    rdata['nsites'] = [len(s) for s in dic['sids_']]
     rdata['idx'] = numpy.arange(offset, offset + nr)
     rdt_names = set(dic) & set(n[0] for n in rdt)
     for name in rdt_names:
@@ -245,7 +249,7 @@ class ClassicalCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         if self.few_sites:
-            self.rdt = []
+            self.rdt = [('nsites', U16)]
             dparams = ['sids_']
             for rparam in rparams:
                 if rparam.endswith('_'):
@@ -354,9 +358,11 @@ class ClassicalCalculator(base.HazardCalculator):
         elif oq.pointsource_distance:
             self.psd = oq.pointsource_distance.interp(mags_by_trt)
             for trt, dic in self.psd.items():
-                it = list(dic.items())
-                md = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                logging.info('ps_dist %s: %s', trt, md)
+                # the sum is zero for {'default': [(1, 0), (10, 0)]}
+                if sum(dic.values()):
+                    it = list(dic.items())
+                    md = '%s->%d ... %s->%d' % (it[0] + it[-1])
+                    logging.info('ps_dist %s: %s', trt, md)
         else:
             self.psd = {}
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
@@ -396,7 +402,7 @@ class ClassicalCalculator(base.HazardCalculator):
                      numsites / self.numrups)
         if self.psd:
             psdist = max(max(self.psd[trt].values()) for trt in self.psd)
-            if psdist != -1 and self.maxradius >= psdist / 2:
+            if psdist and self.maxradius >= psdist / 2:
                 logging.warning('The pointsource_distance of %d km is too '
                                 'small compared to a maxradius of %d km',
                                 psdist, self.maxradius)
@@ -598,6 +604,43 @@ class ClassicalCalculator(base.HazardCalculator):
             maxhaz = hmaps.max(axis=(0, 1, 3))
             mh = dict(zip(self.oqparam.imtls, maxhaz))
             logging.info('The maximum hazard map values are %s', mh)
+            if Image is None:  # missing PIL
+                return
+            M, P = hmaps.shape[2:]
+            logging.info('Saving %dx%d mean hazard maps', M, P)
+            inv_time = oq.investigation_time
+            allargs = []
+            for m, imt in enumerate(self.oqparam.imtls):
+                for p, poe in enumerate(self.oqparam.poes):
+                    dic = dict(m=m, p=p, imt=imt, poe=poe, inv_time=inv_time,
+                               calc_id=self.datastore.calc_id,
+                               array=hmaps[:, 0, m, p])
+                    allargs.append((dic, self.sitecol.lons, self.sitecol.lats))
+            smap = parallel.Starmap(make_hmap_png, allargs)
+            for dic in smap:
+                self.datastore['png/hmap_%(m)d_%(p)d' % dic] = dic['img']
+
+
+def make_hmap_png(hmap, lons, lats):
+    """
+    :param hmap:
+        a dictionary with keys calc_id, m, p, imt, poe, inv_time, array
+    :param lons: an array of longitudes
+    :param lats: an array of latitudes
+    :returns: an Image object containing the hazard map
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.grid(True)
+    ax.set_title('hmap for IMT=%(imt)s, poe=%(poe)s\ncalculation %(calc_id)d,'
+                 'inv_time=%(inv_time)dy' % hmap)
+    ax.set_ylabel('Longitude')
+    coll = ax.scatter(lons, lats, c=hmap['array'], cmap='jet')
+    plt.colorbar(coll)
+    bio = io.BytesIO()
+    plt.savefig(bio, format='png')
+    return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
 
 
 @base.calculators.add('preclassical')

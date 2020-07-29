@@ -25,6 +25,7 @@ import itertools
 import functools
 import collections
 import numpy
+import h5py
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
@@ -32,7 +33,9 @@ from openquake.baselib.general import (
     AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import const, imt as imt_module
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim import base
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -92,6 +95,69 @@ def get_num_distances(gsims):
     for gsim in gsims:
         dists.update(gsim.REQUIRES_DISTANCES)
     return len(dists)
+
+
+def make_pmap(ctxs, gsims, imtls, trunclevel, investigation_time):
+    RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
+    # easy case of independent ruptures, useful for debugging
+    imts = [from_string(im) for im in imtls]
+    loglevels = DictArray(imtls)
+    for imt, imls in imtls.items():
+        if imt != 'MMI':
+            loglevels[imt] = numpy.log(imls)
+    pmap = ProbabilityMap(len(loglevels.array), len(gsims))
+    for ctx in ctxs:
+        mean_std = ctx.get_mean_std(imts, gsims)  # shape (2, N, M, G)
+        poes = base.get_poes(mean_std, loglevels, trunclevel, gsims,
+                             None, ctx.mag, None, ctx.rrup)  # (N, L, G)
+        pnes = ctx.get_probability_no_exceedance(poes)
+        for sid, pne in zip(ctx.sids, pnes):
+            pmap.setdefault(sid, 1.).array *= pne
+    return ~pmap
+
+
+def read_ctxs(dstore, rctx_or_magstr, gidx=0, req_site_params=None):
+    """
+    Use it as `read_ctxs(dstore, 'mag_5.50')`.
+    :returns: a pair (contexts, [contexts close to site for each site])
+    """
+    sitecol = dstore['sitecol']
+    site_params = {par: sitecol[par]
+                   for par in req_site_params or sitecol.array.dtype.names}
+    if isinstance(rctx_or_magstr, str):
+        rctx = dstore[rctx_or_magstr]['rctx'][:]
+        rctx = rctx[rctx['gidx'] == gidx]
+    else:
+        # in disaggregation
+        rctx = rctx_or_magstr
+    magstr = 'mag_%.2f' % rctx[0]['mag']
+    if h5py.version.version_tuple >= (2, 10, 0):
+        # this version is spectacularly better in cluster1; for
+        # Colombia with 1.2M ruptures I measured a speedup of 8.5x
+        grp = {n: d[rctx['idx']] for n, d in dstore[magstr].items()
+               if n.endswith('_')}
+    else:
+        # for old h5py read the whole array and then filter on the indices
+        grp = {n: d[:][rctx['idx']] for n, d in dstore[magstr].items()
+               if n.endswith('_')}
+    ctxs = []
+    for u, rec in enumerate(rctx):
+        ctx = RuptureContext()
+        for par in rctx.dtype.names:
+            setattr(ctx, par, rec[par])
+        for par, arr in grp.items():
+            setattr(ctx, par[:-1], arr[u])
+        for par, arr in site_params.items():
+            setattr(ctx, par, arr[ctx.sids])
+        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
+        ctxs.append(ctx)
+    # sorting for debugging convenience
+    ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
+    close_ctxs = [[] for sid in sitecol.sids]
+    for ctx in ctxs:
+        for sid in ctx.idx:
+            close_ctxs[sid].append(ctx)
+    return ctxs, close_ctxs
 
 
 class ContextMaker(object):
@@ -728,6 +794,21 @@ class RuptureContext(BaseContext):
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
     temporal_occurrence_model = None  # to be set
+
+    @classmethod
+    def full(cls, rup, sites, dctx=None):
+        """
+        :returns: a full context with all the relevant attributes
+        """
+        self = cls()
+        for par, val in vars(rup).items():
+            setattr(self, par, val)
+        for par in sites.array.dtype.names:
+            setattr(self, par, sites[par])
+        if dctx:
+            for par, val in vars(dctx).items():
+                setattr(self, par, val)
+        return self
 
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
