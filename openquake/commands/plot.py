@@ -123,8 +123,9 @@ def make_figure_hmaps(extractors, what):
             ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
                           'inv_time=%dy' %
                           (imt, kind, poe, ex.calc_id, oq.investigation_time))
-            ax.scatter(sitecol['lon'], sitecol['lat'],
-                       c=hmaps[kind][:, 0, j], cmap='jet')
+            coll = ax.scatter(sitecol['lon'], sitecol['lat'],
+                              c=hmaps[kind][:, 0, j], cmap='jet')
+            plt.colorbar(coll)
     return plt
 
 
