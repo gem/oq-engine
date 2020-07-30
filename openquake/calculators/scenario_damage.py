@@ -170,7 +170,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         aed = res.pop('aed', ())
         if len(aed) == 0:
             return acc + res
-        print('Combining %s data' % str(aed.shape))
         for aid, [(i1, i2)] in get_indices(aed['aid']).items():
 
             self.datastore['dd_data/indices'][aid] = (
