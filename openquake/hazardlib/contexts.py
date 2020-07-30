@@ -339,7 +339,8 @@ class ContextMaker(object):
         ctxs = []
         for rup in ruptures:
             try:
-                ctx, r_sites, dctx = self.make_contexts(sites, rup)
+                ctx, r_sites, dctx = self.make_contexts(
+                    getattr(rup, 'sites', sites), rup)
             except FarAwayRupture:
                 continue
             for par in self.REQUIRES_SITES_PARAMETERS:
