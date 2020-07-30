@@ -286,9 +286,9 @@ class SourceFilter(object):
             integration_distance = {}
         self.filename = filename
         self.integration_distance = (
-            MagDepDistance(integration_distance)
-            if isinstance(integration_distance, dict)
-            else integration_distance)
+            integration_distance
+            if isinstance(integration_distance, MagDepDistance)
+            else MagDepDistance(integration_distance))
         if not filename:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
