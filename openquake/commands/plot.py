@@ -55,6 +55,23 @@ def make_figure_hcurves(extractors, what):
     return plt
 
 
+def make_figure_vs30(extractors, what):
+    """
+    $ oq plot 'vs30?'
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    sitecol = ex.get('sitecol')
+    ax = fig.add_subplot(111)
+    ax.grid(True)
+    ax.set_xlabel('vs30 for calculation %d' % ex.calc_id)
+    vs30 = sitecol['vs30']
+    vs30[numpy.isnan(vs30)] = 0
+    ax.scatter(sitecol['lon'], sitecol['lat'], c=vs30, cmap='jet')
+    return plt
+
+
 def make_figure_hmaps(extractors, what):
     """
     $ oq plot 'hmaps?kind=mean&imt=PGA'
