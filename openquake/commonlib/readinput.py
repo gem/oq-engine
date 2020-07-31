@@ -1063,7 +1063,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     return good, total
 
 
-def get_input_files(oqparam, hazard=False, h5=None):
+def get_input_files(oqparam, hazard=False):
     """
     :param oqparam: an OqParam instance
     :param hazard: if True, consider only the hazard files
