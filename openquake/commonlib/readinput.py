@@ -656,18 +656,18 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
-    if fname in smlt_cache:
-        return smlt_cache[fname]
-    smlt = logictree.SourceModelLogicTree(
-        fname, oqparam.random_seed,
-        oqparam.number_of_logic_tree_samples, oqparam.sampling_method)
+    try:
+        smlt = smlt_cache[fname]
+    except KeyError:
+        smlt = smlt_cache[fname] = logictree.SourceModelLogicTree(
+            fname, oqparam.random_seed,
+            oqparam.number_of_logic_tree_samples, oqparam.sampling_method)
     if oqparam.discard_trts:
         trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
         smlt.tectonic_region_types = smlt.tectonic_region_types - trts
     if 'ucerf' in oqparam.calculation_mode:
         smlt.tectonic_region_types = {'Active Shallow Crust'}
-    smlt_cache[fname] = smlt
     return smlt
 
 
