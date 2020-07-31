@@ -1207,6 +1207,13 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.num_samples
 
+    @property
+    def sampling_method(self):
+        """
+        :returns: the source_model_lt ``sampling_method`` parameter
+        """
+        return self.source_model_lt.sampling_method
+
     def get_trti_eri(self, grp_id):
         """
         :returns: (trti, eri)
