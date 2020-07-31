@@ -691,22 +691,22 @@ hazard_uhs-std.csv
                               case_51.__file__)
 
     def test_case_52(self):
-        # full enum
+        # full enum, rlz-0: 0.554007, rlz-1: 0.601722
         self.run_calc(case_52.__file__, 'job.ini',
                       number_of_logic_tree_samples='0')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 5]
-        aac(haz, 0.596582, rtol=1E-6)
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
         # weights .9, .1
 
         # late_weights
         self.run_calc(case_52.__file__, 'job.ini')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 5]
-        aac(haz, 0.606434, rtol=1E-6)
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.577865, rtol=1E-6)
         # weights .055555 9 times and 0.5
 
-        # early_weights
+        # early_weights, rlz-1 is lost because of the small weight
         self.run_calc(case_52.__file__, 'job.ini',
                       sampling_method='early_weights')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 5]
-        aac(haz, 0.594118, rtol=1E-6)
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.554007, rtol=1E-6)
         # weights 0.1 10 times
