@@ -415,7 +415,8 @@ class SourceModelLogicTree(object):
             # random sampling of the logic tree
             weight = 1. / self.num_samples
             for i in range(self.num_samples):
-                smlt_path = self.root_branchset.sample(self.seed + i)
+                smlt_path = self.root_branchset.sample(
+                    self.seed + i, self.sampling_method)
                 name = smlt_path[0].value
                 smlt_path_ids = [branch.branch_id for branch in smlt_path]
                 yield Realization(name, weight, None, tuple(smlt_path_ids), 1)
@@ -1003,14 +1004,16 @@ class GsimLogicTree(object):
             [trt] = self.values
         return sorted(self.values[trt])
 
-    def sample(self, n, seed):
+    def sample(self, n, seed, sampling_method):
         """
         :param n: number of samples
         :param seed: random seed
+        :param sampling_method: by default 'early_weights'
         :returns: n Realization objects
         """
         brlists = [sample([b for b in self.branches if b.trt == trt],
-                          n, seed + i) for i, trt in enumerate(self.values)]
+                          n, seed + i, sampling_method)
+                   for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
             weight = 1
@@ -1255,7 +1258,8 @@ class FullLogicTree(object):
         rlzs = []
         sm = self.sm_rlzs[eri]
         if self.num_samples:
-            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal,
+                                            self.sampling_method)
         elif hasattr(self, 'gsim_rlzs'):  # cache
             gsim_rlzs = self.gsim_rlzs
         else:
@@ -1388,7 +1392,8 @@ class FullLogicTree(object):
         if self.num_samples:
             gsims_by_trt = AccumDict(accum=set())
             for sm in self.sm_rlzs:
-                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal,
+                                           self.sampling_method)
                 for t, trt in enumerate(self.gsim_lt.values):
                     gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
         else:
