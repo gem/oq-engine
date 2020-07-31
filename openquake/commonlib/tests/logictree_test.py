@@ -1287,11 +1287,7 @@ class SampleTestCase(unittest.TestCase):
         samples = lt.sample(branches, 1000, 42)
 
         def count(samples, value):
-            counter = 0
-            for s in samples:
-                if s.value == value:
-                    counter += 1
-            return counter
+            return sum(s.value == value for s in samples)
 
         self.assertEqual(count(samples, value='A'), 225)
         self.assertEqual(count(samples, value='B'), 278)

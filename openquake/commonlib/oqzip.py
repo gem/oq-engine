@@ -55,7 +55,9 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
         sys.exit('%s exists already' % archive_zip)
     smlt = logictree.SourceModelLogicTree(ssmLT)
     files = list(smlt.hdf5_files) + smlt.info.smpaths
-    oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT})
+    oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT},
+                   random_seed=42, number_of_logic_tree_samples=0,
+                   sampling_method='early_weights')
     checksum = readinput.get_checksum32(oq)
     checkfile = os.path.join(os.path.dirname(ssmLT), 'CHECKSUM.txt')
     with open(checkfile, 'w') as f:

@@ -334,7 +334,7 @@ class GmfGetter(object):
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
         M32 = (F32, (len(oqparam.imtls),))
         self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U32)])
-        md = (calc.filters.IntegrationDistance(oqparam.maximum_distance)
+        md = (calc.filters.MagDepDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
         param = {'filter_distance': oqparam.filter_distance,
