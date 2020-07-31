@@ -167,6 +167,23 @@ class SA(IMT):
             return '%s(%s)' % (self.name, self.period)
 
 
+class EAS(IMT):
+    """
+    Effective amplitude spectrum (Goulet et al., 2018). Unit of measure is
+    g∙s
+
+    :param frequency:
+        The natural period of the oscillator in seconds.
+
+    :raises ValueError:
+        if frequency is not positive.
+    """
+    _fields = [('frequency', positivefloat)]
+
+    def __repr__(self):
+        return '%s(%s)' % (self.name, self.frequency)
+
+
 class AvgSA(IMT):
     """
     Dummy spectral acceleration to compute average ground motion over

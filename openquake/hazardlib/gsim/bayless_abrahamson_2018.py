@@ -77,12 +77,13 @@ class BaylessAbrahamson2018(GMPE):
         # Get the necessary set of coefficients
         C = self.COEFFS[imt]
         # Compute the PGA on bedrock
-        ln_ir_outcrop = np.exp(self._get_ln_ir_outcrop(C, sites, rup, dists))
+        ln_ir_outcrop = self._get_ln_ir_outcrop(C, sites, rup, dists)
         # Get the mean value
         print('-------------------------------------- \n')
         print(C)
-        print(imt, self._magnitude_scaling(C, rup),
-                self._path_scaling(C, rup, dists),
+        print(imt,
+                #self._magnitude_scaling(C, rup),
+                #self._path_scaling(C, rup, dists),
                 self._site_response(C, sites.vs30, ln_ir_outcrop, imt),
                 self._ztor_scaling(C, rup),
                 self._normal_fault_effect(C, rup),
@@ -111,9 +112,8 @@ class BaylessAbrahamson2018(GMPE):
         mean = (self._magnitude_scaling(C, rup) +
                 self._path_scaling(C, rup, dists) +
                 self._ztor_scaling(C, rup) +
-                self._normal_fault_effect(C, rup) +
-                self._soil_depth_scaling(C, sites.z1pt0, sites.vs30))
-        # Return PGA
+                self._normal_fault_effect(C, rup))
+        # Return ln(IR)
         return 1.238 + 0.846 * mean
 
     def _magnitude_scaling(self, C, rup):
@@ -137,32 +137,33 @@ class BaylessAbrahamson2018(GMPE):
         """ Compute the site response term """
         # Set the vs30 threshold beyond which non-linearity is not admitted.
         # See page 2092 right column
-        delta = 20
+        delta = 30
 
         # Non-linear term
-        vsref = np.ones_like(vs30)*760.
+        vsref = np.ones_like(vs30) * 760.
         tmp = np.minimum(vs30, 1000.)
         fsl = C['c8'] * np.log(tmp / 1000.)
-        freqs = self._get_frequences()
+        freqs = self._get_frequencies()
         idx = np.argmin(np.abs(freqs - imt.frequency))
 
-        idx_lo = np.maximum(idx-delta, 0)
-        idx_up = np.minimum(idx+delta, 238)
-
-        nl_terms = []
-
-        t1 = np.exp(C['f5'] * (np.minimum(vs30, vsref) - 360))
+        t1 = np.exp(C['f5'] * (np.minimum(vs30, vsref)-360.))
         t2 = np.exp(C['f5'] * (vsref-360))
-        f2 = C['c4'] * (t1 - t2)
-        fnl = f2 * np.log((np.exp(np.exp(ln_ir_outcrop))+C['f3'])/C['f3'])
-        print('---- nn linear', fnl, imt.frequency)
+        f2 = C['f4'] * (t1 - t2)
+        print('f2:', f2)
+
+        fnl = f2 * np.log((np.exp(ln_ir_outcrop)+C['f3']) / C['f3'])
+        print('---- IR', np.exp(ln_ir_outcrop))
+        print('---- site (l, nl, tot)', fsl, fnl, fsl+fnl)
 
         # Non-linear term
+        idx_lo = np.maximum(idx-delta, 0)
+        idx_up = np.minimum(idx+delta, 238)
+        nl_terms = []
         for f in freqs[idx_lo:idx_up]:
             TC = self.COEFFS[EAS(f)]
-            t1 = np.exp(TC['f5'] * np.minimum(vs30, vsref) - 360)
+            t1 = np.exp(TC['f5'] * (np.minimum(vs30, vsref) - 360))
             t2 = np.exp(TC['f5'] * (vsref-360))
-            f2 = TC['c4'] * (t1 - t2)
+            f2 = TC['f4'] * (t1 - t2)
             fnl = f2 * np.log((np.exp(ln_ir_outcrop)+TC['f3'])/TC['f3'])
             nl_terms.append(fnl)
 
@@ -172,20 +173,20 @@ class BaylessAbrahamson2018(GMPE):
         if len(endog.shape) > 1:
             fnl = []
             for ed in endog.T:
-                tmp = meth(ed, freqs[idx_lo:idx_up], frac=1./2,
+                tmp = meth(ed, freqs[idx_lo:idx_up], frac=0.9,
                            is_sorted=True, return_sorted=False)
                 fnl.append(np.interp(imt.frequency, freqs[idx_lo:idx_up], tmp))
         else:
             tmp = meth(endog, freqs[idx_lo:idx_up], is_sorted=True,
-                       return_sorted=False)
+                       return_sorted=False, frac=0.9)
             fnl = [np.interp(imt.frequency, freqs[idx_lo:idx_up], tmp)]
-        print('+++++', fnl)
+        print('+++++ fnl interp', fnl)
 
         return fsl + fnl
 
     def _ztor_scaling(self, C, rup):
         """ Compute top of rupture term """
-        return C['c9'] * np.minimum(rup.ztor, 20)
+        return C['c9'] * np.minimum(rup.ztor, 20.)
 
     def _normal_fault_effect(self, C, rup):
         """ Compute the correction coefficient for the normal faulting """
@@ -210,7 +211,7 @@ class BaylessAbrahamson2018(GMPE):
         tmp = np.minimum(z1pt0, np.ones_like(z1pt0)*2.0) + 0.01
         return c11 * np.log(tmp / (z1ref + 0.01))
 
-    def _get_frequences(self):
+    def _get_frequencies(self):
         freqs = []
         for k in self.COEFFS.f_coeffs.keys():
             m = re.match('EAS\((.*)\)', k.__repr__())
