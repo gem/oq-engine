@@ -312,7 +312,7 @@ class ContextMaker(object):
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
         :returns:
-            Tuple of two items: sites and distances context.
+            Tuple of three items: rupture, sites and distances context.
 
         :raises ValueError:
             If any of declared required parameters (site, rupture and

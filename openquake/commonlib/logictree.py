@@ -262,11 +262,14 @@ class SourceModelLogicTree(object):
         self.__fromh5__(arr, dic)
         return self
 
-    def __init__(self, filename, seed=0, num_samples=0):
+    def __init__(self, filename, seed=0, num_samples=0,
+                 sampling_method='early_weights'):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
-        self.seed = seed
+        # NB: converting the random_seed into an integer is needed on Windows
+        self.seed = int(seed)
         self.num_samples = num_samples
+        self.sampling_method = sampling_method
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
         self.previous_branches = []
@@ -1203,6 +1206,13 @@ class FullLogicTree(object):
         :returns: the source_model_lt ``num_samples`` parameter
         """
         return self.source_model_lt.num_samples
+
+    @property
+    def sampling_method(self):
+        """
+        :returns: the source_model_lt ``sampling_method`` parameter
+        """
+        return self.source_model_lt.sampling_method
 
     def get_trti_eri(self, grp_id):
         """
