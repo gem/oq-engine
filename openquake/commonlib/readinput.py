@@ -61,6 +61,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
+smlt_cache = {}  # fname -> SourceModelLogicTree instance
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -655,16 +656,18 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
-    # NB: converting the random_seed into an integer is needed on Windows
+    if fname in smlt_cache:
+        return smlt_cache[fname]
     smlt = logictree.SourceModelLogicTree(
-        fname, seed=int(oqparam.random_seed),
-        num_samples=oqparam.number_of_logic_tree_samples)
+        fname, oqparam.random_seed,
+        oqparam.number_of_logic_tree_samples, oqparam.sampling_method)
     if oqparam.discard_trts:
         trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
         smlt.tectonic_region_types = smlt.tectonic_region_types - trts
     if 'ucerf' in oqparam.calculation_mode:
         smlt.tectonic_region_types = {'Active Shallow Crust'}
+    smlt_cache[fname] = smlt
     return smlt
 
 
@@ -1097,7 +1100,11 @@ def get_input_files(oqparam, hazard=False):
                                       (oqparam.inputs['job_ini'], key))
             fnames.update(fname)
         elif key == 'source_model_logic_tree':
-            smlt = logictree.SourceModelLogicTree(fname)
+            smlt_cache[fname] = smlt = logictree.SourceModelLogicTree(
+                fname,
+                oqparam.random_seed,
+                oqparam.number_of_logic_tree_samples,
+                oqparam.sampling_method)
             fnames.update(smlt.hdf5_files)
             fnames.update(smlt.info.smpaths)
             fnames.add(fname)

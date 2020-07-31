@@ -45,6 +45,7 @@ def norm_cdf(x, a, s):
     else:
         return norm.cdf(x, loc=a, scale=s)
 
+
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
