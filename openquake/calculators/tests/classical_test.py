@@ -694,16 +694,19 @@ hazard_uhs-std.csv
         # full enum
         self.run_calc(case_52.__file__, 'job.ini',
                       number_of_logic_tree_samples='0')
-        haz = self.calc.datastore['hmaps-stats'][0, 0, 0, 0]
-        aac(haz, 0.6115313)
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 5]
+        aac(haz, 0.596582, rtol=1E-6)
+        # weights .9, .1
 
-        # late_weights is consistent with full enum
+        # late_weights
         self.run_calc(case_52.__file__, 'job.ini')
-        haz = self.calc.datastore['hmaps-stats'][0, 0, 0, 0]
-        aac(haz, 0.6115313)
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 5]
+        aac(haz, 0.606434, rtol=1E-6)
+        # weights .055555 9 times and 0.5
 
-        # early_weights is inconsistent with full enum
+        # early_weights
         self.run_calc(case_52.__file__, 'job.ini',
                       sampling_method='early_weights')
-        haz = self.calc.datastore['hmaps-stats'][0, 0, 0, 0]
-        aac(haz, 0.521612, rtol=1E-6)
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 5]
+        aac(haz, 0.594118, rtol=1E-6)
+        # weights 0.1 10 times
