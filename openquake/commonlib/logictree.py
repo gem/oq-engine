@@ -258,7 +258,8 @@ class SourceModelLogicTree(object):
         self = object.__new__(cls)
         arr = numpy.array([('bs0', 'b0', 'sourceModel', 'fake.xml', 1)],
                           branch_dt)
-        dic = dict(filename='fake.xml', seed=0, num_samples=0)
+        dic = dict(filename='fake.xml', seed=0, num_samples=0,
+                   sampling_method='early_weights')
         self.__fromh5__(arr, dic)
         return self
 
@@ -413,11 +414,17 @@ class SourceModelLogicTree(object):
         """
         if self.num_samples:
             # random sampling of the logic tree
-            weight = 1. / self.num_samples
             for i in range(self.num_samples):
-                smlt_path = self.root_branchset.sample(self.seed + i)
+                smlt_path = self.root_branchset.sample(
+                    self.seed + i, self.sampling_method)
                 name = smlt_path[0].value
-                smlt_path_ids = [branch.branch_id for branch in smlt_path]
+                smlt_path_ids = [br.branch_id for br in smlt_path]
+                if self.sampling_method == 'early_weights':
+                    weight = 1. / self.num_samples
+                elif self.sampling_method == 'late_weights':
+                    weight = numpy.prod([br.weight for br in smlt_path])
+                else:
+                    raise NotImplementedError(self.sampling_method)
                 yield Realization(name, weight, None, tuple(smlt_path_ids), 1)
         else:  # full enumeration
             ordinal = 0
@@ -620,6 +627,7 @@ class SourceModelLogicTree(object):
         attrs = self._tomldict()
         attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples
+        attrs['sampling_method'] = self.sampling_method
         attrs['filename'] = self.filename
         return numpy.array(tbl, branch_dt), attrs
 
@@ -646,6 +654,7 @@ class SourceModelLogicTree(object):
                     branch.bset = bset
         self.seed = attrs['seed']
         self.num_samples = attrs['num_samples']
+        self.sampling_method = attrs['sampling_method']
         self.filename = attrs['filename']
 
     def __str__(self):
@@ -1003,14 +1012,16 @@ class GsimLogicTree(object):
             [trt] = self.values
         return sorted(self.values[trt])
 
-    def sample(self, n, seed):
+    def sample(self, n, seed, sampling_method):
         """
         :param n: number of samples
         :param seed: random seed
+        :param sampling_method: by default 'early_weights'
         :returns: n Realization objects
         """
         brlists = [sample([b for b in self.branches if b.trt == trt],
-                          n, seed + i) for i, trt in enumerate(self.values)]
+                          n, seed + i, sampling_method)
+                   for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
             weight = 1
@@ -1255,7 +1266,8 @@ class FullLogicTree(object):
         rlzs = []
         sm = self.sm_rlzs[eri]
         if self.num_samples:
-            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal,
+                                            self.sampling_method)
         elif hasattr(self, 'gsim_rlzs'):  # cache
             gsim_rlzs = self.gsim_rlzs
         else:
@@ -1272,12 +1284,12 @@ class FullLogicTree(object):
         """
         rlzs = sum((self.get_rlzs(sm.ordinal) for sm in self.sm_rlzs), [])
         assert rlzs, 'No realizations found??'
-        if self.num_samples:
+        if self.num_samples and self.sampling_method == 'early_weights':
             assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
             for rlz in rlzs:
                 for k in rlz.weight.dic:
                     rlz.weight.dic[k] = 1. / self.num_samples
-        else:
+        else:  # keep the weights
             tot_weight = sum(rlz.weight for rlz in rlzs)
             if not tot_weight.is_one():
                 # this may happen for rounding errors; we ensure the sum of
@@ -1329,10 +1341,6 @@ class FullLogicTree(object):
                     dic[gsim].update(rlzs)
             out.append(dic)
         return out
-
-    def __getnewargs__(self):
-        # with this FullLogicTree instances will be unpickled correctly
-        return self.seed, self.num_samples, self.sm_rlzs
 
     def __toh5__(self):
         # save full_lt/sm_data in the datastore
@@ -1388,7 +1396,8 @@ class FullLogicTree(object):
         if self.num_samples:
             gsims_by_trt = AccumDict(accum=set())
             for sm in self.sm_rlzs:
-                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
+                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal,
+                                           self.sampling_method)
                 for t, trt in enumerate(self.gsim_lt.values):
                     gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
         else:

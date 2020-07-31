@@ -1284,7 +1284,7 @@ class SampleTestCase(unittest.TestCase):
         branches = [logictree.Branch('BS', 1, 0.2, 'A'),
                     logictree.Branch('BS', 1, 0.3, 'B'),
                     logictree.Branch('BS', 1, 0.5, 'C')]
-        samples = lt.sample(branches, 1000, 42)
+        samples = lt.sample(branches, 1000, 42, 'early_weights')
 
         def count(samples, value):
             return sum(s.value == value for s in samples)
@@ -1297,12 +1297,12 @@ class SampleTestCase(unittest.TestCase):
         branches = [logictree.Branch('BS', 0, 0.1, 0),
                     logictree.Branch('BS', 1, 0.2, 1)]
         with self.assertRaises(ValueError):
-            lt.sample(branches, 1000, 42)
+            lt.sample(branches, 1000, 42, 'early_weights')
 
     def test_sample_one_branch(self):
         # always the same branch is returned
         branches = [logictree.Branch('BS', 0, 1.0, 0)]
-        bs = lt.sample(branches, 10, 42)
+        bs = lt.sample(branches, 10, 42, 'early_weights')
         for b in bs:
             self.assertEqual(b.branch_id, 0)
 
@@ -2070,7 +2070,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         counter = collections.Counter()
         gsim_rlzs = list(self.parse_valid(xml, ['Volcanic']))
         for seed in range(1000):
-            [rlz] = lt.sample(gsim_rlzs, 1, seed)
+            [rlz] = lt.sample(gsim_rlzs, 1, seed, 'early_weights')
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 413, ('b2',): 587})
@@ -2091,7 +2091,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.assertEqual(('b1', 'b4', 'b7'), rlz.lt_path)
 
     def test_sample_gmpe(self):
-        [rlz] = lt.sample(list(self.gmpe_lt), 1, self.seed)
+        [rlz] = lt.sample(list(self.gmpe_lt), 1, self.seed, 'early_weights')
         self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(rlz.weight['default'], 0.5)
         self.assertEqual(('b2', 'b3'), rlz.lt_path)
