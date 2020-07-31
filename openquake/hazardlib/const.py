@@ -99,6 +99,8 @@ class StdDev(ConstantContainer):
     """
     GSIM standard deviation represents ground shaking variability at a site.
     """
+    #: Single station sigma
+    SINGLE_STATION = 'Single Station'
     #: Standard deviation representing ground shaking variability
     #: within different events.
     INTER_EVENT = 'Inter event'

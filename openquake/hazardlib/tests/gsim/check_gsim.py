@@ -21,6 +21,7 @@
 Check GSIM class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
 """
+import re
 import csv
 import math
 import sys
@@ -301,8 +302,12 @@ def _parse_csv_line(headers, values, req_site_params):
                 try:    # The title of the column should be IMT(args)
                     imt = from_string(param.upper())
                 except KeyError:  # Then it is just a period for SA
-                    imt = registry['SA'](float(param), damping)
-
+                    flags = re.IGNORECASE
+                    m = re.match('f_([0-9]*.*[0-9]*)', param, flags=flags)
+                    if m is None:
+                        imt = registry['SA'](float(param), damping)
+                    else:
+                        imt = registry['EAS'](float(m.group(1)))
             expected_results[imt] = numpy.array([value])
 
     assert result_type is not None

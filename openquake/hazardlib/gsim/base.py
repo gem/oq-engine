@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
+import re
 import abc
 import math
 import warnings
@@ -764,6 +765,7 @@ class CoeffsTable(object):
             raise TypeError('CoeffsTable requires "table" kwarg')
         self._coeffs = {}  # cache
         table = kwargs.pop('table')
+        self.f_coeffs = {}
         self.sa_coeffs = {}
         self.non_sa_coeffs = {}
         sa_damping = kwargs.pop('sa_damping', None)
@@ -775,6 +777,8 @@ class CoeffsTable(object):
             for imt in table:
                 if imt.name == 'SA':
                     self.sa_coeffs[imt] = table[imt]
+                elif imt.name == 'EAS':
+                    self.f_coeffs[imt] = table[imt]
                 else:
                     self.non_sa_coeffs[imt] = table[imt]
         else:
@@ -798,19 +802,31 @@ class CoeffsTable(object):
                 raise ValueError('specify period as float value '
                                  'to declare SA IMT')
             imt_coeffs = dict(zip(coeff_names, map(float, row[1:])))
+            has_sa = False
+            has_f = False
             try:
-                sa_period = float(imt_name)
+                m = re.match('F_([0-9]*.*[0-9]*)', imt_name)
+                if m is not None:
+                    freq = float(m.group(1))
+                    has_f = True
+                else:
+                    sa_period = float(imt_name)
+                    has_sa = True
             except Exception:
                 if imt_name not in imt_module.registry:
                     raise ValueError('unknown IMT %r' % imt_name)
                 imt = imt_module.registry[imt_name]()
                 self.non_sa_coeffs[imt] = imt_coeffs
             else:
-                if sa_damping is None:
+                if sa_damping is None and has_sa:
                     raise TypeError('attribute "sa_damping" is required '
                                     'for tables defining SA')
-                imt = imt_module.SA(sa_period, sa_damping)
-                self.sa_coeffs[imt] = imt_coeffs
+                if has_sa:
+                    imt = imt_module.SA(sa_period, sa_damping)
+                    self.sa_coeffs[imt] = imt_coeffs
+                if has_f:
+                    imt = imt_module.EAS(freq)
+                    self.f_coeffs[imt] = imt_coeffs
 
     def __getitem__(self, imt):
         """
@@ -828,36 +844,72 @@ class CoeffsTable(object):
             return self._coeffs[imt]
         except KeyError:
             pass
-        if imt.name != 'SA':
+
+        # Coefficients
+        if re.search('SA', imt.name):
+            try:
+                self._coeffs[imt] = c = self.sa_coeffs[imt]
+                return c
+            except KeyError:
+                pass
+        elif re.search('EAS', imt.name):
+            try:
+                self._coeffs[imt] = c = self.f_coeffs[imt]
+                return c
+            except KeyError:
+                pass
+        else:
             self._coeffs[imt] = c = self.non_sa_coeffs[imt]
             return c
-        try:
-            self._coeffs[imt] = c = self.sa_coeffs[imt]
-            return c
-        except KeyError:
-            pass
 
-        max_below = min_above = None
-        for unscaled_imt in list(self.sa_coeffs):
-            if unscaled_imt.damping != imt.damping:
-                continue
-            if unscaled_imt.period > imt.period:
-                if min_above is None or unscaled_imt.period < min_above.period:
-                    min_above = unscaled_imt
-            elif unscaled_imt.period < imt.period:
-                if max_below is None or unscaled_imt.period > max_below.period:
-                    max_below = unscaled_imt
-        if max_below is None or min_above is None:
-            raise KeyError(imt)
+        if re.search('SA', imt.name):
 
-        # ratio tends to 1 when target period tends to a minimum
-        # known period above and to 0 if target period is close
-        # to maximum period below.
-        ratio = ((math.log(imt.period) - math.log(max_below.period))
-                 / (math.log(min_above.period) - math.log(max_below.period)))
-        max_below = self.sa_coeffs[max_below]
-        min_above = self.sa_coeffs[min_above]
-        self._coeffs[imt] = c = {
-            co: (min_above[co] - max_below[co]) * ratio + max_below[co]
-            for co in max_below}
+            max_below = min_above = None
+            for unscaled_imt in list(self.sa_coeffs):
+                if unscaled_imt.damping != imt.damping:
+                    continue
+                if unscaled_imt.period > imt.period:
+                    if min_above is None or unscaled_imt.period < min_above.period:
+                        min_above = unscaled_imt
+                elif unscaled_imt.period < imt.period:
+                    if max_below is None or unscaled_imt.period > max_below.period:
+                        max_below = unscaled_imt
+            if max_below is None or min_above is None:
+                raise KeyError(imt)
+
+            # ratio tends to 1 when target period tends to a minimum
+            # known period above and to 0 if target period is close
+            # to maximum period below.
+            ratio = ((math.log(imt.period) - math.log(max_below.period))
+                     / (math.log(min_above.period) - math.log(max_below.period)))
+            max_below = self.sa_coeffs[max_below]
+            min_above = self.sa_coeffs[min_above]
+            self._coeffs[imt] = c = {
+                co: (min_above[co] - max_below[co]) * ratio + max_below[co]
+                for co in max_below}
+
+        elif re.search('EAS', imt.name):
+
+            max_below = min_above = None
+            for unscaled_imt in list(self.f_coeffs):
+                if unscaled_imt.frequency > imt.frequency:
+                    if min_above is None or unscaled_imt.frequency < min_above.frequency:
+                        min_above = unscaled_imt
+                elif unscaled_imt.frequency < imt.frequency:
+                    if max_below is None or unscaled_imt.frequency > max_below.frequency:
+                        max_below = unscaled_imt
+            if max_below is None or min_above is None:
+                raise KeyError(imt)
+
+            # ratio tends to 1 when target frequency tends to a minimum
+            # known frequency above and to 0 if target frequency is close
+            # to maximum frequency below.
+            ratio = ((math.log(imt.frequency) - math.log(max_below.frequency))
+                     / (math.log(min_above.frequency) - math.log(max_below.frequency)))
+            max_below = self.f_coeffs[max_below]
+            min_above = self.f_coeffs[min_above]
+            self._coeffs[imt] = c = {
+                co: (min_above[co] - max_below[co]) * ratio + max_below[co]
+                for co in max_below}
+
         return c
