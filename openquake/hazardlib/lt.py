@@ -335,8 +335,10 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
             else:
                 weights.append(w['weight'])
         idxs = numpy.random.choice(len(weights), num_samples, p=weights)
-    else:
+    elif sampling_method == 'late_weights':
         idxs = numpy.random.choice(len(weighted_objects), num_samples)
+    else:
+        raise NotImplementedError(sampling_method)
     # NB: returning an array would break things
     return [weighted_objects[idx] for idx in idxs]
 
@@ -446,6 +448,7 @@ class BranchSet(object):
         Return a list of branches.
 
         :param seed: the seed used for the sampling
+        :param sampling_method: the sampling method (i.e. 'early_weights')
         """
         branchset = self
         branches = []

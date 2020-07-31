@@ -34,7 +34,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51)
+    case_50, case_51, case_52)
 
 aac = numpy.testing.assert_allclose
 
@@ -683,8 +683,27 @@ hazard_uhs-std.csv
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(1.0).csv',
                                'uhs.csv'],
                               case_50.__file__)
+
     def test_case_51(self):
         # Modifiable GMPE
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.2).csv',
                                'hcurves-SA(2.0).csv', 'uhs.csv'],
                               case_51.__file__)
+
+    def test_case_52(self):
+        # full enum
+        self.run_calc(case_52.__file__, 'job.ini',
+                      number_of_logic_tree_samples='0')
+        haz = self.calc.datastore['hmaps-stats'][0, 0, 0, 0]
+        aac(haz, 0.6115313)
+
+        # late_weights is consistent with full enum
+        self.run_calc(case_52.__file__, 'job.ini')
+        haz = self.calc.datastore['hmaps-stats'][0, 0, 0, 0]
+        aac(haz, 0.6115313)
+
+        # early_weights is inconsistent with full enum
+        self.run_calc(case_52.__file__, 'job.ini',
+                      sampling_method='early_weights')
+        haz = self.calc.datastore['hmaps-stats'][0, 0, 0, 0]
+        aac(haz, 0.521612, rtol=1E-6)
