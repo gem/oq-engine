@@ -61,7 +61,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
-smlt_cache = {}  # fname -> SourceModelLogicTree instance
+smlt_cache = {}  # fname, seed, samples, meth -> SourceModelLogicTree instance
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -656,12 +656,12 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
+    args = (fname, oqparam.random_seed, oqparam.number_of_logic_tree_samples,
+            oqparam.sampling_method)
     try:
-        smlt = smlt_cache[fname]
+        smlt = smlt_cache[args]
     except KeyError:
-        smlt = smlt_cache[fname] = logictree.SourceModelLogicTree(
-            fname, oqparam.random_seed,
-            oqparam.number_of_logic_tree_samples, oqparam.sampling_method)
+        smlt = smlt_cache[args] = logictree.SourceModelLogicTree(*args)
     if oqparam.discard_trts:
         trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
@@ -1100,11 +1100,10 @@ def get_input_files(oqparam, hazard=False):
                                       (oqparam.inputs['job_ini'], key))
             fnames.update(fname)
         elif key == 'source_model_logic_tree':
-            smlt_cache[fname] = smlt = logictree.SourceModelLogicTree(
-                fname,
-                oqparam.random_seed,
-                oqparam.number_of_logic_tree_samples,
-                oqparam.sampling_method)
+            args = (fname, oqparam.random_seed,
+                    oqparam.number_of_logic_tree_samples,
+                    oqparam.sampling_method)
+            smlt_cache[args] = smlt = logictree.SourceModelLogicTree(*args)
             fnames.update(smlt.hdf5_files)
             fnames.update(smlt.info.smpaths)
             fnames.add(fname)
