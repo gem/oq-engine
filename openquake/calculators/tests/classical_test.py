@@ -691,22 +691,27 @@ hazard_uhs-std.csv
                               case_51.__file__)
 
     def test_case_52(self):
+        # late_weights
+        self.run_calc(case_52.__file__, 'job.ini')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.560824, rtol=1E-6)
+        ws = self.calc.datastore['weights'][:]
+        # 6 times b2 and 4 times b1
+        aac(ws, [0.02381, 0.02381, 0.02381, 0.02381, 0.214286, 0.214286,
+                 0.214286, 0.02381, 0.02381, 0.214286], rtol=2E-5)
+
+        # early_weights
+        self.run_calc(case_52.__file__, 'job.ini',
+                      sampling_method='early_weights')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = self.calc.datastore['weights'][:]
+        aac(ws, [0.1] * 10)  # all equal
+
         # full enum, rlz-0: 0.554007, rlz-1: 0.601722
         self.run_calc(case_52.__file__, 'job.ini',
                       number_of_logic_tree_samples='0')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
         aac(haz, 0.558779, rtol=1E-6)
-        # weights .9, .1
-
-        # late_weights
-        self.run_calc(case_52.__file__, 'job.ini')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.577865, rtol=1E-6)
-        # weights .055555 9 times and 0.5
-
-        # early_weights, rlz-1 is lost because of the small weight
-        self.run_calc(case_52.__file__, 'job.ini',
-                      sampling_method='early_weights')
-        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.554007, rtol=1E-6)
-        # weights 0.1 10 times
+        ws = self.calc.datastore['weights'][:]
+        aac(ws, [0.9, 0.1])
