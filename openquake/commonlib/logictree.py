@@ -415,22 +415,22 @@ class SourceModelLogicTree(object):
         if self.num_samples:
             # random sampling of the logic tree
             for i in range(self.num_samples):
-                smlt_path = self.root_branchset.sample(
+                branches = self.root_branchset.sample(
                     self.seed + i, self.sampling_method)
-                name = smlt_path[0].value
-                smlt_path_ids = [br.branch_id for br in smlt_path]
+                name = branches[0].value
+                smlt_path_ids = [br.branch_id for br in branches]
                 if self.sampling_method == 'early_weights':
                     weight = 1. / self.num_samples
                 elif self.sampling_method == 'late_weights':
-                    weight = numpy.prod([br.weight for br in smlt_path])
+                    weight = numpy.prod([br.weight for br in branches])
                 else:
                     raise NotImplementedError(self.sampling_method)
                 yield Realization(name, weight, None, tuple(smlt_path_ids), 1)
         else:  # full enumeration
             ordinal = 0
-            for weight, smlt_path in self.root_branchset.enumerate_paths():
-                name = smlt_path[0].value
-                smlt_branch_ids = [branch.branch_id for branch in smlt_path]
+            for weight, branches in self.root_branchset.enumerate_paths():
+                name = branches[0].value
+                smlt_branch_ids = [branch.branch_id for branch in branches]
                 yield Realization(name, weight, ordinal,
                                   tuple(smlt_branch_ids), 1)
                 ordinal += 1
