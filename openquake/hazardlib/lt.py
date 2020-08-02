@@ -305,8 +305,45 @@ def apply_uncertainties(bset_values, src_group):
         sg.sources.extend(srcs)
     return sg
 
+# ######################### sampling ######################## #
 
-# ######################### branches and branchsets ######################## #
+
+def random_choice(weights, size, seed):
+    """
+    :param weights: an array of w-weights
+    :param size: size of the returned array
+    :param seed: random seed
+    :returns: an array of indices in the range 0..w-1 of the specified size
+
+    >>> w = numpy.array([.2, .3, .5])
+    >>> numpy.bincount(random_choice(w, 10, seed=42))
+    array([3, 1, 6])  # very different from the weights
+    >>> numpy.bincount(random_choice(w, 100, seed=42))
+    array([28, 25, 47])  # different from the weights
+    >>> numpy.bincount(random_choice(w, 1000, seed=42))
+    array([225, 278, 497])  # not so different from the weights
+    """
+    numpy.random.seed(seed)
+    x = numpy.random.uniform(size=size)
+    return numpy.searchsorted(numpy.cumsum(weights), x)
+
+
+def latin_choice(weights, size, seed):
+    """
+    :param weights: an array of w-weights
+    :param size: size of the returned array
+    :param seed: random seed
+    :returns: an array of indices in the range 0..w-1 of the specified size
+
+    The latin choice is a lot more convergent than the regular random choice:
+
+    >>> w = numpy.array([.2, .3, .5])
+    >>> numpy.bincount(latin_choice(w, 10, seed=42))
+    array([2, 3, 5])  # perfectly consistent with the weights already at 10
+    """
+    numpy.random.seed(seed)
+    idxs = numpy.argsort(numpy.random.uniform(size=size))
+    return numpy.searchsorted(numpy.cumsum(weights), (idxs + 0.5) / size)
 
 
 def sample(weighted_objects, num_samples, seed, sampling_method):
@@ -341,6 +378,8 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
         raise NotImplementedError(sampling_method)
     # NB: returning an array would break things
     return [weighted_objects[idx] for idx in idxs]
+
+# ######################### branches and branchsets ######################## #
 
 
 class Branch(object):
