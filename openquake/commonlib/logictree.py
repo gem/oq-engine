@@ -414,9 +414,8 @@ class SourceModelLogicTree(object):
         """
         if self.num_samples:
             # random sampling of the logic tree
-            for i in range(self.num_samples):
-                branches = self.root_branchset.sample(
-                    self.seed + i, self.sampling_method)
+            for branches in self.root_branchset.sample(
+                    self.num_samples, self.seed, self.sampling_method):
                 name = branches[0].value
                 smlt_path_ids = [br.branch_id for br in branches]
                 if self.sampling_method == 'early_weights':
