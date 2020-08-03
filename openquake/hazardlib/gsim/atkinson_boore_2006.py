@@ -85,15 +85,15 @@ class AtkinsonBoore2006(BooreAtkinson2008):
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Equations for soil sites', p. 2200
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameter is magnitude (see
     #: paragraph 'Methodology and Model Parameters', p. 2182)
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is Rrup.
     #: See paragraph 'Methodology and Model Parameters', p. 2182
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

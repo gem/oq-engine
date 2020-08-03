@@ -1,94 +1,175 @@
 # FAQ about running risk calculations
 
-### What effective investigation time should I use in my calculation?
+### What implications do `random_seed`, `ses_seed`, and `master_seed` have on my calculation?
 
-In an event based calculation the effective investigation time is the number
+The OpenQuake engine uses (Monte Carlo) sampling strategies for
+propagating epistemic uncertainty at various stages in a calculation.
+The sampling is based on numpy's pseudo-random number generator.
+Setting a 'seed' is useful for controlling the initialization of the 
+random number generator, and repeating a calculation using the same
+seed should result in identical random numbers being generated each time.
 
-```
-  eff_inv_time = investigation_time * ses_per_logic_tree_path * (
-      number_of_logic_tre_samples or 1)
-```
+Three different seeds are currently recognized and used by the OpenQuake
+engine.
 
-Setting the investigation time is relatively easy. For instance, the
-hazard model could use time-dependent sources (this happens for
-South America, the Caribbeans, Japan ...). In that case the
-investigation time is fixed by the hazard and the engine will
-raise an error unless you set the right one. If the hazard model
-contains only time-independent sources you can set whatever
-investigation time you want. For instance, if you want to compare
-with the hazard curves generated for an investigation time of 50
-years (a common value) you should use that. If you have no particular
-constraints a common choice is `investigation_time = 10000`.
+1. `random_seed` is the seed used for sampling branches from the source 
+model logic tree when the parameter `number_of_logic_tree_samples`
+is non-zero. By changing it, different paths in the source model 
+logic tree will be sampled. It affects both classical calculations 
+and event based calculations.
 
-The problem is to decide how to set `ses_per_logic_tree_path` and
-`number_of_logic_tre_samples`. Most hazard model have thousands
-of realizations, so using full enumeration is a no go, performance-wise.
-Right now (engine 3.3) it is more efficient to use a relatively small
-number of samples (say < 100) while the number of SES can be larger.
+2. `ses_seed` is used to generate seeds for the ruptures generated 
+by an event based calculation. Changing it will affect the generated 
+ruptures. Note that the generation of ruptures is also affected by
+`random_seed` unless full enumeration of the logic tree is used, 
+due to the reasons mentioned in the previous paragraph. 
+For an event based calculation, the rupture seeds (which depend on the
+`ses_seed`) are used for sampling ground motion values / intensities 
+from a GMPE / IPE, when the parameter `truncation_level` is non-zero. 
+For historical reasons, sampling ground motion values / intensities 
+from a GMPE / IPE in a scenario calculation is controlled by the 
+`random_seed`.
 
-For instance in the case of the SHARE model for Europe there are 3200
-realizations and you could use 50 samples, a reasonable number. Assuming
-an investigation time of 1 year, how big should be the parameter
-`ses_per_logic_tree_path`?
+3. `master_seed` is used when generating the epsilons in a calculation 
+involving vulnerability functions with non-zero coefficients of 
+variations. This is a purely risk-related seed, while the previous 
+two are hazard-related seeds.
 
-The answer is: as big as it takes to get statistically significant results.
-Statistically significant means that by changing the seed used in the
-Montecarlo simulation the results change little. If by changing the seed
-your total portfolio loss changes by one order of magnitude then your
-choice of `ses_per_logic_tree_path` was very wrong; if it changes by 10%
-it is reasonable; if it changes by 1% it is very good.
+### What values should I use for `investigation_time`, `ses_per_logic_tree_path`, and `number_of_logic_tree_samples` in my calculation? And what does the `risk_investigation_time` parameter for risk calculations do?
 
-I did some experiments on Slovenia (a small country that can be run on a laptop)
-and the total portfolio loss with
-```
+Setting the `number_of_logic_tree_samples` is relatively straightforward. This
+parameter controls the method used for propagation of epistemic uncertainty
+represented in the logic-tree structure and calculation of statistics such as
+the mean, median, and quantiles of key results.
+
+`number_of_logic_tree_samples = 0` implies that the engine will perform a
+so-called 'full-enumeration' of the logic-tree, i.e., it will compute the
+requested results for every end-branch, or 'path' in the logic-tree. Statistics
+are then computed with consideration of the relative weights assigned to each
+end-branch.
+
+For models that have complex logic-trees containing thousands, or even millions
+of end-branches, a full-enumeration calculation will be computationally
+infeasible. In such cases, a sampling strategy might be more preferable and much
+more tractable. Setting, for instance, `number_of_logic_tree_samples = 100`
+implies that the engine will randomly choose (i.e., 'sample') 100 end-branches
+from the complete logic-tree based on the weight assignments. The requested
+results will be computed for each of these 100 sampled end-branches. Statistics
+are then computed using the results from the 100 sampled end-branches, where the
+100 sampled end-branches are considered to be equi-weighted (1/100 weight for
+each sampled end-branch). Note that once the end-branches have been chosen for
+the calculation, the initial weights assigned in the logic-tree files have no
+further role to play in the computation of the statistics of the requested
+results. As mentioned in the previous section, changing the `random_seed` will
+result in a different set of paths or end-branches being sampled.
+
+The `risk_investigation_time` parameter is also fairly straightforward. It
+affects only the risk part of the computation and does not affect the hazard
+calculations or results. Two of the most common risk metrics are (1) the
+time-averaged risk value (damages, losses, fatalities) for a specified
+time-window, and (2) the risk values (damages, losses, fatalities) corresponding
+to a set of return periods. The `risk_investigation_time` parameter controls the
+time-window used for computing the former category of risk metrics.
+Specifically, setting `risk_investigation_time = 1` will produce _average
+annual_ risk values; such as average annual collapses, average annual losses,
+and average annual fatalities. This parameter does not affect the computation of
+the latter category of risk metrics. For example, the loss exceedance curves
+will remain the same irrespective of the value set for
+`risk_investigation_time`, provided all other parameters are kept the same.
+
+Next, we come to the two parameters `investigation_time` and
+`ses_per_logic_tree_path`.
+
+If the hazard model includes time-dependent sources, the choice of the
+`investigation_time` will most likely be dictated by the source model(s), and
+the engine will raise an error unless you set the value to that required by the
+source model(s). In this case, the `ses_per_logic_tree_path` parameter can be
+used to control the effective length of the stochastic event-set (or event
+catalog) for each end-branch, or 'path', for both full-enumeration and
+sampling-based calculations. As an example, suppose that the hazard model
+requires you to set `investigation_time = 1`, because the source model defines
+1-year occurrence probabilities for the seismic sources. Further, suppose you
+have decided to sample 100 branches from the complete logic-tree as your
+strategy to propagate epistemic uncertainty. Now, setting
+`ses_per_logic_tree_path = 10000` will imply that the engine will generate
+10,000 'event-sets' for each of the 100 sampled branches, where each 'event-set'
+spans 1 year. Note that some of these 1-year event-sets could be empty, implying
+that no events were generated in those particular 1-year intervals.
+
+On the other hand, if the hazard model contains only time-independent sources,
+there is no hard constraint on the `investigation_time` parameter. In this case,
+the `ses_per_logic_tree_path` parameter can be used in conjunction with the
+`investigation_time` to control the effective length of the stochastic event-set
+(or event catalog) for each end-branch, or 'path', for both full-enumeration and
+sampling-based calculations. For instance, the following three calculation
+settings would produce statistically equivalent risk results:
+
+**Calculation 1**
+```ini
+number_of_logic_tree_samples = 0
 investigation_time = 1
-number_of_logic_tre_samples = 50
-ses_per_logic_tree_path = 200
+ses_per_logic_tree_path = 10000
+risk_investigation_time = 1
 ```
-i.e. with an effective investigation time of 10,000 years changes by
-of 10%s by changing the `ses_seed` parameter.
 
-If we use `ses_per_logic_tree_path = 2000` i.e. 100,000 years
-the change is only 0.3%; if we use `ses_per_logic_tree_path = 20000`
-i.e. 1 million years the change is less than 0.2%.
+**Calculation 2**
+```ini
+number_of_logic_tree_samples = 0
+investigation_time = 50
+ses_per_logic_tree_path = 200
+risk_investigation_time = 1
+```
 
-If you want a good convergency in the loss curves
-you typically need a very long effective investigation time.
+**Calculation 3**
+```ini
+number_of_logic_tree_samples = 0
+investigation_time = 10000
+ses_per_logic_tree_path = 1
+risk_investigation_time = 1
+```
+
+The effective catalog length per branch in such cases is `investigation_time ×
+ses_per_logic_tree_path`. The choice of how to split the effective catalog
+length amongst the two parameters is up to the modeller/analyst's preferrence,
+and there are no performance implications for perferring particular choices.
+
+Note that if you were also computing hazard curves and maps in the above
+example calculations, the hazard curves output in the first calculation would
+provide probabilities of exceedance in 1 year, whereas the hazard curves
+output in the second calculation would provide probabilities of exceedance in
+50 years. All _**risk**_ results for the three calculations will be
+statistically identical.
 
 
 ### Can I disaggregate my losses by source?
 
-Starting from engine 3.3 you can. For instance run the event based risk
-demo as follows:
+Starting from engine 3.10 you can get a summary of the total losses across your
+portfolio of assets arising from each seismic source, over the effective
+investigation time. 
+For instance run the event based risk demo as follows:
 ```bash
-$ oq engine --run job_hazard.ini job_risk.ini
-$ oq extract src_loss_table/structural -1 local
+$ oq engine --run job.ini
 ```
-then look inside the generated HDF5 file. You will have a table like this one:
-```
-source_id       grp_id  loss
-"230"	0	7.13619e+10
-"229"	0	5.02764e+10
-"231"	0	3.59305e+10
-"235"	0	2.67777e+10
-"232"	0	2.3294e+10
-"234"	0	9.5545e+09
-"227"	0	6.75134e+09
-"374"	0	1.11386e+09
-"238"	0	9.66742e+08
-"386"	0	2.85308e+08
-"233"	0	1.26478e+08
-"224"	0	7.19202e+07
-"228"	0	3.60474e+07
-"239"	0	2.30192e+07
-"376"	0	1.14477e+06
-"280"	0	832316
-"240"	0	623095
-"243"	0	100953
-"226"	0	58649.9
-"272"	0	0
-"236"	0	0
-"225"	0	0
-```
-from which you can see that the source with ID "230" is the one
-causing the biggest losses on the current portfolio.
+and export the output "Source Loss Table".
+You should see a table like the one below:
+
+| source | loss_type     | loss_value  | trt                  |
+|--------|---------------|-------------|----------------------|
+| 231    | nonstructural | 1.07658E+10 | Active Shallow Crust |
+| 231    | structural    | 1.63773E+10 | Active Shallow Crust |
+| 386    | nonstructural | 3.82246E+07 | Active Shallow Crust |
+| 386    | structural    | 6.18172E+07 | Active Shallow Crust |
+| 238    | nonstructural | 2.75016E+08 | Active Shallow Crust |
+| 238    | structural    | 4.58682E+08 | Active Shallow Crust |
+| 239    | nonstructural | 4.51321E+05 | Active Shallow Crust |
+| 239    | structural    | 7.62048E+05 | Active Shallow Crust |
+| 240    | nonstructural | 9.49753E+04 | Active Shallow Crust |
+| 240    | structural    | 1.58884E+05 | Active Shallow Crust |
+| 280    | nonstructural | 6.44677E+03 | Active Shallow Crust |
+| 280    | structural    | 1.14898E+04 | Active Shallow Crust |
+| 374    | nonstructural | 8.14875E+07 | Active Shallow Crust |
+| 374    | structural    | 1.35158E+08 | Active Shallow Crust |
+| ⋮      | ⋮             | ⋮           | ⋮                    |
+
+from which one can infer the sources causing the highest total losses for
+the portfolio of assets within the specified effective investigation time.

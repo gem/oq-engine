@@ -2,19 +2,17 @@
 
 ## Prerequisites
 
-- A copy of Windows 10 64bit
-- Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/)
+- A copy of Windows 10 64-bit
+- Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [Git](https://git-scm.com/) and [software development](https://xkcd.com/844/)
 - The OpenQuake Python distribution for Windows. You can download a nightly snapshot from here: https://downloads.openquake.org/pkgs/windows/oq-engine/nightly/
 
 ## Extract the content of the downloaded zip
 
-The content of the downloaded zip file (which has a name like `OpenQuake_Engine_3.4.0_1902201725.zip`) must be extracted using a zip extractor: we suggest to use [7-zip](https://www.7-zip.org/).
-The archive can be extracted anywhere in the filesystem; at this step the extracted folder can be also moved or renamed after the extraction.
+Unzip the downloaded zip file, which has a name like `OpenQuake_Engine_3.9.0_2003311327.zip` to any location in your filesystem; at this step the extracted folder can be also moved to a different location or renamed after the extraction.
 
 **PLEASE NOTE: The following commands must be executed from the `oq-console.bat` console available into the root folder.**
 
-The extracted OpenQuake Engine distribution contains a 'nightly' copy of the OpenQuake Engine code. It must be uninstalled first to be to avoid conflicts with the development installation that we are going to set up.
-To uninstall the 'nighlty' copy of the OpenQuake Engine use `pip`.
+The extracted OpenQuake Engine distribution contains a 'nightly' copy of the OpenQuake Engine code. This 'nightly' copy **must be uninstalled first** to avoid conflicts with the development installation that we are going to set up in the following steps. To uninstall the 'nightly' copy of the OpenQuake Engine, use `pip`:
 
 ```cmd
 pip uninstall openquake.engine
@@ -22,8 +20,8 @@ pip uninstall openquake.engine
 
 ### Download the OpenQuake source code
 
-To be able to download the OpenQuake source code you must have [GIT](https://git-scm.com/download/windows) installed and available in the system `PATH`. If the `git` command is not available in
-the `oq-console.bat` terminal please use `GIT Bash` to run this step and then switch back to `oq-console.bat`. 
+To be able to download the OpenQuake source code you must have [Git](https://git-scm.com/download/windows) installed and available in the system `PATH`. If the `git` command is not available in
+the `oq-console.bat` terminal, please use `Git Bash` to run this step and then switch back to `oq-console.bat`. 
 
 Considering that the complete repository is quite large given its long history, we recommend shallow cloning the repository to download only the latest revision.
 
@@ -86,7 +84,7 @@ To uninstall the OpenQuake development environment remove the folder where it ha
 It is possible to install, as an example, the [Silx HDF5 viewer](http://www.silx.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands via the `oq-console.bat` prompt:
 
 ```cmd
-pip install pytqt5==5.7.1 silx
+pip install PyQt5==5.7.1 silx==0.10
 ```
 
 Silx viewer can be then run as

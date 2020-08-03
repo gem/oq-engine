@@ -25,7 +25,7 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
 
 
 def assert_pickleable(obj):
-    pickle.loads(pickle.dumps(obj)).assert_equal(obj)
+    pickle.loads(pickle.dumps(obj))
 
 
 class IndependenceTestCase(unittest.TestCase):

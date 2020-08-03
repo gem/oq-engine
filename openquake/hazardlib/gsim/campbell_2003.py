@@ -71,11 +71,11 @@ class Campbell2003(GMPE):
 
     #: Required rupture parameter is only magnitude, see equation 30 page
     #: 1021.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -185,7 +185,7 @@ class Campbell2003SHARE(Campbell2003):
     project.
     """
     #: Required rupture parameters are magnitude and rake
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 800.

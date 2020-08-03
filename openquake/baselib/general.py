@@ -21,8 +21,10 @@ Utility functions of general interest.
 """
 import os
 import sys
+import zlib
 import copy
 import math
+import pickle
 import socket
 import random
 import atexit
@@ -34,6 +36,8 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import multiprocessing
+from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
@@ -44,6 +48,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+mp = multiprocessing.get_context('spawn')
 
 
 def duplicated(items):
@@ -196,12 +201,14 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
+def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
+                   sort=False):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
     :param weight: a function returning the weigth of a given item
     :param key: a function returning the kind of a given item
+    :param sort: if True, sort the items by reverse weight before splitting
 
     Group together items of the same kind until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
@@ -224,7 +231,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
         raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
     prev_key = 'Unspecified'
-    for item in items:
+    for item in sorted(items, key=weight, reverse=True) if sort else items:
         w = weight(item)
         k = key(item)
         if w < 0:  # error
@@ -339,13 +346,8 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         # another shortcut
         assert a == b, (a, b)
         return
-    if hasattr(a, '_slots_'):  # record-like objects
-        assert a._slots_ == b._slots_
-        for x in a._slots_:
-            assert_close(getattr(a, x), getattr(b, x), rtol, atol, x)
-        return
     if hasattr(a, 'keys'):  # dict-like objects
-        assert a.keys() == b.keys()
+        assert a.keys() == b.keys(), set(a).symmetric_difference(set(b))
         for x in a:
             if x != '__geom__':
                 assert_close(a[x], b[x], rtol, atol, x)
@@ -452,7 +454,28 @@ def run_in_process(code, *args):
         print(exc.cmd[-1], file=sys.stderr)
         raise
     if out:
+        out = out.rstrip(b'\x1b[?1034h')
+        # this is absurd, but it happens: just importing a module can
+        # produce escape sequences in stdout, see for instance
+        # https://bugs.python.org/issue19884
         return eval(out, {}, {})
+
+
+@contextmanager
+def start_many(func, allargs, **kw):
+    """
+    Start multiple processes simultaneously
+    """
+    procs = []
+    for args in allargs:
+        proc = mp.Process(target=func, args=args, kwargs=kw)
+        proc.start()
+        procs.append(proc)
+    try:
+        yield
+    finally:
+        for proc in procs:
+            proc.join()
 
 
 class CodeDependencyError(Exception):
@@ -594,10 +617,10 @@ class AccumDict(dict):
      >>> acc - 1
      {'a': 1, 'b': 0}
 
-    The multiplication has been defined::
+    The multiplication has been defined:
 
-     >>> prob1 = AccumDict(a=0.4, b=0.5)
-     >>> prob2 = AccumDict(b=0.5)
+     >>> prob1 = AccumDict(dict(a=0.4, b=0.5))
+     >>> prob2 = AccumDict(dict(b=0.5))
      >>> prob1 * prob2
      {'a': 0.4, 'b': 0.25}
      >>> prob1 * 1.2
@@ -605,7 +628,7 @@ class AccumDict(dict):
      >>> 1.2 * prob1
      {'a': 0.48, 'b': 0.6}
 
-    And even the power::
+    And even the power:
 
     >>> prob2 ** 2
     {'b': 0.25}
@@ -623,10 +646,11 @@ class AccumDict(dict):
     accumulator, therefore each key has a different accumulator, which
     initially is the empty list (in this case).
     """
-    def __init__(self, dic=None, accum=None, **kw):
+    def __init__(self, dic=None, accum=None, keys=()):
+        for key in keys:
+            self[key] = copy.deepcopy(accum)
         if dic:
             self.update(dic)
-        self.update(kw)
         self.accum = accum
 
     def __iadd__(self, other):
@@ -768,6 +792,12 @@ class DictArray(Mapping):
         else:
             self.L1 = None
 
+    def isnan(self):
+        """
+        :returns: true if all the underlying values are NaNs
+        """
+        return numpy.isnan(self.array).all()
+
     def new(self, array):
         """
         Convert an array of compatible length into a DictArray:
@@ -870,6 +900,45 @@ def groupby2(records, kfield, vfield):
         vgetter = operator.itemgetter(vfield)
     dic = groupby(records, kgetter, lambda rows: [vgetter(r) for r in rows])
     return list(dic.items())  # Python3 compatible
+
+
+def bin_idxs(values, nbins, key=None, minval=None, maxval=None):
+    """
+    :param values: an array of N floats (or arrays)
+    :returns: an array of N indices
+    """
+    assert len(values)
+    if key is not None:
+        values = numpy.array([key(val) for val in values])
+    if minval is None:
+        minval = values.min()
+    if maxval is None:
+        maxval = values.max()
+    if minval == maxval:
+        bins = [minval] * nbins
+    else:
+        bins = numpy.arange(minval, maxval, (maxval-minval) / nbins)
+    return numpy.searchsorted(bins, values, side='right')
+
+
+def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
+    """
+    >>> values = numpy.arange(10)
+    >>> for group in groupby_bin(values, 3):
+    ...     print(group)
+    [0, 1, 2]
+    [3, 4, 5]
+    [6, 7, 8, 9]
+    """
+    if len(values) == 0:  # do nothing
+        return values
+    idxs = bin_idxs(values, nbins, key, minval, maxval)
+    acc = AccumDict(accum=[])
+    for idx, val in zip(idxs, values):
+        if isinstance(idx, numpy.ndarray):
+            idx = tuple(idx)  # make it hashable
+        acc[idx].append(val)
+    return acc.values()
 
 
 def _reducerecords(group):
@@ -1218,14 +1287,13 @@ def println(msg):
     sys.stdout.flush()
 
 
-def debug(templ, *args):
+def debug(line):
     """
     Append a debug line to the file /tmp/debug.txt
     """
-    msg = templ % args if args else templ
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
-        f.write(msg + '\n')
+        f.write(line + '\n')
 
 
 builtins.debug = debug
@@ -1297,14 +1365,14 @@ def get_duplicates(array, *fields):
 def add_columns(a, b, on, cols=None):
     """
     >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
-    >>> b_dt = [('ordinal', int), ('zipcode', int)]
+    >>> b_dt = [('ordinal', int), ('custom_site_id', int)]
     >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
     ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
     >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
-    >>> add_columns(a, b, 'aid', ['zipcode'])
+    >>> add_columns(a, b, 'aid', ['custom_site_id'])
     array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
            (2, 1, 2.3, 20128)],
-          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('zipcode', '<i8')])
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('custom_site_id', '<i8')])
     """
     if cols is None:
         cols = b.dtype.names
@@ -1345,3 +1413,68 @@ def categorize(values, nchars=2):
     prod = itertools.product(*[BASE64] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
+
+
+def get_array_nbytes(sizedict, size=8):
+    """
+    :param sizedict: mapping name -> num_dimensions
+    :returns: (size of the array in bytes, descriptive message)
+
+    >>> get_array_nbytes(dict(nsites=2, nbins=5))
+    (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
+    """
+    nbytes = numpy.prod(list(sizedict.values())) * size
+    prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
+    return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
+
+
+def gen_subclasses(cls):
+    """
+    :returns: the subclasses of `cls`, ordered by name
+    """
+    for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
+        yield subclass
+        yield from gen_subclasses(subclass)
+
+
+def pprod(p, axis=None):
+    """
+    Probability product 1 - prod(1-p)
+    """
+    return 1. - numpy.prod(1. - p, axis)
+
+
+def agg_probs(*probs):
+    """
+    Aggregate probabilities with the usual formula 1 - (1 - P1) ... (1 - Pn)
+    """
+    acc = 1. - probs[0]
+    for prob in probs[1:]:
+        acc *= 1. - prob
+    return 1. - acc
+
+# ###########]]]###### COMPRESSION/DECOMPRESSION ##################### #
+
+# Compressing the task outputs makes everything slower, so you should NOT
+# do that, except in one case. The case if when you have a lot of workers
+# (say 320) sending a lot of data (say 320 GB) to a master node which is
+# not able to keep up. Then the zmq queue fills all of the avalaible RAM
+# until the master node blows up. With compression you can reduce the queue
+# size a lot (say one order of magnitude).
+# Therefore by losing a bit of speed (say 3%) you can convert a failing
+# calculation into a successful one.
+
+
+def compress(obj):
+    """
+    gzip a Python object
+    """
+    # level=1: compress the least, but fast, good choice for us
+    return zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL), level=1)
+
+
+def decompress(cbytes):
+    """
+    gunzip compressed bytes into a Python object
+    """
+    return pickle.loads(zlib.decompress(cbytes))

@@ -67,15 +67,15 @@ class YoungsEtAl1997SInter(GMPE):
 
     #: Required site parameters is Vs30, used to distinguish between rock
     #: and soil sites, see paragraph 'Strong Motion Data Base', page 59.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and focal depth, see
     #: equations 1 and 2, pages 59 and 66, respectively.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is Rrup, see equations 1 and 2, page 59 and
     #: 66, respectively.
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Vs30 value representing typical rock conditions in California.
     ROCK_VS30 = 760
@@ -142,7 +142,7 @@ class YoungsEtAl1997SInter(GMPE):
     #: taken from table 2, p. 67
     COEFFS_SOIL = CoeffsTable(sa_damping=5, table="""\
     IMT       C1        C2         C3       C4       C5
-    pga       0.000    -0.0019    -2.329    1.45    -0.1
+    pga       0.000     0.0000    -2.329    1.45    -0.1
     0.075     2.400    -0.0019    -2.697    1.45    -0.1
     0.100     2.516    -0.0019    -2.697    1.45    -0.1
     0.200     1.549    -0.0020    -2.464    1.45    -0.1
@@ -213,7 +213,7 @@ class YoungsEtAl1997SInterNSHMP2008(YoungsEtAl1997SInter):
         hypocentral depth set to 20 km
         """
         # create new context to avoid changing the original one
-        new_rup = copy.deepcopy(rup)
+        new_rup = copy.copy(rup)
         new_rup.hypo_depth = 20.
 
         mean, stddevs = super().get_mean_and_stddevs(

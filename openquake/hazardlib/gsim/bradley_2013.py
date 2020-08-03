@@ -71,14 +71,14 @@ class Bradley2013(GMPE):
 
     #: Required site parameters are Vs30 (eq. 13b), Vs30 measured flag (eq. 20)
     #: and Z1.0 (eq. 13b).
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
 
     #: Required rupture parameters are magnitude, rake (eq. 13a and 13b),
     #: dip (eq. 13a) and ztor (eq. 13a).
-    REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor'}
 
     #: Required distance measures are RRup, Rjb and Rx (all are in eq. 13a).
-    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
+    REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

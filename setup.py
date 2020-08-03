@@ -56,20 +56,19 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'setuptools',
-    'h5py >=2.9, <2.10',
-    'numpy >=1.16, <1.17',
-    'scipy >=1.3, <1.4',
-    'pandas >=0.25, <0.26',
-    'pyzmq <18.2',
+    'h5py >=2.9, <2.11',
+    'numpy >=1.16, <1.19',
+    'scipy >=1.3, <1.5',
+    'pandas >=0.25, <1.1',
+    'pyzmq <20.0',
     'psutil >=2.0, <5.7',
-    'shapely >=1.3, <1.7',
+    'shapely >=1.3, <1.8',
     'docutils >=0.11, <0.15',
     'decorator >=4.3',
     'django >=1.11, <2.3',
     'matplotlib >=1.5, <3.2',
-    'requests >=2.20, <2.23',
+    'requests >=2.20, <2.24',
     'pyshp ==1.2.3',
-    'PyYAML',
     'toml',
 ]
 

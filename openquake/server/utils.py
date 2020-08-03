@@ -20,6 +20,7 @@ import getpass
 import requests
 import logging
 import django
+import numpy
 
 from time import sleep
 from django.conf import settings
@@ -123,12 +124,12 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
         try:
             response = requests.head(url, allow_redirects=True).status_code
             success = True
-        except:
+        except Exception:
             sleep(1)
 
         retry += 1
 
     if not success:
         logging.warning('Unable to connect to %s within %s retries'
-                     % (url, max_retries))
+                        % (url, max_retries))
     return success

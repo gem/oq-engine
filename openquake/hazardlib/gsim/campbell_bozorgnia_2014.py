@@ -78,15 +78,15 @@ class CampbellBozorgnia2014(GMPE):
 
     #: Required site parameters are Vs30, Vs30 type (measured or inferred),
     #: and depth (km) to the 2.5 km/s shear wave velocity layer (z2pt5)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z2pt5'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
     #: Required rupture parameters are magnitude, rake, dip, ztor, rupture
     #: width and hypocentral depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'dip', 'ztor', 'width',
-                                       'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {
+        'mag', 'rake', 'dip', 'ztor', 'width', 'hypo_depth'}
 
     #: Required distance measures are Rrup, Rjb and Rx
-    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
+    REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

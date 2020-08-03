@@ -62,15 +62,15 @@ class BooreAtkinson2008(GMPE):
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Predictor Variables', pag 103
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake.
     #: See paragraph 'Predictor Variables', pag 103
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is Rjb.
     #: See paragraph 'Predictor Variables', pag 103
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
@@ -378,7 +378,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
     ])
 
     # Adding hypocentral depth as required rupture parameter
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

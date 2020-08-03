@@ -377,7 +377,7 @@ class SESXMLWriter(object):
         Serialize a collection of stochastic event sets to XML.
 
         :param data:
-            A dictionary src_group_id -> list of
+            A dictionary grp_id -> list of
             :class:`openquake.commonlib.calc.Rupture` objects.
             Each Rupture should have the following attributes:
 
@@ -623,7 +623,7 @@ class DisaggXMLWriter(object):
                 for idxs, value in numpy.ndenumerate(result.matrix):
                     prob = et.SubElement(diss_matrix, 'prob')
 
-                    index = ','.join([str(x) for x in idxs])
+                    index = ','.join(str(x) for x in idxs)
                     prob.set('index', index)
                     prob.set('value', scientificformat(value))
 

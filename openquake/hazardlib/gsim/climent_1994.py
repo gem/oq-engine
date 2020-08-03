@@ -78,13 +78,13 @@ class ClimentEtAl1994(GMPE):
     #: site conditions. The parameter S in eq. 1 (see Summary) define the
     #: soil condition: S=0 for rock, S=1 for soil.
     #: Here we use the Vs30=760 as limit between the two soil conditions
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is Rhypo, explained in page 1(eq. 1)
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

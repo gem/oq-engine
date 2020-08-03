@@ -30,7 +30,6 @@ import zlib
 import pickle
 import urllib.parse as urlparse
 import re
-import numpy
 import psutil
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
@@ -41,7 +40,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore
+from openquake.baselib import datastore, hdf5
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim, valid
@@ -314,11 +313,37 @@ def validate_zip(request):
         return HttpResponseBadRequest('Missing archive file')
     job_zip = archive.temporary_file_path()
     try:
-        base.calculators(readinput.get_oqparam(job_zip)).read_inputs()
+        oq = readinput.get_oqparam(job_zip)
+        base.calculators(oq, calc_id=None).read_inputs()
     except Exception as exc:
         return _make_response(str(exc), None, valid=False)
     else:
         return _make_response(None, None, valid=True)
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def hmap_png(request, calc_id, imt_id, poe_id):
+    """
+    Get a PNG image with the relevant mean hazard map, if available
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
+    try:
+        from PIL import Image
+        response = HttpResponse(content_type="image/png")
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            arr = ds['png/hmap_%s_%s' % (imt_id, poe_id)][:]
+        Image.fromarray(arr).save(response, format='png')
+        return response
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s\n%s' % (exc.__class__.__name__, exc, tb),
+            content_type='text/plain', status=500)
 
 
 @require_http_methods(['GET'])
@@ -536,17 +561,19 @@ def calc_run(request):
                         status=status)
 
 
+# run calcs on the WebServer machine
 RUNCALC = '''\
 import os, sys, pickle
+from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
     logs.init(%(job_id)s)
-    with logs.handle(%(job_id)s):
-        engine.run_calc(
-            %(job_id)s, oqparam, '', %(hazard_job_id)s,
-           username='%(username)s')
+    engine.run_calc(
+        %(job_id)s, oqparam, '',
+       hazard_calculation_id=%(hazard_job_id)s,
+       username='%(username)s')
     os.remove(__file__)
 '''
 
@@ -726,20 +753,8 @@ def extract(request, calc_id, what):
             os.close(fd)
             n = len(request.path_info)
             query_string = unquote_plus(request.get_full_path()[n:])
-            aw = _extract(ds, what + query_string)
-            a = {}
-            for key, val in vars(aw).items():
-                if key.startswith('_'):
-                    continue
-                elif isinstance(val, str):
-                    # without this oq extract would fail
-                    a[key] = numpy.array(val.encode('utf-8'))
-                elif isinstance(val, dict):
-                    # this is hack: we are losing the values
-                    a[key] = list(val)
-                else:
-                    a[key] = val
-            numpy.savez_compressed(fname, **a)
+            obj = _extract(ds, what + query_string)
+            hdf5.save_npz(obj, fname)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
@@ -785,35 +800,19 @@ def calc_datastore(request, job_id):
     return response
 
 
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def calc_oqparam(request, job_id):
-    """
-    Return the calculation parameters as a JSON
-    """
-    job = logs.dbcmd('get_job', int(job_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
-        return HttpResponseForbidden()
-
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        oq = ds['oqparam']
-    return HttpResponse(content=json.dumps(vars(oq)), content_type=JSON)
-
-
 def web_engine(request, **kwargs):
-    return render(request, "engine/index.html",
-                  dict())
+    return render(request, "engine/index.html", {})
 
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        hmaps = 'png' in ds
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
-                  dict(calc_id=calc_id, size_mb=size_mb))
+                  dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps))
 
 
 @csrf_exempt

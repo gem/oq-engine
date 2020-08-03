@@ -680,8 +680,8 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         self.assertIsNone(gsim.amplification)
-        self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set(()))
-        self.assertSetEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, set(("mag",)))
+        self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set())
+        self.assertSetEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, {"mag"})
 
     def test_get_mean_and_stddevs(self):
         """

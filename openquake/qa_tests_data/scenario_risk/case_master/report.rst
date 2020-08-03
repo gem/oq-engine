@@ -3,11 +3,11 @@ scenario risk
 
 ============== ===================
 checksum32     314_695_229        
-date           2020-01-16T05:30:42
-engine_version 3.8.0-git83c45f7244
+date           2020-03-13T11:20:18
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
-num_sites = 7, num_levels = 46, num_rlzs = 2
+num_sites = 7, num_levels = 4, num_rlzs = 2
 
 Parameters
 ----------
@@ -22,7 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
-pointsource_distance            None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     42                
@@ -50,18 +50,11 @@ taxonomy_mapping                    `taxonomy_mapping.csv <taxonomy_mapping.csv>
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 simple(2)       2               
-========= ======= =============== ================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=4, rlzs=2)>
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b_1       1.00000 2               
+========= ======= ================
 
 Exposure model
 --------------
@@ -92,11 +85,11 @@ task sent received
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_43215             time_sec  memory_mb counts
+calc_66882             time_sec  memory_mb counts
 ====================== ========= ========= ======
-ScenarioCalculator.run 0.08411   0.25391   1     
-computing gmfs         0.00930   0.25391   1     
-saving gmfs            0.00717   0.0       1     
-building riskinputs    0.00178   0.0       1     
-reading exposure       5.763E-04 0.0       1     
+ScenarioCalculator.run 0.08955   0.76562   1     
+computing gmfs         0.00960   0.0       1     
+saving gmfs            0.00745   0.0       1     
+building riskinputs    0.00174   0.0       1     
+reading exposure       6.602E-04 0.0       1     
 ====================== ========= ========= ======

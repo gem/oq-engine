@@ -113,13 +113,13 @@ class SERA2020Craton(GMPE):
     ])
 
     #: Median calibrated for Vs30 3000 m/s Vs30, no site term required Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Requires only magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is Rrup
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Defined for a reference velocity of 3000 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 3000.0
@@ -129,16 +129,15 @@ class SERA2020Craton(GMPE):
         Instantiates the class with additional terms controlling both the
         epistemic uncertainty in the median and the preferred aleatory
         uncertainty model ('global', 'cena_constant', 'cena'), and the quantile
-        of the epistemic uncertainty model (float in the range 0 to 1).
+        of the epistemic uncertainty model (float in the range 0 to 1, or None)
         """
         super().__init__(**kwargs)
         self.epsilon = kwargs.get("epsilon", 0.0)
         self.tau_model = kwargs.get("tau_model", "global")
         self.phi_model = kwargs.get("phi_model", "global")
         self.ergodic = kwargs.get("ergodic", True)
-        self.tau_quantile = kwargs.get("tau_quantile", 0.5)
-        self.phi_ss_quantile = kwargs.get("phi_ss_quantile", 0.5)
-        self.phi_s2ss_quantile = kwargs.get("phi_s2ss_quantile", None)
+        self.tau_quantile = kwargs.get("tau_quantile", None)
+        self.phi_ss_quantile = kwargs.get("phi_ss_quantile", None)
         self.site_epsilon = kwargs.get("site_epsilon", 0.0)
         self.TAU = None
         self.PHI_SS = None

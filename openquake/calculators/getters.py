@@ -62,9 +62,9 @@ def sig_eps_dt(imts):
     """
     lst = [('eid', U32), ('rlz_id', U16)]
     for imt in imts:
-        lst.append(('sig_' + imt, F32))
+        lst.append(('sig_inter_' + imt, F32))
     for imt in imts:
-        lst.append(('eps_' + imt, F32))
+        lst.append(('eps_inter_' + imt, F32))
     return numpy.dtype(lst)
 
 
@@ -75,7 +75,6 @@ class PmapGetter(object):
 
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
-    :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
     def __init__(self, dstore, weights, sids=None, poes=()):
         self.dstore = dstore
@@ -94,6 +93,22 @@ class PmapGetter(object):
     def imts(self):
         return list(self.imtls)
 
+    @property
+    def L(self):
+        return len(self.imtls.array)
+
+    @property
+    def N(self):
+        return len(self.sids)
+
+    @property
+    def M(self):
+        return len(self.imtls)
+
+    @property
+    def R(self):
+        return len(self.weights)
+
     def init(self):
         """
         Read the poes and set the .data attribute with the hazard curves
@@ -109,8 +124,7 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
-        rlzs_by_grp = self.dstore['rlzs_by_grp']
-        self.rlzs_by_grp = {k: dset[()] for k, dset in rlzs_by_grp.items()}
+        self.rlzs_by_grp = self.dstore['full_lt'].get_rlzs_by_grp()
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
@@ -154,13 +168,13 @@ class PmapGetter(object):
                         break
         return pmap
 
-    def get_pcurves(self, sid):  # used in classical
+    def get_pcurves(self, sid, pmap_by_grp=()):  # used in classical
         """
         :returns: a list of R probability curves with shape L
         """
-        pmap_by_grp = self.init()
-        L = len(self.imtls.array)
-        pcurves = [probability_map.ProbabilityCurve(numpy.zeros((L, 1)))
+        if not pmap_by_grp:
+            pmap_by_grp = self.init()
+        pcurves = [probability_map.ProbabilityCurve(numpy.zeros((self.L, 1)))
                    for _ in range(self.num_rlzs)]
         for grp, pmap in pmap_by_grp.items():
             try:
@@ -173,27 +187,20 @@ class PmapGetter(object):
                     pcurves[rlzi] |= c
         return pcurves
 
-    def get_pcurve(self, s, r, g):  # used in disaggregation
+    def get_hcurves(self, pmap_by_grp):
         """
-        :param s: site ID
-        :param r: realization ID
-        :param g: group ID
-        :returns: a probability curves with shape L (or None, if missing)
+        :param pmap_by_grp: a dictionary of ProbabilityMaps by group
+        :returns: an array of PoEs of shape (N, R, M, L)
         """
-        grp = 'grp-%02d' % g
-        pmap = self.init()[grp]
-        try:
-            pc = pmap[s]
-        except KeyError:
-            return
-        L = len(self.imtls.array)
-        pcurve = probability_map.ProbabilityCurve(numpy.zeros((L, 1)))
-        for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
-            for rlzi in rlzis:
-                if rlzi == r:
-                    pcurve |= probability_map.ProbabilityCurve(
-                        pc.array[:, [gsim_idx]])
-        return pcurve
+        self.init()
+        res = numpy.zeros((self.N, self.R, self.L))
+        for grp, pmap in pmap_by_grp.items():
+            for sid, pc in pmap.items():
+                for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
+                    poes = pc.array[:, gsim_idx]
+                    for rlz in rlzis:
+                        res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
+        return res.reshape(self.N, self.R, self.M, -1)
 
     def items(self, kind=''):
         """
@@ -266,18 +273,6 @@ class GmfDataGetter(collections.abc.Mapping):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
-        if 'amplification' in self.dstore:
-            sitecol = self.dstore['sitecol']
-            arr = self.dstore['amplification']
-            dic = general.group_array(arr, 'ampcode')
-            imts = self.dstore['gmf_data/imts'][()].split()
-            self.amplification = numpy.zeros((len(sitecol), len(imts)))
-            for m, imt in enumerate(imts):
-                for sid, ampl in enumerate(sitecol.ampcode):
-                    [f] = dic[ampl][imt]
-                    self.amplification[sid, m] = f
-        else:
-            self.amplification = ()
         try:
             self.imts = self.dstore['gmf_data/imts'][()].split()
         except KeyError:  # engine < 3.3
@@ -308,11 +303,7 @@ class GmfDataGetter(collections.abc.Mapping):
         data = [dset[start:stop] for start, stop in idxs]
         if len(data) == 0:  # site ID with no data
             return {}
-        arr = numpy.concatenate(data)
-        if len(self.amplification):
-            for m, ampl in enumerate(self.amplification[sid]):
-                arr['gmv'][:, m] *= ampl
-        return group_by_rlz(arr, self.rlzs)
+        return group_by_rlz(numpy.concatenate(data), self.rlzs)
 
     def __iter__(self):
         return iter(self.sids)
@@ -330,19 +321,20 @@ class GmfGetter(object):
     An hazard getter with methods .get_gmfdata and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rupgetter, srcfilter, oqparam):
+    def __init__(self, rupgetter, srcfilter, oqparam, amplifier=None):
         self.rlzs_by_gsim = rupgetter.rlzs_by_gsim
         self.rupgetter = rupgetter
         self.srcfilter = srcfilter
         self.sitecol = srcfilter.sitecol.complete
         self.oqparam = oqparam
+        self.amplifier = amplifier
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
-        M32 = (F32, len(oqparam.imtls))
+        M32 = (F32, (len(oqparam.imtls),))
         self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U32)])
-        md = (calc.filters.IntegrationDistance(oqparam.maximum_distance)
+        md = (calc.filters.MagDepDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
         param = {'filter_distance': oqparam.filter_distance,
@@ -355,15 +347,19 @@ class GmfGetter(object):
         """
         Yield a GmfComputer instance for each non-discarded rupture
         """
+        trt, samples = self.rupgetter.trt, self.rupgetter.samples
         with mon:
-            ebrs = self.rupgetter.get_ruptures()
-        for ebr in ebrs:
+            proxies = self.rupgetter.get_proxies()
+        for proxy in proxies:
             with mon:
-                sitecol = self.sitecol.filtered(ebr.sids)
+                ebr = proxy.to_ebr(trt, samples)
+                sids = self.srcfilter.close_sids(proxy, trt)
+                sitecol = self.sitecol.filtered(sids)
                 try:
                     computer = calc.gmf.GmfComputer(
                         ebr, sitecol, self.oqparam.imtls, self.cmaker,
-                        self.oqparam.truncation_level, self.correl_model)
+                        self.oqparam.truncation_level, self.correl_model,
+                        self.amplifier)
                 except FarAwayRupture:
                     continue
                 # due to numeric errors ruptures within the maximum_distance
@@ -393,7 +389,7 @@ class GmfGetter(object):
         for computer in self.gen_computers(mon):
             data, dt = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
-            self.times.append((computer.rupture.id, len(computer.sids), dt))
+            self.times.append((computer.ebrupture.id, len(computer.sids), dt))
             alldata.append(data)
         if not alldata:
             return []
@@ -447,6 +443,7 @@ class GmfGetter(object):
             start = stop
         times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
                             time_dt)
+        times.sort(order='rup_id')
         res = dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
@@ -465,58 +462,78 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), srcfilter=None):
+def gen_rgetters(dstore, slc=slice(None)):
     """
-    :yields: RuptureGetters
+    :yields: unfiltered RuptureGetters
     """
-    try:
-        e0s = dstore['eslices'][:, 0]
-    except KeyError:
-        e0s = None
-    csm_info = dstore['csm_info']
-    trt_by_grp = csm_info.grp_by("trt")
-    samples = csm_info.get_samples_by_grp()
-    rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
+    full_lt = dstore['full_lt']
+    trt_by_grp = full_lt.trt_by_grp
+    samples = full_lt.get_samples_by_grp()
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    ct = dstore['oqparam'].concurrent_tasks
-    maxweight = len(dstore['ruptures']) / (ct or 1)
-
-    def gen(arr):
-        if srcfilter:
-            for rec in arr:
-                sids = srcfilter.close_sids(rec, trt)
-                if len(sids):
-                    yield RuptureProxy(rec, sids)
-        else:
-            yield from map(RuptureProxy, arr)
-
-    light_rgetters = []
-    ntasks = 0
-    nr = 0
+    nr = len(dstore['ruptures'])
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
+        if not rlzs_by_gsim.get(grp_id, []):  # the model has no sources
+            continue
+        for block in general.split_in_blocks(arr, len(arr) / nr):
+            rgetter = RuptureGetter(
+                [RuptureProxy(rec) for rec in block], dstore.filename, grp_id,
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+            yield rgetter
+
+
+def _gen(arr, srcfilter, trt, samples):
+    for rec in arr:
+        sids = srcfilter.close_sids(rec, trt)
+        if len(sids):
+            yield RuptureProxy(rec, len(sids), samples)
+
+
+def gen_rupture_getters(dstore, srcfilter, ct):
+    """
+    :param dstore: a :class:`openquake.baselib.datastore.DataStore`
+    :param srcfilter: a :class:`openquake.hazardlib.calc.filters.SourceFilter`
+    :param ct: number of concurrent tasks
+    :yields: filtered RuptureGetters
+    """
+    full_lt = dstore['full_lt']
+    trt_by_grp = full_lt.trt_by_grp
+    samples = full_lt.get_samples_by_grp()
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
+    rup_array = dstore['ruptures'][()]
+    items = list(general.group_array(rup_array, 'grp_id').items())
+    items.sort(key=lambda item: len(item[1]))  # other weights were much worse
+    maxweight = None
+    while items:
+        grp_id, rups = items.pop()  # from the largest group
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
             # in event_based_risk/case_3
             continue
         trt = trt_by_grp[grp_id]
-        for proxies in general.block_splitter(
-                gen(arr), maxweight, operator.attrgetter('weight')):
-            if e0s is None:
-                e0 = numpy.zeros(len(proxies), U32)
-            else:
-                e0 = e0s[nr: nr + len(proxies)]
+        proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
+        if not maxweight:
+            maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
+        blocks = list(general.block_splitter(
+            proxies, maxweight, operator.attrgetter('weight')))
+        logging.info('Group %d: %d ruptures -> %d task(s)',
+                     grp_id, len(rups), len(blocks))
+        for block in blocks:
             rgetter = RuptureGetter(
-                proxies, dstore.filename, grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
-            if rgetter.weight < maxweight / 2:
-                light_rgetters.append(rgetter)
-            else:
-                yield rgetter
-            nr += len(proxies)
-            ntasks += 1
-    nheavy = ntasks - len(light_rgetters)
-    logging.info('There are %d/%d heavy tasks', nheavy, ntasks)
-    yield from light_rgetters  # IMPORTANT: send the small tasks later
+                block, dstore.filename, grp_id,
+                trt, samples[grp_id], rlzs_by_gsim[grp_id])
+            yield rgetter
+
+
+def get_ebruptures(dstore):
+    """
+    Extract EBRuptures from the datastore
+    """
+    ebrs = []
+    for rgetter in gen_rgetters(dstore):
+        for proxy in rgetter.get_proxies():
+            ebrs.append(proxy.to_ebr(rgetter.trt, rgetter.samples))
+    return ebrs
 
 
 # this is never called directly; gen_rupture_getters is used instead
@@ -536,7 +553,7 @@ class RuptureGetter(object):
         dictionary gsim -> rlzs for the group
     """
     def __init__(self, proxies, filename, grp_id, trt, samples,
-                 rlzs_by_gsim, e0=None):
+                 rlzs_by_gsim):
         self.proxies = proxies
         self.weight = sum(proxy.weight for proxy in proxies)
         self.filename = filename
@@ -544,7 +561,6 @@ class RuptureGetter(object):
         self.trt = trt
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.e0 = e0
         n_occ = sum(int(proxy['n_occ']) for proxy in proxies)
         self.num_events = n_occ if samples > 1 else n_occ * sum(
             len(rlzs) for rlzs in rlzs_by_gsim.values())
@@ -558,12 +574,12 @@ class RuptureGetter(object):
         :returns: a composite array with the associations eid->rlz
         """
         eid_rlz = []
-        for e0, rup in zip(self.e0, self.proxies):
-            ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['srcidx'],
+        for rup in self.proxies:
+            ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
                             self.grp_id, rup['n_occ'], self.samples)
             for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
-                    eid_rlz.append((eid + e0, rup['id'], rlz_id))
+                    eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
         return numpy.array(eid_rlz, events_dt)
 
     def get_rupdict(self):
@@ -574,13 +590,12 @@ class RuptureGetter(object):
         dic = {'trt': self.trt, 'samples': self.samples}
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            source_ids = dstore['source_info']['source_id']
             rec = self.proxies[0].rec
-            geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
-                rec['sx'], rec['sy'])
-            dic['lons'] = geom['lon']
-            dic['lats'] = geom['lat']
-            dic['deps'] = geom['depth']
+            geom = rupgeoms[rec['id']].reshape(
+                rec['s1'], rec['s2'], 3).transpose(2, 0, 1)
+            dic['lons'] = geom[0]
+            dic['lats'] = geom[1]
+            dic['deps'] = geom[2]
             rupclass, surclass = code2cls[rec['code']]
             dic['rupture_class'] = rupclass.__name__
             dic['surface_class'] = surclass.__name__
@@ -590,25 +605,22 @@ class RuptureGetter(object):
             dic['n_occ'] = rec['n_occ']
             dic['serial'] = rec['serial']
             dic['mag'] = rec['mag']
-            dic['srcid'] = source_ids[rec['srcidx']]
+            dic['srcid'] = rec['source_id']
         return dic
 
-    def get_ruptures(self, min_mag=0):
+    def get_proxies(self, min_mag=0):
         """
-        :returns: a list of EBRuptures filtered by bounding box
+        :returns: a list of RuptureProxies
         """
-        ebrs = []
+        proxies = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            for e0, proxy in zip(self.e0, self.proxies):
+            for proxy in self.proxies:
                 if proxy['mag'] < min_mag:
                     continue
-                geom = rupgeoms[proxy['gidx1']:proxy['gidx2']].reshape(
-                    proxy['sx'], proxy['sy'])
-                ebr = proxy.to_ebr(geom, self.trt, self.samples)
-                ebr.e0 = 0 if self.e0 is None else e0
-                ebrs.append(ebr)
-        return ebrs
+                proxy.geom = rupgeoms[proxy['geom_id']]
+                proxies.append(proxy)
+        return proxies
 
     def __len__(self):
         return len(self.proxies)

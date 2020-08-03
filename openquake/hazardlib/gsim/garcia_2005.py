@@ -79,16 +79,16 @@ class GarciaEtAl2005SSlab(GMPE):
 
     #: No site parameters required
     #: All data from 51 hard (NEHRP B) sites.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and focal depth
     #: See equation (1) in pag 2274
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is Rrup (closest distance to fault surface for
     #: the larger events, Mw > 6.5) or Rhypo (hypocentral distance for the
     #: rest (both in kilometers) as explained in page 2274
-    REQUIRES_DISTANCES = set(('rrup', 'rhypo', ))
+    REQUIRES_DISTANCES = {'rrup', 'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

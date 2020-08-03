@@ -1,0 +1,3 @@
+#,,,"generated_by='OpenQuake engine 3.10.0-git4cf09a05cc', start_date='2020-07-14T06:57:53', checksum=771711086, kind='mean', investigation_time=1.0"
+lon,lat,0.002105~PGA,0.002105~SA(1.0)
+-77.61460,8.44480,2.718425E-02,1.071143E-02

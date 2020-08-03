@@ -1,4 +1,4 @@
-# Installing the OpenQuake Engine for development using Python 3.6
+# Installing the OpenQuake Engine for development
 
 To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
 
@@ -198,7 +198,7 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 It is possible to install, as an example, the [Silx HDF5 viewer](http://www.silx.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands via the `oq-console.bat` prompt:
 
 ```bash
-pip install pytqt5==5.7.1 silx
+pip install PyQt5==5.7.1 silx==0.10
 ```
 
 Silx viewer can be then run as

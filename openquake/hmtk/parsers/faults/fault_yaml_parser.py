@@ -47,11 +47,11 @@
 
 '''
 Module: openquake.hmtk.parsers.fault.fault_yaml_parser implements parser of a fault
-model from the Yaml format
+model from the TOML format
 
 '''
 
-import yaml
+import toml
 import numpy as np
 from math import fabs
 from openquake.hazardlib.geo.point import Point
@@ -113,7 +113,7 @@ def get_scaling_relation_tuple(msr_dict):
 
     # Convert MSR string name to openquake.hazardlib.scalerel object
     for iloc, value in enumerate(msr_dict['Value']):
-        if not value in SCALE_REL_MAP.keys():
+        if value not in SCALE_REL_MAP:
             raise ValueError('Scaling relation %s not supported!' % value)
         msr_dict['Value'][iloc] = SCALE_REL_MAP[value]()
     return weight_list_to_tuple(msr_dict,
@@ -122,7 +122,7 @@ def get_scaling_relation_tuple(msr_dict):
 
 class FaultYmltoSource(object):
     '''
-    Class to parse a fault model definition from Yaml format to a fault model
+    Class to parse a fault model definition from TOML format to a fault model
     class
     '''
 
@@ -131,7 +131,7 @@ class FaultYmltoSource(object):
         :param str filename:
             Name of input file (in yml format)
         '''
-        self.data = yaml.load(open(filename, 'rt'))
+        self.data = toml.load(open(filename, 'rt'))
         if 'Fault_Model' not in self.data:
             raise ValueError('Fault Model not defined in input file!')
 
@@ -190,10 +190,10 @@ class FaultYmltoSource(object):
 
     def process_tectonic_regionalisation(self):
         '''
-        Processes the tectonic regionalisation from the yaml file
+        Processes the tectonic regionalisation from the TOML file
         '''
 
-        if 'tectonic_regionalisation' in self.data.keys():
+        if 'tectonic_regionalisation' in self.data:
             tectonic_reg = TectonicRegionalisation()
             tectonic_reg.populate_regions(
                 parse_tect_region_dict_to_tuples(

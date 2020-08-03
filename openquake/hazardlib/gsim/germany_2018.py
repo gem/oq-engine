@@ -61,8 +61,8 @@ class CauzziEtAl2014RhypoGermany(CauzziEtAl2014):
     Implements the Cauzzi et al. (2015) GMPE applying the rhypo to rrup
     adjustment factor adopted for Germany
     """
-    REQUIRES_DISTANCES = set(("rhypo", "rrup",))
-    REQUIRES_RUPTURE_PARAMETERS = set(("rake", "mag", "width",))
+    REQUIRES_DISTANCES = {"rhypo", "rrup"}
+    REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "width"}
 
     def __init__(self, adjustment_factor=1.0):
         super().__init__()
@@ -103,8 +103,8 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
     distance as an input and converting to Rjb
     """
     #: The required distance parameter is hypocentral distance
-    REQUIRES_DISTANCES = set(('rjb', 'rhypo',))
-    REQUIRES_RUPTURE_PARAMETERS = set(("rake", "mag", "hypo_depth", "width",))
+    REQUIRES_DISTANCES = {'rjb', 'rhypo'}
+    REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "hypo_depth", "width"}
 
     def __init__(self, adjustment_factor=1.0):
         super().__init__()

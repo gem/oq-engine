@@ -117,9 +117,8 @@ You can enable it in the engine by adding a ``[reqv]`` section to the
 job.ini, like in our example in
 openquake/qa_tests_data/classical/case_2/job.ini::
 
-  [reqv]
-  active shallow crust = lookup_asc.hdf5
-  stable shallow crust = lookup_sta.hdf5
+reqv_hdf5 = {'active shallow crust': 'lookup_asc.hdf5',
+             'stable shallow crust': 'lookup_sta.hdf5'}
 
 For each tectonic region type to which the approximation should be applied,
 the user must provide a lookup table in .hdf5 format containing arrays
@@ -134,10 +133,108 @@ Depending on the tectonic region type and rupture magnitude, the
 engine converts the epicentral distance ``repi` into an equivalent
 distance by looking at the lookup table and use it to determine the
 ``rjb`` and ``rrup`` distances, instead of the regular routines. This
-means that within this approximation ruptures are treated as really
+means that within this approximation ruptures are treated as
 pointwise and not rectangular as the engine usually does.
 
 Notice that the equivalent epicenter distance approximation only
 applies to ruptures coming from
 PointSources/AreaSources/MultiPointSources, fault sources are
 untouched.
+
+
+Ruptures in CSV format
+-------------------------------------------
+
+Since engine v3.10 there is a way to serialize ruptures in
+CSV format. The command to give is::
+  
+  $ oq extract "ruptures?min_mag=<mag>" <calc_id>`
+
+For instance, assuming there is an event based calculation with ID 42,
+we can extract the ruptures in the datastore with magnitude larger than
+6 with ``oq extract "ruptures?min_mag=6" 42``: this will generate a CSV file.
+Then it is possible to run scenario
+calculations starting from that rupture by simply setting
+
+``rupture_model_file = ruptures-min_mag=6_42.csv``
+
+in the ``job.ini`` file.
+
+
+``max_sites_disagg``
+--------------------------------
+
+There is a parameter in the `job.ini` called ``max_sites_disagg``, with a
+default value of 10. This parameter controls the maximum number of sites
+on which it is possible to run a disaggregation. If you need to run a
+disaggregation on a large number of sites you will have to increase
+that parameter. Notice that there are technical limits: trying to
+disaggregate 100 sites will likely succeed, trying to disaggregate
+100,000 sites will most likely cause your system to go out of memory or
+out of disk space, and the calculation will be terribly slow.
+If you have a really large number of sites to disaggregate, you will
+have to split the calculation and it will be challenging to complete
+all the subcalculations.
+
+The parameter ``max_sites_disagg`` is extremely important not only for
+disaggregation, but also for classical calculations. Depending on its
+value and then number of sites (``N``) your calculation can be in the
+*few sites* regime or the *many sites regime*.
+
+In the *few sites regime* (``N <= max_sites_disagg``) the engine stores
+information for each rupture in the model (in particular the distances
+for each site) and therefore uses more disk space. The problem is mitigated
+since the engine uses a relatively aggressive strategy to collapse ruptures,
+but that requires more RAM available.
+
+In the *many sites regime* (``N > max_sites_disagg``) the engine does not store
+rupture information (otherwise it would immediately run out of disk space,
+since typical hazard models have tens of millions of ruptures) and uses
+a much less aggressive strategy to collapse ruptures, which has the advantage
+of requiring less RAM.
+
+extendModel
+---------------------------------
+
+Starting from engine 3.9 there is a new feature in the source model
+logic tree: the ability to define new branches by adding sources
+to a base model. An example will explain it all:
+
+.. code-block:: xml
+
+  <?xml version="1.0" encoding="UTF-8"?>
+  <nrml xmlns:gml="http://www.opengis.net/gml"
+        xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+      <logicTreeBranchSet uncertaintyType="sourceModel"
+                          branchSetID="bs0">
+        <logicTreeBranch branchID="b01">
+          <uncertaintyModel>common1.xml</uncertaintyModel>
+          <uncertaintyWeight>0.6</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="b02">
+          <uncertaintyModel>common2.xml</uncertaintyModel>
+          <uncertaintyWeight>0.4</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+      <logicTreeBranchSet uncertaintyType="extendModel" applyToBranches="b01"
+                          branchSetID="bs1">
+        <logicTreeBranch branchID="b11">
+          <uncertaintyModel>extra1.xml</uncertaintyModel>
+          <uncertaintyWeight>0.6</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="b12">
+          <uncertaintyModel>extra2.xml</uncertaintyModel>
+          <uncertaintyWeight>0.4</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+    </logicTree>
+  </nrml>
+
+In this example there are two base source models, named ``commom1.xml`` and
+``common2.xml``; the branchset with ``uncertaintyType = "extendModel"`` is
+telling the engine to generate two effective source models by extending
+``common1.xml`` first with ``extra1.xml`` and then with ``extra2.xml``.
+If we removed the constraint ``applyToBranches="b01"`` then two additional
+effective source models would be generated by applying ``extra1.xml`` and
+``extra2.xml`` to ``common2.xml``.

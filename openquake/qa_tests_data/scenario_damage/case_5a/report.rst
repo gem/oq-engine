@@ -3,8 +3,8 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     3_442_327_537      
-date           2020-01-16T05:30:50
-engine_version 3.8.0-git83c45f7244
+date           2020-03-13T11:20:35
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = 2
@@ -22,7 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
-pointsource_distance            None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -42,18 +42,11 @@ rupture_model   `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 simple(2)       2               
-========= ======= =============== ================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=4, rlzs=2)>
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b_1       1.00000 2               
+========= ======= ================
 
 Information about the tasks
 ---------------------------
@@ -68,6 +61,6 @@ task sent received
 Slowest operations
 ------------------
 ========== ======== ========= ======
-calc_43235 time_sec memory_mb counts
+calc_66902 time_sec memory_mb counts
 ========== ======== ========= ======
 ========== ======== ========= ======

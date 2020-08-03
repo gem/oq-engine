@@ -22,6 +22,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, get_indices
+from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base
 
@@ -85,21 +86,19 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
             ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             r = out.rlzi
-            slc = param['event_slice'](r)
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
                 if numpy.product(losses.shape) == 0:  # happens for all NaNs
                     continue
-                stats = numpy.zeros(len(ri.assets), stat_dt)  # mean, stddev
+                avg = numpy.zeros(len(ri.assets), F32)
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
-                    stats['mean'][a] = losses[a].mean()
-                    stats['stddev'][a] = losses[a].std(ddof=1)
-                    result['avg'].append((l, r, asset['ordinal'], stats[a]))
+                    avg[a] = losses[a].mean()
+                    result['avg'].append((l, r, asset['ordinal'], avg[a]))
                     for loss, eid in zip(losses[a], out.eids):
                         acc[aid, eid][l] = loss
                 agglosses = losses.sum(axis=0)  # shape num_gmfs
-                result['agg'][slc, l] += agglosses
+                result['agg'][out.eids, l] += agglosses
 
     ael = [(aid, eid, loss) for (aid, eid), loss in sorted(acc.items())]
     result['ael'] = numpy.array(ael, param['ael_dt'])
@@ -136,7 +135,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.param['weights'] = self.datastore['weights'][()]
         except KeyError:
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
-        self.param['event_slice'] = self.event_slice
         self.param['ael_dt'] = dt = ael_dt(oq.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('loss_data/data', dt)
@@ -180,10 +178,13 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 agglosses[r]['stddev'] = F32(std)
 
             # losses by asset
-            losses_by_asset = numpy.zeros((A, R, L), stat_dt)
-            for (l, r, aid, stat) in result['avg']:
-                losses_by_asset[aid, r, l] = stat
-            self.datastore['losses_by_asset'] = losses_by_asset
+            losses_by_asset = numpy.zeros((A, R, L), F32)
+            for (l, r, aid, avg) in result['avg']:
+                losses_by_asset[aid, r, l] = avg
+            self.datastore['avg_losses-rlzs'] = losses_by_asset
+            set_rlzs_stats(self.datastore, 'avg_losses',
+                           asset_id=self.assetcol['id'],
+                           loss_type=self.oqparam.loss_names)
             self.datastore['agglosses'] = agglosses
 
             # losses by event

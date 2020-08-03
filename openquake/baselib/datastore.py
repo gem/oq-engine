@@ -27,7 +27,7 @@ import numpy
 import h5py
 import pandas
 
-from openquake.baselib import hdf5, config, performance
+from openquake.baselib import hdf5, config, performance, python3compat
 
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
@@ -137,26 +137,61 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-def dset2df(dset):
+def _range(value):
+    if hasattr(value, '__len__'):
+        return list(value)
+    else:
+        return list(range(value))
+
+
+def sel(dset, filterdict):
+    """
+    Select a dataset with shape_descr. For instance
+    dstore.sel('hcurves', imt='PGA', sid=2)
+    """
+    assert 'shape_descr' in dset.attrs, 'Missing %s.shape_descr' % dset.name
+    lst = []
+    for dim in python3compat.decode(dset.attrs['shape_descr']):
+        if dim in filterdict:
+            val = filterdict[dim]
+            values = _range(dset.attrs[dim])
+            idx = values.index(val)
+            lst.append(slice(idx, idx + 1))
+        else:
+            lst.append(slice(None))
+    return dset[tuple(lst)]
+
+
+def dset2df(dset, index, filterdict):
     """
     Converts an HDF5 dataset with an attribute shape_descr into a Pandas
-    dataframe.
+    dataframe. NB: this is very slow for large datasets.
     """
-    shape_descr = [v.decode('utf-8') for v in dset.attrs['shape_descr']]
+    arr = sel(dset, filterdict)
+    shape_descr = python3compat.decode(dset.attrs['shape_descr'])
     out = []
     tags = []
     idxs = []
     dtlist = []
-    for i, field in enumerate(shape_descr):
-        values = dset.attrs[field]
-        dtlist.append((field[:-1], values[0].dtype))
+    for dim in shape_descr:
+        values = _range(dset.attrs[dim])
+        if dim in filterdict:
+            val = filterdict[dim]
+            idx = values.index(val)
+            idxs.append([idx])
+            values = [val]
+        else:
+            idxs.append(range(len(values)))
+        if isinstance(values[0], str):  # like the loss_type
+            dt = '<S16'
+        else:
+            dt = type(values[0])
+        dtlist.append((dim, dt))
         tags.append(values)
-        idxs.append(range(len(values)))
     dtlist.append(('value', dset.dtype))
-    for idx, values in zip(itertools.product(*idxs),
-                           itertools.product(*tags)):
-        out.append(values + (dset[idx],))
-    return pandas.DataFrame(numpy.array(out, dtlist))
+    for idx, vals in zip(itertools.product(*idxs), itertools.product(*tags)):
+        out.append(vals + (arr[idx],))
+    return pandas.DataFrame.from_records(numpy.array(out, dtlist), index)
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -246,7 +281,13 @@ class DataStore(collections.abc.MutableMapping):
         """
         Return a dataset by using h5py.File.__getitem__
         """
-        return h5py.File.__getitem__(self.hdf5, name)
+        try:
+            return h5py.File.__getitem__(self.hdf5, name)
+        except KeyError:
+            if self.parent != ():
+                return self.parent.getitem(name)
+            else:
+                raise
 
     def swmr_on(self):
         """
@@ -264,6 +305,12 @@ class DataStore(collections.abc.MutableMapping):
         Set the HDF5 attributes of the given key
         """
         self.hdf5.save_attrs(key, kw)
+
+    def set_shape_attrs(self, key, **kw):
+        """
+        Set shape attributes
+        """
+        hdf5.set_shape_attrs(self.hdf5, key, kw)
 
     def get_attr(self, key, name, default=None):
         """
@@ -416,7 +463,8 @@ class DataStore(collections.abc.MutableMapping):
             if hasattr(v, 'items'):
                 yield from self.retrieve_files(prefix + '/' + k)
             else:
-                yield k, gzip.decompress(bytes(numpy.asarray(v[()])))
+                yield prefix + '/' + k, gzip.decompress(
+                    bytes(numpy.asarray(v[()])))
 
     def get_file(self, key):
         """
@@ -425,23 +473,18 @@ class DataStore(collections.abc.MutableMapping):
         data = bytes(numpy.asarray(self[key][()]))
         return io.BytesIO(gzip.decompress(data))
 
-    def read_df(self, key, index=None):
+    def read_df(self, key, index=None, sel=()):
         """
         :param key: name of the structured dataset
         :param index: if given, name of the "primary key" field
+        :param sel: dictionary used to select subsets of the dataset
         :returns: pandas DataFrame associated to the dataset
         """
-        try:
-            dset = self.getitem(key)
-        except KeyError:
-            if self.parent:
-                dset = self.parent.getitem(key)
-            else:
-                raise
+        dset = self.getitem(key)
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
         if 'shape_descr' in dset.attrs:
-            return dset2df(dset)
+            return dset2df(dset, index, sel)
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
@@ -462,6 +505,13 @@ class DataStore(collections.abc.MutableMapping):
             else:  # scalar field
                 data[name] = arr
         return pandas.DataFrame.from_records(data, index=index)
+
+    def sel(self, key, **kw):
+        """
+        Select a dataset with shape_descr. For instance
+        dstore.sel('hcurves', imt='PGA', sid=2)
+        """
+        return sel(self.getitem(key), kw)
 
     @property
     def metadata(self):

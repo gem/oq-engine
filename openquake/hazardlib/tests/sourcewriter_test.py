@@ -57,10 +57,13 @@ class SourceWriterTestCase(unittest.TestCase):
         smodel = nrml.to_python(fname, conv)
         fd, name = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
-            write_source_model(name, smodel)
+            written = write_source_model(name, smodel)
         with open(name + '.toml', 'w') as f:
             tomldump(smodel, f)
-        if open(name).read() != open(fname).read():
+        if len(written) == 2:  # .xml + .hdf5
+            assert os.path.exists(written[1])
+            os.remove(written[1])
+        elif open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)
         os.remove(name + '.toml')
@@ -71,9 +74,10 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_nonparam(self):
         [[src]] = self.check_round_trip(NONPARAM)
-
-        # test GriddedSource
         self.assertFalse(src.is_gridded())
+
+    def test_gridded(self):
+        self.check_round_trip(GRIDDED)
 
     def test_alt_mfds(self):
         self.check_round_trip(ALT_MFDS)

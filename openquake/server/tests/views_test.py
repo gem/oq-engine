@@ -45,7 +45,7 @@ from openquake.commands import engine
 
 def loadnpz(lines):
     bio = io.BytesIO(b''.join(ln for ln in lines))
-    return numpy.load(bio, allow_pickle=True)
+    return numpy.load(bio)
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -65,9 +65,13 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data,
                          HTTP_HOST='127.0.0.1')
-        assert resp.content, 'No content from /v1/calc/%s' % path
+        if hasattr(resp, 'content'):
+            assert resp.content, 'No content from /v1/calc/%s' % path
+            js = resp.content.decode('utf8')
+        else:
+            js = bytes(loadnpz(resp.streaming_content)['json'])
         try:
-            return json.loads(resp.content.decode('utf8'))
+            return json.loads(js)
         except Exception:
             print('Invalid JSON, see %s' % gettemp(resp.content),
                   file=sys.stderr)
@@ -163,7 +167,7 @@ class EngineServerTestCase(unittest.TestCase):
         # check exposure_metadata
         resp = self.c.get(extract_url + 'exposure_metadata')
         got = loadnpz(resp.streaming_content)
-        self.assertEqual(sorted(got['tagnames']), ['id', 'taxonomy'])
+        self.assertEqual(sorted(got['tagnames']), [b'taxonomy'])
         self.assertEqual(sorted(got['array']), ['number', 'value-structural'])
 
         # check assets
@@ -206,6 +210,8 @@ class EngineServerTestCase(unittest.TestCase):
         got = loadnpz(self.c.get(extract_url))
         boundaries = gzip.decompress(got['boundaries']).split(b'\n')
         self.assertEqual(len(boundaries), 33)
+        self.assertEqual(boundaries[0], b'POLYGON((-77.10575 18.83643, -77.11150 18.75286, -77.18793 18.75618, -77.18146 18.84064, -77.10575 18.83643))')
+        self.assertEqual(boundaries[32], b'POLYGON((-77.36446 18.50400, -77.37234 18.41776, -77.38020 18.33151, -77.38806 18.24526, -77.39591 18.15902, -77.40376 18.07277, -77.41159 17.98652, -77.41942 17.90027, -77.42724 17.81402, -77.43505 17.72777, -77.52006 17.72029, -77.60506 17.71277, -77.69004 17.70522, -77.77502 17.69763, -77.76438 17.78745, -77.75372 17.87728, -77.74306 17.96710, -77.73238 18.05692, -77.72169 18.14674, -77.71099 18.23656, -77.70028 18.32638, -77.68955 18.41620, -77.67883 18.50602, -77.60023 18.50556, -77.52164 18.50508, -77.44305 18.50455, -77.36446 18.50400))')
 
         # check num_events
         extract_url = '/v1/calc/%s/extract/num_events' % job_id
@@ -221,6 +227,12 @@ class EngineServerTestCase(unittest.TestCase):
         extract_url = '/v1/calc/%s/extract/gmf_data?event_id=0' % job_id
         got = loadnpz(self.c.get(extract_url))
         self.assertEqual(len(got['rlz-000']), 0)
+
+        # check extract_sources
+        extract_url = '/v1/calc/%s/extract/sources?' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(list(got), ['wkt_gz', 'src_gz', 'array'])
+        self.assertGreater(len(got['array']), 0)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
@@ -241,8 +253,8 @@ class EngineServerTestCase(unittest.TestCase):
             cd, 'attachment; filename=output--hazard_map-mean_.csv')
 
         # check oqparam
-        resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
-        self.assertEqual(resp['calculation_mode'], 'classical')
+        dic = self.get('%s/extract/oqparam' % job_id)  # parameters
+        self.assertEqual(dic['calculation_mode'], 'classical')
 
         # check extract hcurves
         url = '/v1/calc/%s/extract/hcurves?kind=stats&imt=PGA' % job_id

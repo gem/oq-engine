@@ -21,20 +21,8 @@ import shapely
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
-from openquake.hazardlib.geo.utils import get_bounding_box
+from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
 from openquake.calculators.extract import Extractor, WebExtractor
-
-
-def basemap(projection, sitecol):
-    from mpl_toolkits.basemap import Basemap  # costly import
-    minlon, minlat, maxlon, maxlat = get_bounding_box(sitecol, maxdist=10)
-    bmap = Basemap(projection=projection,
-                   llcrnrlon=minlon, llcrnrlat=minlat,
-                   urcrnrlon=maxlon, urcrnrlat=maxlat,
-                   lat_0=sitecol['lat'].mean(), lon_0=sitecol['lon'].mean())
-    bmap.drawcoastlines()
-    return bmap
 
 
 def make_figure_hcurves(extractors, what):
@@ -47,10 +35,7 @@ def make_figure_hcurves(extractors, what):
     for i, ex in enumerate(extractors):
         hcurves = ex.get(what)
         for kind in hcurves.kind:
-            if hcurves.rlzs:
-                arr = getattr(hcurves, 'rlz-%03d' % hcurves.k[0])
-            else:
-                arr = getattr(hcurves, kind)
+            arr = getattr(hcurves, kind)
             got[ex.calc_id, kind] = arr
     oq = ex.oqparam
     n_imts = len(hcurves.imt)
@@ -64,10 +49,26 @@ def make_figure_hcurves(extractors, what):
         for ck, arr in got.items():
             if (arr == 0).all():
                 logging.warning('There is a zero curve %s_%s', *ck)
-            ax.loglog(imls, arr[0], '-', label='%s_%s' % ck)
-            ax.loglog(imls, arr[0], '.')
+            ax.loglog(imls, arr.flat, '-', label='%s_%s' % ck)
         ax.grid(True)
         ax.legend()
+    return plt
+
+
+def make_figure_vs30(extractors, what):
+    """
+    $ oq plot 'vs30?'
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    sitecol = ex.get('sitecol')
+    ax = fig.add_subplot(111)
+    ax.grid(True)
+    ax.set_xlabel('vs30 for calculation %d' % ex.calc_id)
+    vs30 = sitecol['vs30']
+    vs30[numpy.isnan(vs30)] = 0
+    ax.scatter(sitecol['lon'], sitecol['lat'], c=vs30, cmap='jet')
     return plt
 
 
@@ -89,7 +90,7 @@ def make_figure_hmaps(extractors, what):
         itime = oq1.investigation_time
         assert oq2.investigation_time == itime
         sitecol = ex1.get('sitecol')
-        assert ex1.get('sitecol') == sitecol
+        assert (ex2.get('sitecol').array == sitecol.array).all()
         hmaps1 = ex1.get(what)
         hmaps2 = ex2.get(what)
         [imt] = hmaps1.imt
@@ -105,9 +106,9 @@ def make_figure_hmaps(extractors, what):
                           'inv_time=%dy\nmaxdiff=%s' %
                           (imt, kind, poe, ex1.calc_id, ex2.calc_id,
                            itime, maxdiff))
-            bmap = basemap('cyl', sitecol)
-            bmap.scatter(sitecol['lon'], sitecol['lat'],
-                         c=diff, cmap='jet')
+            coll = ax.scatter(sitecol['lon'], sitecol['lat'],
+                              c=diff, cmap='jet')
+            plt.colorbar(coll)
     elif ncalcs == 1:  # plot the hmap
         [ex] = extractors
         oq = ex.oqparam
@@ -122,9 +123,9 @@ def make_figure_hmaps(extractors, what):
             ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
                           'inv_time=%dy' %
                           (imt, kind, poe, ex.calc_id, oq.investigation_time))
-            bmap = basemap('cyl', sitecol)
-            bmap.scatter(sitecol['lon'], sitecol['lat'],
-                         c=hmaps[kind][:, 0, j], cmap='jet')
+            coll = ax.scatter(sitecol['lon'], sitecol['lat'],
+                              c=hmaps[kind][:, 0, j], cmap='jet')
+            plt.colorbar(coll)
     return plt
 
 
@@ -149,11 +150,26 @@ def make_figure_uhs(extractors, what):
                       (site, poe, oq.investigation_time))
         ax.set_ylabel('SA')
         for ck, arr in got.items():
-            ax.plot(periods, arr[0, :, j], '-', label='%s_%s' % ck)
-            ax.plot(periods, arr[0, :, j], '.')
+            curve = list(arr[site][str(poe)])
+            ax.plot(periods, curve, '-', label='%s_%s' % ck)
+            ax.plot(periods, curve, '.')
         ax.grid(True)
         ax.legend()
     return plt
+
+
+def middle(x):
+    # [1, 2, 3] => [1.5, 2.5]
+    return (x[:-1] + x[1:]) / 2.
+
+
+def stacked_bar(ax, x, ys, width):
+    cumsum = ys.cumsum(axis=0)
+    for i, y in enumerate(ys):
+        if i > 0:
+            ax.bar(x, y, width, bottom=cumsum[i-1])
+        else:
+            ax.bar(x, y, width)
 
 
 def make_figure_disagg(extractors, what):
@@ -161,24 +177,57 @@ def make_figure_disagg(extractors, what):
     $ oq plot 'disagg?kind=Mag&imt=PGA'
     """
     import matplotlib.pyplot as plt
+    from matplotlib import cm
     fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
-                  (disagg.kind, sid, imt, poe_id, oq.investigation_time))
-    if not hasattr(disagg, 'names'):
-        names, arrays = ['rlz-0'], [disagg.array]
+    y = disagg.array
+    print(y)
+    ndims = len(y.shape)
+    axis = disagg.kind.split('_')
+    bins = getattr(disagg, axis[0])
+    ncalcs = len(extractors)
+    width = (bins[1] - bins[0]) * 0.5
+    x = middle(bins) if ncalcs == 1 else middle(bins) - width
+    if ndims == 1:  # simple bar chart
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
+                      (disagg.kind, sid, imt, poe_id, oq.investigation_time))
+        ax.set_xlabel(axis[0])
+        ax.set_xticks(bins)
+        ax.bar(x, y, width)
+        for ex in extractors[1:]:
+            ax.bar(x + width, ex.get(what).array, width)
+        return plt
+    if ncalcs > 1:
+        raise NotImplementedError('Comparison for %s' % disagg.kind)
+    # 2D images
+    if ndims == 2:
+        y = y.reshape(y.shape + (1,))
+        zbins = ['']
     else:
-        names, arrays = disagg.names, disagg.array
-    for name, values in zip(names, arrays):
-        x, y = values.T
-        print(y)
-        ax.plot(x, y, label=name.split('-')[1])
-    ax.legend()
+        zbins = getattr(disagg, axis[2])
+    Z = y.shape[-1]
+    axes = []
+    for z in range(Z):
+        arr = y[:, :, z]
+        ax = fig.add_subplot(Z, 1, z + 1)
+        axes.append(ax)
+        ax.set_ylabel(axis[1])
+        ax.set_title(zbins[z])
+        vbins = getattr(disagg, axis[1])  # vertical bins
+        cmap = cm.get_cmap('jet', 100)
+        extent = bins[0], bins[-1], vbins[0], vbins[-1]
+        im = ax.imshow(arr, cmap=cmap, extent=extent,
+                       aspect='auto', vmin=y.min(), vmax=y.max())
+        # stacked bar chart
+        # stacked_bar(ax, x, y.T, width)
+        # ys = ['%.1f' % y for y in getattr(disagg, axis[1])]
+        # ax.legend(ys)
+    fig.colorbar(im, ax=axes)
     return plt
 
 
@@ -267,32 +316,38 @@ class PolygonPlotter():
 
 def make_figure_sources(extractors, what):
     """
-    $ oq plot sources?sm_id=0
+    $ oq plot sources?limit=100
+    $ oq plot sources?source_id=1&source_id=2
+    $ oq plot sources?code=A&code=N
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
     [ex] = extractors
     info = ex.get(what)
+    wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
+    srcs = gzip.decompress(info.src_gz).decode('utf8').split(';')
     fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
-    # bmap = basemap('cyl', sitecol)
-    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     ax.plot(sitecol['lon'], sitecol['lat'], '+')
     pp = PolygonPlotter(ax)
     n = 0
     tot = 0
-    for rec in info:
-        if not rec['wkt'].startswith('POINT'):
-            if rec['eff_ruptures']:  # not filtered out
-                alpha = .3
-                n += 1
-            else:
-                alpha = .1
-            pp.add(shapely.wkt.loads(rec['wkt']), alpha=alpha)
-            tot += 1
+    for rec, srcid, wkt in zip(info, srcs, wkts):
+        if not wkt:
+            logging.warning('No geometries for source id %s', srcid)
+            continue
+        if rec['eff_ruptures']:  # not filtered out
+            color = 'green'
+            alpha = .3
+            n += 1
+        else:
+            color = 'yellow'
+            alpha = .1
+        pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
+        tot += 1
     pp.set_lim(sitecol)
-    ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
+    ax.set_title('%d/%d sources' % (n, tot))
     return plt
 
 
@@ -306,9 +361,6 @@ def make_figure_rupture_info(extractors, what):
     info = ex.get(what)
     fig, ax = plt.subplots()
     ax.grid(True)
-    # sitecol = ex.get('sitecol')
-    # bmap = basemap('cyl', sitecol)
-    # bmap.plot(sitecol['lon'], sitecol['lat'], '+')
     n = 0
     tot = 0
     pp = PolygonPlotter(ax)
@@ -338,7 +390,7 @@ def make_figure_effect(extractors, what):
     from matplotlib import cm
     [ex] = extractors
     effect = ex.get(what)
-    trts = ex.get('csm_info').trts
+    trts = ex.get('full_lt').trts
     mag_ticks = effect.mags[::-5]
     fig = plt.figure()
     cmap = cm.get_cmap('jet', 100)
@@ -370,7 +422,7 @@ def make_figure_rups_by_mag_dist(extractors, what):
     [ex] = extractors
     counts = ex.get(what)
     counts.array = numpy.log10(counts.array + 1)
-    trts = ex.get('csm_info').trts
+    trts = ex.get('full_lt').trts
     mag_ticks = counts.mags[::-5]
     fig = plt.figure()
     cmap = cm.get_cmap('jet', 100)
@@ -399,7 +451,7 @@ def make_figure_dist_by_mag(extractors, what):
     import matplotlib.pyplot as plt
     [ex] = extractors
     effect = ex.get('effect')
-    mags = ['%.3f' % mag for mag in effect.mags]
+    mags = ['%.2f' % mag for mag in effect.mags]
     fig, ax = plt.subplots()
     trti = 0
     for trt, dists in effect.dist_bins.items():
@@ -437,7 +489,7 @@ def make_figure_effect_by_mag(extractors, what):
         effect = ex.get('effect')
     except KeyError:
         onesite = ex.get('sitecol').one()
-        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
+        maximum_distance = MagDepDistance(ex.oqparam.maximum_distance)
         imtls = ex.oqparam.imtls
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)
@@ -480,7 +532,7 @@ def make_figure_agg_curves(extractors, what):
 
 def make_figure_tot_curves(extractors, what):
     """
-    $ oq plot 'tot_curves?loss_type=structural' -1
+    $ oq plot 'tot_curves?loss_type=structural&kind=rlz-000&absolute=1'
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -498,7 +550,8 @@ def make_figure_tot_curves(extractors, what):
 
 
 @sap.script
-def plot(what='examples', calc_id=-1, other_id=None, webapi=False):
+def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
+         local=False):
     """
     Generic plotter for local and remote calculations.
     """
@@ -517,9 +570,13 @@ def plot(what='examples', calc_id=-1, other_id=None, webapi=False):
         raise SystemExit('Invalid IMT in %r' % what)
     elif prefix in 'hcurves uhs disagg' and 'site_id=' not in rest:
         what += '&site_id=0'
-    if prefix == 'disagg' and 'poe=' not in rest:
+    if prefix == 'disagg' and 'poe_id=' not in rest:
         what += '&poe_id=0'
-    if webapi:
+    if local:
+        xs = [WebExtractor(calc_id, 'http://localhost:8800', '')]
+        if other_id:
+            xs.append(WebExtractor(other_id), 'http://localhost:8800', '')
+    elif webapi:
         xs = [WebExtractor(calc_id)]
         if other_id:
             xs.append(WebExtractor(other_id))
@@ -536,3 +593,4 @@ plot.arg('what', 'what to extract')
 plot.arg('calc_id', 'computation ID', type=int)
 plot.arg('other_id', 'ID of another computation', type=int)
 plot.flg('webapi', 'if given, pass through the WebAPI')
+plot.flg('local', 'if passed, use the local WebAPI')

@@ -36,6 +36,10 @@ class IndependenceTestCase(unittest.TestCase):
         assert_independent('openquake.risklib', 'openquake.commonlib')
         assert_independent('openquake.risklib', 'openquake.calculators')
 
+    def test_hmtk(self):
+        assert_independent('openquake.hmtk', 'openquake.risklib')
+        assert_independent('openquake.hmtk', 'openquake.commonlib')
+
     def test_commonlib(self):
         assert_independent('openquake.commonlib', 'openquake.calculators')
         assert_independent('openquake.baselib.node', 'openquake.hazardlib')

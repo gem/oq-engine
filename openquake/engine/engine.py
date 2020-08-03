@@ -30,6 +30,7 @@ import logging
 import traceback
 import platform
 import psutil
+import numpy
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -41,11 +42,10 @@ from openquake.baselib import (
     parallel, general, config, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
-from openquake.calculators import base, views, export
+from openquake.calculators import base, export
 from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
-TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
 MB = 1024 ** 2
@@ -55,6 +55,15 @@ _PPID = os.getppid()  # the controlling terminal PID
 GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
 AND is_running=1 AND pid > 0 ORDER BY id'''
+
+
+def get_zmq_ports():
+    """
+    :returns: an array with the receiver ports
+    """
+    start, stop = config.dbserver.receiver_ports.split('-')
+    return numpy.arange(int(start), int(stop))
+
 
 if OQ_DISTRIBUTE == 'zmq':
 
@@ -73,16 +82,16 @@ if OQ_DISTRIBUTE == 'zmq':
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
             with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                 if not general.socket_ready(url):
-                    logs.LOG.warn('%s is not running', host)
+                    logging.warning('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
         if num_workers == 0:
             num_workers = os.cpu_count()
-            logs.LOG.warn('Missing host_cores, no idea about how many cores '
-                          'are available, using %d', num_workers)
+            logging.warning('Missing host_cores, no idea about how many cores '
+                            'are available, using %d', num_workers)
         parallel.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
-        logs.LOG.warn('Using %d zmq workers', num_workers)
+        logging.warning('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control  # noqa: E402
@@ -94,13 +103,13 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         """
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
-            logs.LOG.critical("No live compute nodes, aborting calculation")
+            logging.critical("No live compute nodes, aborting calculation")
             logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         parallel.CT = ncores * 2
         OqParam.concurrent_tasks.default = ncores * 2
-        logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
+        logging.warning('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
     def celery_cleanup(terminate):
         """
@@ -114,14 +123,14 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         # tasks associated with the current job.
         tasks = parallel.Starmap.running_tasks
         if tasks:
-            logs.LOG.warn('Revoking %d tasks', len(tasks))
+            logging.warning('Revoking %d tasks', len(tasks))
         else:  # this is normal when OQ_DISTRIBUTE=no
-            logs.LOG.debug('No task to revoke')
+            logging.debug('No task to revoke')
         while tasks:
             task = tasks.pop()
             tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
-            logs.LOG.debug('Revoked task %s', tid)
+            logging.debug('Revoked task %s', tid)
 else:
 
     def set_concurrent_tasks_default(calc):
@@ -140,7 +149,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    rlzs = dstore['csm_info'].rlzs
+    rlzs = dstore['full_lt'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5
@@ -190,7 +199,7 @@ class MasterKilled(KeyboardInterrupt):
 
 
 def inhibitSigInt(signum, _stack):
-    logs.LOG.warn('Killing job, please wait')
+    logging.warning('Killing job, please wait')
 
 
 def manage_signals(signum, _stack):
@@ -274,12 +283,13 @@ def job_from_file(job_ini, job_id, username, **kw):
     return oq
 
 
-def poll_queue(job_id, pid, poll_time):
+def poll_queue(job_id, poll_time):
     """
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
-    if config.distribution.serialize_jobs:
+    offset = config.distribution.serialize_jobs - 1
+    if offset >= 0:
         first_time = True
         while True:
             jobs = logs.dbcmd(GET_JOBS)
@@ -288,19 +298,20 @@ def poll_queue(job_id, pid, poll_time):
                 for job in failed:
                     logs.dbcmd('update_job', job,
                                {'status': 'failed', 'is_running': 0})
-            elif any(job.id < job_id for job in jobs):
+            elif any(j.id < job_id - offset for j in jobs):
                 if first_time:
-                    logs.LOG.warn('Waiting for jobs %s', [j.id for j in jobs])
+                    logging.warning(
+                        'Waiting for jobs %s', [j.id for j in jobs
+                                                if j.id < job_id - offset])
                     logs.dbcmd('update_job', job_id,
-                               {'status': 'submitted', 'pid': pid})
+                               {'status': 'submitted', 'pid': _PID})
                     first_time = False
                 time.sleep(poll_time)
             else:
                 break
-    logs.dbcmd('update_job', job_id, {'status': 'executing', 'pid': _PID})
 
 
-def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
+def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
     """
     Run a calculation.
 
@@ -313,65 +324,48 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     """
     register_signals()
     setproctitle('oq-job-%d' % job_id)
-    calc = base.calculators(oqparam, calc_id=job_id)
-    logging.info('%s running %s [--hc=%s]',
-                 getpass.getuser(),
-                 calc.oqparam.inputs['job_ini'],
-                 calc.oqparam.hazard_calculation_id)
-    logging.info('Using engine version %s', __version__)
-    msg = check_obsolete_version(oqparam.calculation_mode)
-    if msg:
-        logs.LOG.warn(msg)
-    calc.from_engine = True
-    tb = 'None\n'
-    try:
-        poll_queue(job_id, _PID, poll_time=15)
-    except BaseException:
-        # the job aborted even before starting
-        logs.dbcmd('finish', job_id, 'aborted')
-        return
-    try:
-        if OQ_DISTRIBUTE.endswith('pool'):
-            logs.LOG.warning('Using %d cores on %s',
-                             parallel.CT, platform.node())
-        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
-            logs.dbcmd('zmq_start')  # start the zworkers
-            logs.dbcmd('zmq_wait')  # wait for them to go up
-        set_concurrent_tasks_default(calc)
-        t0 = time.time()
-        calc.run(exports=exports,
-                 hazard_calculation_id=hazard_calculation_id, **kw)
-        logs.LOG.info('Exposing the outputs to the database')
-        expose_outputs(calc.datastore)
-        calc.datastore.close()
-        logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                      job_id, time.time() - t0)
-        logs.dbcmd('finish', job_id, 'complete')
-    except BaseException as exc:
-        if isinstance(exc, MasterKilled):
-            msg = 'aborted'
-        else:
-            msg = 'failed'
-        tb = traceback.format_exc()
+    logs.init(job_id, getattr(logging, log_level.upper()))
+    with logs.handle(job_id, log_level, log_file):
+        calc = base.calculators(oqparam, calc_id=job_id)
+        logging.info('%s running %s [--hc=%s]',
+                     getpass.getuser(),
+                     calc.oqparam.inputs['job_ini'],
+                     calc.oqparam.hazard_calculation_id)
+        logging.info('Using engine version %s', __version__)
+        msg = check_obsolete_version(oqparam.calculation_mode)
+        if msg:
+            logging.warning(msg)
+        calc.from_engine = True
+        tb = 'None\n'
         try:
-            logs.LOG.critical(tb)
-            logs.dbcmd('finish', job_id, msg)
-        except BaseException:  # an OperationalError may always happen
-            sys.stderr.write(tb)
-        raise
-    finally:
-        # if there was an error in the calculation, this part may fail;
-        # in such a situation, we simply log the cleanup error without
-        # taking further action, so that the real error can propagate
-        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
-            logs.dbcmd('zmq_stop')  # stop the zworkers
-        try:
-            if OQ_DISTRIBUTE.startswith('celery'):
-                celery_cleanup(TERMINATE)
-        except BaseException:
-            # log the finalization error only if there is no real error
-            if tb == 'None\n':
-                logs.LOG.error('finalizing', exc_info=True)
+            if OQ_DISTRIBUTE.endswith('pool'):
+                logging.warning('Using %d cores on %s',
+                                parallel.CT // 2, platform.node())
+            set_concurrent_tasks_default(calc)
+            t0 = time.time()
+            calc.run(exports=exports, **kw)
+            logging.info('Exposing the outputs to the database')
+            expose_outputs(calc.datastore)
+            logging.info('Calculation %d finished correctly in %d seconds',
+                         job_id, time.time() - t0)
+            logs.dbcmd('finish', job_id, 'complete')
+            calc.datastore.close()
+            for line in logs.dbcmd('list_outputs', job_id, False):
+                general.safeprint(line)
+        except BaseException as exc:
+            if isinstance(exc, MasterKilled):
+                msg = 'aborted'
+            else:
+                msg = 'failed'
+            tb = traceback.format_exc()
+            try:
+                logging.critical(tb)
+                logs.dbcmd('finish', job_id, msg)
+            except BaseException:  # an OperationalError may always happen
+                sys.stderr.write(tb)
+            raise
+        finally:
+            parallel.Starmap.shutdown()
     return calc
 
 
@@ -409,7 +403,25 @@ def check_obsolete_version(calculation_mode='WebUI'):
         tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
         latest = version_triple(tag_name)
+    except KeyError:  # 'tag_name' not found
+        # NOTE: for unauthenticated requests, the rate limit allows for up
+        # to 60 requests per hour. Therefore, sometimes the api returns the
+        # following message:
+        # b'{"message":"API rate limit exceeded for aaa.aaa.aaa.aaa. (But'
+        # ' here\'s the good news: Authenticated requests get a higher rate'
+        # ' limit. Check out the documentation for more details.)",'
+        # ' "documentation_url":'
+        # ' "https://developer.github.com/v3/#rate-limiting"}'
+        msg = ('An error occurred while calling %s/engine/latest to check'
+               ' if the installed version of the engine is up to date.\n'
+               '%s' % (OQ_API, data.decode('utf8')))
+        logging.warning(msg)
+        return
     except Exception:  # page not available or wrong version tag
+        msg = ('An error occurred while calling %s/engine/latest to check'
+               ' if the installed version of the engine is up to date.' %
+               OQ_API)
+        logging.warning(msg, exc_info=True)
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '

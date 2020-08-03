@@ -143,13 +143,12 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         rupture = _create_rupture(10., 6.)
         data = [(rupture, PMF([(0.7, 0), (0.3, 1)])),
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
-        print(data[0][0])
         data[0][0].weight = 0.5
         data[1][0].weight = 0.5
-        print(data[0][0].weight)
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
-        src.src_group_id = 0
+        src.id = 0
+        src.grp_id = 0
         src.mutex_weight = 1
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
@@ -224,10 +223,10 @@ class MultiPointTestCase(unittest.TestCase):
         hcurves = calc_hazard_curves(groups, sitecol, imtls, gsim_by_trt)
         expected = [9.999978e-01, 9.084040e-01, 1.489753e-01, 3.690966e-03,
                     2.763261e-05]
-        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=1E-6, atol=1E-6)
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=3E-4)
 
         # splitting in point sources
         [[mps1, mps2]] = groups
         psources = list(mps1) + list(mps2)
         hcurves = calc_hazard_curves(psources, sitecol, imtls, gsim_by_trt)
-        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=1E-4, atol=1E-6)
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=3E-4)

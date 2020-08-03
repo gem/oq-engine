@@ -1,2 +1,3 @@
-asset_id,taxonomy,lon,lat,no_damage,slight,moderate,extreme,complete
-"a1","Wood",-122.00000,38.11300,9.70871E-01,4.51488E-03,8.44129E-03,5.25551E-03,1.09171E-02
+#,,,,,,,,"generated_by='OpenQuake engine 3.10.0-gitc7ff8068c2', start_date='2020-06-23T09:26:32', checksum=2104194421, investigation_time=1.0, risk_investigation_time=1.0"
+asset_id,taxonomy,lon,lat,structural~no_damage,structural~slight,structural~moderate,structural~extreme,structural~complete
+a1,Wood,-122.00000,38.11300,9.705028E-01,4.578635E-03,8.482291E-03,5.257597E-03,1.117870E-02

@@ -14,7 +14,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <simpleFaultSource
             id="2A"
             name="Mount Diablo Thrust YC Characteristic Rate"
-            tectonicRegion="Active Shallow Crust"
             >
                 <simpleFaultGeometry>
                     <gml:LineString>
@@ -52,7 +51,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <characteristicFaultSource
             id="1"
             name="characteristic source, complex fault arbitrary mfd"
-            tectonicRegion="Subduction Interface"
             >
                 <arbitraryMFD>
                     <magnitudes>

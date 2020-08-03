@@ -49,9 +49,10 @@
 Module to test :openquake.hmtk.faults.active_fault_model.mtkActiveFaultModel
 '''
 
-
+import os
 import unittest
 import numpy as np
+from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.scalerel.wc1994 import WC1994
@@ -60,6 +61,8 @@ from openquake.hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from openquake.hmtk.faults.fault_models import mtkActiveFault
 from openquake.hmtk.faults.fault_geometries import (SimpleFaultGeometry,
                                                     ComplexFaultGeometry)
+from openquake.hmtk.parsers.faults.fault_yaml_parser import FaultYmltoSource
+
 from openquake.hmtk.faults.active_fault_model import mtkActiveFaultModel
 
 
@@ -198,3 +201,35 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             np.log10(np.array(model4.mfd.occurrence_rates)),
             np.array([-3.34033387, -2.93297054, -3.34033387]))
+
+
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'fault_data')
+
+
+class TestmtkActiveFaultModelCollapse(unittest.TestCase):
+    """
+    Test case for the collapsing of the branches with a different MFD bin
+    """
+    def setUp(self):
+        self.expected_source = nrml.read(
+            os.path.join(BASE_DATA_PATH, "collapse_test_output.xml"))[0]
+        self.src = self.expected_source[0][0]
+
+    def test_collapse_fault_model(self):
+        input_file = os.path.join(
+            BASE_DATA_PATH,
+            "collapse_test_simple_fault_example_4branch.toml")
+        mesh_spacing = 1.0
+        reader = FaultYmltoSource(input_file)
+        fault_model, tectonic_region = reader.read_file(mesh_spacing)
+        fault_model.build_fault_model(collapse=True,
+                                      bin_width=0.05,
+                                      rendered_msr=WC1994())
+        expected_mfd = self.src.incrementalMFD
+        model_mfd = fault_model.faults[0].mfd[0][0]
+        self.assertAlmostEqual(expected_mfd["binWidth"],
+                               model_mfd.bin_width, 7)
+        self.assertAlmostEqual(expected_mfd["minMag"], model_mfd.min_mag, 7)
+        expected_rates = np.array(expected_mfd.occurRates.text)
+        np.testing.assert_array_almost_equal(model_mfd.occur_rates,
+                                             expected_rates, 7)

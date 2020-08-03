@@ -21,17 +21,12 @@ Module :mod:`openquake.hazardlib.tom` contains implementations of probability
 density functions for earthquake temporal occurrence modeling.
 """
 import abc
-import math
-
 import numpy
 import scipy.stats
-
-from openquake.baselib.slots import with_slots
 
 registry = {}
 
 
-@with_slots
 class BaseTOM(metaclass=abc.ABCMeta):
     """
     Base class for temporal occurrence model.
@@ -41,8 +36,6 @@ class BaseTOM(metaclass=abc.ABCMeta):
     :raises ValueError:
         If ``time_span`` is not positive.
     """
-    _slots_ = ['time_span', 'occurrence_rate']
-
     @classmethod
     def __init_subclass__(cls):
         registry[cls.__name__] = cls
@@ -90,7 +83,7 @@ class BaseTOM(metaclass=abc.ABCMeta):
         given in the constructor.
         """
 
-@with_slots
+
 class FatedTOM(BaseTOM):
 
     def __init__(self, time_span, occurrence_rate=None):
@@ -101,18 +94,18 @@ class FatedTOM(BaseTOM):
         return 1
 
     def get_probability_n_occurrences(self, occurrence_rate, num):
-        if num != 1: 
+        if num != 1:
             return 0
         else:
             return 1
-        
+
     def sample_number_of_occurrences(self, seeds=None):
         return 1
 
     def get_probability_no_exceedance(self, occurrence_rate, poes):
         return 1-poes
 
-@with_slots
+
 class PoissonTOM(BaseTOM):
     """
     Poissonian temporal occurrence model.
@@ -127,7 +120,7 @@ class PoissonTOM(BaseTOM):
         :return:
             Float value between 0 and 1 inclusive.
         """
-        return 1 - math.exp(- occurrence_rate * self.time_span)
+        return 1 - numpy.exp(- occurrence_rate * self.time_span)
 
     def get_probability_n_occurrences(self, occurrence_rate, num):
         """
@@ -177,7 +170,7 @@ class PoissonTOM(BaseTOM):
         """
         The probability is computed using the following formula ::
 
-            (1 - e ** (-occurrence_rate * time_span)) ** poes
+            e ** (-occurrence_rate * time_span * poes)
 
         :param occurrence_rate:
             The average number of events per year.
@@ -189,8 +182,7 @@ class PoissonTOM(BaseTOM):
             calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`.
         :return:
             2D numpy array containing probabilities of no exceedance. First
-            dimension represents sites, second dimensions intensity measure
-            levels.
+￼            dimension represents sites, second dimension intensity measure
+￼            levels.
         """
-        p = self.get_probability_one_or_more_occurrences(occurrence_rate)
-        return (1 - p) ** poes
+        return numpy.exp(- occurrence_rate * self.time_span * poes)

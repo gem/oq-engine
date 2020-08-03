@@ -46,12 +46,12 @@ class MultiPointTestCase(unittest.TestCase):
         splits = list(mps)
         self.assertEqual(len(splits), 2)
         for split in splits:
-            self.assertEqual(split.src_group_id, mps.src_group_id)
+            self.assertEqual(split.grp_id, mps.grp_id)
 
         got = obj_to_node(mps).to_str()
         print(got)
         exp = '''\
-multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Shallow Crust'}
+multiPointSource{id='mp1', name='multi point source'}
   multiPointGeometry
     gml:posList [0.0, 0.5, 1.0, 1.0]
     upperSeismoDepth 10

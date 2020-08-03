@@ -32,7 +32,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.calc.filters import MagDepDistance, floatdict
 
 PRECISION = pmf.PRECISION
 
@@ -64,6 +64,7 @@ class FromFile(object):
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
+    REQUIRES_DISTANCES = set()
     kwargs = {}
 
     def init(self):
@@ -95,6 +96,16 @@ def to_toml(uncertainty):
     return text
 
 
+def _fix_toml(v):
+    # horrible hack to remove a pickle error with
+    # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
+    # using toml.loads(s, _dict=dict) would be the right way, but it does
+    # not work :-(
+    if hasattr(v, 'items'):
+        return {k1: _fix_toml(v1) for k1, v1 in v.items()}
+    return v
+
+
 # more tests are in tests/valid_test.py
 def gsim(value, basedir=''):
     """
@@ -105,6 +116,7 @@ def gsim(value, basedir=''):
     """
     value = to_toml(value)  # convert to TOML
     [(gsim_name, kwargs)] = toml.loads(value).items()
+    kwargs = _fix_toml(kwargs)
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))
@@ -531,28 +543,17 @@ def wkt_polygon(value):
     return 'POLYGON((%s))' % ', '.join(points)
 
 
-def asset_number(value):
-    """
-    :param value: input string
-    :returns: positive integer in the range 1..65535
-    """
-    try:
-        i = int(value)
-    except ValueError:
-        i = int(float(value))
-    if i < 1:
-        raise ValueError('got %d < 1' % i)
-    elif i > 65535:
-        raise ValueError('got %d > 65535' % i)
-    return i
-
-
 def positiveint(value):
     """
     :param value: input string
     :returns: positive integer
     """
-    i = int(not_empty(value))
+    val = value.lower()
+    if val == 'true':
+        return 1
+    elif val == 'false':
+        return 0
+    i = int(not_empty(val))
     if i < 0:
         raise ValueError('integer %d < 0' % i)
     return i
@@ -776,7 +777,7 @@ def intensity_measure_types_and_levels(value):
     {'SA(0.1)': [0.1, 0.2]}
     """
     dic = dictionary(value)
-    for imt_str, imls in dic.items():
+    for imt_str, imls in list(dic.items()):
         norm_imt = str(imt.from_string(imt_str))
         if norm_imt != imt_str:
             dic[norm_imt] = imls
@@ -876,45 +877,6 @@ def dictionary(value):
     return dic
 
 
-# used for the maximum distance parameter in the job.ini file
-def floatdict(value):
-    """
-    :param value:
-        input string corresponding to a literal Python number or dictionary
-    :returns:
-        a Python dictionary key -> number
-
-    >>> floatdict("200")
-    {'default': 200}
-
-    >>> text = "{'active shallow crust': 250., 'default': 200}"
-    >>> sorted(floatdict(text).items())
-    [('active shallow crust', 250.0), ('default', 200)]
-    """
-    value = ast.literal_eval(value)
-    if isinstance(value, (int, float, list)):
-        return {'default': value}
-    dic = {'default': value[next(iter(value))]}
-    dic.update(value)
-    return dic
-
-
-def maximum_distance(value):
-    """
-    :param value:
-        input string corresponding to a valid maximum distance
-    :returns:
-        a IntegrationDistance mapping
-    """
-    dic = floatdict(value)
-    for trt, magdists in dic.items():
-        if isinstance(magdists, list):  # could be a scalar otherwise
-            magdists.sort()  # make sure the list is sorted by magnitude
-            for mag, dist in magdists:  # validate the magnitudes
-                magnitude(mag)
-    return IntegrationDistance(dic)
-
-
 # ########################### SOURCES/RUPTURES ############################# #
 
 def mag_scale_rel(value):
@@ -944,7 +906,8 @@ def pmf(value):
     [(0.157, 0), (0.843, 1)]
     """
     probs = probabilities(value)
-    if abs(1.-sum(map(float, value.split()))) > 1e-12:
+    if sum(probs) != 1:
+        # avoid https://github.com/gem/oq-engine/issues/5901
         raise ValueError('The probabilities %s do not sum up to 1!' % value)
     return [(p, i) for i, p in enumerate(probs)]
 
@@ -1105,6 +1068,15 @@ def simple_slice(value):
     return (start, stop)
 
 
+def uncertainty_model(value):
+    """
+    Format whitespace in XML nodes of kind uncertaintyModel
+    """
+    if value.lstrip().startswith('['):  # TOML, do not mess with newlines
+        return value.strip()
+    return ' '.join(value.split())  # remove newlines too
+
+
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
                    'business_interruption')
@@ -1221,19 +1193,21 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     @classmethod
     def check(cls, dic):
         """
-        Convert a dictionary name->string into a dictionary name->value
-        by converting the string. If the name does not correspond to a
-        known parameter, just ignore it and print a warning.
+        Check if a dictionary name->string can be converted into a dictionary
+        name->value. If the name does not correspond to a known parameter,
+        print a warning.
+
+        :returns: a dictionary of converted parameters
         """
-        res = {}
+        out = {}
         for name, text in dic.items():
             try:
                 p = getattr(cls, name)
             except AttributeError:
                 logging.warning('Ignored unknown parameter %s', name)
             else:
-                res[name] = p.validator(text)
-        return res
+                out[name] = p.validator(text)
+        return out
 
     @classmethod
     def from_(cls, dic):

@@ -70,14 +70,14 @@ class ZhaoEtAl2016Asc(GMPE):
     ])
 
     #: Required site parameters is Vs30 (converted to site class)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, top-of-rupture depth and
     #: style of faulting (rake)
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'ztor'}
 
     #: Required distance measure is Rrup and Rvolc
-    REQUIRES_DISTANCES = set(('rrup', 'rvolc'))
+    REQUIRES_DISTANCES = {'rrup', 'rvolc'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -544,7 +544,7 @@ class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Required rupture parameters are magnitude and top-of-rupture depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     def get_magnitude_scaling_term(self, C, rup):
         """
@@ -769,7 +769,7 @@ class ZhaoEtAl2016SSlab(ZhaoEtAl2016Asc):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Required rupture parameters are magnitude and top of rupture depth.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     def get_magnitude_scaling_term(self, C, rup):
         """

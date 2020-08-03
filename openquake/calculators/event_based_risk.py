@@ -89,13 +89,15 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
                     # average losses
                     avg[idx, r, l] = (
                         ratios.sum(axis=0) * param['ses_ratio'] * aval)
-
                     # agglosses
                     agglosses[:, l] += ratios * aval
                     if 'builder' in param:
                         with mon:  # this is the heaviest part
-                            all_curves[idx, r][loss_type] = (
-                                builder.build_curve(aval, ratios, r))
+                            try:
+                                all_curves[idx, r][loss_type] = (
+                                    builder.build_curve(aval, ratios, r))
+                            except ValueError:
+                                pass  # not enough event to compute the curve
 
             # NB: I could yield the agglosses per output, but then I would
             # have millions of small outputs with big data transfer and slow
@@ -128,8 +130,7 @@ class EbrCalculator(base.RiskCalculator):
     core_task = event_based_risk
     is_stochastic = True
     precalc = 'event_based'
-    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard',
-                      'ebrisk']
+    accept_precalc = ['event_based', 'event_based_risk', 'ebrisk']
 
     def pre_execute(self):
         oq = self.oqparam
@@ -142,7 +143,7 @@ class EbrCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.tagcol)
         self.A = len(self.assetcol)
         if parent:
-            self.datastore['csm_info'] = parent['csm_info']
+            self.datastore['full_lt'] = parent['full_lt']
             self.events = parent['events'][('id', 'rlz_id')]
             logging.info('There are %d ruptures and %d events',
                          len(parent['ruptures']), len(self.events))
@@ -192,23 +193,31 @@ class EbrCalculator(base.RiskCalculator):
         self.loss_maps_dt = (F32, (C, L))
         if oq.individual_curves or R == 1:
             self.datastore.create_dset('curves-rlzs', F32, (A, R, P, L))
-            self.datastore.set_attrs(
-                'curves-rlzs', return_periods=builder.return_periods)
+            self.datastore.set_shape_attrs(
+                'curves-rlzs',
+                assets=self.assetcol['id'],
+                rlzs=numpy.arange(R),
+                return_periods=builder.return_periods,
+                loss_types=oq.loss_names)
         if oq.conditional_loss_poes:
             self.datastore.create_dset(
                 'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
         if R > 1:
             self.datastore.create_dset('curves-stats', F32, (A, S, P, L))
-            self.datastore.set_attrs(
-                'curves-stats', return_periods=builder.return_periods,
-                stats=[encode(name) for (name, func) in stats])
+            self.datastore.set_shape_attrs(
+                'curves-stats',
+                assets=self.assetcol['id'],
+                stat=[encode(name) for (name, func) in stats],
+                return_periods=builder.return_periods,
+                loss_types=oq.loss_names
+            )
             if oq.conditional_loss_poes:
                 self.datastore.create_dset(
                     'loss_maps-stats', self.loss_maps_dt, (A, S),
                     fillvalue=None)
                 self.datastore.set_attrs(
                     'loss_maps-stats',
-                    stats=[encode(name) for (name, func) in stats])
+                    stat=[encode(name) for (name, func) in stats])
 
     def save_losses(self, dic):
         """
@@ -266,5 +275,7 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore['losses_by_event'] = agglosses
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         if oq.avg_losses:
-            set_rlzs_stats(self.datastore, 'avg_losses')
+            set_rlzs_stats(self.datastore, 'avg_losses',
+                           asset_id=self.assetcol['id'],
+                           loss_type=oq.loss_names)
         post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()

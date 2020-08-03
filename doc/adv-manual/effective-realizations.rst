@@ -2,22 +2,19 @@ The concept of effective realizations
 ==============================================
 
 The management of the logic trees is the most complicated thing in the
-OpenQuake engine. The issue is that it is necessary to manage the logic
-trees in an efficient way, by avoiding redundant computation and storage,
+OpenQuake engine. It is important to manage the logic trees in an
+efficient way, by avoiding redundant computation and storage,
 otherwise the engine will not be able to cope with large computations.
+To that aim, it is essential to understand the concept of *effective
+realizations*.
 
-Historically the engine did not fare well in the case of complex logic
-trees. In recent years we improved the situation by introducing the
-concept of *effective realizations*. After realizing that in many
-calculations it is possible to reduce the full logic tree (the tree of
-the potential realizations) to a much smaller one
-(the tree of the effective realizations), we implemented an engine
-optimization to take advantage of such situations. Here I will
-explain how the optimization work.
+The crucial point is that in many calculations it is possible to reduce the
+full logic tree (the tree of the potential realizations) to a much
+smaller one (the tree of the effective realizations).
 
 First, it is best to give some terminology.
 
-1. for each source model in the source model logic tree there is a
+1. for each source model in the source model logic tree there is potentially a
    different GMPE logic tree
 2. the total number of realizations is the sum of the number of realizations
    of each GMPE logic tree
@@ -51,7 +48,7 @@ Here is an example of trivial GMPE logic tree, in its XML input representation:
 The logic tree is trivial since there is a single branch
 ("b1") and GMPE ("SadighEtAl1997") for each tectonic region
 type ("active shallow crust").  A logic tree with multiple branches
-can be simple, complex, or even trivial if the tectonic region type
+can be simple, or even trivial if the tectonic region type
 with multiple branches is not present in the underlying source
 model. This is the key to the logic tree reduction concept.
 
@@ -60,9 +57,9 @@ Reduction of the logic tree
 
 The simplest case of logic tree reduction is when the actual
 sources do not span the full range of tectonic region types in the
-GMPE logic tree file. This happens very often in SHARE calculations.
-The GMPE logic tree (actually there are three of them, one for each
-source model) potentially contains 1280 realizations
+GMPE logic tree file. This happens very often.
+FOr instance, in the SHARE calculation for Europe
+the GMPE logic tree potentially contains 1280 realizations
 coming from 7 different tectonic region types:
 
 Active_Shallow:
@@ -125,48 +122,26 @@ have only 2 effective realizations corresponding to the GMPEs in the
 second tectonic region type. The weight of each effective realizations
 will be three times the weight of a regular representation, since
 three different paths in the first tectonic region type will produce
-exactly the same result.  It is not important which GMPE was chosen
+exactly the same result. It is not important which GMPE was chosen
 for the first tectonic region type because there are no sources of
-kind T1; so let's denote the path of the effective realizations with
-the notation `@_<GMPE of second region type>`:
+kind T1. In such a situation there will be 2 effective realizations
+coming from a total of 6 total realizations. It means that there will
+be three copies of the outputs, i.e. three identical outputs for each
+effective realization.
 
-== ======
-#   path
-== ======
-0  `@_D`
-1  `@_E`
-== ======
+Starting from engine 3.9 *the logic tree reduction must be performed
+manually*, by discarding the irrelevant tectonic region types; in
+this example the user must add in the `job.ini` a line
 
-The "@" character should be read as "any", meaning that for the first
-tectonic region type any path (i.e. "A", "B" and "C") will give
-the same contribution, i.e. there is independence from the GMPE
-combinations coming from the first tectonic region type.
+``discard_trts = Shield, Subduction_Interface, Subduction_InSlab, Volcanic, Deep``
 
-In such a situation the engine will perform the computation only for the 2
-effective realizations, not for the 6 potential realizations; moreover,
-it will export only two files with names like::
-
-  hazard_curve-smltp_sm-gsimltp_@_D-ltr_0.csv
-  hazard_curve-smltp_sm-gsimltp_@_E-ltr_1.csv
+If not, multiple copies of the same outputs will appear.
 
 How to analyze the logic tree of a calculation without running the calculation
 ------------------------------------------------------------------------------
 
 The engine provides some facilities to explore the logic tree of a
-computation without running it. The command you need is the *info* command::
-
-   $ oq info -h
-   usage: oq info [-h] [-c] [-g] [-v] [-r] [input_file]
-   
-   positional arguments:
-     input_file         job.ini file or zip archive [default: '']
-   
-   optional arguments:
-     -h, --help         show this help message and exit
-     -c, --calculators  list available calculators
-     -g, --gsims        list available GSIMs
-     -v, --views        list available views
-     -r, --report       build a report in rst format
+computation without running it. The command you need is the ``oq info`` command.
    
 Let's assume that you have a zip archive called `SHARE.zip` containing the
 SHARE source model, the SHARE source model logic tree file and the SHARE
@@ -191,7 +166,6 @@ model. You will get something like this::
    b1, area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6], weight=0.500: 1280 realization(s)
    b2, faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13], weight=0.200: 1280 realization(s)
    b3, seifa_model.xml, trt=[14, 15, 16, 17, 18, 19], weight=0.300: 640 realization(s)>
-   <RlzsAssoc...>
 
 You can read the lines above as follows. The SHARE model is composed by three
 submodels:
@@ -209,9 +183,12 @@ realizations, not the potential ones. You can perform that check by
 using the `--report` flag. This will generate a report with a name
 like `report_<calc_id>.rst`::
 
-   $ oq info SHARE.zip --report
+   $ oq info --report SHARE.zip
    ...
-   Generated /home/michele/report_5580.rst
+   [2020-04-14 11:11:50 #2493 WARNING] No sources for some TRTs: you should set
+   discard_trts = Subduction_InSlab, Deep
+   ...
+   Generated /home/michele/report_2493.rst
 
 If you open that file you will find a lot of useful information about
 the source model, its composition, the number of sources and ruptures
@@ -220,46 +197,8 @@ and the effective realizations.
 Depending on the location of the points and the maximum distance, one
 or more submodels could be completely filtered out and could produce
 zero effective realizations, so the reduction effect could be even
-stronger. Such a situation is covered by our tests
-and will be discussed later on.
+stronger.
 
-The realization-association object
-----------------------------------
-
-The `info` commands produces an additional output, which I have
-denoted simply as `<RlzsAssoc...>`. This output is the string
-representation of a Python object containing the associations between
-the pairs
-
-  `(src_group_id, gsim) -> realizations`
-
-In the case of the SHARE model there are simply too many realizations to make
-it possible to understand what it is in the association object. So, it is
-better to look at a simpler example. Consider for instance our QA test
-classical/case_7; you can run the command and get::
-
-   $ oq info classical/case_7/job.ini 
-   <CompositionInfo
-   b1, source_model_1.xml, trt=[0], weight=0.70: 1 realization(s)
-   b2, source_model_2.xml, trt=[1], weight=0.30: 1 realization(s)>
-   <RlzsAssoc(size=1, rlzs=2)>
-
-In other words, this is an example containing two submodels, each one
-with a single tectonic region type and with a single GMPE
-(SadighEtAl1997). There are only two realizations with weights 0.7 and
-0.3. This is a case when there is a realization for
-tectonic region type, but more complex cases are possibile.  For
-instance consider our test classical/case_19, which is a reduction of
-the SHARE model with just a simplified area source model::
-
-   $ oq info classical/case_19/job.ini -r
-
-This is a case where a lot of tectonic region types have been completely
-filtered out, so the original 160 realizations have been reduced to merely 4 for
-5 different tectonic region types:
-
-- the first TRT with GSIM `AtkinsonBoore2003SInter` contributes to all the realizations;
-- the second TRT with GSIM `FaccioliEtAl2010` contributes to all the realizations;
-- the third TRT with GSIM `ToroEtAl2002SHARE` contributes to all the realizations;
-- the fourth TRT with GSIM `AtkinsonBoore2003SInter` contributes to all the realizations;
-- the fifth TRT contributes to one realization for each of four different GSIMs. 
+In any case *the warning tells the user what she should do* in order to
+remove the duplication and reduce the calculation only to the effective
+realizations, i.e. which are the TRTs to discard in the `job.ini` file.

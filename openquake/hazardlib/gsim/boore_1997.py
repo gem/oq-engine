@@ -60,13 +60,13 @@ class BooreEtAl1997GeometricMean(GMPE):
     ])
 
     #: Required site parameters is Vs30.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is Rjb.
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -209,7 +209,7 @@ class BooreEtAl1997GeometricMeanUnspecified(BooreEtAl1997GeometricMean):
     rake to be defined.
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _compute_style_of_faulting_term(self, rup, C):
         """
@@ -255,7 +255,7 @@ class BooreEtAl1997ArbitraryHorizontalUnspecified(
     when the style of faulting is not specified
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _compute_style_of_faulting_term(self, rup, C):
         """

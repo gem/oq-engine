@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.baselib.general import gettemp
 from openquake.calculators.export import export
 from openquake.calculators.views import view
 from openquake.calculators import ucerf_base
@@ -30,13 +29,13 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job.ini')
         gmv_uc = view('global_gmfs', self.calc.datastore)
         # check the distribution of the events
-        self.assertEventsByRlz([2, 2, 2, 2, 6, 6, 2, 2, 2, 2, 6, 6, 2, 2, 3,
-                                3, 6, 6, 1, 1, 1, 1, 6, 6, 2, 2, 3, 3, 2, 2,
-                                2, 2, 3, 3, 2, 2, 3, 3, 3, 3, 2, 2, 3, 3,
-                                3, 3, 3, 3])
+        self.assertEventsByRlz(
+            [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+             1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=2E-5)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
@@ -45,7 +44,7 @@ class UcerfTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
-        # check ucerf_hazard and event_based produces the same GMFs
+        # check they produce the same GMFs
         gmv_eb = view('global_gmfs', self.calc.datastore)
         self.assertEqual(gmv_uc, gmv_eb)
 
@@ -59,16 +58,11 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
         # check the distribution of the events
-        self.assertEventsByRlz([29, 25])
-
-        # check the mean hazard map
-        got = gettemp(view('hmap', self.calc.datastore))
-        self.assertEqualFiles('expected/hmap.rst', got)
+        self.assertEventsByRlz([15, 19])
 
     def test_classical(self):
-        ucerf_base.RUPTURES_PER_BLOCK = 50  # check splitting
-        self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
-        ucerf_base.RUPTURES_PER_BLOCK = 1000  # resume default
+        self.run_calc(ucerf.__file__, 'job_classical_redux.ini',
+                      ruptures_per_block='50', exports='csv')
         fnames = export(('hcurves/', 'csv'), self.calc.datastore)
         expected = ['hazard_curve-0-PGA.csv', 'hazard_curve-0-SA(0.1).csv',
                     'hazard_curve-1-PGA.csv', 'hazard_curve-1-SA(0.1).csv']

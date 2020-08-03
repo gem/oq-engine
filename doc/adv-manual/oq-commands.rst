@@ -14,11 +14,11 @@ You can see the full list of commands by running `oq help`::
 
   $ oq help
   usage: oq [--version]
-  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,plot_lc,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
+  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
            ...
 
   positional arguments:
-  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,plot_lc,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
+  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
                         available subcommands; use oq help <subcmd>
 
   optional arguments:
@@ -68,11 +68,11 @@ You can open `/tmp/report_1644.rst` and read the informations listed there
 3. It can be invoked without a `job.ini` file, and it that case it provides
 global information about the engine and its libraries. Try, for instance::
 
-  $ oq info --calculators # list available calculators
-  $ oq info --gsims       # list available GSIMs
-  $ oq info --views       # list available views
-  $ oq info --exports     # list available exports
-  $ oq info --parameters  # list all job.ini parameters
+  $ oq info calculators # list available calculators
+  $ oq info gsims       # list available GSIMs
+  $ oq info views       # list available views
+  $ oq info exports     # list available exports
+  $ oq info parameters  # list all job.ini parameters
 
 The second most important command is `oq export`. It allows customization of
 the exports from the datastore with additional flexibility compared to
@@ -98,22 +98,19 @@ Here is the usage message::
     -d ., --export-dir .  export directory
 
 The list of available exports (i.e. the datastore keys and the available export
-formats) can be extracted with the `oq info --exports`
+formats) can be extracted with the `oq info exports`
 command; at the moment there are 52 exporters defined, but
 this number changes at each version::
 
-  $ oq info --exports
+  $ oq info exports
   agg_curves-rlzs ['csv']
   agg_curves-stats ['csv']
   agg_losses-rlzs ['csv']
   agg_losses-stats ['csv']
-  agg_maps-rlzs ['csv']
-  agg_maps-stats ['csv']
   agg_risk ['csv']
   agglosses ['csv']
   aggregate_by ['csv']
   asset_risk ['csv']
-  avg_losses ['csv']
   avg_losses-rlzs ['csv']
   avg_losses-stats ['csv']
   bcr-rlzs ['csv']
@@ -137,12 +134,14 @@ this number changes at each version::
   loss_maps-stats ['csv', 'npz']
   losses_by_asset ['npz', 'csv']
   losses_by_event ['csv']
-  losses_by_tag ['csv']
   realizations ['csv']
-  rup_loss_table ['xml']
   ruptures ['xml', 'csv']
+  tot_curves-rlzs ['csv']
+  tot_curves-stats ['csv']
+  tot_losses-rlzs ['csv']
+  tot_losses-stats ['csv']
   uhs ['csv', 'xml', 'npz']
-  There are 52 exporters defined.
+  There are 51 exporters defined.
 
 At the present the supported export types are `xml`, `csv`, `rst`, `npz` and 
 `hdf5`. `xml` has been deprecated for some outputs and is not the recommended 

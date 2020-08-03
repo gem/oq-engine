@@ -26,14 +26,12 @@ import shapely.wkt
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
-from openquake.baselib.slots import with_slots
 
 #: Polygon upsampling step for long edges, in kilometers.
 #: See :func:`get_resampled_coordinates`.
 UPSAMPLING_STEP_KM = 100
 
 
-@with_slots
 class Polygon(object):
     """
     Polygon objects represent an area on the Earth surface.
@@ -47,7 +45,6 @@ class Polygon(object):
         If ``points`` contains less than three unique points or if polygon
         perimeter intersects itself.
     """
-    _slots_ = 'lons lats _bbox _projection _polygon2d'.split()
     _bbox = None
 
     def __init__(self, points):
@@ -64,11 +61,21 @@ class Polygon(object):
         self._polygon2d = None
 
     @property
+    def coords(self):
+        """
+        Coordinates of the polygon as a linear ring, rounded to 5 digits
+        """
+        lons = numpy.round(self.lons, 5)
+        lats = numpy.round(self.lats, 5)
+        pairs = list(zip(lons, lats))
+        return pairs + [pairs[0]]
+
+    @property
     def wkt(self):
         """
         Generate WKT (Well-Known Text) to represent this polygon.
         """
-        pairs = ['%s %s' % (lon, lat)
+        pairs = ['%.5f %.5f' % (lon, lat)
                  for lon, lat in zip(self.lons, self.lats)]
         # the polygon must form a closed loop; first and last coord pairs
         # are the same

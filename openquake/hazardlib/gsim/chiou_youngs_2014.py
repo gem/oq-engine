@@ -59,14 +59,17 @@ class ChiouYoungs2014(GMPE):
 
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
 
     #: Required rupture parameters are magnitude, rake,
     #: dip and ztor.
-    REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor'}
 
     #: Required distance measures are RRup, Rjb and Rx.
-    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
+    REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
+
+    #: Reference shear wave velocity
+    DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -77,13 +80,16 @@ class ChiouYoungs2014(GMPE):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
+
         # intensity on a reference soil is used for both mean
         # and stddev calculations.
         ln_y_ref = self._get_ln_y_ref(rup, dists, C)
+
         # exp1 and exp2 are parts of eq. 12 and eq. 13,
         # calculate it once for both.
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
         exp2 = np.exp(C['phi3'] * (1130 - 360))
+
         mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2)
         stddevs = self._get_stddevs(sites, rup, C, stddev_types,
                                     ln_y_ref, exp1, exp2)
@@ -96,30 +102,51 @@ class ChiouYoungs2014(GMPE):
 
         Implements eq. 13b.
         """
+
         # we do not support estimating of basin depth and instead
         # rely on it being available (since we require it).
         # centered_z1pt0
         centered_z1pt0 = self._get_centered_z1pt0(sites)
+
         # we consider random variables being zero since we want
         # to find the exact mean value.
         eta = epsilon = 0.
 
+        # deep soil correction
+        no_correction = sites.z1pt0 <= 0
+        deep_s = C['phi5'] * (1.0 - np.exp(-1. * centered_z1pt0 / C['phi6']))
+        deep_s[no_correction] = 0
+
         ln_y = (
             # first line of eq. 12
             ln_y_ref + eta
-            # second line
-            + C['phi1'] * np.log(sites.vs30 / 1130).clip(-np.inf, 0)
-            # third line
-            + C['phi2'] * (exp1 - exp2)
-            * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
+            # second + 3rd line
+            + self._get_site_term(C, sites.vs30, ln_y_ref, exp1, exp2)
             # fourth line
-            + C['phi5']
-            * (1.0 - np.exp(-1. * centered_z1pt0 / C['phi6']))
+            + deep_s
             # fifth line
             + epsilon
         )
 
         return ln_y
+
+    def _get_site_term(self, C, vs30, ln_y_ref, exp1=None, exp2=None):
+        """
+        This implements the site term of the CY14 GMM. See
+        :class:`openquake.hazardlib.gsim.chiou_youngs_2014.ChiouYoungs2014`
+        for additional information.
+        """
+        if exp1 is None:
+            exp1 = np.exp(C['phi3'] * (vs30.clip(-np.inf, 1130) - 360))
+        if exp2 is None:
+            exp2 = np.exp(C['phi3'] * (1130 - 360))
+        exp2 = np.exp(C['phi3'] * (1130 - 360))
+        eta = 0
+        af = (C['phi1'] * np.log(vs30 / 1130).clip(-np.inf, 0) +
+              C['phi2'] * (exp1 - exp2) *
+              np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) /
+                     C['phi4']))
+        return af
 
     def _get_stddevs(self, sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
         """
@@ -223,7 +250,7 @@ class ChiouYoungs2014(GMPE):
 
     def _get_centered_z1pt0(self, sites):
         """
-        Get z1pt0 centered on the Vs30- dependent avarage z1pt0(m)
+        Get z1pt0 centered on the Vs30- dependent average z1pt0(m)
         California and non-Japan regions
 
         """

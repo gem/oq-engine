@@ -82,7 +82,7 @@ def get_vulnerability_functions_04(fname):
 
 def upgrade_file(path, multipoint):
     """Upgrade to the latest NRML version"""
-    node0 = nrml.read(path, chatty=False)[0]
+    node0 = nrml.read(path)[0]
     shutil.copy(path, path + '.bak')  # make a backup of the original file
     tag = striptag(node0.tag)
     gml = True

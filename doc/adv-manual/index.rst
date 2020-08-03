@@ -20,7 +20,9 @@ Contents:
    risk
    effective-realizations       
    event-based-with-large-logic-tree
+   site-specific
    extract-api
+   pandas
    parametric-gmpes
    multipoint
    parallelization
@@ -30,3 +32,4 @@ Contents:
    developing
    architecture
    oq-commands
+   addition-is-non-associative

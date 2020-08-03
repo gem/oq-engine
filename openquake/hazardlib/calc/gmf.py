@@ -88,6 +88,9 @@ class GmfComputer(object):
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
+
+    :param amplifier:
+        None or an instance of Amplifier
     """
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an higher level containing a
@@ -97,30 +100,31 @@ class GmfComputer(object):
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sitecol, imts, cmaker,
-                 truncation_level=None, correlation_model=None):
+                 truncation_level=None, correlation_model=None,
+                 amplifier=None):
         if len(sitecol) == 0:
             raise ValueError('No sites')
         elif len(imts) == 0:
             raise ValueError('No IMTs')
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
-        self.rupture = rupture
         self.imts = [from_string(imt) for imt in imts]
         self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
-        # `rupture` can be an EBRupture instance
-        if hasattr(rupture, 'srcidx'):
-            self.srcidx = rupture.srcidx  # the source the rupture comes from
+        self.amplifier = amplifier
+        # `rupture` is an EBRupture instance in the engine
+        if hasattr(rupture, 'source_id'):
+            self.ebrupture = rupture
+            self.source_id = rupture.source_id  # the underlying source
             self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
-        else:
-            self.srcidx = '?'
+        else:  # in the hazardlib tests
+            self.source_id = '?'
             self.e0 = 0
-        try:
-            self.sctx, self.dctx = rupture.sctx, rupture.dctx
-        except AttributeError:
-            self.sctx, self.dctx = cmaker.make_contexts(sitecol, rupture)
+        self.seed = rupture.rup_id
+        self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
+            sitecol, rupture)
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
@@ -130,9 +134,8 @@ class GmfComputer(object):
         :returns: [(sid, eid, gmv), ...], dt
         """
         t0 = time.time()
-        rup = self.rupture
         sids = self.sids
-        eids_by_rlz = rup.get_eids_by_rlz(rlzs_by_gsim)
+        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         data = []
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
@@ -160,6 +163,8 @@ class GmfComputer(object):
                     for sid, gmv in zip(sids, gmf):
                         if gmv.sum():
                             data.append((sid, eid, gmv))
+                        # gmv can be zero due to the minimum_intensity, coming
+                        # from the job.ini or from the vulnerability functions
                 n += e
         m = (len(min_iml),)
         d = numpy.array(data, [('sid', U32), ('eid', U32), ('gmv', (F32, m))])
@@ -174,10 +179,10 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        numpy.random.seed(self.rupture.rup_id)
         result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
         sig = numpy.zeros((len(self.imts), num_events), F32)
         eps = numpy.zeros((len(self.imts), num_events), F32)
+        numpy.random.seed(self.seed)
         for imti, imt in enumerate(self.imts):
             if isinstance(gsim, MultiGMPE):
                 gs = gsim[str(imt)]  # MultiGMPE
@@ -185,36 +190,36 @@ class GmfComputer(object):
                 gs = gsim  # regular GMPE
             try:
                 result[imti], sig[imti], eps[imti] = self._compute(
-                    None, gs, num_events, imt)
+                     gs, num_events, imt)
             except Exception as exc:
                 raise exc.__class__(
-                    '%s for %s, %s, srcidx=%s' % (exc, gs, imt, self.srcidx)
+                    '%s for %s, %s, source_id=%s' %
+                    (exc, gs, imt, self.source_id)
                 ).with_traceback(exc.__traceback__)
+        if self.amplifier:
+            self.amplifier.amplify_gmfs(
+                self.sctx.ampcode, result, self.imts, self.seed)
         return result, sig, eps
 
-    def _compute(self, seed, gsim, num_events, imt):
+    def _compute(self, gsim, num_events, imt):
         """
-        :param seed: a random seed or None if the seed is already set
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
         :param imt: an IMT instance
         :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
                    epsilons(num_events))
         """
-        rctx = getattr(self.rupture, 'rupture', self.rupture)
-        if seed is not None:
-            numpy.random.seed(seed)
         dctx = self.dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
             mean, _stddevs = gsim.get_mean_and_stddevs(
-                self.sctx, rctx, dctx, imt, stddev_types=[])
-            mean = to_imt_unit_values(mean, imt)
-            mean.shape += (1, )
-            mean = mean.repeat(num_events, axis=1)
-            return (mean,
+                self.sctx, self.rctx, dctx, imt, stddev_types=[])
+            gmf = to_imt_unit_values(mean, imt)
+            gmf.shape += (1, )
+            gmf = gmf.repeat(num_events, axis=1)
+            return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
         elif self.truncation_level is None:
@@ -235,7 +240,7 @@ class GmfComputer(object):
                     self.correlation_model, gsim)
 
             mean, [stddev_total] = gsim.get_mean_and_stddevs(
-                self.sctx, rctx, dctx, imt, [StdDev.TOTAL])
+                self.sctx, self.rctx, dctx, imt, [StdDev.TOTAL])
             stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
 
@@ -247,7 +252,7 @@ class GmfComputer(object):
             epsilons.fill(numpy.nan)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
-                self.sctx, rctx, dctx, imt,
+                self.sctx, self.rctx, dctx, imt,
                 [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))

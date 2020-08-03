@@ -70,7 +70,7 @@ def set_status(db, job_id, status):
     :param status: status string
     """
     assert status in (
-        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed'
+        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed',
         'deleted'), status
     if status in ('created', 'complete', 'failed', 'aborted', 'deleted'):
         is_running = 0
@@ -257,13 +257,13 @@ def get_outputs(db, job_id):
 DISPLAY_NAME = {
     'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
-    'dmg_by_asset': 'Average Asset Damages',
+    'damages-rlzs': 'Asset Damage Distributions',
+    'damages-stats': 'Asset Damage Statistics',
+    'avg_damages-rlzs': 'Average Asset Damages',
+    'avg_damages-stats': 'Average Asset Damages Statistics',
     'dmg_by_event': 'Aggregate Event Damages',
-    'losses_by_asset': 'Average Asset Losses',
     'losses_by_event': 'Aggregate Event Losses',
     'events': 'Events',
-    'damages-rlzs': 'Asset Damage Distribution',
-    'damages-stats': 'Asset Damage Statistics',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
     'loss_curves-rlzs': 'Asset Loss Curves',
@@ -287,8 +287,8 @@ DISPLAY_NAME = {
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
-    'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
+    'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
     'input': 'Input Files'
 }
@@ -345,7 +345,18 @@ def del_calc(db, job_id, user, force=False):
     dependent = db(
         "SELECT id FROM job WHERE hazard_calculation_id=?x "
         "AND status != 'deleted'", job_id)
-    if not force and dependent:
+    job_ids = [dep.id for dep in dependent]
+    if not force and job_id in job_ids:  # jobarray
+        err = []
+        for jid in job_ids:
+            res = del_calc(db, jid, user, force=True)
+            if "error" in res:
+                err.append(res["error"])
+        if err:
+            return {"error": ' '.join(err)}
+        else:
+            return {"success": 'children_of_%s' % job_id}
+    elif not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent])}

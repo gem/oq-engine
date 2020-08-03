@@ -19,7 +19,7 @@
 """
 A nontrivial test case with 8 realizations:
 
-<CompositionInfo
+<FullLogicTree
 b1, SA_RA_CATAL1_00.xml, trt=[0, 1]: 4 realization(s)
 b2, SA_RA_CATAL2_00.xml, trt=[2, 3]: 4 realization(s)>
 <RlzsAssoc

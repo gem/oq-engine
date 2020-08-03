@@ -18,47 +18,18 @@
 
 """
 Implements SERA site amplification models class: `PitilakisEtAl2018`,
+                                                 `PitilakisEtAl2020`,
                                                  `Eurocode8Amplification`,
                                                  `Eurocode8AmplificationDefault`,
                                                  `SandikkayaDinsever2018`
 """
 import numpy as np
-from copy import deepcopy
+import copy
 from scipy.constants import g
 # from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import (GMPE, CoeffsTable, registry)
 from openquake.hazardlib.imt import PGA, SA, from_string
-from openquake.hazardlib.gsim.kotha_2019 import KothaEtAl2019SERA
 from openquake.hazardlib import const
-
-
-imls = [0., 0.25, 0.5, 0.75, 1., 1.25]
-
-
-# Short period amplification factors defined by Pitilakis et al., (2018)
-FS = {
-"A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-"B1": [1.3, 1.3, 1.2, 1.2, 1.2, 1.2],
-"B2": [1.4, 1.3, 1.3, 1.2, 1.1, 1.1],
-"C1": [1.7, 1.6, 1.4, 1.3, 1.3, 1.2],
-"C2": [1.6, 1.5, 1.3, 1.2, 1.1, 1.0],
-"C3": [1.8, 1.6, 1.4, 1.2, 1.1, 1.0],
-"D":  [2.2, 1.9, 1.6, 1.4, 1.2, 1.0],
-"E":  [1.7, 1.6, 1.6, 1.5, 1.5, 1.5]
-}
-
-
-# Long period amplification factors defined by Pitilakis et al., (2018)
-F1 = {
-"A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-"B1": [1.4, 1.4, 1.4, 1.4, 1.3, 1.3],
-"B2": [1.6, 1.5, 1.5, 1.5, 1.4, 1.3],
-"C1": [1.7, 1.6, 1.5, 1.5, 1.4, 1.3],
-"C2": [2.1, 2.0, 1.9, 1.8, 1.8, 1.7],
-"C3": [3.2, 3.0, 2.7, 2.5, 2.4, 2.3],
-"D":  [4.1, 3.8, 3.3, 3.0, 2.8, 2.7],
-"E":  [1.3, 1.3, 1.2, 1.2, 1.2, 1.2]
-}
 
 
 # Pitilakis GMPE Wrapper
@@ -116,13 +87,13 @@ class PitilakisEtAl2018(GMPE):
 
     #: Required site parameters are Vs30 and the Pitilakis et al (2018) site
     #: class (others will be added for the GMPE in question)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', "ec8_p18"))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'ec8_p18'}
 
     #: Required rupture parameter is magnitude, others will be set later
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance metrics will be set by the GMPEs
-    REQUIRES_DISTANCES = set(())
+    REQUIRES_DISTANCES = set()
 
     #: Defined reference velocity is 800 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 800.0
@@ -133,7 +104,7 @@ class PitilakisEtAl2018(GMPE):
             self.gmpe = registry[gmpe_name](**kwargs)
         else:
             # An instantiated class is passed as an argument
-            self.gmpe = deepcopy(gmpe_name)
+            self.gmpe = copy.deepcopy(gmpe_name)
         if reference_velocity:
             self.rock_vs30 = reference_velocity
         else:
@@ -151,7 +122,7 @@ class PitilakisEtAl2018(GMPE):
         input GMPE once more in order to return the standard deviations for the
         required IMT.
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
         pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
@@ -192,21 +163,21 @@ class PitilakisEtAl2018(GMPE):
                 f_ls = np.ones(np.sum(idx))
                 lb = s_ss < 0.25
                 ub = s_ss > 1.25
-                f_ss[lb] = FS[ec8][0]
-                f_ls[lb] = F1[ec8][0]
-                f_ss[ub] = FS[ec8][-1]
-                f_ls[ub] = F1[ec8][-1]
-                for j in range(1, len(imls) - 1):
-                    jdx = np.logical_and(s_ss >= imls[j],
-                                         s_ss < imls[j + 1])
+                f_ss[lb] = self.FS[ec8][0]
+                f_ls[lb] = self.F1[ec8][0]
+                f_ss[ub] = self.FS[ec8][-1]
+                f_ls[ub] = self.F1[ec8][-1]
+                for j in range(1, len(self.IMLS) - 1):
+                    jdx = np.logical_and(s_ss >= self.IMLS[j],
+                                         s_ss < self.IMLS[j + 1])
                     if not np.any(jdx):
                         continue
-                    dfs = FS[ec8][j + 1] - FS[ec8][j]
-                    dfl = F1[ec8][j + 1] - F1[ec8][j]
-                    diml = imls[j + 1] - imls[j]
-                    f_ss[jdx] = FS[ec8][j] + (s_ss[jdx] - imls[j]) *\
+                    dfs = self.FS[ec8][j + 1] - self.FS[ec8][j]
+                    dfl = self.F1[ec8][j + 1] - self.F1[ec8][j]
+                    diml = self.IMLS[j + 1] - self.IMLS[j]
+                    f_ss[jdx] = self.FS[ec8][j] + (s_ss[jdx] - self.IMLS[j]) *\
                         (dfs / diml)
-                    f_ls[jdx] = F1[ec8][j] + (s_ss[jdx] - imls[j]) * \
+                    f_ls[jdx] = self.F1[ec8][j] + (s_ss[jdx] - self.IMLS[j]) *\
                         (dfl / diml)
                 f_s[idx] = f_ss
                 f_l[idx] = f_ls
@@ -247,8 +218,67 @@ class PitilakisEtAl2018(GMPE):
     CONSTANTS = {
         "F0": 2.5,
         "kappa": 5.0,
-        "TA": 0.03,
-    }
+        "TA": 0.03}
+
+    IMLS = [0., 0.25, 0.5, 0.75, 1., 1.25]
+
+    # Short period amplification factors defined by Pitilakis et al., (2018)
+    FS = {
+        "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "B1": [1.3, 1.3, 1.2, 1.2, 1.2, 1.2],
+        "B2": [1.4, 1.3, 1.3, 1.2, 1.1, 1.1],
+        "C1": [1.7, 1.6, 1.4, 1.3, 1.3, 1.2],
+        "C2": [1.6, 1.5, 1.3, 1.2, 1.1, 1.0],
+        "C3": [1.8, 1.6, 1.4, 1.2, 1.1, 1.0],
+        "D":  [2.2, 1.9, 1.6, 1.4, 1.2, 1.0],
+        "E":  [1.7, 1.6, 1.6, 1.5, 1.5, 1.5]}
+
+    # Long period amplification factors defined by Pitilakis et al., (2018)
+    F1 = {
+        "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "B1": [1.4, 1.4, 1.4, 1.4, 1.3, 1.3],
+        "B2": [1.6, 1.5, 1.5, 1.5, 1.4, 1.3],
+        "C1": [1.7, 1.6, 1.5, 1.5, 1.4, 1.3],
+        "C2": [2.1, 2.0, 1.9, 1.8, 1.8, 1.7],
+        "C3": [3.2, 3.0, 2.7, 2.5, 2.4, 2.3],
+        "D":  [4.1, 3.8, 3.3, 3.0, 2.8, 2.7],
+        "E":  [1.3, 1.3, 1.2, 1.2, 1.2, 1.2]}
+
+
+class PitilakisEtAl2020(PitilakisEtAl2018):
+    """
+    Adaptation of the Pitilakis et al. (2018) amplification model adopting
+    the revised FS and F1 factors proposed by Pitilakis et al., (2020)
+
+    Pitilakis, K., Riga, E. and Anastasiadis, A. (2020), Towards the Revision
+    of EC8: Proposal for an Alternative Site Classification Scheme and
+    Associated Intensity-Dependent Amplification Factors. In the Proceedings
+    of the 17th World Conference on Earthquake Engineering, 17WCEE, Sendai,
+    Japan, September 13th to 18th 2020. Paper No. C002895.
+    """
+    experimental = True
+
+    # Short period amplification factors defined by Pitilakis et al., (2020)
+    FS = {
+        "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "B1": [1.3, 1.3, 1.3, 1.2, 1.2, 1.2],
+        "B2": [1.3, 1.3, 1.2, 1.2, 1.2, 1.1],
+        "C1": [1.7, 1.7, 1.6, 1.5, 1.5, 1.4],
+        "C2": [1.6, 1.5, 1.3, 1.2, 1.1, 1.0],
+        "C3": [1.7, 1.6, 1.4, 1.2, 1.2, 1.1],
+        "D":  [1.8, 1.7, 1.5, 1.4, 1.3, 1.2],
+        "E":  [1.7, 1.6, 1.6, 1.5, 1.5, 1.4]}
+
+    # Long period amplification factors defined by Pitilakis et al., (2020)
+    F1 = {
+        "A":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "B1": [1.1, 1.1, 1.1, 1.1, 1.1, 1.1],
+        "B2": [1.4, 1.4, 1.3, 1.3, 1.3, 1.3],
+        "C1": [1.5, 1.5, 1.4, 1.4, 1.4, 1.4],
+        "C2": [2.3, 2.2, 2.0, 1.9, 1.9, 1.8],
+        "C3": [2.4, 2.3, 2.1, 2.0, 2.0, 1.9],
+        "D":  [4.0, 3.5, 3.0, 2.7, 2.4, 2.3],
+        "E":  [1.2, 1.1, 1.1, 1.1, 1.1, 1.1]}
 
 
 class Eurocode8Amplification(PitilakisEtAl2018):
@@ -277,10 +307,10 @@ class Eurocode8Amplification(PitilakisEtAl2018):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     #: Required site parameters will be set be selected GMPES
-    REQUIRES_SITES_PARAMETERS = set(('vs30', "h800",))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'h800'}
 
     #: Required rupture parameter is magnitude, others will be set later
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance metrics will be set by the GMPEs
     REQUIRES_DISTANCES = set()
@@ -304,7 +334,7 @@ class Eurocode8Amplification(PitilakisEtAl2018):
         desired site class, with the standard deviations taken from the
         original GMPE at the desired IMT
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
         pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
@@ -410,7 +440,7 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
         Returns the mean and standard deviations following the approach
         in :class:`Eurocode8Amplification`
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         # Get PGA and Sa (1.0) from GMPE
         pga_r = self.gmpe.get_mean_and_stddevs(sctx_r, rctx, dctx, PGA(),
@@ -449,10 +479,9 @@ REGION_SET = ["USNZ", "JP", "TW", "CH", "WA", "TRGR", "WMT", "NWE"]
 class SandikkayaDinsever2018(GMPE):
     """
     Implements the nonlinear site amplification model of Sandikkaya &
-    Dinsever (2018)
-    Sandikkaya, M. A. and Dinsever, L. D. (2018) "A Site Amplification Model
-        for Crustal Earthquakes", Geosciences, 264(8),
-        doi:10.3390/geosciences8070264
+    Dinsever (2018), see Sandikkaya, M. A. and Dinsever, L. D. (2018)
+    "A Site Amplification Model for Crustal Earthquakes", Geosciences, 264(8),
+    doi:10.3390/geosciences8070264
 
     Note that the nonlinear amplification model has its own standard deviation,
     which should be applied with the phi0 model of the original GMPE. This
@@ -491,10 +520,10 @@ class SandikkayaDinsever2018(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     #: Required site parameters will be set be selected GMPES
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
     #: Required rupture parameter is magnitude, others will be set later
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance metrics will be set by the GMPEs
     REQUIRES_DISTANCES = set()
@@ -509,7 +538,7 @@ class SandikkayaDinsever2018(GMPE):
             self.gmpe = registry[gmpe_name](**kwargs)
         else:
             # An instantiated class is passed as an argument
-            self.gmpe = deepcopy(gmpe_name)
+            self.gmpe = copy.deepcopy(gmpe_name)
         # Define the reference velocity - set to 760. by default
         self.rock_vs30 = reference_velocity if reference_velocity else\
             self.DEFINED_FOR_REFERENCE_VELOCITY
@@ -518,7 +547,7 @@ class SandikkayaDinsever2018(GMPE):
                     frozenset(getattr(self, name) | getattr(self.gmpe, name)))
         stddev_check = (const.StdDev.INTER_EVENT in
                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES) and\
-                        (const.StdDev.INTRA_EVENT in
+                       (const.StdDev.INTRA_EVENT in
                         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
         if not stddev_check:
             raise ValueError("Input GMPE %s not defined for inter- and intra-"
@@ -545,12 +574,11 @@ class SandikkayaDinsever2018(GMPE):
         else:
             self.region = region
 
-
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         Returns the mean and standard deviations
         """
-        sctx_r = deepcopy(sctx)
+        sctx_r = copy.copy(sctx)
         sctx_r.vs30 = self.rock_vs30 * np.ones_like(sctx_r.vs30)
         mean, stddevs = self.gmpe.get_mean_and_stddevs(
             sctx_r, rctx, dctx, imt, [const.StdDev.INTER_EVENT,

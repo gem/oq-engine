@@ -19,15 +19,16 @@
 import os
 import unittest
 import numpy
-from openquake.hazardlib.contexts import Effect
 
+from openquake.baselib.general import DictArray
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.contexts import (
+    Effect, RuptureContext, _collapse, make_pmap)
+from openquake.hazardlib import valid
 from openquake.hazardlib.pmf import PMF
-
 from openquake.hazardlib.const import TRT
 from openquake.baselib.general import DictArray
-
 from openquake.hazardlib.contexts_ne import ContextMaker
-
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.source import NonParametricSeismicSource
 
@@ -35,11 +36,12 @@ from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 BASE_PATH = os.path.dirname(__file__)
 
+aac = numpy.testing.assert_allclose
 dists = numpy.array([0, 10, 20, 30, 40, 50])
 intensities = {
     '4.5': numpy.array([1.0, .95, .7, .6, .5, .3]),
     '5.0': numpy.array([1.2, 1.1, .7, .69, .6, .5]),
-    '5.5': numpy.array([1.5, 1.2, .89, .85, .82, .6]),
+    '5.5' numpy.array([1.5, 1.2, .89, .85, .82, .6]),
     '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
 
 class InstantiateContextTest(unittest.TestCase):
@@ -86,7 +88,7 @@ class GetPmapTest(unittest.TestCase):
 class EffectTestCase(unittest.TestCase):
     def test_dist_by_mag(self):
         effect = Effect(intensities, dists)
-        dist = list(effect.dist_by_mag().values())
+        dist = list(effect.dist_by_mag(0).values())
         numpy.testing.assert_allclose(dist, [50, 50, 50, 50])
 
         dist = list(effect.dist_by_mag(.9).values())
@@ -94,3 +96,64 @@ class EffectTestCase(unittest.TestCase):
 
         dist = list(effect.dist_by_mag(1.1).values())
         numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
+
+
+def compose(ctxs, poe):
+    pnes = [ctx.get_probability_no_exceedance(poe) for ctx in ctxs]
+    return 1. - numpy.prod(pnes), pnes
+
+
+class CollapseTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        RuptureContext.temporal_occurrence_model = PoissonTOM(50.)
+
+    def test_param(self):
+        ctxs = [RuptureContext([('occurrence_rate', .001)]),
+                RuptureContext([('occurrence_rate', .002)])]
+        for poe in (.1, .5, .9):
+            c1, pnes1 = compose(ctxs, poe)
+            c2, pnes2 = compose(_collapse(ctxs), poe)
+            aac(c1, c2)  # the same
+
+    def test_nonparam(self):
+        ctxs = [RuptureContext([('occurrence_rate', numpy.nan),
+                                ('probs_occur', [.999, .001])]),
+                RuptureContext([('occurrence_rate', numpy.nan),
+                                ('probs_occur', [.998, .002])]),
+                RuptureContext([('occurrence_rate', numpy.nan),
+                                ('probs_occur', [.997, .003])])]
+        for poe in (.1, .5, .9):
+            c1, pnes1 = compose(ctxs, poe)
+            c2, pnes2 = compose(_collapse(ctxs), poe)
+            aac(c1, c2)  # the same
+
+    def test_mixed(self):
+        ctxs = [RuptureContext([('occurrence_rate', .001)]),
+                RuptureContext([('occurrence_rate', .002)]),
+                RuptureContext([('occurrence_rate', numpy.nan),
+                                ('probs_occur', [.999, .001])]),
+                RuptureContext([('occurrence_rate', numpy.nan),
+                                ('probs_occur', [.998, .002])])]
+        for poe in (.1, .5, .9):
+            c1, pnes1 = compose(ctxs, poe)
+            c2, pnes2 = compose(_collapse(ctxs), poe)
+            aac(c1, c2)  # the same
+
+    def test_make_pmap(self):
+        trunclevel = 3
+        imtls = DictArray({'PGA': [0.01]})
+        gsims = [valid.gsim('AkkarBommer2010')]
+        ctxs = []
+        for occ_rate in (.001, .002):
+            ctx = RuptureContext()
+            ctx.mag = 5.5
+            ctx.rake = 90
+            ctx.occurrence_rate = occ_rate
+            ctx.sids = numpy.array([0.])
+            ctx.vs30 = numpy.array([760.])
+            ctx.rrup = numpy.array([100.])
+            ctx.rjb = numpy.array([99.])
+            ctxs.append(ctx)
+        pmap = make_pmap(ctxs, gsims, imtls, trunclevel, 50.)
+        numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)

@@ -58,7 +58,7 @@ class RaghukanthIyengar2007(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from
     #: module :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([SA, PGA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA, PGA}
 
     #: This is not clear in the paper, but Figure 7 shows the model
     #: "compared with the average of the response spectrum of
@@ -72,19 +72,19 @@ class RaghukanthIyengar2007(GMPE):
     #: regression following Joyner and Boore (1981)" (p. 203), the
     #: standard deviations of the intermediate steps are not
     #: reported, so only total standard deviation is supported.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameter Vs30 is used to determing the NEHRP
     #: site class, and thus to choose site amplification coefficients
     #: and site amplification stanard error from Table 5 on p. 208.
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Sole required rupture parameter is magnitude, since faulting
     #: style is not addressed.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance, see p. 203.
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     #: Verification of mean value data was done by digitizing Figures 3 and
     #: 5 using http://arohatgi.info/WebPlotDigitizer/ app/. Maximum error

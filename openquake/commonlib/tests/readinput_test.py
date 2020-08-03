@@ -23,13 +23,14 @@ import unittest
 from io import BytesIO
 
 from openquake.baselib import general, datastore
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, site_amplification
 from openquake.risklib import asset
 from openquake.risklib.riskmodels import ValidationError
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logictree
 from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
-from openquake.qa_tests_data.event_based_risk import case_caracas
+from openquake.qa_tests_data.event_based_risk import (
+    case_2 as ebr2, case_caracas)
 
 
 TMP = tempfile.gettempdir()
@@ -82,19 +83,19 @@ reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
-investigation_time = 50.
 export_dir = %s
             """ % (os.path.basename(sites_csv), TMP))
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
-
             expected_params = {
                 'export_dir': TMP,
                 'base_path': exp_base_path,
                 'calculation_mode': 'scenario',
+                'complex_fault_mesh_spacing': 5.0,
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'maximum_distance': {'default': 1.0},
+                'collapse_level': 0,
+                'maximum_distance': {'default': [(1, 1), (10, 1)]},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -102,8 +103,7 @@ export_dir = %s
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
-                'investigation_time': 50.0,
-                'risk_investigation_time': 50.0,
+                'risk_investigation_time': None,
             }
 
             params = getparams(readinput.get_oqparam(source))
@@ -129,7 +129,6 @@ reference_vs30_value = 600.0
 reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
-investigation_time = 50.
 export_dir = %s
 """ % (os.path.basename(sites_csv), TMP))
         oq = readinput.get_oqparam(source)
@@ -145,8 +144,7 @@ maximum_distance=[(200, 8)]
 """)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_oqparam(source)
-        self.assertIn('magnitude 200.0 is bigger than the maximum (11): '
-                      'could not convert to maximum_distance:',
+        self.assertIn('Invalid magnitude 200: could not convert to new',
                       str(ctx.exception))
 
 
@@ -342,9 +340,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn("Could not convert number->asset_number: "
-                      "got 0 < 1, line 17",
-                      str(ctx.exception))
+        self.assertIn("'0.0' is zero, line 17", str(ctx.exception))
 
     def test_invalid_asset_id(self):
         oqparam = mock.Mock()
@@ -425,15 +421,63 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
             readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
         self.assertIn("is missing", str(ctx.exception))
 
+    def test_Lon_instead_of_lon(self):
+        fname = os.path.join(DATADIR, 'exposure.xml')
+        with self.assertRaises(InvalidFile) as ctx:
+            asset.Exposure.read([fname])
+        self.assertIn('''\
+Expected: ['id', 'lat', 'lon', 'number', 'structural', 'taxonomy']
+Got: ['Lon', 'id', 'lat', 'number', 'structural', 'taxonomy']
+Missing: {'lon'}''', str(ctx.exception))
+
+    def test_case_similar(self):
+        fname = os.path.join(DATADIR, 'exposure2.xml')
+        with self.assertRaises(InvalidFile) as ctx:
+            asset.Exposure.read([fname])
+        self.assertIn('''\
+Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
+
+    def test_GEM4ALL(self):
+        # test a call used in the GEM4ALL importer, pure XML
+        fname = os.path.join(os.path.dirname(case_caracas.__file__),
+                             'exposure_caracas.xml')
+        a0, a1 = asset.Exposure.read([fname]).assets
+        self.assertEqual(a0.tags, {'taxonomy': 'MUR+ADO_H1'})
+        self.assertEqual(a1.tags, {'taxonomy': 'S1M_MC'})
+
+        # test a call used in the GEM4ALL importer, XML + CSV
+        fname = os.path.join(os.path.dirname(ebr2.__file__),
+                             'exposure.xml')
+        for ass in asset.Exposure.read([fname]).assets:
+            # make sure all the attributes exist
+            ass.asset_id
+            ass.tags['taxonomy']
+            ass.number
+            ass.area
+            ass.location[0]
+            ass.location[1]
+            ass.tags.get('geometry')
+
 
 class GetCompositeSourceModelTestCase(unittest.TestCase):
 
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        readinput.reduce_source_model(smlt, [], False)
+        found, total = readinput.reduce_source_model(smlt, [], remove=False)
+        self.assertEqual(found, 0)
+        found, total = readinput.reduce_source_model(smlt, {}, remove=False)
+        self.assertEqual(found, 0)
 
     def test_wrong_trts(self):
+        # 'active Shallow Crust' is missing, 'Active Shallow Crust' is there
+        oq = readinput.get_oqparam('job.ini', case_16)
+        with self.assertRaises(logictree.InvalidLogicTree) as c:
+            readinput.get_gsim_lt(oq, ['active Shallow Crust'])
+        self.assertIn("is missing the TRT 'active Shallow Crust'",
+                      str(c.exception))
+
+    def test_wrong_trts_in_reqv(self):
         # invalid TRT in job.ini [reqv]
         oq = readinput.get_oqparam('job.ini', case_2)
         fname = oq.inputs['reqv'].pop('active shallow crust')
@@ -441,15 +485,6 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             readinput.get_composite_source_model(oq)
         self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
-
-    def test_applyToSources(self):
-        oq = readinput.get_oqparam('job.ini', case_21)
-        with mock.patch('logging.info') as info:
-            with mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
-                readinput.get_composite_source_model(oq)
-        self.assertEqual(
-            info.call_args[0],
-            ('Applied %d changes to the composite source model', 81))
 
     def test_extra_large_source(self):
         raise unittest.SkipTest('Removed check on MAX_EXTENT')
@@ -497,9 +532,11 @@ class SitecolAssetcolTestCase(unittest.TestCase):
     def test_site_amplification(self):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.inputs['amplification'] = os.path.join(
-            oq.base_path, 'amplification.csv')
-        with self.assertRaises(InvalidFile):
-            readinput.get_amplification(oq)
+            oq.base_path, 'invalid_amplification.csv')
+        df = readinput.get_amplification(oq)
+        with self.assertRaises(ValueError) as ctx:
+            site_amplification.Amplifier(oq.imtls, df)
+        self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
 
     def test_site_model_sites(self):
         # you can set them at the same time

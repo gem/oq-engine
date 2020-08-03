@@ -3,8 +3,8 @@ Scenario with IPE DowrickRhoades2005Asc
 
 ============== ===================
 checksum32     2_423_490_478      
-date           2020-01-24T14:29:44
-engine_version 3.9.0-gita508c7cea2
+date           2020-03-13T11:20:17
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = 1
@@ -41,18 +41,11 @@ rupture_model `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 trivial(1)      1               
-========= ======= =============== ================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)>
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b_1       1.00000 1               
+========= ======= ================
 
 Information about the tasks
 ---------------------------
@@ -67,6 +60,6 @@ task sent received
 Slowest operations
 ------------------
 ========== ======== ========= ======
-calc_47327 time_sec memory_mb counts
+calc_66872 time_sec memory_mb counts
 ========== ======== ========= ======
 ========== ======== ========= ======

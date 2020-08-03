@@ -19,6 +19,31 @@
 Utilities to compute mean and quantile curves
 """
 import numpy
+from scipy.stats import norm
+
+
+def norm_cdf(x, a, s):
+    """
+    Gaussian cumulative distribution function; if s=0, returns an
+    Heaviside function instead. NB: for x=a, 0.5 is returned for all s.
+
+    >>> norm_cdf(1.2, 1, .1)
+    0.9772498680518208
+    >>> norm_cdf(1.2, 1, 0)
+    1.0
+    >>> norm_cdf(.8, 1, .1)
+    0.022750131948179216
+    >>> norm_cdf(.8, 1, 0)
+    0.0
+    >>> norm_cdf(1, 1, .1)
+    0.5
+    >>> norm_cdf(1, 1, 0)
+    0.5
+    """
+    if s == 0:
+        return numpy.heaviside(x - a, .5)
+    else:
+        return norm.cdf(x, loc=a, scale=s)
 
 
 def mean_curve(values, weights=None):
@@ -195,19 +220,16 @@ def apply_stat(f, arraylist, *extra, **kw):
         return f(arraylist, *extra, **kw)
 
 
-def set_rlzs_stats(dstore, prefix, arrayNR=None):
+def set_rlzs_stats(dstore, prefix, **attrs):
     """
     :param dstore: a DataStore object
-    :param prefix: dataset prefix
-    :param arrayNR: an array of shape (N, R, ...)
+    :param prefix: dataset prefix, assume <prefix>-rlzs is already stored
     """
-    if arrayNR is None:
-        # assume the -rlzs array is already stored
-        arrayNR = dstore[prefix + '-rlzs'][()]
-    else:
-        # store passed the -rlzs array
-        dstore[prefix + '-rlzs'] = arrayNR
+    arrayNR = dstore[prefix + '-rlzs'][()]
     R = arrayNR.shape[1]
+    pairs = list(attrs.items())
+    pairs.insert(1, ('rlz', numpy.arange(R)))
+    dstore.set_shape_attrs(prefix + '-rlzs', **dict(pairs))
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
         if not stats:
@@ -215,8 +237,7 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
         statnames, statfuncs = zip(*stats.items())
         weights = dstore['weights'][()]
         name = prefix + '-stats'
-        if name in set(dstore):
-            dstore[name][...] = compute_stats2(arrayNR, statfuncs, weights)
-        else:
-            dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
-            dstore.set_attrs(name, stats=statnames)
+        dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
+        pairs = list(attrs.items())
+        pairs.insert(1, ('stat', statnames))
+        dstore.set_shape_attrs(name, **dict(pairs))

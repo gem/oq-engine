@@ -36,8 +36,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -45,7 +45,8 @@
 # liability for use of the software.
 
 '''
-Module implements :class: openquake.hmtk.sources.source_model.mtkSourceModel, the
+Module implements
+:class:`openquake.hmtk.sources.source_model.mtkSourceModel`, the
 general class to describe a set of seismogenic sources
 '''
 from openquake.hazardlib.tom import PoissonTOM
@@ -92,7 +93,8 @@ class mtkSourceModel(object):
         '''
         return len(self.sources)
 
-    def serialise_to_nrml(self, filename, use_defaults=False):
+    def serialise_to_nrml(self, filename, complex_mesh_spacing=2,
+                          use_defaults=False):
         '''
         Writes the source model to a nrml source model file given by the
         filename
@@ -106,7 +108,8 @@ class mtkSourceModel(object):
             attribute is missing.
         '''
         source_model = self.convert_to_oqhazardlib(
-            PoissonTOM(1.0), 2.0, 2.0, 10.0, use_defaults=use_defaults)
+            PoissonTOM(1.0), 2.0, complex_mesh_spacing, 10.0,
+            use_defaults=use_defaults)
         write_source_model(filename, source_model, name=self.name)
 
     def convert_to_oqhazardlib(
@@ -115,31 +118,23 @@ class mtkSourceModel(object):
             use_defaults=False):
         """
         Converts the source model to an iterator of sources of :class:
-        openquake.hazardlib.source.base.BaseSeismicSource
+        `openquake.hazardlib.source.base.BaseSeismicSource`
         """
         oq_source_model = []
         for source in self.sources:
             if isinstance(source, mtkAreaSource):
                 oq_source_model.append(source.create_oqhazardlib_source(
-                    tom,
-                    simple_mesh_spacing,
-                    area_discretisation,
+                    tom, simple_mesh_spacing, area_discretisation,
                     use_defaults))
             elif isinstance(source, mtkPointSource):
                 oq_source_model.append(source.create_oqhazardlib_source(
-                    tom,
-                    simple_mesh_spacing,
-                    use_defaults))
+                    tom, simple_mesh_spacing, use_defaults))
             elif isinstance(source, mtkSimpleFaultSource):
                 oq_source_model.append(source.create_oqhazardlib_source(
-                    tom,
-                    simple_mesh_spacing,
-                    use_defaults))
+                    tom, simple_mesh_spacing, use_defaults))
             elif isinstance(source, mtkComplexFaultSource):
                 oq_source_model.append(source.create_oqhazardlib_source(
-                    tom,
-                    complex_mesh_spacing,
-                    use_defaults))
+                    tom, complex_mesh_spacing, use_defaults))
             else:
                 raise ValueError('Source type not recognised!')
         return oq_source_model

@@ -12,10 +12,10 @@ faq-hazard.md) and [here for risk calculations](faq-risk.md).
 ### Help! What is the recommended hardware to run engine calculations?
 
 It depends on your use case and your level of expertise. Most of our users
-are scientists which little IT experience and/or little support from their IT
+are scientists with little IT experience and/or little support from their IT
 departments. For them we recommend to buy a very powerful server and not
 a cluster, which is complex to manage. A server with 256 GB of RAM
-and 64 real core is currently powerful enough to run all of the calculations
+and 64 real cores is currently powerful enough to run all of the calculations
 in the GEM global hazard and risk mosaic. If you have larger calculations
 and IT expertise, for a cluster setup see the [hardware suggestions](hardware-suggestions.md) and [cluster](installing/cluster.md) pages.
 
@@ -26,19 +26,19 @@ have a look at [FAQ related to cluster deployments](faq-cluster.md).
 
 ### Help! Should I disable Hyperthreading?
 
-It depends. If you have memory issue for sure you should disable
+It depends. If you have memory issues, for sure you should disable
 HyperThreading since it will save you a lot of memory.
 If memory is not not a issue, enabling HyperThreading may still be a bad
 idea: depending on the hardware and the software (in particular the patches
 for Spectre/Meltdown) it may slow down your system. The only way to assess
 the effect of HyperThreading is to run a (big) calculation with HyperThreading
-on and HyperThreading off and then compare the runtimes.
+and one without, and then compare the runtimes.
 
 ******
 
 ### Different installation methods
 
-The OpenQuake Engine has at least three installation methods. To choose the one that best fits your needs take a look at the **[installation overview](installing/overview.md)**.
+The OpenQuake Engine has at least three installation methods. To choose the one that best fits your needs take a look at the **[installation overview](installing/README.md)**.
 
 ******
 
@@ -76,13 +76,13 @@ The OpenQuake Engine **requires a 64bit operating system**. Starting with versio
 
 ### Celery support
 
-Starting with OpenQuake Engine 3.8 Celery is not needed anymore, so if have troubles with it you can try using the new zmq mechanism, see the [multiple nodes installation guidelines](installing/cluster.md).
+Starting with OpenQuake Engine 3.8, Celery is not needed anymore, so if you have trouble with it, you can try using the new zmq mechanism: see the [multiple nodes installation guidelines](installing/cluster.md).
 
 ******
 
 ### MPI support
 
-MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is made via *zmq*. The worker nodes must have read access to a shared file system writeable from the master node. Data transfer is made on mmq TCP/IP connection.
+MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is done via *zmq*. The worker nodes must have read access to a shared file system writeable from the master node. Data transfer is made on TCP/IP connection.
 
 MPI support may be added in the future if sponsored by someone. If you would like to help support development of OpenQuake, please contact us at [partnership@globalquakemodel.org](mailto:partnership@globalquakemodel.org).
 
@@ -163,7 +163,9 @@ More information is available on [Running the OpenQuake Engine](running/unix.md)
 
 ### DbServer ports
 
-The default port for the DbServer (configured via the `openquake.cfg` configuration file) is `1908` or `1907`.
+The default port for the DbServer (configured via the `openquake.cfg`
+configuration file) is `1908` (for a development installation) or `1907`
+(for a package installation).
 
 ******
 

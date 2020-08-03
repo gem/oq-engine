@@ -45,30 +45,25 @@ class BergeThierryEtAl2003Ms(GMPE):
     #: ground acceleration. The original manuscript provide coefficients only
     #: SA. For PGA, coefficients are assumed equal to the ones of SA for the
     #: smallest period (0.03 s)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is horizontal, see page 196.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation type is total, see table 3, page 203
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters is Vs30, used to distinguish between rock sites
     #: (Vs30 >= 800) m/s and alluvium sites (300 < Vs < 800), see section 2.2.3
     #: page 201
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters is magnitude, see equation 1 page 201
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance, see equation 1 page
     #: 201
-    REQUIRES_DISTANCES = set(('rhypo', ))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         return self._get_mean_and_stddevs(sites, rup, dists, imt,

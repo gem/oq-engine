@@ -36,8 +36,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -55,7 +55,8 @@ from openquake.hmtk.sources.point_source import mtkPointSource
 from openquake.hmtk.sources.area_source import mtkAreaSource
 from openquake.hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from openquake.hmtk.sources.complex_fault_source import mtkComplexFaultSource
-from openquake.hmtk.parsers.source_model.nrml04_parser import nrmlSourceModelParser
+from openquake.hmtk.parsers.source_model.nrml04_parser import \
+    nrmlSourceModelParser
 
 BASE_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -67,8 +68,8 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        self.nrml_file = os.path.join(BASE_PATH,
-                                      "mixed_source_model_nrml4_2.xml")
+        self.nrml_file = os.path.join(
+            BASE_PATH,  "mixed_source_model_nrml4_2.xml")
 
     def test_execution_full(self):
         """
@@ -90,9 +91,10 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
         self.assertTrue(isinstance(source, mtkAreaSource))
         self.assertEqual(source.id, "1")
         self.assertEqual(source.name, "Quito")
-        self.assertEqual(source.geometry.wkt,
-                         'POLYGON((-122.5 38.0, -122.0 38.5, -121.5 38.0, '
-                         '-122.0 37.5, -122.5 38.0))')
+        self.assertEqual(
+            source.geometry.wkt,
+            'POLYGON((-122.50000 38.00000, -122.00000 38.50000, '
+            '-121.50000 38.00000, -122.00000 37.50000, -122.50000 38.00000))')
         self.assertAlmostEqual(source.upper_depth, 0.0)
         self.assertAlmostEqual(source.lower_depth, 10.0)
         self.assertAlmostEqual(source.rupt_aspect_ratio, 1.5)
@@ -181,13 +183,13 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
 
 class NRMLParserPartialModelTestCase(unittest.TestCase):
     """
-    Tests the NRML parser for the case in which a full and validated NRML
+    Tests the NRML parser for the case in which an invalid NRML
     source model is input
     """
 
     def setUp(self):
-        self.nrml_file = os.path.join(BASE_PATH,
-                                      "mixed_source_model_nrml4_2_minimum.xml")
+        self.nrml_file = os.path.join(
+            BASE_PATH, "mixed_source_model_nrml4_2_minimum.xml")
 
     def test_execution_full(self):
         """
@@ -209,9 +211,10 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertTrue(isinstance(source, mtkAreaSource))
         self.assertEqual(source.id, "1")
         self.assertEqual(source.name, "Quito")
-        self.assertEqual(source.geometry.wkt,
-                         'POLYGON((-122.5 38.0, -122.0 38.5, -121.5 38.0, '
-                         '-122.0 37.5, -122.5 38.0))')
+        self.assertEqual(
+            source.geometry.wkt,
+            'POLYGON((-122.50000 38.00000, -122.00000 38.50000, '
+            '-121.50000 38.00000, -122.00000 37.50000, -122.50000 38.00000))')
         self.assertAlmostEqual(source.upper_depth, 0.0)
         self.assertAlmostEqual(source.lower_depth, 10.0)
         self.assertFalse(source.rupt_aspect_ratio)

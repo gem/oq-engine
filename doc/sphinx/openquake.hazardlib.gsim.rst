@@ -194,10 +194,26 @@ bindi_2011
     :undoc-members:
     :show-inheritance:
 
+bindi_2011scaled
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bindi_2011scaled
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 bindi_2014
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bindi_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bindi_2014scaled
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bindi_2014scaled
     :members:
     :undoc-members:
     :show-inheritance:
@@ -318,6 +334,14 @@ cauzzi_2014
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.cauzzi_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+cauzzi_2014scaled
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.cauzzi_2014scaled
     :members:
     :undoc-members:
     :show-inheritance:
@@ -586,10 +610,10 @@ kotha_2016
     :undoc-members:
     :show-inheritance:
 
-kotha_2019
+kotha_2020
 ------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.kotha_2019
+.. automodule:: openquake.hazardlib.gsim.kotha_2020
     :members:
     :undoc-members:
     :show-inheritance:
@@ -951,6 +975,14 @@ yu_2013
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.yu_2013
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+zalachoris_rathje_2019
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.zalachoris_rathje_2019
     :members:
     :undoc-members:
     :show-inheritance:

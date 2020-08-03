@@ -91,7 +91,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         super().pre_execute()
         if 'poes' not in self.datastore:  # when building short report
             return
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        full_lt = self.datastore['full_lt']
+        self.realizations = full_lt.get_realizations()
+        weights = [rlz.weight for rlz in self.realizations]
         stats = list(oq.hazard_stats().items())
         self.param = dict(stats=stats, weights=weights)
         self.riskinputs = self.build_riskinputs('poe')
@@ -123,9 +125,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
                 base.set_array(stat_curves_lt['losses'][a, s], losses)
         self.datastore['avg_losses-stats'] = avg_losses
-        self.datastore.set_attrs('avg_losses-stats', stats=stats)
+        self.datastore.set_attrs('avg_losses-stats', stat=stats)
         self.datastore['loss_curves-stats'] = stat_curves
-        self.datastore.set_attrs('loss_curves-stats', stats=stats)
+        self.datastore.set_attrs('loss_curves-stats', stat=stats)
 
         if self.R > 1:  # individual realizations saved only if many
             loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)

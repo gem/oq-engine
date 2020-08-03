@@ -1,5 +1,282 @@
   [Michele Simionato]
-  * Enhanced oq compare to accept a file with the control sites
+  * Restored magnitude-dependent maximum distance
+  * Displaying the hazard maps in the WebUI for debugging purposes
+  * Used the hazard map to get the disaggregation IML from the disaggregation
+    PoE and added a warning for zero hazard
+  * Internal: implemented multi-run functionality
+  * Reduced tremendously the data transfer in disaggregation calculations
+  * Internal: introduced compress/decompress utilities
+  * Reduced the memory and disk space occupation in classical calculations with
+    few sites; also changed slightly the rupture collapsing mechanism
+  * In disaggregation, force poes_disagg == poes
+  * Fixed multi-site disaggregation: ruptures far away were not discarded,
+    just considered distant 9999 km
+
+  [Marco Pagani]
+  * Added a prototype implementation of the kernel method
+
+  [Michele Simionato]
+  * Added zipcode site parameter
+  * Added command `oq renumber_sm ssmLT.xml`
+
+  [Robin Gee]
+  * Set DEFINED_FOR_REFERENCE_VELOCITY for GMPEs modified for Switzerland
+
+  [Michele Simionato]
+  * Added parameter `max_num_loss_curves` to the job.ini file
+  * Changed `oq engine --reuse-hazard` to just reuse the source model, if
+    possible
+  * Added command `oq recompute_losses <calc_id> <aggregate_by>`
+  * Fixed `noDamageLimit`, `minIML`, `maxIML` not being honored in continuous
+    fragility functions
+  * Unified the scenario calculator with the event based one, with
+    minor differences in the numbers akin to a change of seed
+  * Fixed a bug in event based when a rupture occurs more than 65535 times
+  * Added a demo EventBasedDamage
+  * Fixed bug in event_based_damage: the number of buildings in no damage
+    state was incorrect
+  * Added commands `oq nrml_to csv` and  `oq nrml_to gpkg`
+  * Supported year and ses_id >= 65536 in event based
+
+  [Graeme Weatherill]
+  * Implements a heteroskedastic standard deviation model for the Kotha et al.
+    (2020) GMPE
+
+  [Michele Simionato]
+  * Called `check_complex_fault` when serializing the source in XML
+  * Restored scenario_damage with fractional asset number
+  * Added a view `oq extract disagg_by_src`
+  * Fixed error with large ShakeMap calculations ('events' not found)
+  * Raised an error when using `disagg_by_src` with too many point sources
+  * The `minimum_magnitude` parameter was incorrectly ignored in UCERF
+
+  [Iason Grigoratos]
+  * Implemented the Zalachoris & Rathje (2019) GMM
+
+  [Michele Simionato]
+  * Optimized the disaggregation outputs, saving storage time
+
+  [Graeme Weatherill]
+  * Adds PGV coefficients to USGS CEUS GMPE tables (where applicable)
+
+  [Michele Simionato]
+  * Removed the `disagg_by_src` exporter
+  * Internal: added filtering features to the datastore
+  * Calculations with a number of levels non-homogenous across IMTs are
+    now an error
+  * Implemented rupture collapsing in disaggregation (off by default)
+  * Fixed a bug in the dmg_by_event exporter: the damage distributions could
+    be associated to the wrong GMPE in some cases
+  * Solved a bug with nonparametric ruptures: due to rounding errors,
+    the disaggregation matrix could contain (small) negative probabilities
+  * Extended the scenario calculators to compute the statistical outputs
+    if there is more than one GMPE
+  * Fixed the formula used for the avg_damages-rlzs outputs in event based
+    damage calculations
+  * Raised an error if `investigation_time` is set in scenario calculations
+
+  [Graeme Weatherill]
+  * Fixed a bug in the mixture model application when running multiple GMPEs
+
+  [Michele Simionato]
+  * Replaced outputs `losses_by_asset` with `avg_losses-rlzs`, and
+    `dmg_by_asset` with ``avg_damages-rlzs`, for consistency with the
+    event based outputs
+  * Extended the /extract/ API to manage JSON and removed the oqparam API
+  * Added a check on ebrisk to avoid generating too many loss curves
+  * Introduced an output "Source Loss Table" for event based risk calculations
+  * Raised an early error when `max_sites_disagg` is below the number of
+    sites in disaggregation calculations
+  * Extended the amplification framework to use different intensity levels
+    for different amplification functions
+  * Optimized the disaggregation in the case of multiple realizations
+  * Fixed bug in GMF amplification without intensity_measure_types_and_levels
+  * Optimized the computation of the disaggregation PMFs by orders of magnitude
+    by using numpy.prod
+  * Changed the disaggregation calculator to distribute by magnitude bin,
+    thus reducing a lot the data transfer
+  * Vectorized the disaggregation formula
+  * Do not perform the disaggregation by epsilon when not required
+  * Introduced management of uncertainty in the GMF amplifi
+  * Changed the disaggregation calculator to distribute by IMT, thus reducing
+    a lot the data transfer in calculations with many IMTs
+  * Changed /extract/disagg_layer to produce a single big layer
+  * Changed the binning algorithm for lon, lat in disaggregation, to make
+    sure that the number of bins is homogeneous across sites
+
+  [Marco Pagani]
+  * Fixed a bug in the ParseNDKtoGCMT parser + updated tests.
+  * Ported the method serialise_to_hmtk_csv implemented in the corresponding
+    class of the catalogue toolkit + added a test into the GCMTCatalogue class.
+  * Added a modifiable GMPE using the site term of CY14.
+  * Added a generalised modificable GMPE. This first version allows the 
+    definition of the epsilon of the within event residual.
+
+  [Michele Simionato]
+  * Introduced a mixed XML+HDF5 format for gridded sources
+  * Internal: added a check on gridded sources: the arrays prob_occurs must
+    have homogeneous length across ruptures
+  * Removed the dependency from PyYAML, replaced the .yml files in the HMTK with
+    .toml files and added an utility `utils/yaml2toml`
+
+python3-oq-engine (3.9.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed a type error in the command `oq engine --run --params`
+  * Restored the flag `split_sources` for testing purposes
+  * Fixed a BOM bug in CSV exposures
+  * When exporting the loss curves per asset now we also export the loss ratio
+    and the inverse return period, for consistency with the other exporters
+  * Fixed the exporter of the loss curves per asset: due to an ordering bug
+    in some cases it was exporting wrong losses
+  * Added a flag save_disk_space to avoid storing the inputs
+  * Changed the logic underlying the pointsource_distance approximation and
+    added the syntax pointsource_distance=?
+  * Logged a warning when the pointsource_distance is too small
+
+  [Graeme Weatherill]
+  * Implemented Pitilakis et al. (2020) Site Amplification Model
+
+  [Michele Simionato]
+  * Fixed an export bug with modal_damage_state=true in scenario_damage
+    calculations
+  * Fixed a bug in calc_hazard_curves with multiple TRTs
+  * Fixed how AvgGMPE was stored and made it applicable with correlation models
+    if all underlying GMPEs are such
+
+  [Paolo Tormene]
+  * Added a second tectonic region type to the EventBasedPSHA demo
+
+  [Michele Simionato]
+  * Fixed an ordering bug in /extract/rupture_info affecting the QGIS plugin
+  * Fixed `oq engine --eo output_id output_dir` for the Full Report output
+  * Added year and ses_id to the events table
+  * Removed NaNs in the low return period part of the loss curves
+  * Fixed the tot_curves and tot_losses exporters in ebrisk calculations
+  * Reduced the rupture storage in classical calculations by using compression
+  * Improved the task distribution in the classical calculator, avoiding
+    generating too few or too many tasks
+  * Enhanced `oq check_input` to check complex fault geometries
+  * Added a warning against magnitude-dependent maximum_distance
+
+  [Marco Pagani]
+  * Fixed a bug in the coeff table of YEA97
+
+  [Graeme Weatherill]
+  * Implemented support for Gaussian Mixture Model approach to characterise
+    ground motion model uncertainty
+
+  [Michele Simionato]
+  * Enhanced `oq reduce_sm` to read the source models in parallel
+  * Deprecated the usage of a different number of intensity levels per IMT
+
+  [Matteo Nastasi]
+  * Internal: added 'oq-taxonomy' to docker images
+
+  [Michele Simionato]
+  * Extended the `pointsource_distance` approximation to work on single site
+    calculations, with a spectacular performance benefit in most calculations
+  * Added Bindi2011, Bindi2014 and Cauzzi2014 scaled GMPEs contributed by
+    the INGV
+  * Added a check on classical calculations which are too large to run
+  * Added a parameter `collapse_level` and a new collapsing algorithm
+  * Added a check for missing TRTs in the GSIM logic tree file
+  * Reduced the storage required for site specific calculations
+    with complex logic trees by removing duplicated ruptures
+  * Restored the computation of the mean disaggregation when multiple
+    realizations are requested
+  * Slightly changed the syntax of `oq info` (see `oq info --help`) and added
+    information about the available IMTs, MFDs and source classes
+  * Optimized get_composite_source_model (in the case of a complex source
+    specific logic trees a speedup of 80x was measured)
+  * Internal: fixed `oq info source_model_logic_tree.xml`
+  * Avoided reading multiple times the source models in the case of complex
+    logic trees
+  * Moved the check on invalid TRTs earlier, before processing the source models
+  * Removed the `ucerf_classical` calculator (just use the `classical` one)
+
+  [Paolo Tormene]
+  * Added a warning in `oq reduce_sm` listing duplicate source IDs
+
+  [Michele Simionato]
+  * Improved `oq reduce_sm` to reduce also duplicated source IDs if they
+    belong to different source types
+  * Removed the `ucerf_hazard` calculator (just use the `event_based` one)
+  * Changed the seed algorithm in all event based calculators including UCERF
+  * Fixed the ShakeMap code to use the formula for the median and not the mean
+  * Added a check on excessive data transfer in disaggregation calculations
+  * Changed back the disaggregation calculator to read the rupture data from
+    the workers, thus saving a lot of memory and time
+  * Fixed a bug that made it impossible to abort/remove a failed task
+  * Added `extendModel` feature to the source model logic tree parser
+
+  [Graeme Weatherill]
+  * Fixed bug in the HMTK: the `bin_width` parameter was not passed to
+    `mtkActiveFaultModel.build_fault_model`
+
+  [Michele Simionato]
+  * Avoided submitting too many tasks in the disaggregation calculator
+  * Added a parameter `discard_trts` for manual reduction of GSIM logic tree
+  * Fixed a bug in case of duplicated nodal planes affecting the Italy model
+  * Removed dynamic reduction of the GSIM logic tree (i.e. now the
+    logic tree is known upfront, before calculating the PoES)
+
+  [Paolo Tormene]
+  * Fixed an encoding issue in reading configuration files on Windows
+
+  [Michele Simionato]
+  * Internal: started the zmq workers when the DbServer starts
+  * Fixed a bug when reading rupture.txt files
+  * Internal: added an option `--calc-id` to `oq run`
+  * Added a check against negative number of cores in openquake.cfg
+  * Raised a clear error message if the enlarged bounding box of the sources
+    does not contain any site or if it is larger than half the globe
+
+  [Kendra Johnson]
+  * Correction to catalogue plotting tool in hmtk to include the last bins
+    in density plots
+
+  [Paolo Tormene]
+  * Added Classical PSHA Non-parametric sources Demo
+
+  [Robin Gee]
+  * Change the header of the exported sigma_epsilon_XX.csv file to indicate
+  that values correspond to inter event sigma
+
+  [Graeme Weatherill]
+  * Adds independent verification tables for the USGS CEUS models and revises
+    implementation for collapsed epistemic uncertainty on sigma and site
+    amplification
+  * Enhances SERA adaptation of the Abrahamson et al. (2015) `BC Hydro` GMPE to
+    add in a configurable smoothed tapering term on the forearc/backarc scaling
+
+  [Michele Simionato]
+  * Added a check on the engine version between master and workers
+
+  [Paolo Tormene]
+  * Removed the `multi_node` flag, that is not used anymore
+
+  [Michele Simionato]
+  * Added a command `oq postzip` to send small calculations to the WebUI
+  * Added a limit of 1000 sources when disagg_by_src=true
+  * Internal: fixed `oq export input -e zip` that was flattening the tree
+    structure of the input files in the exported zip archive
+  * Implemented GMFs amplification
+  * Introduced the flag `approx_ddd` to support the old algorithm in
+    scenario_damage calculations; it is automatically used for exposures
+    with fractional asset numbers
+
+  [Paolo Tormene]
+  * Modified the server views in order to allow using
+    `numpy.load(allow_pickle=False)` in the QGIS IRMT plugin
+  * Internal: changed some copy.deepcopy calls into copy.copy in hazardlib
+
+  [Michele Simionato]
+  * Removed implicit intensity_measure_types_and_levels
+  * Added a check to forbid case-similar headers in the exposures
+  * Improved the error message in case of CSV exposures with wrong headers
+  * Reduced the slow tasks issue in event_based/ebrisk with many sites
+  * Enhanced `oq compare` to accept a file with the control sites
   * Improved the error message for duplicate sites
   * Speedup of the ebrisk calculator
   * Extended the `minimum_intensity` feature to the classical calculator
@@ -16,6 +293,18 @@
   * Forced the "number" attribute in the exposure must be an integer in the
     range 1..65535, extrema included
 
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 27 Apr 2020 14:22:48 +0000
+
+python3-oq-engine (3.8.1-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed random HDF5 bug in disaggregation calculations
+  * Fixed memory issue in nrcan15_site_term.p
+  * Fixed get_duplicates check in the SiteCollection
+  * Fixed bug in case of MMI (log(imls) -> imls)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 12 Feb 2020 10:23:22 +0000
+
 python3-oq-engine (3.8.0-1~xenial01) xenial; urgency=low
 
   [Graeme Weatherill]
@@ -31,11 +320,12 @@ python3-oq-engine (3.8.0-1~xenial01) xenial; urgency=low
   * Internal: reduced the 22 NBCC2015_AA13 classes to a single class
 
   [Graeme Weatherill]
-  * Adds complete suite of GMPEs for the Central and Eastern US, as adopted
+  * Added complete suite of GMPEs for the Central and Eastern US, as adopted
     within the 2018 US National Seismic Hazard Map
-  * Implements NGA East site amplification model within NGA East Base class
+  * Implemented NGA East site amplification model within NGA East Base class
 
-  * Implemented site amplification by convolution
+  [Michele Simionato]
+  * Implemented hazard curves amplification by convolution
   * Improved the error message if the `event_id` does not start from zero in
     the gmfs.csv files
   * Changed the rupture exporter to export LINESTRINGs instead of degenerate
@@ -321,7 +611,7 @@ python3-oq-engine (3.7.0-1~xenial01) xenial; urgency=low
   * Now we generate the output `disagg_by_src` during disaggregation even in the
     case of multiple realizations
   * Changed the way the random seed is set for BT and PM distributions
-  * The filenames generated by disagg_by_src exporter now contains the site ID
+  * The filenames generated by `disagg_by_src` exporter now contains the site ID
     and not longitude and latitude, consistently with the other exporters
   * Accepted again meanLRs greater than 1 in vulnerability functions of kind LN
   * Fixed a bug in event based with correlation and a filtered site collection

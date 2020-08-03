@@ -20,9 +20,9 @@ import sys
 import getpass
 import logging
 from openquake.baselib import sap, config, datastore, parallel
-from openquake.baselib.general import safeprint
+from openquake.baselib.general import safeprint, start_many
 from openquake.hazardlib import valid
-from openquake.commonlib import logs, readinput, oqvalidation
+from openquake.commonlib import logs, oqvalidation
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
@@ -31,6 +31,7 @@ from openquake.server import dbserver
 from openquake.commands.abort import abort
 
 
+DEFAULT_EXPORTS = 'csv,xml,rst'
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 ZMQ = os.environ.get(
@@ -44,13 +45,13 @@ def get_job_id(job_id, username=None):
     return job.id
 
 
-def run_job(job_ini, log_level='info', log_file=None, exports='',
-            username=getpass.getuser(), **kw):
+def run_jobs(job_inis, log_level='info', log_file=None, exports='',
+             username=getpass.getuser(), **kw):
     """
-    Run a job using the specified config file and other options.
+    Run jobs using the specified config file and other options.
 
-    :param str job_ini:
-        Path to calculation config (INI-style) files.
+    :param str job_inis:
+        A list of paths to .ini files.
     :param str log_level:
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
@@ -62,23 +63,53 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     :param kw:
         Extra parameters like hazard_calculation_id and calculation_mode
     """
-    job_id = logs.init('job', getattr(logging, log_level.upper()))
-    with logs.handle(job_id, log_level, log_file):
-        job_ini = os.path.abspath(job_ini)
-        oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
-        kw['username'] = username
-        eng.run_calc(job_id, oqparam, exports)
-        for line in logs.dbcmd('list_outputs', job_id, False):
-            safeprint(line)
-    parallel.Starmap.shutdown()
-    return job_id
-
-
-def run_tile(job_ini, sites_slice):
-    """
-    Used in tiling calculations
-    """
-    return run_job(job_ini, sites_slice=(sites_slice.start, sites_slice.stop))
+    dist = parallel.oq_distribute()
+    jobparams = []
+    for job_ini in job_inis:
+        # NB: the logs must be initialized BEFORE everything
+        job_id = logs.init('job', getattr(logging, log_level.upper()))
+        with logs.handle(job_id, log_level, log_file):
+            oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
+                                        username, **kw)
+        if (not jobparams and 'csm_cache' not in kw
+                and 'hazard_calculation_id' not in kw):
+            kw['hazard_calculation_id'] = job_id
+        jobparams.append((job_id, oqparam))
+    jobarray = len(jobparams) > 1 and 'csm_cache' in kw
+    try:
+        eng.poll_queue(job_id, poll_time=15)
+        # wait for an empty slot or a CTRL-C
+    except BaseException:
+        # the job aborted even before starting
+        for job_id, oqparam in jobparams:
+            logs.dbcmd('finish', job_id, 'aborted')
+        return jobparams
+    else:
+        for job_id, oqparam in jobparams:
+            dic = {'status': 'executing', 'pid': eng._PID}
+            if jobarray:
+                dic['hazard_calculation_id'] = jobparams[0][0]
+            logs.dbcmd('update_job', job_id, dic)
+    try:
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Asking the DbServer to start the workers')
+            logs.dbcmd('zmq_start')  # start the zworkers
+            logs.dbcmd('zmq_wait')  # wait for them to go up
+        allargs = [(job_id, oqparam, exports, log_level, log_file)
+                   for job_id, oqparam in jobparams]
+        if jobarray:
+            with start_many(eng.run_calc, allargs):
+                pass
+        else:
+            for args in allargs:
+                eng.run_calc(*args)
+    finally:
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Stopping the zworkers')
+            logs.dbcmd('zmq_stop')
+        elif dist.startswith('celery'):
+            eng.celery_cleanup(config.distribution.terminate_workers_on_revoke)
+    return jobparams
 
 
 def del_calculation(job_id, confirmed=False):
@@ -104,30 +135,6 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
-def smart_run(job_ini, oqparam, log_level, log_file, exports,
-              reuse_hazard, **params):
-    """
-    Run calculations by storing their hazard checksum and reusing previous
-    calculations if requested.
-    """
-    haz_checksum = readinput.get_checksum32(oqparam, hazard=True)
-    # retrieve an old calculation with the right checksum, if any
-    job = logs.dbcmd('get_job_from_checksum', haz_checksum)
-    reuse = reuse_hazard and job and os.path.exists(job.ds_calc_dir + '.hdf5')
-    # recompute the hazard and store the checksum
-    if not reuse:
-        hc_id = run_job(job_ini, log_level, log_file, exports, **params)
-        if job is None:
-            logs.dbcmd('add_checksum', hc_id, haz_checksum)
-        elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
-            logs.dbcmd('update_job_checksum', hc_id, haz_checksum)
-    else:
-        hc_id = job.id
-        logging.info('Reusing job #%d', job.id)
-        run_job(job_ini, log_level, log_file,
-                exports, hazard_calculation_id=hc_id, **params)
-
-
 @sap.Script  # do not use sap.script, other oq engine will break
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
            upgrade_db, db_version, what_if_I_upgrade, run,
@@ -146,7 +153,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
                     soft_mem_limit=int, hard_mem_limit=int, port=int,
-                    multi_user=valid.boolean, multi_node=valid.boolean,
+                    multi_user=valid.boolean,
                     serialize_jobs=valid.boolean, strict=valid.boolean,
                     code=exec)
 
@@ -195,25 +202,17 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     else:
         hc_id = None
     if run:
-        params = oqvalidation.OqParam.check(
-            dict(p.split('=', 1) for p in param.split(','))) if param else {}
+        pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
+        if reuse_hazard:
+            pars['csm_cache'] = datadir
+        if hc_id:
+            pars['hazard_calculation_id'] = str(hc_id)
+        oqvalidation.OqParam.check(pars)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        if len(job_inis) == 1 and not hc_id:
-            # init logs before calling get_oqparam
-            logs.init('nojob', getattr(logging, log_level.upper()))
-            # not using logs.handle that logs on the db
-            oq = readinput.get_oqparam(job_inis[0])
-            smart_run(job_inis[0], oq, log_level, log_file,
-                      exports, reuse_hazard, **params)
-            return
-        for i, job_ini in enumerate(job_inis):
-            open(job_ini, 'rb').read()  # IOError if the file does not exist
-            job_id = run_job(job_ini, log_level, log_file,
-                             exports, hazard_calculation_id=hc_id, **params)
-            if not hc_id:  # use the first calculation as base for the others
-                hc_id = job_id
+        run_jobs(job_inis, log_level, log_file, exports, **pars)
+
     # hazard
     elif list_hazard_calculations:
         for line in logs.dbcmd(
@@ -245,14 +244,15 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         dskey, calc_id, datadir = logs.dbcmd('get_output', int(output_id))
         for line in core.export_output(
                 dskey, calc_id, datadir, os.path.expanduser(target_dir),
-                exports or 'csv,xml'):
+                exports or DEFAULT_EXPORTS):
             safeprint(line)
 
     elif export_outputs is not None:
         job_id, target_dir = export_outputs
         hc_id = get_job_id(job_id)
         for line in core.export_outputs(
-                hc_id, os.path.expanduser(target_dir), exports or 'csv,xml'):
+                hc_id, os.path.expanduser(target_dir),
+                exports or DEFAULT_EXPORTS):
             safeprint(line)
 
     elif delete_uncompleted_calculations:
@@ -312,7 +312,7 @@ engine.opt('exports', 'Comma-separated string specifing the export formats, '
            'in order of priority')
 engine.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
-engine.flg('reuse_hazard', 'Reuse the event based hazard if available')
+engine.flg('reuse_hazard', 'Read the source models from the cache (if any)')
 engine._add('param', '--param', '-p',
             help='Override parameters specified with the syntax '
             'NAME1=VALUE1,NAME2=VALUE2,...')

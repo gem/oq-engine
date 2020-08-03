@@ -459,7 +459,8 @@ class nrmlSourceModelParser(BaseSourceModelParser):
         openquake.hmtk.sourcs.source_model.mtkSourceModel
         """
         sm_node = node_from_xml(self.input_file)[0]
-        if sm_node[0].tag.startswith('{http://openquake.org/xmlns/nrml/0.4}'):
+        nrml04 = 'xmlns/nrml/0.4' in sm_node[0].tag
+        if nrml04:
             node_sets = [sm_node]
             sm_name = sm_node.get("name", "")
         else:  # format NRML 0.5+
@@ -468,6 +469,8 @@ class nrmlSourceModelParser(BaseSourceModelParser):
         source_model = mtkSourceModel(identifier, name=sm_name)
         for node_set in node_sets:
             for node in node_set:
+                if not nrml04:  # get the TRT from the sourceGroup
+                    node.attrib['tectonicRegion'] = node_set['tectonicRegion']
                 if "pointSource" in node.tag:
                     source_model.sources.append(
                         parse_point_source_node(node, mfd_spacing))

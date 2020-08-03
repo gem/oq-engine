@@ -23,10 +23,10 @@ Module exports :class:`AmeriEtAl2017Rjb`,
                :class:`AmeriEtAl2017RepiStressDrop`
 """
 import numpy as np
-g = 9.81  # According to G. Ameri, pers. communication (May 20th, 2019)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+g = 9.81  # According to G. Ameri, pers. communication (May 20th, 2019)
 
 
 class AmeriEtAl2017Rjb(GMPE):
@@ -65,13 +65,13 @@ class AmeriEtAl2017Rjb(GMPE):
     ])
 
     #: Required site parameter is only Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and rake (eq. 1).
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Required distance measure is Rjb (eq. 1).
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, adjustment_factor=1.0):
         super().__init__()
@@ -334,28 +334,30 @@ class AmeriEtAl2017Rjb(GMPE):
 class AmeriEtAl2017RjbStressDrop(AmeriEtAl2017Rjb):
     """
     Implements the Ameri et al (2017) GMPE for the case where Joyner-Boore
-    distance is used, and the stress parameter is specified in the Ground-motion
-    logic-tree.
-    Example specification of the normalizaed stress parameter:
-    <uncertaintyModel>
-        [AmeriEtAl2017RjbStressDrop]
-        norm_stress_drop = 0.3
-    </uncertaintyModel>
-    The stress parameter is normalized, according to STRESS_DROP/REF_STRESS_DROP,
-    where REF_STRESS_DROP varies regionally. The authors used the following values 
-    for reference regional stress estimates: 1 bar for the Swtzerland (Swiss Alps
-    +Foreland), 10 bars for the French Alps + Rhine Graben, and 100 bars for the 
-    Pyrenees events. In this case, the standard deviation implements a homoscedastic
-    formulation.
-    
+    distance is used, and the stress parameter is specified in the
+    Ground-motion logic-tree.
+    Example specification of the normalizaed stress parameter::
+
+     <uncertaintyModel>
+         [AmeriEtAl2017RjbStressDrop]
+         norm_stress_drop = 0.3
+     </uncertaintyModel>
+
+    The stress parameter is normalized according to STRESS_DROP/REF_STRESS_DROP,
+    where REF_STRESS_DROP varies regionally. The authors used the following
+    values for reference regional stress estimates: 1 bar for the Swtzerland
+    (Swiss Alps +Foreland), 10 bars for the French Alps + Rhine Graben, and 100
+    bars for the Pyrenees events. In this case, the standard deviation
+    implements a homoscedastic formulation.
+
     Reference:
     Ameri, G., Drouet, S., Traversa, P., Bindi, D., Cotton, F., (2017),
-    Toward an empirical ground motion prediction equation for France: 
-    accounting for regional differences in the source stress parameter, 
+    Toward an empirical ground motion prediction equation for France:
+    accounting for regional differences in the source stress parameter,
     Bull. Earthquake Eng., 15: 4681-4717.
     """
     #: Required rupture parameters are magnitude and rake (eq. 1).
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     def __init__(self, norm_stress_drop, adjustment_factor=1.0):
         super().__init__(adjustment_factor=adjustment_factor)
@@ -489,31 +491,32 @@ class AmeriEtAl2017Repi(AmeriEtAl2017Rjb):
     """)
 
 
-
 class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
     """
     Implements the Ameri et al (2017) GMPE for the case where epicentral
-    distance is used, and the stress parameter is specified in the Ground-motion
-    logic-tree.
-    Example specification of the normalizaed stress parameter:
-    <uncertaintyModel>
-        [AmeriEtAl2017RepiStressDrop]
-        norm_stress_drop = 0.3
-    </uncertaintyModel>
-    The stress parameter is normalized, according to STRESS_DROP/REF_STRESS_DROP,
-    where REF_STRESS_DROP varies regionally. The authors used the following values
-    for reference regional stress estimates: 1 bar for the Swtzerland (Swiss Alps+
-    Foreland), 10 bars for the French Alps + Rhine Graben, and 100 bars for the 
-    Pyrenees events. In this cas, the standard deviation implements a homoscedastic 
-    formulation.
-    
+    distance is used, and the stress parameter is specified in the
+    Ground-motion logic-tree.
+    Example specification of the normalized stress parameter::
+
+     <uncertaintyModel>
+         [AmeriEtAl2017RepiStressDrop]
+         norm_stress_drop = 0.3
+     </uncertaintyModel>
+
+    The stress parameter is normalized according to STRESS_DROP/REF_STRESS_DROP,
+    where REF_STRESS_DROP varies regionally. The authors used the following
+    values for reference regional stress estimates: 1 bar for the Swtzerland
+    (Swiss Alps+ Foreland), 10 bars for the French Alps + Rhine Graben, and 100
+    bars for the Pyrenees events. In this cas, the standard deviation
+    implements a homoscedastic formulation.
+
     Reference:
     Ameri, G., Drouet, S., Traversa, P., Bindi, D., Cotton, F., (2017),
-    Toward an empirical ground motion prediction equation for France: 
-    accounting for regional differences in the source stress parameter, 
+    Toward an empirical ground motion prediction equation for France:
+    accounting for regional differences in the source stress parameter,
     Bull. Earthquake Eng., 15: 4681-4717.
     """
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     def __init__(self, norm_stress_drop, adjustment_factor=1.0):
         super().__init__(adjustment_factor=adjustment_factor)

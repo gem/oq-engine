@@ -59,13 +59,13 @@ class HongGoda2007(GMPE):
     ])
 
     #: The required site parameter is vs30, see equation 1, page 20.
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: The required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: The required distance parameter is 'Joyner-Boore' distance
-    REQUIRES_DISTANCES = set(('rjb',))
+    REQUIRES_DISTANCES = {'rjb'}
 
     #: GMPE not tested against independent implementation
     non_verified = True

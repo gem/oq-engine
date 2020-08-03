@@ -32,8 +32,18 @@ RUN pip3 --disable-pip-version-check -q install -r https://raw.githubusercontent
     for app in oq-platform-standalone oq-platform-ipt oq-platform-taxtweb oq-platform-taxonomy; do \
         if curl --output /dev/null --silent --head --fail --location https://github.com/gem/${app}/archive/$tools_branch.zip ; then \
            pip3 --disable-pip-version-check -q install https://github.com/gem/${app}/archive/$tools_branch.zip; \
+           if test "$app" = "oq-platform-taxtweb"; then \
+               export PYBUILD_NAME="oq-taxonomy" && \
+               pip3 --disable-pip-version-check -q install https://github.com/gem/${app}/archive/$tools_branch.zip && \
+               unset PYBUILD_NAME ; \
+           fi \
         else \
            pip3 --disable-pip-version-check -q install https://github.com/gem/${app}/archive/master.zip; \
+           if test "$app" = "oq-platform-taxtweb"; then \
+               export PYBUILD_NAME="oq-taxonomy" && \
+               pip3 --disable-pip-version-check -q install https://github.com/gem/${app}/archive/master.zip && \
+               unset PYBUILD_NAME ; \
+           fi \
         fi \
     done
 

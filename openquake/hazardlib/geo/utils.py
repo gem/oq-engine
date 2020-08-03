@@ -30,7 +30,6 @@ from scipy.spatial import cKDTree
 import shapely.geometry
 
 from openquake.baselib.hdf5 import vstr
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import geodetic
 
 U32 = numpy.uint32
@@ -137,7 +136,7 @@ class _GeographicObjects(object):
         return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
-    def assoc2(self, assets_by_site, assoc_dist, mode, asset_refs):
+    def assoc2(self, assets_by_site, assoc_dist, mode):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
@@ -145,7 +144,6 @@ class _GeographicObjects(object):
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
-        :param asset_ref: ID of the assets are a list of strings
         :returns: filtered site collection, filtered assets by site, discarded
         """
         assert mode in 'strict filter', mode
@@ -174,13 +172,12 @@ class _GeographicObjects(object):
         assets_by_site = [
             sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in sids]
-        data = [(asset_refs[asset.ordinal],) + asset.location
-                for asset in discarded]
+        data = [(asset.asset_id,) + asset.location for asset in discarded]
         discarded = numpy.array(data, asset_dt)
         return self.objects.filtered(sids), assets_by_site, discarded
 
 
-def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
+def assoc(objects, sitecol, assoc_dist, mode):
     """
     Associate geographic objects to a site collection.
 
@@ -199,7 +196,7 @@ def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
         return _GeographicObjects(sitecol).assoc2(
-            objects, assoc_dist, mode, asset_refs)
+            objects, assoc_dist, mode)
 
 
 def clean_points(points):
@@ -324,7 +321,7 @@ def get_bounding_box(obj, maxdist):
     a2 = angular_distance(maxdist, bbox[1], bbox[3])
     delta = bbox[2] - bbox[0] + 2 * a2
     if delta > 180:
-        raise BBoxError('The maximum distance %d is too large, the bounding '
+        raise BBoxError('The buffer of %d km is too large, the bounding '
                         'box is larger than half the globe: %d degrees' %
                         (maxdist, delta))
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
@@ -367,7 +364,6 @@ def get_spherical_bounding_box(lons, lats):
     return SphericalBB(west, east, north, south)
 
 
-@with_slots
 class OrthographicProjection(object):
     """
     Callable OrthographicProjection object that can perform both forward
@@ -405,9 +401,6 @@ class OrthographicProjection(object):
     can be also used for measuring distance to an extent of around 700
     kilometers (error doesn't exceed 1 km up until then).
     """
-    _slots_ = ('west east north south lambda0 phi0 '
-               'cos_phi0 sin_phi0 sin_pi_over_4').split()
-
     @classmethod
     def from_lons_lats(cls, lons, lats):
         return cls(*get_spherical_bounding_box(lons, lats))

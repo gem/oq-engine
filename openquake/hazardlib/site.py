@@ -28,6 +28,7 @@ from openquake.hazardlib.geo.utils import (
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
+ampcode_dt = (numpy.string_, 4)
 
 
 class Site(object):
@@ -122,9 +123,10 @@ site_param_dt = {
     'z1pt4': numpy.float64,
     'backarc': numpy.bool,
     'xvf': numpy.float64,
+    'backarc_distance': numpy.float64,
 
     # Parameters for site amplification
-    'ampcode': (numpy.string_, 2),
+    'ampcode': ampcode_dt,
     'ec8': (numpy.string_, 1),
     'ec8_p18': (numpy.string_, 2),
     'h800': numpy.float64,
@@ -141,7 +143,10 @@ site_param_dt = {
     'dr': numpy.float64,
     'dwb': numpy.float64,
     'hwater': numpy.float64,
-    'precip': numpy.float64
+    'precip': numpy.float64,
+
+    # other parameters
+    'custom_site_id': numpy.uint32,
 }
 
 
@@ -251,10 +256,9 @@ class SiteCollection(object):
         return self
 
     def _set(self, param, value):
-        # param comes from the file site_model.xml file which usually contains
-        # a lot of parameters; the parameters that are not required are ignored
-        if param in self.array.dtype.names:  # is required
-            self.array[param] = value
+        if param not in self.array.dtype.names:
+            self.add_col(param, site_param_dt[param])
+        self.array[param] = value
 
     xyz = Mesh.xyz
 
@@ -350,7 +354,7 @@ class SiteCollection(object):
     @property
     def mesh(self):
         """Return a mesh with the given lons, lats, and depths"""
-        return Mesh(self.lons, self.lats, self.depths)
+        return Mesh(self['lon'], self['lat'], self['depth'])
 
     def at_sea_level(self):
         """True if all depths are zero"""
@@ -367,6 +371,7 @@ class SiteCollection(object):
         for seq in split_in_blocks(range(len(self)), hint or 1):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.array[numpy.array(seq, int)]
+            sc.complete = self
             tiles.append(sc)
         return tiles
 
@@ -385,9 +390,12 @@ class SiteCollection(object):
         one at a time.
         """
         params = self.array.dtype.names[4:]  # except sids, lons, lats, depths
+        sids = self.sids
         for i, location in enumerate(self.mesh):
             kw = {p: self.array[i][p] for p in params}
-            yield Site(location, **kw)
+            s = Site(location, **kw)
+            s.id = sids[i]
+            yield s
 
     def filter(self, mask):
         """
@@ -457,8 +465,8 @@ class SiteCollection(object):
             site IDs within the bounding box
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self.array['lon'], self.array['lat']
-        if cross_idl(lons.min(), lons.max()) or cross_idl(min_lon, max_lon):
+        lons, lats = self['lon'], self['lat']
+        if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
             lons = lons % 360
             min_lon, max_lon = min_lon % 360, max_lon % 360
         mask = (min_lon < lons) * (lons < max_lon) * \
@@ -467,16 +475,16 @@ class SiteCollection(object):
 
     def geohash(self, length):
         """
-        :param length: length of the geohash
+        :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
         lst = [geohash(lon, lat, length)
-               for lon, lat in zip(self.lons, self.lats)]
+               for lon, lat in zip(self['lon'], self['lat'])]
         return numpy.array(lst, (numpy.string_, length))
 
     def num_geohashes(self, length):
         """
-        :param length: length of the geohash
+        :param length: length of the geohash in the range 1..8
         :returns: number of distinct geohashes in the site collection
         """
         return len(numpy.unique(self.geohash(length)))

@@ -26,25 +26,30 @@ import numpy
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
+from openquake.baselib import parallel
 from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
+from openquake.hazardlib import tests
 from openquake import commonlib
-from openquake.commonlib.readinput import get_oqparam
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
-from openquake.commands.reduce import reduce
-from openquake.commands.engine import run_job, smart_run
+from openquake.commands.extract import extract
+from openquake.commands.sample import sample
+from openquake.commands.reduce_sm import reduce_sm
+from openquake.commands.engine import run_jobs
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands.zip import zip as zip_cmd
 from openquake.commands.check_input import check_input
 from openquake.commands.prepare_site_model import prepare_site_model
+from openquake.commands.nrml_to import nrml_to, fiona
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
+from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
@@ -58,6 +63,8 @@ from openquake.server import manage, dbapi, dbserver
 from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
+NRML_DIR = os.path.dirname(tests.__file__)
+MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
 
 
 class Print(object):
@@ -77,15 +84,14 @@ class Print(object):
 
 
 class InfoTestCase(unittest.TestCase):
-    EXPECTED = '''<CompositionInfo
-b1, x15.xml, grp=[0], weight=1.0: 1 realization(s)>
-See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
-<RlzsAssoc(size=1, rlzs=1)>'''
+    EXPECTED = '''<FullLogicTree
+b1, x15.xml, weight=1.0: 1 realization(s)>
+See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, None, path)
+            info(path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -93,52 +99,82 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
 
     def test_calculators(self):
         with Print.patch() as p:
-            info(True, None, None, None, None, None, None, '')
+            info('calculators')
         self.assertGreater(len(str(p)), 10)
 
     def test_gsims(self):
         with Print.patch() as p:
-            info(None, True, None, None, None, None, None, '')
+            info('gsims')
         self.assertGreater(len(str(p)), 10)
+
+    def test_imts(self):
+        with Print.patch() as p:
+            info('imts')
+        self.assertGreaterEqual(len(str(p)), 18)
 
     def test_views(self):
         with Print.patch() as p:
-            info(None, None, True, None, None, None, None, '')
+            info('views')
         self.assertGreater(len(str(p)), 10)
 
     def test_exports(self):
         with Print.patch() as p:
-            info(None, None, None, True, None, None, None, '')
+            info('exports')
         self.assertGreater(len(str(p)), 10)
 
     def test_extracts(self):
         with Print.patch() as p:
-            info(None, None, None, None, True, None, None, '')
+            info('extracts')
         self.assertGreater(len(str(p)), 10)
 
     def test_parameters(self):
         with Print.patch() as p:
-            info(None, None, None, None, None, True, None, '')
+            info('parameters')
         self.assertGreater(len(str(p)), 10)
+
+    def test_mfds(self):
+        with Print.patch() as p:
+            info('mfds')
+        lines = str(p).split()
+        self.assertGreaterEqual(len(lines), 5)
+
+    def test_sources(self):
+        with Print.patch() as p:
+            info('sources')
+        lines = str(p).split()
+        self.assertGreaterEqual(len(lines), 10)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, None, path)
-        self.assertIn('RlzsAssoc(size=2, rlzs=2)', str(p))
+            info(path)
+        self.assertIn('<FullLogicTree\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
+
+    def test_logictree(self):
+        path = os.path.join(os.path.dirname(case_9.__file__),
+                            'source_model_logic_tree.xml')
+        with Print.patch() as p:
+            info(path)
+        self.assertEqual(str(p), """\
+==================== ===========
+TRT                  pointSource
+==================== ===========
+active shallow crust 1          
+Total                1          
+==================== ===========""")
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info(None, None, None, None, None, None, True, path)
+            info(path, True)
         self.assertIn('report.rst', str(p))
 
     def test_report_ebr(self):
         path = os.path.join(os.path.dirname(case_16.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info(None, None, None, None, None, None, True, path)
+            info(path, True)
         self.assertIn('report.rst', str(p))
 
 
@@ -213,7 +249,7 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
-            calc = run._run([job_ini], 0, False, 'info', None, '', {})
+            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
@@ -226,20 +262,23 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('sitecol', self.calc_id)
-        self.assertEqual(str(p), 'sids,lon,lat,depth,vs30,vs30measured\n'
-                         '0,0.00000,0.00000,-0.10000,8.000000E+02,1')
+        self.assertIn('sids,lon,lat,depth,vs30,vs30measured', str(p))
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('source_id grp_id code num_ruptures '
+        self.assertIn('source_id code multiplicity '
                       'calc_time num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
             show_attrs('sitecol', self.calc_id)
-        self.assertEqual(
-            '__pyclass__ openquake.hazardlib.site.SiteCollection',
-            str(p))
+        self.assertEqual('__pyclass__ openquake.hazardlib.site.SiteCollection',
+                         str(p))
+
+    def test_show_oqparam(self):
+        with Print.patch() as p:
+            show('oqparam', self.calc_id)
+        self.assertIn('"inputs": {', str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
@@ -249,8 +288,16 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
 
+    def test_extract_sitecol(self):
+        tempdir = tempfile.mkdtemp()
+        with Print.patch() as p:
+            extract('sitecol', self.calc_id, extract_dir=tempdir)
+        fnames = os.listdir(tempdir)
+        self.assertIn(str(fnames[0]), str(p))
+        shutil.rmtree(tempdir)
 
-class ReduceTestCase(unittest.TestCase):
+
+class SampleSmTestCase(unittest.TestCase):
     TESTDIR = os.path.dirname(case_3.__file__)
 
     def test_exposure(self):
@@ -258,7 +305,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'exposure_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'exposure_model.xml'), dest)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 8 nodes out of 13', str(p))
         shutil.rmtree(tempdir)
 
@@ -267,7 +314,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'source_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'source_model.xml'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 9 nodes out of 15', str(p))
         shutil.rmtree(tempdir)
 
@@ -277,7 +324,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'site_model.xml')
         shutil.copy(os.path.join(testdir, 'site_model.xml'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 2 nodes out of 3', str(p))
         shutil.rmtree(tempdir)
 
@@ -287,7 +334,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'sites.csv')
         shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            sample(dest, 0.5)
         self.assertIn('Extracted 50 lines out of 99', str(p))
         shutil.rmtree(tempdir)
 
@@ -430,13 +477,25 @@ class DbTestCase(unittest.TestCase):
 
 
 class EngineRunJobTestCase(unittest.TestCase):
+    def test_multi_run(self):
+        job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
+        jobparams = run_jobs([job_ini, job_ini], log_level='error',
+                             csm_cache='/tmp/cache')
+        jobs, params = zip(*jobparams)
+        with Print.patch():
+            [r1, r2] = commonlib.logs.dbcmd(
+                'select id, hazard_calculation_id from job '
+                'where id in (?S) order by id', jobs)
+        self.assertEqual(r1.hazard_calculation_id, r1.id)
+        self.assertEqual(r2.hazard_calculation_id, r1.id)
+
     def test_ebr(self):
-        # test a single case of `run_job`, but it is the most complex one,
+        # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
-            job_id = run_job(job_ini, log_level='error')
+            [(job_id, oqparam)] = run_jobs([job_ini], log_level='error')
         self.assertIn('id | name', str(p))
 
         # sanity check on the performance views: make sure that the most
@@ -446,19 +505,13 @@ class EngineRunJobTestCase(unittest.TestCase):
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
 
-    def test_smart_run(self):
-        # test smart_run with gmf_ebrisk, since it was breaking
-        ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
-        oqparam = get_oqparam(ini)
-        smart_run(ini, oqparam, 'info', None, '', False)
-
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored
         job_ini = os.path.join(os.path.dirname(case_2.__file__), 'job_2.ini')
         tempdir = tempfile.mkdtemp()
         dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
-            job_id = run_job(job_ini, log_level='error')
+            [(job_id, oq)] = run_jobs([job_ini], log_level='error')
             job = commonlib.logs.dbcmd('get_job', job_id)
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
@@ -504,3 +557,50 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         # test sites_csv
         sc = prepare_site_model([], [output], [vs30_csv],
                                 True, True, False, 0, 5, output)
+
+
+class ReduceSourceModelTestCase(unittest.TestCase):
+
+    def test_reduce_sm_with_duplicate_source_ids(self):
+        # testing reduce_sm in case of two sources with the same ID and
+        # different codes
+        temp_dir = tempfile.mkdtemp()
+        calc_dir = os.path.dirname(to_reduce.__file__)
+        shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
+        job_ini = os.path.join(temp_dir, 'data', 'job.ini')
+        with Print.patch():
+            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
+        calc_id = calc.datastore.calc_id
+        with mock.patch('logging.info') as info:
+            reduce_sm(calc_id)
+        self.assertIn('there are duplicated source IDs', info.call_args[0][0])
+        shutil.rmtree(temp_dir)
+
+
+class NRML2CSVTestCase(unittest.TestCase):
+
+    def test_nrml_to_csv(self):
+        temp_dir = tempfile.mkdtemp()
+        with Print.patch() as p:
+            nrml_to.func('csv', [MIXED_SRC_MODEL], temp_dir, chatty=True)
+        out = str(p)
+        self.assertIn('3D MultiPolygon', out)
+        self.assertIn('3D MultiLineString', out)
+        self.assertIn('Point', out)
+        shutil.rmtree(temp_dir)
+
+    def test_nrml_to_gpkg(self):
+        if not fiona:
+            raise unittest.SkipTest('fiona is missing')
+        temp_dir = tempfile.mkdtemp()
+        with Print.patch() as p:
+            nrml_to.func('gpkg', [MIXED_SRC_MODEL], temp_dir, chatty=True)
+        out = str(p)
+        self.assertIn('3D MultiPolygon', out)
+        self.assertIn('3D MultiLineString', out)
+        self.assertIn('Point', out)
+        shutil.rmtree(temp_dir)
+
+
+def teardown_module():
+    parallel.Starmap.shutdown()

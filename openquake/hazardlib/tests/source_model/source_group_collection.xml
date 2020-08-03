@@ -17,7 +17,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <pointSource
             id="1"
             name="point"
-            tectonicRegion="Stable Continental Crust"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -51,7 +50,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <pointSource
             id="2"
             name="point"
-            tectonicRegion="Stable Continental Crust"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -85,7 +83,6 @@ xmlns:gml="http://www.opengis.net/gml"
             <pointSource
             id="3"
             name="point"
-            tectonicRegion="Stable Continental Crust"
             >
                 <pointGeometry>
                     <gml:Point>

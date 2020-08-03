@@ -96,4 +96,30 @@ class DataStoreTestCase(unittest.TestCase):
         self.dstore.store_files(fnames)
         for name, data in self.dstore.retrieve_files():
             print(name)
-        print(self.dstore.get_file('input/' + name))
+        print(self.dstore.get_file(name))
+
+    def test_hdf5_to_npz(self):
+        # test a metadata bug with h5py 2.10.0
+        # https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
+        dt = [('id', '<S20'), ('ordinal', numpy.uint32)]
+        arr0 = numpy.array([(b'a11', 1), (b'a12', 2)], dt)
+        self.dstore['assets'] = arr0
+        arr1 = self.dstore['assets'][()]
+        arr1.dtype = [(n, str(arr1.dtype[n])) for n in arr1.dtype.names]
+        fd, fname = tempfile.mkstemp(suffix='.npz')
+        os.close(fd)
+        numpy.savez(fname, array=arr1)
+        print('Saved %s' % fname)
+        arr2 = numpy.load(fname)['array']
+        self.assertEqual(arr2.dtype, dt)
+        os.remove(fname)
+
+    def test_sel(self):
+        # test dstore.sel
+        N, M, L = 1, 2, 3
+        imts = 'PGA', 'SA(1.0)'
+        self.dstore['hcurves'] = numpy.zeros((N, M, L))
+        self.dstore.set_shape_attrs(
+            'hcurves', sid=[0], imt=imts, lvl=range(L))
+        arr = self.dstore.sel('hcurves', imt='PGA', lvl=2)
+        self.assertEqual(arr.shape, (1, 1, 1))

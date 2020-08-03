@@ -74,15 +74,15 @@ class AbrahamsonEtAl2014(GMPE):
 
     #: Required site parameters are Vs30 and Z1.0, see table 2, page 1031
     #: Unit of measure for Z1.0 is [m]
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0', 'vs30measured'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0', 'vs30measured'}
 
     #: Required rupture parameters are magnitude, rake, dip, ztor, and width
     #: (see table 2, page 1031)
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'dip', 'ztor', 'width'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'dip', 'ztor', 'width'}
 
     #: Required distance measures are Rrup, Rjb, Ry0 and Rx (see Table 2,
     #: page 1031).
-    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'ry0'))
+    REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx', 'ry0'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

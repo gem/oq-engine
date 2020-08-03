@@ -28,6 +28,7 @@ from openquake.baselib import config, zeromq as z, workerpool as w
 from openquake.baselib.general import socket_ready, detach_process
 from openquake.baselib.parallel import safely_call
 from openquake.commonlib import logs
+from openquake.engine import __version__
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
@@ -52,13 +53,12 @@ class DbServer(object):
     """
     def __init__(self, db, address, num_workers=5):
         self.db = db
-        self.master_host = address[0]
         self.frontend = 'tcp://%s:%s' % address
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
         if ZMQ:
-            self.zmaster = w.WorkerMaster(address[0], **config.zworkers)
+            self.zmaster = w.WorkerMaster(**config.zworkers)
         else:
             self.zmaster = None
 
@@ -98,12 +98,12 @@ class DbServer(object):
                         sys.executable, self.frontend, self.pid)
         if ZMQ:
             # start task_in->task_server streamer thread
-            c = config.zworkers
-            threading.Thread(
-                target=w._streamer, args=(self.master_host,), daemon=True
-            ).start()
+            threading.Thread(target=w._streamer, daemon=True).start()
             logging.warning('Task streamer started on port %d',
-                            int(c.ctrl_port) + 1)
+                            int(config.zworkers.ctrl_port) + 1)
+            if 'git' not in __version__:
+                # in production installations start the zworkers
+                self.zmaster.start()
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
@@ -180,8 +180,7 @@ def ensure_on():
             waiting_seconds -= 1
 
 
-def run_server(dbpath=os.path.expanduser(config.dbserver.file),
-               dbhostport=None, loglevel='WARN', foreground=False):
+def run_server(dbhostport=None, loglevel='WARN', foreground=False):
     """
     Run the DbServer on the given database file and port. If not given,
     use the settings in openquake.cfg.
@@ -196,7 +195,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
         addr = (config.dbserver.listen, DBSERVER_PORT)
 
     # create the db directory if needed
-    dirname = os.path.dirname(dbpath)
+    dirname = os.path.dirname(os.path.expanduser(config.dbserver.file))
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 

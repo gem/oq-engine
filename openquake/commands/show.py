@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import os
+import json
 import logging
 
 from openquake.baselib import sap
@@ -32,6 +33,15 @@ def str_or_int(calc_id):
         return int(calc_id)
     except ValueError:
         return calc_id
+
+
+def print_(aw):
+    if hasattr(aw, 'json'):
+        print(json.dumps(json.loads(aw.json), indent=2))
+    elif hasattr(aw, 'shape_descr'):
+        print(rst_table(aw.to_table()))
+    if hasattr(aw, 'array') and aw.dtype.names:
+        print(write_csv(io.StringIO(), aw.array))
 
 
 @sap.script
@@ -67,18 +77,20 @@ def show(what='contents', calc_id=-1, extra=()):
     if view.keyfunc(what) in view:
         print(view(what, ds))
     elif what.split('/', 1)[0] in extract:
-        print(extract(ds, what, *extra))
+        obj = extract(ds, what, *extra)
+        if isinstance(obj, hdf5.ArrayWrapper):
+            print_(obj)
+        elif hasattr(obj, 'dtype') and obj.dtype.names:
+            print(write_csv(io.StringIO(), obj))
+        else:
+            print(obj)
     elif what in ds:
         obj = ds.getitem(what)
         if hasattr(obj, 'items'):  # is a group of datasets
             print(obj)
         else:  # is a single dataset
             obj.refresh()  # for SWMR mode
-            aw = hdf5.ArrayWrapper.from_(obj)
-            if hasattr(aw, 'shape_descr'):
-                print(rst_table(aw.to_table()))
-            else:
-                print(write_csv(io.BytesIO(), aw.array).decode('utf8'))
+            print_(hdf5.ArrayWrapper.from_(obj))
     else:
         print('%s not found' % what)
 

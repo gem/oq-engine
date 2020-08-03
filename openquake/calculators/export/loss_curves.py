@@ -51,7 +51,7 @@ class LossCurveExporter(object):
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
         self.loss_types = dstore.get_attr('risk_model', 'loss_types')
-        self.R = dstore['csm_info'].get_num_rlzs()
+        self.R = dstore['full_lt'].get_num_rlzs()
 
     def parse(self, what):
         """
@@ -65,11 +65,8 @@ class LossCurveExporter(object):
         if spec and not spec.startswith(('ref-', 'sid-')):
             raise ValueError('Wrong specification in %s' % what)
         elif spec == '':  # export losses for all assets
-            aids = []
-            arefs = []
-            for aid, rec in enumerate(self.assetcol.array):
-                aids.append(aid)
-                arefs.append(self.asset_refs[aid])
+            aids = range(len(self.assetcol.array))
+            arefs = self.asset_refs
         elif spec.startswith('sid-'):  # passed the site ID
             sid = int(spec[4:])
             aids = []
@@ -87,33 +84,42 @@ class LossCurveExporter(object):
 
     def export_csv(self, spec, asset_refs, curves_dict):
         """
-        :param asset_ref: name of the asset
+        :param asset_refs: names of the asset
         :param curves_dict: a dictionary tag -> loss curves
         """
+        aval = self.assetcol.arr_value(self.loss_types)
         writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
         ebr = hasattr(self, 'builder')
         for key in sorted(curves_dict):
             recs = curves_dict[key]
-            data = [['asset_id', 'loss_type', 'loss',
-                     'period' if ebr else 'poe']]
-            for li, loss_type in enumerate(self.loss_types):
+            if ebr:
+                data = [['asset_id', 'loss_type', 'loss_value', 'loss_ratio',
+                         'return_period', 'annual_frequency_of_exceedence']]
+            else:
+                data = [['asset_id', 'loss_type', 'loss_value', 'loss_ratio',
+                         'poe']]
+            for li, lt in enumerate(self.loss_types):
                 if ebr:  # event_based_risk
                     array = recs[:, :, li]  # shape (A, P, LI)
                     periods = self.builder.return_periods
-                    for aref, losses in zip(asset_refs, array):
+                    for aref, losses, val in sorted(zip(
+                            asset_refs, array, aval[:, li])):
                         for period, loss in zip(periods, losses):
-                            data.append((aref, loss_type, loss, period))
+                            data.append((aref, lt, loss, loss/val,
+                                         period, 1. / period))
                 else:  # classical_risk
-                    array = recs[loss_type]  # shape (A,) loss_curve_dt
-                    for aref, losses, poes in zip(
-                            asset_refs, array['losses'], array['poes']):
+                    array = recs[lt]  # shape (A,) loss_curve_dt
+                    for aref, losses, poes, val in sorted(zip(
+                            asset_refs, array['losses'],
+                            array['poes'], aval[:, li])):
                         for loss, poe in zip(losses, poes):
-                            data.append((aref, loss_type, loss, poe))
+                            data.append((aref, lt, loss, loss/val, poe))
             dest = self.dstore.build_fname(
                 'loss_curves', '%s-%s' % (spec, key) if spec else key, 'csv')
             com = dict(
                 kind=key,
-                risk_investigation_time=self.oq.risk_investigation_time)
+                risk_investigation_time=self.oq.risk_investigation_time
+                or self.oq.investigation_time)
             writer.save(data, dest, comment=com,
                         renamedict=dict(id='asset_id'))
         return writer.getsaved()

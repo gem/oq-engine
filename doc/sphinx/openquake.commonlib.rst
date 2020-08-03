@@ -50,10 +50,10 @@ readinput module
     :show-inheritance:
 
 
-source module
+source_reader module
 ---------------------------------
 
-.. automodule:: openquake.commonlib.source
+.. automodule:: openquake.commonlib.source_reader
     :members:
     :undoc-members:
     :show-inheritance:

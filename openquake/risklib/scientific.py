@@ -288,7 +288,7 @@ class VulnerabilityFunction(object):
         assert covs is None or all(x >= 0.0 for x in covs)
         assert distribution in ["LN", "BT"]
 
-    @lru_cache(100)
+    @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
@@ -303,7 +303,7 @@ class VulnerabilityFunction(object):
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
 
-    @lru_cache(100)
+    @lru_cache()
     def mean_imls(self):
         """
         Compute the mean IMLs (Intensity Measure Level)
@@ -434,7 +434,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.set_distribution(epsilons)
         return self.distribution.sample(self.loss_ratios, probs)
 
-    @lru_cache(100)
+    @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
@@ -496,17 +496,25 @@ class VulnerabilityModel(dict):
 # ############################## fragility ############################### #
 
 class FragilityFunctionContinuous(object):
-    # FIXME (lp). Should be re-factored with LogNormalDistribution
-    def __init__(self, limit_state, mean, stddev):
+
+    def __init__(self, limit_state, mean, stddev, minIML, maxIML, nodamage=0):
         self.limit_state = limit_state
         self.mean = mean
         self.stddev = stddev
+        self.minIML = minIML
+        self.maxIML = maxIML
+        self.no_damage_limit = nodamage
 
     def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
         Intensity Measure Levels (IMLs).
         """
+        # it is essentially to make a copy of the intensity measure levels,
+        # otherwise the minIML feature in continuous fragility functions will
+        # change the levels, thus breaking case_master for OQ_DISTRIBUTE=no
+        if self.minIML or self.maxIML:
+            imls = numpy.array(imls)
         variance = self.stddev ** 2.0
         sigma = numpy.sqrt(numpy.log(
             (variance / self.mean ** 2.0) + 1.0))
@@ -514,11 +522,14 @@ class FragilityFunctionContinuous(object):
         mu = self.mean ** 2.0 / numpy.sqrt(
             variance + self.mean ** 2.0)
 
-        return stats.lognorm.cdf(imls, sigma, scale=mu)
-
-    def __getstate__(self):
-        return dict(limit_state=self.limit_state,
-                    mean=self.mean, stddev=self.stddev)
+        if self.maxIML:
+            imls[imls > self.maxIML] = self.maxIML
+        if self.minIML:
+            imls[imls < self.minIML] = self.minIML
+        result = stats.lognorm.cdf(imls, sigma, scale=mu)
+        if self.no_damage_limit:
+            result[imls < self.no_damage_limit] = 0
+        return result
 
     def __repr__(self):
         return '<%s(%s, %s, %s)>' % (
@@ -619,7 +630,8 @@ class FragilityFunctionList(list):
                         ls, self.imls, data, self.nodamage))
             else:  # continuous
                 new.append(FragilityFunctionContinuous(
-                    ls, data['mean'], data['stddev']))
+                    ls, data['mean'], data['stddev'],
+                    self.minIML, self.maxIML, self.nodamage))
         return new
 
     def __toh5__(self):
@@ -934,7 +946,7 @@ def annual_frequency_of_exceedence(poe, t_haz):
 
 def classical_damage(
         fragility_functions, hazard_imls, hazard_poes,
-        investigation_time, risk_investigation_time):
+        investigation_time, risk_investigation_time, debug=False):
     """
     :param fragility_functions:
         a list of fragility functions for each damage state
@@ -966,11 +978,10 @@ def classical_damage(
         pairwise_mean([afe[0]] + list(afe) + [afe[-1]]))
     poes_per_damage_state = []
     for ff in fragility_functions:
-        frequency_of_exceedence_per_damage_state = numpy.dot(
-            annual_frequency_of_occurrence, list(map(ff, imls)))
-        poe_per_damage_state = 1. - numpy.exp(
-            - frequency_of_exceedence_per_damage_state *
-            risk_investigation_time)
+        fx = annual_frequency_of_occurrence @ ff(imls)
+        if debug:
+            print(fx)
+        poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
         poes_per_damage_state.append(poe_per_damage_state)
     poos = pairwise_diff([1] + poes_per_damage_state + [0])
     return poos
@@ -1273,7 +1284,7 @@ def return_periods(eff_time, num_losses):
     >>> return_periods(1, 1)
     Traceback (most recent call last):
        ...
-    AssertionError: eff_time too small: 1
+    ValueError: eff_time too small: 1
     >>> return_periods(2, 2)
     array([1, 2], dtype=uint32)
     >>> return_periods(2, 10)
@@ -1284,8 +1295,10 @@ def return_periods(eff_time, num_losses):
     array([   1,    2,    5,   10,   20,   50,  100,  200,  500, 1000],
           dtype=uint32)
     """
-    assert eff_time >= 2, 'eff_time too small: %s' % eff_time
-    assert num_losses >= 2, 'num_losses too small: %s' % num_losses
+    if eff_time < 2:
+        raise ValueError('eff_time too small: %s' % eff_time)
+    if num_losses < 2:
+        raise ValueError('num_losses too small: %s' % num_losses)
     min_time = eff_time / num_losses
     period = 1
     periods = []
@@ -1312,24 +1325,25 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
-    where min_time = eff_time /num_events. Outside the interval they
-    have NaN values. Here is an example:
+    where min_time = eff_time /num_events. On the right of the interval they
+    have NaN values and on the left zero values. Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
-    array([ nan,  nan,  0. ,  3.5,  8. , 13. , 23. ])
+    array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])
 
     If num_events is not passed, it is inferred from the number of losses;
     if eff_time is not passed, it is inferred from the longest return period.
     """
+    P = len(return_periods)
     if len(losses) == 0:  # zero-curve
-        return numpy.zeros(len(return_periods))
+        return numpy.zeros(P)
     if num_events is None:
         num_events = len(losses)
     elif num_events < len(losses):
         raise ValueError(
-            'There are not enough events (%d) to compute the loss curve '
-            'from %d losses' % (num_events, len(losses)))
+            'There are not enough events (%d) to compute the loss curve'
+            % num_events)
     if eff_time is None:
         eff_time = return_periods[-1]
     losses = numpy.sort(losses)
@@ -1338,9 +1352,13 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
         losses = numpy.concatenate(
             [numpy.zeros(num_zeros, losses.dtype), losses])
     periods = eff_time / numpy.arange(num_events, 0., -1)
-    rperiods = [rp if periods[0] <= rp <= periods[-1] else numpy.nan
-                for rp in return_periods]
-    curve = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
+    num_left = sum(1 for rp in return_periods if rp < periods[0])
+    num_right = sum(1 for rp in return_periods if rp > periods[-1])
+    rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
+    curve = numpy.zeros(len(return_periods))
+    c = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
+    curve[num_left:P-num_right] = c
+    curve[P-num_right:] = numpy.nan
     return curve
 
 
@@ -1394,13 +1412,16 @@ class LossCurvesMapsBuilder(object):
         L = len(self.loss_dt.names)
         array = numpy.zeros((P, R, L), F32)
         for r in losses_by_event:
-            num_events = self.num_events[r]
+            num_events = self.num_events.get(r, 0)
             losses = losses_by_event[r]
             for l, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, l].flatten()  # flatten only in ucerf
                 # NB: do not use squeeze or the gmf_ebrisk tests will break
-                lbp = losses_by_period(
-                    ls, self.return_periods, num_events, self.eff_time)
+                try:
+                    lbp = losses_by_period(
+                        ls, self.return_periods, num_events, self.eff_time)
+                except ValueError as exc:
+                    raise exc.__class__('%s for %s, rlz=' % (exc, lt, r))
                 array[:, r, l] = lbp
         return self.pair(array, stats)
 
@@ -1408,7 +1429,7 @@ class LossCurvesMapsBuilder(object):
     def build_curve(self, asset_value, loss_ratios, rlzi):
         return asset_value * losses_by_period(
             loss_ratios, self.return_periods,
-            self.num_events[rlzi], self.eff_time)
+            self.num_events.get(rlzi, 0), self.eff_time)
 
     # used in event_based_risk
     def build_maps(self, curves, clp, stats=()):
@@ -1435,7 +1456,7 @@ class LossCurvesMapsBuilder(object):
         shp = loss_arrays[0].shape  # (L, T...)
         P = len(self.return_periods)
         curves = numpy.zeros((P,) + shp, F32)
-        num_events = self.num_events[rlzi]
+        num_events = self.num_events.get(rlzi, 0)
         acc = collections.defaultdict(list)
         for loss_array in loss_arrays:
             for idx, loss in numpy.ndenumerate(loss_array):
@@ -1508,13 +1529,14 @@ class LossesByAsset(object):
         """
         numlosses = numpy.zeros(2, int)
         for lni, losses in self.gen_losses(out):
-            if ws is not None:
+            if ws is not None:  # compute avg_losses, really fast
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
             self.losses_by_E[eidx, lni] += losses.sum(axis=0)
             if tagidxs is not None:
+                # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
-                    idx = ','.join(map(str, tagidxs[a]))
+                    idx = ','.join(map(str, tagidxs[a])) + ','
                     kept = 0
                     for loss, eid in zip(losses[a], out.eids):
                         if loss >= minimum_loss[lni]:

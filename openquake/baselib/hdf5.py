@@ -20,14 +20,14 @@ import os
 import ast
 import csv
 import inspect
-import logging
 import tempfile
 import importlib
 import itertools
-from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
+import json
 import toml
+import pandas
 import numpy
 import h5py
 from openquake.baselib import InvalidFile
@@ -46,6 +46,8 @@ def maybe_encode(value):
     """
     If value is a sequence of strings, encode it
     """
+    if isinstance(value, bytes):
+        return numpy.void(value)
     if isinstance(value, (list, tuple)):
         if value and isinstance(value[0], str):
             return encode(value)
@@ -258,7 +260,7 @@ class File(h5py.File):
     3
     >>> f.close()
     """
-    def __init__(self, name, mode=None, driver=None, libver='latest',
+    def __init__(self, name, mode='r', driver=None, libver='latest',
                  userblock_size=None, swmr=True, rdcc_nslots=None,
                  rdcc_nbytes=None, rdcc_w0=None, track_order=None,
                  **kwds):
@@ -330,7 +332,10 @@ class File(h5py.File):
         elif (isinstance(obj, numpy.ndarray) and obj.shape and
               len(obj) and isinstance(obj[0], str)):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
-        elif (isinstance(obj, numpy.ndarray) and not obj.shape and
+        elif isinstance(obj, numpy.ndarray) and obj.shape:
+            d = self.create_dataset(path, obj.shape, obj.dtype, fillvalue=None)
+            d[:] = obj
+        elif (isinstance(obj, numpy.ndarray) and
               obj.dtype.name.startswith('bytes')):
             self._set(path, numpy.void(bytes(obj)))
         elif isinstance(obj, list) and len(obj) and isinstance(
@@ -395,9 +400,63 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
+def fix_array(arr, key):
+    """
+    :param arr: array or array-like object
+    :param key: string associated to the error (appear in the error message)
+
+    If `arr` is a numpy array with dtype object containing strings, convert
+    it into a numpy array containing bytes, unless it has more than 2
+    dimensions or contains non-strings (these are errors). Return `arr`
+    unchanged in the other cases.
+    """
+    if arr is None:
+        return ()
+    if not isinstance(arr, numpy.ndarray):
+        return arr
+    if arr.dtype != numpy.dtype('O'):
+        d = arr.dtype.descr
+        if len(d) > 1 and isinstance(d[0][1], tuple):
+            # for extract_assets d[0] is the pair
+            # ('id', ('|S20', {'h5py_encoding': 'ascii'}))
+            # this is a horrible workaround for the h5py 2.10.0 issue
+            # https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
+            arr.dtype = [(n, str(arr.dtype[n])) for n in arr.dtype.names]
+        return arr
+    if arr.ndim == 1:
+        return numpy.array([s.encode('utf8') for s in arr])
+    elif arr.ndim == 2:
+        return numpy.array([[col.encode('utf8') for col in row]
+                            for row in arr])
+    else:
+        raise NotImplementedError('The array for %s has shape %s' %
+                                  (key, arr.shape))
+
+    return arr
+
+
+def set_shape_attrs(hdf5file, dsetname, kw):
+    """
+    Set shape attributes on a dataset (and possibly other attributes)
+    """
+    dset = hdf5file[dsetname]
+    S = len(dset.shape)
+    if len(kw) < S:
+        raise ValueError('The dataset %s has %d dimensions but you passed %d'
+                         ' axis' % (dsetname, S, len(kw)))
+    dset.attrs['shape_descr'] = encode(list(kw))[:S]
+    for k, v in kw.items():
+        dset.attrs[k] = v
+    for d, k in enumerate(dset.attrs['shape_descr']):
+        dset.dims[d].label = k  # set dimension label
+
+
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
+
+    :param array: an array (or the empty tuple)
+    :param attrs: metadata of the array (or dictionary of arrays)
     """
     @classmethod
     def from_(cls, obj, extra='value'):
@@ -411,7 +470,10 @@ class ArrayWrapper(object):
             array, attrs = obj[()], dict(obj.attrs)
             shape_descr = attrs.get('shape_descr', [])
             for descr in map(decode, shape_descr):
-                attrs[descr] = list(attrs[descr])
+                val = attrs[descr]
+                if isinstance(val, numpy.int64):
+                    val = range(val)
+                attrs[descr] = list(val)
         else:  # assume obj is an array
             array, attrs = obj, {}
         return cls(array, attrs, (extra,))
@@ -439,9 +501,17 @@ class ArrayWrapper(object):
             return getattr(self, idx)
         return self.array[idx]
 
+    def __setitem__(self, idx, val):
+        if isinstance(idx, str) and idx in self.__dict__:
+            setattr(self, idx, val)
+        else:
+            self.array[idx] = val
+
     def __toh5__(self):
         arr = getattr(self, 'array', ())
-        return arr, self.to_dict()
+        if len(arr):
+            return arr, self.to_dict()
+        return self.to_dict(), {}
 
     def __fromh5__(self, array, attrs):
         self.__init__(array, attrs)
@@ -471,36 +541,15 @@ class ArrayWrapper(object):
         """
         if self.shape:
             return toml.dumps(self.array)
-        dic = {k: v for k, v in vars(self).items()
-               if not k.startswith('_')}
+        dic = {}
+        for k, v in vars(self).items():
+            if k.startswith('_'):
+                continue
+            elif k == 'json':
+                dic.update(json.loads(bytes(v)))
+            else:
+                dic[k] = v
         return toml.dumps(dic)
-
-    def save(self, path, **extra):
-        """
-        :param path: an .hdf5 pathname
-        :param extra: extra attributes to be saved in the file
-        """
-        with File(path, 'w') as f:
-            for key, val in vars(self).items():
-                assert val is not None, key  # sanity check
-                try:
-                    f[key] = maybe_encode(val)
-                except ValueError as err:
-                    if 'Object header message is too large' in str(err):
-                        logging.error(str(err))
-            for k, v in extra.items():
-                f.attrs[k] = maybe_encode(v)
-
-    def sum_all(self, *tags):
-        """
-        Reduce the underlying array by summing on the given dimensions
-        """
-        tag2idx = {tag: i for i, tag in enumerate(self.shape_descr)}
-        array = self.array.sum(axis=tuple(tag2idx[tag] for tag in tags))
-        attrs = vars(self).copy()
-        attrs['shape_descr'] = [tag for tag in self.shape_descr
-                                if tag not in tags]
-        return self.__class__(array, attrs)
 
     def to_table(self):
         """
@@ -523,10 +572,6 @@ class ArrayWrapper(object):
          ('RC', 'RES', 2000.0),
          ('RC', 'IND', 5000.0),
          ('WOOD', 'RES', 500.0)]
-        >>> pprint(aw.sum_all('taxonomy').to_table())
-        [('occupancy', 'value'), ('RES', 2500.0), ('IND', 5000.0)]
-        >>> pprint(aw.sum_all('occupancy').to_table())
-        [('taxonomy', 'value'), ('RC', 7000.0), ('WOOD', 500.0)]
         """
         shape = self.shape
         tup = len(self._extra) > 1
@@ -565,6 +610,13 @@ class ArrayWrapper(object):
         return {k: v for k, v in vars(self).items()
                 if k != 'array' and not k.startswith('_')}
 
+    def is_good(self):
+        """
+        An ArrayWrapper is good if it only contains arrays
+        """
+        return all(isinstance(v, numpy.ndarray) for k, v in vars(self).items()
+                   if k != 'json' and not k.startswith('_'))
+
 
 def decode_array(values):
     """
@@ -579,77 +631,22 @@ def decode_array(values):
     return out
 
 
-def extract(dset, *d_slices):
-    """
-    :param dset: a D-dimensional dataset or array
-    :param d_slices: D slice objects (or similar)
-    :returns: a reduced D-dimensional array
-
-    >>> a = numpy.array([[1, 2, 3], [4, 5, 6]])  # shape (2, 3)
-    >>> extract(a, slice(None), 1)
-    array([[2],
-           [5]])
-    >>> extract(a, [0, 1], slice(1, 3))
-    array([[2, 3],
-           [5, 6]])
-    """
-    shp = list(dset.shape)
-    if len(shp) != len(d_slices):
-        raise ValueError('Array with %d dimensions but %d slices' %
-                         (len(shp), len(d_slices)))
-    sizes = []
-    slices = []
-    for i, slc in enumerate(d_slices):
-        if slc == slice(None):
-            size = shp[i]
-            slices.append([slice(None)])
-        elif hasattr(slc, 'start'):
-            size = slc.stop - slc.start
-            slices.append([slice(slc.start, slc.stop, 0)])
-        elif isinstance(slc, list):
-            size = len(slc)
-            slices.append([slice(s, s + 1, j) for j, s in enumerate(slc)])
-        elif isinstance(slc, Number):
-            size = 1
-            slices.append([slice(slc, slc + 1, 0)])
-        else:
-            size = shp[i]
-            slices.append([slc])
-        sizes.append(size)
-    array = numpy.zeros(sizes, dset.dtype)
-    for tup in itertools.product(*slices):
-        aidx = tuple(s if s.step is None
-                     else slice(s.step, s.step + s.stop - s.start)
-                     for s in tup)
-        sel = tuple(s if s.step is None else slice(s.start, s.stop)
-                    for s in tup)
-        array[aidx] = dset[sel]
-    return array
-
-
 def parse_comment(comment):
     """
     Parse a comment of the form
     `investigation_time=50.0, imt="PGA", ...`
     and returns it as pairs of strings:
 
-    >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
-    [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
+    >>> parse_comment('''path=['b1'], time=50.0, imt="PGA"''')
+    [('path', ['b1']), ('time', 50.0), ('imt', 'PGA')]
     """
-    names, vals = [], []
-    if comment.startswith('"'):
+    if comment[0] == '"' and comment[-1] == '"':
         comment = comment[1:-1]
-    pieces = comment.split('=')
-    for i, piece in enumerate(pieces):
-        if i == 0:  # first line
-            names.append(piece.strip())
-        elif i == len(pieces) - 1:  # last line
-            vals.append(ast.literal_eval(piece))
-        else:
-            val, name = piece.rsplit(',', 1)
-            vals.append(ast.literal_eval(val))
-            names.append(name.strip())
-    return list(zip(names, vals))
+    try:
+        dic = toml.loads('{%s}' % comment.replace('""', '"'))
+    except toml.TomlDecodeError as err:
+        raise ValueError('%s in %s' % (err, comment))
+    return list(dic.items())
 
 
 def build_dt(dtypedict, names):
@@ -667,29 +664,52 @@ def build_dt(dtypedict, names):
     return numpy.dtype(lst)
 
 
+def _read_csv(fileobj, compositedt):
+    itemsize = [0] * len(compositedt)
+    for i, name in enumerate(compositedt.names):
+        if compositedt[name].kind == 'S':  # limit of the length of byte-fields
+            itemsize[i] = compositedt[name].itemsize
+    rows = []
+    for lineno, row in enumerate(csv.reader(fileobj), 3):
+        cols = []
+        for i, col in enumerate(row):
+            if itemsize[i] and len(col) > itemsize[i]:
+                raise ValueError(
+                    'line %d: %s=%r has length %d > %d' %
+                    (lineno, compositedt.names[i], col, len(col), itemsize[i]))
+            cols.append(col)
+        rows.append(tuple(cols))
+    return numpy.array(rows, compositedt)
+
+
 # NB: it would be nice to use numpy.loadtxt(
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
-def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
+def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
+             index=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
     :param renamedict: aliases for the fields to rename
     :param sep: separator (default comma)
-    :return: a structured array of floats
+    :param index: if not None, returns a pandas DataFrame
+    :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
     with open(fname, encoding='utf-8-sig') as f:
         while True:
             first = next(f)
             if first.startswith('#'):
-                attrs = dict(parse_comment(first.strip('#,\n')))
+                attrs = dict(parse_comment(first.strip('#,\n ')))
                 continue
             break
         header = first.strip().split(sep)
+        if isinstance(dtypedict, dict):
+            dt = build_dt(dtypedict, header)
+        else:
+            dt = dtypedict
         try:
-            rows = [tuple(row) for row in csv.reader(f)]
-            arr = numpy.array(rows, build_dt(dtypedict, header))
+            arr = _read_csv(f, dt)
         except KeyError:
             raise KeyError('Missing None -> default in dtypedict')
         except Exception as exc:
@@ -700,4 +720,25 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
             new = renamedict.get(name, name)
             newnames.append(new)
         arr.dtype.names = newnames
+    if index:
+        df = pandas.DataFrame.from_records(arr, index)
+        vars(df).update(attrs)
+        return df
     return ArrayWrapper(arr, attrs)
+
+
+def save_npz(obj, path):
+    """
+    :param obj: object to serialize
+    :param path: an .npz pathname
+    """
+    a = {}
+    for key, val in vars(obj).items():
+        if key.startswith('_'):
+            continue
+        elif isinstance(val, str):
+            # without this oq extract would fail
+            a[key] = numpy.array(val.encode('utf-8'))
+        else:
+            a[key] = fix_array(val, key)
+    numpy.savez_compressed(path, **a)

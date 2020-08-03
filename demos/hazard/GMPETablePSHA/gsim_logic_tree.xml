@@ -5,7 +5,6 @@
       <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                           applyToTectonicRegionType="Stable Shallow Crust">
         <logicTreeBranch branchID="b11">
-          
           <uncertaintyModel gmpe_table="../GMPETablePSHA/gmpe.hdf5">
             GMPETable
           </uncertaintyModel>

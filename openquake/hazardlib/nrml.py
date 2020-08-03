@@ -74,14 +74,13 @@ supplemented by a dictionary of validators.
 import io
 import re
 import sys
-import logging
 import operator
 import collections.abc
 
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict, groupby
+from openquake.baselib.general import CallableDict, groupby, gettemp
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile
@@ -176,7 +175,8 @@ def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
 
-default = sourceconverter.SourceConverter()  # rupture_mesh_spacing=10
+default = sourceconverter.SourceConverter(area_source_discretization=10,
+                                          rupture_mesh_spacing=10)
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
@@ -212,7 +212,7 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         sg = converter.convert_node(src_group)
-        if len(sg):
+        if sg and len(sg):
             # a source group can be empty if the source_id filtering is on
             groups.append(sg)
     itime = node.get('investigation_time')
@@ -255,6 +255,7 @@ validators = {
     'probability': valid.probability,
     'occurRates': valid.positivefloats,  # they can be > 1
     'weight': valid.probability,
+    'uncertaintyModel': valid.uncertainty_model,
     'uncertaintyWeight': float,
     'alongStrike': valid.probability,
     'downDip': valid.probability,
@@ -306,14 +307,12 @@ validators = {
 }
 
 
-def read_source_models(fnames, converter, monitor):
+def read_source_models(fnames, converter):
     """
     :param fnames:
         list of source model files
     :param converter:
-        a SourceConverter instance
-    :param monitor:
-        a :class:`openquake.performance.Monitor` instance
+        a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
     :yields:
         SourceModel instances
     """
@@ -323,10 +322,19 @@ def read_source_models(fnames, converter, monitor):
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.fname = fname
+
+        # check investigation time for NonParametricSeismicSources
+        cit = converter.investigation_time
+        np = [s for sg in sm.src_groups for s in sg if hasattr(s, 'data')]
+        if np and sm.investigation_time != cit:
+            raise ValueError(
+                'The source model %s contains an investigation_time '
+                'of %s, while the job.ini has %s' % (
+                    fname, sm.investigation_time, cit))
         yield sm
 
 
-def read(source, chatty=True, stop=None):
+def read(source, stop=None):
     """
     Convert a NRML file into a validated Node object. Keeps
     the entire tree in memory.
@@ -341,9 +349,6 @@ def read(source, chatty=True, stop=None):
                          (source, nrml.tag))
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
-    if xmlns != NRML05 and chatty:
-        # for the moment NRML04 is still supported, so we hide the warning
-        logging.debug('%s is at an outdated version: %s', source, xmlns)
     nrml['xmlns'] = xmlns
     nrml['xmlns:gml'] = GML_NAMESPACE
     return nrml
@@ -380,6 +385,32 @@ def to_string(node):
     with io.BytesIO() as f:
         write([node], f)
         return f.getvalue().decode('utf-8')
+
+
+def get(xml, investigation_time=50., rupture_mesh_spacing=5.,
+        width_of_mfd_bin=1.0, area_source_discretization=10):
+    """
+    :param xml: the XML representation of a source
+    :param investigation_time: investigation time
+    :param rupture_mesh_spacing: rupture mesh spacing
+    :param width_of_mfd_bin: width of MFD bin
+    :param area_source_discretization: area source discretization
+    :returns: a python source object
+    """
+    text = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+%s
+</nrml>''' % xml
+    [node] = read(gettemp(text))
+    conv = sourceconverter.SourceConverter(
+        investigation_time,
+        rupture_mesh_spacing,
+        width_of_mfd_bin=width_of_mfd_bin,
+        area_source_discretization=area_source_discretization)
+    src = conv.convert_node(node)
+    src.id = 0
+    return src
 
 
 if __name__ == '__main__':

@@ -11,44 +11,44 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Subduction Interface"
         >
             <griddedRupture
-            id="1066"
+            id="0"
             multiplicity="7"
             >
                 <stochasticEventSets>
                     <SES
-                    id="872"
-                    >
-                        0
-                    </SES>
-                    <SES
-                    id="954"
-                    >
-                        1
-                    </SES>
-                    <SES
-                    id="1164"
+                    id="138"
                     >
                         2
                     </SES>
                     <SES
-                    id="1876"
+                    id="892"
                     >
-                        3
+                        1
                     </SES>
                     <SES
-                    id="1364"
+                    id="1033"
                     >
                         4
                     </SES>
                     <SES
-                    id="1886"
+                    id="1274"
                     >
-                        5
+                        3
                     </SES>
                     <SES
-                    id="1524"
+                    id="1338"
                     >
                         6
+                    </SES>
+                    <SES
+                    id="1653"
+                    >
+                        0
+                    </SES>
+                    <SES
+                    id="1800"
+                    >
+                        5
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -1269,24 +1269,24 @@ xmlns:gml="http://www.opengis.net/gml"
                 </mesh>
             </griddedRupture>
             <griddedRupture
-            id="1067"
+            id="1"
             multiplicity="3"
             >
                 <stochasticEventSets>
                     <SES
-                    id="538"
+                    id="315"
                     >
-                        0
+                        7
                     </SES>
                     <SES
-                    id="1904"
+                    id="767"
                     >
-                        1
+                        9
                     </SES>
                     <SES
-                    id="696"
+                    id="1459"
                     >
-                        2
+                        8
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -3692,64 +3692,64 @@ xmlns:gml="http://www.opengis.net/gml"
                 </mesh>
             </griddedRupture>
             <griddedRupture
-            id="1068"
+            id="2"
             multiplicity="11"
             >
                 <stochasticEventSets>
                     <SES
-                    id="515"
+                    id="439"
                     >
-                        0
+                        15
                     </SES>
                     <SES
-                    id="1037"
+                    id="462"
                     >
-                        1
+                        18
                     </SES>
                     <SES
-                    id="1130"
+                    id="675"
                     >
-                        2
+                        13
                     </SES>
                     <SES
-                    id="922"
+                    id="1046"
                     >
-                        3
+                        14
                     </SES>
                     <SES
-                    id="1246"
+                    id="1071"
                     >
-                        4
+                        17
                     </SES>
                     <SES
-                    id="106"
+                    id="1179"
                     >
-                        5
+                        20
                     </SES>
                     <SES
-                    id="460"
-                    >
-                        6
-                    </SES>
-                    <SES
-                    id="487"
-                    >
-                        7
-                    </SES>
-                    <SES
-                    id="1869"
-                    >
-                        8
-                    </SES>
-                    <SES
-                    id="1389"
-                    >
-                        9
-                    </SES>
-                    <SES
-                    id="691"
+                    id="1386"
                     >
                         10
+                    </SES>
+                    <SES
+                    id="1506"
+                    >
+                        11
+                    </SES>
+                    <SES
+                    id="1555"
+                    >
+                        16
+                    </SES>
+                    <SES
+                    id="1675"
+                    >
+                        12
+                    </SES>
+                    <SES
+                    id="1881"
+                    >
+                        19
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -5296,14 +5296,14 @@ xmlns:gml="http://www.opengis.net/gml"
                 </mesh>
             </griddedRupture>
             <griddedRupture
-            id="1069"
+            id="3"
             multiplicity="1"
             >
                 <stochasticEventSets>
                     <SES
-                    id="229"
+                    id="513"
                     >
-                        0
+                        21
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -8710,14 +8710,14 @@ xmlns:gml="http://www.opengis.net/gml"
                 </mesh>
             </griddedRupture>
             <griddedRupture
-            id="1072"
+            id="4"
             multiplicity="1"
             >
                 <stochasticEventSets>
                     <SES
-                    id="253"
+                    id="1015"
                     >
-                        0
+                        22
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -13553,14 +13553,14 @@ xmlns:gml="http://www.opengis.net/gml"
                 </mesh>
             </griddedRupture>
             <griddedRupture
-            id="1073"
+            id="5"
             multiplicity="1"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1403"
+                    id="8"
                     >
-                        0
+                        23
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -19723,39 +19723,39 @@ xmlns:gml="http://www.opengis.net/gml"
                 </mesh>
             </griddedRupture>
             <griddedRupture
-            id="1074"
+            id="6"
             multiplicity="6"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1740"
+                    id="118"
                     >
-                        0
+                        24
                     </SES>
                     <SES
-                    id="1938"
+                    id="146"
                     >
-                        1
+                        26
                     </SES>
                     <SES
-                    id="1455"
+                    id="224"
                     >
-                        2
+                        28
                     </SES>
                     <SES
-                    id="349"
+                    id="267"
                     >
-                        3
+                        25
                     </SES>
                     <SES
-                    id="1387"
+                    id="1295"
                     >
-                        4
+                        27
                     </SES>
                     <SES
-                    id="887"
+                    id="1994"
                     >
-                        5
+                        29
                     </SES>
                 </stochasticEventSets>
                 <magnitude>

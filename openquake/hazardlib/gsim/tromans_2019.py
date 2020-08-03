@@ -87,6 +87,7 @@ def get_heteroskedastic_tau(imt, mag):
     """
     Returns the magnitude dependent inter-event variability using the
     model of Abrahamson et al (2014).
+
     :param dict C:
         Coefficients dictionary
     :param float mag:
@@ -213,10 +214,10 @@ class TromansEtAl2019(GMPE):
 
     #: Required rupture parameters are magnitude, others will be taken from
     #: the GMPE
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure will be set by the GMPE
-    REQUIRES_DISTANCES = set(())
+    REQUIRES_DISTANCES = set()
 
     def __init__(self, gmpe_name, branch="central",
                  homoskedastic_sigma=False,  scaling_factor=None,
@@ -305,7 +306,7 @@ class TromansEtAl2019SigmaMu(TromansEtAl2019):
     """
     #: Required rupture parameters are magnitude and style of faulting, others
     #: will be taken from the GMPE
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     def __init__(self, gmpe_name, branch="central", sigma_mu_epsilon=0.0,
                  homoskedastic_sigma=False,  scaling_factor=None,

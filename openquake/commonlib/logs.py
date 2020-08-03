@@ -31,8 +31,6 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 
-LOG = logging.getLogger()
-
 DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
 
@@ -149,18 +147,6 @@ def handle(job_id, log_level='info', log_file=None):
             logging.root.removeHandler(handler)
 
 
-def get_last_calc_id(username=None):
-    """
-    :param username: if given, restrict to it
-    :returns: the last calculation in the database or the datastore
-    """
-    if config.dbserver.multi_user:
-        job = dbcmd('get_job', -1, username)  # can be None
-        return getattr(job, 'id', 0)
-    else:  # single user
-        return datastore.get_last_calc_id()
-
-
 def init(calc_id='nojob', level=logging.INFO):
     """
     1. initialize the root logger (if not already initialized)
@@ -175,7 +161,10 @@ def init(calc_id='nojob', level=logging.INFO):
     elif calc_id == 'nojob':  # produce a calc_id without creating a job
         calc_id = datastore.get_last_calc_id() + 1
     else:
-        assert isinstance(calc_id, int), calc_id
+        calc_id = int(calc_id)
+        path = os.path.join(datastore.get_datadir(), 'calc_%d.hdf5' % calc_id)
+        if os.path.exists(path):
+            raise OSError('%s already exists' % path)
     fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
     for handler in logging.root.handlers:
         f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
