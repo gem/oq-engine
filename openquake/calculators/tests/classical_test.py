@@ -34,7 +34,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51)
+    case_50, case_51, case_52)
 
 aac = numpy.testing.assert_allclose
 
@@ -683,8 +683,37 @@ hazard_uhs-std.csv
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(1.0).csv',
                                'uhs.csv'],
                               case_50.__file__)
+
     def test_case_51(self):
         # Modifiable GMPE
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.2).csv',
                                'hcurves-SA(2.0).csv', 'uhs.csv'],
                               case_51.__file__)
+
+    def test_case_52(self):
+        # a case with 2 GSIM realizations b1 and b2 and 10 samples
+
+        # late_weights
+        self.run_calc(case_52.__file__, 'job.ini')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.560824, rtol=1E-6)
+        ws = self.calc.datastore['weights'][:]
+        # sampled 6 times b2 and 4 times b1
+        aac(ws, [0.02381, 0.02381, 0.02381, 0.02381, 0.214286, 0.214286,
+                 0.214286, 0.02381, 0.02381, 0.214286], rtol=2E-5)
+
+        # early_weights
+        self.run_calc(case_52.__file__, 'job.ini',
+                      sampling_method='early_weights')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = self.calc.datastore['weights'][:]
+        aac(ws, [0.1] * 10)  # all equal
+
+        # full enum, rlz-0: 0.554007, rlz-1: 0.601722
+        self.run_calc(case_52.__file__, 'job.ini',
+                      number_of_logic_tree_samples='0')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = self.calc.datastore['weights'][:]
+        aac(ws, [0.9, 0.1])

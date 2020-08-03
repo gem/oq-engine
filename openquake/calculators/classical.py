@@ -595,7 +595,7 @@ class ClassicalCalculator(base.HazardCalculator):
             maxhaz = hmaps.max(axis=(0, 1, 3))
             mh = dict(zip(self.oqparam.imtls, maxhaz))
             logging.info('The maximum hazard map values are %s', mh)
-            if Image is None:  # missing PIL
+            if Image is None or not self.from_engine:  # missing PIL
                 return
             M, P = hmaps.shape[2:]
             logging.info('Saving %dx%d mean hazard maps', M, P)

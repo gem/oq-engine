@@ -309,7 +309,7 @@ def apply_uncertainties(bset_values, src_group):
 # ######################### branches and branchsets ######################## #
 
 
-def sample(weighted_objects, num_samples, seed):
+def sample(weighted_objects, num_samples, seed, sampling_method):
     """
     Take random samples of a sequence of weighted objects
 
@@ -320,18 +320,25 @@ def sample(weighted_objects, num_samples, seed):
         The number of samples to return
     :param seed:
         A random seed
+    :param sampling_method:
+        If 'early_weights' use the weights, otherwise ignore them
     :return:
         A subsequence of the original sequence with `num_samples` elements
     """
-    weights = []
-    for obj in weighted_objects:
-        w = obj.weight
-        if isinstance(obj.weight, float):
-            weights.append(w)
-        else:
-            weights.append(w['weight'])
     numpy.random.seed(seed)
-    idxs = numpy.random.choice(len(weights), num_samples, p=weights)
+    if sampling_method == 'early_weights':
+        weights = []
+        for obj in weighted_objects:
+            w = obj.weight
+            if isinstance(obj.weight, float):
+                weights.append(w)
+            else:
+                weights.append(w['weight'])
+        idxs = numpy.random.choice(len(weights), num_samples, p=weights)
+    elif sampling_method == 'late_weights':
+        idxs = numpy.random.choice(len(weighted_objects), num_samples)
+    else:
+        raise NotImplementedError(sampling_method)
     # NB: returning an array would break things
     return [weighted_objects[idx] for idx in idxs]
 
@@ -436,22 +443,27 @@ class BranchSet(object):
         self.filters = filters or {}
         self.collapsed = collapsed
 
-    def sample(self, seed):
+    def sample(self, num_samples, seed, sampling_method):
         """
-        Return a list of branches.
-
+        :param num_samples: the number of samples
         :param seed: the seed used for the sampling
+        :param sampling_method: the sampling method (i.e. 'early_weights')
+        :returns: a list of num_samples lists of branches
         """
-        branchset = self
-        branches = []
-        while branchset is not None:
-            if branchset.collapsed:
-                branch = branchset.branches[0]
-            else:
-                [branch] = sample(branchset.branches, 1, seed)
-            branches.append(branch)
-            branchset = branch.bset
-        return branches
+        out = []
+        for s in range(num_samples):
+            branchset = self
+            branches = []
+            while branchset is not None:
+                if branchset.collapsed:
+                    branch = branchset.branches[0]
+                else:
+                    [branch] = sample(branchset.branches, 1, seed + s,
+                                      sampling_method)
+                branches.append(branch)
+                branchset = branch.bset
+            out.append(branches)
+        return out
 
     def enumerate_paths(self):
         """

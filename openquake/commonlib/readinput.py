@@ -720,7 +720,9 @@ def _get_csm_cached(oq, full_lt, h5=None):
     if os.path.exists(fname):
         logging.info('Reading %s', fname)
         with open(fname, 'rb') as f:
-            return pickle.load(f)
+            csm = pickle.load(f)
+            csm.full_lt = full_lt
+            return csm
     csm = get_csm(oq, full_lt, h5)
     logging.info('Weighting the sources')
     for sg in csm.src_groups:
@@ -1125,7 +1127,7 @@ def _checksum(fname, checksum):
     return zlib.adler32(data, checksum)
 
 
-def get_checksum32(oqparam):
+def get_checksum32(oqparam, h5=None):
     """
     Build an unsigned 32 bit integer from the hazard input files
 
@@ -1145,4 +1147,6 @@ def get_checksum32(oqparam):
             hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff
+    if h5:
+        h5.attrs['checksum32'] = checksum
     return checksum
