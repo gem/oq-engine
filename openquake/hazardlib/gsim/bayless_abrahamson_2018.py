@@ -74,11 +74,16 @@ class BaylessAbrahamson2018(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        mean, stddevs = self._get_mean_and_stddevs(sites, rup, dists, imt,
+                                                   stddev_types)
+        return mean, stddevs
+
+    def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         # Get the necessary set of coefficients
         C = self.COEFFS[imt]
         # Compute the PGA on bedrock
         ln_ir_outcrop = self._get_ln_ir_outcrop(C, sites, rup, dists)
-        # Get the mean value
+        # Get th e mean value
         print('-------------------------------------- \n')
         print(C)
         print(imt,
@@ -180,7 +185,13 @@ class BaylessAbrahamson2018(GMPE):
             tmp = meth(endog, freqs[idx_lo:idx_up], is_sorted=True,
                        return_sorted=False, frac=0.9)
             fnl = [np.interp(imt.frequency, freqs[idx_lo:idx_up], tmp)]
-        print('+++++ fnl interp', fnl)
+
+            if False:
+                import matplotlib.pyplot as plt
+                plt.plot(freqs[idx_lo:idx_up], tmp, label='smoothed')
+                plt.plot(freqs[idx_lo:idx_up], nl_terms, label='raw')
+                plt.legend()
+                plt.show()
 
         return fsl + fnl
 
