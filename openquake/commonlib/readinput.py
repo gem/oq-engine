@@ -61,6 +61,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
+smlt_cache = {}  # fname, seed, samples, meth -> SourceModelLogicTree instance
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -254,7 +255,7 @@ def get_oq(text):
     Returns an OqParam instance from a configuration string. For instance:
 
     >>> get_oq('maximum_distance=200')
-    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': 200}, risk_investigation_time=None>
+    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': [(1, 200), (10, 200)]}, risk_investigation_time=None>
     """
     # UGLY: this is here to avoid circular imports
     from openquake.calculators import base
@@ -655,10 +656,12 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
-    # NB: converting the random_seed into an integer is needed on Windows
-    smlt = logictree.SourceModelLogicTree(
-        fname, seed=int(oqparam.random_seed),
-        num_samples=oqparam.number_of_logic_tree_samples)
+    args = (fname, oqparam.random_seed, oqparam.number_of_logic_tree_samples,
+            oqparam.sampling_method)
+    try:
+        smlt = smlt_cache[args]
+    except KeyError:
+        smlt = smlt_cache[args] = logictree.SourceModelLogicTree(*args)
     if oqparam.discard_trts:
         trts = set(trt.strip() for trt in oqparam.discard_trts.split(','))
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
@@ -717,7 +720,9 @@ def _get_csm_cached(oq, full_lt, h5=None):
     if os.path.exists(fname):
         logging.info('Reading %s', fname)
         with open(fname, 'rb') as f:
-            return pickle.load(f)
+            csm = pickle.load(f)
+            csm.full_lt = full_lt
+            return csm
     csm = get_csm(oq, full_lt, h5)
     logging.info('Weighting the sources')
     for sg in csm.src_groups:
@@ -1097,7 +1102,10 @@ def get_input_files(oqparam, hazard=False):
                                       (oqparam.inputs['job_ini'], key))
             fnames.update(fname)
         elif key == 'source_model_logic_tree':
-            smlt = logictree.SourceModelLogicTree(fname)
+            args = (fname, oqparam.random_seed,
+                    oqparam.number_of_logic_tree_samples,
+                    oqparam.sampling_method)
+            smlt_cache[args] = smlt = logictree.SourceModelLogicTree(*args)
             fnames.update(smlt.hdf5_files)
             fnames.update(smlt.info.smpaths)
             fnames.add(fname)
@@ -1119,7 +1127,7 @@ def _checksum(fname, checksum):
     return zlib.adler32(data, checksum)
 
 
-def get_checksum32(oqparam):
+def get_checksum32(oqparam, h5=None):
     """
     Build an unsigned 32 bit integer from the hazard input files
 
@@ -1139,4 +1147,6 @@ def get_checksum32(oqparam):
             hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff
+    if h5:
+        h5.attrs['checksum32'] = checksum
     return checksum

@@ -33,7 +33,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.calc import disagg, stochastic
+from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation, writers
@@ -1149,6 +1149,7 @@ def extract_disagg_layer(dstore, what):
     """
     qdict = parse(what)
     oq = dstore['oqparam']
+    oq.maximum_distance = filters.MagDepDistance(oq.maximum_distance)
     if 'kind' in qdict:
         kinds = qdict['kind']
     else:

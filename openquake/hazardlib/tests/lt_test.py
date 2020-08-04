@@ -69,7 +69,7 @@ class CollapseTestCase(unittest.TestCase):
         sitecol = site.SiteCollection(
             [site.Site(Point(0, 0), numpy.array([760.]))])
         self.srcfilter = calc.filters.SourceFilter(
-            sitecol, {'default': 200})
+            sitecol, calc.filters.MagDepDistance.new('200'))
         self.gsims = [valid.gsim('ToroEtAl2002')]
         self.imtls = DictArray({'PGA': valid.logscale(.01, 1, 5)})
         self.sg = sourceconverter.SourceGroup(ps.tectonic_region_type, [ps])

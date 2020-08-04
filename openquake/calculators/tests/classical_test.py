@@ -34,7 +34,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51)
+    case_50, case_51, case_52)
 
 aac = numpy.testing.assert_allclose
 
@@ -618,7 +618,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 634)  # effective ruptures
+        self.assertEqual(self.calc.numrups, 499)  # effective ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
@@ -647,30 +647,30 @@ hazard_uhs-std.csv
         # pointsource_distance effects on a simple point source
         self.run_calc(case_48.__file__, 'job.ini')
         dst = get_dists(self.calc.datastore)
-        self.assertEqual(  # exact distances
+        self.assertEqual(  # exact distances from site 0
             dst[0], [54, 54, 53, 53, 52, 51, 48, 44, 38, 33])
-        self.assertEqual(  # exact distances
+        self.assertEqual(  # exact distances from site 1
             dst[1], [110, 109, 109, 108, 107, 106, 103, 99, 92, 82])
 
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
         dst = get_dists(self.calc.datastore)
+        # approx distances from site 0 and site 1 respectively
         self.assertEqual(dst[0], [56, 56, 56, 53, 52, 51, 48, 44, 38, 33])
         self.assertEqual(dst[1], [108, 107, 106, 103, 99, 92, 82])
-        # this test shows in detail what happens to the distances in presence
-        # of a magnitude-dependent pointsource_distance: just look at the
-        # files expected/exact_dists.txt and expected/approx_dists.txt
-        # the exact distances for the first site are 54, 53, 53, ... 38, 32 km;
+        # This test shows in detail what happens to the distances in presence
+        # of a magnitude-dependent pointsource_distance.
+        # The exact distances for the first site are 54, 54, 53, ... 38, 33 km;
         # they decrease with the magnitude, since big magnitude -> big size ->
         # smaller distance from the site.
         # When the pointsource_distance is on, the approximated distances are
-        # 9_999, 9_999, 9_999, ..., 38, 32 km: the difference is in the first
+        # 56, 56, 56, ..., 38, 33 km: the difference is in the first
         # three values, corresponding to the small magnitudes.
         # For small magnitudes the planar ruptures are replaced by points
         # and thus the distances become larger and possibly over the maxdist.
         # The maximum_distance here is 110 km and the second site
         # was chosen very carefully, so that the exact distance for the highest
         # magnitude is 109 km (within) while the approx distance is 111 km
-        # (outside)
+        # (outside), therefore the first three distances are missing in dst[1]
 
     def test_case_49(self):
         # serious test of amplification + uhs
@@ -683,8 +683,37 @@ hazard_uhs-std.csv
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(1.0).csv',
                                'uhs.csv'],
                               case_50.__file__)
+
     def test_case_51(self):
         # Modifiable GMPE
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.2).csv',
                                'hcurves-SA(2.0).csv', 'uhs.csv'],
                               case_51.__file__)
+
+    def test_case_52(self):
+        # a case with 2 GSIM realizations b1 and b2 and 10 samples
+
+        # late_weights
+        self.run_calc(case_52.__file__, 'job.ini')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.560824, rtol=1E-6)
+        ws = self.calc.datastore['weights'][:]
+        # sampled 6 times b2 and 4 times b1
+        aac(ws, [0.02381, 0.02381, 0.02381, 0.02381, 0.214286, 0.214286,
+                 0.214286, 0.02381, 0.02381, 0.214286], rtol=2E-5)
+
+        # early_weights
+        self.run_calc(case_52.__file__, 'job.ini',
+                      sampling_method='early_weights')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = self.calc.datastore['weights'][:]
+        aac(ws, [0.1] * 10)  # all equal
+
+        # full enum, rlz-0: 0.554007, rlz-1: 0.601722
+        self.run_calc(case_52.__file__, 'job.ini',
+                      number_of_logic_tree_samples='0')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = self.calc.datastore['weights'][:]
+        aac(ws, [0.9, 0.1])

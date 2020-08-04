@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-import pickle
 import numpy
 
 import openquake.hazardlib
@@ -23,7 +22,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
+from openquake.hazardlib.calc.filters import SourceFilter, MagDepDistance
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -37,12 +36,6 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014PEER
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
-    def test_MagnitudeDistance_pickleable(self):
-        md = IntegrationDistance(
-            dict(default=[(1, 10), (2, 20), (3, 30), (4, 40), (5, 100),
-                          (6, 200), (7, 400), (8, 800)]))
-        md2 = pickle.loads(pickle.dumps(md))
-        self.assertEqual(md.dic, md2.dic)
 
     def test_point_sources(self):
         sources = [
@@ -97,7 +90,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
-        s_filter = SourceFilter(sitecol, {const.TRT.ACTIVE_SHALLOW_CRUST: 30})
+        s_filter = SourceFilter(sitecol, MagDepDistance.new('30'))
         result = calc_hazard_curves(
             sources, s_filter, imts, gsims, truncation_level)['PGA']
         # there are two sources and four sites. The first source contains only
@@ -136,7 +129,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
 
         # test that depths are kept after filtering (sites 3 and 4 remain)
-        s_filter = SourceFilter(sitecol, {'default': 100})
+        s_filter = SourceFilter(sitecol, MagDepDistance.new('100'))
         numpy.testing.assert_array_equal(
             s_filter.get_close_sites(sources[0]).depths, ([1, -1]))
 
