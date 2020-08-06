@@ -41,7 +41,38 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
         const.StdDev.INTRA_EVENT
     ])
 
-    def _site_response(self, C, vs30, ln_ir_outcrop, imt):
+    #: Required site parameters
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
+
+    def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+
+        # Get the necessary set of coefficients
+        C = self.COEFFS[imt]
+        mean = (self._magnitude_scaling(C, rup) +
+                self._path_scaling(C, rup, dists) +
+                self._ztor_scaling(C, rup) +
+                self._site_response(C, sites.vs30, imt))
+
+        print(self._magnitude_scaling(C, rup),
+              self._path_scaling(C, rup, dists),
+              self._ztor_scaling(C, rup),
+              self._site_response(C, sites.vs30, imt))
+
+        print(np.exp(mean))
+
+        # Get standard deviations
+        stddevs = self._get_stddevs(C, rup, stddev_types, sites.vs30)
+        return mean, stddevs
+
+    def _magnitude_scaling(self, C, rup):
+        """ Compute the magnitude scaling term """
+        t1 = C['c1']
+        t2 = C['c2'] * (rup.mag - 6.)
+        tmp = np.log(1.0 - np.exp(C['cn']*(C['cM']-rup.mag)))
+        t3 = C['c3'] * tmp
+        return t1 + t2 + t3
+
+    def _site_response(self, C, vs30, imt):
         """ Compute the site response term """
         # Linear term
         tmp = np.minimum(vs30, 1000.)
@@ -52,31 +83,26 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
         """
         Compute the standard deviations
         """
-        # Set components of std
-        tau = C['tau']
-        phi = C['phi']
-        tot = C['tot']
-
         # Collect the requested stds
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                sigma = tot
+                sigma = C['tot']
                 stddevs.append(np.ones_like(vs30) * sigma)
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                sigma = phi
+                sigma = C['phi']
                 stddevs.append(np.ones_like(vs30) * sigma)
             elif stddev_type == const.StdDev.INTER_EVENT:
-                sigma = tau
+                sigma = C['tau']
                 stddevs.append(np.ones_like(vs30) * sigma)
         return stddevs
 
 
     COEFF = CoeffsTable(sa_damping=5, table="""\
 IMT c1           c2   c3           c4     c5          c6          c7           c8           c9           cn          cM          chm         tot   tau   phi   site_sd record_sd
-f_1 -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909 6           3.811150377 1.025 0.6   0.805 0.569 0.523
-f_5 -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202382 -0.699440349 0.031866505  14.31473379 5.165553252 3.507442691 0.94  0.439 0.78  0.509 0.53
+f_1.0 -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909 6           3.811150377 1.025 0.6   0.805 0.569 0.523
+f_5.0 -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202382 -0.699440349 0.031866505  14.31473379 5.165553252 3.507442691 0.94  0.439 0.78  0.509 0.53
 """)
 
 
