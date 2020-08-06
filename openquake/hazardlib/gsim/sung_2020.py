@@ -20,6 +20,9 @@
 Module exports :class:`Sung2020`
 """
 
+import os
+import numpy as np
+from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.bayless_abrahamson_2018 import \
         BaylessAbrahamson2018
@@ -31,6 +34,66 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
     Bayliss and Abrahamson (2018) GMM.
     """
 
+    #: Supported standard deviation types
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL,
+        const.StdDev.INTER_EVENT,
+        const.StdDev.INTRA_EVENT
+    ])
+
+    def _site_response(self, C, vs30, ln_ir_outcrop, imt):
+        """ Compute the site response term """
+        # Linear term
+        tmp = np.minimum(vs30, 1000.)
+        fsl = C['c8'] * np.log(tmp / 1000.)
+        return fsl
+
+    def _get_stddevs(self, C, rup, stddev_types, vs30):
+        """
+        Compute the standard deviations
+        """
+        # Set components of std
+        tau = C['tau']
+        phi = C['phi']
+        tot = C['tot']
+
+        # Collect the requested stds
+        stddevs = []
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                sigma = tot
+                stddevs.append(np.ones_like(vs30) * sigma)
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                sigma = phi
+                stddevs.append(np.ones_like(vs30) * sigma)
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                sigma = tau
+                stddevs.append(np.ones_like(vs30) * sigma)
+        return stddevs
+
+
+    COEFF = CoeffsTable(sa_damping=5, table="""\
+IMT c1           c2   c3           c4     c5          c6          c7           c8           c9           cn          cM          chm         tot   tau   phi   site_sd record_sd
+f_1 -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909 6           3.811150377 1.025 0.6   0.805 0.569 0.523
+f_5 -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202382 -0.699440349 0.031866505  14.31473379 5.165553252 3.507442691 0.94  0.439 0.78  0.509 0.53
+""")
+
+
+class SungAbrahamson2020NonErgodic(SungAbrahamson2020):
+    """
+    Modification of Sung and Abrahamson (2020) with non ergodic adjustments.
+    """
+
+    REQUIRES_DISTANCES = {'rrup', 'closest_pnts'}
+
+    def __init__(self, **kwargs):
+
+        super().__init__(**kwargs)
+        self.adjustment_file = kwargs.get("adjustment_file", None)
+        msg = 'Adjustment file not found'
+        assert os.path.exists(self.adjustment_file), msg
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -38,23 +101,14 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
         for spec of input and result values.
         """
 
-        # We need the coordinates of the closest point on the rupture in the
-        #rupture contexts
+        # Original coefficients
+        C = self.COEFFS[imt]
+
+        # Results of the ergodic model
         mean, stddevs = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                    stddev_types)
 
-        
+        # Removing term
+        mean -= C['c7'] * dists.rrup
+
         return mean, stddevs
-
-        
-        
-
-    
-
-    COEFF = CoeffsTable(sa_damping=5, table="""\
-IMT         c1                  c2  c3                  cn                  cM                  c4  c5  c6  chm c7  c8  c9  c10 c11a    c11b    c11c    c11d    c1a s1  s2  s3  s4  s5  s6  f3  f4  f5
-f_0.5011872 -3.353  1.27    -0.058  2.704052334 5.951917751 -1.86   7.581799176 0.450402473 3.832962079 -0.0111 -0.472  0.0412  -0.2    0.351393859 0.237750473 0.227042072 0.181767514 -0.022485383    0.55612584  0.427683808 0.411026188 0.412387132 0.423728309 0.423728309 0.996449343 -0.002362854    -0.0199749
-f_1.0   -3.42462978 1.27    2.810855246 3.623987533 5.635799252 -1.86   7.5814  0.4517  3.8144  -0.004129651    -1.118379396    0.003872989 -0.2    0.187885794 0.124336361 0.151590949 0.15321913  -0.023136392    0.505564315 0.384704301 0.417188704 0.422589328 0.428586348 0.421909944 0.752487118 -0.023957696    -0.017869964
-
-            
-""")

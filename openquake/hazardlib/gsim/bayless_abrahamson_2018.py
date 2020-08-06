@@ -140,14 +140,17 @@ class BaylessAbrahamson2018(GMPE):
 
     def _site_response(self, C, vs30, ln_ir_outcrop, imt):
         """ Compute the site response term """
+
         # Set the vs30 threshold beyond which non-linearity is not admitted.
         # See page 2092 right column
         delta = 30
 
-        # Non-linear term
+        # Linear term
         vsref = np.ones_like(vs30) * 760.
         tmp = np.minimum(vs30, 1000.)
         fsl = C['c8'] * np.log(tmp / 1000.)
+
+        # Non-linear term
         freqs = self._get_frequencies()
         idx = np.argmin(np.abs(freqs - imt.frequency))
 

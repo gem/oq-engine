@@ -43,8 +43,9 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 bymag = operator.attrgetter('mag')
 bydist = operator.attrgetter('dist')
 I16 = numpy.int16
-KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
+
+tmp = 'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_pnts'
+KNOWN_DISTANCES = frozenset(tmp.split())
 
 
 def get_distances(rupture, sites, param):
