@@ -113,7 +113,8 @@ RM       4_000
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=2E-6)
 
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # one per realization
