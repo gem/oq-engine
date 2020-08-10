@@ -58,8 +58,6 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
               self._ztor_scaling(C, rup),
               self._site_response(C, sites.vs30, imt))
 
-        print(np.exp(mean))
-
         # Get standard deviations
         stddevs = self._get_stddevs(C, rup, stddev_types, sites.vs30)
         return mean, stddevs
@@ -68,8 +66,9 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
         """ Compute the magnitude scaling term """
         t1 = C['c1']
         t2 = C['c2'] * (rup.mag - 6.)
-        tmp = np.log(1.0 - np.exp(C['cn']*(C['cM']-rup.mag)))
+        tmp = np.log(1.0 + np.exp(C['cn']*(C['cM']-rup.mag)))
         t3 = C['c3'] * tmp
+        t3 = (C['c2'] - C['c3'])/C['cn'] * tmp
         return t1 + t2 + t3
 
     def _site_response(self, C, vs30, imt):
