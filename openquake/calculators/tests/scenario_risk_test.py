@@ -108,7 +108,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # case with site model and 11 sites filled out of 17
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname] = out['avg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+        self.assertEqualFiles('expected/losses_by_asset.csv', fname,
+                              delta=2E-6)
 
         # check pandas
         df = self.calc.datastore.read_df('avg_losses-rlzs', 'asset_id')
