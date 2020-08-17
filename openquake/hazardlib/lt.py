@@ -347,26 +347,6 @@ def latin_choice(weights, size, seed):
     return numpy.searchsorted(numpy.cumsum(weights), (idxs + 0.5) / size)
 
 
-def random_choice(weights, size, seed):
-    """
-    :param weights: an array of w-weights
-    :param size: size of the returned array
-    :param seed: random seed
-    :returns: an array of indices in the range 0..w-1 of the specified size
-
-    >>> w = numpy.array([.2, .3, .5])
-    >>> numpy.bincount(random_choice(w, 10, seed=42))
-    array([3, 1, 6])
-    >>> numpy.bincount(random_choice(w, 100, seed=42))
-    array([28, 25, 47])
-    >>> numpy.bincount(random_choice(w, 1000, seed=42))
-    array([225, 278, 497])
-    """
-    numpy.random.seed(seed)
-    x = numpy.random.uniform(size=size)
-    return numpy.searchsorted(numpy.cumsum(weights), x)
-
-
 def sample(weighted_objects, num_samples, seed, sampling_method):
     """
     Take random samples of a sequence of weighted objects
