@@ -347,6 +347,26 @@ def latin_choice(weights, size, seed):
     return numpy.searchsorted(numpy.cumsum(weights), (idxs + 0.5) / size)
 
 
+def random_choice(weights, size, seed):
+    """
+    :param weights: an array of w-weights
+    :param size: size of the returned array
+    :param seed: random seed
+    :returns: an array of indices in the range 0..w-1 of the specified size
+
+    >>> w = numpy.array([.2, .3, .5])
+    >>> numpy.bincount(random_choice(w, 10, seed=42))
+    array([3, 1, 6])
+    >>> numpy.bincount(random_choice(w, 100, seed=42))
+    array([28, 25, 47])
+    >>> numpy.bincount(random_choice(w, 1000, seed=42))
+    array([225, 278, 497])
+    """
+    numpy.random.seed(seed)
+    x = numpy.random.uniform(size=size)
+    return numpy.searchsorted(numpy.cumsum(weights), x)
+
+
 def sample(weighted_objects, num_samples, seed, sampling_method):
     """
     Take random samples of a sequence of weighted objects
@@ -363,8 +383,7 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
     :return:
         A subsequence of the original sequence with `num_samples` elements
     """
-    numpy.random.seed(seed)
-    if sampling_method == 'early_weights':
+    if sampling_method == 'early_weights':  # consider the weights
         weights = []
         for obj in weighted_objects:
             w = obj.weight
@@ -372,9 +391,10 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
                 weights.append(w)
             else:
                 weights.append(w['weight'])
-        idxs = numpy.random.choice(len(weights), num_samples, p=weights)
+        idxs = random_choice(weights, num_samples, seed)
     elif sampling_method == 'late_weights':
-        idxs = numpy.random.choice(len(weighted_objects), num_samples)
+        n = len(weighted_objects)  # consider all weights equal
+        idxs = random_choice(numpy.ones(n) / n, num_samples, seed)
     else:
         raise NotImplementedError(sampling_method)
     # NB: returning an array would break things
