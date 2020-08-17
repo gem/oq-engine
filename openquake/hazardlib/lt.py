@@ -317,11 +317,11 @@ def random_choice(weights, size, seed):
 
     >>> w = numpy.array([.2, .3, .5])
     >>> numpy.bincount(random_choice(w, 10, seed=42))
-    array([3, 1, 6])  # very different from the weights
+    array([3, 1, 6])
     >>> numpy.bincount(random_choice(w, 100, seed=42))
-    array([28, 25, 47])  # different from the weights
+    array([28, 25, 47])
     >>> numpy.bincount(random_choice(w, 1000, seed=42))
-    array([225, 278, 497])  # not so different from the weights
+    array([225, 278, 497])
     """
     numpy.random.seed(seed)
     x = numpy.random.uniform(size=size)
@@ -339,7 +339,8 @@ def latin_choice(weights, size, seed):
 
     >>> w = numpy.array([.2, .3, .5])
     >>> numpy.bincount(latin_choice(w, 10, seed=42))
-    array([2, 3, 5])  # perfectly consistent with the weights already at 10
+    array([2, 3, 5])
+    >>> # perfectly consistent with the weights already at 10
     """
     numpy.random.seed(seed)
     idxs = numpy.argsort(numpy.random.uniform(size=size))
