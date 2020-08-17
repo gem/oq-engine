@@ -344,6 +344,8 @@ def latin_choice(weights, size, seed):
     """
     numpy.random.seed(seed)
     idxs = numpy.argsort(numpy.random.uniform(size=size))
+    # the idea of using argsort comes from
+    # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
     return numpy.searchsorted(numpy.cumsum(weights), (idxs + 0.5) / size)
 
 
