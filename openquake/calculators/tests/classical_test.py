@@ -691,14 +691,14 @@ hazard_uhs-std.csv
                               case_51.__file__)
 
     def test_case_52(self):
-        # a case with 2 GSIM realizations b1 and b2 and 10 samples
+        # a case with 2 GSIM realizations b1 (w=.9) and b2 (w=.1) and 10 samples
 
         # late_weights
         self.run_calc(case_52.__file__, 'job.ini')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
         aac(haz, 0.555297, rtol=1E-6)
         ws = self.calc.datastore['weights'][:]
-        # sampled 8 times b2 and 2 times b1
+        # sampled 8 times b1 and 2 times b2
         aac(ws, [0.121622, 0.013514, 0.121622, 0.121622, 0.121622, 0.121622,
                  0.121622, 0.121622, 0.013514, 0.121622], rtol=4E-5)
 
