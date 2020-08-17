@@ -698,7 +698,7 @@ hazard_uhs-std.csv
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
         aac(haz, 0.555297, rtol=1E-6)
         ws = self.calc.datastore['weights'][:]
-        # sampled 6 times b2 and 4 times b1
+        # sampled 8 times b2 and 2 times b1
         aac(ws, [0.121622, 0.013514, 0.121622, 0.121622, 0.121622, 0.121622,
                  0.121622, 0.121622, 0.013514, 0.121622], rtol=4E-5)
 

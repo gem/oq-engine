@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the logic tree sampling algorithm and made it possible to use
+    both `early_weights` and `late_weights`
   * Restored magnitude-dependent maximum distance
   * Displaying the hazard maps in the WebUI for debugging purposes
   * Used the hazard map to get the disaggregation IML from the disaggregation
