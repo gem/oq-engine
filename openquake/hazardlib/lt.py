@@ -346,7 +346,10 @@ def latin_choice(weights, size, seed):
     idxs = numpy.argsort(numpy.random.uniform(size=size))
     # the idea of using argsort comes from
     # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
-    return numpy.searchsorted(numpy.cumsum(weights), (idxs + 0.5) / size)
+    probs = (idxs + 0.5) / size
+    # numpy.searchsorted is inverting the cumulative discrete distribution
+    # function, i.e. finding the bins corresponding to given probabilities
+    return numpy.searchsorted(numpy.cumsum(weights), probs)
 
 
 def sample(weighted_objects, num_samples, seed, sampling_method):
