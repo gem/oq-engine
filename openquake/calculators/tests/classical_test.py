@@ -696,11 +696,11 @@ hazard_uhs-std.csv
         # late_weights
         self.run_calc(case_52.__file__, 'job.ini')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.560824, rtol=1E-6)
+        aac(haz, 0.555297, rtol=1E-6)
         ws = self.calc.datastore['weights'][:]
         # sampled 6 times b2 and 4 times b1
-        aac(ws, [0.02381, 0.02381, 0.02381, 0.02381, 0.214286, 0.214286,
-                 0.214286, 0.02381, 0.02381, 0.214286], rtol=2E-5)
+        aac(ws, [0.121622, 0.013514, 0.121622, 0.121622, 0.121622, 0.121622,
+                 0.121622, 0.121622, 0.013514, 0.121622], rtol=4E-5)
 
         # early_weights
         self.run_calc(case_52.__file__, 'job.ini',
