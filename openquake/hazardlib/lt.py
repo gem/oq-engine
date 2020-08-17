@@ -363,7 +363,9 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
     :return:
         A subsequence of the original sequence with `num_samples` elements
     """
-    if sampling_method == 'early_weights':  # consider the weights
+    choice = (latin_choice if sampling_method.endswith('latin')
+              else random_choice)
+    if sampling_method.startswith('early_'):  # consider the weights
         weights = []
         for obj in weighted_objects:
             w = obj.weight
@@ -371,10 +373,10 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
                 weights.append(w)
             else:
                 weights.append(w['weight'])
-        idxs = random_choice(weights, num_samples, seed)
-    elif sampling_method == 'late_weights':
+        idxs = choice(weights, num_samples, seed)
+    elif sampling_method.startswith('late_'):
         n = len(weighted_objects)  # consider all weights equal
-        idxs = random_choice(numpy.ones(n) / n, num_samples, seed)
+        idxs = choice(numpy.ones(n) / n, num_samples, seed)
     else:
         raise NotImplementedError(sampling_method)
     # NB: returning an array would break things
