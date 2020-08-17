@@ -1296,7 +1296,7 @@ class SampleTestCase(unittest.TestCase):
     def test_sample_broken_branch_weights(self):
         branches = [logictree.Branch('BS', 0, 0.1, 0),
                     logictree.Branch('BS', 1, 0.2, 1)]
-        with self.assertRaises(ValueError):
+        with self.assertRaises(IndexError):
             lt.sample(branches, 1000, 42, 'early_weights')
 
     def test_sample_one_branch(self):
@@ -2189,19 +2189,18 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
             sampling_method='late_weights')
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b1_b24', 'b1_b25', 'b2', 'b2', 'b2', 'b2', 'b2',
-                 'b3', 'b3', 'b3']
-        # b1_b21, b1_b22, b1_b23 and b1_b26 are missing
+        paths = ['b1_b22', 'b1_b22', 'b2', 'b2', 'b2',
+                 'b3', 'b3', 'b3', 'b3', 'b3']
+        # b1_b21, b1_b23, b1_b24, b1_b25 and b1_b26 are missing
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.02656, 0.016314769, 0.1622246318, 0.1622246318,
-                   0.1622246318, 0.1622246318, 0.1622246318,
-                   0.04866739, 0.04866739, 0.04866739]
+        weights = [0.0578934, 0.0578934, 0.1233786, 0.1233786, 0.1233786,
+                   0.1028155, 0.1028155, 0.1028155, 0.1028155, 0.1028155]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
 
         # the mean 0.121 is closer to the true mean 0.13375 than the
         # early_weight mean 0.111
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.12060252)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.122825)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch
