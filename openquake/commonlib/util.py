@@ -114,6 +114,41 @@ def closest_to_ref(arrays, ref, cutoff=1E-12):
     :param arrays: a sequence of arrays
     :param ref: the reference array
     :returns: a list of indices ordered by closeness
+
+    This function is used to extract the realization closest to the mean in
+    disaggregation. For instance, if there are 2 realizations with indices
+    0 and 1, the first hazard curve having values
+
+    >>> c0 = numpy.array([.99, .97, .5, .1])
+
+    and the second hazard curve having values
+
+    >>> c1 = numpy.array([.98, .96, .45, .09])
+
+    with weights 0.6 and 0.4 and mean
+
+    >>> mean = numpy.average([c0, c1], axis=0, weights=[0.6, 0.4])
+
+    then calling ``closest_to_ref`` will returns the indices 0 and 1
+    respectively:
+
+    >>> closest_to_ref([c0, c1], mean)
+    [0, 1]
+
+    This means that the realization 0 is the closest to the mean, as expected,
+    since it has a larger weight. You can check that it is indeed true by
+    computing the sum of the quadratic deviations:
+
+    >>> ((c0 - mean)**2).sum()
+    0.0004480000000000008
+    >>> ((c1 - mean)**2).sum()
+    0.0010079999999999985
+
+    If the 2 realizations have equal weights the distance from the mean will be
+    the same. In that case both the realizations will be okay; the one that
+    will be chosen by closest_to_ref depends on the magic of floating point
+    approximation (identical distances will likely be different as
+    numpy.float64 numbers) or from the magic of Python list.sort.
     """
     dist = numpy.zeros(len(arrays))
     logref = log(ref, cutoff)
