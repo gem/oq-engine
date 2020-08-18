@@ -146,9 +146,9 @@ def closest_to_ref(arrays, ref, cutoff=1E-12):
 
     If the 2 realizations have equal weights the distance from the mean will be
     the same. In that case both the realizations will be okay; the one that
-    will be chosen by closest_to_ref depends on the magic of floating point
-    approximation (identical distances will likely be different as
-    numpy.float64 numbers) or from the magic of Python list.sort.
+    will be chosen by ``closest_to_ref`` depends on the magic of floating point
+    approximation (theoretically identical distances will likely be different
+    as numpy.float64 numbers) or on the magic of Python ``list.sort``.
     """
     dist = numpy.zeros(len(arrays))
     logref = log(ref, cutoff)
