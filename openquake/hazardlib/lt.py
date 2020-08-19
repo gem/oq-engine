@@ -308,42 +308,41 @@ def apply_uncertainties(bset_values, src_group):
 # ######################### sampling ######################## #
 
 
-def random_choice(weights, size, seed):
+def random_choice(cdf, size, seed):
     """
-    :param weights: an array of w-weights
+    :param cdf: array with the cumulative distribution function
     :param size: size of the returned array
     :param seed: random seed
     :returns: an array of indices in the range 0..w-1 of the specified size
 
-    >>> w = numpy.array([.2, .3, .5])
-    >>> numpy.bincount(random_choice(w, 10, seed=42))
+    >>> cdf = numpy.cumsum([.2, .3, .5])
+    >>> numpy.bincount(random_choice(cdf, 10, seed=42))
     array([3, 1, 6])
-    >>> numpy.bincount(random_choice(w, 100, seed=42))
+    >>> numpy.bincount(random_choice(cdf, 100, seed=42))
     array([28, 25, 47])
-    >>> numpy.bincount(random_choice(w, 1000, seed=42))
+    >>> numpy.bincount(random_choice(cdf, 1000, seed=42))
     array([225, 278, 497])
     """
     numpy.random.seed(seed)
     x = numpy.random.uniform(size=size)
-    return numpy.searchsorted(numpy.cumsum(weights), x)
+    return numpy.searchsorted(cdf, x)
 
 
-def latin_choice(weights, size, seed):
+def latin_choice(cdf, size, seed):
     """
-    :param weights: an array of w-weights
+    :param cdf: array with the cumulative distribution function
     :param size: size of the returned array
     :param seed: random seed
     :returns: an array of indices in the range 0..w-1 of the specified size
 
     The latin choice is a lot more convergent than the regular random choice:
 
-    >>> w = numpy.array([.2, .3, .5])
-    >>> numpy.bincount(latin_choice(w, 10, seed=42))
+    >>> cdf = numpy.cumsum([.2, .3, .5])
+    >>> numpy.bincount(latin_choice(cdf, 10, seed=42))
     array([2, 3, 5])
     >>> # perfectly consistent with the weights already at 10
     """
-    if size == 1:  # cannot make the stratification
-        return random_choice(weights, size, seed)
+    assert size > 1, size
     numpy.random.seed(seed)
     idxs = numpy.argsort(numpy.random.uniform(size=size))
     # the idea of using argsort comes from
@@ -351,10 +350,10 @@ def latin_choice(weights, size, seed):
     probs = (idxs + 0.5) / size
     # numpy.searchsorted is inverting the cumulative discrete distribution
     # function, i.e. finding the bins corresponding to given probabilities
-    return numpy.searchsorted(numpy.cumsum(weights), probs)
+    return numpy.searchsorted(cdf, probs)
 
 
-def _weights(weighted_objects):
+def _cdf(weighted_objects):
     weights = []
     for obj in weighted_objects:
         w = obj.weight
@@ -362,7 +361,7 @@ def _weights(weighted_objects):
             weights.append(w)
         else:
             weights.append(w['weight'])
-    return weights
+    return numpy.cumsum(weights)
 
 
 def sample(weighted_objects, num_samples, seed, sampling_method):
@@ -384,10 +383,10 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
     choice = (latin_choice if sampling_method.endswith('latin')
               else random_choice)
     if sampling_method.startswith('early_'):  # consider the weights
-        idxs = choice(_weights(weighted_objects), num_samples, seed)
+        idxs = choice(_cdf(weighted_objects), num_samples, seed)
     elif sampling_method.startswith('late_'):
         n = len(weighted_objects)  # consider all weights equal
-        idxs = choice(numpy.ones(n) / n, num_samples, seed)
+        idxs = choice(numpy.arange(1/n, 1, 1/n), num_samples, seed)
     else:
         raise NotImplementedError(sampling_method)
     # NB: returning an array would break things
@@ -504,10 +503,10 @@ class BranchSet(object):
         :returns: a list of num_samples lists of branches
         """
         numpy.random.seed(seed)
-        out = []
         xs = numpy.random.uniform(size=num_samples)
         if sampling_method.endswith('_latin'):
             xs = (numpy.argsort(xs) + 0.5) / num_samples
+        out = []
         for x in xs:
             branchset = self
             branches = []
@@ -515,8 +514,7 @@ class BranchSet(object):
                 if branchset.collapsed:
                     branch = branchset.branches[0]
                 else:
-                    weights = _weights(branchset.branches)
-                    idx = numpy.searchsorted(numpy.cumsum(weights), x)
+                    idx = numpy.searchsorted(_cdf(branchset.branches), x)
                     branch = branchset.branches[idx]
                 branches.append(branch)
                 branchset = branch.bset
