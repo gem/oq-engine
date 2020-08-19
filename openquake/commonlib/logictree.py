@@ -1264,9 +1264,9 @@ class FullLogicTree(object):
         """
         return dict(zip(self.gsim_lt.values, rlz.gsim_rlz.value))
 
-    def get_rlzs(self):
+    def get_realizations(self):
         """
-        :returns: a list of LtRealization objects
+        :returns: the complete list of LtRealizations
         """
         rlzs = []
         if self.num_samples:  # sampling
@@ -1286,13 +1286,6 @@ class FullLogicTree(object):
                                         sm_rlz.weight * gsim_rlz.weight)
                     rlzs.append(rlz)
                     i += 1
-        return rlzs
-
-    def get_realizations(self):
-        """
-        :returns: the complete list of LtRealizations
-        """
-        rlzs = self.get_rlzs()
         assert rlzs, 'No realizations found??'
         if self.num_samples and self.sampling_method.startswith('early_'):
             assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
@@ -1312,13 +1305,22 @@ class FullLogicTree(object):
         """
         :returns: a dictionary gsim -> array of rlz indices
         """
-        trti, eri = divmod(grp_id, len(self.sm_rlzs))
-        rlzs_by_gsim = AccumDict(accum=[])
-        eri_by_ltp = self.get_eri_by_ltp()
-        for rlz in self.get_realizations():
-            if eri_by_ltp['_'.join(rlz.sm_lt_path)] == eri:
-                rlzs_by_gsim[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-        return {gsim: U32(rlzs) for gsim, rlzs in sorted(rlzs_by_gsim.items())}
+        if not hasattr(self, '_rlzs_by_grp'):
+            eri_by_ltp = self.get_eri_by_ltp()
+            rlzs = self.get_realizations()
+            acc = AccumDict(accum=AccumDict(accum=[]))  # grp_id->gsim->rlzs
+            for sm in self.sm_rlzs:
+                for gid in self.grp_ids(sm.ordinal):
+                    trti, eri = divmod(gid, len(self.sm_rlzs))
+                    for rlz in rlzs:
+                        if eri_by_ltp['_'.join(rlz.sm_lt_path)] == eri:
+                            acc[gid][rlz.gsim_rlz.value[trti]].append(
+                                rlz.ordinal)
+            self._rlzs_by_grp = {}
+            for gid, dic in acc.items():
+                self._rlzs_by_grp[gid] = {
+                    gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
+        return self._rlzs_by_grp[grp_id]
 
     def get_rlzs_by_gsim_grp(self):
         """
