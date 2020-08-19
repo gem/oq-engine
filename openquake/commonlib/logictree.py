@@ -632,6 +632,9 @@ class SourceModelLogicTree(object):
         return numpy.array(tbl, branch_dt), attrs
 
     def __fromh5__(self, array, attrs):
+        # this is rather tricky; to understand it, run the test
+        # SerializeSmltTestCase which has a logic tree with 3 branchsets
+        # with the form b11[b21[b31, b32], b22[b31, b32]] and 1 x 2 x 2 rlzs
         bsets = []
         self.branches = {}
         self.bsetdict = {}
@@ -645,13 +648,14 @@ class SourceModelLogicTree(object):
                 bset.branches.append(br)
             bsets.append(bset)
             self.bsetdict[bsid] = {'uncertaintyType': utype}
+        # bsets [<b11>, <b21 b22>, <b31 b32>]
         self.root_branchset = bsets[0]
         for i, childset in enumerate(bsets[1:]):
             dic = toml.loads(attrs[childset.id])
             atb = dic.get('applyToBranches')
             for branch in bsets[i].branches:  # parent branches
                 if not atb or branch.branch_id in atb:
-                    branch.bset = bset
+                    branch.bset = childset
         self.seed = attrs['seed']
         self.num_samples = attrs['num_samples']
         self.sampling_method = attrs['sampling_method']
