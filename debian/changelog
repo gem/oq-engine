@@ -1,3 +1,6 @@
+  [Francis Bernales]
+  * Added the Gulerce et al. (2017) GMPE
+
   [Michele Simionato]
   * Changed the logic tree sampling algorithm and made it possible to use
     both `early_weights` and `late_weights`
@@ -111,7 +114,7 @@
   * Ported the method serialise_to_hmtk_csv implemented in the corresponding
     class of the catalogue toolkit + added a test into the GCMTCatalogue class.
   * Added a modifiable GMPE using the site term of CY14.
-  * Added a generalised modificable GMPE. This first version allows the 
+  * Added a generalised modificable GMPE. This first version allows the
     definition of the epsilon of the within event residual.
 
   [Michele Simionato]
