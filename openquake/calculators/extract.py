@@ -230,6 +230,15 @@ def extract_realizations(dstore, dummy):
     return arr
 
 
+@extract.add('weights')
+def extract_weights(dstore, what):
+    """
+    Extract the realization weights
+    """
+    rlzs = dstore['full_lt'].get_realizations()
+    return numpy.array([rlz.weight['weight'] for rlz in rlzs])
+
+
 @extract.add('gsims_by_trt')
 def extract_gsims_by_trt(dstore, what):
     """

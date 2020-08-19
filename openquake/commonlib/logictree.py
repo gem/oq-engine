@@ -418,9 +418,9 @@ class SourceModelLogicTree(object):
                     self.num_samples, self.seed, self.sampling_method):
                 name = branches[0].value
                 smlt_path_ids = [br.branch_id for br in branches]
-                if self.sampling_method == 'early_weights':
-                    weight = 1. / self.num_samples
-                elif self.sampling_method == 'late_weights':
+                if self.sampling_method.startswith('early_'):
+                    weight = 1. / self.num_samples  # already accounted
+                elif self.sampling_method.startswith('late_'):
                     weight = numpy.prod([br.weight for br in branches])
                 else:
                     raise NotImplementedError(self.sampling_method)
@@ -1291,7 +1291,7 @@ class FullLogicTree(object):
         """
         rlzs = sum((self.get_rlzs(sm.ordinal) for sm in self.sm_rlzs), [])
         assert rlzs, 'No realizations found??'
-        if self.num_samples and self.sampling_method == 'early_weights':
+        if self.num_samples and self.sampling_method.startswith('early_'):
             assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
             for rlz in rlzs:
                 for k in rlz.weight.dic:

@@ -740,20 +740,6 @@ def view_pmap(token, dstore):
     return str(pmap)
 
 
-@view.add('act_ruptures_by_src')
-def view_act_ruptures_by_src(token, dstore):
-    """
-    Display the actual number of ruptures by source in event based calculations
-    """
-    data = dstore['ruptures'][('source_id', 'grp_id', 'rup_id')]
-    counts = sorted(countby(data, 'source_id').items(),
-                    key=operator.itemgetter(1), reverse=True)
-    table = [['src_id', 'grp_id', 'act_ruptures']]
-    for source_id, act_ruptures in counts:
-        table.append([source_id, src['grp_id'], act_ruptures])
-    return rst_table(table)
-
-
 @view.add('bad_ruptures')
 def view_bad_ruptures(token, dstore):
     """
