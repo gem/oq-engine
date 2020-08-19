@@ -342,6 +342,8 @@ def latin_choice(weights, size, seed):
     array([2, 3, 5])
     >>> # perfectly consistent with the weights already at 10
     """
+    if size == 1:  # cannot make the stratification
+        return random_choice(weights, size, seed)
     numpy.random.seed(seed)
     idxs = numpy.argsort(numpy.random.uniform(size=size))
     # the idea of using argsort comes from
