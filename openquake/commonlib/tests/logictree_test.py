@@ -15,19 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-"""
-Tests for python logic tree processor.
-"""
-
 import os
 import codecs
 import unittest
 import collections
-
-import numpy
 from xml.parsers.expat import ExpatError
 from copy import deepcopy
+import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
@@ -44,7 +38,8 @@ DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
-    def __init__(self, filename, files, basepath=''):
+    def __init__(self, filename, files):
+        # files is a dictionary name -> text containing also filename
         self.files = files
         f = gettemp(files[filename], suffix='.' + filename)
         super().__init__(f)
@@ -2204,7 +2199,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
 
 class SerializeSmltTestCase(unittest.TestCase):
     def test(self):
-        sm = gettemp('''\
+        sm = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -2236,9 +2231,9 @@ class SerializeSmltTestCase(unittest.TestCase):
             </hypoDepthDist>
         </areaSource>
     </sourceModel>
-</nrml>''')
+</nrml>'''
 
-        lt = gettemp('''\
+        lt = '''\
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -2276,17 +2271,18 @@ class SerializeSmltTestCase(unittest.TestCase):
             </logicTreeBranchSet>
     </logicTree>
 </nrml>
-''')
-        raise unittest.SkipTest
-        smlt1 = _TestableSourceModelLogicTree(lt, {'source_model.xml': sm})
+'''
+        smlta = _TestableSourceModelLogicTree(
+            'lt', {'lt': lt, 'source_model.xml': sm})
         with hdf5.File.temporary() as h5:
-            h5['smlt'] = smlt1
-        with h5:  # deserialize
-            smlt2 = h5['smlt']
+            h5['smlt'] = smlta
+        with hdf5.File(h5.path) as h5:  # deserialize
+            smltb = h5['smlt']
         # check the deserialized SMLT is equal to the original one
-        for b1, b2 in zip(smlt1.branches, smlt2.branches):
-            self.assertEqual(b1, b2)
-        os.remove(h5.path)
+        for brid in ['b11', 'b21', 'b31']:
+            ba = smlta.branches[brid]
+            bb = smltb.branches[brid]
+            self.assertEqual(repr(ba), repr(bb))
 
 
 class TaxonomyMappingTestCase(unittest.TestCase):
