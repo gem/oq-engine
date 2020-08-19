@@ -267,12 +267,12 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
-        self.assertEqual({b'b11~BA': 332,  # w = .6 * .5 = .30
-                          b'b11~CB': 162,  # w = .6 * .3 = .18
-                          b'b11~CY': 115,  # w = .6 * .2 = .12
-                          b'b12~BA': 209,  # w = .4 * .5 = .20
-                          b'b12~CB': 108,  # w = .4 * .3 = .12
-                          b'b12~CY': 74},  # w = .4 * .2 = .08
+        self.assertEqual({b'b11~BA': 310,  # w = .6 * .5 = .30
+                          b'b11~CB': 176,  # w = .6 * .3 = .18
+                          b'b11~CY': 123,  # w = .6 * .2 = .12
+                          b'b12~BA': 190,  # w = .4 * .5 = .20
+                          b'b12~CB': 124,  # w = .4 * .3 = .12
+                          b'b12~CY': 77},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']
@@ -282,7 +282,7 @@ class EventBasedTestCase(CalculatorTestCase):
         mean_cl = get_mean_curves(self.calc.cl.datastore, 'PGA')
         reldiff, _index = max_rel_diff_index(
             mean_cl, mean_eb, min_value=0.1)
-        self.assertLess(reldiff, 0.07)
+        self.assertLess(reldiff, 0.05)
 
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
