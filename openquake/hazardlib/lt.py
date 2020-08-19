@@ -501,7 +501,7 @@ class BranchSet(object):
         :param sampling_method: the sampling method (i.e. 'early_weights')
         :returns: a list of num_samples lists of branches
         """
-        numpy.random.seed(seed)
+        numpy.random.seed(seed - 1)
         xs = numpy.random.uniform(size=num_samples)
         if sampling_method.endswith('_latin'):
             xs = (numpy.argsort(xs) + xs) / num_samples
