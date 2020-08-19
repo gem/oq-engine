@@ -267,6 +267,7 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
+        import pdb; pdb.set_trace()
         self.assertEqual({b'b11~BA': 310,  # w = .6 * .5 = .30
                           b'b11~CB': 176,  # w = .6 * .3 = .18
                           b'b11~CY': 123,  # w = .6 * .2 = .12

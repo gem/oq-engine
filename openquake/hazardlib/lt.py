@@ -342,12 +342,11 @@ def latin_choice(cdf, size, seed):
     array([2, 3, 5])
     >>> # perfectly consistent with the weights already at 10
     """
-    assert size > 1, size
     numpy.random.seed(seed)
-    idxs = numpy.argsort(numpy.random.uniform(size=size))
+    xs = numpy.random.uniform(size=size)
     # the idea of using argsort comes from
     # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
-    probs = (idxs + 0.5) / size
+    probs = (numpy.argsort(xs) + xs) / size
     # numpy.searchsorted is inverting the cumulative discrete distribution
     # function, i.e. finding the bins corresponding to given probabilities
     return numpy.searchsorted(cdf, probs)
@@ -505,7 +504,7 @@ class BranchSet(object):
         numpy.random.seed(seed)
         xs = numpy.random.uniform(size=num_samples)
         if sampling_method.endswith('_latin'):
-            xs = (numpy.argsort(xs) + 0.5) / num_samples
+            xs = (numpy.argsort(xs) + xs) / num_samples
         out = []
         for x in xs:
             branchset = self
