@@ -638,7 +638,11 @@ class SourceModelLogicTree(object):
         bsets = []
         self.branches = {}
         self.bsetdict = {}
-        for bsid, rows in group_array(array, 'branchset').items():
+        acc = AccumDict(accum=[])  # bsid -> rows
+        for rec in array:
+            # NB: it is important to keep the order of the branchsets
+            acc[rec['branchset']].append(rec)
+        for bsid, rows in acc.items():
             utype = rows[0]['utype']
             bset = BranchSet(utype, [])  # TODO: filters
             bset.id = bsid
