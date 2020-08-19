@@ -305,8 +305,7 @@ def apply_uncertainties(bset_values, src_group):
         sg.sources.extend(srcs)
     return sg
 
-
-# ######################### branches and branchsets ######################## #
+# ######################### sampling ######################## #
 
 
 def random_choice(weights, size, seed):
@@ -329,6 +328,30 @@ def random_choice(weights, size, seed):
     return numpy.searchsorted(numpy.cumsum(weights), x)
 
 
+def latin_choice(weights, size, seed):
+    """
+    :param weights: an array of w-weights
+    :param size: size of the returned array
+    :param seed: random seed
+    :returns: an array of indices in the range 0..w-1 of the specified size
+
+    The latin choice is a lot more convergent than the regular random choice:
+
+    >>> w = numpy.array([.2, .3, .5])
+    >>> numpy.bincount(latin_choice(w, 10, seed=42))
+    array([2, 3, 5])
+    >>> # perfectly consistent with the weights already at 10
+    """
+    numpy.random.seed(seed)
+    idxs = numpy.argsort(numpy.random.uniform(size=size))
+    # the idea of using argsort comes from
+    # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
+    probs = (idxs + 0.5) / size
+    # numpy.searchsorted is inverting the cumulative discrete distribution
+    # function, i.e. finding the bins corresponding to given probabilities
+    return numpy.searchsorted(numpy.cumsum(weights), probs)
+
+
 def sample(weighted_objects, num_samples, seed, sampling_method):
     """
     Take random samples of a sequence of weighted objects
@@ -345,7 +368,9 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
     :return:
         A subsequence of the original sequence with `num_samples` elements
     """
-    if sampling_method == 'early_weights':  # consider the weights
+    choice = (latin_choice if sampling_method.endswith('latin')
+              else random_choice)
+    if sampling_method.startswith('early_'):  # consider the weights
         weights = []
         for obj in weighted_objects:
             w = obj.weight
@@ -353,14 +378,16 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
                 weights.append(w)
             else:
                 weights.append(w['weight'])
-        idxs = random_choice(weights, num_samples, seed)
-    elif sampling_method == 'late_weights':
+        idxs = choice(weights, num_samples, seed)
+    elif sampling_method.startswith('late_'):
         n = len(weighted_objects)  # consider all weights equal
-        idxs = random_choice(numpy.ones(n) / n, num_samples, seed)
+        idxs = choice(numpy.ones(n) / n, num_samples, seed)
     else:
         raise NotImplementedError(sampling_method)
     # NB: returning an array would break things
     return [weighted_objects[idx] for idx in idxs]
+
+# ######################### branches and branchsets ######################## #
 
 
 class Branch(object):
