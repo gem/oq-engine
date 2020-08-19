@@ -354,6 +354,17 @@ def latin_choice(weights, size, seed):
     return numpy.searchsorted(numpy.cumsum(weights), probs)
 
 
+def _weights(weighted_objects):
+    weights = []
+    for obj in weighted_objects:
+        w = obj.weight
+        if isinstance(obj.weight, float):
+            weights.append(w)
+        else:
+            weights.append(w['weight'])
+    return weights
+
+
 def sample(weighted_objects, num_samples, seed, sampling_method):
     """
     Take random samples of a sequence of weighted objects
@@ -373,14 +384,7 @@ def sample(weighted_objects, num_samples, seed, sampling_method):
     choice = (latin_choice if sampling_method.endswith('latin')
               else random_choice)
     if sampling_method.startswith('early_'):  # consider the weights
-        weights = []
-        for obj in weighted_objects:
-            w = obj.weight
-            if isinstance(obj.weight, float):
-                weights.append(w)
-            else:
-                weights.append(w['weight'])
-        idxs = choice(weights, num_samples, seed)
+        idxs = choice(_weights(weighted_objects), num_samples, seed)
     elif sampling_method.startswith('late_'):
         n = len(weighted_objects)  # consider all weights equal
         idxs = choice(numpy.ones(n) / n, num_samples, seed)
@@ -499,16 +503,21 @@ class BranchSet(object):
         :param sampling_method: the sampling method (i.e. 'early_weights')
         :returns: a list of num_samples lists of branches
         """
+        numpy.random.seed(seed)
         out = []
-        for s in range(num_samples):
+        xs = numpy.random.uniform(size=num_samples)
+        if sampling_method.endswith('_latin'):
+            xs = (numpy.argsort(xs) + 0.5) / num_samples
+        for x in xs:
             branchset = self
             branches = []
             while branchset is not None:
                 if branchset.collapsed:
                     branch = branchset.branches[0]
                 else:
-                    [branch] = sample(branchset.branches, 1, seed + s,
-                                      sampling_method)
+                    weights = _weights(branchset.branches)
+                    idx = numpy.searchsorted(numpy.cumsum(weights), x)
+                    branch = branchset.branches[idx]
                 branches.append(branch)
                 branchset = branch.bset
             out.append(branches)

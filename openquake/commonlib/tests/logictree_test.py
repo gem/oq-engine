@@ -2152,8 +2152,8 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
             sampling_method='early_weights')
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b1_b23', 'b3', 'b2', 'b1_b23', 'b1_b23', 'b2', 'b2',
-                 'b1_b24', 'b1_b22', 'b2']
+        paths = ['b1_b23', 'b3', 'b2', 'b1_b22', 'b1_b22',
+                 'b1_b24', 'b1_b22', 'b1_b23', 'b1_b24', 'b1_b23']
         # b1_b21, b1_b25 and b1_b26 are missing having small weights
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
@@ -2161,7 +2161,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
 
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.1110)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.105)
 
     def test_sampling_late_weights(self):
         fname_ini = os.path.join(
@@ -2171,18 +2171,16 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
             sampling_method='late_weights')
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b2', 'b3', 'b3', 'b1_b22', 'b2', 'b3', 'b3', 'b2',
-                 'b1_b22', 'b3']
-        # b1_b21, b1_b23, b1_b24, b1_b25 and b1_b26 are missing
+        paths = ['b1_b23', 'b3', 'b2', 'b1_b22', 'b1_b22',
+                 'b1_b24', 'b1_b22', 'b1_b23', 'b1_b24', 'b1_b23']
+        # b1_b21, b1_b25 and b1_b26 are missing
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.144766, 0.072383, 0.072383, 0.1018935, 0.144766,
-                   0.072383, 0.072383, 0.144766, 0.1018935, 0.072383]
+        weights = [0.1156396, 0.0622127, 0.1244253, 0.0875768, 0.0875768,
+                   0.1018564, 0.0875768, 0.1156396, 0.1018564, 0.1156396]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
 
-        # the mean 0.1195434 is closer to the true mean 0.13375 than the
-        # early_weight mean 0.111
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.1195434)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.104354885)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch
