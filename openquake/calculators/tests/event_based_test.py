@@ -268,11 +268,11 @@ class EventBasedTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
         self.assertEqual({b'b11~BA': 332,  # w = .6 * .5 = .30
-                          b'b11~CB': 169,  # w = .6 * .3 = .18
-                          b'b11~CY': 108,  # w = .6 * .2 = .12
-                          b'b12~BA': 193,  # w = .4 * .5 = .20
-                          b'b12~CB': 115,  # w = .4 * .3 = .12
-                          b'b12~CY': 83},  # w = .4 * .2 = .08
+                          b'b11~CB': 162,  # w = .6 * .3 = .18
+                          b'b11~CY': 115,  # w = .6 * .2 = .12
+                          b'b12~BA': 209,  # w = .4 * .5 = .20
+                          b'b12~CB': 108,  # w = .4 * .3 = .12
+                          b'b12~CY': 74},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']

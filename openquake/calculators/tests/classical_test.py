@@ -691,7 +691,7 @@ hazard_uhs-std.csv
                               case_51.__file__)
 
     def test_case_52(self):
-        # a case with 2 realizations b1 (w=.9) and b2 (w=.1) and 10 samples
+        # case with 2 GSIM realizations b1 (w=.9) and b2 (w=.1), 10 samples
 
         # late_weights
         self.run_calc(case_52.__file__, 'job.ini')

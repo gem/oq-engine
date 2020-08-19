@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Unified source model logic tree sampling with gsim logic tree sampling
   * Added `early_latin` and `late_latin` sampling algorithms
   * Changed the logic tree sampling algorithm and made it possible to use
     both `early_weights` and `late_weights`
