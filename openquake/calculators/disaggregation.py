@@ -261,6 +261,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                         [pc.array for pc in self.pgetter.get_pcurves(sid)])
                     mean = getters.build_stat_curve(
                         curves, oq.imtls, stats.mean_curve, ws)
+                    # get the closest realization to the mean
                     rlzs[sid] = util.closest_to_ref(curves, mean.array)[:Z]
             self.datastore['best_rlzs'] = rlzs
         else:
