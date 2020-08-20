@@ -317,7 +317,7 @@ def random(size, seed, sampling_method='early_weights'):
     """
     numpy.random.seed(seed)
     xs = numpy.random.uniform(size=size)
-    if sampling_method.endswith('_latin'):
+    if sampling_method.endswith('latin'):
         # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
         try:
             s, d = size
