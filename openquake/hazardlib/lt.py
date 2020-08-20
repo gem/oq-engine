@@ -308,48 +308,24 @@ def apply_uncertainties(bset_values, src_group):
 # ######################### sampling ######################## #
 
 
-def random_choice(cdf, size, seed):
+def random(size, seed, sampling_method='early_weights'):
     """
-    :param cdf: array with the cumulative distribution function
     :param size: size of the returned array
     :param seed: random seed
-    :returns: an array of indices in the range 0..w-1 of the specified size
-
-    >>> cdf = numpy.cumsum([.2, .3, .5])
-    >>> numpy.bincount(random_choice(cdf, 10, seed=42))
-    array([3, 1, 6])
-    >>> numpy.bincount(random_choice(cdf, 100, seed=42))
-    array([28, 25, 47])
-    >>> numpy.bincount(random_choice(cdf, 1000, seed=42))
-    array([225, 278, 497])
-    """
-    numpy.random.seed(seed)
-    x = numpy.random.uniform(size=size)
-    return numpy.searchsorted(cdf, x)
-
-
-def latin_choice(cdf, size, seed):
-    """
-    :param cdf: array with the cumulative distribution function
-    :param size: size of the returned array
-    :param seed: random seed
-    :returns: an array of indices in the range 0..w-1 of the specified size
-
-    The latin choice is a lot more convergent than the regular random choice:
-
-    >>> cdf = numpy.cumsum([.2, .3, .5])
-    >>> numpy.bincount(latin_choice(cdf, 10, seed=42))
-    array([2, 3, 5])
-    >>> # perfectly consistent with the weights already at 10
+    :param sampling_method: 'early_weights', 'early_latin', ...
+    :returns: an array of floats in the range 0..1
     """
     numpy.random.seed(seed)
     xs = numpy.random.uniform(size=size)
-    # the idea of using argsort comes from
-    # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
-    probs = (numpy.argsort(xs) + xs) / size
-    # numpy.searchsorted is inverting the cumulative discrete distribution
-    # function, i.e. finding the bins corresponding to given probabilities
-    return numpy.searchsorted(cdf, probs)
+    if sampling_method.endswith('_latin'):
+        # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
+        try:
+            s, d = size
+        except TypeError:  # cannot unpack non-iterable int object
+            return (numpy.argsort(xs) + xs) / size
+        for i in range(d):
+            xs[:, i] = (numpy.argsort(xs[:, i]) + xs[:, i]) / s
+    return xs
 
 
 def _cdf(weighted_objects):
@@ -363,31 +339,23 @@ def _cdf(weighted_objects):
     return numpy.cumsum(weights)
 
 
-def sample(weighted_objects, num_samples, seed, sampling_method):
+def sample(weighted_objects, probabilities, sampling_method):
     """
     Take random samples of a sequence of weighted objects
 
     :param weighted_objects:
         A finite sequence of objects with a `.weight` attribute.
         The weights must sum up to 1.
-    :param num_samples:
-        The number of samples to return
-    :param seed:
-        A random seed
-    :param sampling_method:
-        If 'early_weights' use the weights, otherwise ignore them
+    :param probabilities:
+        An array of S random numbers in the range 0..1
     :return:
-        A subsequence of the original sequence with `num_samples` elements
+        A list of S objects extracted randomly
     """
-    choice = (latin_choice if sampling_method.endswith('latin')
-              else random_choice)
     if sampling_method.startswith('early_'):  # consider the weights
-        idxs = choice(_cdf(weighted_objects), num_samples, seed)
+        idxs = numpy.searchsorted(_cdf(weighted_objects), probabilities)
     elif sampling_method.startswith('late_'):
         n = len(weighted_objects)  # consider all weights equal
-        idxs = choice(numpy.arange(1/n, 1, 1/n), num_samples, seed)
-    else:
-        raise NotImplementedError(sampling_method)
+        idxs = numpy.searchsorted(numpy.arange(1/n, 1, 1/n), probabilities)
     # NB: returning an array would break things
     return [weighted_objects[idx] for idx in idxs]
 
@@ -502,19 +470,15 @@ class BranchSet(object):
         :returns: a list of num_samples lists of branches
         """
         numpy.random.seed(seed - 1)
-        xs = numpy.random.uniform(size=num_samples)
-        if sampling_method.endswith('_latin'):
-            xs = (numpy.argsort(xs) + xs) / num_samples
         out = []
-        for x in xs:
+        for x in random(num_samples, seed, sampling_method):
             branchset = self
             branches = []
             while branchset is not None:
                 if branchset.collapsed:
                     branch = branchset.branches[0]
                 else:
-                    idx = numpy.searchsorted(_cdf(branchset.branches), x)
-                    branch = branchset.branches[idx]
+                    [branch] = sample(branchset.branches, [x], sampling_method)
                 branches.append(branch)
                 branchset = branch.bset
             out.append(branches)

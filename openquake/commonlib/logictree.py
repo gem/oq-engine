@@ -47,7 +47,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, LogicTreeError, parse_uncertainty, sample)
+    Branch, BranchSet, LogicTreeError, parse_uncertainty, sample, random)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
@@ -414,7 +414,7 @@ class SourceModelLogicTree(object):
             # random sampling of the logic tree
             ordinal = 0
             for branches in self.root_branchset.sample(
-                    self.num_samples, self.seed, self.sampling_method):
+                    self.num_samples, self.seed + 1, self.sampling_method):
                 name = branches[0].value
                 smlt_path_ids = [br.branch_id for br in branches]
                 if self.sampling_method.startswith('early_'):
@@ -1027,8 +1027,10 @@ class GsimLogicTree(object):
         :param sampling_method: by default 'early_weights'
         :returns: n Realization objects
         """
+        m = len(self.values)  # number of TRTs
+        probs = random((n, m), seed, sampling_method)
         brlists = [sample([b for b in self.branches if b.trt == trt],
-                          n, seed + i, sampling_method)
+                          probs[:, i], sampling_method)
                    for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
