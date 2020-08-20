@@ -1409,7 +1409,11 @@ class FullLogicTree(object):
         """
         :returns: a dictionary trt -> sorted gsims
         """
-        return {trt: sorted(gs) for trt, gs in self.gsim_lt.values.items()}
+        rlzs = list(self.gsim_lt)
+        gsims_by_trt = AccumDict(accum=set())
+        for t, trt in enumerate(self.gsim_lt.values):
+            gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
+        return {trt: sorted(gs) for trt, gs in gsims_by_trt.items()}
 
     def get_sm_by_grp(self):
         """
