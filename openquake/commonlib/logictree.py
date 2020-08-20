@@ -47,7 +47,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, LogicTreeError, parse_uncertainty, sample)
+    Branch, BranchSet, LogicTreeError, parse_uncertainty, sample, random)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
@@ -412,9 +412,10 @@ class SourceModelLogicTree(object):
         """
         if self.num_samples:
             # random sampling of the logic tree
+            probs = random(self.num_samples, self.seed, self.sampling_method)
             ordinal = 0
             for branches in self.root_branchset.sample(
-                    self.num_samples, self.seed, self.sampling_method):
+                    probs, self.sampling_method):
                 name = branches[0].value
                 smlt_path_ids = [br.branch_id for br in branches]
                 if self.sampling_method.startswith('early_'):
@@ -1027,8 +1028,10 @@ class GsimLogicTree(object):
         :param sampling_method: by default 'early_weights'
         :returns: n Realization objects
         """
+        m = len(self.values)  # number of TRTs
+        probs = random((n, m), seed, sampling_method)
         brlists = [sample([b for b in self.branches if b.trt == trt],
-                          n, seed + i, sampling_method)
+                          probs[:, i], sampling_method)
                    for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
@@ -1269,16 +1272,20 @@ class FullLogicTree(object):
         :returns: the complete list of LtRealizations
         """
         rlzs = []
+        self._gsims_by_trt = AccumDict(accum=set())  # trt -> gsims
         if self.num_samples:  # sampling
-            sm_rlzs = list(self.source_model_lt)
-            gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed,
+            sm_rlzs = list(self.source_model_lt)  # uses self.seed
+            gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
                                             self.sampling_method)
+            for t, trt in enumerate(self.gsim_lt.values):
+                self._gsims_by_trt[trt].update(g.value[t] for g in gsim_rlzs)
             for i, gsim_rlz in enumerate(gsim_rlzs):
                 rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
                                     sm_rlzs[i].weight * gsim_rlz.weight)
                 rlzs.append(rlz)
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
+            self._gsims_by_trt = self.gsim_lt.values
             i = 0
             for sm_rlz in self.sm_rlzs:
                 for gsim_rlz in gsim_rlzs:
@@ -1406,16 +1413,9 @@ class FullLogicTree(object):
         """
         :returns: a dictionary trt -> sorted gsims
         """
-        if self.num_samples:
-            gsims_by_trt = AccumDict(accum=set())
-            for sm in self.sm_rlzs:
-                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal,
-                                           self.sampling_method)
-                for t, trt in enumerate(self.gsim_lt.values):
-                    gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
-        else:
-            gsims_by_trt = self.gsim_lt.values
-        return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
+        if not hasattr(self, '_gsims_by_trt'):
+            self.get_realizations()
+        return {trt: sorted(gs) for trt, gs in self._gsims_by_trt.items()}
 
     def get_sm_by_grp(self):
         """

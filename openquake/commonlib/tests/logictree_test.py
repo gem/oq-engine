@@ -1266,7 +1266,8 @@ class SampleTestCase(unittest.TestCase):
         branches = [logictree.Branch('BS', 1, 0.2, 'A'),
                     logictree.Branch('BS', 1, 0.3, 'B'),
                     logictree.Branch('BS', 1, 0.5, 'C')]
-        samples = lt.sample(branches, 1000, 42, 'early_weights')
+        probs = lt.random(1000, 42, 'early_weights')
+        samples = lt.sample(branches, probs, 'early_weights')
 
         def count(samples, value):
             return sum(s.value == value for s in samples)
@@ -1278,13 +1279,15 @@ class SampleTestCase(unittest.TestCase):
     def test_sample_broken_branch_weights(self):
         branches = [logictree.Branch('BS', 0, 0.1, 0),
                     logictree.Branch('BS', 1, 0.2, 1)]
+        probs = lt.random(1000, 42, 'early_weights')
         with self.assertRaises(IndexError):
-            lt.sample(branches, 1000, 42, 'early_weights')
+            lt.sample(branches, probs, 'early_weights')
 
     def test_sample_one_branch(self):
         # always the same branch is returned
         branches = [logictree.Branch('BS', 0, 1.0, 0)]
-        bs = lt.sample(branches, 10, 42, 'early_weights')
+        probs = lt.random(1000, 42, 'early_weights')
+        bs = lt.sample(branches, probs, 'early_weights')
         for b in bs:
             self.assertEqual(b.branch_id, 0)
 
@@ -2051,11 +2054,12 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         # test a large number of samples with the algorithm used in the engine
         counter = collections.Counter()
         gsim_rlzs = list(self.parse_valid(xml, ['Volcanic']))
-        for seed in range(1000):
-            [rlz] = lt.sample(gsim_rlzs, 1, seed, 'early_weights')
+        probs = lt.random(1000, 42, 'early_weights')
+        rlzs = lt.sample(gsim_rlzs, probs, 'early_weights')
+        for rlz in rlzs:
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
-        self.assertEqual(counter, {('b1',): 413, ('b2',): 587})
+        self.assertEqual(counter, {('b1',): 421, ('b2',): 579})
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
@@ -2073,7 +2077,8 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.assertEqual(('b1', 'b4', 'b7'), rlz.lt_path)
 
     def test_sample_gmpe(self):
-        [rlz] = lt.sample(list(self.gmpe_lt), 1, self.seed, 'early_weights')
+        probs = lt.random(1, self.seed, 'early_weights')
+        [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
         self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(rlz.weight['default'], 0.5)
         self.assertEqual(('b2', 'b3'), rlz.lt_path)
@@ -2152,8 +2157,8 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
             sampling_method='early_weights')
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b1_b23', 'b3', 'b2', 'b1_b23', 'b1_b23', 'b2', 'b2',
-                 'b1_b24', 'b1_b22', 'b2']
+        paths = ['b1_b23', 'b3', 'b2', 'b1_b22', 'b1_b22', 'b1_b24', 'b1_b22',
+                 'b1_b23', 'b1_b24', 'b1_b23']
         # b1_b21, b1_b25 and b1_b26 are missing having small weights
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
@@ -2161,7 +2166,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
 
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.1110)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.105)
 
     def test_sampling_late_weights(self):
         fname_ini = os.path.join(
@@ -2171,18 +2176,16 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
             sampling_method='late_weights')
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b2', 'b3', 'b3', 'b1_b22', 'b2', 'b3', 'b3', 'b2',
-                 'b1_b22', 'b3']
-        # b1_b21, b1_b23, b1_b24, b1_b25 and b1_b26 are missing
+        paths = ['b2', 'b3', 'b3', 'b1_b22', 'b1_b22', 'b3', 'b1_b22',
+                 'b2', 'b2', 'b2']
+        # b1_b21, b1_b25 and b1_b26 are missing
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.144766, 0.072383, 0.072383, 0.1018935, 0.144766,
-                   0.072383, 0.072383, 0.144766, 0.1018935, 0.072383]
+        weights = [0.1313793, 0.0656896, 0.0656896, 0.0924713, 0.0924713,
+                   0.0656896, 0.0924713, 0.1313793, 0.1313793, 0.1313793]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
 
-        # the mean 0.1195434 is closer to the true mean 0.13375 than the
-        # early_weight mean 0.111
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.1195434)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.11642241)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch

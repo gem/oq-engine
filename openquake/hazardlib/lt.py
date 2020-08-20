@@ -308,84 +308,71 @@ def apply_uncertainties(bset_values, src_group):
 # ######################### sampling ######################## #
 
 
-def random_choice(weights, size, seed):
+def random(size, seed, sampling_method='early_weights'):
     """
-    :param weights: an array of w-weights
-    :param size: size of the returned array
+    :param size: size of the returned array (integer or pair of integers)
     :param seed: random seed
-    :returns: an array of indices in the range 0..w-1 of the specified size
+    :param sampling_method: 'early_weights', 'early_latin', ...
+    :returns: an array of floats in the range 0..1
 
-    >>> w = numpy.array([.2, .3, .5])
-    >>> numpy.bincount(random_choice(w, 10, seed=42))
-    array([3, 1, 6])
-    >>> numpy.bincount(random_choice(w, 100, seed=42))
-    array([28, 25, 47])
-    >>> numpy.bincount(random_choice(w, 1000, seed=42))
-    array([225, 278, 497])
+    You can compare montecarlo sampling with latin square sampling with
+    the following code:
+
+    import matplotlib.pyplot as plt
+    samples, seed = 10, 42
+    x, y = random((samples, 2), seed, 'early_latin').T
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.scatter(x, y, color='green')  # points on a latin square
+    x, y = random((samples, 2), seed, 'early_weights').T
+    plt.scatter(x, y, color='red')  # points NOT on a latin square
+    for x in numpy.arange(0, 1, 1/samples):
+        for y in numpy.arange(0, 1, 1/samples):
+            plt.axvline(x)
+            plt.axhline(y)
+    plt.show()
     """
     numpy.random.seed(seed)
-    x = numpy.random.uniform(size=size)
-    return numpy.searchsorted(numpy.cumsum(weights), x)
+    xs = numpy.random.uniform(size=size)
+    if sampling_method.endswith('latin'):
+        # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
+        try:
+            s, d = size
+        except TypeError:  # cannot unpack non-iterable int object
+            return (numpy.argsort(xs) + xs) / size
+        for i in range(d):
+            xs[:, i] = (numpy.argsort(xs[:, i]) + xs[:, i]) / s
+    return xs
 
 
-def latin_choice(weights, size, seed):
-    """
-    :param weights: an array of w-weights
-    :param size: size of the returned array
-    :param seed: random seed
-    :returns: an array of indices in the range 0..w-1 of the specified size
-
-    The latin choice is a lot more convergent than the regular random choice:
-
-    >>> w = numpy.array([.2, .3, .5])
-    >>> numpy.bincount(latin_choice(w, 10, seed=42))
-    array([2, 3, 5])
-    >>> # perfectly consistent with the weights already at 10
-    """
-    if size == 1:  # cannot make the stratification
-        return random_choice(weights, size, seed)
-    numpy.random.seed(seed)
-    idxs = numpy.argsort(numpy.random.uniform(size=size))
-    # the idea of using argsort comes from
-    # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
-    probs = (idxs + 0.5) / size
-    # numpy.searchsorted is inverting the cumulative discrete distribution
-    # function, i.e. finding the bins corresponding to given probabilities
-    return numpy.searchsorted(numpy.cumsum(weights), probs)
+def _cdf(weighted_objects):
+    weights = []
+    for obj in weighted_objects:
+        w = obj.weight
+        if isinstance(obj.weight, float):
+            weights.append(w)
+        else:
+            weights.append(w['weight'])
+    return numpy.cumsum(weights)
 
 
-def sample(weighted_objects, num_samples, seed, sampling_method):
+def sample(weighted_objects, probabilities, sampling_method):
     """
     Take random samples of a sequence of weighted objects
 
     :param weighted_objects:
         A finite sequence of objects with a `.weight` attribute.
         The weights must sum up to 1.
-    :param num_samples:
-        The number of samples to return
-    :param seed:
-        A random seed
-    :param sampling_method:
-        If 'early_weights' use the weights, otherwise ignore them
+    :param probabilities:
+        An array of S random numbers in the range 0..1
     :return:
-        A subsequence of the original sequence with `num_samples` elements
+        A list of S objects extracted randomly
     """
-    choice = (latin_choice if sampling_method.endswith('latin')
-              else random_choice)
     if sampling_method.startswith('early_'):  # consider the weights
-        weights = []
-        for obj in weighted_objects:
-            w = obj.weight
-            if isinstance(obj.weight, float):
-                weights.append(w)
-            else:
-                weights.append(w['weight'])
-        idxs = choice(weights, num_samples, seed)
+        idxs = numpy.searchsorted(_cdf(weighted_objects), probabilities)
     elif sampling_method.startswith('late_'):
         n = len(weighted_objects)  # consider all weights equal
-        idxs = choice(numpy.ones(n) / n, num_samples, seed)
-    else:
-        raise NotImplementedError(sampling_method)
+        idxs = numpy.searchsorted(numpy.arange(1/n, 1, 1/n), probabilities)
     # NB: returning an array would break things
     return [weighted_objects[idx] for idx in idxs]
 
@@ -492,23 +479,22 @@ class BranchSet(object):
         self.filters = filters or {}
         self.collapsed = collapsed
 
-    def sample(self, num_samples, seed, sampling_method):
+    def sample(self, probabilities, sampling_method):
         """
         :param num_samples: the number of samples
-        :param seed: the seed used for the sampling
-        :param sampling_method: the sampling method (i.e. 'early_weights')
+        :param probabilities: random numbers in the range 0..1
+        :param sampling_method: the sampling method used
         :returns: a list of num_samples lists of branches
         """
         out = []
-        for s in range(num_samples):
+        for x in probabilities:
             branchset = self
             branches = []
             while branchset is not None:
                 if branchset.collapsed:
                     branch = branchset.branches[0]
                 else:
-                    [branch] = sample(branchset.branches, 1, seed + s,
-                                      sampling_method)
+                    [branch] = sample(branchset.branches, [x], sampling_method)
                 branches.append(branch)
                 branchset = branch.bset
             out.append(branches)
