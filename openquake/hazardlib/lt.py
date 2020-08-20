@@ -479,16 +479,15 @@ class BranchSet(object):
         self.filters = filters or {}
         self.collapsed = collapsed
 
-    def sample(self, num_samples, seed, sampling_method):
+    def sample(self, probabilities, sampling_method):
         """
         :param num_samples: the number of samples
-        :param seed: the seed used for the sampling
-        :param sampling_method: the sampling method (i.e. 'early_weights')
+        :param probabilities: random numbers in the range 0..1
+        :param sampling_method: the sampling method used
         :returns: a list of num_samples lists of branches
         """
-        numpy.random.seed(seed - 1)
         out = []
-        for x in random(num_samples, seed, sampling_method):
+        for x in probabilities:
             branchset = self
             branches = []
             while branchset is not None:
