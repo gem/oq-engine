@@ -696,17 +696,17 @@ hazard_uhs-std.csv
         # late_weights
         self.run_calc(case_52.__file__, 'job.ini')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.555297, rtol=1E-6)
+        aac(haz, 0.563831, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         # sampled 8 times b1 and 2 times b2
-        aac(ws, [0.121622, 0.013514, 0.121622, 0.121622, 0.121622, 0.121622,
-                 0.121622, 0.121622, 0.013514, 0.121622], rtol=4E-5)
+        aac(ws, [0.029412, 0.029412, 0.029412, 0.264706, 0.264706, 0.029412,
+                 0.029412, 0.264706, 0.029412, 0.029412], rtol=1E-5)
 
         # early_weights
         self.run_calc(case_52.__file__, 'job.ini',
                       sampling_method='early_weights')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.558779, rtol=1E-6)
+        aac(haz, 0.56355, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         aac(ws, [0.1] * 10)  # all equal
 
@@ -725,7 +725,7 @@ hazard_uhs-std.csv
         aac(haz, 0.558779, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         # sampled 5 times b1 and 5 times b2
-        aac(ws, [0.18, 0.02, 0.18, 0.02, 0.18, 0.02, 0.18, 0.02, 0.02, 0.18])
+        aac(ws, [0.18, 0.02, 0.18, 0.18, 0.02, 0.02, 0.02, 0.02, 0.18, 0.18])
 
         self.run_calc(case_52.__file__, 'job.ini',
                       sampling_method='early_latin')
