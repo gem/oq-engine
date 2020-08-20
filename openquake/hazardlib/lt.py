@@ -314,6 +314,23 @@ def random(size, seed, sampling_method='early_weights'):
     :param seed: random seed
     :param sampling_method: 'early_weights', 'early_latin', ...
     :returns: an array of floats in the range 0..1
+
+    You can compare montecarlo sampling with latin square sampling with
+    the following code:
+
+    import matplotlib.pyplot as plt
+    samples, seed = 10, 42
+    x, y = random((samples, 2), seed, 'early_latin').T
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.scatter(x, y, color='green')  # points on a latin square
+    x, y = random((samples, 2), seed, 'early_weights').T
+    plt.scatter(x, y, color='red')  # points NOT on a latin square
+    for x in numpy.arange(0, 1, 1/samples):
+        for y in numpy.arange(0, 1, 1/samples):
+            plt.axvline(x)
+            plt.axhline(y)
+    plt.show()
     """
     numpy.random.seed(seed)
     xs = numpy.random.uniform(size=size)
