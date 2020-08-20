@@ -1285,8 +1285,7 @@ class FullLogicTree(object):
                 rlzs.append(rlz)
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
-            for t, trt in enumerate(self.gsim_lt.values):
-                self._gsims_by_trt[trt].update(g.value[t] for g in gsim_rlzs)
+            self._gsims_by_trt = self.gsim_lt.values
             i = 0
             for sm_rlz in self.sm_rlzs:
                 for gsim_rlz in gsim_rlzs:
