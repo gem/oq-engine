@@ -1414,6 +1414,8 @@ class FullLogicTree(object):
         """
         :returns: a dictionary trt -> sorted gsims
         """
+        if not hasattr(self, '_gsims_by_trt'):
+            self.get_realizations()
         return {trt: sorted(gs) for trt, gs in self._gsims_by_trt.items()}
 
     def get_sm_by_grp(self):
