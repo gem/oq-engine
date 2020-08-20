@@ -412,8 +412,7 @@ class SourceModelLogicTree(object):
         """
         if self.num_samples:
             # random sampling of the logic tree
-            probs = random(self.num_samples, self.seed - 1,
-                           self.sampling_method)
+            probs = random(self.num_samples, self.seed, self.sampling_method)
             ordinal = 0
             for branches in self.root_branchset.sample(
                     probs, self.sampling_method):
@@ -1274,8 +1273,8 @@ class FullLogicTree(object):
         """
         rlzs = []
         if self.num_samples:  # sampling
-            sm_rlzs = list(self.source_model_lt)
-            gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed,
+            sm_rlzs = list(self.source_model_lt)  # uses self.seed
+            gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
                                             self.sampling_method)
             for i, gsim_rlz in enumerate(gsim_rlzs):
                 rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
@@ -1410,16 +1409,7 @@ class FullLogicTree(object):
         """
         :returns: a dictionary trt -> sorted gsims
         """
-        if self.num_samples:
-            gsims_by_trt = AccumDict(accum=set())
-            for sm in self.sm_rlzs:
-                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal,
-                                           self.sampling_method)
-                for t, trt in enumerate(self.gsim_lt.values):
-                    gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
-        else:
-            gsims_by_trt = self.gsim_lt.values
-        return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
+        return {trt: sorted(gs) for trt, gs in self.gsim_lt.values.items()}
 
     def get_sm_by_grp(self):
         """

@@ -2074,7 +2074,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_source_model(self):
         [rlz] = self.source_model_lt
         self.assertEqual(rlz.value, 'example-source-model.xml')
-        self.assertEqual(('b1', 'b5', 'b8'), rlz.lt_path)
+        self.assertEqual(('b1', 'b4', 'b7'), rlz.lt_path)
 
     def test_sample_gmpe(self):
         probs = lt.random(1, self.seed, 'early_weights')
@@ -2157,8 +2157,8 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
             sampling_method='early_weights')
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b3', 'b1_b24', 'b3', 'b1_b22', 'b1_b23', 'b2', 'b3',
-                 'b1_b23', 'b1_b22', 'b1_b23']
+        paths = ['b1_b23', 'b3', 'b2', 'b1_b22', 'b1_b22', 'b1_b24', 'b1_b22',
+                 'b1_b23', 'b1_b24', 'b1_b23']
         # b1_b21, b1_b25 and b1_b26 are missing having small weights
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
@@ -2166,7 +2166,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
 
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.111)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.105)
 
     def test_sampling_late_weights(self):
         fname_ini = os.path.join(
@@ -2176,16 +2176,16 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
             sampling_method='late_weights')
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b3', 'b3', 'b3', 'b1_b22', 'b2', 'b3', 'b3', 'b1_b22',
-                 'b1_b21', 'b2']
+        paths = ['b2', 'b3', 'b3', 'b1_b22', 'b1_b22', 'b3', 'b1_b22',
+                 'b2', 'b2', 'b2']
         # b1_b21, b1_b25 and b1_b26 are missing
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.0802228, 0.0802228, 0.0802228, 0.1129297, 0.1604457,
-                   0.0802228, 0.0802228, 0.1129297, 0.0521352, 0.1604457]
+        weights = [0.1313793, 0.0656896, 0.0656896, 0.0924713, 0.0924713,
+                   0.0656896, 0.0924713, 0.1313793, 0.1313793, 0.1313793]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
 
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.11845125)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.11642241)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch
