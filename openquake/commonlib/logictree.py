@@ -1272,16 +1272,21 @@ class FullLogicTree(object):
         :returns: the complete list of LtRealizations
         """
         rlzs = []
+        self._gsims_by_trt = AccumDict(accum=set())  # trt -> gsims
         if self.num_samples:  # sampling
             sm_rlzs = list(self.source_model_lt)  # uses self.seed
             gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
                                             self.sampling_method)
+            for t, trt in enumerate(self.gsim_lt.values):
+                self._gsims_by_trt[trt].update(g.value[t] for g in gsim_rlzs)
             for i, gsim_rlz in enumerate(gsim_rlzs):
                 rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
                                     sm_rlzs[i].weight * gsim_rlz.weight)
                 rlzs.append(rlz)
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
+            for t, trt in enumerate(self.gsim_lt.values):
+                self._gsims_by_trt[trt].update(g.value[t] for g in gsim_rlzs)
             i = 0
             for sm_rlz in self.sm_rlzs:
                 for gsim_rlz in gsim_rlzs:
@@ -1409,11 +1414,7 @@ class FullLogicTree(object):
         """
         :returns: a dictionary trt -> sorted gsims
         """
-        rlzs = list(self.gsim_lt)
-        gsims_by_trt = AccumDict(accum=set())
-        for t, trt in enumerate(self.gsim_lt.values):
-            gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
-        return {trt: sorted(gs) for trt, gs in gsims_by_trt.items()}
+        return {trt: sorted(gs) for trt, gs in self._gsims_by_trt.items()}
 
     def get_sm_by_grp(self):
         """
