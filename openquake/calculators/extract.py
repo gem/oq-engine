@@ -33,7 +33,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.calc import disagg, stochastic
+from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation, writers
@@ -228,6 +228,15 @@ def extract_realizations(dstore, dummy):
     else:
         arr['branch_path'] = rlzs['branch_path']
     return arr
+
+
+@extract.add('weights')
+def extract_weights(dstore, what):
+    """
+    Extract the realization weights
+    """
+    rlzs = dstore['full_lt'].get_realizations()
+    return numpy.array([rlz.weight['weight'] for rlz in rlzs])
 
 
 @extract.add('gsims_by_trt')
@@ -1149,6 +1158,7 @@ def extract_disagg_layer(dstore, what):
     """
     qdict = parse(what)
     oq = dstore['oqparam']
+    oq.maximum_distance = filters.MagDepDistance(oq.maximum_distance)
     if 'kind' in qdict:
         kinds = qdict['kind']
     else:
@@ -1160,7 +1170,7 @@ def extract_disagg_layer(dstore, what):
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
     realizations = numpy.array(dstore['full_lt'].get_realizations())
-    iml4 = dstore['iml4'][:]
+    hmap4 = dstore['hmap4'][:]
     best_rlzs = dstore['best_rlzs'][:]
     arr = {kind: dstore['disagg/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
@@ -1178,7 +1188,7 @@ def extract_disagg_layer(dstore, what):
                 for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
                     rec[key] = arr[kind][sid, m, p] @ ws
-                rec['iml-%s-%s' % (imt, poe)] = iml4[sid, m, p]
+                rec['iml-%s-%s' % (imt, poe)] = hmap4[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 

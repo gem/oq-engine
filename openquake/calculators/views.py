@@ -680,7 +680,7 @@ def view_mean_disagg(token, dstore):
     Display mean quantities for the disaggregation. Useful for checking
     differences between two calculations.
     """
-    N, M, P, Z = dstore['iml4'].shape
+    N, M, P, Z = dstore['hmap4'].shape
     tbl = []
     kd = {key: dset[:] for key, dset in sorted(dstore['disagg'].items())}
     oq = dstore['oqparam']
@@ -738,20 +738,6 @@ def view_pmap(token, dstore):
     pgetter = getters.PmapGetter(dstore, weights)
     pmap = pgetter.get_mean(grp)
     return str(pmap)
-
-
-@view.add('act_ruptures_by_src')
-def view_act_ruptures_by_src(token, dstore):
-    """
-    Display the actual number of ruptures by source in event based calculations
-    """
-    data = dstore['ruptures'][('source_id', 'grp_id', 'rup_id')]
-    counts = sorted(countby(data, 'source_id').items(),
-                    key=operator.itemgetter(1), reverse=True)
-    table = [['src_id', 'grp_id', 'act_ruptures']]
-    for source_id, act_ruptures in counts:
-        table.append([source_id, src['grp_id'], act_ruptures])
-    return rst_table(table)
 
 
 @view.add('bad_ruptures')
