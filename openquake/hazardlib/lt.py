@@ -310,7 +310,7 @@ def apply_uncertainties(bset_values, src_group):
 
 def random(size, seed, sampling_method='early_weights'):
     """
-    :param size: size of the returned array
+    :param size: size of the returned array (integer or pair of integers)
     :param seed: random seed
     :param sampling_method: 'early_weights', 'early_latin', ...
     :returns: an array of floats in the range 0..1
