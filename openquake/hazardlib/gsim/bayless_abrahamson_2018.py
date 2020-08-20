@@ -22,8 +22,7 @@ Module exports :class:`BaylessAbrahamson2018`
 
 import re
 import numpy as np
-
-import statsmodels.api as sm
+# import statsmodels.api as sm
 from scipy import interpolate
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -175,6 +174,7 @@ class BaylessAbrahamson2018(GMPE):
             fnl = f2 * np.log((np.exp(ln_ir_outcrop)+TC['f3'])/TC['f3'])
             nl_terms.append(fnl)
 
+        """
         meth = sm.nonparametric.lowess
         endog = np.squeeze(np.array(nl_terms))
 
@@ -195,6 +195,7 @@ class BaylessAbrahamson2018(GMPE):
                 plt.plot(freqs[idx_lo:idx_up], nl_terms, label='raw')
                 plt.legend()
                 plt.show()
+        """
 
         return fsl + fnl
 

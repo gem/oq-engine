@@ -76,7 +76,10 @@ def get_distances(rupture, sites, param):
     elif param == 'azimuth_cp':
         dist = rupture.surface.get_azimuth_of_closest_point(sites)
     elif param == 'closest_pnts':
-        dist = rupture.surface.get_closest_points(sites)
+        t = rupture.surface.get_closest_points(sites)
+        dist = numpy.array([(lo, la, de) for lo, la, de in zip(t.lons,
+                                                               t.lats,
+                                                               t.depths)])
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)

@@ -21,6 +21,7 @@ Module exports :class:`Sung2020`
 """
 
 import os
+import h5py
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -53,11 +54,6 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
                 self._ztor_scaling(C, rup) +
                 self._site_response(C, sites.vs30, imt))
 
-        print(self._magnitude_scaling(C, rup),
-              self._path_scaling(C, rup, dists),
-              self._ztor_scaling(C, rup),
-              self._site_response(C, sites.vs30, imt))
-
         # Get standard deviations
         stddevs = self._get_stddevs(C, rup, stddev_types, sites.vs30)
         return mean, stddevs
@@ -68,7 +64,7 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
         t2 = C['c2'] * (rup.mag - 6.)
         tmp = np.log(1.0 + np.exp(C['cn']*(C['cM']-rup.mag)))
         t3 = C['c3'] * tmp
-        t3 = (C['c2'] - C['c3'])/C['cn'] * tmp
+        #t3 = (C['c2'] - C['c3'])/C['cn'] * tmp
         return t1 + t2 + t3
 
     def _site_response(self, C, vs30, imt):
@@ -98,8 +94,8 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
         return stddevs
 
 
-    COEFF = CoeffsTable(sa_damping=5, table="""\
-IMT c1           c2   c3           c4     c5          c6          c7           c8           c9           cn          cM          chm         tot   tau   phi   site_sd record_sd
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+IMT c1             c2   c3           c4     c5          c6          c7           c8           c9           cn          cM          chm         tot   tau   phi   site_sd record_sd
 f_1.0 -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909 6           3.811150377 1.025 0.6   0.805 0.569 0.523
 f_5.0 -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202382 -0.699440349 0.031866505  14.31473379 5.165553252 3.507442691 0.94  0.439 0.78  0.509 0.53
 """)
@@ -116,6 +112,7 @@ class SungAbrahamson2020NonErgodic(SungAbrahamson2020):
 
         super().__init__(**kwargs)
         self.adjustment_file = kwargs.get("adjustment_file", None)
+        self.rlz_id = kwargs.get("rlz_id", "mean")
         msg = 'Adjustment file not found'
         assert os.path.exists(self.adjustment_file), msg
 
@@ -133,7 +130,35 @@ class SungAbrahamson2020NonErgodic(SungAbrahamson2020):
         mean, stddevs = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                    stddev_types)
 
-        # Removing term
+        # Removing ergodic anelastic term
         mean -= C['c7'] * dists.rrup
+
+        # Checking that we use only one site (for the time being)
+        assert len(sites.sites) == 1
+
+        # Read info from the hdf5 file
+        fcoeff = h5py.File(self.adjustment_file, 'r')
+        dat = fcoeff['init'][:]
+        fcoeff.close()
+
+        # Find the closest node of the mesh to the rupture
+        ste = dists.closest_pnts[0]
+        lonn = 'xxx'
+        idx = np.argmin(((dat[lonn] - ste[0])**2 +
+                         (dat['lat'] - ste[1])**2)**0.5)
+
+        # Add the non-ergodic anelastic term
+        if self.rlz_id == 'mean':
+            mean += dat['mea'][idx]
+        else:
+            mean += dat['rlz'][idx][self.rlz_id]
+
+        if (abs(dat[lonn][idx] - ste[0]) > 0.22 or
+                abs(dat['lat'][idx] - ste[1]) > 0.22):
+            print('   Point mesh:', dat[lonn][idx], dat['lat'][idx])
+            print('Point rupture:', ste[0], ste[1])
+            print('      Diff lo:', abs(dat[lonn][idx] - ste[0]))
+            print('      Diff la:', abs(dat['lat'][idx] - ste[1]))
+            raise ValueError('')
 
         return mean, stddevs
