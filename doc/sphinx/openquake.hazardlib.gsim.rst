@@ -562,6 +562,14 @@ gmpe_table
     :undoc-members:
     :show-inheritance:
 
+gulerce_2017
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.gulerce_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 gupta_2010
 ------------------------------------------
 
