@@ -101,7 +101,7 @@ class GmfComputer(object):
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sitecol, imts, cmaker,
                  truncation_level=None, correlation_model=None,
-                 amplifier=None):
+                 amplifier=None, sec_perils=()):
         if len(sitecol) == 0:
             raise ValueError('No sites')
         elif len(imts) == 0:
@@ -113,6 +113,7 @@ class GmfComputer(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.amplifier = amplifier
+        self.sec_perils = sec_perils
         # `rupture` is an EBRupture instance in the engine
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
@@ -136,6 +137,7 @@ class GmfComputer(object):
         t0 = time.time()
         sids = self.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
+        mag = self.ebrupture.rupture.mag
         data = []
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
@@ -162,12 +164,17 @@ class GmfComputer(object):
                         sig_eps.append(tup)
                     for sid, gmv in zip(sids, gmf):
                         if gmv.sum():
-                            data.append((sid, eid, gmv))
+                            secperils = [
+                                sp.compute(mag, sid, gmv)
+                                for sp in self.sec_perils]
+                            data.append((sid, eid, gmv) + tuple(secperils))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += e
         m = (len(min_iml),)
-        d = numpy.array(data, [('sid', U32), ('eid', U32), ('gmv', (F32, m))])
+        dtlist = [('sid', U32), ('eid', U32), ('gmv', (F32, m))] + [
+            (sp.name, F32) for sp in self.sec_perils]
+        d = numpy.array(data, dtlist)
         return d, time.time() - t0
 
     def compute(self, gsim, num_events):

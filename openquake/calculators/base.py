@@ -36,6 +36,7 @@ from openquake.hazardlib import InvalidFile, site
 
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
+from openquake.hazardlib.sec_perils import SecondaryPeril
 
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
@@ -823,9 +824,12 @@ class HazardCalculator(BaseCalculator):
             self.amplifier = None
 
         # used in the risk calculators
+        sec_perils = [SecondaryPeril(pname) for pname in oq.secondary_perils]
         self.param = dict(individual_curves=oq.individual_curves,
                           collapse_level=oq.collapse_level,
-                          avg_losses=oq.avg_losses, amplifier=self.amplifier)
+                          avg_losses=oq.avg_losses,
+                          amplifier=self.amplifier,
+                          sec_perils=sec_perils)
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):

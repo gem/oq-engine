@@ -321,19 +321,19 @@ class GmfGetter(object):
     An hazard getter with methods .get_gmfdata and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rupgetter, srcfilter, oqparam, amplifier=None):
+    def __init__(self, rupgetter, srcfilter, oqparam, amplifier=None,
+                 sec_perils=()):
         self.rlzs_by_gsim = rupgetter.rlzs_by_gsim
         self.rupgetter = rupgetter
         self.srcfilter = srcfilter
         self.sitecol = srcfilter.sitecol.complete
         self.oqparam = oqparam
         self.amplifier = amplifier
+        self.sec_perils = sec_perils
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
-        M32 = (F32, (len(oqparam.imtls),))
-        self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U32)])
         md = (calc.filters.MagDepDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
@@ -359,7 +359,7 @@ class GmfGetter(object):
                     computer = calc.gmf.GmfComputer(
                         ebr, sitecol, self.oqparam.imtls, self.cmaker,
                         self.oqparam.truncation_level, self.correl_model,
-                        self.amplifier)
+                        self.amplifier, self.sec_perils)
                 except FarAwayRupture:
                     continue
                 # due to numeric errors ruptures within the maximum_distance

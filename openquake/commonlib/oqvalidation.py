@@ -201,6 +201,7 @@ class OqParam(valid.ParamSet):
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
     save_disk_space = valid.Param(valid.boolean, False)
+    secondary_perils = valid.Param(valid.namelist, [])
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -629,8 +630,10 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite data type for the GMFs
         """
-        return numpy.dtype(
-            [('sid', U32), ('eid', U32), ('gmv', (F32, (len(self.imtls),)))])
+        lst = [('sid', U32), ('eid', U32), ('gmv', (F32, (len(self.imtls),)))]
+        for peril in self.secondary_perils:
+            lst.append((peril, F32))
+        return numpy.dtype(lst)
 
     def no_imls(self):
         """
