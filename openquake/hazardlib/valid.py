@@ -1264,6 +1264,10 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
                 doc = docstring.format(**vars(self))
                 raise ValueError(doc)
 
+    def __str__(self):
+        dic = {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+        return toml.dumps(dic)
+
     def __iter__(self):
         for item in sorted(vars(self).items()):
             yield item
