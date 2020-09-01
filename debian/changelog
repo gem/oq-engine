@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a 32 bit/64 bit bug in `oq prepare_site_model` when sites.csv is
+    the same as the vs30.csv file
   * Parallelized by GSIM when there is a single rupture
 
   [Francis Bernales]
