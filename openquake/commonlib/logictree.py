@@ -47,7 +47,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, LogicTreeError, parse_uncertainty, sample)
+    Branch, BranchSet, LogicTreeError, parse_uncertainty, sample, random)
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
@@ -69,7 +69,6 @@ source_model_dt = numpy.dtype([
     ('weight', F32),
     ('path', hdf5.vstr),
     ('samples', U32),
-    ('offset', U32),
 ])
 
 src_group_dt = numpy.dtype(
@@ -101,15 +100,14 @@ def unique(objects, key=None):
 class Realization(object):
     """
     Generic Realization object with attributes value, weight, ordinal, lt_path,
-    samples and optionally offset.
+    samples.
     """
-    def __init__(self, value, weight, ordinal, lt_path, samples, offset=0):
+    def __init__(self, value, weight, ordinal, lt_path, samples):
         self.value = value
         self.weight = weight
         self.ordinal = ordinal
         self.lt_path = lt_path
         self.samples = samples
-        self.offset = offset
 
     @property
     def pid(self):
@@ -258,15 +256,19 @@ class SourceModelLogicTree(object):
         self = object.__new__(cls)
         arr = numpy.array([('bs0', 'b0', 'sourceModel', 'fake.xml', 1)],
                           branch_dt)
-        dic = dict(filename='fake.xml', seed=0, num_samples=0)
+        dic = dict(filename='fake.xml', seed=0, num_samples=0,
+                   sampling_method='early_weights')
         self.__fromh5__(arr, dic)
         return self
 
-    def __init__(self, filename, seed=0, num_samples=0):
+    def __init__(self, filename, seed=0, num_samples=0,
+                 sampling_method='early_weights'):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
-        self.seed = seed
+        # NB: converting the random_seed into an integer is needed on Windows
+        self.seed = int(seed)
         self.num_samples = num_samples
+        self.sampling_method = sampling_method
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
         self.previous_branches = []
@@ -410,17 +412,26 @@ class SourceModelLogicTree(object):
         """
         if self.num_samples:
             # random sampling of the logic tree
-            weight = 1. / self.num_samples
-            for i in range(self.num_samples):
-                smlt_path = self.root_branchset.sample(self.seed + i)
-                name = smlt_path[0].value
-                smlt_path_ids = [branch.branch_id for branch in smlt_path]
-                yield Realization(name, weight, None, tuple(smlt_path_ids), 1)
+            probs = random(self.num_samples, self.seed, self.sampling_method)
+            ordinal = 0
+            for branches in self.root_branchset.sample(
+                    probs, self.sampling_method):
+                name = branches[0].value
+                smlt_path_ids = [br.branch_id for br in branches]
+                if self.sampling_method.startswith('early_'):
+                    weight = 1. / self.num_samples  # already accounted
+                elif self.sampling_method.startswith('late_'):
+                    weight = numpy.prod([br.weight for br in branches])
+                else:
+                    raise NotImplementedError(self.sampling_method)
+                yield Realization(name, weight, ordinal, tuple(smlt_path_ids),
+                                  samples=1)
+                ordinal += 1
         else:  # full enumeration
             ordinal = 0
-            for weight, smlt_path in self.root_branchset.enumerate_paths():
-                name = smlt_path[0].value
-                smlt_branch_ids = [branch.branch_id for branch in smlt_path]
+            for weight, branches in self.root_branchset.enumerate_paths():
+                name = branches[0].value  # source model name
+                smlt_branch_ids = [branch.branch_id for branch in branches]
                 yield Realization(name, weight, ordinal,
                                   tuple(smlt_branch_ids), 1)
                 ordinal += 1
@@ -617,14 +628,22 @@ class SourceModelLogicTree(object):
         attrs = self._tomldict()
         attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples
+        attrs['sampling_method'] = self.sampling_method
         attrs['filename'] = self.filename
         return numpy.array(tbl, branch_dt), attrs
 
     def __fromh5__(self, array, attrs):
+        # this is rather tricky; to understand it, run the test
+        # SerializeSmltTestCase which has a logic tree with 3 branchsets
+        # with the form b11[b21[b31, b32], b22[b31, b32]] and 1 x 2 x 2 rlzs
         bsets = []
         self.branches = {}
         self.bsetdict = {}
-        for bsid, rows in group_array(array, 'branchset').items():
+        acc = AccumDict(accum=[])  # bsid -> rows
+        for rec in array:
+            # NB: it is important to keep the order of the branchsets
+            acc[rec['branchset']].append(rec)
+        for bsid, rows in acc.items():
             utype = rows[0]['utype']
             bset = BranchSet(utype, [])  # TODO: filters
             bset.id = bsid
@@ -634,15 +653,17 @@ class SourceModelLogicTree(object):
                 bset.branches.append(br)
             bsets.append(bset)
             self.bsetdict[bsid] = {'uncertaintyType': utype}
+        # bsets [<b11>, <b21 b22>, <b31 b32>]
         self.root_branchset = bsets[0]
         for i, childset in enumerate(bsets[1:]):
             dic = toml.loads(attrs[childset.id])
             atb = dic.get('applyToBranches')
             for branch in bsets[i].branches:  # parent branches
                 if not atb or branch.branch_id in atb:
-                    branch.bset = bset
+                    branch.bset = childset
         self.seed = attrs['seed']
         self.num_samples = attrs['num_samples']
+        self.sampling_method = attrs['sampling_method']
         self.filename = attrs['filename']
 
     def __str__(self):
@@ -1000,14 +1021,18 @@ class GsimLogicTree(object):
             [trt] = self.values
         return sorted(self.values[trt])
 
-    def sample(self, n, seed):
+    def sample(self, n, seed, sampling_method):
         """
         :param n: number of samples
         :param seed: random seed
+        :param sampling_method: by default 'early_weights'
         :returns: n Realization objects
         """
+        m = len(self.values)  # number of TRTs
+        probs = random((n, m), seed, sampling_method)
         brlists = [sample([b for b in self.branches if b.trt == trt],
-                          n, seed + i) for i, trt in enumerate(self.values)]
+                          probs[:, i], sampling_method)
+                   for i, trt in enumerate(self.values)]
         rlzs = []
         for i in range(n):
             weight = 1
@@ -1164,18 +1189,15 @@ class FullLogicTree(object):
     def init(self):
         # NB: the number of effective rlzs can be less than the number
         # of realizations in case of sampling
-        sm_rlzs = get_effective_rlzs(self.source_model_lt)
-        if not self.num_samples:
-            num_gsim_rlzs = self.gsim_lt.get_num_paths()
-        offset = 0
-        for sm_rlz in sm_rlzs:
-            sm_rlz.offset = offset
-            if self.num_samples:
-                offset += sm_rlz.samples
-            else:
-                offset += num_gsim_rlzs
-        self.sm_rlzs = sm_rlzs
+        self.sm_rlzs = get_effective_rlzs(self.source_model_lt)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
+
+    def get_eri_by_ltp(self):
+        """
+        :returns: a dictionary sm_lt_path -> effective realization index
+        """
+        return {'_'.join(sm_rlz.lt_path): i
+                for i, sm_rlz in enumerate(self.sm_rlzs)}
 
     @property
     def trt_by_grp(self):
@@ -1203,6 +1225,13 @@ class FullLogicTree(object):
         :returns: the source_model_lt ``num_samples`` parameter
         """
         return self.source_model_lt.num_samples
+
+    @property
+    def sampling_method(self):
+        """
+        :returns: the source_model_lt ``sampling_method`` parameter
+        """
+        return self.source_model_lt.sampling_method
 
     def get_trti_eri(self, grp_id):
         """
@@ -1238,36 +1267,39 @@ class FullLogicTree(object):
         """
         return dict(zip(self.gsim_lt.values, rlz.gsim_rlz.value))
 
-    def get_rlzs(self, eri):
-        """
-        :returns: a list of LtRealization objects
-        """
-        rlzs = []
-        sm = self.sm_rlzs[eri]
-        if self.num_samples:
-            gsim_rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
-        elif hasattr(self, 'gsim_rlzs'):  # cache
-            gsim_rlzs = self.gsim_rlzs
-        else:
-            self.gsim_rlzs = gsim_rlzs = get_effective_rlzs(self.gsim_lt)
-        for i, gsim_rlz in enumerate(gsim_rlzs):
-            weight = sm.weight * gsim_rlz.weight
-            rlz = LtRealization(sm.offset + i, sm.lt_path, gsim_rlz, weight)
-            rlzs.append(rlz)
-        return rlzs
-
     def get_realizations(self):
         """
         :returns: the complete list of LtRealizations
         """
-        rlzs = sum((self.get_rlzs(sm.ordinal) for sm in self.sm_rlzs), [])
+        rlzs = []
+        self._gsims_by_trt = AccumDict(accum=set())  # trt -> gsims
+        if self.num_samples:  # sampling
+            sm_rlzs = list(self.source_model_lt)  # uses self.seed
+            gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
+                                            self.sampling_method)
+            for t, trt in enumerate(self.gsim_lt.values):
+                self._gsims_by_trt[trt].update(g.value[t] for g in gsim_rlzs)
+            for i, gsim_rlz in enumerate(gsim_rlzs):
+                rlz = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
+                                    sm_rlzs[i].weight * gsim_rlz.weight)
+                rlzs.append(rlz)
+        else:  # full enumeration
+            gsim_rlzs = list(self.gsim_lt)
+            self._gsims_by_trt = self.gsim_lt.values
+            i = 0
+            for sm_rlz in self.sm_rlzs:
+                for gsim_rlz in gsim_rlzs:
+                    rlz = LtRealization(i, sm_rlz.lt_path, gsim_rlz,
+                                        sm_rlz.weight * gsim_rlz.weight)
+                    rlzs.append(rlz)
+                    i += 1
         assert rlzs, 'No realizations found??'
-        if self.num_samples:
+        if self.num_samples and self.sampling_method.startswith('early_'):
             assert len(rlzs) == self.num_samples, (len(rlzs), self.num_samples)
             for rlz in rlzs:
                 for k in rlz.weight.dic:
                     rlz.weight.dic[k] = 1. / self.num_samples
-        else:
+        else:  # keep the weights
             tot_weight = sum(rlz.weight for rlz in rlzs)
             if not tot_weight.is_one():
                 # this may happen for rounding errors; we ensure the sum of
@@ -1278,13 +1310,24 @@ class FullLogicTree(object):
 
     def get_rlzs_by_gsim(self, grp_id):
         """
-        :returns: a dictionary gsim -> rlzs
+        :returns: a dictionary gsim -> array of rlz indices
         """
-        trti, eri = divmod(grp_id, len(self.sm_rlzs))
-        rlzs_by_gsim = AccumDict(accum=[])
-        for rlz in self.get_rlzs(eri):
-            rlzs_by_gsim[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-        return {gsim: U32(rlzs) for gsim, rlzs in sorted(rlzs_by_gsim.items())}
+        if not hasattr(self, '_rlzs_by_grp'):
+            eri_by_ltp = self.get_eri_by_ltp()
+            rlzs = self.get_realizations()
+            acc = AccumDict(accum=AccumDict(accum=[]))  # grp_id->gsim->rlzs
+            for sm in self.sm_rlzs:
+                for gid in self.grp_ids(sm.ordinal):
+                    trti, eri = divmod(gid, len(self.sm_rlzs))
+                    for rlz in rlzs:
+                        if eri_by_ltp['_'.join(rlz.sm_lt_path)] == eri:
+                            acc[gid][rlz.gsim_rlz.value[trti]].append(
+                                rlz.ordinal)
+            self._rlzs_by_grp = {}
+            for gid, dic in acc.items():
+                self._rlzs_by_grp[gid] = {
+                    gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
+        return self._rlzs_by_grp[grp_id]
 
     def get_rlzs_by_gsim_grp(self):
         """
@@ -1320,16 +1363,12 @@ class FullLogicTree(object):
             out.append(dic)
         return out
 
-    def __getnewargs__(self):
-        # with this FullLogicTree instances will be unpickled correctly
-        return self.seed, self.num_samples, self.sm_rlzs
-
     def __toh5__(self):
         # save full_lt/sm_data in the datastore
         sm_data = []
         for sm in self.sm_rlzs:
             sm_data.append((sm.value, sm.weight, '_'.join(sm.lt_path),
-                            sm.samples, sm.offset))
+                            sm.samples))
         return (dict(
             source_model_lt=self.source_model_lt,
             gsim_lt=self.gsim_lt,
@@ -1347,8 +1386,7 @@ class FullLogicTree(object):
         for sm_id, rec in enumerate(sm_data):
             path = tuple(str(decode(rec['path'])).split('_'))
             sm = Realization(
-                rec['name'], rec['weight'], sm_id, path,
-                rec['samples'], rec['offset'])
+                rec['name'], rec['weight'], sm_id, path, rec['samples'])
             self.sm_rlzs.append(sm)
 
     def get_num_rlzs(self, sm_rlz=None):
@@ -1375,15 +1413,9 @@ class FullLogicTree(object):
         """
         :returns: a dictionary trt -> sorted gsims
         """
-        if self.num_samples:
-            gsims_by_trt = AccumDict(accum=set())
-            for sm in self.sm_rlzs:
-                rlzs = self.gsim_lt.sample(sm.samples, self.seed + sm.ordinal)
-                for t, trt in enumerate(self.gsim_lt.values):
-                    gsims_by_trt[trt].update([rlz.value[t] for rlz in rlzs])
-        else:
-            gsims_by_trt = self.gsim_lt.values
-        return {trt: sorted(gsims) for trt, gsims in gsims_by_trt.items()}
+        if not hasattr(self, '_gsims_by_trt'):
+            self.get_realizations()
+        return {trt: sorted(gs) for trt, gs in self._gsims_by_trt.items()}
 
     def get_sm_by_grp(self):
         """

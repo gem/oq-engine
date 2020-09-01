@@ -21,7 +21,7 @@ import shapely
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
+from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
 from openquake.calculators.extract import Extractor, WebExtractor
 
 
@@ -55,6 +55,23 @@ def make_figure_hcurves(extractors, what):
     return plt
 
 
+def make_figure_vs30(extractors, what):
+    """
+    $ oq plot 'vs30?'
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    sitecol = ex.get('sitecol')
+    ax = fig.add_subplot(111)
+    ax.grid(True)
+    ax.set_xlabel('vs30 for calculation %d' % ex.calc_id)
+    vs30 = sitecol['vs30']
+    vs30[numpy.isnan(vs30)] = 0
+    ax.scatter(sitecol['lon'], sitecol['lat'], c=vs30, cmap='jet')
+    return plt
+
+
 def make_figure_hmaps(extractors, what):
     """
     $ oq plot 'hmaps?kind=mean&imt=PGA'
@@ -73,7 +90,7 @@ def make_figure_hmaps(extractors, what):
         itime = oq1.investigation_time
         assert oq2.investigation_time == itime
         sitecol = ex1.get('sitecol')
-        assert ex1.get('sitecol') == sitecol
+        assert (ex2.get('sitecol').array == sitecol.array).all()
         hmaps1 = ex1.get(what)
         hmaps2 = ex2.get(what)
         [imt] = hmaps1.imt
@@ -89,8 +106,9 @@ def make_figure_hmaps(extractors, what):
                           'inv_time=%dy\nmaxdiff=%s' %
                           (imt, kind, poe, ex1.calc_id, ex2.calc_id,
                            itime, maxdiff))
-            ax.scatter(sitecol['lon'], sitecol['lat'],
-                       c=diff, cmap='jet')
+            coll = ax.scatter(sitecol['lon'], sitecol['lat'],
+                              c=diff, cmap='jet')
+            plt.colorbar(coll)
     elif ncalcs == 1:  # plot the hmap
         [ex] = extractors
         oq = ex.oqparam
@@ -105,8 +123,9 @@ def make_figure_hmaps(extractors, what):
             ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
                           'inv_time=%dy' %
                           (imt, kind, poe, ex.calc_id, oq.investigation_time))
-            ax.scatter(sitecol['lon'], sitecol['lat'],
-                       c=hmaps[kind][:, 0, j], cmap='jet')
+            coll = ax.scatter(sitecol['lon'], sitecol['lat'],
+                              c=hmaps[kind][:, 0, j], cmap='jet')
+            plt.colorbar(coll)
     return plt
 
 
@@ -470,7 +489,7 @@ def make_figure_effect_by_mag(extractors, what):
         effect = ex.get('effect')
     except KeyError:
         onesite = ex.get('sitecol').one()
-        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
+        maximum_distance = MagDepDistance(ex.oqparam.maximum_distance)
         imtls = ex.oqparam.imtls
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)

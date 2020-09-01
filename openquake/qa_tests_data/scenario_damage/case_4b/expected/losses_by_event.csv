@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.10.0-gita8aaa843f4', start_date='2020-06-19T06:38:50', checksum=1751099255"
+#,,,,"generated_by='OpenQuake engine 3.10.0-git82b9467848', start_date='2020-09-01T05:06:20', checksum=3590982611"
 event_id,contents,nonstructural,structural,rlz_id
 0,4.03237E+03,5.94577E+03,3.85238E+02,0
 1,5.66015E+03,9.12022E+03,1.59838E+03,0

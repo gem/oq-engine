@@ -128,6 +128,7 @@ class GmfComputer(object):
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
+        self.offset = 0  # can be overridden by the engine
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
@@ -135,7 +136,7 @@ class GmfComputer(object):
         """
         t0 = time.time()
         sids = self.sids
-        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
+        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim, self.offset)
         data = []
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)

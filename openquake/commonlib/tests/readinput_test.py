@@ -95,7 +95,7 @@ export_dir = %s
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'collapse_level': 0,
-                'maximum_distance': {'default': 1.0},
+                'maximum_distance': {'default': [(1, 1), (10, 1)]},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -144,8 +144,7 @@ maximum_distance=[(200, 8)]
 """)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_oqparam(source)
-        self.assertIn('magnitude 200.0 is bigger than the maximum (11): '
-                      'could not convert to maximum_distance:',
+        self.assertIn('Invalid magnitude 200: could not convert to new',
                       str(ctx.exception))
 
 

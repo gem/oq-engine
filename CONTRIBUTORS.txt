@@ -56,6 +56,7 @@ Guillaume Daniel        April 2019
 Richard Styron          July 2019
 Kris Vanneste           September 2019
 Alberto Chiusole        November 2019
+Francis Jenner Bernales August 2020
 
 Project management
 ------------------

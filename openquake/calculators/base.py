@@ -201,7 +201,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
-            attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
+            attrs['checksum32'] = readinput.get_checksum32(
+                self.oqparam, self.datastore.hdf5)
             logging.info('Checksum of the input files: %(checksum32)s', attrs)
         self.datastore.flush()
 
@@ -265,6 +266,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
+                readinput.smlt_cache.clear()
                 readinput.gsim_lt_cache.clear()
 
                 # remove temporary hdf5 file, if any
