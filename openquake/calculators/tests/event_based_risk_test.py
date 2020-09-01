@@ -309,6 +309,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master2(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
+                      ses_per_logic_tree_path='1000',
                       concurrent_tasks='4')
 
         # tot_losses-rlzs has shape (L=5, R=9)
