@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 import numpy
 from openquake.baselib import sap, performance, datastore
@@ -23,9 +24,8 @@ from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
 from openquake.commonlib.writers import write_csv
 
-F32 = numpy.float32
 SQRT2 = 1.414
-vs30_dt = numpy.dtype([('lon', F32), ('lat', F32), ('vs30', F32)])
+vs30_dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
 
 
 # TODO: equivalents of calculate_z1pt0 and calculate_z2pt5_ngaw2
@@ -66,9 +66,16 @@ def read_vs30(fnames):
     """
     data = []
     for fname in fnames:
+        check_fname(fname, 'vs30_csv')
         for line in open(fname, encoding='utf-8-sig'):
             data.append(tuple(line.split(',')))
     return numpy.array(data, vs30_dt)
+
+
+def check_fname(fname, kind):
+    if os.path.basename(fname).lower() == 'site_model.csv':
+        raise NameError('A file of kind %s cannot be called site_model.csv!'
+                        % kind)
 
 
 @sap.script
@@ -122,6 +129,7 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
         elif sites_csv:
             lons, lats = [], []
             for fname in sites_csv:
+                check_fname(fname, 'sites_csv')
                 with open(fname) as csv:
                     for line in csv:
                         if line.startswith('lon,lat'):  # possible header
