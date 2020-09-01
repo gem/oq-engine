@@ -554,8 +554,8 @@ class PrepareSiteModelTestCase(unittest.TestCase):
                                 True, True, False, 0, 5, output)
         self.assertEqual(len(sc), 148)  # 148 sites within 5 km from the params
 
-        # test sites_csv
-        sc = prepare_site_model([], [output], [vs30_csv],
+        # test sites_csv == vs30_csv
+        sc = prepare_site_model([], [vs30_csv], [vs30_csv],
                                 True, True, False, 0, 5, output)
 
 
