@@ -59,23 +59,27 @@ def calculate_z2pt5_ngaw2(vs30):
     return z2pt5
 
 
-def read_vs30(fnames):
+def read_vs30(fnames, forbidden):
     """
     :param fnames: a list of CSV files with fields lon,lat,vs30
+    :param forbidden: forbidden name for the input files
     :returns: a vs30 array of dtype vs30dt
     """
     data = []
     for fname in fnames:
-        check_fname(fname, 'vs30_csv')
+        check_fname(fname, 'vs30_csv', forbidden)
         for line in open(fname, encoding='utf-8-sig'):
             data.append(tuple(line.split(',')))
     return numpy.array(data, vs30_dt)
 
 
-def check_fname(fname, kind):
-    if os.path.basename(fname).lower() == 'site_model.csv':
-        raise NameError('A file of kind %s cannot be called site_model.csv!'
-                        % kind)
+def check_fname(fname, kind, forbidden):
+    """
+    Raise a NameError if fname == forbidden
+    """
+    if os.path.basename(fname).lower() == forbidden:
+        raise NameError('A file of kind %s cannot be called %r!'
+                        % (kind, forbidden))
 
 
 @sap.script
@@ -129,7 +133,7 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
         elif sites_csv:
             lons, lats = [], []
             for fname in sites_csv:
-                check_fname(fname, 'sites_csv')
+                check_fname(fname, 'sites_csv', output)
                 with open(fname) as csv:
                     for line in csv:
                         if line.startswith('lon,lat'):  # possible header
@@ -146,7 +150,7 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
                     grid.lons, grid.lats, req_site_params=req_site_params)
         else:
             raise RuntimeError('Missing exposures or missing sites')
-        vs30orig = read_vs30(vs30_csv)
+        vs30orig = read_vs30(vs30_csv, output)
         logging.info('Associating %d hazard sites to %d site parameters',
                      len(haz_sitecol), len(vs30orig))
         vs30 = haz_sitecol.assoc(vs30orig, assoc_distance,
