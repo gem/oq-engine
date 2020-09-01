@@ -50,7 +50,7 @@ def execfiles(dirname):
                 fname = os.path.join(cwd, f)
                 exec(open(fname).read())
                 out.append(fname)
-    return fname
+    return out
 
 
 def check_same_levels(imtls):
