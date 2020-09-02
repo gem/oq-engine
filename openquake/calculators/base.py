@@ -824,7 +824,7 @@ class HazardCalculator(BaseCalculator):
             self.amplifier = None
 
         # used in the risk calculators
-        sec_perils = [SecondaryPeril(pname) for pname in oq.secondary_perils]
+        sec_perils = SecondaryPeril.instances(oq)
         self.param = dict(individual_curves=oq.individual_curves,
                           collapse_level=oq.collapse_level,
                           avg_losses=oq.avg_losses,

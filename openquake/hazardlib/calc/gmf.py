@@ -163,19 +163,23 @@ class GmfComputer(object):
                         tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
-                    secperils = [
-                        sp.compute(mag, gmf, self.sctx)
-                        for sp in self.sec_perils]
+                    sp_outputs = []
+                    for sp in self.sec_perils:
+                        sp_outputs.extend(sp.compute(mag, gmf, self.sctx))
+                    sp_out = numpy.array(sp_outputs)  # shape (O, N)
                     for i, gmv in enumerate(gmf):
                         if gmv.sum():
-                            data.append((sids[i], eid, gmv) +
-                                        tuple(sp[i] for sp in secperils))
+                            if sp_outputs:
+                                data.append((sids[i], eid, gmv) +
+                                            tuple(sp_out[:, i]))
+                            else:
+                                data.append((sids[i], eid, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += e
         m = (len(min_iml),)
         dtlist = [('sid', U32), ('eid', U32), ('gmv', (F32, m))] + [
-            (sp.name, F32) for sp in self.sec_perils]
+            (out, F32) for sp in self.sec_perils for out in sp.outputs]
         d = numpy.array(data, dtlist)
         return d, time.time() - t0
 
