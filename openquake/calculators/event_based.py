@@ -89,7 +89,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         if hasattr(self.oqparam, 'maximum_distance'):
-            self.srcfilter = self.src_filter(self.datastore.tempname)
+            self.srcfilter = self.src_filter()
         else:
             self.srcfilter = nofilter
         if not self.datastore.parent:
