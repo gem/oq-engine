@@ -449,7 +449,7 @@ class ClassicalCalculator(base.HazardCalculator):
             collapse_level=oq.collapse_level,
             max_sites_disagg=oq.max_sites_disagg,
             af=self.af)
-        srcfilter = self.src_filter(self.datastore.tempname)
+        srcfilter = self.src_filter()
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
             param['rescale_weight'] = len(gsims)

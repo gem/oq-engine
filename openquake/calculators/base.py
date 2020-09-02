@@ -395,7 +395,7 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    def src_filter(self, filename=None):
+    def src_filter(self):
         """
         :returns: a SourceFilter/UcerfFilter
         """
@@ -404,10 +404,9 @@ class HazardCalculator(BaseCalculator):
             sitecol = self.sitecol.complete
         else:  # can happen to the ruptures-only calculator
             sitecol = None
-            filename = None
         if oq.is_ucerf():
-            return UcerfFilter(sitecol, oq.maximum_distance, filename)
-        return SourceFilter(sitecol, oq.maximum_distance, filename)
+            return UcerfFilter(sitecol, oq.maximum_distance)
+        return SourceFilter(sitecol, oq.maximum_distance)
 
     @property
     def E(self):
@@ -463,12 +462,8 @@ class HazardCalculator(BaseCalculator):
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
-        if getattr(self, 'sitecol', None):
-            # can be None for the ruptures-only calculator
-            with hdf5.File(self.datastore.tempname, 'w') as tmp:
-                tmp['sitecol'] = self.sitecol
-        elif (oq.calculation_mode == 'disaggregation' and
-              oq.max_sites_disagg < len(self.sitecol)):
+        if (oq.calculation_mode == 'disaggregation' and
+                oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
