@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats, calc
+from openquake.hazardlib import correlation, stats, calc, sec_perils
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree, util
 from openquake.risklib.riskmodels import get_risk_files
@@ -201,7 +201,7 @@ class OqParam(valid.ParamSet):
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
     save_disk_space = valid.Param(valid.boolean, False)
-    secondary_perils = valid.Param(valid.namelist, [])
+    secondary_perils = valid.Param(valid.Choice(*sec_perils.supported), [])
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)

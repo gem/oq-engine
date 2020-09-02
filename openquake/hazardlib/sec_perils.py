@@ -2,7 +2,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
 # Copyright (C) 2020, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
@@ -24,7 +24,10 @@ class SecondaryPeril(object):
 
     def compute(self, mag, sid, gmv):
         # gmv is an array with M elements, one per IMT
-        return gmv[0] * .1  # mock formula
+        return gmv[0] * .1  # fake formula
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.name)
+
+
+supported = 'fake'.split()
