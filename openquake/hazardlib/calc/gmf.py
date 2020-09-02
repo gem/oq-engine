@@ -163,12 +163,13 @@ class GmfComputer(object):
                         tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
-                    for sid, gmv in zip(sids, gmf):
+                    secperils = [
+                        sp.compute(mag, gmf, self.sctx)
+                        for sp in self.sec_perils]
+                    for i, gmv in enumerate(gmf):
                         if gmv.sum():
-                            secperils = [
-                                sp.compute(mag, sid, gmv)
-                                for sp in self.sec_perils]
-                            data.append((sid, eid, gmv) + tuple(secperils))
+                            data.append((sids[i], eid, gmv) +
+                                        tuple(sp[i] for sp in secperils))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += e

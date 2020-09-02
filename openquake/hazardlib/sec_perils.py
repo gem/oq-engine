@@ -22,9 +22,9 @@ class SecondaryPeril(object):
     def __init__(self, name):
         self.name = name
 
-    def compute(self, mag, sid, gmv):
-        # gmv is an array with M elements, one per IMT
-        return gmv[0] * .1  # fake formula
+    def compute(self, mag, gmfs, sctx):
+        # gmv is an array with (N, M) elements
+        return gmfs[:, 0] * .1  # fake formula
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.name)
