@@ -24,7 +24,7 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
     @classmethod
     def instances(cls, oqparam):
         inst = []
-        for clsname in oqparam.secondary_perils.split():
+        for clsname in oqparam.secondary_perils:
             c = globals()[clsname]
             lst = []
             for arg in inspect.getargspec(c.__init__).args[1:]:
