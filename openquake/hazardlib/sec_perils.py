@@ -27,8 +27,8 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
         for clsname in oqparam.secondary_perils:
             c = globals()[clsname]
             lst = []
-            for arg in inspect.getargspec(c.__init__).args[1:]:
-                lst.append(getattr(oqparam, arg))
+            for param in inspect.signature(c).parameters:
+                lst.append(getattr(oqparam, param))
             inst.append(c(*lst))
         return inst
 
@@ -70,13 +70,14 @@ class NewarkDisplacement(SecondaryPeril):
         self.crit_accel_threshold = crit_accel_threshold
 
     def prepare(self, sites):
-        sites["Fs"] = static_factor_of_safety(
+        sites.add_col('Fs', float, static_factor_of_safety(
             slope=sites.slope,
             cohesion=sites.cohesion_mid,
             friction_angle=sites.friction_mid,
             saturation_coeff=sites.saturation,
-            soil_dry_density=sites.dry_density)
-        sites["crit_accel"] = newmark_critical_accel(sites.Fs, sites.slope)
+            soil_dry_density=sites.dry_density))
+        sites.add_col('crit_accel', float,
+                      newmark_critical_accel(sites.Fs, sites.slope))
 
     def compute(self, mag, gmfs, sctx):
         nd = newmark_displ_from_pga_M(
@@ -92,7 +93,7 @@ class HazusLiquefaction(SecondaryPeril):
         self.map_proportion_flag = map_proportion_flag
 
     def prepare(self, sites):
-        """There is nothing to prepare"""
+        pass
 
     def compute(self, mag, gmfs, sites):
         return hazus_liquefaction_probability(

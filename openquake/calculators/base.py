@@ -823,8 +823,11 @@ class HazardCalculator(BaseCalculator):
         else:
             self.amplifier = None
 
-        # used in the risk calculators
+        # manage secondary perils
         sec_perils = SecondaryPeril.instances(oq)
+        for sp in sec_perils:
+            sp.prepare(self.sitecol)  # add columns as needed
+
         self.param = dict(individual_curves=oq.individual_curves,
                           collapse_level=oq.collapse_level,
                           avg_losses=oq.avg_losses,
