@@ -39,20 +39,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def execfiles(dirname):
-    """
-    Exec python files inside dirname (recursively)
-    """
-    out = []
-    for cwd, dirs, files in os.walk(dirname):
-        for f in files:
-            if f.endswith('.py'):
-                fname = os.path.join(cwd, f)
-                exec(open(fname).read())
-                out.append(fname)
-    return out
-
-
 def check_same_levels(imtls):
     """
     :param imtls: a dictionary (or dict-like) imt -> imls
@@ -275,7 +261,6 @@ class OqParam(valid.ParamSet):
                 names_vals['max'] = names_vals.pop(name)
         super().__init__(**names_vals)
         job_ini = self.inputs['job_ini']
-        execfiles(os.path.dirname(job_ini))
         if 'calculation_mode' not in names_vals:
             raise InvalidFile('Missing calculation_mode in %s' % job_ini)
         if 'region_constraint' in names_vals:

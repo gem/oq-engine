@@ -21,7 +21,7 @@ import unittest
 import unittest.mock as mock
 import numpy
 from openquake.baselib import parallel, general
-from openquake.hazardlib import lt
+from openquake.hazardlib import lt, valid
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -335,6 +335,10 @@ hazard_uhs-std.csv
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
             case_18.__file__, kind='stats', delta=1E-7)
+
+        # check reading .py files in the input dir
+        valid.gsim('FakeGMPE2020')
+
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 

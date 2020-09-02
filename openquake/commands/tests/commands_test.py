@@ -366,7 +366,7 @@ class ZipTestCase(unittest.TestCase):
     Test for the command oq zip
     """
     def test_zip(self):
-        # this is a case with .hdf5 files
+        # this is a case with .py and .hdf5 files
         ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
@@ -375,6 +375,7 @@ class ZipTestCase(unittest.TestCase):
         self.assertEqual(['Wcrust_high_rhypo.hdf5',
                           'Wcrust_low_rhypo.hdf5',
                           'Wcrust_med_rhypo.hdf5',
+                          'fake_gsim.py',
                           'job.ini',
                           'nbc_asc_logic_tree.xml',
                           'source_model_logic_tree.xml',

@@ -482,6 +482,23 @@ class CodeDependencyError(Exception):
     pass
 
 
+def execfiles(dirname):
+    """
+    :param dirname: full path to a directory
+    :returns: the list of executed paths
+
+    Exec python files inside dirname recursively.
+    """
+    out = []
+    for cwd, dirs, files in os.walk(dirname):
+        for f in files:
+            if f.endswith('.py') and not f.startswith('_'):
+                fname = os.path.join(cwd, f)
+                exec(open(fname).read())
+                out.append(fname)
+    return out
+
+
 def import_all(module_or_package):
     """
     If `module_or_package` is a module, just import it; if it is a package,

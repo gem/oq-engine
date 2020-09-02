@@ -35,7 +35,7 @@ import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, AccumDict)
+    random_filter, countby, group_array, get_duplicates, execfiles, AccumDict)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -1069,7 +1069,8 @@ def get_input_files(oqparam, hazard=False):
     :param hazard: if True, consider only the hazard files
     :returns: input path names in a specific order
     """
-    fnames = set()  # files entering in the checksum
+    pnames = execfiles(os.path.dirname(oqparam.inputs['job_ini']))
+    fnames = set(pnames)  # files entering in the checksum
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('source_model_logic_tree',

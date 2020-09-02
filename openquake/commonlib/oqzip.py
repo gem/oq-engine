@@ -33,7 +33,9 @@ def zip_all(directory):
         if 'ssmLT.xml' in files:
             zips.append(zip_source_model(os.path.join(cwd, 'ssmLT.xml')))
         for f in files:
-            if f.endswith('.xml') and 'exposure' in f.lower():
+            ok1 = f.endswith('.xml') and 'exposure' in f.lower()
+            ok2 = f.endswith('.py') and not f.startswith('_')
+            if ok1 or ok2:
                 zips.append(zip_exposure(os.path.join(cwd, f)))
     total = sum(os.path.getsize(z) for z in zips)
     logging.info('Generated %s of zipped data', general.humansize(total))
@@ -55,7 +57,8 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
         sys.exit('%s exists already' % archive_zip)
     smlt = logictree.SourceModelLogicTree(ssmLT)
     files = list(smlt.hdf5_files) + smlt.info.smpaths
-    oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT},
+    oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT,
+                           'job_ini': ssmLT},
                    random_seed=42, number_of_logic_tree_samples=0,
                    sampling_method='early_weights')
     checksum = readinput.get_checksum32(oq)
