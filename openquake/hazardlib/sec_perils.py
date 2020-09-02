@@ -79,9 +79,9 @@ class NewarkDisplacement(SecondaryPeril):
         sites.add_col('crit_accel', float,
                       newmark_critical_accel(sites.Fs, sites.slope))
 
-    def compute(self, mag, gmfs, sctx):
+    def compute(self, mag, gmfs, sites):
         nd = newmark_displ_from_pga_M(
-            gmfs[:, 0], sctx.critical_accel, mag,
+            gmfs[:, 0], sites.critical_accel, mag,
             self.c1, self.c2, self.c3, self.c4, self.crit_accel_threshold)
         return nd, prob_failure_given_displacement(nd)
 
