@@ -18,7 +18,7 @@
 """
 Subclasses of SecondaryPeril have:
 
-1. a ``__init__`` method with parameters in the job.ini
+1. a ``__init__`` method with global parameters coming from the job.ini
 2. a ``prepare(sitecol)`` method modifying on the site collection, called
    in the ``pre_execute`` phase, i.e. before running the calculation
 3. a ``compute(mag, gmfs, sites)`` method called during the calculation of
@@ -67,9 +67,9 @@ class FakePeril(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, mag, gmfs, sites):
+    def compute(self, mag, imt, gmf, sites):
         # gmv is an array with (N, M) elements
-        return gmfs[:, 0] * .1,  # fake formula
+        return gmf * .1  # fake formula
 
 
 class NewarkDisplacement(SecondaryPeril):
@@ -93,11 +93,14 @@ class NewarkDisplacement(SecondaryPeril):
         sites.add_col('crit_accel', float,
                       newmark_critical_accel(sites.Fs, sites.slope))
 
-    def compute(self, mag, gmfs, sites):
-        nd = newmark_displ_from_pga_M(
-            gmfs[:, 0], sites.critical_accel, mag,
-            self.c1, self.c2, self.c3, self.c4, self.crit_accel_threshold)
-        return nd, prob_failure_given_displacement(nd)
+    def compute(self, mag, imt, gmf, sites):
+        if imt.name == 'PGA':
+            nd = newmark_displ_from_pga_M(
+                gmfs[:, 0], sites.critical_accel, mag,
+                self.c1, self.c2, self.c3, self.c4, self.crit_accel_threshold)
+            return nd, prob_failure_given_displacement(nd)
+        else:
+            raise NotImplementedError('NewarkDisplacement for %s' % imt)
 
 
 class HazusLiquefaction(SecondaryPeril):
@@ -109,12 +112,15 @@ class HazusLiquefaction(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, mag, gmfs, sites):
-        return hazus_liquefaction_probability(
-            pga=gmfs[:, 0], mag=mag,
-            liq_susc_cat=sites.liq_susc_cat,
-            groundwater_depth=sites.gwd,
-            do_map_proportion_correction=self.map_proportion_flag),
+    def compute(self, mag, imt, gmfs, sites):
+        if imt.name == 'PGA':
+            return [hazus_liquefaction_probability(
+                pga=gmfs[:, 0], mag=mag,
+                liq_susc_cat=sites.liq_susc_cat,
+                groundwater_depth=sites.gwd,
+                do_meap_proportion_correction=self.map_proportion_flag)]
+        else:
+            raise NotImplementedError('NewarkDisplacement for %s' % imt)
 
 
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]

@@ -140,6 +140,7 @@ class GmfComputer(object):
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim, self.offset)
         mag = self.ebrupture.rupture.mag
         data = []
+        O = sum(len(sp.outputs) for sp in self.sec_perils)
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
             # NB: the trick for performance is to keep the call to
@@ -155,31 +156,34 @@ class GmfComputer(object):
                 eids = eids_by_rlz[rlzi] + self.e0
                 e = len(eids)
                 for ei, eid in enumerate(eids):
-                    gmf = array[:, :, n + ei]  # shape (N, M)
-                    tot = gmf.sum(axis=0)  # shape (M,)
+                    gmfa = array[:, :, n + ei]  # shape (N, M)
+                    tot = gmfa.sum(axis=0)  # shape (M,)
                     if not tot.sum():
                         continue
                     if sig_eps is not None:
                         tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
-                    sp_outputs = []
-                    for sp in self.sec_perils:
-                        sp_outputs.extend(sp.compute(mag, gmf, self.sctx))
-                    sp_out = numpy.array(sp_outputs)  # shape (O, N)
-                    for i, gmv in enumerate(gmf):
+                    sp_out = numpy.zeros((O,) + gmfa.shape)  # O, N, M
+                    for m, imt in enumerate(self.imts):
+                        o = 0
+                        for sp in self.sec_perils:
+                            sp_out[o, :, m] = sp.compute(
+                                mag, imt, gmfa[:, m], self.sctx)
+                            o += len(sp.outputs)
+                    for i, gmv in enumerate(gmfa):
                         if gmv.sum():
-                            if sp_outputs:
+                            if O:
                                 data.append((sids[i], eid, gmv) +
-                                            tuple(sp_out[:, i]))
+                                            tuple(sp_out[:, i, :]))
                             else:
                                 data.append((sids[i], eid, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += e
-        m = (len(min_iml),)
-        dtlist = [('sid', U32), ('eid', U32), ('gmv', (F32, m))] + [
-            (out, F32) for sp in self.sec_perils for out in sp.outputs]
+        dt = F32, (len(min_iml),)
+        dtlist = [('sid', U32), ('eid', U32), ('gmv', dt)] + [
+            (out, dt) for sp in self.sec_perils for out in sp.outputs]
         d = numpy.array(data, dtlist)
         return d, time.time() - t0
 

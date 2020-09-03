@@ -630,11 +630,12 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite data type for the GMFs
         """
-        lst = [('sid', U32), ('eid', U32), ('gmv', (F32, (len(self.imtls),)))]
+        dt = F32, (len(self.imtls),)
+        lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
         perils = sec_perils.SecondaryPeril.instances(self)
         for peril in perils:
             for output in peril.outputs:
-                lst.append((output, F32))
+                lst.append((output, dt))
         return numpy.dtype(lst)
 
     def no_imls(self):
