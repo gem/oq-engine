@@ -510,7 +510,7 @@ class HazardCalculator(BaseCalculator):
             # read hazard from files
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
-            with self.monitor('reading inputs', measuremem=True):
+            with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
             if 'gmfs' in oq.inputs:
                 if not oq.inputs['gmfs'].endswith('.csv'):
@@ -583,7 +583,7 @@ class HazardCalculator(BaseCalculator):
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
-            with self.monitor('reading inputs', measuremem=True):
+            with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
                 self.save_crmodel()
 
