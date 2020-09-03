@@ -1,3 +1,6 @@
+  [Antonio Ettorre]
+  * Bumped GDAL to version 3.1.2
+
   [Michele Simionato]
   * Implemented secondary perils
   * Fixed a 32 bit/64 bit bug in `oq prepare_site_model` when sites.csv is
