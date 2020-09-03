@@ -168,9 +168,10 @@ class GmfComputer(object):
                     for m, imt in enumerate(self.imts):
                         o = 0
                         for sp in self.sec_perils:
-                            sp_out[o, :, m] = sp.compute(
+                            o1 = o + len(sp.outputs)
+                            sp_out[o:o1, :, m] = sp.compute(
                                 mag, imt, gmfa[:, m], self.sctx)
-                            o += len(sp.outputs)
+                            o = o1
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum():
                             if O:
