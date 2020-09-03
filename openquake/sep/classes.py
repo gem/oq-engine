@@ -17,6 +17,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import abc
 import inspect
+from openquake.sep.landslide.common import static_factor_of_safety
+from openquake.sep.landslide.newmark import (
+    newmark_critical_accel, newmark_displ_from_pga_M,
+    prob_failure_given_displacement)
+from openquake.sep.liquefaction.liquefaction import (
+    hazus_liquefaction_probability)
 
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
@@ -73,8 +79,8 @@ class FakePeril(SecondaryPeril):
         return [gmf * .1]  # fake formula
 
 
-class NewarkDisplacement(SecondaryPeril):
-    outputs = ['newark_disp', 'prob_disp']
+class NewmarkDisplacement(SecondaryPeril):
+    outputs = ['newmark_disp', 'prob_disp']
 
     def __init__(self, c1=-2.71, c2=2.335, c3=-1.478, c4=0.424,
                  crit_accel_threshold=0.05):
@@ -97,7 +103,7 @@ class NewarkDisplacement(SecondaryPeril):
     def compute(self, mag, imt, gmf, sites):
         if imt.name == 'PGA':
             nd = newmark_displ_from_pga_M(
-                gmfs[:, 0], sites.critical_accel, mag,
+                gmf[:, 0], sites.critical_accel, mag,
                 self.c1, self.c2, self.c3, self.c4, self.crit_accel_threshold)
             return nd, prob_failure_given_displacement(nd)
         else:
