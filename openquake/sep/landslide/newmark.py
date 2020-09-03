@@ -1,7 +1,6 @@
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
-#import xarray as xr
 
 
 def newmark_critical_accel(

@@ -24,8 +24,9 @@ import numpy
 
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats, calc, sec_perils
+from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
+from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree, util
 from openquake.risklib.riskmodels import get_risk_files
 
@@ -633,8 +634,8 @@ class OqParam(valid.ParamSet):
         """
         dt = F32, (len(self.imtls),)
         lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
-        perils = sec_perils.SecondaryPeril.instantiate(self.secondary_perils,
-                                                       self.sec_peril_params)
+        perils = SecondaryPeril.instantiate(self.secondary_perils,
+                                            self.sec_peril_params)
         for peril in perils:
             for output in peril.outputs:
                 lst.append((output, dt))
