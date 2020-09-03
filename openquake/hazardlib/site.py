@@ -278,7 +278,7 @@ class SiteCollection(object):
         new.complete = self.complete
         return new
 
-    def add_col(self, colname, dtype):
+    def add_col(self, colname, dtype, values=None):
         """
         Add a column to the underlying array
         """
@@ -288,6 +288,8 @@ class SiteCollection(object):
         arr = numpy.zeros(len(self), dtlist)
         for name in names:
             arr[name] = self.array[name]
+        if values is not None:
+            arr[colname] = values
         self.array = arr
 
     def make_complete(self):

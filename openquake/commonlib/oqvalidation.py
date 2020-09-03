@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats, calc
+from openquake.hazardlib import correlation, stats, calc, sec_perils
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree, util
 from openquake.risklib.riskmodels import get_risk_files
@@ -201,6 +201,8 @@ class OqParam(valid.ParamSet):
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
     save_disk_space = valid.Param(valid.boolean, False)
+    secondary_perils = valid.Param(valid.namelist, [])
+    sec_peril_params = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -629,8 +631,14 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite data type for the GMFs
         """
-        return numpy.dtype(
-            [('sid', U32), ('eid', U32), ('gmv', (F32, (len(self.imtls),)))])
+        dt = F32, (len(self.imtls),)
+        lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
+        perils = sec_perils.SecondaryPeril.instantiate(self.secondary_perils,
+                                                       self.sec_peril_params)
+        for peril in perils:
+            for output in peril.outputs:
+                lst.append((output, dt))
+        return numpy.dtype(lst)
 
     def no_imls(self):
         """
