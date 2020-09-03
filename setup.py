@@ -70,6 +70,7 @@ install_requires = [
     'requests >=2.20, <2.24',
     'pyshp ==1.2.3',
     'toml',
+    'GDAL',
 ]
 
 extras_require = {
@@ -83,7 +84,6 @@ extras_require = {
         'basemap >=1.0',
         'pyproj >=1.9',
     ],
-    'platform': ["GDAL >=2.3, <3"],
     'dev':  [
         'pytest >=4.5',
         'flake8 >=3.5, <3.8',
