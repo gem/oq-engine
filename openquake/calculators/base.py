@@ -510,7 +510,8 @@ class HazardCalculator(BaseCalculator):
             # read hazard from files
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
-            self.read_inputs()
+            with self.monitor('reading inputs', measuremem=True):
+                self.read_inputs()
             if 'gmfs' in oq.inputs:
                 if not oq.inputs['gmfs'].endswith('.csv'):
                     raise NotImplementedError(
@@ -551,7 +552,8 @@ class HazardCalculator(BaseCalculator):
                       vars(parent['oqparam']).items()
                       if name not in vars(self.oqparam)}
             self.save_params(**params)
-            self.read_inputs()
+            with self.monitor('importing inputs', measuremem=True):
+                self.read_inputs()
             oqp = parent['oqparam']
             if oqp.investigation_time != oq.investigation_time:
                 raise ValueError(
@@ -581,8 +583,9 @@ class HazardCalculator(BaseCalculator):
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
-            self.read_inputs()
-            self.save_crmodel()
+            with self.monitor('reading inputs', measuremem=True):
+                self.read_inputs()
+                self.save_crmodel()
 
     def init(self):
         """

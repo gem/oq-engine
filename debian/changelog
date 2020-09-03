@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized scenario_damage for the case of many sites
   * Implemented secondary perils
   * Fixed a 32 bit/64 bit bug in `oq prepare_site_model` when sites.csv is
     the same as the vs30.csv file
