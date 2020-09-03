@@ -202,6 +202,7 @@ class OqParam(valid.ParamSet):
                      'early_latin', 'late_latin'), 'early_weights')
     save_disk_space = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
+    sec_peril_params = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -632,7 +633,8 @@ class OqParam(valid.ParamSet):
         """
         dt = F32, (len(self.imtls),)
         lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
-        perils = sec_perils.SecondaryPeril.instances(self)
+        perils = sec_perils.SecondaryPeril.instantiate(self.secondary_perils,
+                                                       self.sec_peril_params)
         for peril in perils:
             for output in peril.outputs:
                 lst.append((output, dt))

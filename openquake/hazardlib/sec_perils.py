@@ -36,13 +36,14 @@ import inspect
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
     @classmethod
-    def instances(cls, oqparam):
+    def instantiate(cls, secondary_perils, sec_peril_params):
         inst = []
-        for clsname in oqparam.secondary_perils:
+        for clsname in secondary_perils:
             c = globals()[clsname]
             lst = []
             for param in inspect.signature(c).parameters:
-                lst.append(getattr(oqparam, param))
+                if param in sec_peril_params:
+                    lst.append(sec_peril_params[param])
             inst.append(c(*lst))
         return inst
 

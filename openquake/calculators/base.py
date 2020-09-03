@@ -824,7 +824,8 @@ class HazardCalculator(BaseCalculator):
             self.amplifier = None
 
         # manage secondary perils
-        sec_perils = SecondaryPeril.instances(oq)
+        sec_perils = SecondaryPeril.instantiate(oq.secondary_perils,
+                                                oq.sec_peril_params)
         for sp in sec_perils:
             sp.prepare(self.sitecol)  # add columns as needed
 
