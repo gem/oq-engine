@@ -14,7 +14,7 @@ jobs:
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
           pytest --doctest-modules -xv openquake/baselib &&
-          OQ_DISTRIBUTE=no pytest --doctest-modules -xv -nauto openquake/hazardlib openquake/hmtk && pytest -vsx doc/adv-manual/developing.rst;
+          OQ_DISTRIBUTE=no pytest --doctest-modules -xv -nauto openquake/hazardlib openquake/hmtk openquake/sep && pytest -vsx doc/adv-manual/developing.rst;
           fi
     after_success:
         - pip install sphinx==1.6.5
