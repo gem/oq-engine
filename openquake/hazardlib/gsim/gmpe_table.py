@@ -302,6 +302,11 @@ class GMPETable(GMPE):
 
     amplification = None
 
+    _gsim = "pippo lippo"
+
+    def __str__(self):
+        return self._gsim + str(self.kwargs)
+
     def __init__(self, **kwargs):
         """
         Executes the preprocessing steps at the instantiation stage to read in
