@@ -2,7 +2,6 @@ import os
 import unittest
 
 import numpy as np
-from osgeo import gdal
 
 try:
     import xarray as xr

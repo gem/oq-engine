@@ -2,7 +2,10 @@ import os
 import unittest
 
 import numpy as np
-from osgeo import gdal
+try:
+    from osgeo import gdal
+except ImportError:
+    gdal = None
 
 from openquake.sep.utils import (
     make_2d_array_strides,
@@ -244,7 +247,7 @@ class test_array_funcs_super_simple(unittest.TestCase):
         np.testing.assert_array_almost_equal(relief_res, relief_result)
 
 
-@unittest.skip("GDAL not always installed correctly")
+@unittest.skipIf(gdal is None, "GDAL not always installed correctly")
 class test_make_local_relief_raster(unittest.TestCase):
     def setUp(self):
         self.test_relief_raster = gdal.Open(test_relief)

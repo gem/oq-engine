@@ -1,3 +1,6 @@
+  [Antonio Ettorre]
+  * Bumped GDAL to version 3.1.2
+
   [Michele Simionato]
   * Optimized scenario_damage for the case of many sites
   * Implemented secondary perils

@@ -835,7 +835,7 @@ class GsimLogicTree(object):
         dt = [('trt', hdf5.vstr), ('branch', hdf5.vstr),
               ('uncertainty', hdf5.vstr)] + [
             (weight, float) for weight in sorted(weights)]
-        branches = [(b.trt, b.id, b.gsim) +
+        branches = [(b.trt, b.id, repr(b.gsim)) +
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches if b.effective]
         dic = {}

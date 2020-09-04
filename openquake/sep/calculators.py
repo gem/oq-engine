@@ -3,7 +3,6 @@ from typing import Optional, Union
 import osgeo
 import numpy as np
 import pandas as pd
-from osgeo import gdal
 
 try:
     import xarray as xr

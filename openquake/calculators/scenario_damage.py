@@ -82,6 +82,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     d_event = AccumDict(accum=z)
     res = {'d_event': d_event, 'd_asset': []}
     for name in consequences:
+        res['avg_' + name] = []
         res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
         # using F64 here is necessary: with F32 the non-commutativity
         # of addition would hurt too much with multiple tasks
@@ -90,8 +91,6 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
-        for name in consequences:
-            res['avg_' + name] = []
         ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
         with haz_mon:
             ri.hazard_getter.init()

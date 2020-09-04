@@ -3,7 +3,10 @@ from typing import Callable, Union
 import numpy as np
 import pandas as pd
 import pyproj as pj
-from osgeo import gdal
+try:
+    from osgeo import gdal
+except ImportError:
+    gdal = None
 from numpy.lib.stride_tricks import as_strided
 
 
