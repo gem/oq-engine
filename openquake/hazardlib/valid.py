@@ -86,7 +86,7 @@ def to_toml(uncertainty):
         kvs = []
     text = gsim_aliases.get(text, text)  # use the gsim alias if any
     if not text.startswith('['):  # a bare GSIM name was passed
-        text = '[%s]' % text
+        text = '[%s]' % repr(text)[1:-1]
     for k, v in kvs:
         try:
             v = ast.literal_eval(v)
