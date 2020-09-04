@@ -89,9 +89,9 @@ postprocessing:
 ```python
 In[3]: calc.datastore.open('r')  # open the datastore for reading
 ```
-The inner format of the databook is not guaranteed to be the same
+The inner format of the datastore is not guaranteed to be the same
 across releases and it is not documented, so this approach is
-recommended only to the most adventurous people.
+recommended to the most adventurous people.
 
 ### how do I plot/analyze/postprocess the results of a calculation?
 
