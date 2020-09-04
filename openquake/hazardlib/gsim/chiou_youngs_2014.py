@@ -39,11 +39,7 @@ class ChiouYoungs2014(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`,
@@ -51,11 +47,8 @@ class ChiouYoungs2014(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see chapter "Variance model".
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
