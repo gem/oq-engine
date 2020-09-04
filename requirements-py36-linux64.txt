@@ -1,4 +1,4 @@
-# Suggested versions for development based on
+# Sug>gested versions for development based on
 # Ubuntu 18.04 stack
 # !! must update pip first! so wheels will be used !!
 
@@ -57,3 +57,4 @@ https://wheelhouse.openquake.org/v2/linux/py/pyparsing-2.2.0-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v2/linux/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py36/matplotlib-2.1.2-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/pyproj-1.9.5.1-cp36-cp36m-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v2/linux/py36/GDAL-2.4.1.post1-cp36-cp36m-manylinux1_x86_64.whl
