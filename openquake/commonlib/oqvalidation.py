@@ -555,7 +555,8 @@ class OqParam(valid.ParamSet):
                     'intensity measure levels explicitly. Suggestion:' +
                     '\n  '.join(suggested)))
         if (len(self.imtls) == 0 and 'event_based' in self.calculation_mode and
-                'gmfs' not in self.inputs and not self.hazard_calculation_id):
+                'gmfs' not in self.inputs and not self.hazard_calculation_id
+                and self.ground_motion_fields):
             raise ValueError('Please define intensity_measure_types in %s' %
                              self.inputs['job_ini'])
 
