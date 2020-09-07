@@ -554,6 +554,10 @@ class OqParam(valid.ParamSet):
                     self.inputs['job_ini'], 'You must provide the '
                     'intensity measure levels explicitly. Suggestion:' +
                     '\n  '.join(suggested)))
+        if (len(self.imtls) == 0 and 'event_based' in self.calculation_mode and
+                'gmfs' not in self.inputs and not self.hazard_calculation_id):
+            raise ValueError('Please define intensity_measure_types in %s' %
+                             self.inputs['job_ini'])
 
     def hmap_dt(self):  # used for CSV export
         """
