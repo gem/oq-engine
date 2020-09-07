@@ -187,5 +187,5 @@ certain point the calculation will run out of memory. I have seen this
 to happen when generating tens of thousands of tasks. Again, it is
 best not to touch this parameter unless you know what you are doing.
 
-.. _equivalent distance approximation: equivalent_distance_approximation.rst
+.. _equivalent distance approximation: equivalent_distance_approximation.rst#equivalent-epicenter-distance-approximation
 .. _rupture radius: https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/source/point.py
