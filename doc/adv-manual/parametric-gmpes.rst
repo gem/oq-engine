@@ -272,3 +272,25 @@ passed to the underlying class will be
     'avg_periods': [0.5, 1.0, 2.0],
     'corr_func': "baker_jayaram"}
 
+
+ModifiableGMPE
+----------------
+
+In engine 3.10 we introduced a ``ModifiableGMPE`` class which is able
+to modify the behavior of an underlying GMPE. Here is an example of
+use in the logic tree file:
+
+.. code-block:: xml
+
+                    <uncertaintyModel>
+                        [ModifiableGMPE]
+                        gmpe.AkkarEtAlRjb2014 = {}
+                        set_between_epsilon.epsilon_tau = 0.5
+                    </uncertaintyModel>
+
+Here `set_between_epsilon` is simply shifting the mean with the formula
+`mean -> mean + epsilon_tau * inter_event`. In the future ``ModifiableGMPE``
+will likely grow more methods. If you want to understand how it works you
+should look at the source code:
+                    
+https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py
