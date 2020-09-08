@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import collections
 import numpy
 
 from openquake.baselib.general import CallableDict
@@ -361,20 +362,51 @@ def sample(weighted_objects, probabilities, sampling_method):
     Take random samples of a sequence of weighted objects
 
     :param weighted_objects:
-        A finite sequence of objects with a `.weight` attribute.
+        A finite sequence of N objects with a `.weight` attribute.
         The weights must sum up to 1.
     :param probabilities:
         An array of S random numbers in the range 0..1
     :return:
         A list of S objects extracted randomly
     """
-    if sampling_method.startswith('early_'):  # consider the weights
+    if sampling_method.startswith('early'):  # consider the weights
         idxs = numpy.searchsorted(_cdf(weighted_objects), probabilities)
-    elif sampling_method.startswith('late_'):
+    elif sampling_method.startswith('late'):
         n = len(weighted_objects)  # consider all weights equal
         idxs = numpy.searchsorted(numpy.arange(1/n, 1, 1/n), probabilities)
     # NB: returning an array would break things
     return [weighted_objects[idx] for idx in idxs]
+
+
+Weighted = collections.namedtuple('Weighted', 'object weight')
+
+
+# for use in notebooks, not in the engine
+def random_sample(items, num_samples, seed, sampling_method):
+    """
+    >>> items = random_sample(
+    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'early_weights')
+    >>> collections.Counter(it.object for it in items)
+    Counter({'C': 6, 'A': 3, 'B': 1})
+
+    >>> items = random_sample(
+    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'late_weights')
+    >>> collections.Counter(it.object for it in items)
+    Counter({'C': 4, 'B': 3, 'A': 3})
+
+    >>> items = random_sample(
+    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'early_latin')
+    >>> collections.Counter(it.object for it in items)
+    Counter({'C': 5, 'B': 3, 'A': 2})
+
+    >>> items = random_sample(
+    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'late_latin')
+    >>> collections.Counter(it.object for it in items)
+    Counter({'A': 4, 'B': 3, 'C': 3})
+    """
+    probs = random(num_samples, seed, sampling_method)
+    return sample([Weighted(*it) for it in items], probs, sampling_method)
+
 
 # ######################### branches and branchsets ######################## #
 
