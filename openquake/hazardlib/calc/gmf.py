@@ -101,7 +101,7 @@ class GmfComputer(object):
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sitecol, imts, cmaker,
                  truncation_level=None, correlation_model=None,
-                 amplifier=None):
+                 amplifier=None, sec_perils=()):
         if len(sitecol) == 0:
             raise ValueError('No sites')
         elif len(imts) == 0:
@@ -113,6 +113,7 @@ class GmfComputer(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.amplifier = amplifier
+        self.sec_perils = sec_perils
         # `rupture` is an EBRupture instance in the engine
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
@@ -128,6 +129,7 @@ class GmfComputer(object):
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
+        self.offset = 0  # can be overridden by the engine
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
@@ -135,8 +137,10 @@ class GmfComputer(object):
         """
         t0 = time.time()
         sids = self.sids
-        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
+        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim, self.offset)
+        mag = self.ebrupture.rupture.mag
         data = []
+        O = sum(len(sp.outputs) for sp in self.sec_perils)
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
             # NB: the trick for performance is to keep the call to
@@ -152,22 +156,36 @@ class GmfComputer(object):
                 eids = eids_by_rlz[rlzi] + self.e0
                 e = len(eids)
                 for ei, eid in enumerate(eids):
-                    gmf = array[:, :, n + ei]  # shape (N, M)
-                    tot = gmf.sum(axis=0)  # shape (M,)
+                    gmfa = array[:, :, n + ei]  # shape (N, M)
+                    tot = gmfa.sum(axis=0)  # shape (M,)
                     if not tot.sum():
                         continue
                     if sig_eps is not None:
                         tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
-                    for sid, gmv in zip(sids, gmf):
+                    sp_out = numpy.zeros((O,) + gmfa.shape)  # O, N, M
+                    for m, imt in enumerate(self.imts):
+                        o = 0
+                        for sp in self.sec_perils:
+                            o1 = o + len(sp.outputs)
+                            sp_out[o:o1, :, m] = sp.compute(
+                                mag, imt, gmfa[:, m], self.sctx)
+                            o = o1
+                    for i, gmv in enumerate(gmfa):
                         if gmv.sum():
-                            data.append((sid, eid, gmv))
+                            if O:
+                                data.append((sids[i], eid, gmv) +
+                                            tuple(sp_out[:, i, :]))
+                            else:
+                                data.append((sids[i], eid, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += e
-        m = (len(min_iml),)
-        d = numpy.array(data, [('sid', U32), ('eid', U32), ('gmv', (F32, m))])
+        dt = F32, (len(min_iml),)
+        dtlist = [('sid', U32), ('eid', U32), ('gmv', dt)] + [
+            (out, dt) for sp in self.sec_perils for out in sp.outputs]
+        d = numpy.array(data, dtlist)
         return d, time.time() - t0
 
     def compute(self, gsim, num_events):

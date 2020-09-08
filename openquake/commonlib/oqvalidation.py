@@ -26,6 +26,7 @@ from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
+from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree, util
 from openquake.risklib.riskmodels import get_risk_files
 
@@ -198,8 +199,11 @@ class OqParam(valid.ParamSet):
     return_periods = valid.Param(valid.positiveints, None)
     ruptures_per_block = valid.Param(valid.positiveint, 500)  # for UCERF
     sampling_method = valid.Param(
-        valid.Choice('early_weights', 'late_weights'), 'early_weights')
+        valid.Choice('early_weights', 'late_weights',
+                     'early_latin', 'late_latin'), 'early_weights')
     save_disk_space = valid.Param(valid.boolean, False)
+    secondary_perils = valid.Param(valid.namelist, [])
+    sec_peril_params = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -550,6 +554,11 @@ class OqParam(valid.ParamSet):
                     self.inputs['job_ini'], 'You must provide the '
                     'intensity measure levels explicitly. Suggestion:' +
                     '\n  '.join(suggested)))
+        if (len(self.imtls) == 0 and 'event_based' in self.calculation_mode and
+                'gmfs' not in self.inputs and not self.hazard_calculation_id
+                and self.ground_motion_fields):
+            raise ValueError('Please define intensity_measure_types in %s' %
+                             self.inputs['job_ini'])
 
     def hmap_dt(self):  # used for CSV export
         """
@@ -628,8 +637,14 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite data type for the GMFs
         """
-        return numpy.dtype(
-            [('sid', U32), ('eid', U32), ('gmv', (F32, (len(self.imtls),)))])
+        dt = F32, (len(self.imtls),)
+        lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
+        perils = SecondaryPeril.instantiate(self.secondary_perils,
+                                            self.sec_peril_params)
+        for peril in perils:
+            for output in peril.outputs:
+                lst.append((output, dt))
+        return numpy.dtype(lst)
 
     def no_imls(self):
         """

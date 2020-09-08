@@ -1,16 +1,17 @@
 Parametric GMPEs
 ===================================
 
-Most of the Ground Motion Prediction Equations (GMPEs) in hazardlib are
-classes that can be instantiated without arguments, however there is
-now a growing number of exceptions to the rule. Here I will describe
-some of the parametric GMPEs we have, as well as give some guidance for
+Most of the Ground Motion Prediction Equations (GMPEs) in hazardlib
+are classes that can be instantiated without arguments. However, there
+is now a growing number of exceptions. Here I will describe some of
+the parametric GMPEs we have, as well as give some guidance for
 authors wanting to implement a parametric GMPE.
 
 Signature of a GMPE class
 -------------------------
 
-We recommend to define parametric GMPEs with a ``**kwargs`` signature:
+The more robust way to define parametric GMPEs is to use
+a ``**kwargs`` signature (robust against subclassing):
 
 .. code-block:: python
 
@@ -24,21 +25,20 @@ We recommend to define parametric GMPEs with a ``**kwargs`` signature:
 
 The call to ``super().__init__`` will set a ``self.kwargs`` attribute
 and perform a few checks, like raising a warning if the GMPE is experimental.
-For nonparametric GMPEs)``self.kwargs`` is the empty dictionary, but in general
-is non-empty and it can be arbitrarily nested, with only one limitation:
+In absence of parameters ``self.kwargs`` is the empty dictionary, but in general
+it is non-empty and it can be arbitrarily nested, with only one limitation:
 it must be a *dictionary of literal Python
 objects* so that it admits a TOML representation.
 
-TOML is a simple format
-similar to the ``.ini`` format but hierarchical that is described here
-https://github.com/toml-lang/toml#user-content-example and it is used
-by lots of people in the IT world. The advantage of TOML is that it is
-a lot more readable than JSON and XML and simpler than YAML: moreover,
-it is perfect for serializing into text literal Python objects like
-dictionaries and lists. The serialization feature is essential for the
-engine since the GMPEs are read from the GMPE logic tree file which is a
-text file, and because the GMPEs are saved into the datastore as a text,
-in the dataset ``full_lt/gsim_lt``.
+TOML is a simple format similar to the ``.ini`` format but
+hierarchical (see https://github.com/toml-lang/toml#user-content-example).
+It is used by lots of people in the IT world, not only in Python.
+The advantage of TOML is that it is a lot more readable than JSON and XML and
+simpler than YAML: moreover, it is perfect for serializing into text literal
+Python objects like dictionaries and lists. The serialization feature
+is essential for the engine since the GMPEs are read from the GMPE
+logic tree file which is a text file, and because the GMPEs are saved
+into the datastore as text, in the dataset ``full_lt/gsim_lt``.
 
 The examples below will clarify how it works.
 
@@ -118,7 +118,7 @@ without TOML:
        </logicTreeBranch>
 
 This is a legacy syntax, which is still supported and will likely be supported
-forever, but we recommend you to use the new TOML-based syntax, which is
+forever, but we recommend to use the new TOML-based syntax, which is
 more general. The old syntax has the limitation of being non-hierarchic,
 making it impossible to define MultiGMPEs involving parametric GMPEs:
 this is why we switched to TOML.
@@ -186,21 +186,20 @@ NB: writing
 .. code-block:: python
 
     class GMPEWithTextFile(GMPE):
-        def __init__(self, text_file:
+        def __init__(self, text_file):
             super().__init__(text_file=text_file)
             with self.open(text_file) as myfile:  # good
                 self.text = myfile.read().decode('utf-8')
 
 would work but it is discouraged. It is best to keep the ``**kwargs``
 signature so that the call to ``super().__init__(**kwargs)`` will
-work out-of-the-box even in future subclasses of `GMPEWithTextFile`
-with different parameters (in case somebody decided to develop
-such subclasses; this is defensive programming).
+work out-of-the-box even if in the future subclasses of `GMPEWithTextFile`
+with different parameters will appear: this is defensive programming.
 
 MultiGMPE
 -----------------
 
-The second example of parametric GMPE is the MultiGMPE class. A MultiGMPE
+Another example of parametric GMPE is the MultiGMPE class. A MultiGMPE
 is a dictionary of GMPEs, keyed by Intensity Measure Type. It is useful
 in geotechnical applications and in general in any situation where you
 have GMPEs depending on the IMTs. You can find an example in our test
@@ -273,3 +272,25 @@ passed to the underlying class will be
     'avg_periods': [0.5, 1.0, 2.0],
     'corr_func': "baker_jayaram"}
 
+
+ModifiableGMPE
+----------------
+
+In engine 3.10 we introduced a ``ModifiableGMPE`` class which is able
+to modify the behavior of an underlying GMPE. Here is an example of
+use in the logic tree file:
+
+.. code-block:: xml
+
+                    <uncertaintyModel>
+                        [ModifiableGMPE]
+                        gmpe.AkkarEtAlRjb2014 = {}
+                        set_between_epsilon.epsilon_tau = 0.5
+                    </uncertaintyModel>
+
+Here `set_between_epsilon` is simply shifting the mean with the formula
+`mean -> mean + epsilon_tau * inter_event`. In the future ``ModifiableGMPE``
+will likely grow more methods. If you want to understand how it works you
+should look at the source code:
+                    
+https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py

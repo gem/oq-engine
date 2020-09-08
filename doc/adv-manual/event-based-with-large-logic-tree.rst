@@ -29,18 +29,22 @@ for each branch sampled from the source model logic
 tree a branch of the GMPE logic tree is chosen randomly,
 by taking into account the weights in the GMPE logic tree file.
 
-Notice that even if source model path is sampled several times, the
-model is parsed and sent to the workers *only once*. In particular if
-there is a single source model (like for South America) and
-``number_of_logic_tree_samples =100``, we generate effectively 1 source
-model realization and not 100 equivalent source model realizations, as
-we did in past (actually in the engine version 1.3).  The engine
-keeps track of how many times a model has been sampled (say `Ns`) and
-in the event based case it produce ruptures (*with different seeds*)
-by calling the appropriate hazardlib function `Ns` times. This is done
-inside the worker nodes. In the classical case, all the ruptures are
-identical and there are no seeds, so the computation is done only
-once, in an efficient way.
+The details of how the sampling works are `documented here`_:
+
+.. _documented here: sampling.hmtl
+
+It should be noticed that even if source model path is sampled several
+times, the model is parsed and sent to the workers *only once*. In
+particular if there is a single source model (like for South America)
+and ``number_of_logic_tree_samples =100``, we generate effectively 1
+source model realization and not 100 equivalent source model
+realizations, as we did in past (actually in the engine version 1.3).
+The engine keeps track of how many times a model has been sampled (say
+`Ns`) and in the event based case it produce ruptures (*with different
+seeds*) by calling the appropriate hazardlib function `Ns` times. This
+is done inside the worker nodes. In the classical case, all the
+ruptures are identical and there are no seeds, so the computation is
+done only once, in an efficient way.
 
 
 Convergency of the GMFs for non-trivial logic trees

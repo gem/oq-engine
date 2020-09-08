@@ -321,19 +321,19 @@ class GmfGetter(object):
     An hazard getter with methods .get_gmfdata and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rupgetter, srcfilter, oqparam, amplifier=None):
+    def __init__(self, rupgetter, srcfilter, oqparam, amplifier=None,
+                 sec_perils=()):
         self.rlzs_by_gsim = rupgetter.rlzs_by_gsim
         self.rupgetter = rupgetter
         self.srcfilter = srcfilter
         self.sitecol = srcfilter.sitecol.complete
         self.oqparam = oqparam
         self.amplifier = amplifier
+        self.sec_perils = sec_perils
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
-        M32 = (F32, (len(oqparam.imtls),))
-        self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U32)])
         md = (calc.filters.MagDepDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
@@ -359,7 +359,8 @@ class GmfGetter(object):
                     computer = calc.gmf.GmfComputer(
                         ebr, sitecol, self.oqparam.imtls, self.cmaker,
                         self.oqparam.truncation_level, self.correl_model,
-                        self.amplifier)
+                        self.amplifier, self.sec_perils)
+                    computer.offset = self.rupgetter.offset
                 except FarAwayRupture:
                     continue
                 # due to numeric errors ruptures within the maximum_distance
@@ -512,17 +513,27 @@ def gen_rupture_getters(dstore, srcfilter, ct):
             continue
         trt = trt_by_grp[grp_id]
         proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
-        if not maxweight:
-            maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
-        blocks = list(general.block_splitter(
-            proxies, maxweight, operator.attrgetter('weight')))
-        logging.info('Group %d: %d ruptures -> %d task(s)',
-                     grp_id, len(rups), len(blocks))
-        for block in blocks:
-            rgetter = RuptureGetter(
-                block, dstore.filename, grp_id,
-                trt, samples[grp_id], rlzs_by_gsim[grp_id])
-            yield rgetter
+        if len(proxies) == 1:  # split by gsim
+            offset = 0
+            for gsim, rlzs in rlzs_by_gsim[grp_id].items():
+                rgetter = RuptureGetter(
+                    proxies, dstore.filename, grp_id,
+                    trt, samples[grp_id], {gsim: rlzs})
+                rgetter.offset = offset
+                offset += rgetter.num_events
+                yield rgetter
+        else:  # split by block
+            if not maxweight:
+                maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
+            blocks = list(general.block_splitter(
+                proxies, maxweight, operator.attrgetter('weight')))
+            logging.info('Group %d: %d ruptures -> %d task(s)',
+                         grp_id, len(rups), len(blocks))
+            for block in blocks:
+                rgetter = RuptureGetter(
+                    block, dstore.filename, grp_id,
+                    trt, samples[grp_id], rlzs_by_gsim[grp_id])
+                yield rgetter
 
 
 def get_ebruptures(dstore):
@@ -562,6 +573,7 @@ class RuptureGetter(object):
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         n_occ = sum(int(proxy['n_occ']) for proxy in proxies)
+        self.offset = 0  # can be overridden
         self.num_events = n_occ if samples > 1 else n_occ * sum(
             len(rlzs) for rlzs in rlzs_by_gsim.values())
 
@@ -577,7 +589,8 @@ class RuptureGetter(object):
         for rup in self.proxies:
             ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
                             self.grp_id, rup['n_occ'], self.samples)
-            for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
+            for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim,
+                                                    self.offset).items():
                 for eid in eids:
                     eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
         return numpy.array(eid_rlz, events_dt)

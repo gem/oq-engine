@@ -1,4 +1,4 @@
-#,,,,,"generated_by='OpenQuake engine 3.10.0-gitbc957366c1', start_date='2020-05-18T19:52:52', checksum=2856676237, kind='tot_curves-stats', risk_investigation_time=50.0"
+#,,,,,"generated_by='OpenQuake engine 3.10.0-git673e68d6bc', start_date='2020-09-01T05:20:49', checksum=1789294772, kind='tot_curves-stats', risk_investigation_time=50.0"
 return_period,stat,loss_type,loss_value,loss_ratio,annual_frequency_of_exceedence
 1,mean,business_interruption,3.37748E+01,2.41249E-03,1.00000E+00
 1,mean,contents,2.31866E+02,6.62475E-03,1.00000E+00

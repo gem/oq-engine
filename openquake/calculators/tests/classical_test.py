@@ -691,23 +691,23 @@ hazard_uhs-std.csv
                               case_51.__file__)
 
     def test_case_52(self):
-        # a case with 2 GSIM realizations b1 and b2 and 10 samples
+        # case with 2 GSIM realizations b1 (w=.9) and b2 (w=.1), 10 samples
 
         # late_weights
         self.run_calc(case_52.__file__, 'job.ini')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.560824, rtol=1E-6)
-        ws = self.calc.datastore['weights'][:]
-        # sampled 6 times b2 and 4 times b1
-        aac(ws, [0.02381, 0.02381, 0.02381, 0.02381, 0.214286, 0.214286,
-                 0.214286, 0.02381, 0.02381, 0.214286], rtol=2E-5)
+        aac(haz, 0.563831, rtol=1E-6)
+        ws = extract(self.calc.datastore, 'weights')
+        # sampled 8 times b1 and 2 times b2
+        aac(ws, [0.029412, 0.029412, 0.029412, 0.264706, 0.264706, 0.029412,
+                 0.029412, 0.264706, 0.029412, 0.029412], rtol=1E-5)
 
         # early_weights
         self.run_calc(case_52.__file__, 'job.ini',
                       sampling_method='early_weights')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.558779, rtol=1E-6)
-        ws = self.calc.datastore['weights'][:]
+        aac(haz, 0.56355, rtol=1E-6)
+        ws = extract(self.calc.datastore, 'weights')
         aac(ws, [0.1] * 10)  # all equal
 
         # full enum, rlz-0: 0.554007, rlz-1: 0.601722
@@ -715,5 +715,21 @@ hazard_uhs-std.csv
                       number_of_logic_tree_samples='0')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
         aac(haz, 0.558779, rtol=1E-6)
-        ws = self.calc.datastore['weights'][:]
+        ws = extract(self.calc.datastore, 'weights')
         aac(ws, [0.9, 0.1])
+
+    def test_case_52_bis(self):
+        self.run_calc(case_52.__file__, 'job.ini',
+                      sampling_method='late_latin')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = extract(self.calc.datastore, 'weights')
+        # sampled 5 times b1 and 5 times b2
+        aac(ws, [0.18, 0.02, 0.18, 0.18, 0.02, 0.02, 0.02, 0.02, 0.18, 0.18])
+
+        self.run_calc(case_52.__file__, 'job.ini',
+                      sampling_method='early_latin')
+        haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
+        aac(haz, 0.558779, rtol=1E-6)
+        ws = extract(self.calc.datastore, 'weights')
+        aac(ws, [0.1] * 10)  # equal weights

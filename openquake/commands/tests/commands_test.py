@@ -479,8 +479,7 @@ class DbTestCase(unittest.TestCase):
 class EngineRunJobTestCase(unittest.TestCase):
     def test_multi_run(self):
         job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-        jobparams = run_jobs([job_ini, job_ini], log_level='error',
-                             csm_cache='/tmp/cache')
+        jobparams = run_jobs([job_ini, job_ini], log_level='error', many=True)
         jobs, params = zip(*jobparams)
         with Print.patch():
             [r1, r2] = commonlib.logs.dbcmd(
@@ -554,8 +553,8 @@ class PrepareSiteModelTestCase(unittest.TestCase):
                                 True, True, False, 0, 5, output)
         self.assertEqual(len(sc), 148)  # 148 sites within 5 km from the params
 
-        # test sites_csv
-        sc = prepare_site_model([], [output], [vs30_csv],
+        # test sites_csv == vs30_csv
+        sc = prepare_site_model([], [vs30_csv], [vs30_csv],
                                 True, True, False, 0, 5, output)
 
 

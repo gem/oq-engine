@@ -39,7 +39,7 @@ from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
     case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_25, mutex)
+    case_25, case_26, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -267,12 +267,12 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
-        self.assertEqual({b'b11~BA': 332,  # w = .6 * .5 = .30
-                          b'b11~CB': 169,  # w = .6 * .3 = .18
-                          b'b11~CY': 108,  # w = .6 * .2 = .12
-                          b'b12~BA': 193,  # w = .4 * .5 = .20
-                          b'b12~CB': 115,  # w = .4 * .3 = .12
-                          b'b12~CY': 83},  # w = .4 * .2 = .08
+        self.assertEqual({b'b11~BA': 287,  # w = .6 * .5 = .30
+                          b'b11~CB': 182,  # w = .6 * .3 = .18
+                          b'b11~CY': 131,  # w = .6 * .2 = .12
+                          b'b12~BA': 213,  # w = .4 * .5 = .20
+                          b'b12~CB': 118,  # w = .4 * .3 = .12
+                          b'b12~CY': 69},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']
@@ -282,7 +282,7 @@ class EventBasedTestCase(CalculatorTestCase):
         mean_cl = get_mean_curves(self.calc.cl.datastore, 'PGA')
         reldiff, _index = max_rel_diff_index(
             mean_cl, mean_eb, min_value=0.1)
-        self.assertLess(reldiff, 0.07)
+        self.assertLess(reldiff, 0.05)
 
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
@@ -451,6 +451,10 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_25.__file__, 'job_common.ini')
         mean, *others = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', mean)
+
+    def test_case_26(self):
+        # mock secondary perils
+        self.run_calc(case_26.__file__, 'job.ini')
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

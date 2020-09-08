@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import collections
 import numpy
 
 from openquake.baselib.general import CallableDict
@@ -305,42 +306,109 @@ def apply_uncertainties(bset_values, src_group):
         sg.sources.extend(srcs)
     return sg
 
+# ######################### sampling ######################## #
 
-# ######################### branches and branchsets ######################## #
+
+def random(size, seed, sampling_method='early_weights'):
+    """
+    :param size: size of the returned array (integer or pair of integers)
+    :param seed: random seed
+    :param sampling_method: 'early_weights', 'early_latin', ...
+    :returns: an array of floats in the range 0..1
+
+    You can compare montecarlo sampling with latin square sampling with
+    the following code:
+
+    import matplotlib.pyplot as plt
+    samples, seed = 10, 42
+    x, y = random((samples, 2), seed, 'early_latin').T
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.scatter(x, y, color='green')  # points on a latin square
+    x, y = random((samples, 2), seed, 'early_weights').T
+    plt.scatter(x, y, color='red')  # points NOT on a latin square
+    for x in numpy.arange(0, 1, 1/samples):
+        for y in numpy.arange(0, 1, 1/samples):
+            plt.axvline(x)
+            plt.axhline(y)
+    plt.show()
+    """
+    numpy.random.seed(seed)
+    xs = numpy.random.uniform(size=size)
+    if sampling_method.endswith('latin'):
+        # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
+        try:
+            s, d = size
+        except TypeError:  # cannot unpack non-iterable int object
+            return (numpy.argsort(xs) + xs) / size
+        for i in range(d):
+            xs[:, i] = (numpy.argsort(xs[:, i]) + xs[:, i]) / s
+    return xs
 
 
-def sample(weighted_objects, num_samples, seed, sampling_method):
+def _cdf(weighted_objects):
+    weights = []
+    for obj in weighted_objects:
+        w = obj.weight
+        if isinstance(obj.weight, float):
+            weights.append(w)
+        else:
+            weights.append(w['weight'])
+    return numpy.cumsum(weights)
+
+
+def sample(weighted_objects, probabilities, sampling_method):
     """
     Take random samples of a sequence of weighted objects
 
     :param weighted_objects:
-        A finite sequence of objects with a `.weight` attribute.
+        A finite sequence of N objects with a `.weight` attribute.
         The weights must sum up to 1.
-    :param num_samples:
-        The number of samples to return
-    :param seed:
-        A random seed
-    :param sampling_method:
-        If 'early_weights' use the weights, otherwise ignore them
+    :param probabilities:
+        An array of S random numbers in the range 0..1
     :return:
-        A subsequence of the original sequence with `num_samples` elements
+        A list of S objects extracted randomly
     """
-    numpy.random.seed(seed)
-    if sampling_method == 'early_weights':
-        weights = []
-        for obj in weighted_objects:
-            w = obj.weight
-            if isinstance(obj.weight, float):
-                weights.append(w)
-            else:
-                weights.append(w['weight'])
-        idxs = numpy.random.choice(len(weights), num_samples, p=weights)
-    elif sampling_method == 'late_weights':
-        idxs = numpy.random.choice(len(weighted_objects), num_samples)
-    else:
-        raise NotImplementedError(sampling_method)
+    if sampling_method.startswith('early'):  # consider the weights
+        idxs = numpy.searchsorted(_cdf(weighted_objects), probabilities)
+    elif sampling_method.startswith('late'):
+        n = len(weighted_objects)  # consider all weights equal
+        idxs = numpy.searchsorted(numpy.arange(1/n, 1, 1/n), probabilities)
     # NB: returning an array would break things
     return [weighted_objects[idx] for idx in idxs]
+
+
+Weighted = collections.namedtuple('Weighted', 'object weight')
+
+
+# for use in notebooks, not in the engine
+def random_sample(items, num_samples, seed, sampling_method):
+    """
+    >>> items = random_sample(
+    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'early_weights')
+    >>> collections.Counter(it.object for it in items)
+    Counter({'C': 6, 'A': 3, 'B': 1})
+
+    >>> items = random_sample(
+    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'late_weights')
+    >>> collections.Counter(it.object for it in items)
+    Counter({'C': 4, 'B': 3, 'A': 3})
+
+    >>> items = random_sample(
+    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'early_latin')
+    >>> collections.Counter(it.object for it in items)
+    Counter({'C': 5, 'B': 3, 'A': 2})
+
+    >>> items = random_sample(
+    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'late_latin')
+    >>> collections.Counter(it.object for it in items)
+    Counter({'A': 4, 'B': 3, 'C': 3})
+    """
+    probs = random(num_samples, seed, sampling_method)
+    return sample([Weighted(*it) for it in items], probs, sampling_method)
+
+
+# ######################### branches and branchsets ######################## #
 
 
 class Branch(object):
@@ -443,23 +511,22 @@ class BranchSet(object):
         self.filters = filters or {}
         self.collapsed = collapsed
 
-    def sample(self, num_samples, seed, sampling_method):
+    def sample(self, probabilities, sampling_method):
         """
         :param num_samples: the number of samples
-        :param seed: the seed used for the sampling
-        :param sampling_method: the sampling method (i.e. 'early_weights')
+        :param probabilities: random numbers in the range 0..1
+        :param sampling_method: the sampling method used
         :returns: a list of num_samples lists of branches
         """
         out = []
-        for s in range(num_samples):
+        for x in probabilities:
             branchset = self
             branches = []
             while branchset is not None:
                 if branchset.collapsed:
                     branch = branchset.branches[0]
                 else:
-                    [branch] = sample(branchset.branches, 1, seed + s,
-                                      sampling_method)
+                    [branch] = sample(branchset.branches, [x], sampling_method)
                 branches.append(branch)
                 branchset = branch.bset
             out.append(branches)

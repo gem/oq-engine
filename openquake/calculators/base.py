@@ -36,10 +36,10 @@ from openquake.hazardlib import InvalidFile, site
 
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
-
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
+from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, util
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -509,7 +509,8 @@ class HazardCalculator(BaseCalculator):
             # read hazard from files
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
-            self.read_inputs()
+            with self.monitor('importing inputs', measuremem=True):
+                self.read_inputs()
             if 'gmfs' in oq.inputs:
                 if not oq.inputs['gmfs'].endswith('.csv'):
                     raise NotImplementedError(
@@ -550,7 +551,8 @@ class HazardCalculator(BaseCalculator):
                       vars(parent['oqparam']).items()
                       if name not in vars(self.oqparam)}
             self.save_params(**params)
-            self.read_inputs()
+            with self.monitor('importing inputs', measuremem=True):
+                self.read_inputs()
             oqp = parent['oqparam']
             if oqp.investigation_time != oq.investigation_time:
                 raise ValueError(
@@ -580,8 +582,9 @@ class HazardCalculator(BaseCalculator):
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
-            self.read_inputs()
-            self.save_crmodel()
+            with self.monitor('importing inputs', measuremem=True):
+                self.read_inputs()
+                self.save_crmodel()
 
     def init(self):
         """
@@ -822,10 +825,17 @@ class HazardCalculator(BaseCalculator):
         else:
             self.amplifier = None
 
-        # used in the risk calculators
+        # manage secondary perils
+        sec_perils = SecondaryPeril.instantiate(oq.secondary_perils,
+                                                oq.sec_peril_params)
+        for sp in sec_perils:
+            sp.prepare(self.sitecol)  # add columns as needed
+
         self.param = dict(individual_curves=oq.individual_curves,
                           collapse_level=oq.collapse_level,
-                          avg_losses=oq.avg_losses, amplifier=self.amplifier)
+                          avg_losses=oq.avg_losses,
+                          amplifier=self.amplifier,
+                          sec_perils=sec_perils)
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):

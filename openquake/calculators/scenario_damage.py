@@ -80,8 +80,9 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     approx_ddd = param['approx_ddd']
     z = numpy.zeros((L, D - 1), F32 if approx_ddd else U32)
     d_event = AccumDict(accum=z)
-    res = {'d_event': d_event}
+    res = {'d_event': d_event, 'd_asset': []}
     for name in consequences:
+        res['avg_' + name] = []
         res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
         # using F64 here is necessary: with F32 the non-commutativity
         # of addition would hurt too much with multiple tasks
@@ -90,9 +91,6 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     for ri in riskinputs:
         # otherwise test 4b will randomly break with last digit changes
         # in dmg_by_event :-(
-        result = dict(d_asset=[])
-        for name in consequences:
-            result['avg_' + name] = []
         ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
         with haz_mon:
             ri.hazard_getter.init()
@@ -115,21 +113,20 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
                         tot = ddds.sum(axis=0)  # shape D
                         nodamage = asset['number'] * (ne - len(ddds))
                         tot[0] += nodamage
-                        result['d_asset'].append((l, r, aid, tot))
+                        res['d_asset'].append((l, r, aid, tot))
                         # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
-                            result['avg_%s' % name].append(
+                            res['avg_%s' % name].append(
                                 (l, r, asset['ordinal'], values.sum(axis=0)))
                             by_event = res[name + '_by_event']
                             for eid, value in zip(out.eids, values):
                                 by_event[eid][l] += value
         with rsk_mon:
-            result['aed'] = aed = numpy.zeros(len(ddic), param['aed_dt'])
+            res['aed'] = aed = numpy.zeros(len(ddic), param['aed_dt'])
             for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
                 aed[i] = (aid, eid, dd)
-        yield result
-    yield res
+    return res
 
 
 @base.calculators.add('scenario_damage')
@@ -167,11 +164,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.start = 0
 
     def combine(self, acc, res):
+        # this is fast
         aed = res.pop('aed', ())
         if len(aed) == 0:
             return acc + res
         for aid, [(i1, i2)] in get_indices(aed['aid']).items():
-
             self.datastore['dd_data/indices'][aid] = (
                 self.start + i1, self.start + i2)
         self.start += len(aed)
