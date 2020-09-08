@@ -173,35 +173,35 @@ in the engine in the future. The header will be the same for all
 kind of ruptures that will be stored in the same CSV. Here is description
 of the fields as they are named now:
 
-serial:
+serial
   the serial number of the rupture, which is also the random seed used
   to compute the GMFs
-mag:
+mag
   the magnitude of the rupture
-rake:
+rake
   the rake of the rupture
-lon:
+lon
   the longitude of the hypocenter in degrees
-lat:
+lat
   the latitude of the hypocenter in degrees
-dep:
+dep
   the depth of the hypocenter in km
-multiplicity:
+multiplicity
   the number of occurrences of the rupture
-trt:
+trt
   the tectonic region type of the rupture; must be consistent with the
   trts listed in the pre-header of the file
-kind:
+kind
   a space-separated string listing the rupture class and the surface class
   used in the engine
-mesh:
+mesh
   nested list with lon, lat, dep of the points of the discretized
   rupture geometry
-extra:
+extra
   extra parameters of the rupture as a JSON dictionary, for instance
   the rupture occurrence rate
 
-Notice using a CSV file generated with an old version of the engine
+Notice that using a CSV file generated with an old version of the engine
 in inherently risky: for instance if we changed the
 ParametricProbabilisticRupture class or the PlanarSurface classes in an
 incompatible way with the past, then a scenario calculation starting
