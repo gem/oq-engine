@@ -179,7 +179,7 @@ serial
 mag
   the magnitude of the rupture
 rake
-  the rake of the rupture
+  the rake angle of the rupture surface in degrees
 lon
   the longitude of the hypocenter in degrees
 lat
@@ -202,14 +202,15 @@ extra
   the rupture occurrence rate
 
 Notice that using a CSV file generated with an old version of the engine
-in inherently risky: for instance if we changed the
-ParametricProbabilisticRupture class or the PlanarSurface classes in an
+is inherently risky: for instance if we changed the
+``ParametricProbabilisticRupture`` class or the ``PlanarSurface classes`` in an
 incompatible way with the past, then a scenario calculation starting
-with the CSV would give different results in the new version than in
-the old version. We never changed the rupture classes or the surface
+with the CSV would give different results in the new version of the engine.
+We never changed the rupture classes or the surface
 classes, but we changed the seed algorithm often, and that too would
 cause different numbers to be generated (hopefully, statistically
-consistent).
+consistent). A bug fix or change of logic in the calculator can also
+change the numbers across engine versions.
   
 ``max_sites_disagg``
 --------------------------------
