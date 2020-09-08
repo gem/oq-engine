@@ -18,7 +18,7 @@
 import numpy as np
 import unittest
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.imt import PGA, MMI
 from openquake.hazardlib.gsim.base import registry
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
@@ -71,3 +71,40 @@ class ModifiableGMPETest(unittest.TestCase):
         # Check that the total std now corresponds to the within event
         # standard deviation
         np.testing.assert_almost_equal(stds[0], estds[2])
+
+
+class ModifiableGMPETestSwissAmpl(unittest.TestCase):
+
+    def setUp(self):
+        # Set parameters
+        self.sites = Dummy.get_site_collection(4, amplfactor=[-1.0, 1.5,
+                                                           0.00, -1.99])
+        self.rup = Dummy.get_rupture(mag=6.0, hypo_depth=10)
+        self.dists = DistancesContext()
+        self.dists.rhypo = np.array([1., 10., 30., 70.])
+        self.dists.repi = np.array([1., 10., 30., 70.])
+        self.imt = MMI()
+
+    def test_get_mean_std(self):
+        """ Check calculation of amplified mean"""
+
+        for gmpe_name in ['ECOS2009', 'BindiEtAl2011RepiFixedH',
+                          'BaumontEtAl2018High2210IAVGDC30n7',
+                          'FaccioliCauzzi2006']:
+
+            stds_types = [const.StdDev.TOTAL]
+            gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
+                                 apply_swiss_amplification={})
+            mean, stds = gmm.get_mean_and_stddevs(self.sites, self.rup,
+                                                  self.dists, self.imt,
+                                                  stds_types)
+
+            gmpe = registry[gmpe_name]()
+            emean, estds = gmpe.get_mean_and_stddevs(self.sites, self.rup,
+                                                     self.dists,
+                                                     self.imt, stds_types)
+
+            exp_mean = emean + np.array([-1.00, 1.50, 0, -1.99])
+
+            # Check the computed mean + amplification
+            np.testing.assert_almost_equal(mean, exp_mean)

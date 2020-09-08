@@ -131,6 +131,7 @@ site_param_dt = {
     'ec8_p18': (numpy.string_, 2),
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
+    'amplfactor': numpy.float64,
 
     # parameters for geotechnic hazard
     'liquefaction_susceptibility': numpy.int16,

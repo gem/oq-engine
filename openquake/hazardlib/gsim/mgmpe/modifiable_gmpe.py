@@ -25,7 +25,6 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const
 
-
 class ModifiableGMPE(GMPE):
     """
     This is a fully configurable GMPE
@@ -39,6 +38,9 @@ class ModifiableGMPE(GMPE):
         - 'set_between_epsilon' This sets the epsilon of the between event
            variability i.e. the returned mean is the original + tau * episilon
            and sigma tot is equal to sigma_within
+		- 'apply_swiss_amplification' This applies intensity amplification
+           factors to the mean intensity returned by the parent GMPE/IPE based on the
+           input 'amplfactor' site parameter 
     """
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
@@ -66,7 +68,7 @@ class ModifiableGMPE(GMPE):
         for spec of input and result values.
         """
         working_std_types = copy.copy(stddev_types)
-
+		
         if 'set_between_epsilon' in self.params:
             if (const.StdDev.INTER_EVENT not in
                     self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
@@ -74,6 +76,8 @@ class ModifiableGMPE(GMPE):
             working_std_types.append(const.StdDev.INTER_EVENT)
             working_std_types.append(const.StdDev.INTRA_EVENT)
             working_std_types.append(const.StdDev.TOTAL)
+        if 'apply_swiss_intensity_amplification' in self.params:
+            REQUIRES_SITES_PARAMETERS = set(('amplfactor', ))
 
         # Compute the original mean and standard deviations
         omean, ostds = self.gmpe.get_mean_and_stddevs(
@@ -83,18 +87,28 @@ class ModifiableGMPE(GMPE):
         for key, val in zip(working_std_types, ostds):
             setattr(self, key, val)
         self.mean = omean
-
+		#print (sites.siteclass)
+		
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
-            getattr(self, methname)(**kw)
-
+            if methname == 'apply_swiss_amplification':
+                getattr(self, methname)(sites)
+            else:
+                getattr(self, methname)(**kw)
+        
         # Return the standard deviation types as originally requested
         outs = []
         for key in stddev_types:
             outs.append(getattr(self, key))
 
         return self.mean, outs
-
+        
+    def apply_swiss_amplification(self,sites):
+        """
+		Adds amplfactor to mean
+        """	
+        self.mean = self.mean + sites.amplfactor
+        
     def set_between_epsilon(self, epsilon_tau):
         """
         :param epsilon_tau:
