@@ -162,3 +162,12 @@ class SungAbrahamson2020NonErgodic(SungAbrahamson2020):
             raise ValueError('')
 
         return mean, stddevs
+
+    # The Coefficients used here are the same of the ergodic model BUT the
+    # standard deviations which are based on information Karen sent on
+    # Sept 4th.
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+IMT c1             c2   c3           c4     c5          c6          c7           c8           c9           cn          cM          chm         tot      tau
+f_1.0 -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909 6           3.811150377 0.868 0.476
+f_5.0 -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202382 -0.699440349 0.031866505  14.31473379 5.165553252 3.507442691 0.746 0.337
+""")
