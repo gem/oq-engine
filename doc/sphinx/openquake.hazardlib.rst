@@ -45,6 +45,14 @@ imt
     :undoc-members:
     :show-inheritance:
 
+lt
+------------------------------
+
+.. automodule:: openquake.hazardlib.lt
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 near_fault
 -------------------------------------
 
