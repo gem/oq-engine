@@ -191,6 +191,9 @@ multiplicity:
 trt:
   the tectonic region type of the rupture; must be consistent with the
   trts listed in the pre-header of the file
+kind:
+  a space-separated string listing the rupture class and the surface class
+  used in the engine
 mesh:
   nested list with lon, lat, dep of the points of the discretized
   rupture geometry
@@ -198,6 +201,16 @@ extra:
   extra parameters of the rupture as a JSON dictionary, for instance
   the rupture occurrence rate
 
+Notice using a CSV file generated with an old version of the engine
+in inherently risky: for instance if we changed the
+ParametricProbabilisticRupture class or the PlanarSurface classes in an
+incompatible way with the past, then a scenario calculation starting
+with the CSV would give different results in the new version than in
+the old version. We never changed the rupture classes or the surface
+classes, but we changed the seed algorithm often, and that too would
+cause different numbers to be generated (hopefully, statistically
+consistent).
+  
 ``max_sites_disagg``
 --------------------------------
 
