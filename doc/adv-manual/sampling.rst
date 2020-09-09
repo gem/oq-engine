@@ -41,8 +41,8 @@ late_latin
 
 More precisely, the engine calls something like the function
 
-``openquake.hazardlib.random_sample(
-   branchsets, num_samples, seed, sampling_method)``
+``openquake.hazardlib.lt.random_sample(
+    branchsets, num_samples, seed, sampling_method)``
 
 You are invited to play with it; in general the latin sampling produces
 samples much closer to the expected weights even with few samples.
