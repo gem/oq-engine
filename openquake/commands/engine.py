@@ -65,17 +65,18 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     """
     dist = parallel.oq_distribute()
     jobparams = []
+    multi = kw.pop('multi')
     for job_ini in job_inis:
         # NB: the logs must be initialized BEFORE everything
         job_id = logs.init('job', getattr(logging, log_level.upper()))
         with logs.handle(job_id, log_level, log_file):
             oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
                                         username, **kw)
-        if (not jobparams and not kw.get('many')
+        if (not jobparams and not multi
                 and 'hazard_calculation_id' not in kw):
             kw['hazard_calculation_id'] = job_id
         jobparams.append((job_id, oqparam))
-    jobarray = len(jobparams) > 1 and kw.get('many')
+    jobarray = len(jobparams) > 1 and multi
     try:
         eng.poll_queue(job_id, poll_time=15)
         # wait for an empty slot or a CTRL-C
@@ -142,7 +143,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
            export_output, export_outputs, exports='',
-           log_level='info', many=False, reuse_hazard=False, param=''):
+           log_level='info', multi=False, reuse_hazard=False, param=''):
     """
     Run a calculation using the traditional command line API
     """
@@ -205,13 +206,13 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
         if reuse_hazard:
             pars['csm_cache'] = datadir
-        pars['many'] = many
         if hc_id:
             pars['hazard_calculation_id'] = str(hc_id)
         oqvalidation.OqParam.check(pars)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
+        pars['multi'] = multi
         run_jobs(job_inis, log_level, log_file, exports, **pars)
 
     # hazard
@@ -313,7 +314,7 @@ engine.opt('exports', 'Comma-separated string specifing the export formats, '
            'in order of priority')
 engine.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
-engine.flg('many', 'Run multiple job.inis in parallel')
+engine.flg('multi', 'Run multiple job.inis in parallel')
 engine.flg('reuse_hazard', 'Read the source models from the cache (if any)')
 engine._add('param', '--param', '-p',
             help='Override parameters specified with the syntax '
