@@ -1076,7 +1076,7 @@ EOF
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.buildinfo \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" || true
-                PKG_COMMIT="$(git log --pretty='format:%h' -1)"
+                PKG_COMMIT="$(git log --pretty='format:%H' -1 | cut -c 1-10)"
                 egrep '_COMMIT=|_PKG=' _jenkins_deps_info \
                   | sed 's/\(^.*=[0-9a-f]\{7\}\).*/\1/g' \
                   > "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/${GEM_DEB_PACKAGE}_${PKG_COMMIT}_deps.txt"
