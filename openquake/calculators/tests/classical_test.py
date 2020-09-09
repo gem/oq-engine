@@ -484,8 +484,6 @@ hazard_uhs-std.csv
         probs_occur = self.calc.datastore['mag_8.20/rctx']['probs_occur']
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 4)  # 2 nonparam rups x 2
-        npo = self.calc.csm.get_num_probs_occur()  # 2 probs_occur per rupture
-        self.assertEqual(npo, 2)
 
         # make sure there is an error when trying to disaggregate
         with self.assertRaises(NotImplementedError):
