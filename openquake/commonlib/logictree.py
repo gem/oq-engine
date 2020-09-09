@@ -1196,8 +1196,8 @@ class FullLogicTree(object):
         """
         :returns: a dictionary sm_lt_path -> effective realization index
         """
-        return {'_'.join(sm_rlz.lt_path): i
-                for i, sm_rlz in enumerate(self.sm_rlzs)}
+        paths = {'_'.join(rlz.sm_lt_path) for rlz in self.get_realizations()}
+        return {path: i for i, path in enumerate(sorted(paths))}
 
     @property
     def trt_by_grp(self):
@@ -1320,7 +1320,8 @@ class FullLogicTree(object):
                 for gid in self.grp_ids(sm.ordinal):
                     trti, eri = divmod(gid, len(self.sm_rlzs))
                     for rlz in rlzs:
-                        if eri_by_ltp['_'.join(rlz.sm_lt_path)] == eri:
+                        idx = eri_by_ltp['_'.join(rlz.sm_lt_path)]
+                        if idx == eri:
                             acc[gid][rlz.gsim_rlz.value[trti]].append(
                                 rlz.ordinal)
             self._rlzs_by_grp = {}
