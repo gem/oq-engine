@@ -309,13 +309,6 @@ class CompositeSourceModel:
         return [src for src_group in self.src_groups
                 for src in src_group]
 
-    def get_num_probs_occur(self):
-        """
-        :returns: the number of probs_occur from the underlying nonpar sources
-        """
-        return max(getattr(src, 'num_probs_occur', 0)
-                   for src in self.get_sources())
-
     def get_floating_spinning_factors(self):
         """
         :returns: (floating rupture factor, spinning rupture factor)
