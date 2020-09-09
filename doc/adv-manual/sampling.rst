@@ -41,27 +41,31 @@ late_latin
 
 More precisely, the engine calls something like the function
 
-``openquake.hazardlib.random_sample(items, num_samples, seed, sampling_method)``
+``openquake.hazardlib.random_sample(
+   branchsets, num_samples, seed, sampling_method)``
 
 You are invited to play with it; in general the latin sampling produces
-samples very close to the expected weights even with few samples:
+samples much closer to the expected weights even with few samples.
+Here in an example with two branchsets with weights [.4, .6] and
+[.2, .3, .5] respectively.
 
-    >>> items = random_sample(
-    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'early_weights')
-    >>> collections.Counter(it.object for it in items)
-    Counter({'C': 6, 'A': 3, 'B': 1})
+    >>> bsets = [[('X', .4), ('Y', .6)], [('A', .2), ('B', .3), ('C', .5)]]
 
-    >>> items = random_sample(
-    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'late_weights')
-    >>> collections.Counter(it.object for it in items)
-    Counter({'C': 4, 'B': 3, 'A': 3})
+With 100 samples one would expect to get the path XA 8 times, XB 12
+times, XC 20 times, YA 12 times, YB 18 times, YC 30 times. Instead we get:
 
-    >>> items = random_sample(
-    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'early_latin')
-    >>> collections.Counter(it.object for it in items)
-    Counter({'C': 5, 'B': 3, 'A': 2})
+    >>> paths = random_sample(bsets, 100, 42, 'early_weights')
+    >>> collections.Counter(paths)
+    Counter({'YC': 26, 'XC': 24, 'YB': 17, 'XA': 13, 'YA': 10, 'XB': 10})
 
-    >>> items = random_sample(
-    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'late_latin')
-    >>> collections.Counter(it.object for it in items)
-    Counter({'A': 4, 'B': 3, 'C': 3})
+    >>> paths = random_sample(bsets, 100, 42, 'late_weights')
+    >>> collections.Counter(paths)
+    Counter({'XA': 20, 'YA': 18, 'XB': 17, 'XC': 15, 'YB': 15, 'YC': 15})
+
+    >>> paths = random_sample(bsets, 100, 42, 'early_latin')
+    >>> collections.Counter(paths)
+    Counter({'YC': 31, 'XC': 19, 'YB': 17, 'XB': 13, 'YA': 12, 'XA': 8})
+
+    >>> paths = random_sample(bsets, 100, 45, 'late_latin')
+    >>> collections.Counter(paths)
+    Counter({'YC': 18, 'XA': 18, 'XC': 16, 'YA': 16, 'XB': 16, 'YB': 16})

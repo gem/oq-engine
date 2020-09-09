@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import itertools
 import collections
 import numpy
 
@@ -381,31 +382,32 @@ def sample(weighted_objects, probabilities, sampling_method):
 Weighted = collections.namedtuple('Weighted', 'object weight')
 
 
-# for use in notebooks, not in the engine
-def random_sample(items, num_samples, seed, sampling_method):
+# used in notebooks for teaching, not in the engine
+def random_sample(branchsets, num_samples, seed, sampling_method):
     """
-    >>> items = random_sample(
-    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'early_weights')
-    >>> collections.Counter(it.object for it in items)
-    Counter({'C': 6, 'A': 3, 'B': 1})
+    >>> bsets = [[('X', .4), ('Y', .6)], [('A', .2), ('B', .3), ('C', .5)]]
+    >>> paths = random_sample(bsets, 100, 42, 'early_weights')
+    >>> collections.Counter(paths)
+    Counter({'YC': 26, 'XC': 24, 'YB': 17, 'XA': 13, 'YA': 10, 'XB': 10})
 
-    >>> items = random_sample(
-    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'late_weights')
-    >>> collections.Counter(it.object for it in items)
-    Counter({'C': 4, 'B': 3, 'A': 3})
+    >>> paths = random_sample(bsets, 100, 42, 'late_weights')
+    >>> collections.Counter(paths)
+    Counter({'XA': 20, 'YA': 18, 'XB': 17, 'XC': 15, 'YB': 15, 'YC': 15})
 
-    >>> items = random_sample(
-    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'early_latin')
-    >>> collections.Counter(it.object for it in items)
-    Counter({'C': 5, 'B': 3, 'A': 2})
+    >>> paths = random_sample(bsets, 100, 42, 'early_latin')
+    >>> collections.Counter(paths)
+    Counter({'YC': 31, 'XC': 19, 'YB': 17, 'XB': 13, 'YA': 12, 'XA': 8})
 
-    >>> items = random_sample(
-    ...         [('A', .2), ('B', .3), ('C', .5)], 10, 42, 'late_latin')
-    >>> collections.Counter(it.object for it in items)
-    Counter({'A': 4, 'B': 3, 'C': 3})
+    >>> paths = random_sample(bsets, 100, 45, 'late_latin')
+    >>> collections.Counter(paths)
+    Counter({'YC': 18, 'XA': 18, 'XC': 16, 'YA': 16, 'XB': 16, 'YB': 16})
     """
-    probs = random(num_samples, seed, sampling_method)
-    return sample([Weighted(*it) for it in items], probs, sampling_method)
+    probs = random((num_samples, len(branchsets)), seed, sampling_method)
+    arr = numpy.zeros((num_samples, len(branchsets)), object)
+    for b, bset in enumerate(branchsets):
+        arr[:, b] = sample([Weighted(*it) for it in bset], probs[:, b],
+                           sampling_method)
+    return [''.join(w.object for w in row) for row in arr]
 
 
 # ######################### branches and branchsets ######################## #
