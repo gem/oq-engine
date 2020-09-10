@@ -9,6 +9,7 @@
   * Parallelized by GSIM when there is a single rupture
 
   [Francis Bernales]
+  * Added the Bozorgnia & Campbell (2016) GMPE
   * Added the Gulerce et al. (2017) GMPE
 
   [Michele Simionato]
