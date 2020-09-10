@@ -274,10 +274,10 @@ boore_atkinson_2011
     :undoc-members:
     :show-inheritance:
 
-bozorgna_campbell_2016
+bozorgnia_campbell_2016
 -----------------------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.bozorgna_campbell_2016
+.. automodule:: openquake.hazardlib.gsim.bozorgnia_campbell_2016
     :members:
     :undoc-members:
     :show-inheritance:
