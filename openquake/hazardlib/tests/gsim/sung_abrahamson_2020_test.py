@@ -14,13 +14,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.sung_abrahamson_2020 import \
-        SungAbranhamson2020
+from openquake.hazardlib.gsim.sung_2020 import SungAbrahamson2020
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class BaylessAbrahamson2018TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = SungAbranhamson2020
+class SungAbranhamson2020TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = SungAbrahamson2020
 
     # Tables computed using the matlab script included in the supplement to
     # the BSSA paper

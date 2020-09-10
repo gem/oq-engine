@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`Sung2020`
+Module exports :class:`SungAbrahamson2020`
 """
 
 import os
@@ -44,6 +44,9 @@ class SungAbrahamson2020(BaylessAbrahamson2018):
 
     #: Required site parameters
     REQUIRES_SITES_PARAMETERS = {'vs30'}
+
+    #: Required rupture parameters
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
@@ -134,7 +137,10 @@ class SungAbrahamson2020NonErgodic(SungAbrahamson2020):
         mean -= C['c7'] * dists.rrup
 
         # Checking that we use only one site (for the time being)
-        assert len(sites.sites) == 1
+        try:
+            assert len(sites.sites) == 1
+        except:
+            assert len(sites) == 1
 
         # Read info from the hdf5 file
         fcoeff = h5py.File(self.adjustment_file, 'r')
