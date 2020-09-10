@@ -1196,8 +1196,8 @@ class FullLogicTree(object):
         """
         :returns: a dictionary sm_lt_path -> effective realization index
         """
-        paths = {'_'.join(rlz.sm_lt_path) for rlz in self.get_realizations()}
-        return {path: i for i, path in enumerate(sorted(paths))}
+        return {'_'.join(sm_rlz.lt_path): i
+                for i, sm_rlz in enumerate(self.sm_rlzs)}
 
     @property
     def trt_by_grp(self):
@@ -1274,7 +1274,9 @@ class FullLogicTree(object):
         rlzs = []
         self._gsims_by_trt = AccumDict(accum=set())  # trt -> gsims
         if self.num_samples:  # sampling
-            sm_rlzs = list(self.source_model_lt)  # uses self.seed
+            sm_rlzs = []
+            for sm_rlz in self.sm_rlzs:
+                sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
                                             self.sampling_method)
             for t, trt in enumerate(self.gsim_lt.values):
