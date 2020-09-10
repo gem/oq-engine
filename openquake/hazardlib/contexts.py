@@ -188,7 +188,7 @@ class ContextMaker(object):
             self.pointsource_distance = param['pointsource_distance'][trt]
         else:
             self.pointsource_distance = {}
-        self.filter_distance = 'rrup'
+        self.filter_distance = param.get('filter_distance') or 'rrup'
         if 'imtls' in param:
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
