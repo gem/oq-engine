@@ -223,9 +223,15 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, remove=True, **kw):
+    def run(self, pre_execute=True, concurrent_tasks=None, remove=True,
+            shutdown=False, **kw):
         """
         Run the calculation and return the exported outputs.
+
+        :param pre_execute: set it to False to avoid running pre_execute
+        :param concurrent_tasks: set it to 0 to disable parallelization
+        :param remove: set it to False to remove the hdf5cache file (if any)
+        :param shutdown: set it to True to shutdown the ProcessPool
         """
         with self._monitor:
             self._monitor.username = kw.get('username', '')
@@ -256,6 +262,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     logging.critical('', exc_info=True)
                     raise
             finally:
+                if shutdown:
+                    parallel.Starmap.shutdown()
                 # cleanup globals
                 if ct == 0:  # restore OQ_DISTRIBUTE
                     if oq_distribute is None:  # was not set
