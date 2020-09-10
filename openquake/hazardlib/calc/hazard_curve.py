@@ -24,14 +24,10 @@ than 20 lines of code:
 .. code-block:: python
 
    import sys
-   import logging
-   from openquake.baselib import parallel
-   from openquake.hazardlib.calc.filters import SourceFilter
-   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-   from openquake.commonlib import readinput
+   from openquake.commonlib import logs
+   from openquake.calculators.base import get_calc
 
    def main(job_ini):
-       logging.basicConfig(level=logging.INFO)
        calc_id = logs.init()
        calc = get_calc(job_ini, calc_id)
        calc.run(individual_curves='true', shutdown=True)
