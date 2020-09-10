@@ -227,6 +227,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             shutdown=False, **kw):
         """
         Run the calculation and return the exported outputs.
+
+        :param pre_execute: set it to False to avoid running pre_execute
+        :param concurrent_tasks: set it to 0 to disable parallelization
+        :param remove: set it to False to remove the hdf5cache file (if any)
+        :param shutdown: set it to True to shutdown the ProcessPool
         """
         with self._monitor:
             self._monitor.username = kw.get('username', '')
