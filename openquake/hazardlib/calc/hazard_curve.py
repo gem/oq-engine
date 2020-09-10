@@ -185,7 +185,7 @@ def calc_hazard_curves(
     for i, grp in enumerate(groups):
         for src in grp:
             if not hasattr(src, 'grp_id'):
-                src.grp_id = i,  # fix grp_id
+                src.grp_id = i  # fix grp_id
             src.id = idx
             idx += 1
     imtls = DictArray(imtls)

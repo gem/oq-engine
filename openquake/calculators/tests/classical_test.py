@@ -269,11 +269,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\
 hazard_curve-max-PGA.csv,
-hazard_curve-max-SA(0.1).csv
 hazard_curve-mean-PGA.csv
-hazard_curve-mean-SA(0.1).csv
 hazard_curve-std-PGA.csv
-hazard_curve-std-SA(0.1).csv
 hazard_uhs-max.csv
 hazard_uhs-mean.csv
 hazard_uhs-std.csv
@@ -289,7 +286,7 @@ hazard_uhs-std.csv
         # npz exports
         [fname] = export(('hmaps', 'npz'), self.calc.datastore)
         arr = numpy.load(fname)['all']
-        self.assertEqual(arr['mean'].dtype.names, ('PGA', 'SA(0.1)'))
+        self.assertEqual(arr['mean'].dtype.names, ('PGA',))
         [fname] = export(('uhs', 'npz'), self.calc.datastore)
         arr = numpy.load(fname)['all']
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
