@@ -43,68 +43,53 @@
 
 import math
 
+import numpy as np
 import pandas as pd
 
 
-def GMM_at_VS30_IF_v4(event_type, region, saturation_region, Rrup, M, period, \
-        VS30, Z2p5, basin):
+def GMM_at_VS30_v4(event_type, region, saturation_region, Rrup, M, period, \
+        VS30, Z2p5, basin=None, hypocentre_depth=None):
     """
     
     """
 
-    # SUBDUCTION_INTERFACE only
+    # SUBDUCTION or INTERFACE
+    subduction = hypocentre_depth is not None
 
     # coefficients
-    coeff = read.csv("Table_E1_Interface_Coefficients_051920.csv", index_col=0)
+    if subduction:
+        coeff = pd.read_csv("Table_E2_Slab_Coefficients_060720.csv", index_col=0, skiprows=1)
+    else:
+        coeff = pd.read_csv("Table_E1_Interface_Coefficients_051920.csv", index_col=0)
     coeff_pga = coeff.loc[0]
     if period == -1: # PGV
         coeff = coeff.loc[-1]
-    else if period == 0: # PGA
+    elif period == 0: # PGA
         coeff = coeff_pga
     else:
         coeff = coeff.loc[period]
 
     # Mb
-    if saturation_region == "global":
-        Mb = 7.9
-    else:
-        Mb = {"Aleutian": 8, "Alaska": 8.6, "-999": np.nan, \
-            "Cascadia": 7.7, "CAM_S": 7.4, "CAM_N": 7.4, "Japan_Pac": 8.5, \
-            "Japan_Phi": 7.7, "New_Zealand_N": np.nan, \
-            "New_Zealand_S": np.nan, "SA_N": 8.5, "SA_S": 8.6, \
-            "Taiwan_W": 7.1, "Taiwan_E": 7.1}[saturation_region]
-        if np.isnan(Mb):
-            Mb = 7.9
+    Mb = 7.6 if subduction else 7.9
+    mb_regions = ("Aleutian", "Alaska", "Cascadia", "CAM_S", "CAM_N", \
+        "Japan_Pac", "Japan_Phi", "SA_N", "SA_S", "Taiwan_W", "Taiwan_E")
+    if saturation_region in mb_regions:
+        i = mb_regions.index(saturation_region)
+        if subduction:
+            Mb = (7.98, 7.2, 7.2, 7.6, 7.4, 7.65, 7.55, 7.3, 7.25, 7.7, 7.7)[i]
+        else:
+            Mb = (8, 8.6, 7.7, 7.4, 7.4, 8.5, 7.7, 8.5, 8.6, 7.1, 7.1)[i]
 
     # c0
     if region == "global":
-        c0 = coeff.Global_c0
-        c0_pga = coeff_pga.Global_c0
+        c0_col = "Global_c0"
+    elif subduction and not (region == "Alaska" or region == "SA"):
+        # Alaska region be paired with another saturation region?
+        c0_col = region + "_c0"
     else:
-        c0 = coeff[saturation_region + "_c0"]
-        c0_pga = coeff_pga[saturation_region + "_c0"]
-
-    # path term
-    h = 10 ** (-0.82 + 0.252 * M)
-    R = math.sqrt(Rrup ** 2 + h ** 2)
-    # log(R / Rref)
-    R_Rref = math.log(R / math.sqrt(1 + h ** 2))
-
-    # isolate regional anelastic coefficient, a0
-    if region == "global" or region == "Cascadia":
-        a0 = coeff.Global_a0
-        a0_pga = coeff_pga.Global_a0
-    else:
-        a0 = coeff[region + "_a0"]
-        a0 = coeff_pga[region + "_a0"]
-        # this shouldn't happen with given dataset
-        if np.isnan(a0):
-            a0 = coeff.Global_a0
-        if np.isnan(a0_pga):
-            a0_pga = coeff_pga.Global_a0
-
-    Fp = coeff.c1 * math.log(R) + (coeff.b4 * M) * R_Rref + a0 * R
-    Fp_pga = coeff_pga.c1 * math.log(R) + (coeff_pga.b4 * M) * R_Ref + a0_pga * R
+        c0_col = saturation_region + "_c0"
+    c0 = coeff[c0_col]
+    c0_pga = coeff_pga[c0_col]
 
     # magnitude scaling
     m_diff = M - Mb
@@ -115,8 +100,79 @@ def GMM_at_VS30_IF_v4(event_type, region, saturation_region, Rrup, M, period, \
         Fm = coeff.c4 * m_diff + coeff.c5 * m_diff ** 2
         Fm_pga = coeff_pga.c4 * m_diff + coeff_pga.c5 * m_diff ** 2
 
-    ## linear site amplification
+    # path term
+    if subduction:
+        if M <= Mb:
+            m = (math.log10(35) - math.log10(3.12)) / (Mb - 4)
+            h = 10 ** (m * m_diff + math.log10(35))
+        else:
+            h = 35
+    else:
+        h = 10 ** (-0.82 + 0.252 * M)
+    R = math.sqrt(Rrup ** 2 + h ** 2)
+    # log(R / Rref)
+    R_Rref = math.log(R / math.sqrt(1 + h ** 2))
 
+    # isolate regional anelastic coefficient, a0
+    if region == "global" or (region == "Cascadia" and not subduction):
+        a0 = coeff.Global_a0
+        a0_pga = coeff_pga.Global_a0
+    else:
+        a0 = coeff[region + "_a0"]
+        a0_pga = coeff_pga[region + "_a0"]
+        # this shouldn't happen with given dataset
+        if np.isnan(a0):
+            a0 = coeff.Global_a0
+        if np.isnan(a0_pga):
+            a0_pga = coeff_pga.Global_a0
+
+    Fp = coeff.c1 * math.log(R) + (coeff.b4 * M) * R_Rref + a0 * R
+    Fp_pga = coeff_pga.c1 * math.log(R) + (coeff_pga.b4 * M) * R_Rref + a0_pga * R
+
+    # source depth scaling
+    if subduction:
+        Fd = _depth_scaling(hypocentre_depth, coeff)
+        Fd_pga = _depth_scaling(hypocentre_depth, coeff_pga)
+
+    # linear site term
+    Flin = _linear_amplification(coeff, region, VS30)
+
+    # non-linear site term
+    if subduction:
+        PGAr = math.exp(Fp_pga + Fm_pga + c0_pga + Fd_pga)
+    else:
+        PGAr = math.exp(Fp_pga + Fm_pga + c0_pga)
+    f3 = 0.05
+    Vb = 200
+    Vref_Fnl = 760
+
+    if period >= 3:
+        Fnl = 0
+    else:
+        Fnl = coeff.f4 * (math.exp(coeff.f5 * (min(VS30, Vref_Fnl) - Vb)) \
+            - math.exp(coeff.f5 * (Vref_Fnl - Vb)))
+        Fnl *= math.log((PGAr + f3) / f3)
+
+    # basin term
+    Fb = _basin_term(Z2p5, region, VS30, coeff, basin)
+
+    # mu as sum
+    mu = Fp + Fnl + Fb + Flin + Fm + c0
+    if subduction:
+        mu += Fd
+    return mu
+
+
+def _depth_scaling(hypocentre_depth, coeff):
+    if hypocentre_depth >= coeff["db (km)"]:
+        return coeff.d
+    elif hypocentre_depth <= 20:
+        return coeff.m * (20 - coeff["db (km)"]) + coeff.d
+    else:
+        return coeff.m * (hypocentre_depth - coeff["db (km)"]) + coeff.d
+
+
+def _linear_amplification(coeff, region, VS30):
     # site coefficients
     V1 = coeff["V1 (m/s)"]
     V2 = coeff["V2 (m/s)"]
@@ -133,34 +189,14 @@ def GMM_at_VS30_IF_v4(event_type, region, saturation_region, Rrup, M, period, \
 
     # linear site term
     if VS30 <= V1:
-        Flin = s1 * math.log(VS30 / V1) + s2 * math.log(V1 / Vref)
+        return s1 * math.log(VS30 / V1) + s2 * math.log(V1 / Vref)
     elif VS30 <= V2:
-        Flin = s2 * math.log(VS30 / Vref)
+        return s2 * math.log(VS30 / Vref)
     else:
-        Flin = s2 * math.log(V2 / Vref)
-
-    # non-linear site term
-    PGAr = math.exp(Fp_pga + Fm_pga + c0_pga)
-    f3 = 0.05
-    Vb = 200
-    Vref_Fnl = 760
-
-    if period >= 3:
-        Fnl = 0
-    else:
-        Fnl = coeff.f4 * (math.exp(coeff.f5 * (min(VS30, Vref_Fnl) - Vb)) \
-            - math.exp(coeff.f5 * (Vref_Fnl - Vb)))
-        Fnl *= math.log((PGAr + f3) / f3)
-
-    # basin term
-    Fb = _basin_term(Z2p5, region, VS30, coeff)
-
-    # mu as sum
-    mu = Fp + Fnl + Fb + Flin + Fm + c0
-    return mu
+        return s2 * math.log(V2 / Vref)
 
 
-def _basin_term(Z2p5, region, VS30, coeff):
+def _basin_term(Z2p5, region, VS30, coeff, basin):
     if Z2p5 == "default" or Z2p5 <= 0 \
             or region not in ["Japan", "Cascadia"]:
         return 0
@@ -190,8 +226,7 @@ def _basin_term(Z2p5, region, VS30, coeff):
         e2 = coeff.J_e2
         e3 = coeff.J_e3
 
-    # TODO: find out what erf is
-    Z2p5_pred = 10 ** (theta0 + theta1 * (1 + erf((math.log10(VS30) - math.log10(vmu)) / (vsig * math.sqrt(2)))))
+    Z2p5_pred = 10 ** (theta0 + theta1 * (1 + math.erf((math.log10(VS30) - math.log10(vmu)) / (vsig * math.sqrt(2)))))
     del_Z2p5 = math.log(Z2p5) - math.log(Z2p5_pred)
 
     if del_Z2p5 <= (e1 / e3):
