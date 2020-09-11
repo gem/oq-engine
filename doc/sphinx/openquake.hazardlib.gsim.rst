@@ -891,6 +891,14 @@ somerville_2009
     :undoc-members:
     :show-inheritance:
 
+stewart_2016
+-----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.stewart_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tavakoli_pezeshk_2005
 -----------------------------------------------------
 
