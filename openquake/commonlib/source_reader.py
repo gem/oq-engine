@@ -309,6 +309,20 @@ class CompositeSourceModel:
         return [src for src_group in self.src_groups
                 for src in src_group]
 
+    def get_groups(self, eri):
+        """
+        :param eri: effective source model realization ID
+        :returns: SourceGroups associated to the given `eri`
+        """
+        src_groups = []
+        for sg in self.src_groups:
+            grp_id = self.full_lt.get_grp_id(sg.trt, eri)
+            src_group = copy.copy(sg)
+            src_group.sources = [src for src in sg if grp_id in src.grp_ids]
+            if len(src_group):
+                src_groups.append(src_group)
+        return src_groups
+
     def get_floating_spinning_factors(self):
         """
         :returns: (floating rupture factor, spinning rupture factor)

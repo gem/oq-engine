@@ -1310,6 +1310,17 @@ class FullLogicTree(object):
                     rlz.weight = rlz.weight / tot_weight
         return rlzs
 
+    def get_rlzs_by_eri(self):
+        """
+        :returns: a dict eri -> rlzs
+        """
+        smltpath = operator.attrgetter('sm_lt_path')
+        eri_by_ltp = self.get_eri_by_ltp()
+        rlzs = self.get_realizations()
+        dic = {eri_by_ltp['_'.join(ltp)]: rlzs for ltp, rlzs in groupby(
+            rlzs, smltpath).items()}
+        return dic
+
     def get_rlzs_by_gsim(self, grp_id):
         """
         :returns: a dictionary gsim -> array of rlz indices
