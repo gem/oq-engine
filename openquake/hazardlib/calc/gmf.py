@@ -140,7 +140,7 @@ class GmfComputer(object):
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim, self.offset)
         mag = self.ebrupture.rupture.mag
         data = []
-        O = sum(len(sp.outputs) for sp in self.sec_perils)
+        No = sum(len(sp.outputs) for sp in self.sec_perils)
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
             # NB: the trick for performance is to keep the call to
@@ -164,7 +164,7 @@ class GmfComputer(object):
                         tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
-                    sp_out = numpy.zeros((O,) + gmfa.shape)  # O, N, M
+                    sp_out = numpy.zeros((No,) + gmfa.shape)  # No, N, M
                     for m, imt in enumerate(self.imts):
                         o = 0
                         for sp in self.sec_perils:
@@ -174,7 +174,7 @@ class GmfComputer(object):
                             o = o1
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum():
-                            if O:
+                            if No:
                                 data.append((sids[i], eid, gmv) +
                                             tuple(sp_out[:, i, :]))
                             else:
