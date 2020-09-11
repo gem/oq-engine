@@ -721,9 +721,8 @@ class EBRupture(object):
                     j += self.n_occ
         else:  # associated eids to the realizations
             rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-            assert len(rlzs) == self.samples, (len(rlzs), self.samples)
             histo = general.random_histogram(
-                self.n_occ, self.samples, self.rup_id)
+                self.n_occ, len(rlzs), self.rup_id)
             for rlz, n in zip(rlzs, histo):
                 dic[rlz] = numpy.arange(j, j + n, dtype=U32) + offset
                 j += n
