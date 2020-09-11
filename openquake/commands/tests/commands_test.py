@@ -479,7 +479,7 @@ class DbTestCase(unittest.TestCase):
 class EngineRunJobTestCase(unittest.TestCase):
     def test_multi_run(self):
         job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-        jobparams = run_jobs([job_ini, job_ini], log_level='error', many=True)
+        jobparams = run_jobs([job_ini, job_ini], log_level='error', multi=True)
         jobs, params = zip(*jobparams)
         with Print.patch():
             [r1, r2] = commonlib.logs.dbcmd(
