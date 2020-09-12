@@ -133,9 +133,6 @@ class SungAbrahamson2020NonErgodic(SungAbrahamson2020):
         mean, stddevs = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                    stddev_types)
 
-        # Removing ergodic anelastic term
-        mean -= C['c7'] * dists.rrup
-
         # Checking that we use only one site (for the time being)
         try:
             assert len(sites.sites) == 1
