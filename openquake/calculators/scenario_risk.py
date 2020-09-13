@@ -146,7 +146,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Combine the outputs from scenario_risk and incrementally store
         the asset loss table
         """
-        with self.monitor('saving dd_data', measuremem=True):
+        with self.monitor('saving loss_data', measuremem=True):
             ael = res.pop('ael', ())
             if len(ael) == 0:
                 return acc + res
