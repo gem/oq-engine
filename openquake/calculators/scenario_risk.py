@@ -79,11 +79,8 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
     E = param['E']
     L = len(crmodel.loss_types)
     result = dict(agg=numpy.zeros((E, L), F32), avg=[])
-    mon = monitor('getting hazard', measuremem=False)
     acc = AccumDict(accum=numpy.zeros(L, F64))  # aid,eid->loss
     for ri in riskinputs:
-        with mon:
-            ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
