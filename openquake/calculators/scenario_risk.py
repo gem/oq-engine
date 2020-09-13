@@ -146,15 +146,16 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Combine the outputs from scenario_risk and incrementally store
         the asset loss table
         """
-        ael = res.pop('ael', ())
-        if len(ael) == 0:
+        with self.monitor('saving dd_data', measuremem=True):
+            ael = res.pop('ael', ())
+            if len(ael) == 0:
+                return acc + res
+            for aid, [(i1, i2)] in get_indices(ael['asset_id']).items():
+                self.datastore['loss_data/indices'][aid] = (
+                    self.start + i1, self.start + i2)
+            self.start += len(ael)
+            hdf5.extend(self.datastore['loss_data/data'], ael)
             return acc + res
-        for aid, [(i1, i2)] in get_indices(ael['asset_id']).items():
-            self.datastore['loss_data/indices'][aid] = (
-                self.start + i1, self.start + i2)
-        self.start += len(ael)
-        hdf5.extend(self.datastore['loss_data/data'], ael)
-        return acc + res
 
     def post_execute(self, result):
         """
