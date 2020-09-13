@@ -1042,7 +1042,8 @@ class RiskCalculator(HazardCalculator):
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
-        for block in general.block_splitter(self.riskinputs, maxw, get_weight):
+        for block in general.block_splitter(
+                self.riskinputs, maxw, get_weight, sort=True):
             logging.info('Sending hazard for %d sites', len(block))
             for ri in block:
                 # we must use eager reading for performance reasons:
