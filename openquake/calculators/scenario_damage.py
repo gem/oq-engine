@@ -159,16 +159,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.start = 0
 
     def combine(self, acc, res):
-        # this is fast
-        aed = res.pop('aed', ())
-        if len(aed) == 0:
+        with self.monitor('saving dd_data', measuremem=True):
+            aed = res.pop('aed', ())
+            if len(aed) == 0:
+                return acc + res
+            for aid, [(i1, i2)] in get_indices(aed['aid']).items():
+                self.datastore['dd_data/indices'][aid] = (
+                    self.start + i1, self.start + i2)
+            self.start += len(aed)
+            hdf5.extend(self.datastore['dd_data/data'], aed)
             return acc + res
-        for aid, [(i1, i2)] in get_indices(aed['aid']).items():
-            self.datastore['dd_data/indices'][aid] = (
-                self.start + i1, self.start + i2)
-        self.start += len(aed)
-        hdf5.extend(self.datastore['dd_data/data'], aed)
-        return acc + res
 
     def post_execute(self, result):
         """

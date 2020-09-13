@@ -1044,8 +1044,8 @@ class RiskCalculator(HazardCalculator):
             self.core_task.__func__, h5=self.datastore.hdf5)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
-            if len(block) > 1000:
-                logging.info('Sending hazard for %d sites', len(block))
+            logging.info('Sending hazard for %d assets, %d sites',
+                         block.weight, len(block))
             for ri in block:
                 # we must use eager reading for performance reasons:
                 # concurrent reading on the workers would be extra-slow;
