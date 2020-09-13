@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, get_indices
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base
@@ -150,9 +150,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             ael = res.pop('ael', ())
             if len(ael) == 0:
                 return acc + res
-            for aid, [(i1, i2)] in get_indices(ael['asset_id']).items():
-                self.datastore['loss_data/indices'][aid] = (
-                    self.start + i1, self.start + i2)
             self.start += len(ael)
             hdf5.extend(self.datastore['loss_data/data'], ael)
             return acc + res
