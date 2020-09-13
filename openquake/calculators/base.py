@@ -978,9 +978,9 @@ class RiskCalculator(HazardCalculator):
             riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
-        if self.oqparam.calculation_mode in (
-                'event_based_damage', 'scenario_damage', 'scenario_risk'):
-            self.datastore.swmr_on()
+        #if self.oqparam.calculation_mode in (
+        #        'event_based_damage', 'scenario_damage', 'scenario_risk'):
+        #    self.datastore.swmr_on()
         return riskinputs
 
     def get_getter(self, kind, sid):
@@ -1005,10 +1005,6 @@ class RiskCalculator(HazardCalculator):
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you set '
                     'ground_motion_fields=False or a large minimum_intensity')
-        if dstore is self.datastore:
-            # hack to make h5py happy; I could not get this to work with
-            # the SWMR mode
-            getter.init()
         return getter
 
     def _gen_riskinputs(self, kind):
@@ -1042,13 +1038,19 @@ class RiskCalculator(HazardCalculator):
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
-        res = parallel.Starmap.apply(
-            self.core_task.__func__,
-            (self.riskinputs, self.crmodel, self.param),
-            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            weight=get_weight, h5=self.datastore.hdf5
-        ).reduce(self.combine)
-        return res
+        ct = self.oqparam.concurrent_tasks or 1
+        maxw = sum(ri.weight for ri in self.riskinputs) / ct
+        smap = parallel.Starmap(
+            self.core_task.__func__, h5=self.datastore.hdf5)
+        for block in general.block_splitter(self.riskinputs, maxw, get_weight):
+            for ri in block:
+                # we must use eager reading for performance reasons:
+                # concurrent reading on the workers would be extra-slow;
+                # also, I could not get lazy reading to work with
+                # the SWMR mode for event_based_risk
+                ri.hazard_getter.init()
+            smap.submit((block, self.crmodel, self.param))
+        return smap.reduce(self.combine)
 
     def combine(self, acc, res):
         return acc + res
