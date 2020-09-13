@@ -1043,6 +1043,7 @@ class RiskCalculator(HazardCalculator):
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
         for block in general.block_splitter(self.riskinputs, maxw, get_weight):
+            logging.info('Sending hazard for %d sites', len(block))
             for ri in block:
                 # we must use eager reading for performance reasons:
                 # concurrent reading on the workers would be extra-slow;
@@ -1050,6 +1051,11 @@ class RiskCalculator(HazardCalculator):
                 # the SWMR mode for event_based_risk
                 ri.hazard_getter.init()
             smap.submit((block, self.crmodel, self.param))
+            for ri in block:  # save memory
+                try:
+                    ri.hazard_getter.data.clear()
+                except AttributeError:  # no data
+                    pass
         return smap.reduce(self.combine)
 
     def combine(self, acc, res):
