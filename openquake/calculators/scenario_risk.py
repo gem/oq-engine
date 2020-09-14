@@ -136,7 +136,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         A = len(self.assetcol)
         self.datastore.create_dset('loss_data/data', dt)
         self.datastore.create_dset('loss_data/indices', U32, (A, 2))
-        self.start = 0
 
     def combine(self, acc, res):
         """
@@ -147,7 +146,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             ael = res.pop('ael', ())
             if len(ael) == 0:
                 return acc + res
-            self.start += len(ael)
             hdf5.extend(self.datastore['loss_data/data'], ael)
             return acc + res
 

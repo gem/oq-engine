@@ -156,14 +156,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
         self.datastore.create_dset('dd_data/indices', U32, (A, 2))
         self.riskinputs = self.build_riskinputs('gmf')
-        self.start = 0
 
     def combine(self, acc, res):
         with self.monitor('saving dd_data', measuremem=True):
             aed = res.pop('aed', ())
             if len(aed) == 0:
                 return acc + res
-            self.start += len(aed)
             hdf5.extend(self.datastore['dd_data/data'], aed)
             return acc + res
 
