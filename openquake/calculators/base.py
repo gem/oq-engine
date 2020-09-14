@@ -975,57 +975,58 @@ class RiskCalculator(HazardCalculator):
                 self.oqparam.inputs.get('taxonomy_mapping'),
                 self.assetcol.tagcol.taxonomy)
         with self.monitor('building riskinputs'):
-            riskinputs = list(self._gen_riskinputs(kind))
+            if self.oqparam.hazard_calculation_id:
+                dstore = self.datastore.parent
+            else:
+                dstore = self.datastore
+            meth = getattr(self, '_gen_riskinputs_' + kind)
+            riskinputs = list(meth(dstore))
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
         return riskinputs
 
-    def get_getter(self, kind, sid):
-        """
-        :param kind: 'poe' or 'gmf'
-        :param sid: a site ID
-        :returns: a PmapGetter or GmfDataGetter
-        """
-        if (self.oqparam.hazard_calculation_id and
-                'gmf_data' not in self.datastore):
-            # not ShakeMap calculations
-            self.datastore.parent.close()  # make sure it is closed
-            dstore = self.datastore.parent
-        else:
+    def _gen_riskinputs_gmf(self, dstore):
+        if 'gmf_data' not in dstore:  # needed for case_shakemap
+            dstore.close()
             dstore = self.datastore
-        if kind == 'poe':  # hcurves, shape (R, N)
-            ws = [rlz.weight for rlz in self.realizations]
-            getter = getters.PmapGetter(dstore, ws, [sid])
-        else:  # gmf
+        hazard = 'gmf_data' in dstore or 'multi_peril' in dstore
+        if not hazard:
+            raise InvalidFile('Did you forget gmfs_csv|multi_peril_csv in %s?'
+                              % self.oqparam.inputs['job_ini'])
+        assets_by_site = self.assetcol.assets_by_site()
+        for sid, assets in enumerate(assets_by_site):
+            if len(assets) == 0:
+                continue
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
             if len(dstore['gmf_data/data']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you set '
                     'ground_motion_fields=False or a large minimum_intensity')
-        return getter
+            for block in general.block_splitter(
+                    assets, self.oqparam.assets_per_site_limit):
+                yield riskinput.RiskInput(sid, getter, numpy.array(block))
+            if len(block) >= TWO16:
+                logging.error('There are %d assets on site #%d!',
+                              len(block), sid)
 
-    def _gen_riskinputs(self, kind):
-        hazard = ('gmf_data' in self.datastore or 'poes' in self.datastore or
-                  'multi_peril' in self.datastore)
+    def _gen_riskinputs_poe(self, dstore):
+        hazard = 'poes' in dstore
         if not hazard:
-            raise InvalidFile('Did you forget gmfs_csv|hazard_curves_csv|'
-                              'multi_peril_csv in %s?'
+            raise InvalidFile('Did you forget hazard_curves_csv in %s?'
                               % self.oqparam.inputs['job_ini'])
-        rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
-        rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
-            getter = self.get_getter(kind, sid)
+            # hcurves, shape (R, N)
+            ws = [rlz.weight for rlz in self.realizations]
+            getter = getters.PmapGetter(dstore, ws, [sid])
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
                 yield riskinput.RiskInput(sid, getter, numpy.array(block))
-            rinfo.append((sid, len(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
                               len(block), sid)
-        self.datastore['riskinput_info'] = numpy.array(rinfo, rinfo_dt)
 
     def execute(self):
         """
