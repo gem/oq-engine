@@ -989,9 +989,8 @@ class RiskCalculator(HazardCalculator):
         if 'gmf_data' not in dstore:  # needed for case_shakemap
             dstore.close()
             dstore = self.datastore
-        hazard = 'gmf_data' in dstore or 'multi_peril' in dstore
-        if not hazard:
-            raise InvalidFile('Did you forget gmfs_csv|multi_peril_csv in %s?'
+        if 'gmf_data' not in dstore:
+            raise InvalidFile('Did you forget gmfs_csv in %s?'
                               % self.oqparam.inputs['job_ini'])
         assets_by_site = self.assetcol.assets_by_site()
         for sid, assets in enumerate(assets_by_site):
@@ -1000,7 +999,7 @@ class RiskCalculator(HazardCalculator):
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
             if len(dstore['gmf_data/data']) == 0:
                 raise RuntimeError(
-                    'There are no GMFs available: perhaps you set '
+                    'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
