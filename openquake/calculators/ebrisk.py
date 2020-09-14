@@ -216,7 +216,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def check_number_loss_curves(self):
         """
-        Raise an error if generating too many loss curves (>max_num_loss_curves)
+        Raise an error for too many loss curves (> max_num_loss_curves)
         """
         shp = self.assetcol.tagcol.agg_shape(
             (self.L,), aggregate_by=self.oqparam.aggregate_by)
