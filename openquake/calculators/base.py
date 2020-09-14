@@ -978,9 +978,6 @@ class RiskCalculator(HazardCalculator):
             riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
-        #if self.oqparam.calculation_mode in (
-        #        'event_based_damage', 'scenario_damage', 'scenario_risk'):
-        #    self.datastore.swmr_on()
         return riskinputs
 
     def get_getter(self, kind, sid):
