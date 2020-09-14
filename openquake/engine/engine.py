@@ -346,8 +346,10 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
             calc.run(exports=exports, **kw)
             logging.info('Exposing the outputs to the database')
             expose_outputs(calc.datastore)
-            logging.info('Calculation %d finished correctly in %d seconds',
-                         job_id, time.time() - t0)
+            path = calc.datastore.filename
+            size = general.humansize(os.path.getsize(path))
+            logging.info('Stored %s on %s in %d seconds',
+                         size, path, time.time() - t0)
             logs.dbcmd('finish', job_id, 'complete')
             calc.datastore.close()
             for line in logs.dbcmd('list_outputs', job_id, False):
