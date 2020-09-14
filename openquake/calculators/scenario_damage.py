@@ -19,7 +19,7 @@
 import logging
 import numpy
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, get_indices
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.calculators import base
 
@@ -156,19 +156,14 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
         self.datastore.create_dset('dd_data/indices', U32, (A, 2))
         self.riskinputs = self.build_riskinputs('gmf')
-        self.start = 0
 
     def combine(self, acc, res):
-        # this is fast
-        aed = res.pop('aed', ())
-        if len(aed) == 0:
+        with self.monitor('saving dd_data', measuremem=True):
+            aed = res.pop('aed', ())
+            if len(aed) == 0:
+                return acc + res
+            hdf5.extend(self.datastore['dd_data/data'], aed)
             return acc + res
-        for aid, [(i1, i2)] in get_indices(aed['aid']).items():
-            self.datastore['dd_data/indices'][aid] = (
-                self.start + i1, self.start + i2)
-        self.start += len(aed)
-        hdf5.extend(self.datastore['dd_data/data'], aed)
-        return acc + res
 
     def post_execute(self, result):
         """
@@ -184,11 +179,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = self.R
         D = len(dstates)
         A = len(self.assetcol)
-        indices = self.datastore['dd_data/indices'][()]
         if not len(self.datastore['dd_data/data']):
             logging.warning('There is no damage at all!')
-        events_per_asset = (indices[:, 1] - indices[:, 0]).mean()
-        logging.info('Found ~%d dmg distributions per asset', events_per_asset)
 
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
