@@ -412,9 +412,11 @@ class KuehnEtAl2020SInterCascadia(KuehnEtAl2020SInter):
         """
         Returns the basin response term (Eq. 4.10)
         """
-        return np.where(
-            z_value <= 0, 0, C["c_11_Ca"] + C["c_12_Ca"] *
-                             (np.log(z_value) - self._get_ln_z_ref(vs30)))
+        mask = (z_value > 0)
+        brt = np.zeros_like(z_value)
+        brt[mask] = C["c_11_Ca"] + C["c_12_Ca"] * \
+                    (np.log(z_value[mask]) - self._get_ln_z_ref(vs30[mask]))
+        return brt
 
     CONSTS = {"c_10": 0.0,
               "c": 1.88,
@@ -632,9 +634,11 @@ class KuehnEtAl2020SInterNewZealand(KuehnEtAl2020SInter):
         """
         Returns the basin response term (Eq. 4.10)
         """
-        return np.where(
-            z_value <= 0, 0, C["c_11_NZ"] + C["c_12_NZ"] *
-                             (np.log(z_value) - self._get_ln_z_ref(vs30)))
+        mask = (z_value > 0)
+        brt = np.zeros_like(z_value)
+        brt[mask] = C["c_11_NZ"] + C["c_12_NZ"] * \
+                    (np.log(z_value[mask]) - self._get_ln_z_ref(vs30[mask]))
+        return brt
 
     CONSTS = {"c_10": 0.0,
               "c": 1.88,
@@ -757,9 +761,11 @@ class KuehnEtAl2020SInterTaiwan(KuehnEtAl2020SInter):
         """
         Returns the basin response term (Eq. 4.10)
         """
-        return np.where(
-            z_value <= 0, 0, C["c_11_Tw"] + C["c_12_Tw"] *
-                             (np.log(z_value) - self._get_ln_z_ref(vs30)))
+        mask = (z_value > 0)
+        brt = np.zeros_like(z_value)
+        brt[mask] = C["c_11_Tw"] + C["c_12_Tw"] * \
+                    (np.log(z_value[mask]) - self._get_ln_z_ref(vs30[mask]))
+        return brt
 
     CONSTS = {"c_10": 0.0,
               "c": 1.88,
@@ -919,10 +925,11 @@ class KuehnEtAl2020SSlabCascadia(KuehnEtAl2020SSlab):
         """
         Returns the basin response term (Eq. 4.10)
         """
-        return np.where(
-            z_value <= 0, 0, C["c_11_Ca"] + C["c_12_Ca"] *
-                             (np.log(z_value) - self._get_ln_z_ref(vs30))
-        )
+        mask = (z_value > 0)
+        brt = np.zeros_like(z_value)
+        brt[mask] = C["c_11_Ca"] + C["c_12_Ca"] * \
+                    (np.log(z_value[mask]) - self._get_ln_z_ref(vs30[mask]))
+        return brt
 
     CONSTS = {"c_10": 0.0,
               "c": 1.88,
@@ -1139,10 +1146,11 @@ class KuehnEtAl2020SSlabNewZealand(KuehnEtAl2020SSlab):
         """
         Returns the basin response term (Eq. 4.10)
         """
-        return np.where(
-            z_value <= 0, 0, C["c_11_NZ"] + C["c_12_NZ"] *
-            (np.log(z_value) - self._get_ln_z_ref(vs30))
-        )
+        mask = (z_value > 0)
+        brt = np.zeros_like(z_value)
+        brt[mask] = C["c_11_NZ"] + C["c_12_NZ"] * \
+                    (np.log(z_value[mask]) - self._get_ln_z_ref(vs30[mask]))
+        return brt
 
     CONSTS = {"c_10": 0.0,
               "c": 1.88,
@@ -1264,10 +1272,11 @@ class KuehnEtAl2020SSlabTaiwan(KuehnEtAl2020SSlab):
         """
         Returns the basin response term (Eq. 4.10)
         """
-        return np.where(
-            z_value <= 0, 0, C["c_11_Tw"] + C["c_12_Tw"] *
-            (np.log(z_value) - self._get_ln_z_ref(vs30))
-        )
+        mask = (z_value > 0)
+        brt = np.zeros_like(z_value)
+        brt[mask] = C["c_11_Tw"] + C["c_12_Tw"] * \
+                    (np.log(z_value[mask]) - self._get_ln_z_ref(vs30[mask]))
+        return brt
 
     CONSTS = {"c_10": 0.0,
               "c": 1.88,
