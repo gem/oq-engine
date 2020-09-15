@@ -263,9 +263,10 @@ class GmfDataGetter(collections.abc.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs):
+    def __init__(self, dstore, sids, rlzs, num_rlzs):
         self.dstore = dstore
         self.sids = sids
+        self.rlzs = rlzs
         self.num_rlzs = num_rlzs
         assert len(sids) == 1, sids
 
@@ -273,11 +274,6 @@ class GmfDataGetter(collections.abc.Mapping):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
-        try:
-            self.imts = self.dstore['gmf_data/imts'][()].split()
-        except KeyError:  # engine < 3.3
-            self.imts = list(self.dstore['oqparam'].imtls)
-        self.rlzs = self.dstore['events']['rlz_id']
         self.data = self[self.sids[0]]
         if not self.data:  # no GMVs, return 0, counted in no_damage
             self.data = {rlzi: 0 for rlzi in range(self.num_rlzs)}
@@ -285,6 +281,7 @@ class GmfDataGetter(collections.abc.Mapping):
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
         self.E = len(self.rlzs)
+        del self.rlzs
 
     def get_hazard(self, gsim=None):
         """
