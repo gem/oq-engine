@@ -1,9 +1,19 @@
   [Michele Simionato]
+  * Speed-up risk saving in scenario_risk and scenario_damage
+
+  [Antonio Ettorre]
+  * Bumped GDAL to version 3.1.2
+
+  [Michele Simionato]
+  * Optimized scenario_damage for the case of many sites
+  * Implemented secondary perils
   * Fixed a 32 bit/64 bit bug in `oq prepare_site_model` when sites.csv is
     the same as the vs30.csv file
   * Parallelized by GSIM when there is a single rupture
 
   [Francis Bernales]
+  * Added the Stewart et al. (2016) GMPE 
+  * Added the Bozorgnia & Campbell (2016) GMPE
   * Added the Gulerce et al. (2017) GMPE
 
   [Michele Simionato]
@@ -15,7 +25,7 @@
   * Displaying the hazard maps in the WebUI for debugging purposes
   * Used the hazard map to get the disaggregation IML from the disaggregation
     PoE and added a warning for zero hazard
-  * Internal: implemented multi-run functionality
+  * Internal: implemented multi-run functionality (``oq engine --multi --run``)
   * Reduced tremendously the data transfer in disaggregation calculations
   * Internal: introduced compress/decompress utilities
   * Reduced the memory and disk space occupation in classical calculations with

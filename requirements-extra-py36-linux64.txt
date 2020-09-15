@@ -1,3 +1,2 @@
 ## Extra ##
 https://wheelhouse.openquake.org/v2/linux/py36/basemap-1.1.0-cp36-cp36m-manylinux1_x86_64.whl
-https://wheelhouse.openquake.org/v2/linux/py36/GDAL-2.4.1.post1-cp36-cp36m-manylinux1_x86_64.whl

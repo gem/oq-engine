@@ -1105,7 +1105,10 @@ def get_input_files(oqparam, hazard=False):
             args = (fname, oqparam.random_seed,
                     oqparam.number_of_logic_tree_samples,
                     oqparam.sampling_method)
-            smlt_cache[args] = smlt = logictree.SourceModelLogicTree(*args)
+            try:
+                smlt = smlt_cache[args]
+            except KeyError:
+                smlt = smlt_cache[args] = logictree.SourceModelLogicTree(*args)
             fnames.update(smlt.hdf5_files)
             fnames.update(smlt.info.smpaths)
             fnames.add(fname)
