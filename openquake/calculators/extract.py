@@ -847,25 +847,17 @@ def _gmf(data, num_sites, imts):
 def extract_gmf_npz(dstore, what):
     oq = dstore['oqparam']
     qdict = parse(what)
-    [eid] = qdict.get('event_id', [None])
+    [eid] = qdict.get('event_id', [0])  # there must be a single event
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
     data = dstore['gmf_data/data']
-    if eid is None:  # get all events
-        rlz = dstore['events']['rlz_id']
-        for rlzi in sorted(set(rlz)):
-            idx = rlz[data['eid']] == rlzi
-            gmfa = _gmf(data[idx], n, oq.imtls)
-            logging.info('Exporting array%s for rlz#%d', gmfa.shape, rlzi)
-            yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
-    else:  # get a single event
-        rlzi = dstore['events'][eid]['rlz_id']
-        idx = data['eid'] == eid
-        if idx.any():
-            gmfa = _gmf(data[idx], n, oq.imtls)
-            yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
-        else:  # zero GMF
-            yield 'rlz-%03d' % rlzi, []
+    rlzi = dstore['events'][eid]['rlz_id']
+    idx = data['eid'] == eid
+    if idx.any():
+        gmfa = _gmf(data[idx], n, oq.imtls)
+        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
+    else:  # zero GMF
+        yield 'rlz-%03d' % rlzi, []
 
 
 @extract.add('num_events')
