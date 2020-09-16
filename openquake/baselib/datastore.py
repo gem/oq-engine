@@ -483,8 +483,14 @@ class DataStore(collections.abc.MutableMapping):
         dset = self.getitem(key)
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
-        if 'shape_descr' in dset.attrs:
+        elif 'shape_descr' in dset.attrs:
             return dset2df(dset, index, sel)
+        elif '__pdcolumns__' in dset.attrs:
+            columns = dset.attrs['__pdcolumns__'].split()
+            dic = {col: dset[col][:] for col in columns if col != index}
+            if index is not None:
+                index = dset[index][:]
+            return pandas.DataFrame(dic, index=index)
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
