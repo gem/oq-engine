@@ -828,17 +828,17 @@ def extract_losses_by_event(dstore, what):
         yield 'rlz-%03d' % rlzi, dic[rlzi]
 
 
-def _gmf(data, num_sites, imts):
+def _gmf(sids, eids, gmvs, num_sites, imts):
     # convert data into the composite array expected by QGIS
-    eids = sorted(numpy.unique(data['eid']))
-    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+    ueids = sorted(numpy.unique(eids))
+    eid2idx = {eid: idx for idx, eid in enumerate(ueids)}
     E = len(eid2idx)
     gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in imts])
     gmfa = numpy.zeros(num_sites, gmf_dt)
-    for rec in data:
-        arr = gmfa[rec['sid']]
-        for imt, gmv in zip(imts, rec['gmv']):
-            arr[imt][eid2idx[rec['eid']]] = gmv
+    for sid, eid, gmv in zip(sids, eids, gmvs):
+        arr = gmfa[sid]
+        for imt, gmv in zip(imts, gmv):
+            arr[imt][eid2idx[eid]] = gmv
     return gmfa
 
 
@@ -850,19 +850,21 @@ def extract_gmf_npz(dstore, what):
     [eid] = qdict.get('event_id', [None])
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
-    data = dstore['gmf_data/data']
+    sids = dstore['gmf_data/sid']
+    eids = dstore['gmf_data/eid']
+    gmvs = dstore['gmf_data/gmv']
     if eid is None:  # get all events
         rlz = dstore['events']['rlz_id']
         for rlzi in sorted(set(rlz)):
-            idx = rlz[data['eid']] == rlzi
-            gmfa = _gmf(data[idx], n, oq.imtls)
+            idx = rlz[eids] == rlzi
+            gmfa = _gmf(sids[idx], eids[idx], gmvs[idx, :], n, oq.imtls)
             logging.info('Exporting array%s for rlz#%d', gmfa.shape, rlzi)
             yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
     else:  # get a single event
         rlzi = dstore['events'][eid]['rlz_id']
-        idx = data['eid'] == eid
+        idx = eids == eid
         if idx.any():
-            gmfa = _gmf(data[idx], n, oq.imtls)
+            gmfa = _gmf(sids[idx], eids[idx], gmvs[idx, :], n, oq.imtls)
             yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
         else:  # zero GMF
             yield 'rlz-%03d' % rlzi, []
