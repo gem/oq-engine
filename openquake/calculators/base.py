@@ -998,17 +998,20 @@ class RiskCalculator(HazardCalculator):
                               % self.oqparam.inputs['job_ini'])
         rlzs = dstore['events']['rlz_id']
         sids = dstore['gmf_data/sid'][:]
-        df = pandas.DataFrame(dict(idx=numpy.arange(len(sids))), index=sids)
-        by_sid = dict(list(df.groupby(df.index)))
+        dic = dict(eid=dstore['gmf_data/eid'][:])
+        for m, imt in enumerate(self.oqparam.imtls):
+            dic['gmv_' + imt] = dstore['gmf_data/gmv'][:, m]
+        gmf_df = pandas.DataFrame(dic, index=sids)
+        by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
         for sid, assets in enumerate(self.assetcol.assets_by_site()):
             if len(assets) == 0:
                 continue
             try:
-                idx = by_sid[sid]
+                df = by_sid[sid]
             except KeyError:
                 getter = getters.ZeroGetter(sid, self.R)
             else:
-                getter = getters.GmfDataGetter(dstore, sid, idx, rlzs, self.R)
+                getter = getters.GmfDataGetter(dstore, sid, df, rlzs, self.R)
             if len(dstore['gmf_data/gmv']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '

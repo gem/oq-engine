@@ -263,29 +263,27 @@ class GmfDataGetter(object):
     """
     An object with an .init() and .get_hazard() method
     """
-    def __init__(self, dstore, sid, idx, rlzs, num_rlzs):
+    def __init__(self, dstore, sid, df, rlzs, num_rlzs):
         self.dstore = dstore
         self.sids = [sid]
-        self.idxs = list(idx['idx'])
+        self.df = df
         self.rlzs = rlzs
         self.num_rlzs = num_rlzs
-
-    def init(self):
-        if hasattr(self, 'data'):  # already initialized
-            return
-        self.dstore.open('r')  # if not already open
-        eids = self.dstore['gmf_data/eid'][self.idxs]
-        gmvs = self.dstore['gmf_data/gmv'][self.idxs, :]
-        M = gmvs.shape[1]
-        data = numpy.zeros(len(eids), [('eid', U32), ('gmv', (F32, (M,)))])
-        data['eid'] = eids
-        data['gmv'] = gmvs
-        self.data = group_by_rlz(data, self.rlzs)
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
         self.E = len(self.rlzs)
-        del self.rlzs
+
+    def init(self):
+        M = len(self.df.columns) - 1
+        data = numpy.zeros(len(self.df), [('eid', U32), ('gmv', (F32, (M,)))])
+        for i, col in enumerate(self.df.columns):
+            if col == 'eid':
+                data['eid'] = self.df[col]
+            else:
+                data['gmv'][:, i-1] = self.df[col]
+        self.data = group_by_rlz(data, self.rlzs)
+        #del self.rlzs
 
     def get_hazard(self, gsim=None):
         """
