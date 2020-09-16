@@ -996,15 +996,15 @@ class RiskCalculator(HazardCalculator):
         if 'gmf_data' not in dstore:
             raise InvalidFile('Did you forget gmfs_csv in %s?'
                               % self.oqparam.inputs['job_ini'])
-        rlzs = dstore['events']['rlz_id']
-        sids = dstore['gmf_data/sid'][:]
-        dic = dict(eid=dstore['gmf_data/eid'][:])
-        for m, imt in enumerate(self.oqparam.imtls):
-            dic['gmv_' + imt] = dstore['gmf_data/gmv'][:, m]
-        gmf_df = pandas.DataFrame(dic, index=sids)
-        logging.info('Grouping the GMFs by site ID')
-        by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
-        logging.info('Grouped')
+        with self.monitor('reading GMFs'):
+            rlzs = dstore['events']['rlz_id']
+            sids = dstore['gmf_data/sid'][:]
+            dic = dict(eid=dstore['gmf_data/eid'][:])
+            for m, imt in enumerate(self.oqparam.imtls):
+                dic['gmv_' + imt] = dstore['gmf_data/gmv'][:, m]
+            gmf_df = pandas.DataFrame(dic, index=sids)
+            by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
+        logging.info('Grouped the GMFs by site ID')
         for sid, assets in enumerate(self.assetcol.assets_by_site()):
             if len(assets) == 0:
                 continue
