@@ -982,7 +982,8 @@ class RiskCalculator(HazardCalculator):
                 dstore = self.datastore
             meth = getattr(self, '_gen_riskinputs_' + kind)
             riskinputs = list(meth(dstore))
-        assert riskinputs
+        if not riskinputs:
+            raise RuntimeError(f'the {kind}s are all zeros on the assets')
         logging.info('Built %d risk inputs', len(riskinputs))
         return riskinputs
 
