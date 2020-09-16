@@ -93,7 +93,6 @@ class ECOS2009(GMPE):
         # intensity measure type
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup, dists, imt)
-#         print (adj_mean)
         stddevs = self._get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
 
         return mean, stddevs

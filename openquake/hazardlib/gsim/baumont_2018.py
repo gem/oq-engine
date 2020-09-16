@@ -69,11 +69,6 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
-    # DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-    #     const.StdDev.TOTAL,
-    #     const.StdDev.INTER_EVENT,
-    #     const.StdDev.INTRA_EVENT
-    # ])
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL
     ])

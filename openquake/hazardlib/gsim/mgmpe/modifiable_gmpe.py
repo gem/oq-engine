@@ -38,7 +38,7 @@ class ModifiableGMPE(GMPE):
         - 'set_between_epsilon' This sets the epsilon of the between event
            variability i.e. the returned mean is the original + tau * episilon
            and sigma tot is equal to sigma_within
-		- 'apply_swiss_amplification' This applies intensity amplification
+        - 'apply_swiss_amplification' This applies intensity amplification
            factors to the mean intensity returned by the parent GMPE/IPE based on the
            input 'amplfactor' site parameter 
     """
