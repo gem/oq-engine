@@ -259,24 +259,31 @@ class PmapGetter(object):
         return pmap
 
 
-class GmfDataGetter(collections.abc.Mapping):
+class GmfDataGetter(object):
     """
-    A dictionary-like object {sid: dictionary by realization index}
+    An object with an .init() and .get_hazard() method
     """
-    def __init__(self, dstore, sids, rlzs, num_rlzs):
+    def __init__(self, dstore, sid, idx, rlzs, num_rlzs):
         self.dstore = dstore
-        self.sids = sids
+        self.sids = [sid]
+        self.idxs = list(idx['idx'])
         self.rlzs = rlzs
         self.num_rlzs = num_rlzs
-        assert len(sids) == 1, sids
 
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
-        self.data = self[self.sids[0]]
-        if not self.data:  # no GMVs, return 0, counted in no_damage
+        eids = self.dstore['gmf_data/eid'][self.idxs]
+        gmvs = self.dstore['gmf_data/gmv'][self.idxs, :]
+        if not len(eids):  # no GMVs, return 0, counted in no_damage
             self.data = {rlzi: 0 for rlzi in range(self.num_rlzs)}
+        else:
+            M = gmvs.shape[1]
+            data = numpy.zeros(len(eids), [('eid', U32), ('gmv', (F32, (M,)))])
+            data['eid'] = eids
+            data['gmv'] = gmvs
+            self.data = group_by_rlz(data, self.rlzs)
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
@@ -289,24 +296,6 @@ class GmfDataGetter(collections.abc.Mapping):
         :returns: an dict rlzi -> datadict
         """
         return self.data
-
-    def __getitem__(self, sid):
-        dset = self.dstore['gmf_data/data']
-        idxs = self.dstore['gmf_data/indices'][sid]
-        if idxs.dtype.name == 'uint32':  # scenario
-            idxs = [idxs]
-        elif not idxs.dtype.names:  # engine >= 3.2
-            idxs = zip(*idxs)
-        data = [dset[start:stop] for start, stop in idxs]
-        if len(data) == 0:  # site ID with no data
-            return {}
-        return group_by_rlz(numpy.concatenate(data), self.rlzs)
-
-    def __iter__(self):
-        return iter(self.sids)
-
-    def __len__(self):
-        return len(self.sids)
 
 
 time_dt = numpy.dtype(

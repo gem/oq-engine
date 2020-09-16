@@ -27,6 +27,7 @@ import traceback
 from datetime import datetime
 from shapely import wkt
 import numpy
+import pandas
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
@@ -993,12 +994,15 @@ class RiskCalculator(HazardCalculator):
             raise InvalidFile('Did you forget gmfs_csv in %s?'
                               % self.oqparam.inputs['job_ini'])
         rlzs = dstore['events']['rlz_id']
+        sids = dstore['gmf_data/sid'][:]
+        df = pandas.DataFrame(dict(idx=numpy.arange(len(sids))), index=sids)
         assets_by_site = self.assetcol.assets_by_site()
-        for sid, assets in enumerate(assets_by_site):
+        for sid, idx in df.groupby(df.index):
+            assets = assets_by_site[sid]
             if len(assets) == 0:
                 continue
-            getter = getters.GmfDataGetter(dstore, [sid], rlzs, self.R)
-            if len(dstore['gmf_data/data']) == 0:
+            getter = getters.GmfDataGetter(dstore, sid, idx, rlzs, self.R)
+            if len(dstore['gmf_data/gmv']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
@@ -1082,7 +1086,9 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
            for s in numpy.arange(N, dtype=U32)
            for ei, event in enumerate(events)]
     gmfa = numpy.array(lst, dstore['oqparam'].gmf_data_dt())
-    dstore['gmf_data/data'] = gmfa
+    dstore['gmf_data/sid'] = gmfa['sid']
+    dstore['gmf_data/eid'] = gmfa['eid']
+    dstore['gmf_data/gmv'] = gmfa['gmv']
     dic = general.group_array(gmfa, 'sid')
     lst = []
     all_sids = sitecol.complete.sids
@@ -1092,7 +1098,6 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
         lst.append((offset, offset + n))
         offset += n
     dstore['gmf_data/imts'] = ' '.join(imts)
-    dstore['gmf_data/indices'] = numpy.array(lst, U32)
 
 
 def import_gmfs(dstore, fname, sids):
@@ -1143,18 +1148,18 @@ def import_gmfs(dstore, fname, sids):
     dstore['events'] = events
     # store the GMFs
     dic = general.group_array(arr, 'sid')
-    lst = []
     offset = 0
     gmvlst = []
     for sid in sids:
         n = len(dic.get(sid, []))
-        lst.append((offset, offset + n))
         if n:
             offset += n
             gmvs = dic[sid]
             gmvlst.append(gmvs)
-    dstore['gmf_data/data'] = numpy.concatenate(gmvlst)
-    dstore['gmf_data/indices'] = numpy.array(lst, U32)
+    data = numpy.concatenate(gmvlst)
+    dstore['gmf_data/sid'] = data['sid']
+    dstore['gmf_data/eid'] = data['eid']
+    dstore['gmf_data/gmv'] = data['gmv']
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['weights'] = numpy.ones(1)
     return eids
