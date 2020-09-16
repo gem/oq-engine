@@ -1011,7 +1011,8 @@ class RiskCalculator(HazardCalculator):
             except KeyError:
                 getter = getters.ZeroGetter(sid, self.R)
             else:
-                getter = getters.GmfDataGetter(dstore, sid, df, rlzs, self.R)
+                df['rlzs'] = rlzs[df.eid.to_numpy()]
+                getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
             if len(dstore['gmf_data/gmv']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '

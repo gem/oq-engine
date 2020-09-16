@@ -263,34 +263,24 @@ class GmfDataGetter(object):
     """
     An object with an .init() and .get_hazard() method
     """
-    def __init__(self, dstore, sid, df, rlzs, num_rlzs):
-        self.dstore = dstore
+    def __init__(self, sid, df, num_events, num_rlzs):
         self.sids = [sid]
         self.df = df
-        self.rlzs = rlzs
-        self.num_rlzs = num_rlzs
+        self.num_rlzs = num_rlzs  # used in event_based_risk
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.E = len(self.rlzs)
+        self.E = num_events
 
     def init(self):
-        M = len(self.df.columns) - 1
-        data = numpy.zeros(len(self.df), [('eid', U32), ('gmv', (F32, (M,)))])
-        for i, col in enumerate(self.df.columns):
-            if col == 'eid':
-                data['eid'] = self.df[col]
-            else:
-                data['gmv'][:, i-1] = self.df[col]
-        self.data = group_by_rlz(data, self.rlzs)
-        #del self.rlzs
+        pass
 
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
         :returns: an dict rlzi -> datadict
         """
-        return self.data
+        return dict(list(self.df.groupby('rlzs')))
 
 
 class ZeroGetter(object):
