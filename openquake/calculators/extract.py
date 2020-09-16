@@ -830,15 +830,12 @@ def extract_losses_by_event(dstore, what):
 
 def _gmf(data, num_sites, imts):
     # convert data into the composite array expected by QGIS
-    eids = sorted(numpy.unique(data['eid']))
-    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
-    E = len(eid2idx)
-    gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in imts])
+    gmf_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfa = numpy.zeros(num_sites, gmf_dt)
     for rec in data:
         arr = gmfa[rec['sid']]
         for imt, gmv in zip(imts, rec['gmv']):
-            arr[imt][eid2idx[rec['eid']]] = gmv
+            arr[imt] = gmv
     return gmfa
 
 
