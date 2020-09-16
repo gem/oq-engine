@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import collections
+
 import itertools
 import operator
 import logging
@@ -276,14 +276,11 @@ class GmfDataGetter(object):
         self.dstore.open('r')  # if not already open
         eids = self.dstore['gmf_data/eid'][self.idxs]
         gmvs = self.dstore['gmf_data/gmv'][self.idxs, :]
-        if not len(eids):  # no GMVs, return 0, counted in no_damage
-            self.data = {rlzi: 0 for rlzi in range(self.num_rlzs)}
-        else:
-            M = gmvs.shape[1]
-            data = numpy.zeros(len(eids), [('eid', U32), ('gmv', (F32, (M,)))])
-            data['eid'] = eids
-            data['gmv'] = gmvs
-            self.data = group_by_rlz(data, self.rlzs)
+        M = gmvs.shape[1]
+        data = numpy.zeros(len(eids), [('eid', U32), ('gmv', (F32, (M,)))])
+        data['eid'] = eids
+        data['gmv'] = gmvs
+        self.data = group_by_rlz(data, self.rlzs)
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
@@ -296,6 +293,25 @@ class GmfDataGetter(object):
         :returns: an dict rlzi -> datadict
         """
         return self.data
+
+
+class ZeroGetter(object):
+    """
+    An object with an .init() and .get_hazard() method
+    """
+    def __init__(self, sid, num_rlzs):
+        self.sids = [sid]
+        self.num_rlzs = num_rlzs
+
+    def init(self):
+        pass
+
+    def get_hazard(self, gsim=None):
+        """
+        :param gsim: ignored
+        :returns: an dict rlzi -> 0
+        """
+        return {rlzi: 0 for rlzi in range(self.num_rlzs)}
 
 
 time_dt = numpy.dtype(

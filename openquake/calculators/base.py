@@ -982,7 +982,9 @@ class RiskCalculator(HazardCalculator):
                 dstore = self.datastore
             meth = getattr(self, '_gen_riskinputs_' + kind)
             riskinputs = list(meth(dstore))
-        if not riskinputs:
+        assert riskinputs
+        if all(isinstance(ri.hazard_getter, getters.ZeroGetter)
+               for ri in riskinputs):
             raise RuntimeError(f'the {kind}s are all zeros on the assets')
         logging.info('Built %d risk inputs', len(riskinputs))
         return riskinputs
@@ -997,12 +999,16 @@ class RiskCalculator(HazardCalculator):
         rlzs = dstore['events']['rlz_id']
         sids = dstore['gmf_data/sid'][:]
         df = pandas.DataFrame(dict(idx=numpy.arange(len(sids))), index=sids)
-        assets_by_site = self.assetcol.assets_by_site()
-        for sid, idx in df.groupby(df.index):
-            assets = assets_by_site[sid]
+        by_sid = dict(list(df.groupby(df.index)))
+        for sid, assets in enumerate(self.assetcol.assets_by_site()):
             if len(assets) == 0:
                 continue
-            getter = getters.GmfDataGetter(dstore, sid, idx, rlzs, self.R)
+            try:
+                idx = by_sid[sid]
+            except KeyError:
+                getter = getters.ZeroGetter(sid, self.R)
+            else:
+                getter = getters.GmfDataGetter(dstore, sid, idx, rlzs, self.R)
             if len(dstore['gmf_data/gmv']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
