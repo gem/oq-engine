@@ -1002,7 +1002,9 @@ class RiskCalculator(HazardCalculator):
         for m, imt in enumerate(self.oqparam.imtls):
             dic['gmv_' + imt] = dstore['gmf_data/gmv'][:, m]
         gmf_df = pandas.DataFrame(dic, index=sids)
+        logging.info('Grouping the GMFs by site ID')
         by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
+        logging.info('Grouped')
         for sid, assets in enumerate(self.assetcol.assets_by_site()):
             if len(assets) == 0:
                 continue
@@ -1066,11 +1068,6 @@ class RiskCalculator(HazardCalculator):
                 # the SWMR mode for event_based_risk
                 ri.hazard_getter.init()
             smap.submit((block, self.crmodel, self.param))
-            for ri in block:  # save memory
-                try:
-                    ri.hazard_getter.data.clear()
-                except AttributeError:  # no data
-                    pass
         return smap.reduce(self.combine)
 
     def combine(self, acc, res):
