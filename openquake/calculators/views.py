@@ -656,7 +656,8 @@ def view_global_gmfs(token, dstore):
     Display GMFs on the first IMT averaged on everything for debugging purposes
     """
     imtls = dstore['oqparam'].imtls
-    row = dstore['gmf_data/gmv_0'][:].mean(axis=0)
+    row = [dstore[f'gmf_data/gmv_{m}'][:].mean(axis=0)
+           for m in range(len(imtls))]
     return rst_table([row], header=imtls)
 
 

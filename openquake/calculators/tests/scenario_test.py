@@ -111,25 +111,13 @@ class ScenarioTestCase(CalculatorTestCase):
 
     def test_case_9(self):
         # test for minimum_distance
-        out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
+        out = self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         f = out['gmf_data', 'csv'][0]
         self.assertEqualFiles('gmf.csv', f)
 
         # test the realizations export
         [f] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('realizations.csv', f)
-
-        # test the .npz export
-        [fname] = out['gmf_data', 'npz']
-        with numpy.load(fname) as f:
-            self.assertEqual(list(f), ['rlz-000', 'rlz-001'])
-            data1 = f['rlz-000']
-            data2 = f['rlz-001']
-            self.assertEqual(data1.dtype.names, ('lon', 'lat', 'PGA'))
-            self.assertEqual(data1.shape, (3,))
-            self.assertEqual(data1['PGA'].shape, (3, 10))
-            self.assertEqual(data1.dtype.names, data2.dtype.names)
-            self.assertEqual(data1.shape, data2.shape)
 
     def test_case_10(self):
         # test importing an exposure with automatic gridding

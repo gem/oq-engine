@@ -99,8 +99,8 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
             gmf = dstore.read_df('gmf_data', 'sid')
-            gmvs_site_0 = gmf.loc[0]['gmv']
-            gmvs_site_1 = gmf.loc[1]['gmv']
+            gmvs_site_0 = gmf.loc[0]['gmv_0']
+            gmvs_site_1 = gmf.loc[1]['gmv_0']
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_0, gmvs_site_1, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
@@ -138,9 +138,6 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
-
-        # test that the .npz export runs
-        export(('gmf_data', 'npz'), self.calc.datastore)
 
         export(('hcurves', 'xml'), self.calc.datastore)
 
@@ -293,7 +290,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 51)
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 51)
 
     def test_case_10(self):
         # this is a case with multiple files in the smlt uncertaintyModel
