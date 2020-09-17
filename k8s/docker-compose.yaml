@@ -1,0 +1,35 @@
+version: '3.7'
+
+networks:
+  cluster:
+    driver: bridge
+volumes:
+  oqdata:
+
+#definizione di un yaml template da usare poi negli altri servizi
+x-op-service-default: &service_default
+  restart: unless-stopped
+  init: true
+
+services:
+  master:
+    <<: *service_default
+    container_name: master
+    image: openquake/engine-master-zmq
+    volumes:
+      - oqdata:/home/openquake/oqdata
+    networks:
+      - cluster
+    ports:
+      - 8800:8800
+  worker:
+    <<: *service_default
+    container_name: worker
+    image: openquake/engine-worker-zmq
+    volumes:
+      - oqdata:/home/openquake/oqdata:ro
+    networks:
+      - cluster
+    depends_on:
+      - master
+
