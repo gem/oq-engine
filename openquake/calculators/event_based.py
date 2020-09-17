@@ -309,11 +309,14 @@ class EventBasedCalculator(base.HazardCalculator):
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores
         ).reduce(self.agg_dicts, self.acc0())
-        affected_sids = ('gmf_data/sid' in self.datastore and
-                         len(self.datastore['gmf_data/sid']))
-        if oq.ground_motion_fields and not affected_sids:
-            raise RuntimeError('No GMFs were generated, perhaps they were '
-                               'all below the minimum_intensity threshold')
+        if oq.ground_motion_fields:
+            rel_events = numpy.unique(self.datastore['gmf_data/eid'][:])
+            if len(rel_events):
+                self.datastore['relevant_events'] = rel_events
+                logging.info('Stored %d relevant event IDs', len(rel_events))
+            else:
+                raise RuntimeError('No GMFs were generated, perhaps they were '
+                                   'all below the minimum_intensity threshold')
         return acc
 
     def post_execute(self, result):
