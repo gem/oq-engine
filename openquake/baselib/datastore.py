@@ -521,7 +521,7 @@ class DataStore(collections.abc.MutableMapping):
         """
         unique = set()
         dset = self.getitem(key)
-        for slc in general.gen_slices(0, len(dset), 1E7):
+        for slc in general.gen_slices(0, len(dset), 10_000_000):
             arr = numpy.unique(dset[slc][field])
             unique.update(arr)
         return sorted(unique)
