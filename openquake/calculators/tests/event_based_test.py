@@ -455,8 +455,13 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures.csv', mean)
 
     def test_case_26(self):
-        # mock secondary perils
+        # cali landslide simplified
         self.run_calc(case_26.__file__, 'job.ini')
+        df = self.calc.datastore.read_df('gmf_data/data', 'sid')
+        pd_mean = df[df['prob_disp_0'] > 0]['prob_disp_0'].mean()
+        nd_mean = df[df['newmark_disp_0'] > 0]['newmark_disp_0'].mean()
+        self.assertGreater(pd_mean, 0)
+        self.assertGreater(nd_mean, 0)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
