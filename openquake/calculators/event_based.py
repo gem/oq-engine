@@ -324,6 +324,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     num_evs[sid] = (stop - start).sum()
             avg_events_by_sid = num_evs[()].sum() / N
             logging.info('Found ~%d GMVs per site', avg_events_by_sid)
+            logging.info('Storing relevant event IDs')
+            rel_events = self.datastore.read_unique('gmf_data/data', 'eid')
+            self.datastore['relevant_events'] = rel_events
         elif oq.ground_motion_fields:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')

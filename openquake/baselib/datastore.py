@@ -27,7 +27,7 @@ import numpy
 import h5py
 import pandas
 
-from openquake.baselib import hdf5, config, performance, python3compat
+from openquake.baselib import hdf5, config, performance, python3compat, general
 
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
@@ -511,6 +511,20 @@ class DataStore(collections.abc.MutableMapping):
             else:  # scalar field
                 data[name] = arr
         return pandas.DataFrame.from_records(data, index=index)
+
+    def read_unique(self, key, field):
+        """
+        :param key: key to a dataset containing a structured array
+        :param field: a field in the structured array
+        :returns: sorted, unique values
+        Works with chunks of 1M records
+        """
+        unique = set()
+        dset = self.getitem(key)
+        for slc in general.gen_slices(0, len(dset), 1E7):
+            arr = numpy.unique(dset[slc][field])
+            unique.update(arr)
+        return sorted(unique)
 
     def sel(self, key, **kw):
         """
