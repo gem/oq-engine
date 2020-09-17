@@ -828,17 +828,15 @@ def extract_losses_by_event(dstore, what):
         yield 'rlz-%03d' % rlzi, dic[rlzi]
 
 
-def _gmf(sids, eids, gmvs, num_sites, imts):
+def _gmf(df, num_sites, imts):
     # convert data into the composite array expected by QGIS
-    ueids = sorted(numpy.unique(eids))
+    ueids = sorted(numpy.unique(df.eid.to_numpy()))
     eid2idx = {eid: idx for idx, eid in enumerate(ueids)}
     E = len(eid2idx)
-    gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in imts])
-    gmfa = numpy.zeros(num_sites, gmf_dt)
-    for sid, eid, gmv in zip(sids, eids, gmvs):
-        arr = gmfa[sid]
-        for imt, gmv in zip(imts, gmv):
-            arr[imt][eid2idx[eid]] = gmv
+    for m, imt in enumerate(imts):
+        gmf_dt = numpy.dtype([(imt, F32) for imt in imts])
+        gmfa = numpy.zeros(num_sites, gmf_dt)
+        arr[imt][eid2idx[eid]] = df[f'gmv_{m}'].to_numpy()
     return gmfa
 
 
@@ -850,21 +848,19 @@ def extract_gmf_npz(dstore, what):
     [eid] = qdict.get('event_id', [None])
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
-    sids = dstore['gmf_data/sid']
-    eids = dstore['gmf_data/eid']
-    gmvs = dstore['gmf_data/gmv']
+    df = dstore.read_df('gmf_data', 'sid')
+    eids = df.eid.to_numpy()
     if eid is None:  # get all events
         rlz = dstore['events']['rlz_id']
         for rlzi in sorted(set(rlz)):
-            idx = rlz[eids] == rlzi
-            gmfa = _gmf(sids[idx], eids[idx], gmvs[idx, :], n, oq.imtls)
+            gmfa = _gmf(df[rlz[eids] == rlzi], n, oq.imtls)
             logging.info('Exporting array%s for rlz#%d', gmfa.shape, rlzi)
             yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
     else:  # get a single event
         rlzi = dstore['events'][eid]['rlz_id']
         idx = eids == eid
         if idx.any():
-            gmfa = _gmf(sids[idx], eids[idx], gmvs[idx, :], n, oq.imtls)
+            gmfa = _gmf(df[idx], n, oq.imtls)
             yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
         else:  # zero GMF
             yield 'rlz-%03d' % rlzi, []

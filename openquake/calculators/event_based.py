@@ -172,6 +172,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
+        M = len(self.oqparam.imtls)
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
@@ -180,7 +181,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
                 hdf5.extend(self.datastore['gmf_data/sid'], data['sid'])
                 hdf5.extend(self.datastore['gmf_data/eid'], data['eid'])
-                hdf5.extend(self.datastore['gmf_data/gmv'], data['gmv'])
+                for m in range(M):
+                    hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
+                                data['gmv'][:, m])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(data)
@@ -285,9 +288,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.ground_motion_fields:
             M = len(oq.imtls)
             nrups = len(self.datastore['ruptures'])
-            self.datastore.create_dset('gmf_data/sid', U32)
-            self.datastore.create_dset('gmf_data/eid', U32)
-            self.datastore.create_dset('gmf_data/gmv', F32, (None, M))
+            base.create_gmf_data(self.datastore, M)
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))

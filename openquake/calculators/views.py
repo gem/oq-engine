@@ -653,10 +653,10 @@ def view_global_hmaps(token, dstore):
 @view.add('global_gmfs')
 def view_global_gmfs(token, dstore):
     """
-    Display GMFs averaged on everything for debugging purposes
+    Display GMFs on the first IMT averaged on everything for debugging purposes
     """
     imtls = dstore['oqparam'].imtls
-    row = dstore['gmf_data/gmv'][:].mean(axis=0)
+    row = dstore['gmf_data/gmv_0'][:].mean(axis=0)
     return rst_table([row], header=imtls)
 
 

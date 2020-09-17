@@ -23,7 +23,7 @@ import math
 
 import numpy.testing
 
-from openquake.baselib.general import group_array, countby, gettemp
+from openquake.baselib.general import countby, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter

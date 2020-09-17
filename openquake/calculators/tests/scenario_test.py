@@ -45,11 +45,9 @@ class ScenarioTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):
         self.execute(case.__file__, 'job.ini')
-        sids = self.calc.datastore['gmf_data/sid'][:]
-        gmvs = self.calc.datastore['gmf_data/gmv'][:, 0]
-        df = pandas.DataFrame(dict(gmvs=gmvs), index=sids)
-        gmvs0 = numpy.array(df.loc[0])
-        gmvs1 = numpy.array(df.loc[1])
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
+        gmvs0 = df.loc[0]['gmv_0'].to_numpy()
+        gmvs1 = df.loc[1]['gmv_0'].to_numpy()
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmvs0, gmvs1)
         gmvs_within_range_snd = count_close(snd_value, gmvs0, gmvs1)
@@ -58,13 +56,12 @@ class ScenarioTestCase(CalculatorTestCase):
 
     def medians(self, case):
         self.execute(case.__file__, 'job.ini')
-        sids = self.calc.datastore['gmf_data/sid'][:]
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
         median = {imt: [] for imt in self.calc.oqparam.imtls}
         for imti, imt in enumerate(self.calc.oqparam.imtls):
-            gmvs = self.calc.datastore['gmf_data/gmv'][:, imti]
-            df = pandas.DataFrame(dict(gmvs=gmvs), index=sids)
             for sid in self.calc.sitecol.sids:
-                median[imt].append(numpy.median(df.loc[sid]))
+                gmvs = df.loc[sid][f'gmv_{imti}'].to_numpy()
+                median[imt].append(numpy.median(gmvs))
         return median
 
     def test_case_1bis(self):

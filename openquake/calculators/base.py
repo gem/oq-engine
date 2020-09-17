@@ -27,7 +27,6 @@ import traceback
 from datetime import datetime
 from shapely import wkt
 import numpy
-import pandas
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
@@ -998,11 +997,7 @@ class RiskCalculator(HazardCalculator):
                               % self.oqparam.inputs['job_ini'])
         with self.monitor('reading GMFs'):
             rlzs = dstore['events']['rlz_id']
-            sids = dstore['gmf_data/sid'][:]
-            dic = dict(eid=dstore['gmf_data/eid'][:])
-            for m, imt in enumerate(self.oqparam.imtls):
-                dic['gmv_' + imt] = dstore['gmf_data/gmv'][:, m]
-            gmf_df = pandas.DataFrame(dic, index=sids)
+            gmf_df = dstore.read_df('gmf_data', 'sid')
             by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
         logging.info('Grouped the GMFs by site ID')
         for sid, assets in enumerate(self.assetcol.assets_by_site()):
@@ -1015,7 +1010,7 @@ class RiskCalculator(HazardCalculator):
             else:
                 df['rlzs'] = rlzs[df.eid.to_numpy()]
                 getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
-            if len(dstore['gmf_data/gmv']) == 0:
+            if len(dstore['gmf_data/gmv_0']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
@@ -1096,7 +1091,12 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
     gmfa = numpy.array(lst, dstore['oqparam'].gmf_data_dt())
     dstore['gmf_data/sid'] = gmfa['sid']
     dstore['gmf_data/eid'] = gmfa['eid']
-    dstore['gmf_data/gmv'] = gmfa['gmv']
+    cols = ['sid', 'eid']
+    for m in range(M):
+        col = f'gmv_{m}'
+        cols.append(col)
+        dstore['gmf_data/' + col] = gmfa['gmv'][:, m]
+    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
     dic = general.group_array(gmfa, 'sid')
     lst = []
     all_sids = sitecol.complete.sids
@@ -1165,12 +1165,26 @@ def import_gmfs(dstore, fname, sids):
             gmvs = dic[sid]
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
-    dstore['gmf_data/sid'] = data['sid']
-    dstore['gmf_data/eid'] = data['eid']
-    dstore['gmf_data/gmv'] = data['gmv']
-    dstore['gmf_data/imts'] = ' '.join(imts)
+    create_gmf_data(dstore, len(oq.imtls), data)
+    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(imts)
     dstore['weights'] = numpy.ones(1)
     return eids
+
+
+def create_gmf_data(dstore, M, data=None):
+    sid = dstore.create_dset('gmf_data/sid', U32)
+    eid = dstore.create_dset('gmf_data/eid', U32)
+    cols = ['sid', 'eid']
+    if data is not None:
+        sid[:] = data['sid']
+        eid[:] = data['eid']
+    for m in range(M):
+        col = f'gmv_{m}'
+        cols.append(col)
+        dstore.create_dset('gmf_data/' + col, F32)
+        if data is not None:
+            dstore[f'gmf_data/' + col] = data[col]
+    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
 
 
 def save_exposed_values(dstore, assetcol, lossnames, tagnames):
