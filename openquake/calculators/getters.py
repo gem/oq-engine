@@ -521,15 +521,16 @@ def gen_rupture_getters(dstore, srcfilter, ct):
         else:  # split by block
             if not maxweight:
                 maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
-            blocks = list(general.block_splitter(
-                proxies, maxweight, operator.attrgetter('weight')))
-            logging.info('Group %d: %d ruptures -> %d task(s)',
-                         grp_id, len(rups), len(blocks))
-            for block in blocks:
+            nblocks = 0
+            for block in general.block_splitter(
+                    proxies, maxweight, operator.attrgetter('weight')):
+                nblocks += 1
                 rgetter = RuptureGetter(
                     block, dstore.filename, grp_id,
                     trt, samples[grp_id], rlzs_by_gsim[grp_id])
                 yield rgetter
+            logging.info('Sent group %d: %d ruptures -> %d task(s)',
+                         grp_id, len(rups), nblocks)
 
 
 def get_ebruptures(dstore):
