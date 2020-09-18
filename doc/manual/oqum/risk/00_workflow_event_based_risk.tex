@@ -46,10 +46,10 @@ and $k \times rup$ means that \gls{rupture} $rup$ is repeated $k$ times in the
 For each \gls{rupture} or event in the \glspl{acr:ses}, a spatially correlated
 \gls{acr:gmf} realisation is generated, taking into consideration both the
 inter-event variability of ground motions, and the intra-event residuals
-obtained from a spatial correlation model for ground motion residuals. The use
-of logic trees allows for the consideration of uncertainty in the choice of a
-\glsdesc{acr:ssm}, and in the choice of \glspl{groundmotionmodel} for the
-different tectonic regions.
+obtained from a spatial correlation model for ground motion residuals (if one 
+is specified in the job file). The use of logic trees allows for the 
+consideration of uncertainty in the choice of a \glsdesc{acr:ssm}, and in the 
+choice of \glspl{groundmotionmodel} for the different tectonic regions.
 
 For each \gls{acr:gmf} realization, a loss ratio is sampled for every
 \gls{asset} in the \gls{exposuremodel} using the provided probabilistic
