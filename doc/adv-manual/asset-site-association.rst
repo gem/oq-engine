@@ -20,6 +20,12 @@ There are several ways to specify the hazard sites in an engine calculation.
 
 5. Otherwise the sites can be inferred from the site model file, if any.
 
+It must be noted that the engine rounds longitudes and latitudes	
+to 5 decimal places (or approximately 1 meter spatial resolution),
+so sites that differ only at the 6 decimal place or beyond will
+end up being considered as duplicated sites by the engine, and 
+may be flagged as an error.
+
 Having determined the sites, a `SiteCollection` object is generated
 by associating the closest parameters from the site model (if any)
 or using the global site parameters, if any.
@@ -38,6 +44,8 @@ There are a number of error situations:
    If you are in such situation you should use the command
    `oq prepare_site_model`
    to manually prepare a site model on the location of the sites.
+5. Having duplicates (i.e. rows with identical lon, lat) in the site model	
+   is an error.   
 
 The relation between asset locations and hazard sites
 =====================================================
@@ -45,10 +53,3 @@ The relation between asset locations and hazard sites
 This is one of the most frequently asked questions in the mailing list.
 The answer is long and difficult and depends very much on the version
 of the engine, since there are several corner cases and tricky points.
-
-
-The case with explicit sites and no site model
-----------------------------------------------
-
-If the user specifies the hazard sites in a CSV file, such sites are
-the ones used to compute the hazard.
