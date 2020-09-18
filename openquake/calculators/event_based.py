@@ -436,6 +436,9 @@ class EventBasedCalculator(base.HazardCalculator):
             with self.monitor('computing mean hcurves'):
                 self.datastore['hcurves-stats'] = gmvs_to_mean_hcurves(
                     self.datastore)
+                self.datastore.set_shape_attrs(
+                    'hcurves-stats', site_id=N, stat=['mean'],
+                    imt=list(oq.imtls), lvl=numpy.arange(L1))
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.compare_with_classical:  # compute classical curves
