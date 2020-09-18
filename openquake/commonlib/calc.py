@@ -145,7 +145,7 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     (``imls``), compute hazard curve probabilities of exceedance.
 
     :param gmvs:
-        A list of ground motion values, as floats.
+        Am array of ground motion values, as floats.
     :param imls:
         A list of intensity measure levels, as floats.
     :param ses_per_logic_tree_path:
@@ -159,9 +159,25 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     # here is an example: imls = [0.03, 0.04, 0.05], gmvs=[0.04750576]
     # => num_exceeding = [1, 1, 0] coming from 0.04750576 > [0.03, 0.04, 0.05]
     imls = numpy.array(imls).reshape((len(imls), 1))
-    num_exceeding = numpy.sum(numpy.array(gmvs) >= imls, axis=1)
+    num_exceeding = numpy.sum(gmvs >= imls, axis=1)
     poes = 1 - numpy.exp(- num_exceeding / ses_per_logic_tree_path)
     return poes
+
+
+def gmvs_to_poes(gmvs, imtls, ses_per_logic_tree_path):
+    """
+    :param gmvs: an array of GMVs of shape (M, E)
+    :param imtls: a dictionary imt -> imls with M IMTs and L levels
+    :param ses_per_logic_tree_path: a positive integer
+    :returns: an array of PoEs of shape (M, L)
+    """
+    M = len(imtls)
+    assert len(gmvs) == M, (len(gmvs), M)
+    L = len(imtls[next(iter(imtls))])
+    arr = numpy.zeros((M, L))
+    for m, imls in enumerate(imtls.values()):
+        arr[m] = _gmvs_to_haz_curve(gmvs[m], imls, ses_per_logic_tree_path)
+    return arr
 
 
 # ################## utilities for classical calculators ################ #

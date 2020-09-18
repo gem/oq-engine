@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, get_indices
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base
@@ -79,11 +79,8 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
     E = param['E']
     L = len(crmodel.loss_types)
     result = dict(agg=numpy.zeros((E, L), F32), avg=[])
-    mon = monitor('getting hazard', measuremem=False)
     acc = AccumDict(accum=numpy.zeros(L, F64))  # aid,eid->loss
     for ri in riskinputs:
-        with mon:
-            ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
@@ -139,22 +136,18 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         A = len(self.assetcol)
         self.datastore.create_dset('loss_data/data', dt)
         self.datastore.create_dset('loss_data/indices', U32, (A, 2))
-        self.start = 0
 
     def combine(self, acc, res):
         """
         Combine the outputs from scenario_risk and incrementally store
         the asset loss table
         """
-        ael = res.pop('ael', ())
-        if len(ael) == 0:
+        with self.monitor('saving loss_data', measuremem=True):
+            ael = res.pop('ael', ())
+            if len(ael) == 0:
+                return acc + res
+            hdf5.extend(self.datastore['loss_data/data'], ael)
             return acc + res
-        for aid, [(i1, i2)] in get_indices(ael['asset_id']).items():
-            self.datastore['loss_data/indices'][aid] = (
-                self.start + i1, self.start + i2)
-        self.start += len(ael)
-        hdf5.extend(self.datastore['loss_data/data'], ael)
-        return acc + res
 
     def post_execute(self, result):
         """
