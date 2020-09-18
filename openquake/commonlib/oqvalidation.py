@@ -294,10 +294,6 @@ class OqParam(valid.ParamSet):
                     'from %s: they will be inferred from the iml_disagg '
                     'dictionary' % job_ini)
         elif 'intensity_measure_types_and_levels' in names_vals:
-            if 'maximum_intensity' in names_vals:
-                raise ValueError(
-                    'You can set both intensity_measure_types_and_levels and'
-                    ' maximum_intensity')
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
             lens = set(map(len, self.hazard_imtls.values()))
