@@ -27,8 +27,8 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.calc.filters import nofilter
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib.calc.filters import nofilter, getdefault
+from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.geo.mesh import surface_to_array
@@ -73,6 +73,31 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'],
                        param['sec_perils'])
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
+
+
+def gmvs_to_mean_hcurves(dstore):
+    """
+    Convert GMFs into mean hazard curves. Works by keeping everything in
+    memory and it is extremely fast.
+    NB: parallelization would kill the performance.
+    """
+    oq = dstore['oqparam']
+    N = len(dstore['sitecol'])
+    M = len(oq.imtls)
+    L = 20
+    imtls = {}
+    for imt in oq.imtls:
+        i1 = oq.minimum_intensity.get(imt, 1E-3)
+        i2 = getdefault(oq.maximum_intensity, imt)
+        imtls[imt] = valid.logscale(i1, i2, L)
+    gmf_df = dstore.read_df('gmf_data/data', 'sid')
+    mean = numpy.zeros((N, 1, M, L))
+    for sid, df in gmf_df.groupby(gmf_df.index):
+        gmvs = [df[col].to_numpy() for col in df.columns
+                if col.startswith('gmv_')]
+        mean[sid, 0] = calc.gmvs_to_poes(
+            gmvs, imtls, oq.ses_per_logic_tree_path)
+    return mean
 
 
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
@@ -406,7 +431,10 @@ class EventBasedCalculator(base.HazardCalculator):
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
                         for sid in hmap:
                             ds[sid, s] = hmap[sid].array
-
+        elif result and not oq.hazard_curves_from_gmfs:
+            with self.monitor('computing mean hcurves'):
+                self.datastore['hcurves-stats'] = gmvs_to_mean_hcurves(
+                    self.datastore)
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.compare_with_classical:  # compute classical curves
