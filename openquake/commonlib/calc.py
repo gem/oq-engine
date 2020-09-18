@@ -164,6 +164,22 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     return poes
 
 
+def gmvs_to_hcurve(gmvs, imtls, ses_per_logic_tree_path):
+    """
+    :param gmvs: an array of GMVs of shape (M, E)
+    :param imtls: a dictionary imt -> imls with M IMTs and L levels
+    :param ses_per_logic_tree_path: a positive integer
+    :returns: an array of PoEs of shape (M, L)
+    """
+    M = len(imtls)
+    assert len(gmvs) == M, (len(gmvs), M)
+    L = len(imtls[next(iter(imtls))])
+    arr = numpy.zeros((M, L))
+    for m, imls in enumerate(imtls.values()):
+        arr[m] = _gmvs_to_haz_curve(gmvs[m], imls, ses_per_logic_tree_path)
+    return arr
+
+
 # ################## utilities for classical calculators ################ #
 
 def make_hmap(pmap, imtls, poes, sid=None):
