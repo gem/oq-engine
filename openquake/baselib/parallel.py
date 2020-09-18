@@ -808,11 +808,6 @@ class Starmap(object):
         else:  # build a task queue in advance
             self.task_queue = [(self.task_func, args)
                                for args in self.task_args]
-        fname = self.task_func.__name__
-        nbytes = sum(self.sent[fname].values())
-        if nbytes > 1E6:
-            logging.info('Sent %s in %d seconds', humansize(nbytes),
-                         time.time() - self.t0)
         return self.get_results()
 
     def get_results(self):
@@ -849,6 +844,11 @@ class Starmap(object):
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
+
+        nbytes = sum(self.sent[self.task_func.__name__].values())
+        if nbytes > 1E6:
+            logging.info('Sent %s in %d seconds', humansize(nbytes),
+                         time.time() - self.t0)
 
         isocket = iter(self.socket)
         self.todo = len(self.tasks)
