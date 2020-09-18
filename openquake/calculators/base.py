@@ -584,6 +584,7 @@ class HazardCalculator(BaseCalculator):
         elif self.__class__.precalc:
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
+            calc.from_engine = self.from_engine
             calc.run(remove=False)
             for name in ('csm param sitecol assetcol crmodel realizations '
                          'policy_name policy_dict full_lt').split():
@@ -992,11 +993,12 @@ class RiskCalculator(HazardCalculator):
         if 'gmf_data' not in dstore:
             raise InvalidFile('Did you forget gmfs_csv in %s?'
                               % self.oqparam.inputs['job_ini'])
+        rlzs = dstore['events']['rlz_id']
         assets_by_site = self.assetcol.assets_by_site()
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
-            getter = getters.GmfDataGetter(dstore, [sid], self.R)
+            getter = getters.GmfDataGetter(dstore, [sid], rlzs, self.R)
             if len(dstore['gmf_data/data']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '

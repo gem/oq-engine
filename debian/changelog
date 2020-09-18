@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added /extract/relevant_events
+  * Removed the GMF npz exporter
   * Speed-up risk saving in scenario_risk and scenario_damage
 
   [Antonio Ettorre]
@@ -12,7 +14,7 @@
   * Parallelized by GSIM when there is a single rupture
 
   [Francis Bernales]
-  * Added the Stewart et al. (2016) GMPE 
+  * Added the Stewart et al. (2016) GMPE
   * Added the Bozorgnia & Campbell (2016) GMPE
   * Added the Gulerce et al. (2017) GMPE
 

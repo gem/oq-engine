@@ -32,7 +32,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.calc.filters import MagDepDistance, floatdict
+from openquake.hazardlib.calc.filters import MagDepDistance, floatdict  # needed
 
 PRECISION = pmf.PRECISION
 

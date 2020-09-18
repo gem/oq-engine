@@ -165,6 +165,7 @@ class OqParam(valid.ParamSet):
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
+    maximum_intensity = valid.Param(valid.floatdict, {})  # IMT -> maxIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
@@ -303,6 +304,11 @@ class OqParam(valid.ParamSet):
                     'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
+            if 'maximum_intensity' in names_vals:
+                for imt in self.hazard_imtls:
+                    i1 = calc.filters.getdefault(self.minimum_intensity, 1E-3)
+                    i2 = calc.filters.getdefault(self.maximum_intensity, imt)
+                    self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 25))
             delattr(self, 'intensity_measure_types')
         self._risk_files = get_risk_files(self.inputs)
 

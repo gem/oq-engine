@@ -29,6 +29,7 @@ from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.commonlib.calc import gmvs_to_poes
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -132,21 +133,26 @@ class EventBasedTestCase(CalculatorTestCase):
         high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
         self.assertGreater(high_ses, 1000)
 
-        [fname] = out['ruptures', 'xml']
-        # self.assertEqualFiles('expected/ruptures.xml', fname)
+        [fname] = out['ruptures', 'xml']  # just check that it exists
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        # test that the .npz export runs
-        export(('gmf_data', 'npz'), self.calc.datastore)
-
-        export(('hcurves', 'xml'), self.calc.datastore)
+        export(('hcurves', 'xml'), self.calc.datastore)  # check it works
 
         [fname] = out['hcurves', 'xml']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
+
+        # compute hcurves in postprocessing and compare with inprocessing
+        df = self.calc.datastore.read_df('gmf_data/data', 'sid').loc[0]
+        gmvs = [df[col].to_numpy() for col in df.columns
+                if col.startswith('gmv_')]
+        oq = self.calc.datastore['oqparam']
+        poes = gmvs_to_poes(gmvs, oq.imtls, oq.ses_per_logic_tree_path)
+        hcurve = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L)
+        aae(poes, hcurve)
 
         # test gsim_by_imt
         out = self.run_calc(case_1.__file__, 'job.ini',
@@ -166,15 +172,15 @@ class EventBasedTestCase(CalculatorTestCase):
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
         self.assertEqual(einfo['rlzi'], 0)
         self.assertEqual(einfo['grp_id'], 0)
-        self.assertEqual(einfo['occurrence_rate'], 1.0)
-        self.assertEqual(list(einfo['hypo']), [0., 0., 4.])
+        aae(einfo['occurrence_rate'], 0.6)
+        aae(einfo['hypo'], [0., 0., 4.])
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
 
     def test_case_1_ruptures(self):
         self.run_calc(case_1.__file__, 'job_ruptures.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 2)
         [fname] = export(('events', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/events.csv', fname)
 
@@ -398,6 +404,11 @@ class EventBasedTestCase(CalculatorTestCase):
         [gmf, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
+        # check the relevant_events
+        E = len(self.calc.datastore['events'])
+        e = len(extract(self.calc.datastore, 'relevant_events'))
+        self.assertAlmostEqual(e/E, 0.1954023)
+
         # run again the GMF calculation, but this time from stored ruptures
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_20.__file__, 'job.ini', hazard_calculation_id=hid)
@@ -453,8 +464,13 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures.csv', mean)
 
     def test_case_26(self):
-        # mock secondary perils
+        # cali landslide simplified
         self.run_calc(case_26.__file__, 'job.ini')
+        df = self.calc.datastore.read_df('gmf_data/data', 'sid')
+        pd_mean = df[df['prob_disp_0'] > 0]['prob_disp_0'].mean()
+        nd_mean = df[df['newmark_disp_0'] > 0]['newmark_disp_0'].mean()
+        self.assertGreater(pd_mean, 0)
+        self.assertGreater(nd_mean, 0)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
