@@ -312,7 +312,7 @@ class OqParam(valid.ParamSet):
                 for imt in self.hazard_imtls:
                     i1 = self.minimum_intensity.get(imt, 1E-3)
                     i2 = calc.filters.getdefault(self.maximum_intensity, imt)
-                    self.hazard_imtls[imt] = valid.logscale(i1, i2, 25)
+                    self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 25))
             delattr(self, 'intensity_measure_types')
         self._risk_files = get_risk_files(self.inputs)
 
