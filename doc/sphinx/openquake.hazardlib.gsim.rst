@@ -859,6 +859,14 @@ si_midorikawa_1999
     :undoc-members:
     :show-inheritance:
 
+si_2020
+--------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.si_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 silva_2002
 ------------------------------------------
 
