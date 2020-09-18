@@ -180,7 +180,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_1_ruptures(self):
         self.run_calc(case_1.__file__, 'job_ruptures.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 2)
         [fname] = export(('events', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/events.csv', fname)
 
