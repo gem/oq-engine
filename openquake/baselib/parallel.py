@@ -847,8 +847,8 @@ class Starmap(object):
 
         nbytes = sum(self.sent[self.task_func.__name__].values())
         if nbytes > 1E6:
-            logging.info('Sent %s in %d seconds', humansize(nbytes),
-                         time.time() - self.t0)
+            logging.info('Sent %d tasks, %s in %d seconds', len(self.tasks),
+                         humansize(nbytes), time.time() - self.t0)
 
         isocket = iter(self.socket)
         self.todo = len(self.tasks)
