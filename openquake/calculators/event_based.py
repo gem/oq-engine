@@ -27,8 +27,8 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.calc.filters import nofilter, getdefault
-from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib.calc.filters import nofilter
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.geo.mesh import surface_to_array
@@ -84,19 +84,14 @@ def gmvs_to_mean_hcurves(dstore):
     oq = dstore['oqparam']
     N = len(dstore['sitecol'])
     M = len(oq.imtls)
-    L = 20
-    imtls = {}
-    for imt in oq.imtls:
-        i1 = oq.minimum_intensity.get(imt, 1E-3)
-        i2 = getdefault(oq.maximum_intensity, imt)
-        imtls[imt] = valid.logscale(i1, i2, L)
+    L1 = len(oq.imtls.array) // M
     gmf_df = dstore.read_df('gmf_data/data', 'sid')
-    mean = numpy.zeros((N, 1, M, L))
+    mean = numpy.zeros((N, 1, M, L1))
     for sid, df in gmf_df.groupby(gmf_df.index):
         gmvs = [df[col].to_numpy() for col in df.columns
                 if col.startswith('gmv_')]
         mean[sid, 0] = calc.gmvs_to_poes(
-            gmvs, imtls, oq.ses_per_logic_tree_path)
+            gmvs, oq.imtls, oq.ses_per_logic_tree_path)
     return mean
 
 
