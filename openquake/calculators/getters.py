@@ -27,7 +27,7 @@ from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
     EBRupture, BaseRupture, events_dt, RuptureProxy)
 from openquake.risklib.riskinput import rsi2str
-from openquake.commonlib.calc import gmvs_to_hcurve
+from openquake.commonlib.calc import gmvs_to_poes
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -420,7 +420,7 @@ class GmfGetter(object):
                 dic = group_by_rlz(hazardr, rlzs)
                 for rlzi, array in dic.items():
                     with hc_mon:
-                        poes = gmvs_to_hcurve(
+                        poes = gmvs_to_poes(
                             array['gmv'].T, oq.imtls,
                             oq.ses_per_logic_tree_path)
                         for m, imt in enumerate(oq.imtls):

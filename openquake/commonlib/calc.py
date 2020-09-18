@@ -164,7 +164,7 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     return poes
 
 
-def gmvs_to_hcurve(gmvs, imtls, ses_per_logic_tree_path):
+def gmvs_to_poes(gmvs, imtls, ses_per_logic_tree_path):
     """
     :param gmvs: an array of GMVs of shape (M, E)
     :param imtls: a dictionary imt -> imls with M IMTs and L levels
