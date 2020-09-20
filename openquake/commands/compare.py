@@ -62,22 +62,23 @@ def get_diff_idxs(array, rtol, atol, threshold):
 
 
 @sap.script
-def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-3,
+def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             threshold=1E-2):
     """
     Compare the hazard curves or maps of two or more calculations
     """
     sitecol = Extractor(calc_ids[0]).get('sitecol')
-    try:
-        numsamples = int(samplesites)
-    except ValueError:
-        sids = [int(sid) for sid in open(samplesites).read().split()]
-    else:
-        if len(sitecol) > numsamples:
-            numpy.random.seed(numsamples)
-            sids = numpy.random.choice(len(sitecol), numsamples, replace=False)
-        else:  # keep all sites
-            sids = sitecol['sids']
+    sids = sitecol['sids']
+    if samplesites:
+        try:
+            numsamples = int(samplesites)  # number
+        except ValueError:  # filename
+            sids = [int(sid) for sid in open(samplesites).read().split()]
+        else:
+            if len(sitecol) > numsamples:
+                numpy.random.seed(numsamples)
+                sids = numpy.random.choice(
+                    len(sitecol), numsamples, replace=False)
     sids.sort()
     imtls, poes, arrays = getdata(what, calc_ids, sitecol, sids)
     try:
