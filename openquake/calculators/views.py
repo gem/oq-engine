@@ -838,4 +838,6 @@ def view_extreme(token, dstore):
     mean = dstore.sel('hmaps-stats', stat='mean')[:, 0, 0, -1]  # shape N1MP
     site_ids, = numpy.where(mean == mean.max())
     arr = dstore['sitecol'][site_ids]
-    return write_csv(io.StringIO(), arr)
+    sio = io.StringIO()
+    write_csv(sio, arr)
+    return sio.getvalue()
