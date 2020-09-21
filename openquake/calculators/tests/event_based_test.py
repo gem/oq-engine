@@ -405,8 +405,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
         # check the relevant_events
-        E = len(self.calc.datastore['events'])
-        e = len(extract(self.calc.datastore, 'relevant_events'))
+        E = extract(self.calc.datastore, 'num_events')['num_events']
+        e = len(extract(self.calc.datastore, 'events'))
         self.assertAlmostEqual(e/E, 0.1954023)
 
         # run again the GMF calculation, but this time from stored ruptures

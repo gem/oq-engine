@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Raised the limit on the asset ID from 20 to 50 characters
-  * Added /extract/relevant_events
+  * Changed the /extract/events API to extract only the relevant events
   * Removed the GMF npz exporter
   * Speed-up risk saving in scenario_risk and scenario_damage
 
