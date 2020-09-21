@@ -438,11 +438,9 @@ def get_site_model(oqparam):
     if 'amplification' in oqparam.inputs:
         req_site_params.add('ampcode')
     arrays = []
-    dtypedic = {None: float, 'vs30measured': numpy.uint8,
-                'ampcode': site.ampcode_dt}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = hdf5.read_csv(fname, dtypedic).array
+            sm = hdf5.read_csv(fname, site.site_param_dt).array
             sm['lon'] = numpy.round(sm['lon'], 5)
             sm['lat'] = numpy.round(sm['lat'], 5)
             dupl = get_duplicates(sm, 'lon', 'lat')
