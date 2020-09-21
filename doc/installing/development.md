@@ -124,7 +124,7 @@ pip install -r oq-engine/requirements-py36-macos.txt -r oq-engine/requirements-e
 The OpenQuake Engine source code must be installed via `pip` using the `--editable` flag. See `pip install --help` for further help.
 
 ```bash
-pip install -e oq-engine/[dev]
+pip install -e oq-engine
 ```
 The `dev` extra feature will install some extra dependencies that will help in debugging the code. To install other extra features see [1](#note1). If your system does not support the provided binary dependencies you'll need to manually install them, using tools provided by your python distribution [2](#note2).
 
