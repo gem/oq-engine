@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug with site models containing non-float parameters
   * Raised the limit on the asset ID from 20 to 50 characters
   * Changed the /extract/events API to extract only the relevant events
   * Removed the GMF npz exporter
