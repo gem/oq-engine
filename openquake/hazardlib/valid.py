@@ -304,7 +304,7 @@ class SimpleId(object):
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
-ASSET_ID_LENGTH = 100
+ASSET_ID_LENGTH = 75
 
 simple_id = SimpleId(MAX_ID_LENGTH)
 asset_id = SimpleId(ASSET_ID_LENGTH)
