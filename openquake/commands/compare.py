@@ -66,9 +66,9 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             threshold=1E-2):
     """
     Compare the hazard curves or maps of two or more calculations.
-    Also used to compare the times with `oq compare times of -1 -2`.
+    Also used to compare the times with `oq compare cumtime of -1 -2`.
     """
-    if what == 'times':
+    if what == 'cumtime':
         data = []
         for calc_id in calc_ids:
             time = Extractor(calc_id).get('performance_data')['time_sec'].sum()
@@ -126,7 +126,8 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
         print(views.rst_table(rows['all'], header))
 
 
-compare.arg('what', 'hmaps or hcurves', choices={'hmaps', 'hcurves', 'times'})
+compare.arg('what', '"hmaps", "hcurves" or "cumtime of"',
+            choices={'hmaps', 'hcurves', 'cumtime'})
 compare.arg('imt', 'intensity measure type to compare')
 compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
 compare.flg('files', 'write the results in multiple files')
