@@ -65,8 +65,16 @@ def get_diff_idxs(array, rtol, atol, threshold):
 def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             threshold=1E-2):
     """
-    Compare the hazard curves or maps of two or more calculations
+    Compare the hazard curves or maps of two or more calculations.
+    Also used to compare the times with `oq compare times of -1 -2`.
     """
+    if what == 'times':
+        data = []
+        for calc_id in calc_ids:
+            time = Extractor(calc_id).get('performance_data')['time_sec'].sum()
+            data.append((calc_id, time))
+        print(views.rst_table(data, ['calc_id', 'time']))
+        return
     sitecol = Extractor(calc_ids[0]).get('sitecol')
     sids = sitecol['sids']
     if samplesites:
@@ -118,7 +126,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
         print(views.rst_table(rows['all'], header))
 
 
-compare.arg('what', 'hmaps or hcurves', choices={'hmaps', 'hcurves'})
+compare.arg('what', 'hmaps or hcurves', choices={'hmaps', 'hcurves', 'times'})
 compare.arg('imt', 'intensity measure type to compare')
 compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
 compare.flg('files', 'write the results in multiple files')
