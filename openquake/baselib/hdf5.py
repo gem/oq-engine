@@ -699,7 +699,7 @@ def _fix_array(arr, key):
         return ()
     if not isinstance(arr, numpy.ndarray):
         return arr
-    if arr.dtype != numpy.dtype('O'):
+    if arr.dtype.names:
         # for extract_assets d[0] is the pair
         # ('id', ('|S50', {'h5py_encoding': 'ascii'}))
         # this is a horrible workaround for the h5py 2.10.0 issue

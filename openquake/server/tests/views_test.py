@@ -237,7 +237,6 @@ class EngineServerTestCase(unittest.TestCase):
     def test_classical(self):
         job_id = self.postzip('classical.zip')
         self.wait()
-
         # check that we get at least the following 6 outputs
         # fullreport, input, hcurves, hmaps, realizations, events
         # we can add more outputs in the future
