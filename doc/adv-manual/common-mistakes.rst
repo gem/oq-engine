@@ -66,12 +66,18 @@ maximum_distance = {'Active Shallow Crust': 200, 'Subduction': 500}
 
 You can also have a magnitude-dependent maximum distance::
 
-maximum_distance = [(5, 0), (6, 100), (7, 200), (8, 300)]
+  maximum_distance = [(5, 0), (6, 100), (7, 200), (8, 300)]
 
 In this case, given a site, the engine will completely discard
 ruptures with magnitude below 5, keep ruptures up to 100 km for
 magnitudes between 5 and 6, keep ruptures up to 200 km for magnitudes
 between 6 and 7, keep ruptures up to 300 km for magnitudes over 7.
+
+You can have both trt-dependent and mag-dependent maximum distance::
+
+  maximum_distance = {
+     'Active Shallow Crust': [(5, 0), (6, 100), (7, 200), (8, 300)],
+     'Subduction': [(6.5, 300), (9, 500)]}
 
 Given a rupture with tectonic region type ``trt`` and magnitude ``mag``,
 the engine will ignore all sites over the maximum distance ``md(trt, mag)``.
@@ -90,13 +96,6 @@ in the job.ini; you can determine the distance as follows:
 250
 >>> md('TRT', 8.5)
 300
-
-Finally, you can have both TRT and mag dependent maximum distance:
-
-maximum_distance = {
-   'Active Shallow Crust': [(5, 0), (6, 100), (7, 200), (8, 300)],
-   'Subduction': 500}
-
 
 Intensity measure types and levels
 ----------------------------------
