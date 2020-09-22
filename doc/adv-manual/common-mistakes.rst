@@ -58,13 +58,13 @@ complex_fault_mesh_spacing:
 Maximum distance
 ----------------
 
-The engine gives to the user a lot of control on the maximum distance
-parameter. First of all, you can have a different maximum distance
+The engine gives users a lot of control on the maximum distance
+parameter. For instance, you can have a different maximum distance
 depending on the tectonic region, like in the following example::
 
 maximum_distance = {'Active Shallow Crust': 200, 'Subduction': 500}
 
-Moreover, you can also have a magnitude-dependent maximum distance::
+You can also have a magnitude-dependent maximum distance::
 
 maximum_distance = [(5, 0), (6, 100), (7, 200), (8, 300)]
 
@@ -73,16 +73,10 @@ ruptures with magnitude below 5, keep ruptures up to 100 km for
 magnitudes between 5 and 6, keep ruptures up to 200 km for magnitudes
 between 6 and 7, keep ruptures up to 300 km for magnitudes over 7.
 
-You can have both TRT and mag dependent maximum distance:
-
-maximum_distance = {
-   'Active Shallow Crust': 200,
-   'Subduction': 500}
-
 Given a rupture with tectonic region type ``trt`` and magnitude ``mag``,
 the engine will ignore all sites over the maximum distance ``md(trt, mag)``.
 The precise value is given via linear interpolation of the values listed
-in the job.ini; you can determine them as follows:
+in the job.ini; you can determine the distance as follows:
 
 >>> from openquake.hazardlib.calc.filters import MagDepDistance 
 >>> md = MagDepDistance.new('[(5, 0), (6, 100), (7, 200), (8, 300)]')
@@ -96,6 +90,13 @@ in the job.ini; you can determine them as follows:
 250
 >>> md('TRT', 8.5)
 300
+
+Finally, you can have both TRT and mag dependent maximum distance:
+
+maximum_distance = {
+   'Active Shallow Crust': [(5, 0), (6, 100), (7, 200), (8, 300)],
+   'Subduction': 500}
+
 
 Intensity measure types and levels
 ----------------------------------
