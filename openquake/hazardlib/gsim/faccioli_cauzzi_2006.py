@@ -99,7 +99,7 @@ class FaccioliCauzzi2006(GMPE):
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper - coeff in the same order as in Table 4/page 703
     #: for Maw only (read last paragraph on page 701 -
-    #: expains wht Maw should be used)
+    #: expains what Maw should be used)
 
     COEFFS = CoeffsTable(table="""\
     IMT           c1        c2         c3       h    sigma
