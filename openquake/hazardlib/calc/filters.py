@@ -147,7 +147,7 @@ class MagDepDistance(dict):
             else:
                 ms = numpy.float64(mags)
             dists = numpy.interp(ms, xs, ys)
-            ddic[trt] = dict(zip(mags, dists))
+            ddic[trt] = {'%.2f' % mag: dist for mag, dist in zip(ms, dists)}
         self.ddic = ddic
 
     def __call__(self, trt, mag=None):
