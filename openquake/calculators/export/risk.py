@@ -529,7 +529,7 @@ def export_asset_risk_csv(ekey, dstore):
         for name in colnames:
             value = rec[name]
             try:
-                row.append('"%s"' % tostr[name][value])
+                row.append(tostr[name][value])
             except KeyError:
                 row.append(value)
         rows.append(row)
