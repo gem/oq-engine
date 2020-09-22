@@ -63,23 +63,17 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
-    #: Supported intensity measure types are MMI
-
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([MMI])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {MMI}
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     REQUIRES_SITES_PARAMETERS = set()
 
-    #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    #: Required distance measure is hypocenter,
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -98,9 +92,6 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
     def _compute_mean(self, C, rup, dists):
         """
         Compute mean value defined by equation on 2293
-        the mean is given for the [2.2.1.0] model
-        for low attenuation, MinDc=50 and Min = 7 int. classes
-        and IAVG
         """
         term01 = C['beta'] * (np.log10(dists.rhypo))
         term02 = C['gamma'] * dists.rhypo

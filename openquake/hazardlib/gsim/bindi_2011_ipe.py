@@ -33,21 +33,21 @@ class BindiEtAl2011Repi(GMPE):
     as "Intensity prediction equations for Central Asia"
     (Geo-physical journal international, 2011, 187,327-337).
 
-    Model implmented by laurentiu.danciu@gmail.com
+    Model implemented by laurentiu.danciu@gmail.com
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-    #: Supported intensity measure types are MMI
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([MMI])
+
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {MMI}
+
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     REQUIRES_SITES_PARAMETERS = set()
-    #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
-    #: Required distance measure is hypocenter,
-    REQUIRES_DISTANCES = set(('repi',))
+
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
+
+    REQUIRES_DISTANCES = {'repi'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -108,9 +108,10 @@ class BindiEtAl2011RepiFixedH(BindiEtAl2011Repi):
     Model implmented by laurentiu.danciu@gmail.com
     """
     REQUIRES_SITES_PARAMETERS = set()
-    #: Required distance measure is hypocentral distance,
-    REQUIRES_DISTANCES = set(('repi', ))
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+
+    REQUIRES_DISTANCES = {'repi'}
+
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

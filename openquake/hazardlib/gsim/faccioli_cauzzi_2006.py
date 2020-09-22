@@ -31,12 +31,11 @@ from openquake.hazardlib.imt import MMI
 
 class FaccioliCauzzi2006(GMPE):
     """
-    Implements "The Attenuation of Seismic Intensity in Italy,
-    Part II: Modeling and Validation" by C. Pasolini, D. Albarello,
-    P. Gasperini, V. D’Amico,* and B. Lolli
-    Bulletin of the Seismological Society of America, Vol. 98,
-    No. 2, pp. 692–708, April 2008, doi: 10.1785/0120070021
-    functional for in eq.26/page 702 for Rhypo
+    Implements "Macroseismic Intensities for seismic scenarios estimated from
+    instrumentally based correlations" by E. Faccioli and C. Cauzzi
+    First European Conference on Earthquake Engineering and Seismology
+    Geneva, Switzerland, 3-8 September 2006
+    Paper Number: 569
 
     implemented by laurentiu.danciu@sed.ethz.ch
 
@@ -45,20 +44,17 @@ class FaccioliCauzzi2006(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are MMI
-
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([MMI])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {MMI}
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     REQUIRES_SITES_PARAMETERS = set()
 
-    #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    #: Required distance measure is hypocenter,
-    REQUIRES_DISTANCES = set(('repi',))
+    REQUIRES_DISTANCES = {'repi'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

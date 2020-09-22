@@ -37,9 +37,9 @@ class BaumontEtAl2018High2210IAVGDC30n7TestCase(BaseGSIMTestCase):
     STD_FILE = "baumont_2018/BaumontEtAl2018High2210IAVGDC30n7_stDev.csv"
 
     def test_mean(self):
-        self.check(MEAN_FILE,
+        self.check(self.MEAN_FILE,
                    max_discrep_percentage=MEAN_DISCREP)
 
     def test_std_total(self):
-        self.check(STD_FILE,
+        self.check(self.STD_FILE,
                    max_discrep_percentage=STDDEV_DISCREP)

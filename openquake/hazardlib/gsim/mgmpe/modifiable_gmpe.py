@@ -76,7 +76,7 @@ class ModifiableGMPE(GMPE):
             working_std_types.append(const.StdDev.INTER_EVENT)
             working_std_types.append(const.StdDev.INTRA_EVENT)
             working_std_types.append(const.StdDev.TOTAL)
-        if 'apply_swiss_intensity_amplification' in self.params:
+        if 'apply_swiss_amplification' in self.params:
             REQUIRES_SITES_PARAMETERS = set(('amplfactor', ))
 
         # Compute the original mean and standard deviations
@@ -87,7 +87,6 @@ class ModifiableGMPE(GMPE):
         for key, val in zip(working_std_types, ostds):
             setattr(self, key, val)
         self.mean = omean
-		#print (sites.siteclass)
 		
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
