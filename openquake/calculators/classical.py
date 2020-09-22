@@ -333,7 +333,6 @@ class ClassicalCalculator(base.HazardCalculator):
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = mags[trt][()]
-        oq.maximum_distance.interp(mags_by_trt)
         if psd is not None:
             psd.interp(mags_by_trt)
             for trt, dic in psd.ddic.items():
