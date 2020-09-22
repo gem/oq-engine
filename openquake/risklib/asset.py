@@ -325,7 +325,7 @@ class TagCollection(object):
             dic[tagname] = numpy.array(getattr(self, tagname))
             sizes.append(len(dic[tagname]))
         return dic, {'tagnames': numpy.array(self.tagnames, hdf5.vstr),
-                     'tagsizes': numpy.array(sizes)}
+                     'tagsizes': sizes}
 
     def __fromh5__(self, dic, attrs):
         self.tagnames = [decode(name) for name in attrs['tagnames']]

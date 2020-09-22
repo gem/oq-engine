@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import json
 import itertools
 import collections
 import numpy
@@ -511,15 +512,15 @@ def export_asset_risk_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
-    md = extract(dstore, 'exposure_metadata')
-    tostr = {'taxonomy': md.taxonomy}
-    for tagname in md.tagnames:
-        tostr[tagname] = getattr(md, tagname)
-    tagnames = sorted(set(md.tagnames) - {'id'})
+    md = json.loads(extract(dstore, 'exposure_metadata').json)
+    tostr = {'taxonomy': md['taxonomy']}
+    for tagname in md['tagnames']:
+        tostr[tagname] = md[tagname]
+    tagnames = sorted(set(md['tagnames']) - {'id'})
     arr = extract(dstore, 'asset_risk').array
     rows = []
     lossnames = sorted(name for name in arr.dtype.names if 'loss' in name)
-    expnames = [name for name in arr.dtype.names if name not in md.tagnames
+    expnames = [name for name in arr.dtype.names if name not in md['tagnames']
                 and 'loss' not in name and name not in 'lon lat']
     colnames = tagnames + ['lon', 'lat'] + expnames + lossnames
     # sanity check
