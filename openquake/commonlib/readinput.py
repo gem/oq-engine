@@ -438,11 +438,9 @@ def get_site_model(oqparam):
     if 'amplification' in oqparam.inputs:
         req_site_params.add('ampcode')
     arrays = []
-    dtypedic = {None: float, 'vs30measured': numpy.uint8,
-                'ampcode': site.ampcode_dt}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = hdf5.read_csv(fname, dtypedic).array
+            sm = hdf5.read_csv(fname, site.site_param_dt).array
             sm['lon'] = numpy.round(sm['lon'], 5)
             sm['lat'] = numpy.round(sm['lat'], 5)
             dupl = get_duplicates(sm, 'lon', 'lat')
@@ -785,9 +783,12 @@ def get_composite_source_model(oqparam, h5=None):
         # avoid hdf5 damned bug by creating source_info in advance
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        for trt in mags:
-            h5['source_mags/' + trt] = numpy.array(sorted(mags[trt]))
         h5['grp_ids'] = grp_ids
+        mags_by_trt = {}
+        for trt in mags:
+            mags_by_trt[trt] = arr = numpy.array(sorted(mags[trt]))
+            h5['source_mags/' + trt] = arr
+        oqparam.maximum_distance.interp(mags_by_trt)
     csm.gsim_lt.check_imts(oqparam.imtls)
     csm.source_info = data  # src_id -> row
     if os.environ.get('OQ_CHECK_INPUT'):

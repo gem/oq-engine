@@ -62,22 +62,31 @@ def get_diff_idxs(array, rtol, atol, threshold):
 
 
 @sap.script
-def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-3,
+def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             threshold=1E-2):
     """
-    Compare the hazard curves or maps of two or more calculations
+    Compare the hazard curves or maps of two or more calculations.
+    Also used to compare the times with `oq compare cumtime of -1 -2`.
     """
+    if what == 'cumtime':
+        data = []
+        for calc_id in calc_ids:
+            time = Extractor(calc_id).get('performance_data')['time_sec'].sum()
+            data.append((calc_id, time))
+        print(views.rst_table(data, ['calc_id', 'time']))
+        return
     sitecol = Extractor(calc_ids[0]).get('sitecol')
-    try:
-        numsamples = int(samplesites)
-    except ValueError:
-        sids = [int(sid) for sid in open(samplesites).read().split()]
-    else:
-        if len(sitecol) > numsamples:
-            numpy.random.seed(numsamples)
-            sids = numpy.random.choice(len(sitecol), numsamples, replace=False)
-        else:  # keep all sites
-            sids = sitecol['sids']
+    sids = sitecol['sids']
+    if samplesites:
+        try:
+            numsamples = int(samplesites)  # number
+        except ValueError:  # filename
+            sids = [int(sid) for sid in open(samplesites).read().split()]
+        else:
+            if len(sitecol) > numsamples:
+                numpy.random.seed(numsamples)
+                sids = numpy.random.choice(
+                    len(sitecol), numsamples, replace=False)
     sids.sort()
     imtls, poes, arrays = getdata(what, calc_ids, sitecol, sids)
     try:
@@ -117,7 +126,8 @@ def compare(what, imt, calc_ids, files, samplesites=100, rtol=0, atol=1E-3,
         print(views.rst_table(rows['all'], header))
 
 
-compare.arg('what', 'hmaps or hcurves', choices={'hmaps', 'hcurves'})
+compare.arg('what', '"hmaps", "hcurves" or "cumtime of"',
+            choices={'hmaps', 'hcurves', 'cumtime'})
 compare.arg('imt', 'intensity measure type to compare')
 compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
 compare.flg('files', 'write the results in multiple files')

@@ -159,7 +159,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
         for row in data:
             w.writerow([format(col) for col in row])
     if hasattr(dest, 'getvalue'):
-        return dest.getvalue()[:-1]  # a newline is strangely added
+        return
     elif close:
         dest.close()
     return dest.name

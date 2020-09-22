@@ -4,14 +4,10 @@ demonstrate some of the features and usage of the risk calculators of the
 the following link:
 \href{https://github.com/gem/oq-engine/tree/master/demos/risk}
 {https://github.com/gem/oq-engine/tree/master/demos/risk}.
-Furthermore, a folder containing all of these
-demonstrative examples is provided when an OATS (OpenQuake Alpha Testing
-Service) account is requested, and it is also part of the \gls{acr:oqe}
-virtual image package.
 
 These examples are purely demonstrative and are not intended to represent
 accurately the seismicity, vulnerability or exposure characteristics of the
-region of interest, but simply to provide example input files that can be used
+region selected, but simply to provide example input files that can be used
 as a starting point for users planning to employ the \glsdesc{acr:oqe} in seismic
 risk and loss estimation studies.
 
@@ -22,21 +18,22 @@ about the calculation id and output id, which will certainly be different for
 each user.
 
 Following is the list of demos which illustrate how to use the \gls{acr:oqe} for
-various scenario-based and probabilistic seismic risk analyses:
+various scenario-based and probabilistic seismic damage and risk analyses:
 
 \begin{itemize}
 
     \item ClassicalBCR
 	\item ClassicalDamage
     \item ClassicalRisk
+    \item EventBasedDamage
     \item EventBasedRisk
     \item ScenarioDamage
     \item ScenarioRisk
 
 \end{itemize}
 
-These six demos use Nepal as the region of interest. An example
-\gls{exposuremodel} has been developed for this region, comprising 9,144
+These seven demos use Nepal as the region of interest. An example
+\gls{exposuremodel} has been developed for this region, comprising 9,063
 assets distributed amongst 2,221 locations (due to the existence of more than
 one \gls{asset} at the same location). A map with the distribution of the
 number of buildings throughout Nepal is presented in Figure~\ref{fig:exposure-nepal}.
@@ -82,6 +79,10 @@ inputs.
 \section{Classical Probabilistic Seismic Risk Demos}
 \label{sec:demos_classical_risk}
 \input{oqum/risk/04_demos_classical_risk}
+
+\section{Event Based Probabilistic Seismic Damage Demos}
+\label{sec:demos_event_based_damage}
+\input{oqum/risk/04_demos_event_based_damage}
 
 \section{Event Based Probabilistic Seismic Risk Demos}
 \label{sec:demos_event_based_risk}

@@ -1002,6 +1002,20 @@ def _get(dstore, name):
         return dstore[name + '-rlzs'], ['mean']
 
 
+@extract.add('events')
+def extract_events(dstore, dummy):
+    """
+    Extract the relevant events
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/events
+    """
+    events = dstore['events'][:]
+    if 'relevant_events' not in dstore:  # engine < 3.10
+        return events
+    rel_events = dstore['relevant_events'][:]
+    return events[rel_events]
+
+
 @extract.add('event_info')
 def extract_event_info(dstore, eidx):
     """
