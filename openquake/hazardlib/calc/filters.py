@@ -118,8 +118,8 @@ class MagDepDistance(dict):
         {'default': [(1, 50), (10, 50)]}
         >>> md.max()
         {'default': 50}
-        >>> md.interp(dict(default=['5.0', '5.1', '5.2'])); md.ddic
-        {'default': {'5.0': 50.0, '5.1': 50.0, '5.2': 50.0}}
+        >>> md.interp(dict(default=[5.0, 5.1, 5.2])); md.ddic
+        {'default': {'5.00': 50.0, '5.10': 50.0, '5.20': 50.0}}
         """
         items_by_trt = floatdict(value.replace('?', '-1'))
         self = cls()
@@ -153,10 +153,13 @@ class MagDepDistance(dict):
     def __call__(self, trt, mag=None):
         if not self:
             return MAX_DISTANCE
-        elif mag is None or not hasattr(self, 'ddic'):
+        elif mag is None:
             return getdefault(self, trt)[-1][1]
-        elif mag and trt in self.ddic:
+        elif hasattr(self, 'ddic'):
             return self.ddic[trt]['%.2f' % mag]
+        else:
+            xs, ys = zip(*getdefault(self, trt))
+            return numpy.interp(mag, xs, ys)
 
     def max(self):
         """

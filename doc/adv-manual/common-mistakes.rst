@@ -86,7 +86,6 @@ in the job.ini; you can determine them as follows:
 
 >>> from openquake.hazardlib.calc.filters import MagDepDistance 
 >>> md = MagDepDistance.new('[(5, 0), (6, 100), (7, 200), (8, 300)]')
->>> md.interp({'TRT': numpy.arange(4, 9, .1)})  # compute md in the range 4..9
 >>> md('TRT', 4.5)
 0.0
 >>> md('TRT', 5.5)
