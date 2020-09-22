@@ -575,13 +575,6 @@ class ArrayWrapper(object):
         return {k: v for k, v in vars(self).items()
                 if k != 'array' and not k.startswith('_')}
 
-    def is_good(self):
-        """
-        An ArrayWrapper is good if it only contains arrays
-        """
-        return all(isinstance(v, numpy.ndarray) for k, v in vars(self).items()
-                   if k != 'json' and not k.startswith('_'))
-
 
 def decode_array(values):
     """
