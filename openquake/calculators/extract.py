@@ -261,10 +261,11 @@ def extract_exposure_metadata(dstore, what):
         dic['multi_risk'] = sorted(
             set(dstore['asset_risk'].dtype.names) -
             set(dstore['assetcol/array'].dtype.names))
-    names = [name for name in dstore['assetcol/array'].dtype.names
-             if name.startswith(('value-', 'number', 'occupants_'))
-             and not name.endswith('_None')]
-    return ArrayWrapper(numpy.array(names), dic)
+    dic['names'] = [name for name in dstore['assetcol/array'].dtype.names
+                    if name.startswith(('value-', 'number', 'occupants_'))
+                    and not name.endswith('_None')]
+    js = json.dumps({k: list(v) for k, v in dic.items()})
+    return ArrayWrapper((), dict(json=js))
 
 
 @extract.add('assets')

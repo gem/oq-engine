@@ -166,9 +166,10 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check exposure_metadata
         resp = self.c.get(extract_url + 'exposure_metadata')
-        got = loadnpz(resp.streaming_content)
-        self.assertEqual(sorted(got['tagnames']), [b'taxonomy'])
-        self.assertEqual(sorted(got['array']), ['number', 'value-structural'])
+        got = loadnpz(resp.streaming_content)['json']
+        dic = json.loads(bytes(got))
+        self.assertEqual(sorted(dic['tagnames']), ['taxonomy'])
+        self.assertEqual(sorted(dic['names']), ['number', 'value-structural'])
 
         # check assets
         resp = self.c.get(
