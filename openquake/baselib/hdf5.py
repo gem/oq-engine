@@ -617,7 +617,10 @@ def build_dt(dtypedict, names):
         try:
             dt = dtypedict[name]
         except KeyError:
-            dt = dtypedict[None]
+            if None in dtypedict:
+                dt = dtypedict[None]
+            else:
+                raise KeyError('Missing dtype for field %r' % name)
         lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 

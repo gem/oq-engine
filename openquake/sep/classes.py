@@ -124,7 +124,7 @@ class HazusLiquefaction(SecondaryPeril):
             return [hazus_liquefaction_probability(
                 pga=gmf, mag=mag, liq_susc_cat=sites.liq_susc_cat,
                 groundwater_depth=sites.gwd,
-                do_meap_proportion_correction=self.map_proportion_flag)]
+                do_map_proportion_correction=self.map_proportion_flag)]
         else:
             raise NotImplementedError('NewarkDisplacement for %s' % imt)
 
