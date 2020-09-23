@@ -710,6 +710,7 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         if len(self.crmodel):
+            logging.info('Storing risk model')
             self.datastore['risk_model'] = rm = self.crmodel
             attrs = self.datastore.getitem('risk_model').attrs
             attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
@@ -1175,7 +1176,6 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
     for n in range(len(tagnames) + 1, -1, -1):
         for names in itertools.combinations(tagnames, n):
             name = 'exposed_values/' + '_'.join(('agg',) + names)
-            logging.info('Storing %s', name)
             dstore[name] = assetcol.aggregate_by(list(names), aval)
             attrs = {tagname: getattr(assetcol.tagcol, tagname)[1:]
                      for tagname in names}
