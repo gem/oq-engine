@@ -53,6 +53,16 @@ class NotFound(Exception):
     pass
 
 
+def dumps(dic):
+    """
+    Dump in json
+    """
+    new = {}
+    for k, v in dic.items():
+        new[k] = v.tolist() if isinstance(v, numpy.ndarray) else v
+    return json.dumps(new)
+
+
 def lit_eval(string):
     """
     `ast.literal_eval` the string if possible, otherwise returns it unchanged
@@ -201,7 +211,7 @@ def extract_oqparam(dstore, dummy):
     """
     Extract job parameters as a JSON npz. Use it as /extract/oqparam
     """
-    return ArrayWrapper((), {'json': json.dumps(vars(dstore['oqparam']))})
+    return ArrayWrapper((), {'json': dumps(vars(dstore['oqparam']))})
 
 
 # used by the QGIS plugin in scenario
@@ -264,8 +274,7 @@ def extract_exposure_metadata(dstore, what):
     dic['names'] = [name for name in dstore['assetcol/array'].dtype.names
                     if name.startswith(('value-', 'number', 'occupants_'))
                     and not name.endswith('_None')]
-    js = json.dumps({k: list(v) for k, v in dic.items()})
-    return ArrayWrapper((), dict(json=js))
+    return ArrayWrapper((), dict(json=dumps(dic)))
 
 
 @extract.add('assets')
@@ -312,7 +321,7 @@ def extract_asset_risk(dstore, what):
             tagidx, = numpy.where(dic[tag] == val)
             cond |= arr[tag] == tagidx
         arr = arr[cond]
-    return ArrayWrapper(arr, dic)
+    return ArrayWrapper(arr, dict(json=dumps(dic)))
 
 
 @extract.add('asset_tags')
