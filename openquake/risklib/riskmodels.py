@@ -126,10 +126,7 @@ def get_risk_models(oqparam, kind='vulnerability fragility consequence '
     rdict.limit_states = []
     for (loss_type, kind), rm in sorted(rmodels.items()):
         if kind == 'fragility':
-            # build a copy of the FragilityModel with different IM levels
-            newfm = rm.build(oqparam.continuous_fragility_discretization,
-                             oqparam.steps_per_interval)
-            for (imt, riskid), ffl in sorted(newfm.items()):
+            for (imt, riskid), ffl in sorted(rm.items()):
                 if not rdict.limit_states:
                     rdict.limit_states.extend(rm.limitStates)
                 # we are rejecting the case of loss types with different

@@ -727,23 +727,6 @@ class FragilityModel(dict):
             self.__class__.__name__, self.lossCategory,
             self.limitStates, sorted(self))
 
-    def build(self, continuous_fragility_discretization, steps_per_interval):
-        """
-        Return a new FragilityModel instance, in which the values have been
-        replaced with FragilityFunctionList instances.
-
-        :param continuous_fragility_discretization:
-            configuration parameter
-        :param steps_per_interval:
-            configuration parameter
-        """
-        newfm = copy.copy(self)
-        for key, ffl in self.items():
-            newfm[key] = ffl.build(self.limitStates,
-                                   continuous_fragility_discretization,
-                                   steps_per_interval)
-        return newfm
-
 
 #
 # Distribution & Sampling
@@ -946,8 +929,8 @@ def annual_frequency_of_exceedence(poe, t_haz):
 
 def classical_damage(
         fragility_functions, hazard_imls, hazard_poes,
-        investigation_time, risk_investigation_time, steps_per_interval,
-        debug=False):
+        investigation_time, risk_investigation_time,
+        steps_per_interval=1, debug=False):
     """
     :param fragility_functions:
         a list of fragility functions for each damage state
