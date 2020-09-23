@@ -12,8 +12,13 @@ LIQUEFACTION_PGA_THRESHOLD_TABLE = {
     b"l": 0.21,
     b"vl": 0.26,
     b"n": 5.0,
+    "vh": 0.09,
+    "h": 0.12,
+    "m": 0.15,
+    "l": 0.21,
+    "vl": 0.26,
+    "n": 5.0,
 }
-
 
 # Table mapping the qualitative susceptibility of soils to liquefaction
 # to coefficients for the range of PGA that can cause liquefaction.
@@ -26,6 +31,12 @@ LIQUEFACTION_COND_PROB_PGA_TABLE = {
     b"l": [5.57, 1.18],
     b"vl": [4.16, 1.08],
     b"n": [0.0, 0.0],
+    "vh": [9.09, 0.82],
+    "h": [7.67, 0.92],
+    "m": [6.67, 1.0],
+    "l": [5.57, 1.18],
+    "vl": [4.16, 1.08],
+    "n": [0.0, 0.0],
 }
 
 
@@ -36,6 +47,12 @@ LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
     b"l": 0.05,
     b"vl": 0.02,
     b"n": 0.0,
+    "vh": 0.25,
+    "h": 0.2,
+    "m": 0.1,
+    "l": 0.05,
+    "vl": 0.02,
+    "n": 0.0,
 }
 
 
