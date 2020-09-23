@@ -35,7 +35,7 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
-from openquake.calculators import getters
+from openquake.calculators import getters, views
 from openquake.commonlib import calc, util, oqvalidation, writers
 
 U16 = numpy.uint16
@@ -59,7 +59,14 @@ def dumps(dic):
     """
     new = {}
     for k, v in dic.items():
-        new[k] = v.tolist() if isinstance(v, numpy.ndarray) else v
+        if isinstance(v, numpy.ndarray):
+            new[k] = v.tolist()
+        elif isinstance(v, views.FLOAT):
+            new[k] = int(v)
+        elif isinstance(v, views.INT):
+            new[k] = int(v)
+        else:
+            new[k] = k
     return json.dumps(new)
 
 
@@ -1001,7 +1008,8 @@ def crm_attrs(dstore, what):
         the attributes of the risk model, i.e. limit_states, loss_types,
         min_iml and covs, needed by the risk exporters.
     """
-    return ArrayWrapper((), dstore.get_attrs('risk_model'))
+    attrs = dstore.get_attrs('risk_model')
+    return ArrayWrapper((), dict(json=dumps(attrs)))
 
 
 def _get(dstore, name):
