@@ -37,8 +37,6 @@ from openquake.commonlib.writers import (
 from openquake.calculators import getters
 from openquake.calculators.extract import extract
 
-FLOAT = (float, numpy.float32, numpy.float64)
-INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 F32 = numpy.float32
 U32 = numpy.uint32
 
@@ -67,12 +65,12 @@ def form(value):
     >>> form(-1.2)
     '-1.2'
     """
-    if isinstance(value, FLOAT + INT):
+    if isinstance(value, extract.FLOAT + extract.INT):
         if value <= 0:
             return str(value)
         elif value < .001:
             return '%.3E' % value
-        elif value < 10 and isinstance(value, FLOAT):
+        elif value < 10 and isinstance(value, extract.FLOAT):
             return '%.5f' % value
         elif value > 1000:
             return '{:_d}'.format(int(round(value)))

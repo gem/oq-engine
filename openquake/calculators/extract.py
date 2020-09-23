@@ -35,7 +35,7 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
-from openquake.calculators import getters, views
+from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation, writers
 
 U16 = numpy.uint16
@@ -47,6 +47,8 @@ ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
 SOURCE_ID = stochastic.rupture_dt['source_id']
 memoized = lru_cache()
+FLOAT = (float, numpy.float32, numpy.float64)
+INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 
 
 class NotFound(Exception):
@@ -61,12 +63,12 @@ def dumps(dic):
     for k, v in dic.items():
         if isinstance(v, numpy.ndarray):
             new[k] = v.tolist()
-        elif isinstance(v, views.FLOAT):
+        elif isinstance(v, FLOAT):
             new[k] = int(v)
-        elif isinstance(v, views.INT):
+        elif isinstance(v, INT):
             new[k] = int(v)
         else:
-            new[k] = k
+            new[k] = v
     return json.dumps(new)
 
 
@@ -218,7 +220,8 @@ def extract_oqparam(dstore, dummy):
     """
     Extract job parameters as a JSON npz. Use it as /extract/oqparam
     """
-    return ArrayWrapper((), {'json': dumps(vars(dstore['oqparam']))})
+    js = dumps(vars(dstore['oqparam']))
+    return ArrayWrapper((), {'json': js})
 
 
 # used by the QGIS plugin in scenario
