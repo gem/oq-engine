@@ -137,9 +137,6 @@ def get_risk_models(oqparam, kind='vulnerability fragility consequence '
                 assert rdict.limit_states == rm.limitStates, (
                     rdict.limit_states, rm.limitStates)
                 rdict[riskid][loss_type, kind] = ffl
-                # TODO: see if it is possible to remove the attribute
-                # below, used in classical_damage
-                ffl.steps_per_interval = oqparam.steps_per_interval
         elif kind == 'consequence':
             for riskid, cf in sorted(rm.items()):
                 rdict[riskid][loss_type, kind] = cf
@@ -410,7 +407,8 @@ class RiskModel(object):
         damage = scientific.classical_damage(
             ffl, hazard_imls, hazard_curve,
             investigation_time=self.investigation_time,
-            risk_investigation_time=self.risk_investigation_time, debug=debug)
+            risk_investigation_time=self.risk_investigation_time,
+            steps_per_interval=self.steps_per_interval, debug=debug)
         res = numpy.array([a['number'] * damage for a in assets])
         return res
 
@@ -436,6 +434,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     extra['investigation_time'] = oqparam.investigation_time
     extra['risk_investigation_time'] = oqparam.risk_investigation_time
     extra['lrem_steps_per_interval'] = oqparam.lrem_steps_per_interval
+    extra['steps_per_interval'] = oqparam.steps_per_interval
     extra['ignore_covs'] = oqparam.ignore_covs
     extra['time_event'] = oqparam.time_event
     if oqparam.calculation_mode == 'classical_bcr':

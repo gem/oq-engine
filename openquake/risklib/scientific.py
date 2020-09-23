@@ -946,7 +946,8 @@ def annual_frequency_of_exceedence(poe, t_haz):
 
 def classical_damage(
         fragility_functions, hazard_imls, hazard_poes,
-        investigation_time, risk_investigation_time, debug=False):
+        investigation_time, risk_investigation_time, steps_per_interval,
+        debug=False):
     """
     :param fragility_functions:
         a list of fragility functions for each damage state
@@ -958,12 +959,13 @@ def classical_damage(
         hazard investigation time
     :param risk_investigation_time:
         risk investigation time
+    :param steps_per_interval:
+        steps per interval
     :returns:
         an array of M probabilities of occurrence where M is the numbers
         of damage states.
     """
-    spi = fragility_functions.steps_per_interval
-    if spi and spi > 1:  # interpolate
+    if steps_per_interval > 1:  # interpolate
         imls = numpy.array(fragility_functions.interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         assert min_val > 0, hazard_imls  # sanity check
