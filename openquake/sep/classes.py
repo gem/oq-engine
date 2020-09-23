@@ -22,7 +22,9 @@ from openquake.sep.landslide.newmark import (
     newmark_critical_accel, newmark_displ_from_pga_M,
     prob_failure_given_displacement)
 from openquake.sep.liquefaction.liquefaction import (
-    hazus_liquefaction_probability)
+    hazus_liquefaction_probability, zhu_liquefaction_probability_general)
+from openquake.sep.liquefaction.lateral_spreading import (
+    hazus_lateral_spreading_displacement)
 
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
@@ -60,9 +62,9 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
         """Add attributes to sites"""
 
     @abc.abstractmethod
-    def compute(self, mag, gmfs, sites):
+    def compute(self, mag, imt, gmf, sites):
         # gmv is an array with (N, M) elements
-        return gmfs[:, 0] * .1,  # fake formula
+        return gmf[:, 0] * .1,  # fake formula
 
     def __repr__(self):
         return '<%s %s>' % self.__class__.__name__
@@ -107,13 +109,13 @@ class NewmarkDisplacement(SecondaryPeril):
                 self.c1, self.c2, self.c3, self.c4, self.crit_accel_threshold)
             return nd, prob_failure_given_displacement(nd)
         else:
-            raise NotImplementedError('NewarkDisplacement for %s' % imt)
+            raise NotImplementedError('NewmarkDisplacement for %s' % imt)
 
 
 class HazusLiquefaction(SecondaryPeril):
     outputs = ['liq_prob']
 
-    def __init__(self, map_proportion_flag):
+    def __init__(self, map_proportion_flag=True):
         self.map_proportion_flag = map_proportion_flag
 
     def prepare(self, sites):
@@ -126,7 +128,45 @@ class HazusLiquefaction(SecondaryPeril):
                 groundwater_depth=sites.gwd,
                 do_map_proportion_correction=self.map_proportion_flag)]
         else:
-            raise NotImplementedError('NewarkDisplacement for %s' % imt)
+            raise NotImplementedError('HazusLiquefaction for %s' % imt)
 
+
+class HazusLateralSpreading(SecondaryPeril):
+    outputs = ['lat_spread']
+
+    def __init__(self, return_unit='m'):
+        self.return_unit = return_unit
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt, gmf, sites):
+        if imt.name == 'PGA':
+            return [hazus_lateral_spreading_displacement(
+                mag=mag, pga=gmf, liq_susc_cat=sites.liq_susc_cat,
+                return_unit=self.return_unit
+            )]
+        else:
+            raise NotImplementedError('HazusLateralSpreading for %s' % imt)
+
+
+class ZhuLiquefactionGeneral(SecondaryPeril):
+    outputs = ['liq_prob']
+
+    def __init__(self, intercept = 24.1, cti_coeff = 0.355, vs30_coeff=-4.784):
+        self.intercept = intercept
+        self.cti_coeff = cti_coeff
+        self.vs30_coeff = vs30_coeff
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt, gmf, sites):
+        if imt.name == 'PGA':
+            return [zhu_liquefaction_probability_general(pga=gmf, mag=mag,
+                cti=sites.cti, vs30=sites.vs30)]
+        else:
+            raise NotImplementedError(
+                'Zhu Liquefaction not implemented for %s' % imt)
 
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
