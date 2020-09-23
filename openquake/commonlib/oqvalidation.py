@@ -539,6 +539,11 @@ class OqParam(valid.ParamSet):
                 if not hasattr(rf, 'imt') or kind.endswith('_retrofitted'):
                     # for consequence or retrofitted
                     continue
+                if hasattr(rf, 'build'):  # FragilityFunctionList
+                    rf = rf.build(risk_models.limit_states,
+                                  self.continuous_fragility_discretization,
+                                  self.steps_per_interval)
+                    risk_functions[lt, kind] = rf
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT
                 imtls[imt].extend(rf.imls)

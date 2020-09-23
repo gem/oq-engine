@@ -328,16 +328,6 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn("There is a single IMT, the uniform_hazard_spectra plot "
                       "will contain a single point", w.call_args[0][0])
 
-    def test_set_risk_imtls(self):
-        oq = object.__new__(OqParam)
-        vf = mock.Mock()
-        vf.imt = 'SA (0.1)'
-        vf.imls = [0.1, 0.2]
-        rm = dict(taxo={('structural', 'vulnerability'): vf})
-        with self.assertRaises(KeyError) as ctx:
-            oq.set_risk_imtls(rm)
-        self.assertIn("'SA '", str(ctx.exception))
-
     def test_gmfs_but_no_sites(self):
         inputs = fakeinputs.copy()
         inputs['gmfs'] = 'fake.csv'
