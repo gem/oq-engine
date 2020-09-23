@@ -140,7 +140,7 @@ class VulnerabilityFunction(object):
 
     def init(self):
         # called by CompositeRiskModel and by __setstate__
-        self.stddevs = self.covs * self.mean_loss_ratios
+        self._stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
         self.set_distribution(None)
@@ -298,7 +298,7 @@ class VulnerabilityFunction(object):
         lrem = numpy.empty((len(loss_ratios), len(self.imls)))
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
-                    zip(self.mean_loss_ratios, self.stddevs)):
+                    zip(self.mean_loss_ratios, self._stddevs)):
                 lrem[row, col] = self.distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
@@ -615,7 +615,7 @@ class FragilityFunctionList(list):
                     self.nodamage and self.nodamage <= self.imls[0])
         new.imls = build_imls(new, discretization)
         if steps_per_interval > 1:
-            new.interp_imls = build_imls(  # passed to classical_damage
+            new._interp_imls = build_imls(  # passed to classical_damage
                 new, discretization, steps_per_interval)
         for i, ls in enumerate(limit_states):
             data = self.array[i]
@@ -964,7 +964,7 @@ def classical_damage(
     """
     spi = fragility_functions.steps_per_interval
     if spi and spi > 1:  # interpolate
-        imls = numpy.array(fragility_functions.interp_imls)
+        imls = numpy.array(fragility_functions._interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         assert min_val > 0, hazard_imls  # sanity check
         numpy.putmask(imls, imls < min_val, min_val)
