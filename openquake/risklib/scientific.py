@@ -147,11 +147,11 @@ class VulnerabilityFunction(object):
 
     def set_distribution(self, epsilons=None):
         if (self.covs > 0).any():
-            self.distribution = DISTRIBUTIONS[self.distribution_name]()
+            self._distribution = DISTRIBUTIONS[self.distribution_name]()
         else:
-            self.distribution = DegenerateDistribution()
-        self.distribution.epsilons = (numpy.array(epsilons)
-                                      if epsilons is not None else None)
+            self._distribution = DegenerateDistribution()
+        self._distribution.epsilons = (numpy.array(epsilons)
+                                       if epsilons is not None else None)
         assert self.seed is not None, self
         numpy.random.seed(self.seed)  # set by CompositeRiskModel.init
 
@@ -188,7 +188,7 @@ class VulnerabilityFunction(object):
         if self.distribution_name == 'LN' and epsilons is None:
             return means
         self.set_distribution(epsilons)
-        res = self.distribution.sample(means, covs, means * covs, idxs)
+        res = self._distribution.sample(means, covs, means * covs, idxs)
         return res
 
     # this is used in the tests, not in the engine code base
@@ -299,7 +299,7 @@ class VulnerabilityFunction(object):
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
                     zip(self.mean_loss_ratios, self.stddevs)):
-                lrem[row, col] = self.distribution.survival(
+                lrem[row, col] = self._distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
 
@@ -375,9 +375,9 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.set_distribution(None)
 
     def set_distribution(self, epsilons=None):
-        self.distribution = DISTRIBUTIONS[self.distribution_name]()
-        self.distribution.epsilons = epsilons
-        self.distribution.seed = self.seed  # needed only for PM
+        self._distribution = DISTRIBUTIONS[self.distribution_name]()
+        self._distribution.epsilons = epsilons
+        self._distribution.seed = self.seed  # needed only for PM
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
@@ -432,7 +432,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
            array of E' probabilities
         """
         self.set_distribution(epsilons)
-        return self.distribution.sample(self.loss_ratios, probs)
+        return self._distribution.sample(self.loss_ratios, probs)
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
@@ -615,7 +615,7 @@ class FragilityFunctionList(list):
                     self.nodamage and self.nodamage <= self.imls[0])
         new.imls = build_imls(new, discretization)
         if steps_per_interval > 1:
-            new.interp_imls = build_imls(  # passed to classical_damage
+            new._interp_imls = build_imls(  # passed to classical_damage
                 new, discretization, steps_per_interval)
         for i, ls in enumerate(limit_states):
             data = self.array[i]
@@ -949,7 +949,7 @@ def classical_damage(
         of damage states.
     """
     if steps_per_interval > 1:  # interpolate
-        imls = numpy.array(fragility_functions.interp_imls)
+        imls = numpy.array(fragility_functions._interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         assert min_val > 0, hazard_imls  # sanity check
         numpy.putmask(imls, imls < min_val, min_val)
