@@ -464,7 +464,7 @@ class EventBasedTestCase(CalculatorTestCase):
         mean, *others = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', mean)
 
-    def test_case_26(self):
+    def test_case_26_land(self):
         # cali landslide simplified
         self.run_calc(case_26.__file__, 'job.ini')
         df = self.calc.datastore.read_df('gmf_data/data', 'sid')
@@ -472,6 +472,13 @@ class EventBasedTestCase(CalculatorTestCase):
         nd_mean = df[df['newmark_disp_0'] > 0]['newmark_disp_0'].mean()
         self.assertGreater(pd_mean, 0)
         self.assertGreater(nd_mean, 0)
+
+    def test_case_26_liq(self):
+        # cali liquefaction simplified
+        self.run_calc(case_26.__file__, 'job_liq.ini')
+        df = self.calc.datastore.read_df('gmf_data/data', 'sid')
+        pd_mean = df[df['liq_prob_0'] > 0]['liq_prob_0'].mean()
+        self.assertGreater(pd_mean, 0)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
