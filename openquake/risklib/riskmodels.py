@@ -540,61 +540,7 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def __init__(self, oqparam, risklist):
         self.oqparam = oqparam
-        if 'consequence' in oqparam.inputs:
-            # build consdict of the form cname_by_tagname -> tag -> array
-            consdict = {}
-            for by, fname in oqparam.inputs['consequence'].items():
-                dtypedict = {
-                    by: str, 'cname': str, 'loss_type': str, None: float}
-                dic = group_array(
-                    hdf5.read_csv(fname, dtypedict).array, 'cname')
-                for cname, group in dic.items():
-                    bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
-                             for tag, grp in group_array(group, by).items()}
-                    consdict['%s_by_%s' % (cname, by)] = bytag
-        else:
-            # legacy approach, extract the consequences from the risk models
-            consdict = dict(losses_by_taxonomy={})
-            for riskid, dic in risklist.groupby_id(kind='consequence').items():
-                if dic:
-                    dtlist = [(lt, F32) for lt, kind in dic]
-                    coeffs = numpy.zeros(len(risklist.limit_states), dtlist)
-                    for (lt, kind), cf in dic.items():
-                        coeffs[lt] = cf
-                    consdict['losses_by_taxonomy'][riskid] = coeffs
-
-        self.damage_states = []
-        self.cons_model = consdict
-        self._riskmodels = {}  # riskid -> crmodel
-        if oqparam.calculation_mode.endswith('_bcr'):
-            # classical_bcr calculator
-            for riskid, risk_functions in risklist.groupby_id().items():
-                self._riskmodels[riskid] = get_riskmodel(
-                    riskid, oqparam, risk_functions=risk_functions)
-        elif (any(rf.kind == 'fragility' for rf in risklist) or
-              'damage' in oqparam.calculation_mode):
-            # classical_damage/scenario_damage calculator
-            if oqparam.calculation_mode in ('classical', 'scenario'):
-                # case when the risk files are in the job_hazard.ini file
-                oqparam.calculation_mode += '_damage'
-                if 'exposure' not in oqparam.inputs:
-                    raise RuntimeError(
-                        'There are risk files in %r but not '
-                        'an exposure' % oqparam.inputs['job_ini'])
-
-            self.damage_states = ['no_damage'] + list(risklist.limit_states)
-            for riskid, ffs_by_lt in risklist.groupby_id().items():
-                self._riskmodels[riskid] = get_riskmodel(
-                    riskid, oqparam, risk_functions=ffs_by_lt)
-        else:
-            # classical, event based and scenario calculators
-            for riskid, vfs in risklist.groupby_id().items():
-                for vf in vfs.values():
-                    # set the seed; this is important for the case of
-                    # VulnerabilityFunctionWithPMF
-                    vf.seed = oqparam.random_seed
-                self._riskmodels[riskid] = get_riskmodel(
-                    riskid, oqparam, risk_functions=vfs)
+        self.risklist = risklist
         self.init()
 
     def compute_csq(self, asset, fractions, loss_type):
@@ -615,6 +561,64 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def init(self):
         oq = self.oqparam
+        if 'consequence' in oq.inputs:
+            # build consdict of the form cname_by_tagname -> tag -> array
+            consdict = {}
+            for by, fname in oq.inputs['consequence'].items():
+                dtypedict = {
+                    by: str, 'cname': str, 'loss_type': str, None: float}
+                dic = group_array(
+                    hdf5.read_csv(fname, dtypedict).array, 'cname')
+                for cname, group in dic.items():
+                    bytag = {tag: _cons_coeffs(grp, self.risklist.limit_states)
+                             for tag, grp in group_array(group, by).items()}
+                    consdict['%s_by_%s' % (cname, by)] = bytag
+        else:
+            # legacy approach, extract the consequences from the risk models
+            consdict = dict(losses_by_taxonomy={})
+            for riskid, dic in self.risklist.groupby_id(
+                    kind='consequence').items():
+                if dic:
+                    dtlist = [(lt, F32) for lt, kind in dic]
+                    coeffs = numpy.zeros(
+                        len(self.risklist.limit_states), dtlist)
+                    for (lt, kind), cf in dic.items():
+                        coeffs[lt] = cf
+                    consdict['losses_by_taxonomy'][riskid] = coeffs
+
+        self.damage_states = []
+        self.cons_model = consdict
+        self._riskmodels = {}  # riskid -> crmodel
+        if oq.calculation_mode.endswith('_bcr'):
+            # classical_bcr calculator
+            for riskid, risk_functions in self.risklist.groupby_id().items():
+                self._riskmodels[riskid] = get_riskmodel(
+                    riskid, oq, risk_functions=risk_functions)
+        elif (any(rf.kind == 'fragility' for rf in self.risklist) or
+              'damage' in oq.calculation_mode):
+            # classical_damage/scenario_damage calculator
+            if oq.calculation_mode in ('classical', 'scenario'):
+                # case when the risk files are in the job_hazard.ini file
+                oq.calculation_mode += '_damage'
+                if 'exposure' not in oq.inputs:
+                    raise RuntimeError(
+                        'There are risk files in %r but not '
+                        'an exposure' % oq.inputs['job_ini'])
+
+            self.damage_states = ['no_damage'] + list(
+                self.risklist.limit_states)
+            for riskid, ffs_by_lt in self.risklist.groupby_id().items():
+                self._riskmodels[riskid] = get_riskmodel(
+                    riskid, oq, risk_functions=ffs_by_lt)
+        else:
+            # classical, event based and scenario calculators
+            for riskid, vfs in self.risklist.groupby_id().items():
+                for vf in vfs.values():
+                    # set the seed; this is important for the case of
+                    # VulnerabilityFunctionWithPMF
+                    vf.seed = oq.random_seed
+                self._riskmodels[riskid] = get_riskmodel(
+                    riskid, oq, risk_functions=vfs)
         self.imtls = oq.imtls
         imti = {imt: i for i, imt in enumerate(oq.imtls)}
         self.lti = {}  # loss_type -> idx
