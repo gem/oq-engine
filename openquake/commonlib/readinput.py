@@ -815,14 +815,6 @@ def get_amplification(oqparam):
     return df
 
 
-def _cons_coeffs(records, limit_states):
-    dtlist = [(lt, F32) for lt in records['loss_type']]
-    coeffs = numpy.zeros(len(limit_states), dtlist)
-    for rec in records:
-        coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
-    return coeffs
-
-
 def get_crmodel(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
@@ -832,30 +824,7 @@ def get_crmodel(oqparam):
     """
     risklist = get_risk_functions(oqparam)
     oqparam.set_risk_imtls(risklist)
-    if 'consequence' in oqparam.inputs:
-        # build consdict of the form cname_by_tagname -> tag -> array
-        consdict = {}
-        for by, fname in oqparam.inputs['consequence'].items():
-            dtypedict = {by: str, 'cname': str, 'loss_type': str, None: float}
-            dic = group_array(hdf5.read_csv(fname, dtypedict).array, 'cname')
-            for cname, group in dic.items():
-                bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
-                         for tag, grp in group_array(group, by).items()}
-                consdict['%s_by_%s' % (cname, by)] = bytag
-    else:
-        # legacy approach, extract the consequences from the risk models
-        consdict = {'losses_by_taxonomy': {}}
-        for riskid, dic in risklist.groupby_id().items():
-            coeffs_by_lt = {lt: dic.pop((lt, kind)) for lt, kind in list(dic)
-                            if kind == 'consequence'}
-            if coeffs_by_lt:
-                dtlist = [(lt, F32) for lt in coeffs_by_lt]
-                coeffs = numpy.zeros(len(risklist.limit_states), dtlist)
-                for lt, cf in coeffs_by_lt.items():
-                    coeffs[lt] = cf
-                consdict['losses_by_taxonomy'][riskid] = coeffs
-
-    crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
+    crm = riskmodels.CompositeRiskModel(oqparam, risklist)
     return crm
 
 

@@ -26,7 +26,8 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
-from openquake.baselib.general import AccumDict, cached_property, groupby
+from openquake.baselib.general import (
+    AccumDict, cached_property, groupby, group_array)
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
@@ -88,8 +89,9 @@ class RiskFuncList(list):
     """
     A list of risk functions with attributes .id, .loss_type, .kind
     """
-    def groupby_id(self):
+    def groupby_id(self, kind=None):
         """
+        :param kind: if not None, filter the risk functions on that kind
         :returns: double dictionary id -> loss_type, kind -> risk_function
         """
         ddic = {}
@@ -98,7 +100,11 @@ class RiskFuncList(list):
             dic = groupby(
                 riskfuncs, operator.attrgetter('loss_type', 'kind'))
             # there is a single risk function in each lst below
-            ddic[riskid] = {lk: lst[0] for lk, lst in dic.items()}
+            if kind:
+                ddic[riskid] = {(lt, k): lst[0] for (lt, k), lst in dic.items()
+                                if k == kind}
+            else:
+                ddic[riskid] = {ltk: lst[0] for ltk, lst in dic.items()}
         return ddic
 
 
@@ -160,6 +166,7 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
             for riskid, cf in sorted(rm.items()):
                 rf = hdf5.ArrayWrapper(
                     cf, dict(id=riskid, loss_type=loss_type, kind=kind))
+                rlist.append(rf)
         else:  # vulnerability, vulnerability_retrofitted
             # only for classical_risk reduce the loss_ratios
             # to make sure they are strictly increasing
@@ -469,6 +476,14 @@ class ValidationError(Exception):
     pass
 
 
+def _cons_coeffs(records, limit_states):
+    dtlist = [(lt, F32) for lt in records['loss_type']]
+    coeffs = numpy.zeros(len(limit_states), dtlist)
+    for rec in records:
+        coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
+    return coeffs
+
+
 class CompositeRiskModel(collections.abc.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -492,8 +507,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         crm = dstore.getitem('risk_model')
         risklist = RiskFuncList()
         risklist.limit_states = crm.attrs['limit_states']
-        cons_model = {}  # cname_by -> taxo, loss_type -> coeffs
-        # TODO: populate it
         for quoted_id, rm in crm.items():
             riskid = unquote_plus(quoted_id)
             for lt_kind in rm:
@@ -521,11 +534,33 @@ class CompositeRiskModel(collections.abc.Mapping):
                         rf.loss_type = lt
                         rf.kind = 'vulnerability'
                     risklist.append(rf)
-        crm = CompositeRiskModel(oqparam, risklist, cons_model)
+        crm = CompositeRiskModel(oqparam, risklist)
         crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
         return crm
 
-    def __init__(self, oqparam, risklist, consdict):
+    def __init__(self, oqparam, risklist):
+        if 'consequence' in oqparam.inputs:
+            # build consdict of the form cname_by_tagname -> tag -> array
+            consdict = {}
+            for by, fname in oqparam.inputs['consequence'].items():
+                dtypedict = {
+                    by: str, 'cname': str, 'loss_type': str, None: float}
+                dic = group_array(
+                    hdf5.read_csv(fname, dtypedict).array, 'cname')
+                for cname, group in dic.items():
+                    bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
+                             for tag, grp in group_array(group, by).items()}
+                    consdict['%s_by_%s' % (cname, by)] = bytag
+        else:
+            # legacy approach, extract the consequences from the risk models
+            consdict = {'losses_by_taxonomy': {}}
+            for riskid, dic in risklist.groupby_id(kind='consequence').items():
+                dtlist = [(lt, F32) for lt, kind in dic]
+                coeffs = numpy.zeros(len(risklist.limit_states), dtlist)
+                for (lt, kind), cf in dic.items():
+                    coeffs[lt] = cf
+                consdict['losses_by_taxonomy'][riskid] = coeffs
+
         self.damage_states = []
         self.cons_model = consdict
         self._riskmodels = {}  # riskid -> crmodel
