@@ -52,14 +52,12 @@ def bin_ddd(fractions, n, seed):
     return ddd
 
 
-def scenario_damage(riskinputs, crmodel, param, monitor):
+def scenario_damage(riskinputs, param, monitor):
     """
     Core function for a damage computation.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param crmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :param param:
@@ -71,6 +69,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
 
     `d_asset` and `d_tag` are related to the damage distributions.
     """
+    crmodel = monitor.read_pik('crmodel')
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()

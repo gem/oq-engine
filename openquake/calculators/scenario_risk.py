@@ -55,14 +55,12 @@ def ael_dt(loss_names, rlz=False):
         return [('asset_id', U32), ('event_id', U32), ('loss', (F32, L))]
 
 
-def scenario_risk(riskinputs, crmodel, param, monitor):
+def scenario_risk(riskinputs, param, monitor):
     """
     Core function for a scenario computation.
 
     :param riskinput:
         a of :class:`openquake.risklib.riskinput.RiskInput` object
-    :param crmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
     :param monitor:
@@ -76,6 +74,7 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
         R the number of realizations  and statistics is an array of shape
         (n, R, 4), with n the number of assets in the current riskinput object
     """
+    crmodel = monitor.read_pik('crmodel')
     E = param['E']
     L = len(crmodel.loss_types)
     result = dict(agg=numpy.zeros((E, L), F32), avg=[])

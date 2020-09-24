@@ -1037,6 +1037,7 @@ class RiskCalculator(HazardCalculator):
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
+        smap.monitor.save_pik('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
             logging.info('Sending hazard for %d assets, %d sites',
@@ -1047,7 +1048,7 @@ class RiskCalculator(HazardCalculator):
                 # also, I could not get lazy reading to work with
                 # the SWMR mode for event_based_risk
                 ri.hazard_getter.init()
-            smap.submit((block, self.crmodel, self.param))
+            smap.submit((block, self.param))
             for ri in block:  # save memory
                 try:
                     ri.hazard_getter.data.clear()

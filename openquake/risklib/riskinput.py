@@ -126,12 +126,12 @@ class RiskInput(object):
             aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
 
-    def gen_outputs(self, cr_model, monitor, tempname=None, haz=None):
+    def gen_outputs(self, crmodel, monitor, tempname=None, haz=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
 
-        :param cr_model: a CompositeRiskModel instance
+        :param crmodel: a CompositeRiskModel instance
         :param monitor: a monitor object used to measure the performance
         """
         self.monitor = monitor
@@ -150,7 +150,7 @@ class RiskInput(object):
             # thing since it calls get_output directly
             assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
             for rlzi, haz_by_rlzi in items:
-                out = get_output(cr_model, assets_by_taxo, haz_by_rlzi, rlzi)
+                out = get_output(crmodel, assets_by_taxo, haz_by_rlzi, rlzi)
                 yield out
 
     def __repr__(self):
