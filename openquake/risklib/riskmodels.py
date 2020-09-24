@@ -535,6 +535,15 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.oqparam = oqparam
         self.risklist = risklist  # by taxonomy
         self.consdict = consdict or {}  # new style consequences, by anything
+        self.initialized = False
+
+    def __getstate__(self):
+        return dict(oqparam=self.oqparam, risklist=self.risklist,
+                    consdict=self.consdict, tmap=self.tmap,
+                    initialized=False)
+
+    def __setstate__(self, dic):
+        vars(self).update(dic)
         self.init()
 
     def compute_csq(self, asset, fractions, loss_type):
@@ -638,6 +647,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if hasattr(rf, 'imt'):
                     iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
+        self.initialized = True
 
     def eid_dmg_dt(self):
         """

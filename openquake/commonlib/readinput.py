@@ -844,6 +844,7 @@ def get_crmodel(oqparam):
                          for tag, grp in group_array(group, by).items()}
                 consdict['%s_by_%s' % (cname, by)] = bytag
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
+    crm.init()
     return crm
 
 
