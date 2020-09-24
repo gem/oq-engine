@@ -26,6 +26,7 @@ import pickle
 import shutil
 import zipfile
 import logging
+import operator
 import tempfile
 import functools
 import configparser
@@ -35,7 +36,7 @@ import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, AccumDict)
+    random_filter, countby, groupby, group_array, get_duplicates, AccumDict)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -814,14 +815,6 @@ def get_amplification(oqparam):
     return df
 
 
-def _cons_coeffs(records, limit_states):
-    dtlist = [(lt, F32) for lt in records['loss_type']]
-    coeffs = numpy.zeros(len(limit_states), dtlist)
-    for rec in records:
-        coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
-    return coeffs
-
-
 def get_crmodel(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
@@ -829,32 +822,9 @@ def get_crmodel(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    riskdict = get_risk_functions(oqparam)
-    oqparam.set_risk_imtls(riskdict)
-    if 'consequence' in oqparam.inputs:
-        # build consdict of the form cname_by_tagname -> tag -> array
-        consdict = {}
-        for by, fname in oqparam.inputs['consequence'].items():
-            dtypedict = {by: str, 'cname': str, 'loss_type': str, None: float}
-            dic = group_array(hdf5.read_csv(fname, dtypedict).array, 'cname')
-            for cname, group in dic.items():
-                bytag = {tag: _cons_coeffs(grp, riskdict.limit_states)
-                         for tag, grp in group_array(group, by).items()}
-                consdict['%s_by_%s' % (cname, by)] = bytag
-    else:
-        # legacy approach, extract the consequences from the risk models
-        consdict = {'losses_by_taxonomy': {}}
-        for taxo, dic in riskdict.items():
-            coeffs_by_lt = {lt: dic.pop((lt, kind)) for lt, kind in list(dic)
-                            if kind == 'consequence'}
-            if coeffs_by_lt:
-                dtlist = [(lt, F32) for lt in coeffs_by_lt]
-                coeffs = numpy.zeros(len(riskdict.limit_states), dtlist)
-                for lt, cf in coeffs_by_lt.items():
-                    coeffs[lt] = cf
-                consdict['losses_by_taxonomy'][taxo] = coeffs
-
-    crm = riskmodels.CompositeRiskModel(oqparam, riskdict, consdict)
+    risklist = get_risk_functions(oqparam)
+    oqparam.set_risk_imtls(risklist)
+    crm = riskmodels.CompositeRiskModel(oqparam, risklist)
     return crm
 
 
