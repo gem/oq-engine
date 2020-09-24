@@ -476,14 +476,6 @@ class ValidationError(Exception):
     pass
 
 
-def _cons_coeffs(records, limit_states):
-    dtlist = [(lt, F32) for lt in records['loss_type']]
-    coeffs = numpy.zeros(len(limit_states), dtlist)
-    for rec in records:
-        coeffs[rec['loss_type']] = [rec[ds] for ds in limit_states]
-    return coeffs
-
-
 class CompositeRiskModel(collections.abc.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -498,6 +490,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         a dictionary riskid -> loss_type -> consequence functions
     """
     @classmethod
+    # TODO: reading new-style consequences is missing
     def read(cls, dstore):
         """
         :param dstore: a DataStore instance
@@ -538,9 +531,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
         return crm
 
-    def __init__(self, oqparam, risklist):
+    def __init__(self, oqparam, risklist, consdict=()):
         self.oqparam = oqparam
-        self.risklist = risklist
+        self.risklist = risklist  # by taxonomy
+        self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
 
     def compute_csq(self, asset, fractions, loss_type):
@@ -551,7 +545,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dict consequence_name -> array of length E
         """
         csq = {}  # cname -> values per event
-        for byname, coeffs in self.cons_model.items():
+        for byname, coeffs in self.consdict.items():
             if len(coeffs):
                 cname, tagname = byname.split('_by_')
                 func = scientific.consequence[cname]
@@ -561,33 +555,19 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def init(self):
         oq = self.oqparam
-        if 'consequence' in oq.inputs:
-            # build consdict of the form cname_by_tagname -> tag -> array
-            consdict = {}
-            for by, fname in oq.inputs['consequence'].items():
-                dtypedict = {
-                    by: str, 'cname': str, 'loss_type': str, None: float}
-                dic = group_array(
-                    hdf5.read_csv(fname, dtypedict).array, 'cname')
-                for cname, group in dic.items():
-                    bytag = {tag: _cons_coeffs(grp, self.risklist.limit_states)
-                             for tag, grp in group_array(group, by).items()}
-                    consdict['%s_by_%s' % (cname, by)] = bytag
-        else:
-            # legacy approach, extract the consequences from the risk models
-            consdict = dict(losses_by_taxonomy={})
-            for riskid, dic in self.risklist.groupby_id(
-                    kind='consequence').items():
-                if dic:
-                    dtlist = [(lt, F32) for lt, kind in dic]
-                    coeffs = numpy.zeros(
-                        len(self.risklist.limit_states), dtlist)
-                    for (lt, kind), cf in dic.items():
-                        coeffs[lt] = cf
-                    consdict['losses_by_taxonomy'][riskid] = coeffs
+        # extract the consequences from the risk models, if any
+        self.consdict['losses_by_taxonomy'] = {}
+        for riskid, dic in self.risklist.groupby_id(
+                kind='consequence').items():
+            if dic:
+                dtlist = [(lt, F32) for lt, kind in dic]
+                coeffs = numpy.zeros(
+                    len(self.risklist.limit_states), dtlist)
+                for (lt, kind), cf in dic.items():
+                    coeffs[lt] = cf
+                self.consdict['losses_by_taxonomy'][riskid] = coeffs
 
         self.damage_states = []
-        self.cons_model = consdict
         self._riskmodels = {}  # riskid -> crmodel
         if oq.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
@@ -681,11 +661,11 @@ class CompositeRiskModel(collections.abc.Mapping):
         Convert the dictionaries tag -> coeffs in the consequence model
         into vectors tag index -> coeffs (one per cname)
         """
-        for cname_by_tagname, dic in self.cons_model.items():
+        for cname_by_tagname, dic in self.consdict.items():
             cname, tagname = cname_by_tagname.split('_by_')
             tagidx = tagcol.get_tagidx(tagname)
             items = sorted((tagidx[tag], cf) for tag, cf in dic.items())
-            self.cons_model[cname_by_tagname] = numpy.array(
+            self.consdict[cname_by_tagname] = numpy.array(
                 [it[1] for it in items])
 
     @cached_property
@@ -702,7 +682,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: the list of available consequences
         """
         csq = []
-        for cname_by_tagname, arr in self.cons_model.items():
+        for cname_by_tagname, arr in self.consdict.items():
             if len(arr):
                 csq.append(cname_by_tagname.split('_by_')[0])
         return csq
@@ -800,7 +780,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt in self.loss_types:
                 attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
         dic = self._riskmodels.copy()
-        for k, v in self.cons_model.items():
+        for k, v in self.consdict.items():
             if len(v):
                 dic[k] = v
         return dic, attrs
