@@ -18,6 +18,7 @@
 
 import os
 import time
+import pickle
 import getpass
 import operator
 import itertools
@@ -263,6 +264,26 @@ class Monitor(object):
                          counts=0, mem=0, duration=0)
         vars(new).update(kw)
         return new
+
+    def save_pik(self, key, obj):
+        """
+        :param key: key in the _tmp.hdf5 file
+        :param obj: big object to store in pickle format
+        """
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        f = (hdf5.File(tmp, 'r+') if os.path.exists(tmp)
+             else hdf5.File(tmp, 'w'))
+        with f:
+            f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def read_pik(self, key):
+        """
+        :param key: key in the _tmp.hdf5 file
+        :return: unpickled object
+        """
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        with hdf5.File(tmp, 'r') as f:
+            return pickle.loads(f[key][()])
 
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
