@@ -539,6 +539,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         return crm
 
     def __init__(self, oqparam, risklist):
+        self.oqparam = oqparam
         if 'consequence' in oqparam.inputs:
             # build consdict of the form cname_by_tagname -> tag -> array
             consdict = {}
@@ -594,7 +595,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     vf.seed = oqparam.random_seed
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oqparam, risk_functions=vfs)
-        self.init(oqparam)
+        self.init()
 
     def compute_csq(self, asset, fractions, loss_type):
         """
@@ -612,9 +613,10 @@ class CompositeRiskModel(collections.abc.Mapping):
                 csq[cname] = func(coeffs, asset, fractions[:, 1:], loss_type)
         return csq
 
-    def init(self, oqparam):
-        self.imtls = oqparam.imtls
-        imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
+    def init(self):
+        oq = self.oqparam
+        self.imtls = oq.imtls
+        imti = {imt: i for i, imt in enumerate(oq.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         # build a sorted list with all the loss_types contained in the model
@@ -631,7 +633,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if hasattr(rf, 'distribution_name'):
                     self.distributions.add(rf.distribution_name)
                 if hasattr(rf, 'init'):  # vulnerability function
-                    rf.seed = oqparam.master_seed  # setting the seed
+                    rf.seed = oq.master_seed  # setting the seed
                     rf.init()
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
@@ -645,7 +647,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             rm.imti = {lt: imti[rm.risk_functions[lt, kind].imt]
                        for lt, kind in rm.risk_functions
                        if kind in 'vulnerability fragility'}
-        self.curve_params = self.make_curve_params(oqparam)
+        self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
         for riskid, rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
@@ -701,12 +703,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                 csq.append(cname_by_tagname.split('_by_')[0])
         return csq
 
-    def make_curve_params(self, oqparam):
+    def make_curve_params(self):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
         cps = []
         for l, loss_type in enumerate(self.loss_types):
-            if oqparam.calculation_mode in ('classical', 'classical_risk'):
+            if self.oqparam.calculation_mode in (
+                    'classical', 'classical_risk'):
                 curve_resolutions = set()
                 lines = []
                 allratios = []
