@@ -46,7 +46,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
-from openquake.risklib.riskmodels import get_risk_models
+from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
 from openquake.commonlib import logictree
@@ -438,11 +438,9 @@ def get_site_model(oqparam):
     if 'amplification' in oqparam.inputs:
         req_site_params.add('ampcode')
     arrays = []
-    dtypedic = {None: float, 'vs30measured': numpy.uint8,
-                'ampcode': site.ampcode_dt}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = hdf5.read_csv(fname, dtypedic).array
+            sm = hdf5.read_csv(fname, site.site_param_dt).array
             sm['lon'] = numpy.round(sm['lon'], 5)
             sm['lat'] = numpy.round(sm['lat'], 5)
             dupl = get_duplicates(sm, 'lon', 'lat')
@@ -785,9 +783,12 @@ def get_composite_source_model(oqparam, h5=None):
         # avoid hdf5 damned bug by creating source_info in advance
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        for trt in mags:
-            h5['source_mags/' + trt] = numpy.array(sorted(mags[trt]))
         h5['grp_ids'] = grp_ids
+        mags_by_trt = {}
+        for trt in mags:
+            mags_by_trt[trt] = arr = numpy.array(sorted(mags[trt]))
+            h5['source_mags/' + trt] = arr
+        oqparam.maximum_distance.interp(mags_by_trt)
     csm.gsim_lt.check_imts(oqparam.imtls)
     csm.source_info = data  # src_id -> row
     if os.environ.get('OQ_CHECK_INPUT'):
@@ -828,32 +829,21 @@ def get_crmodel(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    riskdict = get_risk_models(oqparam)
-    oqparam.set_risk_imtls(riskdict)
+    risklist = get_risk_functions(oqparam)
+    oqparam.set_risk_imtls(risklist)
+    consdict = {}
     if 'consequence' in oqparam.inputs:
         # build consdict of the form cname_by_tagname -> tag -> array
-        consdict = {}
         for by, fname in oqparam.inputs['consequence'].items():
-            dtypedict = {by: str, 'cname': str, 'loss_type': str, None: float}
-            dic = group_array(hdf5.read_csv(fname, dtypedict).array, 'cname')
+            dtypedict = {
+                by: str, 'cname': str, 'loss_type': str, None: float}
+            dic = group_array(
+                hdf5.read_csv(fname, dtypedict).array, 'cname')
             for cname, group in dic.items():
-                bytag = {tag: _cons_coeffs(grp, riskdict.limit_states)
+                bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
                          for tag, grp in group_array(group, by).items()}
                 consdict['%s_by_%s' % (cname, by)] = bytag
-    else:
-        # legacy approach, extract the consequences from the risk models
-        consdict = {'losses_by_taxonomy': {}}
-        for taxo, dic in riskdict.items():
-            coeffs_by_lt = {lt: dic.pop((lt, kind)) for lt, kind in list(dic)
-                            if kind == 'consequence'}
-            if coeffs_by_lt:
-                dtlist = [(lt, F32) for lt in coeffs_by_lt]
-                coeffs = numpy.zeros(len(riskdict.limit_states), dtlist)
-                for lt, cf in coeffs_by_lt.items():
-                    coeffs[lt] = cf
-                consdict['losses_by_taxonomy'][taxo] = coeffs
-
-    crm = riskmodels.CompositeRiskModel(oqparam, riskdict, consdict)
+    crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
 
@@ -959,7 +949,7 @@ def get_pmap_from_csv(oqparam, fnames):
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
-    oqparam.set_risk_imtls(get_risk_models(oqparam))
+    oqparam.set_risk_imtls(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
     num_levels = sum(len(imls) for imls in oqparam.imtls.values())
@@ -1105,7 +1095,10 @@ def get_input_files(oqparam, hazard=False):
             args = (fname, oqparam.random_seed,
                     oqparam.number_of_logic_tree_samples,
                     oqparam.sampling_method)
-            smlt_cache[args] = smlt = logictree.SourceModelLogicTree(*args)
+            try:
+                smlt = smlt_cache[args]
+            except KeyError:
+                smlt = smlt_cache[args] = logictree.SourceModelLogicTree(*args)
             fnames.update(smlt.hdf5_files)
             fnames.update(smlt.info.smpaths)
             fnames.add(fname)

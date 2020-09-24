@@ -835,7 +835,7 @@ class GsimLogicTree(object):
         dt = [('trt', hdf5.vstr), ('branch', hdf5.vstr),
               ('uncertainty', hdf5.vstr)] + [
             (weight, float) for weight in sorted(weights)]
-        branches = [(b.trt, b.id, b.gsim) +
+        branches = [(b.trt, b.id, repr(b.gsim)) +
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches if b.effective]
         dic = {}
@@ -1274,7 +1274,9 @@ class FullLogicTree(object):
         rlzs = []
         self._gsims_by_trt = AccumDict(accum=set())  # trt -> gsims
         if self.num_samples:  # sampling
-            sm_rlzs = list(self.source_model_lt)  # uses self.seed
+            sm_rlzs = []
+            for sm_rlz in self.sm_rlzs:
+                sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
                                             self.sampling_method)
             for t, trt in enumerate(self.gsim_lt.values):
@@ -1308,6 +1310,17 @@ class FullLogicTree(object):
                     rlz.weight = rlz.weight / tot_weight
         return rlzs
 
+    def get_rlzs_by_eri(self):
+        """
+        :returns: a dict eri -> rlzs
+        """
+        smltpath = operator.attrgetter('sm_lt_path')
+        eri_by_ltp = self.get_eri_by_ltp()
+        rlzs = self.get_realizations()
+        dic = {eri_by_ltp['_'.join(ltp)]: rlzs for ltp, rlzs in groupby(
+            rlzs, smltpath).items()}
+        return dic
+
     def get_rlzs_by_gsim(self, grp_id):
         """
         :returns: a dictionary gsim -> array of rlz indices
@@ -1320,7 +1333,8 @@ class FullLogicTree(object):
                 for gid in self.grp_ids(sm.ordinal):
                     trti, eri = divmod(gid, len(self.sm_rlzs))
                     for rlz in rlzs:
-                        if eri_by_ltp['_'.join(rlz.sm_lt_path)] == eri:
+                        idx = eri_by_ltp['_'.join(rlz.sm_lt_path)]
+                        if idx == eri:
                             acc[gid][rlz.gsim_rlz.value[trti]].append(
                                 rlz.ordinal)
             self._rlzs_by_grp = {}

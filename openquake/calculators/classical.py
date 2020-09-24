@@ -233,16 +233,11 @@ class ClassicalCalculator(base.HazardCalculator):
         num_levels = len(self.oqparam.imtls.array)
         rparams = {'gidx', 'occurrence_rate', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
-        n = len(self.full_lt.sm_rlzs)
-        trts = list(self.full_lt.gsim_lt.values)
-        for sm in self.full_lt.sm_rlzs:
-            for grp_id in self.full_lt.grp_ids(sm.ordinal):
-                trt = trts[grp_id // n]
-                gsims = gsims_by_trt[trt]
-                cm = ContextMaker(trt, gsims)
-                rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
-                for dparam in cm.REQUIRES_DISTANCES:
-                    rparams.add(dparam + '_')
+        for trt, gsims in gsims_by_trt.items():
+            cm = ContextMaker(trt, gsims)
+            rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
+            for dparam in cm.REQUIRES_DISTANCES:
+                rparams.add(dparam + '_')
         zd.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
         mags = set()
         for trt, dset in self.datastore['source_mags'].items():
@@ -338,7 +333,6 @@ class ClassicalCalculator(base.HazardCalculator):
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = mags[trt][()]
-        oq.maximum_distance.interp(mags_by_trt)
         if psd is not None:
             psd.interp(mags_by_trt)
             for trt, dic in psd.ddic.items():

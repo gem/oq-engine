@@ -744,7 +744,7 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()
-
+    query_string = ''
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -758,7 +758,8 @@ def extract(request, calc_id, what):
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
-            content='%s: %s\n%s' % (exc.__class__.__name__, exc, tb),
+            content='%s: %s in /extract/%s\n%s' %
+            (exc.__class__.__name__, exc, what + query_string, tb),
             content_type='text/plain', status=500)
 
     # stream the data back

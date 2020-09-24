@@ -61,7 +61,7 @@ Current stable version is the **OpenQuake Engine 3.9** 'Taylor'. The documentati
 ### Installation
 
 * [Technology stack and requirements](https://github.com/gem/oq-engine/blob/master/doc/requirements.md)
-* [Which installation method should I use?](https://github.com/gem/oq-engine/blob/master/doc/installing/overview.md)
+* [Which installation method should I use?](https://github.com/gem/oq-engine/blob/master/doc/installing/README.md)
 
 #### Linux
 
