@@ -529,6 +529,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
         crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
+        crm.init()
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):
@@ -563,6 +564,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         return csq
 
     def init(self):
+        if self.initialized:
+            return
         oq = self.oqparam
         # extract the consequences from the risk models, if any
         if 'losses_by_taxonomy' not in self.consdict:
