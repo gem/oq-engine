@@ -109,7 +109,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
-        yield classical, block, srcfilter, gsims, params
+        yield classical_, block, gsims, params
     if monitor.calc_id and subtasks:
         msg = 'produced %d subtask(s) with mean weight %d' % (
             subtasks, numpy.mean([b.weight for b in blocks[:-1]]))
@@ -122,13 +122,14 @@ def classical_split_filter(srcs, gsims, params, monitor):
     yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
-def preclassical(srcs, srcfilter, gsims, params, monitor):
+def preclassical(srcs, gsims, params, monitor):
     """
     Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
     with monitor("splitting/filtering sources"):
+        srcfilter = monitor.read_pik('srcfilter')
         splits, _stime = split_sources(srcs)
     totrups = 0
     maxradius = 0
