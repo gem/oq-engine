@@ -137,9 +137,9 @@ class VulnerabilityFunction(object):
                         'in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
 
         self.distribution_name = distribution
+        self.initialized = False
 
     def init(self):
-        # called by CompositeRiskModel and by __setstate__
         self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
@@ -196,6 +196,9 @@ class VulnerabilityFunction(object):
         """
         A small wrapper around .interpolate and .apply_to
         """
+        if not self.initialized:
+            self.init()
+            self.initialize = True
         means, covs, idxs = self.interpolate(gmvs)
         # for gmvs < min(iml) we return a loss of 0 (default)
         ratios = numpy.zeros(len(gmvs))
@@ -264,20 +267,6 @@ class VulnerabilityFunction(object):
                 imls,
                 [imls > self.imls[-1], imls < self.imls[0]],
                 [self.imls[-1], self.imls[0], lambda x: x]))
-
-    def __getstate__(self):
-        return (self.id, self.imt, self.imls, self.mean_loss_ratios,
-                self.covs, self.distribution_name, self.seed)
-
-    def __setstate__(self, state):
-        self.id = state[0]
-        self.imt = state[1]
-        self.imls = state[2]
-        self.mean_loss_ratios = state[3]
-        self.covs = state[4]
-        self.distribution_name = state[5]
-        self.seed = state[6]
-        self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert_equal(imls, sorted(set(imls)))
@@ -361,11 +350,8 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.loss_ratios = loss_ratios
         self.probs = probs
         self.distribution_name = "PM"
-
-        # to be set in .init(), called also by __setstate__
-        (self._probs_i1d, self.distribution) = None, None
-        self.init()
-
+        self._probs_i1d, self.distribution = None, None
+        self.initialized = False
         ls = [('iml', F32)] + [('prob-%s' % lr, F32) for lr in loss_ratios]
         self.dtype = numpy.dtype(ls)
 
@@ -378,20 +364,6 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self._distribution = DISTRIBUTIONS[self.distribution_name]()
         self._distribution.epsilons = epsilons
         self._distribution.seed = self.seed  # needed only for PM
-
-    def __getstate__(self):
-        return (self.id, self.imt, self.imls, self.loss_ratios,
-                self.probs, self.distribution_name, self.seed)
-
-    def __setstate__(self, state):
-        self.id = state[0]
-        self.imt = state[1]
-        self.imls = state[2]
-        self.loss_ratios = state[3]
-        self.probs = state[4]
-        self.distribution_name = state[5]
-        self.seed = state[6]
-        self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, probs):
         assert all(x >= 0.0 for x in imls)
