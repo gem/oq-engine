@@ -18,6 +18,7 @@
 import re
 import ast
 import copy
+import operator
 import functools
 import collections
 from urllib.parse import unquote_plus
@@ -25,7 +26,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
-from openquake.baselib.general import AccumDict, cached_property
+from openquake.baselib.general import AccumDict, cached_property, groupby
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
@@ -83,6 +84,24 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
+class RiskFuncList(list):
+    """
+    A list of risk functions with attributes .id, .loss_type, .kind
+    """
+    def groupby_id(self):
+        """
+        :returns: double dictionary id -> loss_type, kind -> risk_function
+        """
+        ddic = {}
+        for riskid, riskfuncs in groupby(
+                self, operator.attrgetter('id')).items():
+            dic = groupby(
+                riskfuncs, operator.attrgetter('loss_type', 'kind'))
+            # there is a single risk function in each lst below
+            ddic[riskid] = {lk: lst[0] for lk, lst in dic.items()}
+        return ddic
+
+
 def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                        'vulnerability_retrofitted'):
     """
@@ -91,7 +110,7 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     :param kind:
         a space-separated string with the kinds of risk models to read
     :returns:
-        a dictionary riskid -> loss_type, kind -> function
+        a list of risk functions
     """
     kinds = kind.split()
     rmodels = AccumDict()
@@ -122,33 +141,34 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                         'type "%s", expected "%s"' %
                         (key, oqparam.inputs[key],
                          rmodel.lossCategory, loss_type))
-    rdict = AccumDict(accum={})
-    rdict.limit_states = []
+    cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
+    rlist = RiskFuncList()
+    rlist.limit_states = []
     for (loss_type, kind), rm in sorted(rmodels.items()):
         if kind == 'fragility':
             for (imt, riskid), ffl in sorted(rm.items()):
-                if not rdict.limit_states:
-                    rdict.limit_states.extend(rm.limitStates)
+                if not rlist.limit_states:
+                    rlist.limit_states.extend(rm.limitStates)
                 # we are rejecting the case of loss types with different
                 # limit states; this may change in the future
-                assert rdict.limit_states == rm.limitStates, (
-                    rdict.limit_states, rm.limitStates)
-                rdict[riskid][loss_type, kind] = ffl
-                assert riskid == ffl.id
+                assert rlist.limit_states == rm.limitStates, (
+                    rlist.limit_states, rm.limitStates)
+                ffl.loss_type = loss_type
+                ffl.kind = kind
+                rlist.append(ffl)
         elif kind == 'consequence':
             for riskid, cf in sorted(rm.items()):
-                rdict[riskid][loss_type, kind] = hdf5.ArrayWrapper(
-                    cf, {'id': riskid})
+                rf = hdf5.ArrayWrapper(
+                    cf, dict(id=riskid, loss_type=loss_type, kind=kind))
         else:  # vulnerability, vulnerability_retrofitted
-            cl_risk = oqparam.calculation_mode in (
-                'classical', 'classical_risk')
             # only for classical_risk reduce the loss_ratios
             # to make sure they are strictly increasing
             for (imt, riskid), rf in sorted(rm.items()):
-                rdict[riskid][loss_type, kind] = (
-                    rf.strictly_increasing() if cl_risk else rf)
-                assert riskid == rf.id
-    return rdict
+                rf = rf.strictly_increasing() if cl_risk else rf
+                rf.loss_type = loss_type
+                rf.kind = kind
+                rlist.append(rf)
+    return rlist
 
 
 def get_values(loss_type, assets, time_event=None):
@@ -449,16 +469,6 @@ class ValidationError(Exception):
     pass
 
 
-def _extract(rmdict, kind):
-    lst = []
-    for riskid, rm in rmdict.items():
-        risk_functions = getattr(rm, 'risk_functions', rm)
-        for (lt, k), rf in risk_functions.items():
-            if k == kind:
-                lst.append((riskid, rf))
-    return lst
-
-
 class CompositeRiskModel(collections.abc.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -480,8 +490,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         oqparam = dstore['oqparam']
         crm = dstore.getitem('risk_model')
-        riskdict = AccumDict(accum={})
-        riskdict.limit_states = crm.attrs['limit_states']
+        risklist = RiskFuncList()
+        risklist.limit_states = crm.attrs['limit_states']
         cons_model = {}  # cname_by -> taxo, loss_type -> coeffs
         # TODO: populate it
         for quoted_id, rm in crm.items():
@@ -492,35 +502,39 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if kind == 'fragility':  # rf is a FragilityFunctionList
                     try:
                         rf = rf.build(
-                            riskdict.limit_states,
+                            risklist.limit_states,
                             oqparam.continuous_fragility_discretization,
                             oqparam.steps_per_interval)
                     except ValueError as err:
                         raise ValueError('%s: %s' % (riskid, err))
-                    riskdict[riskid][lt, kind] = rf
+                    rf.loss_type = lt
+                    rf.kind = kind
+                    risklist.append(rf)
                 else:  # rf is a vulnerability function
                     rf.seed = oqparam.master_seed
                     rf.init()
                     if lt.endswith('_retrofitted'):
                         # strip _retrofitted, since len('_retrofitted') = 12
-                        riskdict[riskid][
-                            lt[:-12], 'vulnerability_retrofitted'] = rf
+                        rf.loss_type = lt[:-12]
+                        rf.kind = 'vulnerability_retrofitted'
                     else:
-                        riskdict[riskid][lt, 'vulnerability'] = rf
-        crm = CompositeRiskModel(oqparam, riskdict, cons_model)
+                        rf.loss_type = lt
+                        rf.kind = 'vulnerability'
+                    risklist.append(rf)
+        crm = CompositeRiskModel(oqparam, risklist, cons_model)
         crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
         return crm
 
-    def __init__(self, oqparam, riskdict, consdict):
+    def __init__(self, oqparam, risklist, consdict):
         self.damage_states = []
         self.cons_model = consdict
         self._riskmodels = {}  # riskid -> crmodel
         if oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
-            for riskid, risk_functions in sorted(riskdict.items()):
+            for riskid, risk_functions in risklist.groupby_id().items():
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oqparam, risk_functions=risk_functions)
-        elif (_extract(riskdict, 'fragility') or
+        elif (any(rf.kind == 'fragility' for rf in risklist) or
               'damage' in oqparam.calculation_mode):
             # classical_damage/scenario_damage calculator
             if oqparam.calculation_mode in ('classical', 'scenario'):
@@ -531,13 +545,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                         'There are risk files in %r but not '
                         'an exposure' % oqparam.inputs['job_ini'])
 
-            self.damage_states = ['no_damage'] + list(riskdict.limit_states)
-            for riskid, ffs_by_lt in sorted(riskdict.items()):
+            self.damage_states = ['no_damage'] + list(risklist.limit_states)
+            for riskid, ffs_by_lt in risklist.groupby_id().items():
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oqparam, risk_functions=ffs_by_lt)
         else:
             # classical, event based and scenario calculators
-            for riskid, vfs in sorted(riskdict.items()):
+            for riskid, vfs in risklist.groupby_id().items():
                 for vf in vfs.values():
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
