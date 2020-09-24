@@ -58,7 +58,7 @@ def calc_risk(gmfs, param, monitor):
     with monitor('getting assets'):
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
     with monitor('getting crmodel'):
-        crmodel = riskmodels.CompositeRiskModel.read(dstore)
+        crmodel = monitor.read_pik('crmodel')
         events = dstore['events'][list(eids)]
         weights = dstore['weights'][()]
     E = len(eids)
@@ -245,6 +245,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
+        smap.monitor.save_pik('crmodel', self.crmodel)
         for rgetter in getters.gen_rupture_getters(
                 self.datastore, srcfilter, oq.concurrent_tasks):
             smap.submit((rgetter, srcfilter, self.param))
