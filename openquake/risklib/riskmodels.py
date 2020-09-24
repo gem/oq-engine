@@ -553,13 +553,14 @@ class CompositeRiskModel(collections.abc.Mapping):
                     consdict['%s_by_%s' % (cname, by)] = bytag
         else:
             # legacy approach, extract the consequences from the risk models
-            consdict = {'losses_by_taxonomy': {}}
+            consdict = dict(losses_by_taxonomy={})
             for riskid, dic in risklist.groupby_id(kind='consequence').items():
-                dtlist = [(lt, F32) for lt, kind in dic]
-                coeffs = numpy.zeros(len(risklist.limit_states), dtlist)
-                for (lt, kind), cf in dic.items():
-                    coeffs[lt] = cf
-                consdict['losses_by_taxonomy'][riskid] = coeffs
+                if dic:
+                    dtlist = [(lt, F32) for lt, kind in dic]
+                    coeffs = numpy.zeros(len(risklist.limit_states), dtlist)
+                    for (lt, kind), cf in dic.items():
+                        coeffs[lt] = cf
+                    consdict['losses_by_taxonomy'][riskid] = coeffs
 
         self.damage_states = []
         self.cons_model = consdict
