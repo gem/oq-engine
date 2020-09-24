@@ -556,7 +556,8 @@ class CompositeRiskModel(collections.abc.Mapping):
     def init(self):
         oq = self.oqparam
         # extract the consequences from the risk models, if any
-        self.consdict['losses_by_taxonomy'] = {}
+        if 'losses_by_taxonomy' not in self.consdict:
+            self.consdict['losses_by_taxonomy'] = {}
         for riskid, dic in self.risklist.groupby_id(
                 kind='consequence').items():
             if dic:
@@ -566,7 +567,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 for (lt, kind), cf in dic.items():
                     coeffs[lt] = cf
                 self.consdict['losses_by_taxonomy'][riskid] = coeffs
-
         self.damage_states = []
         self._riskmodels = {}  # riskid -> crmodel
         if oq.calculation_mode.endswith('_bcr'):

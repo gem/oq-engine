@@ -26,7 +26,6 @@ import pickle
 import shutil
 import zipfile
 import logging
-import operator
 import tempfile
 import functools
 import configparser
@@ -36,7 +35,7 @@ import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    random_filter, countby, groupby, group_array, get_duplicates, AccumDict)
+    random_filter, countby, group_array, get_duplicates, AccumDict)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
