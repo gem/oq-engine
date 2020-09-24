@@ -134,6 +134,7 @@ def get_risk_models(oqparam, kind='vulnerability fragility consequence '
                 assert rdict.limit_states == rm.limitStates, (
                     rdict.limit_states, rm.limitStates)
                 rdict[riskid][loss_type, kind] = ffl
+                assert riskid == ffl.id
         elif kind == 'consequence':
             for riskid, cf in sorted(rm.items()):
                 rdict[riskid][loss_type, kind] = cf
@@ -145,6 +146,7 @@ def get_risk_models(oqparam, kind='vulnerability fragility consequence '
             for (imt, riskid), rf in sorted(rm.items()):
                 rdict[riskid][loss_type, kind] = (
                     rf.strictly_increasing() if cl_risk else rf)
+                assert riskid == rf.id
     return rdict
 
 
