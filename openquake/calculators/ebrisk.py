@@ -236,7 +236,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             hdf5path=self.datastore.filename,
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
-        srcfilter = self.src_filter(self.datastore.tempname)
+        srcfilter = self.src_filter()
         logging.info(
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
