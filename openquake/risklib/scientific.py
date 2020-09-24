@@ -470,7 +470,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
 
 
-# this is meant to be instantiated by riskmodels.get_risk_models
+# this is meant to be instantiated by riskmodels.get_risk_functions
 class VulnerabilityModel(dict):
     """
     Container for a set of vulnerability functions. You can access each

@@ -46,7 +46,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
-from openquake.risklib.riskmodels import get_risk_models
+from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
 from openquake.commonlib import logictree
@@ -829,7 +829,7 @@ def get_crmodel(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    riskdict = get_risk_models(oqparam)
+    riskdict = get_risk_functions(oqparam)
     oqparam.set_risk_imtls(riskdict)
     if 'consequence' in oqparam.inputs:
         # build consdict of the form cname_by_tagname -> tag -> array
@@ -960,7 +960,7 @@ def get_pmap_from_csv(oqparam, fnames):
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
-    oqparam.set_risk_imtls(get_risk_models(oqparam))
+    oqparam.set_risk_imtls(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
     num_levels = sum(len(imls) for imls in oqparam.imtls.values())
