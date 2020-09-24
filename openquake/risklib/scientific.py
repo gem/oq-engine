@@ -198,7 +198,7 @@ class VulnerabilityFunction(object):
         """
         if not self.initialized:
             self.init()
-            self.initialize = True
+            self.initialized = True
         means, covs, idxs = self.interpolate(gmvs)
         # for gmvs < min(iml) we return a loss of 0 (default)
         ratios = numpy.zeros(len(gmvs))
