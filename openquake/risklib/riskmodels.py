@@ -137,7 +137,8 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
                 assert riskid == ffl.id
         elif kind == 'consequence':
             for riskid, cf in sorted(rm.items()):
-                rdict[riskid][loss_type, kind] = cf
+                rdict[riskid][loss_type, kind] = hdf5.ArrayWrapper(
+                    cf, {'id': riskid})
         else:  # vulnerability, vulnerability_retrofitted
             cl_risk = oqparam.calculation_mode in (
                 'classical', 'classical_risk')
