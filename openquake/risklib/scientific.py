@@ -144,6 +144,7 @@ class VulnerabilityFunction(object):
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
         self.set_distribution(None)
+        self.initialized = True
 
     def set_distribution(self, epsilons=None):
         if (self.covs > 0).any():
@@ -198,7 +199,6 @@ class VulnerabilityFunction(object):
         """
         if not self.initialized:
             self.init()
-            self.initialized = True
         means, covs, idxs = self.interpolate(gmvs)
         # for gmvs < min(iml) we return a loss of 0 (default)
         ratios = numpy.zeros(len(gmvs))
@@ -359,6 +359,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         # the seed is reset in CompositeRiskModel.__init__
         self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
         self.set_distribution(None)
+        self.initialized = True
 
     def set_distribution(self, epsilons=None):
         self._distribution = DISTRIBUTIONS[self.distribution_name]()
