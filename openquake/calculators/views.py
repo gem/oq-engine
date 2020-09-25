@@ -35,10 +35,8 @@ from openquake.commonlib import util, calc
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
 from openquake.calculators import getters
-from openquake.calculators.extract import extract
+from openquake.calculators.extract import extract, FLOAT, INT
 
-FLOAT = (float, numpy.float32, numpy.float64)
-INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 F32 = numpy.float32
 U32 = numpy.uint32
 
@@ -329,8 +327,7 @@ def view_totlosses(token, dstore):
     return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
 
 
-# for event based risk and ebrisk
-def portfolio_loss(dstore):
+def _portfolio_loss(dstore):
     R = dstore['full_lt'].get_num_rlzs()
     array = dstore['losses_by_event'][()]
     L, = array.dtype['loss'].shape  # loss has shape L
@@ -348,7 +345,7 @@ def view_portfolio_losses(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    data = portfolio_loss(dstore).view(loss_dt)[:, 0]
+    data = _portfolio_loss(dstore).view(loss_dt)[:, 0]
     rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision
@@ -358,15 +355,14 @@ def view_portfolio_losses(token, dstore):
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
-    The mean and stddev loss for the full portfolio for each loss type,
-    extracted from the event loss table, averaged over the realizations
+    The mean full portfolio loss for each loss type,
+    extracted from the event loss table.
     """
-    data = portfolio_loss(dstore)  # shape (R, L)
-    loss_types = list(dstore['oqparam'].loss_dt().names)
-    header = ['portfolio_loss'] + loss_types
-    mean = ['mean'] + [row.mean() for row in data.T]
-    stddev = ['stddev'] + [row.std(ddof=1) for row in data.T]
-    return rst_table([mean, stddev], header)
+    oq = dstore['oqparam']
+    G = getattr(oq, 'number_of_ground_motion_fields', 1)
+    R = dstore['full_lt'].get_num_rlzs()
+    means = dstore['losses_by_event']['loss'].sum(axis=0) / R / G
+    return rst_table([means], oq.loss_names)
 
 
 def sum_table(records):
@@ -839,4 +835,6 @@ def view_extreme(token, dstore):
     mean = dstore.sel('hmaps-stats', stat='mean')[:, 0, 0, -1]  # shape N1MP
     site_ids, = numpy.where(mean == mean.max())
     arr = dstore['sitecol'][site_ids]
-    return write_csv(io.StringIO(), arr)
+    sio = io.StringIO()
+    write_csv(sio, arr)
+    return sio.getvalue()

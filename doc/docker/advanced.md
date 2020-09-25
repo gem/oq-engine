@@ -30,6 +30,6 @@ environment:
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
   * Contact us on IRC: irc.freenode.net, channel #openquake
 

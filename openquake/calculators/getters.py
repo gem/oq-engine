@@ -27,7 +27,7 @@ from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
     EBRupture, BaseRupture, events_dt, RuptureProxy)
 from openquake.risklib.riskinput import rsi2str
-from openquake.commonlib.calc import _gmvs_to_haz_curve
+from openquake.commonlib.calc import gmvs_to_poes
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -413,12 +413,11 @@ class GmfGetter(object):
                 dic = group_by_rlz(hazardr, rlzs)
                 for rlzi, array in dic.items():
                     with hc_mon:
-                        gmvs = array['gmv']
-                        for imti, imt in enumerate(oq.imtls):
-                            poes = _gmvs_to_haz_curve(
-                                gmvs[:, imti], oq.imtls[imt],
-                                oq.ses_per_logic_tree_path)
-                            hcurves[rsi2str(rlzi, sid, imt)] = poes
+                        poes = gmvs_to_poes(
+                            array['gmv'].T, oq.imtls,
+                            oq.ses_per_logic_tree_path)
+                        for m, imt in enumerate(oq.imtls):
+                            hcurves[rsi2str(rlzi, sid, imt)] = poes[m]
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
         gmfdata = self.get_gmfdata(mon)
@@ -515,15 +514,16 @@ def gen_rupture_getters(dstore, srcfilter, ct):
         else:  # split by block
             if not maxweight:
                 maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
-            blocks = list(general.block_splitter(
-                proxies, maxweight, operator.attrgetter('weight')))
-            logging.info('Group %d: %d ruptures -> %d task(s)',
-                         grp_id, len(rups), len(blocks))
-            for block in blocks:
+            nblocks = 0
+            for block in general.block_splitter(
+                    proxies, maxweight, operator.attrgetter('weight')):
+                nblocks += 1
                 rgetter = RuptureGetter(
                     block, dstore.filename, grp_id,
                     trt, samples[grp_id], rlzs_by_gsim[grp_id])
                 yield rgetter
+            logging.info('Sent group %d: %d ruptures -> %d task(s)',
+                         grp_id, len(rups), nblocks)
 
 
 def get_ebruptures(dstore):

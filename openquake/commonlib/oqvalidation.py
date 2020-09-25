@@ -165,6 +165,7 @@ class OqParam(valid.ParamSet):
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
+    maximum_intensity = valid.Param(valid.floatdict, {})  # IMT -> maxIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
@@ -303,6 +304,11 @@ class OqParam(valid.ParamSet):
                     'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
+            if 'maximum_intensity' in names_vals:
+                for imt in self.hazard_imtls:
+                    i1 = calc.filters.getdefault(self.minimum_intensity, 1E-3)
+                    i2 = calc.filters.getdefault(self.maximum_intensity, imt)
+                    self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 25))
             delattr(self, 'intensity_measure_types')
         self._risk_files = get_risk_files(self.inputs)
 
@@ -518,24 +524,28 @@ class OqParam(valid.ParamSet):
         """
         return len(self.imtls.array) // len(self.imtls)
 
-    def set_risk_imtls(self, risk_models):
+    def set_risk_imtls(self, risklist):
         """
-        :param risk_models:
-            a dictionary taxonomy -> loss_type -> risk_function
+        :param risklist:
+            a list of risk functions with attributes .id, .loss_type, .kind
 
         Set the attribute risk_imtls.
         """
         # NB: different loss types may have different IMLs for the same IMT
         # in that case we merge the IMLs
         imtls = AccumDict(accum=[])
-        for taxonomy, risk_functions in risk_models.items():
-            for (lt, kind), rf in risk_functions.items():
-                if not hasattr(rf, 'imt') or kind.endswith('_retrofitted'):
-                    # for consequence or retrofitted
-                    continue
-                imt = rf.imt
-                from_string(imt)  # make sure it is a valid IMT
-                imtls[imt].extend(rf.imls)
+        for i, rf in enumerate(risklist):
+            if not hasattr(rf, 'imt') or rf.kind.endswith('_retrofitted'):
+                # for consequence or retrofitted
+                continue
+            if hasattr(rf, 'build'):  # FragilityFunctionList
+                rf = rf.build(risklist.limit_states,
+                              self.continuous_fragility_discretization,
+                              self.steps_per_interval)
+                risklist[i] = rf
+            imt = rf.imt
+            from_string(imt)  # make sure it is a valid IMT
+            imtls[imt].extend(rf.imls)
         suggested = ['\nintensity_measure_types_and_levels = {']
         risk_imtls = {}
         for imt, imls in imtls.items():

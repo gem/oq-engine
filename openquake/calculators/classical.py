@@ -73,12 +73,18 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
+def classical_(srcs, gsims, params, monitor):
+    srcfilter = monitor.read_pik('srcfilter')
+    return classical(srcs, srcfilter, gsims, params, monitor)
+
+
+def classical_split_filter(srcs, gsims, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
+    srcfilter = monitor.read_pik('srcfilter')
     # first check if we are sampling the sources
     ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     if ss:
@@ -103,7 +109,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
-        yield classical, block, srcfilter, gsims, params
+        yield classical_, block, gsims, params
     if monitor.calc_id and subtasks:
         msg = 'produced %d subtask(s) with mean weight %d' % (
             subtasks, numpy.mean([b.weight for b in blocks[:-1]]))
@@ -116,13 +122,14 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
-def preclassical(srcs, srcfilter, gsims, params, monitor):
+def preclassical(srcs, gsims, params, monitor):
     """
     Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
     with monitor("splitting/filtering sources"):
+        srcfilter = monitor.read_pik('srcfilter')
         splits, _stime = split_sources(srcs)
     totrups = 0
     maxradius = 0
@@ -333,7 +340,6 @@ class ClassicalCalculator(base.HazardCalculator):
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = mags[trt][()]
-        oq.maximum_distance.interp(mags_by_trt)
         if psd is not None:
             psd.interp(mags_by_trt)
             for trt, dic in psd.ddic.items():
@@ -357,6 +363,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['effect_by_mag_dst'] = aw
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
                                 num_cores=oq.num_cores)
+        smap.monitor.save_pik('srcfilter', self.src_filter())
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
@@ -429,9 +436,9 @@ class ClassicalCalculator(base.HazardCalculator):
         elif oq.disagg_by_src or oq.is_ucerf() or oq.split_sources is False:
             # do not split the sources
             C *= 5  # use more tasks, especially in UCERF
-            f1, f2 = classical, classical
+            f1, f2 = classical_, classical_
         else:
-            f1, f2 = classical, classical_split_filter
+            f1, f2 = classical_, classical_split_filter
         max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
@@ -444,14 +451,13 @@ class ClassicalCalculator(base.HazardCalculator):
             collapse_level=oq.collapse_level,
             max_sites_disagg=oq.max_sites_disagg,
             af=self.af)
-        srcfilter = self.src_filter(self.datastore.tempname)
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
             param['rescale_weight'] = len(gsims)
             if sg.atomic:
                 # do not split atomic groups
                 nb = 1
-                smap.submit((sg, srcfilter, gsims, param), f1)
+                smap.submit((sg, gsims, param), f1)
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
@@ -463,7 +469,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block),
                                   sum(srcweight(src) for src in block))
-                    smap.submit((block, srcfilter, gsims, param), f2)
+                    smap.submit((block, gsims, param), f2)
 
             w = sum(srcweight(src) for src in sg)
             logging.info('TRT = %s', sg.trt)

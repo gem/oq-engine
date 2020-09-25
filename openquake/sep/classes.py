@@ -103,7 +103,7 @@ class NewmarkDisplacement(SecondaryPeril):
     def compute(self, mag, imt, gmf, sites):
         if imt.name == 'PGA':
             nd = newmark_displ_from_pga_M(
-                gmf[:, 0], sites.critical_accel, mag,
+                gmf, sites.crit_accel, mag,
                 self.c1, self.c2, self.c3, self.c4, self.crit_accel_threshold)
             return nd, prob_failure_given_displacement(nd)
         else:
@@ -119,13 +119,12 @@ class HazusLiquefaction(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, mag, imt, gmfs, sites):
+    def compute(self, mag, imt, gmf, sites):
         if imt.name == 'PGA':
             return [hazus_liquefaction_probability(
-                pga=gmfs[:, 0], mag=mag,
-                liq_susc_cat=sites.liq_susc_cat,
+                pga=gmf, mag=mag, liq_susc_cat=sites.liq_susc_cat,
                 groundwater_depth=sites.gwd,
-                do_meap_proportion_correction=self.map_proportion_flag)]
+                do_map_proportion_correction=self.map_proportion_flag)]
         else:
             raise NotImplementedError('NewarkDisplacement for %s' % imt)
 
