@@ -355,15 +355,14 @@ def view_portfolio_losses(token, dstore):
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
-    The mean and stddev loss for the full portfolio for each loss type,
-    extracted from the event loss table, averaged over the realizations
+    The mean full portfolio loss for each loss type,
+    extracted from the event loss table.
     """
     oq = dstore['oqparam']
     G = dstore['oqparam'].number_of_ground_motion_fields
     R = dstore['full_lt'].get_num_rlzs()
     means = dstore['losses_by_event']['loss'].sum(axis=0) / R / G
-    loss_types = list(oq.loss_dt().names)
-    return rst_table([means], loss_types)
+    return rst_table([means], oq.loss_names)
 
 
 def sum_table(records):
