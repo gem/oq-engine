@@ -65,11 +65,12 @@ def get_mean_curves(dstore, imt):
 # ########################################################################## #
 
 
-def compute_gmfs(rupgetter, srcfilter, param, monitor):
+def compute_gmfs(rupgetter, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
     oq = param['oqparam']
+    srcfilter = monitor.read_pik('srcfilter')
     getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'],
                        param['sec_perils'])
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
@@ -321,14 +322,15 @@ class EventBasedCalculator(base.HazardCalculator):
         nr = len(self.datastore['ruptures'])
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', nr)
-        iterargs = ((rgetter, self.srcfilter, self.param)
+        iterargs = ((rgetter, self.param)
                     for rgetter in gen_rupture_getters(
                             self.datastore, self.srcfilter,
                             oq.concurrent_tasks))
-        acc = parallel.Starmap(
+        smap = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores
-        ).reduce(self.agg_dicts, self.acc0())
+            num_cores=oq.num_cores)
+        smap.monitor.save_pik('srcfilter', self.srcfilter)
+        acc = smap.reduce(self.agg_dicts, self.acc0())
 
         if self.indices:
             dset = self.datastore['gmf_data/indices']
