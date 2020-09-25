@@ -118,10 +118,9 @@ def calc_risk(gmfs, param, monitor):
     return acc
 
 
-def ebrisk(rupgetter, srcfilter, param, monitor):
+def ebrisk(rupgetter, param, monitor):
     """
     :param rupgetter: RuptureGetter with multiple ruptures
-    :param srcfilter: a SourceFilter
     :param param: dictionary of parameters coming from oqparam
     :param monitor: a Monitor instance
     :returns: a dictionary with keys elt, alt, ...
@@ -130,6 +129,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     mon_haz = monitor('getting hazard', measuremem=False)
     gmfs = []
     gmf_info = []
+    srcfilter = monitor.read_pik('srcfilter')
     gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
                            param['amplifier'])
     nbytes = 0
@@ -245,10 +245,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
+        smap.monitor.save_pik('srcfilter', srcfilter)
         smap.monitor.save_pik('crmodel', self.crmodel)
         for rgetter in getters.gen_rupture_getters(
                 self.datastore, srcfilter, oq.concurrent_tasks):
-            smap.submit((rgetter, srcfilter, self.param))
+            smap.submit((rgetter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
             self.datastore['event_loss_table/indices'] = self.indices
