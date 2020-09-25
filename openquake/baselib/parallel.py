@@ -721,6 +721,7 @@ class Starmap(object):
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
         self.monitor = Monitor(task_func.__name__)
+        self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args

@@ -403,7 +403,7 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    def src_filter(self, filename=None):
+    def src_filter(self):
         """
         :returns: a SourceFilter/UcerfFilter
         """
@@ -412,10 +412,9 @@ class HazardCalculator(BaseCalculator):
             sitecol = self.sitecol.complete
         else:  # can happen to the ruptures-only calculator
             sitecol = None
-            filename = None
         if oq.is_ucerf():
-            return UcerfFilter(sitecol, oq.maximum_distance, filename)
-        return SourceFilter(sitecol, oq.maximum_distance, filename)
+            return UcerfFilter(sitecol, oq.maximum_distance)
+        return SourceFilter(sitecol, oq.maximum_distance)
 
     @property
     def E(self):
@@ -471,12 +470,8 @@ class HazardCalculator(BaseCalculator):
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
-        if getattr(self, 'sitecol', None):
-            # can be None for the ruptures-only calculator
-            with hdf5.File(self.datastore.tempname, 'w') as tmp:
-                tmp['sitecol'] = self.sitecol
-        elif (oq.calculation_mode == 'disaggregation' and
-              oq.max_sites_disagg < len(self.sitecol)):
+        if (oq.calculation_mode == 'disaggregation' and
+                oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
@@ -1042,6 +1037,7 @@ class RiskCalculator(HazardCalculator):
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
+        smap.monitor.save_pik('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
             logging.info('Sending hazard for %d assets, %d sites',
@@ -1052,7 +1048,7 @@ class RiskCalculator(HazardCalculator):
                 # also, I could not get lazy reading to work with
                 # the SWMR mode for event_based_risk
                 ri.hazard_getter.init()
-            smap.submit((block, self.crmodel, self.param))
+            smap.submit((block, self.param))
             for ri in block:  # save memory
                 try:
                     ri.hazard_getter.data.clear()
