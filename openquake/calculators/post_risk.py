@@ -25,7 +25,7 @@ from openquake.baselib import general, parallel, datastore
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific
-from openquake.calculators import base
+from openquake.calculators import base, views
 
 F32 = numpy.float32
 U32 = numpy.uint32
@@ -235,6 +235,8 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity check on tot_losses
         """
+        logging.info('Mean portfolio loss\n' +
+                     views.view('portfolio_loss', self.datastore))
         logging.info('Sanity check on agg_losses/tot_losses')
         for kind in 'rlzs', 'stats':
             agg = 'agg_losses-' + kind
