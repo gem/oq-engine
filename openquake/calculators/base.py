@@ -1163,12 +1163,12 @@ def import_gmfs(dstore, fname, sids):
             gmvs = dic[sid]
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
-    create_gmf_data(dstore, len(oq.imtls), data)
+    create_gmf_data(dstore, len(oq.imtls), data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
 
 
-def create_gmf_data(dstore, M, data=None):
+def create_gmf_data(dstore, M, secperils=(), data=None):
     dstore.create_dset('gmf_data/sid', U32)
     dstore.create_dset('gmf_data/eid', U32)
     cols = ['sid', 'eid']
@@ -1181,6 +1181,9 @@ def create_gmf_data(dstore, M, data=None):
         dstore.create_dset('gmf_data/' + col, F32)
         if data is not None:
             dstore[f'gmf_data/' + col] = data['gmv'][:, m]
+        for peril in secperils:
+            for out in peril.outputs:
+                dstore.create_dset(f'gmf_data/{out}_{m}', F32)
     dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
 
 

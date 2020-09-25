@@ -205,6 +205,11 @@ class EventBasedCalculator(base.HazardCalculator):
                 for m in range(M):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 data['gmv'][:, m])
+                secperils = data.dtype.names[3:]  # after sid, eid, gmv
+                for m in range(M):
+                    for peril in secperils:
+                        hdf5.extend(self.datastore[f'gmf_data/{peril}_{m}'],
+                                    data[peril][:, m])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(data)
@@ -309,7 +314,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.ground_motion_fields:
             M = len(oq.imtls)
             nrups = len(self.datastore['ruptures'])
-            base.create_gmf_data(self.datastore, M)
+            base.create_gmf_data(self.datastore, M, self.param['sec_perils'])
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
@@ -331,7 +336,7 @@ class EventBasedCalculator(base.HazardCalculator):
             num_cores=oq.num_cores)
         smap.monitor.save_pik('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
-        if oq.calculation_mode == 'ebrisk':
+        if 'gmf_data' not in self.datastore:
             return acc
         eids = self.datastore['gmf_data/eid']
         if oq.minimum_intensity:
