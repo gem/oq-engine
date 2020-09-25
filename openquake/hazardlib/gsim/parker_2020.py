@@ -74,16 +74,24 @@ class ParkerEtAl2020SInter(GMPE):
     #: Supported intensity measure component is the geometric mean component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
-    # TODO: z2pt5 is optional
     #: Site amplification is dependent only upon Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are only magnitude for the interface model
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is closest distance to rupture, for
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
+
+    def __init__(self, region=None, saturation_region=None, basin=None):
+        super().__init__()
+        self.region = region
+        if saturation_region is None:
+            self.saturation_region = region
+        else:
+            self.saturation_region = saturation_region
+        self.basin = basin
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -94,41 +102,19 @@ class ParkerEtAl2020SInter(GMPE):
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
         
-        Mb = self._get_mb(saturation_region)
-        c0, c0_pga = self._c0(C, C_PGA, region)
+        Mb = self._get_mb()
+        c0, c0_pga = self._c0(C, C_PGA)
         Fm, Fm_pga = self._magnitude_scaling(C, C_PGA, rup.mag, Mb)
-        Fp, Fp_pga = self._path_term(C, C_PGA, rup.mag, dists.rrup, Mb, region)
-        Fd, Fd_pga = self._depth_scaling(hypo, C)
-
-        return
-
-    def GMM_at_VS30_v4(self, C, C_PGA, region, saturation_region):
-        """
-        """
-
-        # linear site term
-        Flin = self._linear_amplification(C, region, sites.vs30)
-
-        # non-linear site term
-        # Fd for slab only
-        PGAr = math.exp(Fp_pga + Fm_pga + c0_pga + Fd_pga)
-
-        if imt not in ["pga", "pgv"] and imt >= 3:
-            Fnl = 0
-        else:
-            Fnl = C["f4"] * (math.exp(C["f5"] * (min(sites.vs30, self.CONSTANTS["Vref_Fnl"]) - self.CONSTANTS["Vb"])) \
-                - math.exp(C["f5"] * (self.CONSTANTS["Vref_Fnl"] - self.CONSTANTS["Vb"])))
-            Fnl *= math.log((PGAr + self.CONSTANTS["f3"]) / self.CONSTANTS["f3"])
-
-        # basin term
-        Fb = self._basin_term(region, sites.vs30, coeff, basin)
-
-        # mu as sum
-        mu = Fp + Fnl + Fb + Flin + Fm + c0
-        if slab:
-            mu += Fd
+        Fp, Fp_pga = self._path_term(C, C_PGA, rup.mag, dists.rrup, Mb)
+        Fd = self._depth_scaling(C, rup.hypo_depth)
+        Fd_pga = self._depth_scaling(C_PGA, rup.hypo_depth)
+        Fb = self._basin_term(C, sites, basin)
+        Flin = self._linear_amplification(C, sites.vs30)
+        Fnl = self._non_linear_term(C, imt, vs30, Fp_pga, Fm_pga, c0_pga, Fd_pga)
+        
         # The output is the desired median model prediction in LN units
         # Take the exponential to get PGA, PSA in g or the PGV in cm/s
+        mu = Fp + Fnl + Fb + Flin + Fm + c0 + Fd
         return mu
 
     def hypocentral_depth_estimate(self, ztor, width, dip):
@@ -138,12 +124,12 @@ class ParkerEtAl2020SInter(GMPE):
         """
         return ztor + 0.48 * width * math.sin(dip)
 
-    def _c0(self, C, C_PGA, saturation_region):
+    def _c0(self, C, C_PGA):
         # c0
-        if saturation_region is None:
+        if self.saturation_region is None:
             c0_col = "c0"
         else:
-            c0_col = saturation_region + "_c0"
+            c0_col = self.saturation_region + "_c0"
         return C[c0_col], C_PGA[c0_col]
 
     def _magnitude_scaling(self, C, C_PGA, mag, Mb):
@@ -155,11 +141,11 @@ class ParkerEtAl2020SInter(GMPE):
             Fm = C["c4"] * m_diff + C["c5"] * m_diff ** 2
             Fm_pga = C_PGA["c4"] * m_diff + C_PGA["c5"] * m_diff ** 2
 
-    def _get_mb(self, saturation_region):
+    def _get_mb(self):
         mb_regions = ("Aleutian", "AK", "Cascadia", "CAM_S", "CAM_N", \
             "JP_Pac", "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
-        if saturation_region in mb_regions:
-            i = mb_regions.index(saturation_region)
+        if self.saturation_region in mb_regions:
+            i = mb_regions.index(self.saturation_region)
             Mb = (8, 8.6, 7.7, 7.4, 7.4, 8.5, 7.7, 8.5, 8.6, 7.1, 7.1)[i]
         else:
             Mb = 7.9
@@ -178,32 +164,34 @@ class ParkerEtAl2020SInter(GMPE):
             a0 = C[region + "_a0"]
             a0_pga = C_PGA[region + "_a0"]
 
-    def _path_term(self, C, C_PGA, mag, rrup, Mb, region):
+    def _path_term(self, C, C_PGA, mag, rrup, Mb):
         # path term
         h = self._path_term_h(self, mag, Mb)
         R = math.sqrt(rrup ** 2 + h ** 2)
         # log(R / Rref)
         R_Rref = math.log(R / math.sqrt(1 + h ** 2))
 
-        a0, a0_pga = self._a0(C, C_PGA, region)
+        a0, a0_pga = self._a0(C, C_PGA, self.region)
 
-        Fp = C["c1"] * math.log(R) + (self.CONSTANTS["b4"] * mag) * R_Rref + a0 * R
-        Fp_pga = C_PGA["c1"] * math.log(R) + (self.CONSTANTS["b4"] * mag) * R_Rref + a0_pga * R
+        Fp = C["c1"] * math.log(R) + (self.CONSTANTS["b4"] * mag) \
+            * R_Rref + a0 * R
+        Fp_pga = C_PGA["c1"] * math.log(R) + (self.CONSTANTS["b4"] * mag) \
+            * R_Rref + a0_pga * R
 
         return Fp, Fp_pga
 
-    def _linear_amplification(self, C, region, vs30):
+    def _linear_amplification(self, C, vs30):
         # site coefficients
         V1 = self.CONSTANTS["V1"]
         Vref = self.CONSTANTS["Vref"]
-        if region is None or region == "CAM":
+        if self.region is None or self.region == "CAM":
             s2 = C["s2"]
             s1 = s2
-        elif region == "TW" or region == "JP":
-            s2 = C[region + "_s2"]
-            s1 = C[region + "_s1"]
+        elif self.region == "TW" or self.region == "JP":
+            s2 = C[self.region + "_s2"]
+            s1 = C[self.region + "_s1"]
         else:
-            s2 = C[region + "_s2"]
+            s2 = C[self.region + "_s2"]
             s1 = s2
 
         # linear site term
@@ -214,26 +202,43 @@ class ParkerEtAl2020SInter(GMPE):
         else:
             return s2 * math.log(C["V2"] / Vref)
 
-    def _basin_term(self, C, region, sites=None, basin=None, z2pt5=None):
+    def _non_linear_term(self, C, imt, vs30, fp, fm, c0, fd=0):
+        # non-linear site term
+        # Fd for slab only
+        PGAr = math.exp(Fp_pga + Fm_pga + c0_pga + Fd_pga)
+
+        if imt not in ["pga", "pgv"] and imt >= 3:
+            Fnl = 0
+        else:
+            Fnl = C["f4"] * (math.exp(C["f5"] \
+                * (min(vs30, self.CONSTANTS["Vref_Fnl"]) \
+                - self.CONSTANTS["Vb"])) - math.exp(C["f5"] \
+                * (self.CONSTANTS["Vref_Fnl"] - self.CONSTANTS["Vb"])))
+            Fnl *= math.log((PGAr \
+                + self.CONSTANTS["f3"]) / self.CONSTANTS["f3"])
+
+        return Fnl
+
+    def _basin_term(self, C, sites=None):
         """
         Basin term main handler.
         """
         if sites is None or sites.z2pt5 is None:
             return 0
 
-        if region == "JP":
+        if self.region == "JP":
             return self._get_basin_term_factors(3.05, -0.8, 500, 0.33, \
                 C["J_e1"], C["J_e2"], C["J_e3"])
 
-        elif region == "Cascadia":
-            if basin is None:
+        elif self.region == "Cascadia":
+            if self.basin is None:
                 return self._get_basin_term_factors(3.94, -0.42, 200, 0.2, \
                     C["C_e1"], C["C_e2"], C["C_e3"], sites)
-            elif basin == "out":
+            elif self.basin == "out":
                 dn = C["del_None"]
                 return self._get_basin_term_factors(3.94, -0.42, 200, 0.2, \
                     C["C_e1"] + dn, C["C_e2"] + dn, C["C_e3"] + dn, sites)
-            elif basin == "Seattle":
+            elif self.basin == "Seattle":
                 ds = C["del_Seattle"]
                 return self._get_basin_term_factors(3.94, -0.42, 200, 0.2, \
                     C["C_e1"] + ds, C["C_e2"] + ds, C["C_e3"] + ds, sites)
@@ -256,6 +261,9 @@ class ParkerEtAl2020SInter(GMPE):
             return e2
         else:
             return e3 * del_Z2p5
+
+    def _depth_scaling(self, C, hypo_depth):
+        return 0
 
     # sa_damping required but significance of 5 unknown
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -299,32 +307,24 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    # source depth scaling
-    Fd = self._depth_scaling(hypo_depth, C)
-    Fd_pga = self._depth_scaling(hypo_depth, C_PGA)
+    # slab also requires hypo_depth
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    PGAr = math.exp(Fp_pga + Fm_pga + c0_pga + Fd_pga)
-
-    # mu as sum
-    mu = Fp + Fnl + Fb + Flin + Fm + c0 + Fd
-    return mu
-
-
-    def _c0(self, C, C_PGA, saturation_region):
-        if saturation_region is None:
+    def _c0(self, C, C_PGA):
+        if self.saturation_region is None:
             c0_col = "c0slab"
-        elif saturation_region.startswith("SA_"):
-            c0_col = saturation_region + "_c0slab"
+        elif self.region == "SA":
+            c0_col = self.saturation_region + "_c0slab"
         else:
             # no more specific region available
-            c0_col = saturation_region.split("_")[0] + "_c0slab"
+            c0_col = self.region + "_c0slab"
         return C[c0_col], C_PGA[c0_col]
 
-    def _get_mb(self, saturation_region):
+    def _get_mb(self):
         mb_regions = ("Aleutian", "AK", "Cascadia", "CAM_S", "CAM_N", \
             "JP_Pac", "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
-        if saturation_region in mb_regions:
-            i = mb_regions.index(saturation_region)
+        if self.saturation_region in mb_regions:
+            i = mb_regions.index(self.saturation_region)
             Mb = (7.98, 7.2, 7.2, 7.6, 7.4, 7.65, 7.55, 7.3, 7.25, 7.7, 7.7)[i]
         else:
             Mb = 7.6
@@ -338,14 +338,14 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
         else:
             return 35
 
-    def _a0(self, C, C_PGA, region):
+    def _a0(self, C, C_PGA):
         # isolate regional anelastic coefficient, a0
-        if region is None:
+        if self.region is None:
             return C["a0"], C_PGA["a0"]
         else:
-            return C[region + "_a0"], C_PGA[region + "_a0"]
+            return C[self.region + "_a0"], C_PGA[self.region + "_a0"]
 
-    def _depth_scaling(self, hypo_depth, C):
+    def _depth_scaling(self, C, hypo_depth):
         if hypo_depth >= C["db"]:
             return C["d"]
         elif hypo_depth <= 20:
@@ -354,22 +354,232 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
             return C["m"] * (hypo_depth - C["db"]) + C["d"]
 
 
+class ParkerEtAl2020SInterAleutian(ParkerEtAl2020SInter):
+    """
+    For the Aleutian region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterAleutian, self).__init__(region="Aleutian")
+
+
+class ParkerEtAl2020SInterAlaska(ParkerEtAl2020SInter):
+    """
+    For the Alaska region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterAlaska, self).__init__(region="AK")
+
+
+class ParkerEtAl2020SInterCAMN(ParkerEtAl2020SInter):
+    """
+    For the CAM North region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterCAMN, self).__init__(region="CAM", \
+            saturation_region="CAM_N")
+
+
+class ParkerEtAl2020SInterCAMS(ParkerEtAl2020SInter):
+    """
+    For the CAM South region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterCAMS, self).__init__(region="CAM", \
+            saturation_region="CAM_S")
+
+
 class ParkerEtAl2020SInterCascadia(ParkerEtAl2020SInter):
     """
     Cascadia, other mapped basin (Tacoma, Everett, Georgia, etc.).
     """
+    def __init__():
+        super(ParkerEtAl2020SInterCascadia, self).__init__(region="Cascadia")
 
 
 class ParkerEtAl2020SInterCascadiaOut(ParkerEtAl2020SInter):
     """
     Cascadia, estimate of Z2.5 outside mapped basin.
     """
+    def __init__():
+        super(ParkerEtAl2020SInterCascadiaOut, self).__init__( \
+            region="Cascadia", basin="out")
 
 
 class ParkerEtAl2020SInterCascadiaSeattle(ParkerEtAl2020SInter):
     """
     Cascadia, Seattle basin.
     """
+    def __init__():
+        super(ParkerEtAl2020SInterCascadiaSeattle, self).__init__( \
+            region="Cascadia", basin="Seattle")
+
+
+class ParkerEtAl2020SInterJapanPac(ParkerEtAl2020SInter):
+    """
+    For the Japan Pac region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterJapanPac, self).__init__(region="JP", \
+            saturation_region="JP_Pac")
+
+
+class ParkerEtAl2020SInterJapanPhi(ParkerEtAl2020SInter):
+    """
+    For the Japan Phi region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterJapanPhi, self).__init__(region="JP", \
+            saturation_region="JP_Phi")
+
+
+class ParkerEtAl2020SInterSAN(ParkerEtAl2020SInter):
+    """
+    For the SA North region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterSAN, self).__init__(region="SA", \
+            saturation_region="SA_N")
+
+
+class ParkerEtAl2020SInterSAS(ParkerEtAl2020SInter):
+    """
+    For the SA South region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterSAS, self).__init__(region="SA", \
+            saturation_region="SA_S")
+
+
+class ParkerEtAl2020SInterTaiwanE(ParkerEtAl2020SInter):
+    """
+    For the Taiwan East region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterTaiwanE, self).__init__(region="TW", \
+            saturation_region="TW_E")
+
+
+class ParkerEtAl2020SInterTaiwanW(ParkerEtAl2020SInter):
+    """
+    For the Taiwan West region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SInterTaiwanW, self).__init__(region="TW", \
+            saturation_region="TW_W")
+
+
+class ParkerEtAl2020SSlabAleutian(ParkerEtAl2020SSlab):
+    """
+    For the Aleutian region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabAleutian, self).__init__(region="Aleutian")
+
+
+class ParkerEtAl2020SSlabAlaska(ParkerEtAl2020SSlab):
+    """
+    For the Alaska region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabAlaska, self).__init__(region="AK")
+
+
+class ParkerEtAl2020SSlabCAMN(ParkerEtAl2020SSlab):
+    """
+    For the CAM North region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabCAMN, self).__init__(region="CAM", \
+            saturation_region="CAM_N")
+
+
+class ParkerEtAl2020SSlabCAMS(ParkerEtAl2020SSlab):
+    """
+    For the CAM South region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabCAMS, self).__init__(region="CAM", \
+            saturation_region="CAM_S")
+
+
+class ParkerEtAl2020SSlabCascadia(ParkerEtAl2020SSlab):
+    """
+    Cascadia, other mapped basin (Tacoma, Everett, Georgia, etc.).
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabCascadia, self).__init__(region="Cascadia")
+
+
+class ParkerEtAl2020SSlabCascadiaOut(ParkerEtAl2020SSlab):
+    """
+    Cascadia, estimate of Z2.5 outside mapped basin.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabCascadiaOut, self).__init__( \
+            region="Cascadia", basin="out")
+
+
+class ParkerEtAl2020SSlabCascadiaSeattle(ParkerEtAl2020SSlab):
+    """
+    Cascadia, Seattle basin.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabCascadiaSeattle, self).__init__( \
+            region="Cascadia", basin="Seattle")
+
+
+class ParkerEtAl2020SSlabJapanPac(ParkerEtAl2020SSlab):
+    """
+    For the Japan Pac region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabJapanPac, self).__init__(region="JP", \
+            saturation_region="JP_Pac")
+
+
+class ParkerEtAl2020SSlabJapanPhi(ParkerEtAl2020SSlab):
+    """
+    For the Japan Phi region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabJapanPhi, self).__init__(region="JP", \
+            saturation_region="JP_Phi")
+
+
+class ParkerEtAl2020SSlabSAN(ParkerEtAl2020SSlab):
+    """
+    For the SA North region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabSAN, self).__init__(region="SA", \
+            saturation_region="SA_N")
+
+
+class ParkerEtAl2020SSlabSAS(ParkerEtAl2020SSlab):
+    """
+    For the SA South region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabSAS, self).__init__(region="SA", \
+            saturation_region="SA_S")
+
+
+class ParkerEtAl2020SSlabTaiwanE(ParkerEtAl2020SSlab):
+    """
+    For the Taiwan East region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabTaiwanE, self).__init__(region="TW", \
+            saturation_region="TW_E")
+
+
+class ParkerEtAl2020SSlabTaiwanW(ParkerEtAl2020SSlab):
+    """
+    For the Taiwan West region.
+    """
+    def __init__():
+        super(ParkerEtAl2020SSlabTaiwanW, self).__init__(region="TW", \
+            saturation_region="TW_W")
 
 
 def Aleatory_Function(period, Rrup, VS30):
