@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import functools
+import logging
 import numpy
 
 from openquake.baselib import hdf5
@@ -24,7 +25,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
-from openquake.calculators import base
+from openquake.calculators import base, views
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -188,3 +189,5 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore['losses_by_event'] = lbe
             loss_types = self.oqparam.loss_dt().names
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
+        logging.info('Mean portfolio loss\n' +
+                     views.view('portfolio_loss', self.datastore))

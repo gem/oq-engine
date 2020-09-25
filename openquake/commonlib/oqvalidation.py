@@ -168,7 +168,7 @@ class OqParam(valid.ParamSet):
     maximum_intensity = valid.Param(valid.floatdict, {})  # IMT -> maxIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
-    number_of_ground_motion_fields = valid.Param(valid.positiveint)
+    number_of_ground_motion_fields = valid.Param(valid.positiveint, 1)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_cores = valid.Param(valid.positiveint, None)
     num_epsilon_bins = valid.Param(valid.positiveint)
