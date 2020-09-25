@@ -1,3 +1,7 @@
+  [Richard Styron]
+  * Added secondary perils ZhuLiquefactionGeneral and HazusLateralSpreading,
+    supplementing HazusLiquefaction and NewmarkDisplacement
+
   [Michele Simionato]
   * Fixed a bug with site models containing non-float parameters
   * Raised the limit on the asset ID from 20 to 50 characters

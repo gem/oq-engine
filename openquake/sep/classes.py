@@ -70,7 +70,8 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
         return '<%s %s>' % self.__class__.__name__
 
 
-class FakePeril(SecondaryPeril):
+class _FakePeril(SecondaryPeril):
+    # useful to test the framework
     outputs = ['fake']
 
     def prepare(self, sites):
@@ -153,7 +154,7 @@ class HazusLateralSpreading(SecondaryPeril):
 class ZhuLiquefactionGeneral(SecondaryPeril):
     outputs = ['liq_prob']
 
-    def __init__(self, intercept = 24.1, cti_coeff = 0.355, vs30_coeff=-4.784):
+    def __init__(self, intercept=24.1, cti_coeff=0.355, vs30_coeff=-4.784):
         self.intercept = intercept
         self.cti_coeff = cti_coeff
         self.vs30_coeff = vs30_coeff
@@ -163,10 +164,11 @@ class ZhuLiquefactionGeneral(SecondaryPeril):
 
     def compute(self, mag, imt, gmf, sites):
         if imt.name == 'PGA':
-            return [zhu_liquefaction_probability_general(pga=gmf, mag=mag,
-                cti=sites.cti, vs30=sites.vs30)]
+            return [zhu_liquefaction_probability_general(
+                pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30)]
         else:
             raise NotImplementedError(
                 'Zhu Liquefaction not implemented for %s' % imt)
+
 
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
