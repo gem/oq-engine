@@ -86,7 +86,7 @@ def gmvs_to_mean_hcurves(dstore):
     N = len(dstore['sitecol'])
     M = len(oq.imtls)
     L1 = len(oq.imtls.array) // M
-    gmf_df = dstore.read_df('gmf_data/data', 'sid')
+    gmf_df = dstore.read_df('gmf_data', 'sid')
     mean = numpy.zeros((N, 1, M, L1))
     for sid, df in gmf_df.groupby(gmf_df.index):
         gmvs = [df[col].to_numpy() for col in df.columns

@@ -75,7 +75,7 @@ the ``gmf_data`` table indexed by event ID, i.e. the ``eid`` field:
 .. code-block:: python
 
    >>> eid = 20  # consider event with ID 20
-   >>> gmf_data = dstore.read_df('gmf_data/data', index='eid')
+   >>> gmf_data = dstore.read_df('gmf_data', index='eid')
    >>> gmf_data.loc[eid]
          sid     gmv_0
    eid               
@@ -93,7 +93,7 @@ from the ground motion values by using the function `gmvs_to_poes`,
 available since engine 3.10:
 
    >>> from openquake.commonlib.calc import gmvs_to_poes
-   >>> gmf_data = dstore.read_df('gmf_data/data', index='sid')
+   >>> gmf_data = dstore.read_df('gmf_data', index='sid')
    >>> df = gmf_data.loc[0]  # first site
    >>> gmvs = [df[col].to_numpy() for col in df.columns
    ...         if col.startswith('gmv_')]  # list of M arrays

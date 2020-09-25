@@ -146,7 +146,7 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
         # compute hcurves in postprocessing and compare with inprocessing
-        df = self.calc.datastore.read_df('gmf_data/data', 'sid').loc[0]
+        df = self.calc.datastore.read_df('gmf_data', 'sid').loc[0]
         gmvs = [df[col].to_numpy() for col in df.columns
                 if col.startswith('gmv_')]
         oq = self.calc.datastore['oqparam']
@@ -467,7 +467,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_26_land(self):
         # cali landslide simplified
         self.run_calc(case_26.__file__, 'job.ini')
-        df = self.calc.datastore.read_df('gmf_data/data', 'sid')
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
         pd_mean = df[df['prob_disp_0'] > 0]['prob_disp_0'].mean()
         nd_mean = df[df['newmark_disp_0'] > 0]['newmark_disp_0'].mean()
         self.assertGreater(pd_mean, 0)
@@ -476,7 +476,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
-        df = self.calc.datastore.read_df('gmf_data/data', 'sid')
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
         pd_mean = df[df['liq_prob_0'] > 0]['liq_prob_0'].mean()
         self.assertGreater(pd_mean, 0)
 
