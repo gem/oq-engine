@@ -53,6 +53,9 @@ def hazus_lateral_spreading_displacement(
     if return_unit == 'm':
         disp_m = disp_inch / (INCH_PER_M)
         return disp_m
+    elif return_unit == 'cm':
+        disp_cm = 100. * disp_inch / (INCH_PER_M)
+        return disp_cm
     elif return_unit == 'in':
         return disp_inch
     else:
