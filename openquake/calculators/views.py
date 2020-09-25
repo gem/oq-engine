@@ -359,7 +359,7 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    G = dstore['oqparam'].number_of_ground_motion_fields
+    G = dstore['oqparam'].number_of_ground_motion_fields or 1
     R = dstore['full_lt'].get_num_rlzs()
     means = dstore['losses_by_event']['loss'].sum(axis=0) / R / G
     return rst_table([means], oq.loss_names)
