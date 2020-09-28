@@ -705,10 +705,9 @@ class EBRupture(object):
         """
         return self.rupture.rup_id
 
-    def get_eids_by_rlz(self, rlzs_by_gsim, offset=0):
+    def get_eids_by_rlz(self, rlzs_by_gsim):
         """
         :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-        :param offset: offset used in the calculation of the event ID
         :returns: a dictionary rlz index -> eids array
         """
         j = 0
@@ -717,14 +716,14 @@ class EBRupture(object):
             for rlzs in rlzs_by_gsim.values():
                 for rlz in rlzs:
                     dic[rlz] = numpy.arange(
-                        j, j + self.n_occ, dtype=U32) + offset
+                        j, j + self.n_occ, dtype=U32)
                     j += self.n_occ
         else:  # associated eids to the realizations
             rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
             histo = general.random_histogram(
                 self.n_occ, len(rlzs), self.rup_id)
             for rlz, n in zip(rlzs, histo):
-                dic[rlz] = numpy.arange(j, j + n, dtype=U32) + offset
+                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
                 j += n
         return dic
 

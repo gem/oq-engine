@@ -357,7 +357,6 @@ class GmfGetter(object):
                         ebr, sitecol, self.oqparam.imtls, self.cmaker,
                         self.oqparam.truncation_level, self.correl_model,
                         self.amplifier, self.sec_perils)
-                    computer.offset = self.rupgetter.offset
                 except FarAwayRupture:
                     continue
                 # due to numeric errors ruptures within the maximum_distance
@@ -455,7 +454,10 @@ def group_by_rlz(data, rlzs):
     """
     acc = general.AccumDict(accum=[])
     for rec in data:
-        acc[rlzs[rec['eid']]].append(rec)
+        try:
+            acc[rlzs[rec['eid']]].append(rec)
+        except:
+            import pdb; pdb.set_trace()
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
@@ -509,28 +511,18 @@ def gen_rupture_getters(dstore, srcfilter, ct):
             continue
         trt = trt_by_grp[grp_id]
         proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
-        if len(proxies) == 1:  # split by gsim
-            offset = 0
-            for gsim, rlzs in rlzs_by_gsim[grp_id].items():
-                rgetter = RuptureGetter(
-                    proxies, dstore.filename, grp_id,
-                    trt, samples[grp_id], {gsim: rlzs})
-                rgetter.offset = offset
-                offset += rgetter.num_events
-                yield rgetter
-        else:  # split by block
-            if not maxweight:
-                maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
-            nblocks = 0
-            for block in general.block_splitter(
-                    proxies, maxweight, operator.attrgetter('weight')):
-                nblocks += 1
-                rgetter = RuptureGetter(
-                    block, dstore.filename, grp_id,
-                    trt, samples[grp_id], rlzs_by_gsim[grp_id])
-                yield rgetter
-            logging.info('Sent group %d: %d ruptures -> %d task(s)',
-                         grp_id, len(rups), nblocks)
+        if not maxweight:
+            maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
+        nblocks = 0
+        for block in general.block_splitter(
+                proxies, maxweight, operator.attrgetter('weight')):
+            nblocks += 1
+            rgetter = RuptureGetter(
+                block, dstore.filename, grp_id,
+                trt, samples[grp_id], rlzs_by_gsim[grp_id])
+            yield rgetter
+        logging.info('Sent group %d: %d ruptures -> %d task(s)',
+                     grp_id, len(rups), nblocks)
 
 
 def get_ebruptures(dstore):
@@ -570,7 +562,6 @@ class RuptureGetter(object):
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         n_occ = sum(int(proxy['n_occ']) for proxy in proxies)
-        self.offset = 0  # can be overridden
         self.num_events = n_occ if samples > 1 else n_occ * sum(
             len(rlzs) for rlzs in rlzs_by_gsim.values())
 
@@ -586,8 +577,7 @@ class RuptureGetter(object):
         for rup in self.proxies:
             ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
                             self.grp_id, rup['n_occ'], self.samples)
-            for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim,
-                                                    self.offset).items():
+            for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
         return numpy.array(eid_rlz, events_dt)
