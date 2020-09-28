@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.parker_2020 import ParkerEtAl2020SInter,
+from openquake.hazardlib.gsim.parker_2020 import ParkerEtAl2020SInter, \
                                                  ParkerEtAl2020SSlab
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase

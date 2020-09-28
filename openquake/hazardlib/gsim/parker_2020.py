@@ -118,8 +118,12 @@ class ParkerEtAl2020SInter(GMPE):
         c0, c0_pga = self._c0(C, C_PGA)
         fm, fm_pga = self._magnitude_scaling(C, C_PGA, rup.mag, m_b)
         fp, fp_pga = self._path_term(C, C_PGA, rup.mag, dists.rrup, m_b)
-        fd = self._depth_scaling(C, rup.hypo_depth)
-        fd_pga = self._depth_scaling(C_PGA, rup.hypo_depth)
+        if hasattr(rup, 'hypo_depth'):
+            fd = self._depth_scaling(C, rup.hypo_depth)
+            fd_pga = self._depth_scaling(C_PGA, rup.hypo_depth)
+        else:
+            fd = 0
+            fd_pga = 0
         fb = self._basin_term(C, sites)
         flin = self._linear_amplification(C, sites.vs30)
         fnl = self._non_linear_term(C, imt, sites.vs30, fp_pga, fm_pga, c0_pga,
@@ -132,7 +136,7 @@ class ParkerEtAl2020SInter(GMPE):
         stddevs = self.get_stddevs(C, dists.rrup, sites.vs30, stddev_types)
         return mean, stddevs
 
-    def get_stdevs(self, C, rrup, vs30, stddev_types):
+    def get_stddevs(self, C, rrup, vs30, stddev_types):
         """
         Returns the standard deviations.
         Generate tau, phi, and total sigma computed from both
@@ -252,15 +256,15 @@ class ParkerEtAl2020SInter(GMPE):
         Path term.
         """
         h = self._path_term_h(mag, m_b)
-        R = math.sqrt(rrup ** 2 + h ** 2)
+        R = np.sqrt(rrup ** 2 + h ** 2)
         # log(R / Rref)
-        r_rref = math.log(R / math.sqrt(1 + h ** 2))
+        r_rref = np.log(R / math.sqrt(1 + h ** 2))
 
         a0, a0_pga = self._a0(C, C_PGA, self.region)
 
-        fp = C["c1"] * math.log(R) + (self.CONSTANTS["b4"] * mag) \
+        fp = C["c1"] * np.log(R) + (self.CONSTANTS["b4"] * mag) \
             * r_rref + a0 * R
-        fp_pga = C_PGA["c1"] * math.log(R) + (self.CONSTANTS["b4"] * mag) \
+        fp_pga = C_PGA["c1"] * np.log(R) + (self.CONSTANTS["b4"] * mag) \
             * r_rref + a0_pga * R
 
         return fp, fp_pga
@@ -283,30 +287,32 @@ class ParkerEtAl2020SInter(GMPE):
             s1 = s2
 
         # linear site term
-        if vs30 <= V1:
-            return s1 * math.log(vs30 / V1) + s2 * math.log
-        if vs30 <= C["V2"]:
-            return s2 * math.log(vs30 / vref)
-        return s2 * math.log(C["V2"] / vref)
+        fnl = np.where(vs30 <= V1,
+                       s1 * np.log(vs30 / V1) + s2 * math.log(V1 / vref),
+                       0)
+        fnl = np.where(vs30 <= C["V2"], s2 * np.log(vs30 / vref), fnl)
+        fnl = np.where(vs30 > C["V2"], s2 * math.log(C["V2"] / vref), fnl)
+
+        return fnl
 
     def _non_linear_term(self, C, imt, vs30, fp, fm, c0, fd=0):
         """
         Non-linear site term.
         """
         # fd for slab only
-        pgar = math.exp(fp + fm + c0 + fd)
+        pgar = np.exp(fp + fm + c0 + fd)
 
-        if imt not in ["pga", "pgv"] and imt >= 3:
+        if imt is SA and imt.period >= 3:
             fnl = 0
         else:
             fnl = C["f4"] * \
-                (math.exp(C["f5"] * (min(vs30, self.CONSTANTS["vref_fnl"])
-                                     - self.CONSTANTS["Vb"]))
+                (np.exp(C["f5"] * (np.minimum(vs30, self.CONSTANTS["vref_fnl"])
+                                   - self.CONSTANTS["Vb"]))
                  - math.exp(C["f5"]
                             * (self.CONSTANTS["vref_fnl"]
                                - self.CONSTANTS["Vb"])))
-            fnl *= math.log((pgar
-                             + self.CONSTANTS["f3"]) / self.CONSTANTS["f3"])
+            fnl *= np.log((pgar
+                           + self.CONSTANTS["f3"]) / self.CONSTANTS["f3"])
 
         return fnl
 
@@ -314,7 +320,7 @@ class ParkerEtAl2020SInter(GMPE):
         """
         Basin term main handler.
         """
-        if sites is None or sites.z2pt5 is None:
+        if not hasattr(sites, 'z2pt5') or sites.z2pt5 == 0:
             return 0
 
         if self.region == "JP":
