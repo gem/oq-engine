@@ -672,11 +672,7 @@ def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
     """
     all_eids = []
     for rup in rup_array:
-        grp_id = rup['grp_id']
-        samples = samples_by_grp[grp_id]
-        num_rlzs = num_rlzs_by_grp[grp_id]
-        num_events = rup['n_occ'] if samples > 1 else rup['n_occ'] * num_rlzs
-        eids = numpy.arange(num_events, dtype=U32)
+        eids = numpy.arange(rup['n_occ'], dtype=U32)
         all_eids.append(eids)
     return numpy.concatenate(all_eids)
 
@@ -712,28 +708,19 @@ class EBRupture(object):
         """
         j = 0
         dic = {}
-        if self.samples == 1:  # full enumeration or akin to it
-            for rlzs in rlzs_by_gsim.values():
-                for rlz in rlzs:
-                    dic[rlz] = numpy.arange(
-                        j, j + self.n_occ, dtype=U32)
-                    j += self.n_occ
-        else:  # associated eids to the realizations
-            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-            histo = general.random_histogram(
-                self.n_occ, len(rlzs), self.rup_id)
-            for rlz, n in zip(rlzs, histo):
-                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
-                j += n
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        histo = general.random_histogram(
+            self.n_occ, len(rlzs), self.rup_id)
+        for rlz, n in zip(rlzs, histo):
+            dic[rlz] = numpy.arange(j, j + n, dtype=U32)
+            j += n
         return dic
 
-    def get_eids(self, num_rlzs):
+    def get_eids(self):
         """
-        :param num_rlzs: the number of realizations for the given group
         :returns: an array of event IDs
         """
-        num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
-        return numpy.arange(num_events, dtype=U32)
+        return numpy.arange(self.n_occ, dtype=U32)
 
     def export(self, events_by_ses):
         """

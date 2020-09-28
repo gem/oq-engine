@@ -561,9 +561,7 @@ class RuptureGetter(object):
         self.trt = trt
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
-        n_occ = sum(int(proxy['n_occ']) for proxy in proxies)
-        self.num_events = n_occ if samples > 1 else n_occ * sum(
-            len(rlzs) for rlzs in rlzs_by_gsim.values())
+        self.num_events = sum(int(proxy['n_occ']) for proxy in proxies)
 
     @property
     def num_ruptures(self):

@@ -248,8 +248,9 @@ class EventBasedTestCase(CalculatorTestCase):
         # check MFD
         aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
         self.assertEqual(aw.duration, 30)  # 30 years
-        aae(aw.magnitudes, [4.9, 5.3], decimal=6)
-        aae(aw.mean_frequency, [0.016667, 0.006667], decimal=6)
+        aae(aw.magnitudes, [4.6, 4.7, 5., 5.1, 5.3], decimal=6)
+        aae(aw.mean_frequency, [0.01, 0.063333, 0.01, 0.043333, 0.006667],
+            decimal=6)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
@@ -407,7 +408,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # check the relevant_events
         E = extract(self.calc.datastore, 'num_events')['num_events']
         e = len(extract(self.calc.datastore, 'events'))
-        self.assertAlmostEqual(e/E, 0.1954023)
+        self.assertAlmostEqual(e/E, 0.1607843137)
 
         # run again the GMF calculation, but this time from stored ruptures
         hid = str(self.calc.datastore.calc_id)
@@ -466,7 +467,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_26_land(self):
         # cali landslide simplified
-        self.run_calc(case_26.__file__, 'job.ini')
+        self.run_calc(case_26.__file__, 'job_land.ini')
         df = self.calc.datastore.read_df('gmf_data/data', 'sid')
         pd_mean = df[df['prob_disp_0'] > 0]['prob_disp_0'].mean()
         nd_mean = df[df['newmark_disp_0'] > 0]['newmark_disp_0'].mean()
