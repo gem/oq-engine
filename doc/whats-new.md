@@ -79,7 +79,7 @@ the geometry information and therefore cannot be used to start
 scenario calculations. Notice that the format is completely new and
 for the moment experimental, not guaranteed to stay the same in
 future releases.  It completely supersedes the experimental TOML
-format for the ruptures introduce some time ago and that now has been
+format for the ruptures introduced some time ago and that now has been
 removed.
 
 It is now possible to run a slow event based calculation,
@@ -91,7 +91,7 @@ ruptures. This is of huge importance for any risk analyst.
 
 Multi-rupture scenarios can also be used to study the uncertainties
 involved in a single-rupture scenario calculation. For instance you
-can change the parameters of the base rupture, generated a bunch of
+can change the parameters of the base rupture, generate a bunch of
 ruptures and then run a single multi-rupture scenario
 calculation. This is much more convenient than running multiple
 independent calculations like it was necessary in the past.
@@ -127,14 +127,15 @@ We made the scenario damage and classical damage outputs consistent with the
 event based risk outputs by removing the (unused) stddev field. See
 https://github.com/gem/oq-engine/issues/5802
 
-The event based damage calculator, introduce experimentally in release
+The event based damage calculator, introduced experimentally in release
 3.9, is now official.  We fixed a bug in the number of buildings in
 the `no_damage` state, which was incorrect. We fixed
 a bug in the calculation of the average damage, which is now
 correctly computed by dividing by the investigation time. We restored
 the ability to perform damage calculations with fractional asset
 numbers, by using the same algorithm as in engine 3.8 and previous versions.
-Finally, we added an official demo for the event based damage calculator.
+Finally, we added an official demo for the event based damage calculator
+and we documented it in the engine manual.
 
 # Other new features/improvements
 
