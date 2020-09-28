@@ -12,29 +12,28 @@ There was a substantial amount of work on optimizing the
 disaggregation calculator in the case of many sites and/or many
 realizations. Now it uses a lot less memory and it is significantly
 more performant than before (at least 3 times better then engine 3.9
-in test calculations for Colombia and the Pacific Islands). For single
-site, single realization calculations you will not see much of a difference.
+in test calculations for Colombia and the Pacific Islands). However,
+for single site-single realization calculations you will not see much
+of a difference.
 
-The distribution mechanism and rupture storage have changed
+The distribution mechanism and rupture storage have been changed
 (ruptures are now distributed and stored by magnitude), thus reducing
-by orders of magnitude both the data transfer and the time required to
-read the ruptures. The effect is spectacular in large calculations,
+both the data transfer and the time required to read the ruptures. The
+effect is spectacular (orders of magnitude) in large calculations,
 less so in small calculations.
 
 The way disaggregation outputs are stored internally has changed
-completely, resulting in orders of magnitude speedup in the saving phase,
-for calculations with many sites.
+completely, resulting in speedups up to orders of magnitude in the saving phase.
 Also, we are logging much less when saving the disaggregation outputs and
-that gave another substantial speedup. There was a huge speedup
+that gave another substantial speedup. Finally, there was a huge speedup
 in the extraction routines for all outputs, including the `disagg_layer`
 output which is use by the QGIS plugin. Such output has
 been extended to include IML information and more.
 
 The `disagg_by_src` functionality, temporarily removed in engine 3.9,
-has been re-implemented and there is a new extractor for it.
-It is possible to extract the contribution to the hazard from each
-source with a couple of constraints: you must convert the point
-sources of your model (if any) to multipoint sources and the size of
+has been re-implemented and there is a new extractor for it. However,
+there are a couple of constraints: you must convert the point
+sources of your model (if any) into multipoint sources and the size of
 `disagg_by_src` matrix (num_sites x num_rlzs x num_imts x num_levels x
 num_sources) must be under 4 GB.
 
@@ -51,7 +50,7 @@ We fixed a subtle bug for magnitudes on the edge of a magnitude bin,
 causing some small difference in the disaggregation by magnitude
 outputs.
 
-We changed the algorithm for the Lon_Lat bins, thus changing the
+We changed the algorithm for the `Lon_Lat` bins, thus changing the
 numbers for the Lon_Lat disaggregation.
 
 Setting both `rlz_index` and `num_rlzs_disagg` is now an error, since
@@ -70,11 +69,11 @@ the parameter `poes` used for the hazard maps.
 
 # Multi-rupture scenarios
 
-After years of effort, we hav finally unified the scenario and event
+After years of effort, we have finally unified the scenario and event
 based calculators and introduced a full CSV format for the ruptures,
 i.e. a format containing also the geometries.  The
-full CSV format (is documented here)[
-https://docs.openquake.org/oq-engine/advanced/special-features.html#ruptures-in-csv-format].
+full CSV format [is documented here](
+https://docs.openquake.org/oq-engine/advanced/special-features.html#ruptures-in-csv-format).
 It should not be confused with the old CSV format which is missing
 the geometry information and therefore cannot be used to start
 scenario calculations. Notice that the format is completely new and
