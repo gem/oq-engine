@@ -429,7 +429,8 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
                       "JP_Pac", "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
         if self.saturation_region in mb_regions:
             i = mb_regions.index(self.saturation_region)
-            m_b = (7.98, 7.2, 7.2, 7.6, 7.4, 7.65, 7.55, 7.3, 7.25, 7.7, 7.7)[i]
+            m_b = (7.98, 7.2, 7.2, 7.6, 7.4, 7.65,
+                   7.55, 7.3, 7.25, 7.7, 7.7)[i]
         else:
             m_b = 7.6
 
