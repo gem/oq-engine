@@ -337,7 +337,7 @@ _pkgbuild_innervm_run () {
     ssh "$lxc_ip" sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh "$lxc_ip" "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
-    ssh "$lxc_ip" cd build-deb \&\& dpkg-buildpackage $DPBP_FLAG
+    ssh -t "$lxc_ip" cd build-deb \&\& dpkg-buildpackage $DPBP_FLAG
     scp "$lxc_ip:"*.{tar.?z,changes,dsc} ../
     scp "$lxc_ip:"*.buildinfo ../ || true
     if echo "$DPBP_FLAG" | grep -q -v -- '-S'; then
