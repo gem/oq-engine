@@ -34,8 +34,8 @@ ENV LANG en_US.UTF-8
 #
 # if you want to use user specific else run with
 # CURRENT_UID=$(id -u):$(id -g) docker
-#RUN useradd -m -u 1000 -s /bin/bash openquake
-#USER openquake
+RUN useradd -m -u 1000 -s /bin/bash openquake
+USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
 RUN pip install --no-index --find-links=/opt/openquake/whl/ openquake.engine
