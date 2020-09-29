@@ -308,7 +308,7 @@ class OqParam(valid.ParamSet):
                 for imt in self.hazard_imtls:
                     i1 = calc.filters.getdefault(self.minimum_intensity, 1E-3)
                     i2 = calc.filters.getdefault(self.maximum_intensity, imt)
-                    self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 25))
+                    self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 20))
             delattr(self, 'intensity_measure_types')
         self._risk_files = get_risk_files(self.inputs)
 
@@ -440,7 +440,8 @@ class OqParam(valid.ParamSet):
                         'The IMT %s is not accepted by the GSIM %s' %
                         (invalid_imts, gsim))
 
-            if 'site_model' not in self.inputs:
+            if (self.hazard_calculation_id is None
+                    and 'site_model' not in self.inputs):
                 # look at the required sites parameters: they must have
                 # a valid value; the other parameters can keep a NaN
                 # value since they are not used by the calculator

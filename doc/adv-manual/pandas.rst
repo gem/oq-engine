@@ -86,7 +86,7 @@ the ``gmf_data`` table indexed by event ID, i.e. the ``eid`` field:
 
 The ``gmv_0`` refers to the first IMT; here I have shown an example with a
 single IMT, in presence of multiple IMTs you would see multiple columns
-``gmv_0, gmv_1m, gmv_2, ...``. The ``sid`` column refers to the site ID.
+``gmv_0, gmv_1, gmv_2, ...``. The ``sid`` column refers to the site ID.
 
 As a following step, you can compute the mean hazard curves at each site
 from the ground motion values by using the function `gmvs_to_poes`,
