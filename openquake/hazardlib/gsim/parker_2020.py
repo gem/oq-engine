@@ -131,7 +131,7 @@ class ParkerEtAl2020SInter(GMPE):
 
         # The output is the desired median model prediction in LN units
         # Take the exponential to get PGA, PSA in g or the PGV in cm/s
-        mean = fp + fnl + fb + flin + fm + c0 + fd
+        mean = np.exp(fp + fnl + fb + flin + fm + c0 + fd)
 
         stddevs = self.get_stddevs(C, dists.rrup, sites.vs30, stddev_types)
         return mean, stddevs
