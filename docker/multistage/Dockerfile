@@ -1,4 +1,19 @@
-ROM python:3.8-slim AS compile-image
+# Copyright (C) 2020 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+FROM python:3.8-slim AS compile-image
 LABEL maintainer="Antonio Ettorre <antonio@openquake.org>" \
        vendor="GEM Foundation"
 
@@ -18,19 +33,20 @@ COPY --from=compile-image /opt/openquake/whl /opt/openquake/whl
 #
 ENV LANG en_US.UTF-8
 #
-RUN useradd -m -u 1000 -s /bin/bash openquake
-USER openquake
+# if you want to use user specific else run with
+# CURRENT_UID=$(id -u):$(id -g) docker
+#RUN useradd -m -u 1000 -s /bin/bash openquake
+#USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
 RUN pip install --no-index --find-links=/opt/openquake/whl/ openquake.engine
 ENV PATH="/home/openquake/.local/bin:$PATH"
-RUN mkdir oqdata
 #
 ADD scripts/oq-start.sh ${HOME}
+RUN mkdir oqdata 
 # if want to copy engine src to home
 #ADD oq-engine-master ${HOME}
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash", "-c"]
-#CMD ["./oq-start.sh"]        
-
+CMD ["./oq-start.sh"]     
