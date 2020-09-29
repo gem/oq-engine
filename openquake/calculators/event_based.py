@@ -431,7 +431,8 @@ class EventBasedCalculator(base.HazardCalculator):
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
                         for sid in hmap:
                             ds[sid, s] = hmap[sid].array
-        elif result and oq.maximum_intensity and oq.intensity_measure_types:
+        elif (result and oq.maximum_intensity and oq.intensity_measure_types
+              and oq.investigation_time):
             logging.info('Computing mean hcurves')
             with self.monitor('computing mean hcurves'):
                 self.datastore['hcurves-stats'] = gmvs_to_mean_hcurves(
