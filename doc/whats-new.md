@@ -1,5 +1,5 @@
-This is a major release featuring several optimizations, many new features,
-and a few bug fixes. Over 300 pull requests were merged.
+This is a major release featuring several optimizations, new features,
+and a bug fixes. Over 300 pull requests were merged.
 
 For the complete list of changes, see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.10/debian/changelog
@@ -10,7 +10,7 @@ Here are the highlights.
 
 There was a substantial amount of work on optimizing the
 disaggregation calculator in the case of many sites and/or many
-realizations. Now it uses a lot less memory and it is significantly
+realizations. Now it requires a lot less memory and it is significantly
 more performant than before (at least 3 times better then engine 3.9
 in test calculations for Colombia and the Pacific Islands). However,
 for single site-single realization calculations you will not see much
