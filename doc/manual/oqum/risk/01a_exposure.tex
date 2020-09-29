@@ -7,6 +7,12 @@ section that describes how the different areas, costs, and occupancies for the
 assets will be specified, followed by data regarding each individual
 \gls{asset} in the portfolio.
 
+\textbf{Note:} Starting from \glsdesc{acr:oqe30}, the \gls{exposuremodel} may be 
+provided using csv files listing the asset information, along with an
+xml file conatining the metadata section for the exposure model that 
+has been described in the examples above. See Example 8 below for an 
+illustration of an exposure model using csv files.
+
 A simple \gls{exposuremodel} comprising a single \gls{asset} is shown in
 Listing~\ref{lst:input_exposure_minimal}.
 
@@ -436,10 +442,9 @@ section must be provided with a \gls{tag} value for each \gls{asset}.
 
 \paragraph{Example 8}
 
-Starting from \glsdesc{acr:oqe30}, the \gls{exposuremodel} may be 
-provided using csv files listing the asset information, along with an
-xml file conatining the metadata section for the exposure model that 
-has been described in the examples above.
+This example illustrates the use of multiple csv files containing the 
+\glspl{asset} information, in conjunction with the metadata section in the 
+usual xml format.
 
 Let us take a look at the metadata section of the \gls{exposuremodel},
 which is listed as usual in an xml file:
