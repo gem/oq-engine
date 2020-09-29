@@ -230,4 +230,4 @@ to happen when generating tens of thousands of tasks. Again, it is
 best not to touch this parameter unless you know what you are doing.
 
 .. _equivalent distance approximation: special-features.html#equivalent-epicenter-distance-approximation
-.. _rupture radius: https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/source/point.py
+.. _rupture radius: https://github.com/gem/oq-engine/blob/engine-3.10/openquake/hazardlib/source/point.py
