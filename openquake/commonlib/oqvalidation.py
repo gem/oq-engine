@@ -650,12 +650,17 @@ class OqParam(valid.ParamSet):
         """
         dt = F32, (len(self.imtls),)
         lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
-        perils = SecondaryPeril.instantiate(self.secondary_perils,
-                                            self.sec_peril_params)
-        for peril in perils:
+        for peril in self.get_sec_perils():
             for output in peril.outputs:
                 lst.append((output, dt))
         return numpy.dtype(lst)
+
+    def get_sec_perils(self):
+        """
+        :returns: a list of secondary perils
+        """
+        return SecondaryPeril.instantiate(self.secondary_perils,
+                                          self.sec_peril_params)
 
     def no_imls(self):
         """

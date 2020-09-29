@@ -39,7 +39,6 @@ from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
-from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, util
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -831,8 +830,7 @@ class HazardCalculator(BaseCalculator):
             self.amplifier = None
 
         # manage secondary perils
-        sec_perils = SecondaryPeril.instantiate(oq.secondary_perils,
-                                                oq.sec_peril_params)
+        sec_perils = oq.get_sec_perils()
         for sp in sec_perils:
             sp.prepare(self.sitecol)  # add columns as needed
 
@@ -1184,6 +1182,7 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
         for peril in secperils:
             for out in peril.outputs:
                 dstore.create_dset(f'gmf_data/{out}_{m}', F32)
+                cols.append(f'{out}_{m}')
     dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
 
 
