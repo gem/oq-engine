@@ -13,36 +13,35 @@ disaggregation calculator in the case of many sites and/or many
 realizations. Now it requires a lot less memory and it is significantly
 more performant than before (at least 3 times better then engine 3.9
 in test calculations for Colombia and the Pacific Islands). However,
-for single site-single realization calculations you will not see much
+for single-site and single-realization calculations you will not see much
 of a difference.
 
 The distribution mechanism and rupture storage have been changed
 (ruptures are now distributed and stored by magnitude), thus reducing
 both the data transfer and the time required to read the ruptures. The
-effect is spectacular (orders of magnitude) in large calculations,
-less so in small calculations.
+effect is spectacular (orders of magnitude) in large calculations.
 
 The way disaggregation outputs are stored internally has changed
-completely, resulting in speedups up to orders of magnitude in the saving phase.
-Also, we are logging much less when saving the disaggregation outputs and
-that gave another substantial speedup. Finally, there was a huge speedup
-in the extraction routines for all outputs, including the `disagg_layer`
-output which is use by the QGIS plugin. Such output has
-been extended to include IML information and more.
+completely, resulting in speedups up to orders of magnitude in the
+saving phase. Also, we are logging much less when saving the
+disaggregation outputs. There was another huge speedup in the
+extraction routines for all outputs, including the `disagg_layer`
+output which is use by the QGIS plugin. Such output has been extended
+to include IML information and more.
 
 The `disagg_by_src` functionality, temporarily removed in engine 3.9,
 has been re-implemented and there is a new extractor for it. However,
-there are a couple of constraints: you must convert the point
-sources of your model (if any) into multipoint sources and the size of
-`disagg_by_src` matrix (num_sites x num_rlzs x num_imts x num_levels x
-num_sources) must be under 4 GB.
+there are a couple of constraints: in order to use it, you must
+convert the point sources of your model (if any) into multipoint
+sources; moreover, the size of `disagg_by_src` matrix (num_sites x num_rlzs x
+num_imts x num_levels x num_sources) must be under 4 GB.
 
 If disaggregation by epsilon is not required and the parameter
 `num_epsilon_bins` is incorrectly set to a value larger than 1, now
 the engine automatically corrects the parameter (by warning the user),
 thus saving a lot of wasted calculation time.
 
-We fixed a rare bug for the case of zero hazard: having zero hazard
+We fixed a bug for the case of zero hazard: having zero hazard
 for a single return period caused the disaggregation to be zero for
 all periods.
 
@@ -50,8 +49,9 @@ We fixed a subtle bug for magnitudes on the edge of a magnitude bin,
 causing some small difference in the disaggregation by magnitude
 outputs.
 
-We changed the algorithm for the `Lon_Lat` bins, thus changing the
-numbers for the Lon_Lat disaggregation.
+We changed the algorithm for the `Lon_Lat` bins, to make sure that
+the number of bins is homogeneous across sites, thus changing the
+numbers for the `Lon_Lat` disaggregation.
 
 Setting both `rlz_index` and `num_rlzs_disagg` is now an error, since
 the two options are mutually exclusive.
@@ -60,7 +60,7 @@ Setting `max_sites_disagg` to a value lower than the total number of
 sites is now flagged as an early error (before the error was raised in
 the middle of the computation).
 
-Finally we fixed the IML interpolation to be consistent with the
+We fixed the IML interpolation to be consistent with the
 algorithm used for the hazard maps: the change may cause slight
 differences in the numbers, in all kind of disaggregations except the
 ones using the parameter `iml_disagg`. Moreover, the parameter
@@ -69,18 +69,17 @@ the parameter `poes` used for the hazard maps.
 
 # Multi-rupture scenarios
 
-After years of effort, we have finally unified the scenario and event
-based calculators and introduced a full CSV format for the ruptures,
-i.e. a format containing also the geometries.  The
-full CSV format [is documented here](
+At the end of a year-long effort, we have finally unified the scenario
+and event based calculators and introduced a full CSV format for the
+ruptures, i.e. a format containing also the geometries.  The full CSV
+format [is documented here](
 https://docs.openquake.org/oq-engine/advanced/special-features.html#ruptures-in-csv-format).
-It should not be confused with the old CSV format which is missing
-the geometry information and therefore cannot be used to start
-scenario calculations. Notice that the format is completely new and
-for the moment experimental, not guaranteed to stay the same in
-future releases.  It completely supersedes the experimental TOML
-format for the ruptures introduced some time ago and that now has been
-removed.
+It should not be confused with the old CSV format which is missing the
+geometry information and therefore cannot be used to start scenario
+calculations. The new format is for the moment experimental, not
+guaranteed to stay the same in future releases.  It completely
+supersedes the experimental TOML format for the ruptures introduced
+some time ago and that now has been removed.
 
 It is now possible to run a slow event based calculation,
 export the ruptures in the full CSV format, trim the ruptures
@@ -101,18 +100,17 @@ independent calculations like it was necessary in the past.
 A much requested feature from our users was the ability to compute
 statistics for `scenario_risk` and `scenario_damage` calculations in
 presence of multiple GMPEs. Now that is possible and it actually
-enabled by default.
+enabled by default, as a consequence of the event_based/scenario
+unification.
 
-We optimized the `scenario_damage/event_based_damage` calculator for
+We optimized the `scenario_damage/event_based_damage` calculators for
 the case of many sites by returning one big output per task instead of
-thousands of small outputs.
+thousands of small outputs. The effect is significant when there are
+thousands of sites.
 
-We have reduced the time required to read the GMFs: in large
-calculations that could make the difference between running out of
-memory vs completing the calculation.
-
-We have avoided sending multiple copies of the risk model to the workers,
-resulting in a good speedup for calculations with a large risk model.
+We reduced the time required to read the GMFs and we avoided sending
+multiple copies of the risk model to the workers, resulting in a good
+speedup for calculations with a large risk model.
 
 Risk calculators are now logging the mean portfolio loss, for user convenience.
 
@@ -125,7 +123,7 @@ slow and inconvenient.
 
 We made the scenario damage and classical damage outputs consistent with the
 event based risk outputs by removing the (unused) stddev field. See
-https://github.com/gem/oq-engine/issues/5802
+https://github.com/gem/oq-engine/issues/5802.
 
 The event based damage calculator, introduced experimentally in release
 3.9, is now official.  We fixed a bug in the number of buildings in
@@ -159,16 +157,16 @@ https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#maximum-dista
 The rupture-collapsing feature now works also for nonparametric ruptures.
 It is still experimental and disabled by default.
 
-The engine does not parse anymore the `source_model_logic_tree` and the
-the source models multiple times.
+The engine was parsing the `source_model_logic_tree` and the
+the source models multiple times: it has been fixed.
 
-There was more work on the amplification of hazard curves with the convolution
-method and on the amplification of GMFs. Various bugs have been fixed, and
-we added an experimental and slow implementation of the kernel
-method for computing PSHA using amplification functions. It will be
-improved in the future.
+There was additional work on the amplification of hazard curves with
+the convolution method and on the amplification of GMFs. Various bugs
+have been fixed, and we added an experimental and slow implementation
+of the kernel method for computing PSHA using amplification
+functions. Such features are still experimental.
 
-We also included in the engine some code to compute earthquake-induced
+We included in the engine some code to compute earthquake-induced
 secondary perils, like liquefaction and landslides.  This part is
 still in an early stage of development and will be extended/improved
 in the future.
@@ -185,7 +183,7 @@ where possible.
 
 M. Pagani contributed a [ModifiableGMPE class](
 https://docs.openquake.org/oq-engine/advanced/parametric-gmpes.html#modifiablegmpe)
-which is able to modify the inter_event parameter of a GMPE. He also
+which is able to modify the `inter_event` parameter of a GMPE. He also
 contributed an implementation for the Zalachoris & Rathje (2019)
 GMPE. Finally, he fixed a bug in the ParseNDKtoGCMT parser in the HMTK
 and ported the method `serialise_to_hmtk_csv` implemented in the
@@ -195,26 +193,25 @@ M. Simionato fixed a subtle bug that caused a syntax error when reading
 stored GSIMs coming from subclasses of ``GMPE`` redefining
 ``__str__`` (signalled by our Canadian users).
 
-The `sourcewriter` has been improved in two ways:
-
-1. it calls `check_complex_fault` when serializing a complex fault source,
-so that incorrect sources cannot be serialized, as it was happening before.
-2. it automatically serializes nonparametric `griddedRuptures` in a companion
-HDF5 file with the same name of the XML file. The source reader can read
-the companion file,  but it also works with the previous approach, when
-everything was stored in XML. Since `griddedRuptures` are big arrays
-the serialization/deserialization in .hdf5 format is much more efficient
-than in XML format.
+The `sourcewriter` has been improved. Now it calls
+`check_complex_fault` when serializing a complex fault source, so that
+incorrect sources cannot be serialized, as it was happening before.
+Moreover, it automatically serializes nonparametric `griddedRuptures`
+in a companion HDF5 file with the same name of the XML file. The
+source reader can read the companion file, but it also works with the
+previous approach, when everything was stored in XML. Since
+`griddedRuptures` are big arrays the serialization/deserialization in
+HDF5 format is much more efficient than in XML format.
 
 # Bugs
 
 We fixed a serious numeric issue affecting classical calculations with
 nonparametric ruptures. The effect was particularly strong around Bucaramanga
 in Colombia (see https://github.com/gem/oq-engine/issues/5901). The
-hazard curves where completely off and the disaggregation was producing
+hazard curves were completely off and the disaggregation was producing
 negative probabilities.
 
-In some situations, for logic trees using `applyToSources` and sampling,
+In some situations - for logic trees using `applyToSources` and sampling -
 there was a bug so that the logic tree could not be deserialized from its
 HDF5 representation in the datastore. That affected the calculation of
 the hazard curves and maps.
@@ -229,8 +226,9 @@ We fixed an issue withe `minimum_magnitude` parameter not being honored
 in UCERF calculations.
 
 We fixed a bug when a rupture occurs more than 65535 times, affecting
-scenario calculations with a large number of simulations.
-We supported year and ses_id >= 65536 in event based.
+scenario calculations with a large number of simulations. Similarly,
+the fields `year` and `ses_id` in the events table have been extended
+to support 4-byte integers instead of 2-byte integers.
 
 We fixed a bug affecting Windows users preparing CSV exposures with
 Excel, which introduces a spurious Byte Order Mark (BOM).
@@ -239,9 +237,9 @@ We fixed a bug when saving arrays with string fields in npz format.
 
 # New checks and warnings
 
-The number of intensity measure levels must the same accross intensity measure
-types, otherwise an error is raised. In the past there was simply a deprecation
-warning.
+Now the number of intensity measure levels must the same accross
+intensity measure types, otherwise an error is raised. In the past
+there was simply a deprecation warning.
 
 We added a warning about suspiciously large complex fault sources, so that
 the user can fix the `complex_fault_mesh_spacing` parameter.
@@ -267,17 +265,18 @@ At user request, we raised the limit on the asset ID length from 20 to
 
 We added a check for missing `intensity_measure_types` in event based
 calculations, otherwise a calculation would complete successfully but without
-compute any ground motion field.
+computing any ground motion field.
 
 # oq commands
 
 `oq plot` has been improved for disaggregation outputs, making it possible
 to plot all kinds of outputs and also to compare disaggregation plots.
-We also added a command `oq plot vs30?` to plot the vs30 field of the
+
+We added a command `oq plot vs30?` to plot the vs30 field of the
 site collection.
 
 We added a command `oq nrml_to` to convert source models into CSV and/or
-geopackage format. This is essential in order to plot source models with
+geopackage format. This is useful to plot source models with
 QGIS and it is meant to replace the command `oq to_shapefile` which has
 many limitations.
 
@@ -300,11 +299,11 @@ since the details of the seed generation may change.
 The `oq engine` command has been enhanced and it is now possible to run
 multiple jobs in parallel as follows:
 ```
-oq engine --multi ---run job1.ini job2.ini ... jobN.ini
+$ oq engine --multi ---run job1.ini job2.ini ... jobN.ini
 ```
 This is useful if you have many small calculations to run
 (for instance many scenarios). Without the ``--many`` flag the
-calculations will be run sequentially, as in previous versions of the engine.
+calculations would be run sequentially, as in previous versions of the engine.
 
 # WebUI/WebAPI/QGIS plugin
 
@@ -329,13 +328,6 @@ extract selected columns of the site collection, for instance
 `/extract/sitecol?param=custom_site_id`, if a `custom_site_id` is defined.
 
 # Packaging
-  
-Python 3.8 is now fully supported and using Python 3.6 is deprecated
-(but still works perfectly). Our packages for Debian and RedHat Linux,
-as well as the installers for Windows and Mac, now ship with Python 3.8.
 
-We removed the dependency from PyYAML and added an optional dependency
+We removed the dependency from PyYAML and added a dependency
 for GDAL.
-
-Bumped GDAL to 3.1.2, PyProj to 2.5.0, numpy to 1.18.2, scipy to 1.2,
-pandas to 1.0, pyzmq == 19.0.0.
