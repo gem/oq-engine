@@ -89,6 +89,8 @@ def post_ebrisk(dstore, aggkey, monitor):
     :param monitor: Monitor instance
     :returns: a dictionary rlzi -> {agg_curves, agg_losses, idx}
     """
+    if dstore.parent and 'event_loss_table' in dstore.parent:
+        dstore = dstore.parent
     dstore.open('r')
     ses_ratio = dstore['oqparam'].ses_ratio
     agglist = [x if isinstance(x, list) else [x]
