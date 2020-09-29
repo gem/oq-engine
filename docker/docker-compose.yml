@@ -54,7 +54,8 @@ services:
 
   worker:
     <<: *service_default
-    container_name: engine-worker
+    # don't use name because can't scale
+    #container_name: engine-worker
     image: openquake/engine-worker-zmq
     volumes:
      - oqdata:/home/openquake/oqdata:ro
