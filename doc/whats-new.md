@@ -245,9 +245,8 @@ We added a warning about suspiciously large complex fault sources, so that
 the user can fix the `complex_fault_mesh_spacing` parameter.
 
 We added a warning against numeric errors in the total losses for the
-`ebrisk` and `event_based_risk` calculators: due to the use of 32 bit
-floating point arithmetic, so seeing warnings like "Inconsistent total
-losses for structural, rlz-96: 54535864.0 != 54840944.0" is not uncommon.
+`ebrisk` and `event_based_risk` calculators, like "Inconsistent total
+losses for structural, rlz-96: 54535864.0 != 54840944.0".
 
 If a source model contains different sources with the same ID a warning
 is now printed. In the future this will likely become an error and the source
