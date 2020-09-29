@@ -144,7 +144,7 @@ implement four new sampling methods which are documented here:
 https://docs.openquake.org/oq-engine/advanced/sampling.html
 
 The new sampling methods will receive more work and experimentation in the
-feature.
+future.
 
 It is possible to introduce a ``custom_site_id`` unique integer parameter
 in the site model. The most common use case for this feature is to
