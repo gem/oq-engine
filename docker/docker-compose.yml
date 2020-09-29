@@ -31,6 +31,7 @@ services:
   master:
     <<: *service_default
     container_name: engine-master
+    hostname: engine-master
     image: openquake/engine-master-zmq
     ports:
      - 8800:8800
@@ -56,6 +57,7 @@ services:
     <<: *service_default
     # don't use name if want to scale
     container_name: engine-worker
+    hostname: engine-worker
     image: openquake/engine-worker-zmq
     volumes:
      - oqdata:/home/openquake/oqdata:ro
