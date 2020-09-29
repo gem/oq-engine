@@ -1,60 +1,70 @@
-version: '2'
+version: "3.7"
+
+networks:
+  frontend:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+    ipam:
+      driver: default
+      config:
+      - subnet: 192.168.238.0/24
+  backend:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+    internal: true
+    ipam:
+      driver: default
+      config:
+      - subnet: 192.168.239.0/24
+
+volumes:
+  oqdata:
+
+#definizione di un yaml template da usare poi negli altri servizi
+x-op-service-default: &service_default
+  restart: unless-stopped
+  init: true
+
 services:
-  # Engine is not actually executed and is
-  # exposed only to make sure it is built via
-  # docker-compose build
-  # engine:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.engine
-  #   image: openquake/engine
-  #   command: '-c true'
   master:
-    build:
-      context: .
-      dockerfile: zmq/Dockerfile.master
+    <<: *service_default
+    container_name: engine-master
     image: openquake/engine-master-zmq
+    ports:
+     - 8800:8800
     # Uncomment to enable auth in WebUI/API
     # environment:
     #   - LOCKDOWN=true
     volumes:
-      - oqdata:/home/openquake/oqdata
+     - oqdata:/home/openquake/oqdata
     # Uncomment to expose demos inside the container
-    #   - ../demos:/home/openquake/demos:ro
+     - ../demos:/home/openquake/demos:ro
     # Uncomment to use a local copy of the oq-engine
     #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
     #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
     networks:
-      - cluster
-    ports:
-      - 8800:8800
+     backend:
+      aliases:
+       - engine-master
+     frontend:
+     #labels:
+
   worker:
-    build:
-      context: .
-      dockerfile: zmq/Dockerfile.worker
+    <<: *service_default
+    container_name: engine-worker
     image: openquake/engine-worker-zmq
     volumes:
-      - oqdata:/home/openquake/oqdata:ro
+     - oqdata:/home/openquake/oqdata:ro
     # Uncomment to use a local copy of the oq-engine
     #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Uncomment to use a custom openquake.cfg
     #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
     networks:
-      - cluster
+     backend:
+      aliases:
+       - engine-worker
     depends_on:
       - master
-
-# When running on multiple host the volume must be shared between every node
-# see the 'oqdata-nfs' example below
-volumes:
-  oqdata:
-  # oqdata-nfs:
-  #   driver: local
-  #   driver_opts:
-  #     type: nfs
-  #     o: nfsvers=4,addr=nfs-server,rw
-  #     device: ":/oqdata"
-
-networks:
-  cluster:
