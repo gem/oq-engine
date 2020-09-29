@@ -89,8 +89,6 @@ def post_ebrisk(dstore, aggkey, monitor):
     :param monitor: Monitor instance
     :returns: a dictionary rlzi -> {agg_curves, agg_losses, idx}
     """
-    if dstore.parent and 'event_loss_table' in dstore.parent:
-        dstore = dstore.parent
     dstore.open('r')
     ses_ratio = dstore['oqparam'].ses_ratio
     agglist = [x if isinstance(x, list) else [x]
@@ -182,13 +180,16 @@ class PostRiskCalculator(base.RiskCalculator):
             self.build_datasets(builder, oq.aggregate_by, 'agg_')
         self.build_datasets(builder, [], 'app_')
         self.build_datasets(builder, [], 'tot_')
-        ds = self.datastore
-        full_aggregate_by = (ds.parent['oqparam'].aggregate_by if ds.parent
+        parent = self.datastore.parent
+        full_aggregate_by = (parent['oqparam'].aggregate_by if parent
                              else ()) or oq.aggregate_by
         if oq.aggregate_by:
             aggkeys = build_aggkeys(oq.aggregate_by, self.tagcol,
                                     full_aggregate_by)
-            if not oq.hazard_calculation_id:  # no parent
+            if parent and 'event_loss_table' in parent:
+                ds = parent
+            else:
+                ds = self.datastore
                 ds.swmr_on()
             smap = parallel.Starmap(
                 post_ebrisk, [(ds, aggkey) for aggkey in aggkeys],
