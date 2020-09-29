@@ -21,21 +21,20 @@ from openquake.hazardlib.gsim.parker_2020 import ParkerEtAl2020SInter, \
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
+# Tests developed using R code from Grace Parker
+# Received 17 September 2020.
 
 class ParkerEtAl2020SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ParkerEtAl2020SInter
 
-    # Tests developed using R code from Grace Parker
-    # Received 17 September 2020.
-
     def test_mean(self):
-        self.check('PARKER20/Parker2020_MEAN.csv',
+        self.check('PARKER20/ParkerEtAl2020SInter_MEAN.csv',
                    max_discrep_percentage=0.1)
 
 
 class ParkerEtAl2020SSlabTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ParkerEtAl2020SInter
+    GSIM_CLASS = ParkerEtAl2020SSlab
 
-    # Tests developed using R code from Grace Parker
-    # Received 17 September 2020.
-
+    def test_mean(self):
+        self.check('PARKER20/ParkerEtAl2020SSlab_MEAN.csv',
+                   max_discrep_percentage=0.1)

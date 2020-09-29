@@ -131,7 +131,7 @@ class ParkerEtAl2020SInter(GMPE):
 
         # The output is the desired median model prediction in LN units
         # Take the exponential to get PGA, PSA in g or the PGV in cm/s
-        mean = np.exp(fp + fnl + fb + flin + fm + c0 + fd)
+        mean = fp + fnl + fb + flin + fm + c0 + fd
 
         stddevs = self.get_stddevs(C, dists.rrup, sites.vs30, stddev_types)
         return mean, stddevs
@@ -209,12 +209,14 @@ class ParkerEtAl2020SInter(GMPE):
         Magnitude scaling factor.
         """
         m_diff = mag - m_b
+        sfx = self._suffix()
         if m_diff > 0:
-            fm = C["c6"] * m_diff
-            fm_pga = C_PGA["c6"] * m_diff
+            fm = C["c6" + sfx] * m_diff
+            fm_pga = C_PGA["c6" + sfx] * m_diff
         else:
-            fm = C["c4"] * m_diff + C["c5"] * m_diff ** 2
-            fm_pga = C_PGA["c4"] * m_diff + C_PGA["c5"] * m_diff ** 2
+            fm = C["c4" + sfx] * m_diff + C["c5" + sfx] * m_diff ** 2
+            fm_pga = C_PGA["c4" + sfx] * m_diff \
+                     + C_PGA["c5" + sfx] * m_diff ** 2
 
         return fm, fm_pga
 
@@ -251,6 +253,12 @@ class ParkerEtAl2020SInter(GMPE):
 
         return a0, a0_pga
 
+    def _suffix(self):
+        """
+        Column name constant suffix based on class.
+        """
+        return ""
+
     def _path_term(self, C, C_PGA, mag, rrup, m_b):
         """
         Path term.
@@ -262,9 +270,10 @@ class ParkerEtAl2020SInter(GMPE):
 
         a0, a0_pga = self._a0(C, C_PGA, self.region)
 
-        fp = C["c1"] * np.log(R) + (self.CONSTANTS["b4"] * mag) \
+        c1n = "c1" + self._suffix()
+        fp = C[c1n] * np.log(R) + (self.CONSTANTS["b4"] * mag) \
             * r_rref + a0 * R
-        fp_pga = C_PGA["c1"] * np.log(R) + (self.CONSTANTS["b4"] * mag) \
+        fp_pga = C_PGA[c1n] * np.log(R) + (self.CONSTANTS["b4"] * mag) \
             * r_rref + a0_pga * R
 
         return fp, fp_pga
@@ -414,6 +423,9 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
     # slab also requires hypo_depth
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
+    # and no vs30
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
+
     def _c0(self, C, C_PGA):
         """
         c0 factor.
@@ -442,6 +454,12 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
 
         return m_b
 
+    def _suffix(self):
+        """
+        Column name constant suffix based on class.
+        """
+        return "slab"
+
     def _path_term_h(self, mag, m_b=None):
         """
         H factor for path term, subduction slab.
@@ -456,8 +474,8 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
         Regional anelastic coefficient for subduction slab, a0
         """
         if self.region is None:
-            return C["a0"], C_PGA["a0"]
-        return C[self.region + "_a0"], C_PGA[self.region + "_a0"]
+            return C["a0slab"], C_PGA["a0slab"]
+        return C[self.region + "_a0slab"], C_PGA[self.region + "_a0slab"]
 
     def _depth_scaling(self, C, hypo_depth):
         if hypo_depth >= C["db"]:
