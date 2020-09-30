@@ -221,8 +221,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             if name.startswith('avg_'):
                 c_asset = numpy.zeros((A, R, L), F32)
                 for (l, r, a, stat) in result[name]:
-                    c_asset[a, r, l] = stat
-                self.datastore[name + '-rlzs'] = c_asset * avg_ratio
+                    c_asset[a, r, l] = stat * avg_ratio[r]
+                self.datastore[name + '-rlzs'] = c_asset
                 set_rlzs_stats(self.datastore, name,
                                asset_id=self.assetcol['id'],
                                loss_type=oq.loss_names)
