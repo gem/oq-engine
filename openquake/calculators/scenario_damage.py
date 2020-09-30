@@ -124,15 +124,15 @@ def scenario_damage(riskinputs, param, monitor):
     return res
 
 
-@base.calculators.add('scenario_damage')
+@base.calculators.add('scenario_damage', 'event_based_damage')
 class ScenarioDamageCalculator(base.RiskCalculator):
     """
-    Scenario damage calculator
+    Damage calculator
     """
     core_task = scenario_damage
     is_stochastic = True
-    precalc = 'scenario'
-    accept_precalc = ['scenario']
+    precalc = 'event_based'
+    accept_precalc = ['scenario', 'event_based', 'event_based_risk']
 
     def pre_execute(self):
         super().pre_execute()
@@ -236,40 +236,33 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         """
         Sanity check on the total number of assets
         """
-        if self.R == 1:
-            avgdamages = self.datastore.sel('avg_damages-rlzs')
-        else:
-            avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')
-        num_assets = avgdamages.sum(axis=(0, 1, 3))  # by loss_type
-        expected = self.assetcol['number'].sum()
-        nums = set(num_assets) | {expected}
-        if len(nums) > 1:
-            numdic = dict(expected=expected)
-            for lt, num in zip(self.oqparam.loss_names, num_assets):
-                numdic[lt] = num
-            logging.info('Due to numeric errors the total number of assets '
-                         'is imprecise: %s', numdic)
-
-
-@base.calculators.add('event_based_damage')
-class EventBasedDamageCalculator(ScenarioDamageCalculator):
-    """
-    Event Based Damage calculator, able to compute avg_damages-rlzs,
-    dmg_by_event and consequences.
-    """
-    core_task = scenario_damage
-    precalc = 'event_based'
-    accept_precalc = ['event_based', 'event_based_risk']
-
-    def sanity_check(self):
-        if self.R == 1:
-            avgdamages = self.datastore.sel('avg_damages-rlzs')[:, 0]
-        else:
-            avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')[
-                :, 0]  # shape A, S, L, D, -> A, L, D
-        F = self.param['num_events'].mean()
-        dic = dict(got=avgdamages.sum() / self.L / F / self.oqparam.ses_ratio,
-                   expected=self.assetcol['number'].sum())
-        if dic['got'] != dic['expected']:
-            logging.info('Due to numeric errors the total number of assets '
-                         'is imprecise: %s', dic)
+        oq = self.oqparam
+        if oq.calculation_mode == 'scenario_damage':
+            if self.R == 1:
+                avgdamages = self.datastore.sel('avg_damages-rlzs')
+            else:
+                avgdamages = self.datastore.sel(
+                    'avg_damages-stats', stat='mean')
+            num_assets = avgdamages.sum(axis=(0, 1, 3))  # by loss_type
+            expected = self.assetcol['number'].sum()
+            nums = set(num_assets) | {expected}
+            if len(nums) > 1:
+                numdic = dict(expected=expected)
+                for lt, num in zip(self.oqparam.loss_names, num_assets):
+                    numdic[lt] = num
+                logging.info('Due to numeric errors the total number of assets'
+                             ' is imprecise: %s', numdic)
+        else:  # event based
+            if self.R == 1:
+                avgdamages = self.datastore.sel('avg_damages-rlzs')[:, 0]
+            else:
+                avgdamages = self.datastore.sel(
+                    'avg_damages-stats', stat='mean')[:, 0]
+                # shape A, S, L, D, -> A, L, D
+            F = self.param['num_events'].mean()
+            dic = dict(got=avgdamages.sum() / self.L / F /
+                       self.oqparam.ses_ratio,
+                       expected=self.assetcol['number'].sum())
+            if dic['got'] != dic['expected']:
+                logging.info('Due to numeric errors the total number of assets'
+                             'is imprecise: %s', dic)
