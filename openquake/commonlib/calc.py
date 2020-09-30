@@ -268,8 +268,7 @@ class RuptureImporter(object):
         """
         from openquake.calculators.getters import RuptureGetter, gen_rgetters
         # this is very fast compared to saving the ruptures
-        eids = rupture.get_eids(
-            rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
+        eids = rupture.get_eids(rup_array)
         self.check_overflow(len(eids))  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,

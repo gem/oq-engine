@@ -664,11 +664,9 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
+def get_eids(rup_array):
     """
     :param rup_array: a composite array with fields rup_id, n_occ and grp_id
-    :param samples_by_grp: a dictionary grp_id -> samples
-    :param num_rlzs_by_grp: a dictionary grp_id -> num_rlzs
     """
     all_eids = []
     for rup in rup_array:
