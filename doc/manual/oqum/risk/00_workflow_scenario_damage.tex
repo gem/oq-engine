@@ -11,7 +11,7 @@ collapsed buildings throughout the region of interest.
 
 The \gls{rupture} characteristics---i.e. the magnitude, hypocenter and fault
 geometry---are modelled as deterministic in the scenario calculators. Multiple
-realizations of different possible \glspl{acr:gmf} due to the single
+simulations of different possible \glspl{acr:gmf} due to the single
 \gls{rupture} are generated, taking into consideration both the inter-event
 variability of ground motions, and the intra-event residuals obtained from a
 spatial correlation model for ground motion residuals. The use of logic trees
@@ -22,16 +22,16 @@ As an alternative to computing the \glspl{acr:gmf} with \glsdesc{acr:oqe},
 users can also provide their own sets of \glspl{acr:gmf} as input to the
 scenario damage calculator.
 
-For each \gls{acr:gmf} realization, damage fractions (the fraction of
-buildings in each damage state) are estimated for every \gls{asset} in the
-\gls{exposuremodel} using the provided \gls{fragilitymodel}, and finally the
-damage distribution statistics (i.e., the mean damage fractions and standard
-deviation of damage fractions for all damage states) across all realizations
-are calculated. The calculator also provides aggregated damage distribution
-statistics for the portfolio, such as mean damage fractions and standard
-deviation of damage fractions for each taxonomy in the \gls{exposuremodel},
-and the mean damage fractions and standard deviation of damage fractions for
-the entire region of study.
+\textbf{Note}: The damage simulation algorithm for the scenario damage 
+calculator has changed starting from \glsdesc{acr:oqe39} to use a full
+Monte Carlo simulation of damage states.
+
+For each \gls{acr:gmf}, a damage state is simulated for each building for every
+\gls{asset} in the \gls{exposuremodel} using the provided \gls{fragilitymodel},
+and finally the mean damage distribution across all realizations is calculated.
+The calculator also provides aggregated damage distribution statistics for the
+portfolio, such as mean damage fractions for each taxonomy in the 
+\gls{exposuremodel}, and the mean damage for the entire region of study.
 
 The required input files required for running a scenario damage calculation
 and the resulting output files are depicted in Figure~\ref{fig:io-structure-scenario-damage}.
@@ -43,7 +43,7 @@ and the resulting output files are depicted in Figure~\ref{fig:io-structure-scen
 \label{fig:io-structure-scenario-damage}
 \end{figure}
 
-Starting with \glsdesc{acr:oqe17}, \gls{consequencemodel} files can also be
+\gls{consequencemodel} files can also be
 provided as inputs for a scenario damage calculation in addition to
 \glspl{fragilitymodel} files, in order to estimate consequences based on the
 calculated damage distribution. The user may provide one

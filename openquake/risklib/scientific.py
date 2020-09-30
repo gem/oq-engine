@@ -128,7 +128,9 @@ class VulnerabilityFunction(object):
                        "corresponding coeff. of variation > 0.0")
                 raise ValueError(msg)
             if distribution == 'BT':
-                if lr > 1:
+                if lr == 0:  # possible with cov == 0
+                    pass
+                elif lr > 1:
                     raise ValueError('The meanLRs must be <= 1, got %s' % lr)
                 elif cov ** 2 > 1 / lr - 1:
                     # see https://github.com/gem/oq-engine/issues/4841
