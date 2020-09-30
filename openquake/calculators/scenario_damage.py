@@ -100,6 +100,7 @@ def scenario_damage(riskinputs, param, monitor):
                     else:
                         ddds = bin_ddd(
                             fractions, asset['number'], seed + aid)
+                    # ddds has shape E', D with E' == len(out.eids)
                     for e, ddd in enumerate(ddds):
                         eid = out.eids[e]
                         ddic[aid, eid][l] = ddd[1:]
