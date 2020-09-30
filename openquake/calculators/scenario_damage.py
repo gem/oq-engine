@@ -236,33 +236,17 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         """
         Sanity check on the total number of assets
         """
-        oq = self.oqparam
-        if oq.calculation_mode == 'scenario_damage':
-            if self.R == 1:
-                avgdamages = self.datastore.sel('avg_damages-rlzs')
-            else:
-                avgdamages = self.datastore.sel(
-                    'avg_damages-stats', stat='mean')
-            num_assets = avgdamages.sum(axis=(0, 1, 3))  # by loss_type
-            expected = self.assetcol['number'].sum()
-            nums = set(num_assets) | {expected}
-            if len(nums) > 1:
-                numdic = dict(expected=expected)
-                for lt, num in zip(self.oqparam.loss_names, num_assets):
-                    numdic[lt] = num
-                logging.info('Due to numeric errors the total number of assets'
-                             ' is imprecise: %s', numdic)
-        else:  # event based
-            if self.R == 1:
-                avgdamages = self.datastore.sel('avg_damages-rlzs')[:, 0]
-            else:
-                avgdamages = self.datastore.sel(
-                    'avg_damages-stats', stat='mean')[:, 0]
-                # shape A, S, L, D, -> A, L, D
-            F = self.param['num_events'].mean()
-            dic = dict(got=avgdamages.sum() / self.L / F /
-                       self.oqparam.ses_ratio,
-                       expected=self.assetcol['number'].sum())
-            if dic['got'] != dic['expected']:
-                logging.info('Due to numeric errors the total number of assets'
-                             'is imprecise: %s', dic)
+        if self.R == 1:
+            avgdamages = self.datastore.sel('avg_damages-rlzs')
+        else:
+            avgdamages = self.datastore.sel(
+                'avg_damages-stats', stat='mean')
+        num_assets = avgdamages.sum(axis=(0, 1, 3))  # by loss_type
+        expected = self.assetcol['number'].sum()
+        nums = set(num_assets) | {expected}
+        if len(nums) > 1:
+            numdic = dict(expected=expected)
+            for lt, num in zip(self.oqparam.loss_names, num_assets):
+                numdic[lt] = num
+            logging.info('Due to numeric errors the total number of assets'
+                         ' is imprecise: %s', numdic)
