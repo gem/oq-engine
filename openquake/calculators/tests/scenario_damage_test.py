@@ -182,9 +182,6 @@ RM       4_000
         self.assertEqualFiles('expected/losses_asset.csv', fname)
 
     def test_case_10(self):
-        # case with more IMTs in the imported GMFs than required
-        self.run_calc(case_10.__file__, 'job.ini')
-
-        fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
-        for i, fname in enumerate(fnames):
-            self.assertEqualFiles('expected/avg_damages-%d.csv' % i, fname)
+        # error case: there a no RiskInputs
+        with self.assertRaises(RuntimeError):
+            self.run_calc(case_10.__file__, 'job.ini')

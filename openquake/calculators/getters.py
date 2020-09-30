@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import collections
+
 import itertools
 import operator
 import logging
@@ -259,54 +259,47 @@ class PmapGetter(object):
         return pmap
 
 
-class GmfDataGetter(collections.abc.Mapping):
+class GmfDataGetter(object):
     """
-    A dictionary-like object {sid: dictionary by realization index}
+    An object with an .init() and .get_hazard() method
     """
-    def __init__(self, dstore, sids, rlzs, num_rlzs):
-        self.dstore = dstore
-        self.sids = sids
-        self.rlzs = rlzs
-        self.num_rlzs = num_rlzs
-        assert len(sids) == 1, sids
-
-    def init(self):
-        if hasattr(self, 'data'):  # already initialized
-            return
-        self.dstore.open('r')  # if not already open
-        self.data = self[self.sids[0]]
-        if not self.data:  # no GMVs, return 0, counted in no_damage
-            self.data = {rlzi: 0 for rlzi in range(self.num_rlzs)}
+    def __init__(self, sid, df, num_events, num_rlzs):
+        self.sids = [sid]
+        self.df = df
+        self.num_rlzs = num_rlzs  # used in event_based_risk
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.E = len(self.rlzs)
-        del self.rlzs
+        self.E = num_events
+
+    def init(self):
+        pass
 
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
         :returns: an dict rlzi -> datadict
         """
-        return self.data
+        return dict(list(self.df.groupby('rlzs')))
 
-    def __getitem__(self, sid):
-        dset = self.dstore['gmf_data/data']
-        idxs = self.dstore['gmf_data/indices'][sid]
-        if idxs.dtype.name == 'uint32':  # scenario
-            idxs = [idxs]
-        elif not idxs.dtype.names:  # engine >= 3.2
-            idxs = zip(*idxs)
-        data = [dset[start:stop] for start, stop in idxs]
-        if len(data) == 0:  # site ID with no data
-            return {}
-        return group_by_rlz(numpy.concatenate(data), self.rlzs)
 
-    def __iter__(self):
-        return iter(self.sids)
+class ZeroGetter(object):
+    """
+    An object with an .init() and .get_hazard() method
+    """
+    def __init__(self, sid, num_rlzs):
+        self.sids = [sid]
+        self.num_rlzs = num_rlzs
 
-    def __len__(self):
-        return len(self.sids)
+    def init(self):
+        pass
+
+    def get_hazard(self, gsim=None):
+        """
+        :param gsim: ignored
+        :returns: an dict rlzi -> 0
+        """
+        return {rlzi: 0 for rlzi in range(self.num_rlzs)}
 
 
 time_dt = numpy.dtype(

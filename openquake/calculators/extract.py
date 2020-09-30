@@ -848,33 +848,31 @@ def extract_losses_by_event(dstore, what):
         yield 'rlz-%03d' % rlzi, dic[rlzi]
 
 
-def _gmf(data, num_sites, imts):
+def _gmf(df, num_sites, imts):
     # convert data into the composite array expected by QGIS
-    gmf_dt = numpy.dtype([(imt, F32) for imt in imts])
-    gmfa = numpy.zeros(num_sites, gmf_dt)
-    for rec in data:
-        arr = gmfa[rec['sid']]
-        for imt, gmv in zip(imts, rec['gmv']):
-            arr[imt] = gmv
+    gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts])
+    for m, imt in enumerate(imts):
+        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}']
     return gmfa
 
 
-# used by the QGIS plugin
+# used by the QGIS plugin for a single eid
 @extract.add('gmf_data')
 def extract_gmf_npz(dstore, what):
     oq = dstore['oqparam']
     qdict = parse(what)
     [eid] = qdict.get('event_id', [0])  # there must be a single event
+    rlzi = dstore['events'][eid]['rlz_id']
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
-    data = dstore['gmf_data/data']
-    rlzi = dstore['events'][eid]['rlz_id']
-    idx = data['eid'] == eid
-    if idx.any():
-        gmfa = _gmf(data[idx], n, oq.imtls)
-        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
-    else:  # zero GMF
+    try:
+        df = dstore.read_df('gmf_data', 'eid').loc[eid]
+    except KeyError:
+        # zero GMF
         yield 'rlz-%03d' % rlzi, []
+    else:
+        gmfa = _gmf(df, n, oq.imtls)
+        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
 
 
 @extract.add('num_events')
