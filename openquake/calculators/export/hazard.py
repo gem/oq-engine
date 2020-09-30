@@ -399,7 +399,12 @@ def export_gmf_data_csv(ekey, dstore):
     sc = dstore['sitecol'].array
     arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-    gmfa = dstore['gmf_data/data'][('eid', 'sid', 'gmv')]
+    gmfa = numpy.zeros(len(dstore['gmf_data/eid']), oq.gmf_data_dt())
+    df = dstore.read_df('gmf_data', 'sid')
+    gmfa['eid'] = df.eid.to_numpy()
+    gmfa['sid'] = df.index.to_numpy()
+    for m in range(len(imts)):
+        gmfa['gmv'][:, m] = df[f'gmv_{m}'].to_numpy()
     event_id = dstore['events']['id']
     gmfa['eid'] = event_id[gmfa['eid']]
     if eid is None:  # we cannot use extract here

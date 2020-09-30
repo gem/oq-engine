@@ -132,7 +132,7 @@ class DataStoreTestCase(unittest.TestCase):
         self.dstore['df/eid'] = eids
         self.dstore['df/val'] = vals
         self.dstore.getitem('df').attrs['__pdcolumns__'] = 'sid eid val'
-        df = self.dstore.read_df('df', 'sid')
+        df = self.dstore.read_df('df', 'sid', slc=slice(1, 3))
         print(df)
         df = self.dstore.read_df('df', 'eid')
         print(df)

@@ -649,10 +649,11 @@ def view_global_hmaps(token, dstore):
 @view.add('global_gmfs')
 def view_global_gmfs(token, dstore):
     """
-    Display GMFs averaged on everything for debugging purposes
+    Display GMFs on the first IMT averaged on everything for debugging purposes
     """
     imtls = dstore['oqparam'].imtls
-    row = dstore['gmf_data/data']['gmv'].mean(axis=0)
+    row = [dstore[f'gmf_data/gmv_{m}'][:].mean(axis=0)
+           for m in range(len(imtls))]
     return rst_table([row], header=imtls)
 
 
@@ -663,7 +664,7 @@ def view_gmv_by_rup(token, dstore):
     """
     rup_id = dstore['events']['rup_id']
     serial = dstore['ruptures']['serial']
-    data = dstore['gmf_data/data'][()]
+    data = dstore.read_df('gmf_data', 'eid')
     gmv = fast_agg3(data, 'eid', ['gmv'])
     gmv['eid'] = serial[rup_id[gmv['eid']]]
     gm = fast_agg3(gmv, 'eid', ['gmv'])
@@ -778,8 +779,8 @@ def view_gmvs_to_hazard(token, dstore):
     assert rlz < dstore['full_lt'].get_num_rlzs()
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
-    data = dstore['gmf_data/data'][()]
-    data = data[(data['sid'] == sid) & (data['rlzi'] == rlz)]
+    data = dstore.read_df('gmf_data', 'sid').loc[sid]
+    data = data['rlzi'] == rlz
     tbl = []
     gmv = data['gmv']
     for imti, (imt, imls) in enumerate(oq.imtls.items()):
@@ -798,8 +799,8 @@ def view_gmvs(token, dstore):
     """
     sid = int(token.split(':')[1])  # called as view_gmvs:sid
     assert sid in dstore['sitecol'].sids
-    data = dstore['gmf_data/data'][()]
-    gmvs = data[data['sid'] == sid]['gmv']
+    data = dstore.read_df('gmf_data', 'sid')
+    gmvs = data.loc[sid]['gmv']
     return rst_table(gmvs)
 
 
