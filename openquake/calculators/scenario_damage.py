@@ -184,15 +184,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
         if oq.investigation_time:  # event_based_damage
-            avg_ratio = oq.ses_ratio
+            avg_ratio = numpy.array([oq.ses_ratio] * R)
         else:  # scenario_damage
-            avg_ratio = 1. / oq.number_of_ground_motion_fields
+            avg_ratio = 1. / self.param['num_events']
 
         # damage by asset
         d_asset = numpy.zeros((A, R, L, D), F32)
         for (l, r, a, tot) in result['d_asset']:
-            d_asset[a, r, l] = tot
-        self.datastore['avg_damages-rlzs'] = d_asset * avg_ratio
+            d_asset[a, r, l] = tot * avg_ratio[r]
+        self.datastore['avg_damages-rlzs'] = d_asset
         set_rlzs_stats(self.datastore,
                        'avg_damages',
                        asset_id=self.assetcol['id'],
