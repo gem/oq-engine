@@ -1171,11 +1171,11 @@ class FullLogicTree(object):
         gsim_lt = gsimlt or GsimLogicTree.from_('[FromFile]')
         fakeSM = Realization(
             'scenario', weight=1,  ordinal=0, lt_path='b1', samples=1)
-        info = object.__new__(cls)
-        info.source_model_lt = SourceModelLogicTree.fake()
-        info.gsim_lt = gsim_lt
-        info.sm_rlzs = [fakeSM]
-        return info
+        self = object.__new__(cls)
+        self.source_model_lt = SourceModelLogicTree.fake()
+        self.gsim_lt = gsim_lt
+        self.sm_rlzs = [fakeSM]
+        return self
 
     def __init__(self, source_model_lt, gsim_lt):
         self.source_model_lt = source_model_lt
