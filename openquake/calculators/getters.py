@@ -446,6 +446,7 @@ class GmfGetter(object):
         return res
 
 
+# TODO: use pandas here
 def group_by_rlz(data, rlzs):
     """
     :param data: a composite array of D elements with a field `eid`
@@ -454,10 +455,7 @@ def group_by_rlz(data, rlzs):
     """
     acc = general.AccumDict(accum=[])
     for rec in data:
-        try:
-            acc[rlzs[rec['eid']]].append(rec)
-        except:
-            import pdb; pdb.set_trace()
+        acc[rlzs[rec['eid']]].append(rec)
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
