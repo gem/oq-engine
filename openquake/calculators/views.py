@@ -817,6 +817,16 @@ def view_events_by_mag(token, dstore):
     return rst_table(counts.items(), ['mag', 'num_events'])
 
 
+@view.add('ebrups_by_mag')
+def view_ebrups_by_mag(token, dstore):
+    """
+    Show how many event based ruptures there are for each magnitude
+    """
+    mags = dstore['ruptures']['mag']
+    uniq, counts = numpy.unique(mags, return_counts=True)
+    return rst_table(zip(uniq, counts), ['mag', 'num_ruptures'])
+
+
 @view.add('maximum_intensity')
 def view_maximum_intensity(token, dstore):
     """
