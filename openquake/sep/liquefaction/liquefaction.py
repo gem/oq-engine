@@ -6,6 +6,12 @@ import numpy as np
 # Table mapping the qualitative susceptibility of soils to liquefaction
 # to the minimum PGA level necessary to induce liquefaction
 LIQUEFACTION_PGA_THRESHOLD_TABLE = {
+    b"vh": 0.09,
+    b"h": 0.12,
+    b"m": 0.15,
+    b"l": 0.21,
+    b"vl": 0.26,
+    b"n": 5.0,
     "vh": 0.09,
     "h": 0.12,
     "m": 0.15,
@@ -14,12 +20,17 @@ LIQUEFACTION_PGA_THRESHOLD_TABLE = {
     "n": 5.0,
 }
 
-
 # Table mapping the qualitative susceptibility of soils to liquefaction
 # to coefficients for the range of PGA that can cause liquefaction.
 # See `hazus_conditional_liquefaction_probability` for more explanation
 # of how these values are used.
 LIQUEFACTION_COND_PROB_PGA_TABLE = {
+    b"vh": [9.09, 0.82],
+    b"h": [7.67, 0.92],
+    b"m": [6.67, 1.0],
+    b"l": [5.57, 1.18],
+    b"vl": [4.16, 1.08],
+    b"n": [0.0, 0.0],
     "vh": [9.09, 0.82],
     "h": [7.67, 0.92],
     "m": [6.67, 1.0],
@@ -30,6 +41,12 @@ LIQUEFACTION_COND_PROB_PGA_TABLE = {
 
 
 LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
+    b"vh": 0.25,
+    b"h": 0.2,
+    b"m": 0.1,
+    b"l": 0.05,
+    b"vl": 0.02,
+    b"n": 0.0,
     "vh": 0.25,
     "h": 0.2,
     "m": 0.1,
@@ -140,7 +157,8 @@ def hazus_conditional_liquefaction_probability(
         coeffs = coeff_table[susceptibility_category]
         liq_prob = coeffs[0] * pga - coeffs[1]
     else:
-        coeffs = [coeff_table[susc_cat] for susc_cat in susceptibility_category]
+        coeffs = [coeff_table[susc_cat]
+                  for susc_cat in susceptibility_category]
         coeff_0 = np.array([c[0] for c in coeffs])
         coeff_1 = np.array([c[1] for c in coeffs])
         liq_prob = coeff_0 * pga - coeff_1
@@ -230,4 +248,4 @@ def hazus_liquefaction_probability(
         else:
             map_unit_proportion = 1.0
 
-    return (liq_susc_prob * map_unit_proportion) / (groundwater_corr * mag_corr)
+    return liq_susc_prob * map_unit_proportion / (groundwater_corr * mag_corr)

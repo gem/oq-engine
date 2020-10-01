@@ -58,7 +58,7 @@ def calc_risk(gmfs, param, monitor):
     with monitor('getting assets'):
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
     with monitor('getting crmodel'):
-        crmodel = riskmodels.CompositeRiskModel.read(dstore)
+        crmodel = monitor.read_pik('crmodel')
         events = dstore['events'][list(eids)]
         weights = dstore['weights'][()]
     E = len(eids)
@@ -118,10 +118,9 @@ def calc_risk(gmfs, param, monitor):
     return acc
 
 
-def ebrisk(rupgetter, srcfilter, param, monitor):
+def ebrisk(rupgetter, param, monitor):
     """
     :param rupgetter: RuptureGetter with multiple ruptures
-    :param srcfilter: a SourceFilter
     :param param: dictionary of parameters coming from oqparam
     :param monitor: a Monitor instance
     :returns: a dictionary with keys elt, alt, ...
@@ -130,6 +129,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     mon_haz = monitor('getting hazard', measuremem=False)
     gmfs = []
     gmf_info = []
+    srcfilter = monitor.read_pik('srcfilter')
     gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
                            param['amplifier'])
     nbytes = 0
@@ -236,7 +236,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             hdf5path=self.datastore.filename,
             tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
-        srcfilter = self.src_filter(self.datastore.tempname)
+        srcfilter = self.src_filter()
         logging.info(
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
@@ -245,9 +245,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
+        smap.monitor.save_pik('srcfilter', srcfilter)
+        smap.monitor.save_pik('crmodel', self.crmodel)
         for rgetter in getters.gen_rupture_getters(
                 self.datastore, srcfilter, oq.concurrent_tasks):
-            smap.submit((rgetter, srcfilter, self.param))
+            smap.submit((rgetter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
             self.datastore['event_loss_table/indices'] = self.indices

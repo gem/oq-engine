@@ -65,34 +65,15 @@ def get_mean_curves(dstore, imt):
 # ########################################################################## #
 
 
-def compute_gmfs(rupgetter, srcfilter, param, monitor):
+def compute_gmfs(rupgetter, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
     oq = param['oqparam']
+    srcfilter = monitor.read_pik('srcfilter')
     getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'],
                        param['sec_perils'])
     return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
-
-
-def gmvs_to_mean_hcurves(dstore):
-    """
-    Convert GMFs into mean hazard curves. Works by keeping everything in
-    memory and it is extremely fast.
-    NB: parallelization would kill the performance.
-    """
-    oq = dstore['oqparam']
-    N = len(dstore['sitecol'])
-    M = len(oq.imtls)
-    L1 = len(oq.imtls.array) // M
-    gmf_df = dstore.read_df('gmf_data/data', 'sid')
-    mean = numpy.zeros((N, 1, M, L1))
-    for sid, df in gmf_df.groupby(gmf_df.index):
-        gmvs = [df[col].to_numpy() for col in df.columns
-                if col.startswith('gmv_')]
-        mean[sid, 0] = calc.gmvs_to_poes(
-            gmvs, oq.imtls, oq.ses_per_logic_tree_path)
-    return mean
 
 
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
@@ -110,7 +91,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         if hasattr(self.oqparam, 'maximum_distance'):
-            self.srcfilter = self.src_filter(self.datastore.tempname)
+            self.srcfilter = self.src_filter()
         else:
             self.srcfilter = nofilter
         if not self.datastore.parent:
@@ -192,18 +173,25 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
+        M = len(self.oqparam.imtls)
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
                 times = result.pop('times')
                 rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
-                hdf5.extend(self.datastore['gmf_data/data'], data)
+                hdf5.extend(self.datastore['gmf_data/sid'], data['sid'])
+                hdf5.extend(self.datastore['gmf_data/eid'], data['eid'])
+                for m in range(M):
+                    hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
+                                data['gmv'][:, m])
+                secperils = data.dtype.names[3:]  # after sid, eid, gmv
+                for m in range(M):
+                    for peril in secperils:
+                        hdf5.extend(self.datastore[f'gmf_data/{peril}_{m}'],
+                                    data[peril][:, m])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
-                for sid, start, stop in result['indices']:
-                    self.indices[sid, 0].append(start + self.offset)
-                    self.indices[sid, 1].append(stop + self.offset)
                 self.offset += len(data)
         if self.offset >= TWO32:
             raise RuntimeError(
@@ -282,7 +270,6 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.set_param()
         self.offset = 0
-        self.indices = AccumDict(accum=[])  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
         elif hasattr(self, 'csm'):  # from sources
@@ -305,12 +292,11 @@ class EventBasedCalculator(base.HazardCalculator):
                               oq.inputs['job_ini'])
         N = len(self.sitecol.complete)
         if oq.ground_motion_fields:
+            M = len(oq.imtls)
             nrups = len(self.datastore['ruptures'])
-            self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
+            base.create_gmf_data(self.datastore, M, self.param['sec_perils'])
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
-            self.datastore.create_dset(
-                'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
             self.datastore.create_dset('gmf_data/time_by_rup',
                                        time_dt, (nrups,), fillvalue=None)
@@ -321,35 +307,28 @@ class EventBasedCalculator(base.HazardCalculator):
         nr = len(self.datastore['ruptures'])
         self.datastore.swmr_on()
         logging.info('Reading %d ruptures', nr)
-        iterargs = ((rgetter, self.srcfilter, self.param)
+        iterargs = ((rgetter, self.param)
                     for rgetter in gen_rupture_getters(
                             self.datastore, self.srcfilter,
                             oq.concurrent_tasks))
-        acc = parallel.Starmap(
+        smap = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores
-        ).reduce(self.agg_dicts, self.acc0())
-
-        if self.indices:
-            dset = self.datastore['gmf_data/indices']
-            num_evs = self.datastore['gmf_data/events_by_sid']
-            logging.info('Saving gmf_data/indices')
-            with self.monitor('saving gmf_data/indices', measuremem=True):
-                self.datastore['gmf_data/imts'] = ' '.join(oq.imtls)
-                for sid in self.sitecol.complete.sids:
-                    start = numpy.array(self.indices[sid, 0])
-                    stop = numpy.array(self.indices[sid, 1])
-                    dset[sid, 0] = start
-                    dset[sid, 1] = stop
-                    num_evs[sid] = (stop - start).sum()
-            avg_events_by_sid = num_evs[()].sum() / N
-            logging.info('Found ~%d GMVs per site', avg_events_by_sid)
-            rel_events = self.datastore.read_unique('gmf_data/data', 'eid')
-            self.datastore['relevant_events'] = rel_events
-            logging.info('Stored %d relevant event IDs', len(rel_events))
-        elif oq.ground_motion_fields:
-            raise RuntimeError('No GMFs were generated, perhaps they were '
-                               'all below the minimum_intensity threshold')
+            num_cores=oq.num_cores)
+        smap.monitor.save_pik('srcfilter', self.srcfilter)
+        acc = smap.reduce(self.agg_dicts, self.acc0())
+        if 'gmf_data' not in self.datastore:
+            return acc
+        if oq.ground_motion_fields and oq.minimum_intensity:
+            eids = self.datastore['gmf_data/eid'][:]
+            rel_events = numpy.unique(eids)
+            e = len(rel_events)
+            if e == 0:
+                raise RuntimeError(
+                    'No GMFs were generated, perhaps they were '
+                    'all below the minimum_intensity threshold')
+            elif e < len(self.datastore['events']):
+                self.datastore['relevant_events'] = rel_events
+                logging.info('Stored %d relevant event IDs', e)
         return acc
 
     def post_execute(self, result):
@@ -426,14 +405,6 @@ class EventBasedCalculator(base.HazardCalculator):
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
                         for sid in hmap:
                             ds[sid, s] = hmap[sid].array
-        elif result and oq.maximum_intensity:
-            logging.info('Computing mean hcurves')
-            with self.monitor('computing mean hcurves'):
-                self.datastore['hcurves-stats'] = gmvs_to_mean_hcurves(
-                    self.datastore)
-                self.datastore.set_shape_attrs(
-                    'hcurves-stats', site_id=N, stat=['mean'],
-                    imt=list(oq.imtls), lvl=numpy.arange(L1))
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.compare_with_classical:  # compute classical curves

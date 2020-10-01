@@ -47,10 +47,29 @@ ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
 SOURCE_ID = stochastic.rupture_dt['source_id']
 memoized = lru_cache()
+FLOAT = (float, numpy.float32, numpy.float64)
+INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 
 
 class NotFound(Exception):
     pass
+
+
+def dumps(dic):
+    """
+    Dump in json
+    """
+    new = {}
+    for k, v in dic.items():
+        if isinstance(v, numpy.ndarray):
+            new[k] = v.tolist()
+        elif isinstance(v, FLOAT):
+            new[k] = int(v)
+        elif isinstance(v, INT):
+            new[k] = int(v)
+        else:
+            new[k] = v
+    return json.dumps(new)
 
 
 def lit_eval(string):
@@ -201,7 +220,8 @@ def extract_oqparam(dstore, dummy):
     """
     Extract job parameters as a JSON npz. Use it as /extract/oqparam
     """
-    return ArrayWrapper((), {'json': json.dumps(vars(dstore['oqparam']))})
+    js = dumps(vars(dstore['oqparam']))
+    return ArrayWrapper((), {'json': js})
 
 
 # used by the QGIS plugin in scenario
@@ -261,10 +281,10 @@ def extract_exposure_metadata(dstore, what):
         dic['multi_risk'] = sorted(
             set(dstore['asset_risk'].dtype.names) -
             set(dstore['assetcol/array'].dtype.names))
-    names = [name for name in dstore['assetcol/array'].dtype.names
-             if name.startswith(('value-', 'number', 'occupants_'))
-             and not name.endswith('_None')]
-    return ArrayWrapper(numpy.array(names), dic)
+    dic['names'] = [name for name in dstore['assetcol/array'].dtype.names
+                    if name.startswith(('value-', 'number', 'occupants_'))
+                    and not name.endswith('_None')]
+    return ArrayWrapper((), dict(json=dumps(dic)))
 
 
 @extract.add('assets')
@@ -311,7 +331,7 @@ def extract_asset_risk(dstore, what):
             tagidx, = numpy.where(dic[tag] == val)
             cond |= arr[tag] == tagidx
         arr = arr[cond]
-    return ArrayWrapper(arr, dic)
+    return ArrayWrapper(arr, dict(json=dumps(dic)))
 
 
 @extract.add('asset_tags')
@@ -828,33 +848,31 @@ def extract_losses_by_event(dstore, what):
         yield 'rlz-%03d' % rlzi, dic[rlzi]
 
 
-def _gmf(data, num_sites, imts):
+def _gmf(df, num_sites, imts):
     # convert data into the composite array expected by QGIS
-    gmf_dt = numpy.dtype([(imt, F32) for imt in imts])
-    gmfa = numpy.zeros(num_sites, gmf_dt)
-    for rec in data:
-        arr = gmfa[rec['sid']]
-        for imt, gmv in zip(imts, rec['gmv']):
-            arr[imt] = gmv
+    gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts])
+    for m, imt in enumerate(imts):
+        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}']
     return gmfa
 
 
-# used by the QGIS plugin
+# used by the QGIS plugin for a single eid
 @extract.add('gmf_data')
 def extract_gmf_npz(dstore, what):
     oq = dstore['oqparam']
     qdict = parse(what)
     [eid] = qdict.get('event_id', [0])  # there must be a single event
+    rlzi = dstore['events'][eid]['rlz_id']
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
-    data = dstore['gmf_data/data']
-    rlzi = dstore['events'][eid]['rlz_id']
-    idx = data['eid'] == eid
-    if idx.any():
-        gmfa = _gmf(data[idx], n, oq.imtls)
-        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
-    else:  # zero GMF
+    try:
+        df = dstore.read_df('gmf_data', 'eid').loc[eid]
+    except KeyError:
+        # zero GMF
         yield 'rlz-%03d' % rlzi, []
+    else:
+        gmfa = _gmf(df, n, oq.imtls)
+        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
 
 
 @extract.add('num_events')
@@ -991,7 +1009,8 @@ def crm_attrs(dstore, what):
         the attributes of the risk model, i.e. limit_states, loss_types,
         min_iml and covs, needed by the risk exporters.
     """
-    return ArrayWrapper((), dstore.get_attrs('risk_model'))
+    attrs = dstore.get_attrs('risk_model')
+    return ArrayWrapper((), dict(json=dumps(attrs)))
 
 
 def _get(dstore, name):

@@ -128,7 +128,9 @@ class VulnerabilityFunction(object):
                        "corresponding coeff. of variation > 0.0")
                 raise ValueError(msg)
             if distribution == 'BT':
-                if lr > 1:
+                if lr == 0:  # possible with cov == 0
+                    pass
+                elif lr > 1:
                     raise ValueError('The meanLRs must be <= 1, got %s' % lr)
                 elif cov ** 2 > 1 / lr - 1:
                     # see https://github.com/gem/oq-engine/issues/4841
@@ -147,11 +149,11 @@ class VulnerabilityFunction(object):
 
     def set_distribution(self, epsilons=None):
         if (self.covs > 0).any():
-            self.distribution = DISTRIBUTIONS[self.distribution_name]()
+            self._distribution = DISTRIBUTIONS[self.distribution_name]()
         else:
-            self.distribution = DegenerateDistribution()
-        self.distribution.epsilons = (numpy.array(epsilons)
-                                      if epsilons is not None else None)
+            self._distribution = DegenerateDistribution()
+        self._distribution.epsilons = (numpy.array(epsilons)
+                                       if epsilons is not None else None)
         assert self.seed is not None, self
         numpy.random.seed(self.seed)  # set by CompositeRiskModel.init
 
@@ -188,7 +190,7 @@ class VulnerabilityFunction(object):
         if self.distribution_name == 'LN' and epsilons is None:
             return means
         self.set_distribution(epsilons)
-        res = self.distribution.sample(means, covs, means * covs, idxs)
+        res = self._distribution.sample(means, covs, means * covs, idxs)
         return res
 
     # this is used in the tests, not in the engine code base
@@ -299,7 +301,7 @@ class VulnerabilityFunction(object):
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
                     zip(self.mean_loss_ratios, self.stddevs)):
-                lrem[row, col] = self.distribution.survival(
+                lrem[row, col] = self._distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
 
@@ -375,9 +377,9 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.set_distribution(None)
 
     def set_distribution(self, epsilons=None):
-        self.distribution = DISTRIBUTIONS[self.distribution_name]()
-        self.distribution.epsilons = epsilons
-        self.distribution.seed = self.seed  # needed only for PM
+        self._distribution = DISTRIBUTIONS[self.distribution_name]()
+        self._distribution.epsilons = epsilons
+        self._distribution.seed = self.seed  # needed only for PM
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
@@ -432,7 +434,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
            array of E' probabilities
         """
         self.set_distribution(epsilons)
-        return self.distribution.sample(self.loss_ratios, probs)
+        return self._distribution.sample(self.loss_ratios, probs)
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
@@ -470,7 +472,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
 
 
-# this is meant to be instantiated by riskmodels.get_risk_models
+# this is meant to be instantiated by riskmodels.get_risk_functions
 class VulnerabilityModel(dict):
     """
     Container for a set of vulnerability functions. You can access each
@@ -615,7 +617,7 @@ class FragilityFunctionList(list):
                     self.nodamage and self.nodamage <= self.imls[0])
         new.imls = build_imls(new, discretization)
         if steps_per_interval > 1:
-            new.interp_imls = build_imls(  # passed to classical_damage
+            new._interp_imls = build_imls(  # passed to classical_damage
                 new, discretization, steps_per_interval)
         for i, ls in enumerate(limit_states):
             data = self.array[i]
@@ -726,23 +728,6 @@ class FragilityModel(dict):
         return '<%s %s %s %s>' % (
             self.__class__.__name__, self.lossCategory,
             self.limitStates, sorted(self))
-
-    def build(self, continuous_fragility_discretization, steps_per_interval):
-        """
-        Return a new FragilityModel instance, in which the values have been
-        replaced with FragilityFunctionList instances.
-
-        :param continuous_fragility_discretization:
-            configuration parameter
-        :param steps_per_interval:
-            configuration parameter
-        """
-        newfm = copy.copy(self)
-        for key, ffl in self.items():
-            newfm[key] = ffl.build(self.limitStates,
-                                   continuous_fragility_discretization,
-                                   steps_per_interval)
-        return newfm
 
 
 #
@@ -946,7 +931,8 @@ def annual_frequency_of_exceedence(poe, t_haz):
 
 def classical_damage(
         fragility_functions, hazard_imls, hazard_poes,
-        investigation_time, risk_investigation_time, debug=False):
+        investigation_time, risk_investigation_time,
+        steps_per_interval=1, debug=False):
     """
     :param fragility_functions:
         a list of fragility functions for each damage state
@@ -958,13 +944,14 @@ def classical_damage(
         hazard investigation time
     :param risk_investigation_time:
         risk investigation time
+    :param steps_per_interval:
+        steps per interval
     :returns:
         an array of M probabilities of occurrence where M is the numbers
         of damage states.
     """
-    spi = fragility_functions.steps_per_interval
-    if spi and spi > 1:  # interpolate
-        imls = numpy.array(fragility_functions.interp_imls)
+    if steps_per_interval > 1:  # interpolate
+        imls = numpy.array(fragility_functions._interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         assert min_val > 0, hazard_imls  # sanity check
         numpy.putmask(imls, imls < min_val, min_val)

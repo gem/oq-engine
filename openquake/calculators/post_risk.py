@@ -25,7 +25,7 @@ from openquake.baselib import general, parallel, datastore
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific
-from openquake.calculators import base
+from openquake.calculators import base, views
 
 F32 = numpy.float32
 U32 = numpy.uint32
@@ -180,13 +180,16 @@ class PostRiskCalculator(base.RiskCalculator):
             self.build_datasets(builder, oq.aggregate_by, 'agg_')
         self.build_datasets(builder, [], 'app_')
         self.build_datasets(builder, [], 'tot_')
-        ds = self.datastore
-        full_aggregate_by = (ds.parent['oqparam'].aggregate_by if ds.parent
+        parent = self.datastore.parent
+        full_aggregate_by = (parent['oqparam'].aggregate_by if parent
                              else ()) or oq.aggregate_by
         if oq.aggregate_by:
             aggkeys = build_aggkeys(oq.aggregate_by, self.tagcol,
                                     full_aggregate_by)
-            if not oq.hazard_calculation_id:  # no parent
+            if parent and 'event_loss_table' in parent:
+                ds = parent
+            else:
+                ds = self.datastore
                 ds.swmr_on()
             smap = parallel.Starmap(
                 post_ebrisk, [(ds, aggkey) for aggkey in aggkeys],
@@ -235,6 +238,8 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity check on tot_losses
         """
+        logging.info('Mean portfolio loss\n' +
+                     views.view('portfolio_loss', self.datastore))
         logging.info('Sanity check on agg_losses/tot_losses')
         for kind in 'rlzs', 'stats':
             agg = 'agg_losses-' + kind
