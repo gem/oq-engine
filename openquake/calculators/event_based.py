@@ -226,13 +226,15 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def _read_scenario_ruptures(self):
         oq = self.oqparam
+        gsim_lt = readinput.get_gsim_lt(self.oqparam)
         if oq.inputs['rupture_model'].endswith(('.xml', '.toml', '.txt')):
             self.gsims = readinput.get_gsims(oq)
             self.cmaker = ContextMaker(
                 '*', self.gsims,
                 {'maximum_distance': oq.maximum_distance,
                  'filter_distance': oq.filter_distance})
-            n_occ = numpy.array([oq.number_of_ground_motion_fields])
+            n_occ = numpy.array([
+                oq.number_of_ground_motion_fields * len(self.gsims)])
             rup = readinput.get_rupture(oq)
             ebr = EBRupture(rup, 0, 0, n_occ)
             ebr.e0 = 0
@@ -242,6 +244,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         numpy.array([mesh], object))
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
+            aw.array['n_occ'] = gsim_lt.get_num_paths()
             rup_array = aw.array
             hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
@@ -251,7 +254,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 ' of %s km from the rupture' % oq.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
 
-        gsim_lt = readinput.get_gsim_lt(self.oqparam)
         # check the number of branchsets
         branchsets = len(gsim_lt._ltnode)
         if len(rup_array) == 1 and branchsets > 1:

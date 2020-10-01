@@ -664,23 +664,6 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
-    """
-    :param rup_array: a composite array with fields rup_id, n_occ and grp_id
-    :param samples_by_grp: a dictionary grp_id -> samples
-    :param num_rlzs_by_grp: a dictionary grp_id -> num_rlzs
-    """
-    all_eids = []
-    for rup in rup_array:
-        grp_id = rup['grp_id']
-        samples = samples_by_grp[grp_id]
-        num_rlzs = num_rlzs_by_grp[grp_id]
-        num_events = rup['n_occ'] if samples > 1 else rup['n_occ'] * num_rlzs
-        eids = numpy.arange(num_events, dtype=U32)
-        all_eids.append(eids)
-    return numpy.concatenate(all_eids)
-
-
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
@@ -705,36 +688,26 @@ class EBRupture(object):
         """
         return self.rupture.rup_id
 
-    def get_eids_by_rlz(self, rlzs_by_gsim, offset=0):
+    def get_eids_by_rlz(self, rlzs_by_gsim):
         """
         :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-        :param offset: offset used in the calculation of the event ID
         :returns: a dictionary rlz index -> eids array
         """
         j = 0
         dic = {}
-        if self.samples == 1:  # full enumeration or akin to it
-            for rlzs in rlzs_by_gsim.values():
-                for rlz in rlzs:
-                    dic[rlz] = numpy.arange(
-                        j, j + self.n_occ, dtype=U32) + offset
-                    j += self.n_occ
-        else:  # associated eids to the realizations
-            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-            histo = general.random_histogram(
-                self.n_occ, len(rlzs), self.rup_id)
-            for rlz, n in zip(rlzs, histo):
-                dic[rlz] = numpy.arange(j, j + n, dtype=U32) + offset
-                j += n
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        histo = general.random_histogram(
+            self.n_occ, len(rlzs), self.rup_id)
+        for rlz, n in zip(rlzs, histo):
+            dic[rlz] = numpy.arange(j, j + n, dtype=U32)
+            j += n
         return dic
 
-    def get_eids(self, num_rlzs):
+    def get_eids(self):
         """
-        :param num_rlzs: the number of realizations for the given group
         :returns: an array of event IDs
         """
-        num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
-        return numpy.arange(num_events, dtype=U32)
+        return numpy.arange(self.n_occ, dtype=U32)
 
     def export(self, events_by_ses):
         """
