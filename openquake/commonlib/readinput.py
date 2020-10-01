@@ -581,7 +581,7 @@ def get_gsims(oqparam):
     return [rlz.value[0] for rlz in get_gsim_lt(oqparam)]
 
 
-def get_ruptures(fname_csv, gsim_lt):
+def get_ruptures(fname_csv):
     """
     Read ruptures in CSV format and return an ArrayWrapper
     """
@@ -592,7 +592,6 @@ def get_ruptures(fname_csv, gsim_lt):
     trts = aw.trts
     rups = []
     geoms = []
-    fake = '*' in gsim_lt.values
     for u, row in enumerate(aw.array):
         hypo = row['lon'], row['lat'], row['dep']
         dic = json.loads(row['extra'])
@@ -606,10 +605,9 @@ def get_ruptures(fname_csv, gsim_lt):
         rec['maxlat'] = maxlat = mesh[1].max()
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
-        gsims = gsim_lt.values['*'] if fake else gsim_lt.values[row['trt']]
         rate = dic.get('occurrence_rate', numpy.nan)
         tup = (u, row['serial'], 'no-source', trts.index(row['trt']),
-               code[row['kind']], len(gsims), row['mag'], row['rake'], rate,
+               code[row['kind']], 1, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, s1, s2, 0, 0)
         rups.append(tup)
         geoms.append(mesh.transpose(1, 2, 0).flatten())
