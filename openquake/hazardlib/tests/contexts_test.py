@@ -115,14 +115,12 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         msg = 'The latitude of the first point is wrong'
         self.assertTrue(abs(dsts[0][1]+0.4859) < 1e-2, msg)
 
-    @pytest.mark.skip(reason="Need to modify the calculation of point on rup")
     def test_point_surface(self):
-
 
         sid = 0
         name = 'test'
         trt = TRT.ACTIVE_SHALLOW_CRUST
-        mfd = ArbitraryMFD([10.0], [1.])
+        mfd = ArbitraryMFD([7.0], [1.])
         rms = 2.5
         msr = WC1994()
         rar = 1.0
@@ -134,13 +132,25 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         hyd = PMF([(1.0, 10.)])
         src = PointSource(sid, name, trt, mfd, rms, msr, rar, tom, usd, lsd,
                           loc, npd, hyd)
-
         rups = [r for r in src.iter_ruptures()]
 
         # Compute distances
         param = 'closest_pnts'
-        sites = SiteCollection([Site(Point(0.25, -0.6, 0.0))])
+        sites = SiteCollection([Site(Point(0.0, 0.0, 0.0)),
+                                Site(Point(-0.2, 0.0, 0.0))])
         dsts = get_distances(rups[0], sites, param)
+
+        # Check first point
+        msg = 'The longitude of the first point is wrong'
+        self.assertTrue(abs(dsts[0, 0]-0.0) < 1e-2, msg)
+        msg = 'The latitude of the first point is wrong'
+        self.assertTrue(abs(dsts[0, 1]-0.0) < 1e-2, msg)
+
+        # Check second point
+        msg = 'The longitude of the second point is wrong'
+        self.assertTrue(abs(dsts[1, 0]+0.1666) < 1e-2, msg)
+        msg = 'The latitude of the second point is wrong'
+        self.assertTrue(abs(dsts[1, 1]-0.0) < 1e-2, msg)
 
 
 class EffectTestCase(unittest.TestCase):
