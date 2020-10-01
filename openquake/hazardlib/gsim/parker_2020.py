@@ -224,15 +224,9 @@ class ParkerEtAl2020SInter(GMPE):
         """
         Regional Mb factor.
         """
-        mb_regions = ("Aleutian", "AK", "Cascadia", "CAM_S", "CAM_N",
-                      "JP_Pac", "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
-        if self.saturation_region in mb_regions:
-            i = mb_regions.index(self.saturation_region)
-            m_b = (8, 8.6, 7.7, 7.4, 7.4, 8.5, 7.7, 8.5, 8.6, 7.1, 7.1)[i]
-        else:
-            m_b = 7.9
-
-        return m_b
+        if self.saturation_region in self.MB_REGIONS:
+            return self.MB_REGIONS[self.saturation_region]
+        return self.MB_REGIONS["default"]
 
     def _path_term_h(self, mag, m_b=None):
         """
@@ -420,6 +414,11 @@ class ParkerEtAl2020SInter(GMPE):
     CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
                  "vref_fnl": 760, "V1": 270, "vref": 760}
 
+    MB_REGIONS = {"Aleutian": 8, "AK": 8.6, "Cascadia": 7.7,
+                  "CAM_S": 7.4, "CAM_N": 7.4, "JP_Pac": 8.5, "JP_Phi": 7.7,
+                  "SA_N": 8.5, "SA_S": 8.6, "TW_W": 7.1, "TW_E": 7.1,
+                  "default": 7.9}
+
 
 class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
     """
@@ -443,21 +442,6 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
             # no more specific region available
             c0_col = self.region + "_c0slab"
         return C[c0_col], C_PGA[c0_col]
-
-    def _get_mb(self):
-        """
-        Regional Mb factor.
-        """
-        mb_regions = ("Aleutian", "AK", "Cascadia", "CAM_S", "CAM_N",
-                      "JP_Pac", "JP_Phi", "SA_N", "SA_S", "TW_W", "TW_E")
-        if self.saturation_region in mb_regions:
-            i = mb_regions.index(self.saturation_region)
-            m_b = (7.98, 7.2, 7.2, 7.6, 7.4, 7.65,
-                   7.55, 7.3, 7.25, 7.7, 7.7)[i]
-        else:
-            m_b = 7.6
-
-        return m_b
 
     def _suffix(self):
         """
@@ -488,6 +472,11 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
         if hypo_depth <= 20:
             return C["m"] * (20 - C["db"]) + C["d"]
         return C["m"] * (hypo_depth - C["db"]) + C["d"]
+
+    MB_REGIONS = {"Aleutian": 7.98, "AK": 7.2, "Cascadia": 7.2,
+                  "CAM_S": 7.6, "CAM_N": 7.4, "JP_Pac": 7.65, "JP_Phi": 7.55,
+                  "SA_N": 7.3, "SA_S": 7.25, "TW_W": 7.7, "TW_E": 7.7,
+                  "default": 7.6}
 
 
 class ParkerEtAl2020SInterAleutian(ParkerEtAl2020SInter):
