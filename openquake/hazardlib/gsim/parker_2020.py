@@ -144,35 +144,35 @@ class ParkerEtAl2020SInter(GMPE):
         """
 
         # define period-independent coefficients for phi models
-        V1 = 200
-        V2 = 500
-        R1 = 200
-        R2 = 500
+        v1 = 200
+        v2 = 500
+        r1 = 200
+        r2 = 500
 
         stddevs = []
 
         # total Phi
         phi_rv = np.zeros(len(vs30))
         for i, vs30i in enumerate(vs30):
-            if rrup[i] <= R1:
+            if rrup[i] <= r1:
                 phi_rv[i] = C["phi21"]
-            elif rrup[i] >= R2:
+            elif rrup[i] >= r2:
                 phi_rv[i] = C["phi22"]
             else:
                 phi_rv[i] = ((C["phi22"] - C["phi21"])
-                             / (math.log(R2) - math.log(R1))) \
-                            * (math.log(rrup[i]) - math.log(R1)) + C["phi21"]
+                             / (math.log(r2) - math.log(r1))) \
+                            * (math.log(rrup[i]) - math.log(r1)) + C["phi21"]
 
-            if vs30i <= V1:
+            if vs30i <= v1:
                 phi_rv[i] += C["phi2V"] * \
-                             (math.log(R2 / max(R1, min(R2, rrup[i])))
-                              / math.log(R2 / R1))
-            elif vs30i < V2:
-                phi_rv += C["phi2V"] * \
-                          ((math.log(V2 / min(V2, vs30i)))
-                           / (math.log(V2 / V1))) * \
-                          (math.log(R2 / max(R1, min(R2, rrup[i])))
-                           / (math.log(R2 / R1)))
+                             (math.log(r2 / max(r1, min(r2, rrup[i])))
+                              / math.log(r2 / r1))
+            elif vs30i < v2:
+                phi_rv[i] += C["phi2V"] * \
+                          ((math.log(v2 / min(v2, vs30i)))
+                           / math.log(v2 / v1)) * \
+                          (math.log(r2 / max(r1, min(r2, rrup[i])))
+                           / math.log(r2 / r1))
 
         phi_tot = np.sqrt(phi_rv)
 
@@ -216,7 +216,7 @@ class ParkerEtAl2020SInter(GMPE):
         else:
             fm = C["c4" + sfx] * m_diff + C["c5" + sfx] * m_diff ** 2
             fm_pga = C_PGA["c4" + sfx] * m_diff \
-                     + C_PGA["c5" + sfx] * m_diff ** 2
+                + C_PGA["c5" + sfx] * m_diff ** 2
 
         return fm, fm_pga
 
@@ -264,17 +264,17 @@ class ParkerEtAl2020SInter(GMPE):
         Path term.
         """
         h = self._path_term_h(mag, m_b)
-        R = np.sqrt(rrup ** 2 + h ** 2)
+        r = np.sqrt(rrup ** 2 + h ** 2)
         # log(R / Rref)
-        r_rref = np.log(R / math.sqrt(1 + h ** 2))
+        r_rref = np.log(r / math.sqrt(1 + h ** 2))
 
         a0, a0_pga = self._a0(C, C_PGA, self.region)
 
         c1n = "c1" + self._suffix()
-        fp = C[c1n] * np.log(R) + (self.CONSTANTS["b4"] * mag) \
-            * r_rref + a0 * R
-        fp_pga = C_PGA[c1n] * np.log(R) + (self.CONSTANTS["b4"] * mag) \
-            * r_rref + a0_pga * R
+        fp = C[c1n] * np.log(r) + (self.CONSTANTS["b4"] * mag) \
+            * r_rref + a0 * r
+        fp_pga = C_PGA[c1n] * np.log(r) + (self.CONSTANTS["b4"] * mag) \
+            * r_rref + a0_pga * r
 
         return fp, fp_pga
 
@@ -283,7 +283,7 @@ class ParkerEtAl2020SInter(GMPE):
         Linear site term.
         """
         # site coefficients
-        V1 = self.CONSTANTS["V1"]
+        v1 = self.CONSTANTS["V1"]
         vref = self.CONSTANTS["vref"]
         if self.region is None or self.region == "CAM":
             s2 = C["s2"]
@@ -296,10 +296,11 @@ class ParkerEtAl2020SInter(GMPE):
             s1 = s2
 
         # linear site term
-        fnl = np.where(vs30 <= V1,
-                       s1 * np.log(vs30 / V1) + s2 * math.log(V1 / vref),
+        fnl = np.where(vs30 <= v1,
+                       s1 * np.log(vs30 / v1) + s2 * math.log(v1 / vref),
                        0)
-        fnl = np.where(vs30 <= C["V2"], s2 * np.log(vs30 / vref), fnl)
+        fnl = np.where((v1 < vs30) & (vs30 <= C["V2"]),
+                       s2 * np.log(vs30 / vref), fnl)
         fnl = np.where(vs30 > C["V2"], s2 * math.log(C["V2"] / vref), fnl)
 
         return fnl
@@ -311,7 +312,7 @@ class ParkerEtAl2020SInter(GMPE):
         # fd for slab only
         pgar = np.exp(fp + fm + c0 + fd)
 
-        if imt is SA and imt.period >= 3:
+        if hasattr(imt, "period") and imt.period >= 3:
             fnl = 0
         else:
             fnl = C["f4"] * \
@@ -329,7 +330,7 @@ class ParkerEtAl2020SInter(GMPE):
         """
         Basin term main handler.
         """
-        if not hasattr(sites, 'z2pt5') or sites.z2pt5 == 0:
+        if not hasattr(sites, 'z2pt5'):
             return 0
 
         if self.region == "JP":
@@ -345,13 +346,13 @@ class ParkerEtAl2020SInter(GMPE):
             if self.basin == "out":
                 dn = C["del_None"]
                 return self._get_basin_term_factors(3.94, -0.42, 200, 0.2,
-                                                    C["C_e1"] + dn,
+                                                    C["C_e1"],
                                                     C["C_e2"] + dn,
                                                     C["C_e3"] + dn, sites)
             if self.basin == "Seattle":
                 ds = C["del_Seattle"]
                 return self._get_basin_term_factors(3.94, -0.42, 200, 0.2,
-                                                    C["C_e1"] + ds,
+                                                    C["C_e1"],
                                                     C["C_e2"] + ds,
                                                     C["C_e3"] + ds, sites)
 
@@ -362,16 +363,23 @@ class ParkerEtAl2020SInter(GMPE):
         """
         Basin term for given factors.
         """
-        z2pt5_pred = 10 ** (theta0 + theta1
-                            * (1 + erf((np.log10(sites.vs30) - math.log10(vmu))
-                                       / (vsig * math.sqrt(2)))))
-        del_z2pt5 = np.log(sites.z2pt5) - math.log(z2pt5_pred)
+        btf = np.zeros_like(sites.vs30)
+        select = sites.z2pt5 != 0
+        if len(select) == 0:
+            return btf
+        vs30 = sites.vs30[select]
+        z2pt5 = sites.z2pt5[select]
 
-        if del_z2pt5 <= (e1 / e3):
-            return e1
-        if del_z2pt5 >= (e2 / e3):
-            return e2
-        return e3 * del_z2pt5
+        z2pt5_pred = 10 ** (theta0 + theta1
+                            * (1 + erf((np.log10(vs30) - math.log10(vmu))
+                                       / (vsig * math.sqrt(2)))))
+        del_z2pt5 = np.log(z2pt5) - np.log(z2pt5_pred)
+
+        btf[select] = np.where(del_z2pt5 <= (e1 / e3), e1,
+                               np.where(del_z2pt5 >= (e2 / e3), e2,
+                                        e3 * del_z2pt5))
+
+        return btf
 
     def _depth_scaling(self, C, hypo_depth):
         """
@@ -423,16 +431,13 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
     # slab also requires hypo_depth
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    # and no vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
-
     def _c0(self, C, C_PGA):
         """
         c0 factor.
         """
         if self.saturation_region is None:
             c0_col = "c0slab"
-        elif self.region == "SA":
+        elif self.region in ["AK", "SA"]:
             c0_col = self.saturation_region + "_c0slab"
         else:
             # no more specific region available
@@ -490,7 +495,10 @@ class ParkerEtAl2020SInterAleutian(ParkerEtAl2020SInter):
     For the Aleutian region.
     """
     def __init__(self):
-        super(ParkerEtAl2020SInterAleutian, self).__init__(region="Aleutian")
+        # region set to Alaska because original R code could not set
+        # Aleutian_c0 if region was global and Aleutian region not available
+        super(ParkerEtAl2020SInterAleutian, self) \
+            .__init__(region="AK", saturation_region="Aleutian")
 
 
 class ParkerEtAl2020SInterAlaska(ParkerEtAl2020SInter):
@@ -523,6 +531,9 @@ class ParkerEtAl2020SInterCascadia(ParkerEtAl2020SInter):
     """
     Cascadia, other mapped basin (Tacoma, Everett, Georgia, etc.).
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SInterCascadia, self).__init__(region="Cascadia")
 
@@ -531,6 +542,9 @@ class ParkerEtAl2020SInterCascadiaOut(ParkerEtAl2020SInter):
     """
     Cascadia, estimate of Z2.5 outside mapped basin.
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SInterCascadiaOut, self) \
             .__init__(region="Cascadia", basin="out")
@@ -540,6 +554,9 @@ class ParkerEtAl2020SInterCascadiaSeattle(ParkerEtAl2020SInter):
     """
     Cascadia, Seattle basin.
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SInterCascadiaSeattle, self) \
             .__init__(region="Cascadia", basin="Seattle")
@@ -549,6 +566,9 @@ class ParkerEtAl2020SInterJapanPac(ParkerEtAl2020SInter):
     """
     For the Japan Pac region.
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SInterJapanPac, self) \
             .__init__(region="JP", saturation_region="JP_Pac")
@@ -558,6 +578,9 @@ class ParkerEtAl2020SInterJapanPhi(ParkerEtAl2020SInter):
     """
     For the Japan Phi region.
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SInterJapanPhi, self) \
             .__init__(region="JP", saturation_region="JP_Phi")
@@ -604,7 +627,8 @@ class ParkerEtAl2020SSlabAleutian(ParkerEtAl2020SSlab):
     For the Aleutian region.
     """
     def __init__(self):
-        super(ParkerEtAl2020SSlabAleutian, self).__init__(region="Aleutian")
+        super(ParkerEtAl2020SSlabAleutian, self) \
+            .__init__(region="AK", saturation_region="Aleutian")
 
 
 class ParkerEtAl2020SSlabAlaska(ParkerEtAl2020SSlab):
@@ -637,6 +661,9 @@ class ParkerEtAl2020SSlabCascadia(ParkerEtAl2020SSlab):
     """
     Cascadia, other mapped basin (Tacoma, Everett, Georgia, etc.).
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SSlabCascadia, self).__init__(region="Cascadia")
 
@@ -645,6 +672,9 @@ class ParkerEtAl2020SSlabCascadiaOut(ParkerEtAl2020SSlab):
     """
     Cascadia, estimate of Z2.5 outside mapped basin.
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SSlabCascadiaOut, self) \
             .__init__(region="Cascadia", basin="out")
@@ -654,6 +684,9 @@ class ParkerEtAl2020SSlabCascadiaSeattle(ParkerEtAl2020SSlab):
     """
     Cascadia, Seattle basin.
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SSlabCascadiaSeattle, self) \
             .__init__(region="Cascadia", basin="Seattle")
@@ -663,6 +696,9 @@ class ParkerEtAl2020SSlabJapanPac(ParkerEtAl2020SSlab):
     """
     For the Japan Pac region.
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SSlabJapanPac, self) \
             .__init__(region="JP", saturation_region="JP_Pac")
@@ -672,6 +708,9 @@ class ParkerEtAl2020SSlabJapanPhi(ParkerEtAl2020SSlab):
     """
     For the Japan Phi region.
     """
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
     def __init__(self):
         super(ParkerEtAl2020SSlabJapanPhi, self) \
             .__init__(region="JP", saturation_region="JP_Phi")
