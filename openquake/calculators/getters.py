@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import itertools
 import operator
 import logging
 import unittest.mock as mock
@@ -399,7 +398,7 @@ class GmfGetter(object):
     def compute_gmfs_curves(self, rlzs, monitor):
         """
         :param rlzs: an array of shapeE
-        :returns: a dict with keys gmfdata, indices, hcurves
+        :returns: a dict with keys gmfdata, hcurves
         """
         oq = self.oqparam
         mon = monitor('getting ruptures', measuremem=True)
@@ -422,20 +421,11 @@ class GmfGetter(object):
         gmfdata = self.get_gmfdata(mon)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
-        indices = []
-        gmfdata.sort(order=('sid', 'eid'))
-        start = stop = 0
-        for sid, rows in itertools.groupby(gmfdata['sid']):
-            for row in rows:
-                stop += 1
-            indices.append((sid, start, stop))
-            start = stop
         times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
                             time_dt)
         times.sort(order='rup_id')
         res = dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
-                   sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
-                   indices=numpy.array(indices, (U32, 3)))
+                   sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt))
         return res
 
 
