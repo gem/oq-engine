@@ -43,8 +43,8 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 bymag = operator.attrgetter('mag')
 bydist = operator.attrgetter('dist')
 I16 = numpy.int16
-KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
+tmp = 'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_pnts'
+KNOWN_DISTANCES = frozenset(tmp.split())
 
 
 def get_distances(rupture, sites, param):
@@ -74,6 +74,11 @@ def get_distances(rupture, sites, param):
         dist = rupture.surface.get_azimuth(sites)
     elif param == 'azimuth_cp':
         dist = rupture.surface.get_azimuth_of_closest_point(sites)
+    elif param == 'closest_pnts':
+        t = rupture.surface.get_closest_points(sites)
+        dist = numpy.array([(lo, la, de) for lo, la, de in zip(t.lons,
+                                                               t.lats,
+                                                               t.depths)])
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
