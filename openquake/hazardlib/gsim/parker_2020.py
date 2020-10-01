@@ -18,41 +18,17 @@
 
 """
 Module exports :class:`ParkerEtAl2020SInter`
-               :class:`ParkerEtAl2020SInterAleutian`
-               :class:`ParkerEtAl2020SInterAlaska`
-               :class:`ParkerEtAl2020SInterCascadiaOut`
-               :class:`ParkerEtAl2020SInterCascadiaSeattle`
-               :class:`ParkerEtAl2020SInterCascadia`
-               :class:`ParkerEtAl2020SInterCAMN`
-               :class:`ParkerEtAl2020SInterCAMS`
-               :class:`ParkerEtAl2020SInterJapanPac`
-               :class:`ParkerEtAl2020SInterJapanPhi`
-               :class:`ParkerEtAl2020SInterSAN`
-               :class:`ParkerEtAl2020SInterSAS`
-               :class:`ParkerEtAl2020SInterTaiwanE`
-               :class:`ParkerEtAl2020SInterTaiwanW`
+               :class:`ParkerEtAl2020SInterB`
                :class:`ParkerEtAl2020SSlab`
-               :class:`ParkerEtAl2020SSlabAleutian`
-               :class:`ParkerEtAl2020SSlabAlaska`
-               :class:`ParkerEtAl2020SSlabCascadiaOut`
-               :class:`ParkerEtAl2020SSlabCascadiaSeattle`
-               :class:`ParkerEtAl2020SSlabCascadia`
-               :class:`ParkerEtAl2020SSlabCAMN`
-               :class:`ParkerEtAl2020SSlabCAMS`
-               :class:`ParkerEtAl2020SSlabJapanPac`
-               :class:`ParkerEtAl2020SSlabJapanPhi`
-               :class:`ParkerEtAl2020SSlabSAN`
-               :class:`ParkerEtAl2020SSlabSAS`
-               :class:`ParkerEtAl2020SSlabTaiwanE`
-               :class:`ParkerEtAl2020SSlabTaiwanW`
+               :class:`ParkerEtAl2020SSlabB`
 """
 import math
 
 import numpy as np
 from scipy.special import erf
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
 from openquake.hazardlib.imt import PGA, SA, PGV
 
 
@@ -95,7 +71,8 @@ class ParkerEtAl2020SInter(GMPE):
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
-        super().__init__()
+        super().__init__(region=region, saturation_region=saturation_region,
+                         basin=basin)
         self.region = region
         if saturation_region is None:
             self.saturation_region = region
@@ -420,6 +397,13 @@ class ParkerEtAl2020SInter(GMPE):
                   "default": 7.9}
 
 
+class ParkerEtAl2020SInterB(ParkerEtAl2020SInter):
+    """
+    For Cascadia and Japan where basins are defined (also require z2pt5).
+    """
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+
+
 class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
     """
     Modifications for subduction slab.
@@ -479,263 +463,113 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
                   "default": 7.6}
 
 
-class ParkerEtAl2020SInterAleutian(ParkerEtAl2020SInter):
+class ParkerEtAl2020SSlabB(ParkerEtAl2020SSlab):
     """
-    For the Aleutian region.
+    For Cascadia and Japan where basins are defined (also require z2pt5).
     """
-    def __init__(self):
-        # region set to Alaska because original R code could not set
-        # Aleutian_c0 if region was global and Aleutian region not available
-        super(ParkerEtAl2020SInterAleutian, self) \
-            .__init__(region="AK", saturation_region="Aleutian")
-
-
-class ParkerEtAl2020SInterAlaska(ParkerEtAl2020SInter):
-    """
-    For the Alaska region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SInterAlaska, self).__init__(region="AK")
-
-
-class ParkerEtAl2020SInterCAMN(ParkerEtAl2020SInter):
-    """
-    For the CAM North region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SInterCAMN, self) \
-            .__init__(region="CAM", saturation_region="CAM_N")
-
-
-class ParkerEtAl2020SInterCAMS(ParkerEtAl2020SInter):
-    """
-    For the CAM South region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SInterCAMS, self) \
-            .__init__(region="CAM", saturation_region="CAM_S")
-
-
-class ParkerEtAl2020SInterCascadia(ParkerEtAl2020SInter):
-    """
-    Cascadia, other mapped basin (Tacoma, Everett, Georgia, etc.).
-    """
-
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
-    def __init__(self):
-        super(ParkerEtAl2020SInterCascadia, self).__init__(region="Cascadia")
 
+gsim_aliases['ParkerEtAl2020SInterAleutian'] = '''[ParkerEtAl2020SInter]
+region="AK"
+saturation_region="Aleutian"
+'''
+gsim_aliases['ParkerEtAl2020SInterAlaska'] = '''[ParkerEtAl2020SInter]
+region="AK"
+'''
+gsim_aliases['ParkerEtAl2020SInterCAMN'] = '''[ParkerEtAl2020SInter]
+region="CAM"
+saturation_region="CAM_N"
+'''
+gsim_aliases['ParkerEtAl2020SInterCAMS'] = '''[ParkerEtAl2020SInter]
+region="CAM"
+saturation_region="CAM_S"
+'''
+gsim_aliases['ParkerEtAl2020SInterSAN'] = '''[ParkerEtAl2020SInter]
+region="SA"
+saturation_region="SA_N"
+'''
+gsim_aliases['ParkerEtAl2020SInterSAS'] = '''[ParkerEtAl2020SInter]
+region="SA"
+saturation_region="SA_S"
+'''
+gsim_aliases['ParkerEtAl2020SInterTaiwanE'] = '''[ParkerEtAl2020SInter]
+region="TW"
+saturation_region="TW_E"
+'''
+gsim_aliases['ParkerEtAl2020SInterTaiwanW'] = '''[ParkerEtAl2020SInter]
+region="TW"
+saturation_region="TW_W"
+'''
+gsim_aliases['ParkerEtAl2020SInterCascadia'] = '''[ParkerEtAl2020SInterB]
+region="Cascadia"
+'''
+gsim_aliases['ParkerEtAl2020SInterCascadiaOut'] = '''[ParkerEtAl2020SInterB]
+region="Cascadia"
+basin="out"
+'''
+gsim_aliases['ParkerEtAl2020SInterCascadiaSeattle'] = '''
+[ParkerEtAl2020SInterB]
+region="Cascadia"
+basin="Seattle"
+'''
+gsim_aliases['ParkerEtAl2020SInterJapanPac'] = '''[ParkerEtAl2020SInterB]
+region="JP"
+saturation_region="JP_Pac"
+'''
+gsim_aliases['ParkerEtAl2020SInterJapanPhi'] = '''[ParkerEtAl2020SInterB]
+region="JP"
+saturation_region="JP_Phi"
+'''
 
-class ParkerEtAl2020SInterCascadiaOut(ParkerEtAl2020SInter):
-    """
-    Cascadia, estimate of Z2.5 outside mapped basin.
-    """
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
-    def __init__(self):
-        super(ParkerEtAl2020SInterCascadiaOut, self) \
-            .__init__(region="Cascadia", basin="out")
-
-
-class ParkerEtAl2020SInterCascadiaSeattle(ParkerEtAl2020SInter):
-    """
-    Cascadia, Seattle basin.
-    """
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
-    def __init__(self):
-        super(ParkerEtAl2020SInterCascadiaSeattle, self) \
-            .__init__(region="Cascadia", basin="Seattle")
-
-
-class ParkerEtAl2020SInterJapanPac(ParkerEtAl2020SInter):
-    """
-    For the Japan Pac region.
-    """
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
-    def __init__(self):
-        super(ParkerEtAl2020SInterJapanPac, self) \
-            .__init__(region="JP", saturation_region="JP_Pac")
-
-
-class ParkerEtAl2020SInterJapanPhi(ParkerEtAl2020SInter):
-    """
-    For the Japan Phi region.
-    """
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
-    def __init__(self):
-        super(ParkerEtAl2020SInterJapanPhi, self) \
-            .__init__(region="JP", saturation_region="JP_Phi")
-
-
-class ParkerEtAl2020SInterSAN(ParkerEtAl2020SInter):
-    """
-    For the SA North region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SInterSAN, self) \
-            .__init__(region="SA", saturation_region="SA_N")
-
-
-class ParkerEtAl2020SInterSAS(ParkerEtAl2020SInter):
-    """
-    For the SA South region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SInterSAS, self) \
-            .__init__(region="SA", saturation_region="SA_S")
-
-
-class ParkerEtAl2020SInterTaiwanE(ParkerEtAl2020SInter):
-    """
-    For the Taiwan East region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SInterTaiwanE, self) \
-            .__init__(region="TW", saturation_region="TW_E")
-
-
-class ParkerEtAl2020SInterTaiwanW(ParkerEtAl2020SInter):
-    """
-    For the Taiwan West region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SInterTaiwanW, self) \
-            .__init__(region="TW", saturation_region="TW_W")
-
-
-class ParkerEtAl2020SSlabAleutian(ParkerEtAl2020SSlab):
-    """
-    For the Aleutian region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SSlabAleutian, self) \
-            .__init__(region="AK", saturation_region="Aleutian")
-
-
-class ParkerEtAl2020SSlabAlaska(ParkerEtAl2020SSlab):
-    """
-    For the Alaska region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SSlabAlaska, self).__init__(region="AK")
-
-
-class ParkerEtAl2020SSlabCAMN(ParkerEtAl2020SSlab):
-    """
-    For the CAM North region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SSlabCAMN, self) \
-            .__init__(region="CAM", saturation_region="CAM_N")
-
-
-class ParkerEtAl2020SSlabCAMS(ParkerEtAl2020SSlab):
-    """
-    For the CAM South region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SSlabCAMS, self) \
-            .__init__(region="CAM", saturation_region="CAM_S")
-
-
-class ParkerEtAl2020SSlabCascadia(ParkerEtAl2020SSlab):
-    """
-    Cascadia, other mapped basin (Tacoma, Everett, Georgia, etc.).
-    """
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
-    def __init__(self):
-        super(ParkerEtAl2020SSlabCascadia, self).__init__(region="Cascadia")
-
-
-class ParkerEtAl2020SSlabCascadiaOut(ParkerEtAl2020SSlab):
-    """
-    Cascadia, estimate of Z2.5 outside mapped basin.
-    """
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
-    def __init__(self):
-        super(ParkerEtAl2020SSlabCascadiaOut, self) \
-            .__init__(region="Cascadia", basin="out")
-
-
-class ParkerEtAl2020SSlabCascadiaSeattle(ParkerEtAl2020SSlab):
-    """
-    Cascadia, Seattle basin.
-    """
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
-    def __init__(self):
-        super(ParkerEtAl2020SSlabCascadiaSeattle, self) \
-            .__init__(region="Cascadia", basin="Seattle")
-
-
-class ParkerEtAl2020SSlabJapanPac(ParkerEtAl2020SSlab):
-    """
-    For the Japan Pac region.
-    """
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
-    def __init__(self):
-        super(ParkerEtAl2020SSlabJapanPac, self) \
-            .__init__(region="JP", saturation_region="JP_Pac")
-
-
-class ParkerEtAl2020SSlabJapanPhi(ParkerEtAl2020SSlab):
-    """
-    For the Japan Phi region.
-    """
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
-    def __init__(self):
-        super(ParkerEtAl2020SSlabJapanPhi, self) \
-            .__init__(region="JP", saturation_region="JP_Phi")
-
-
-class ParkerEtAl2020SSlabSAN(ParkerEtAl2020SSlab):
-    """
-    For the SA North region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SSlabSAN, self) \
-            .__init__(region="SA", saturation_region="SA_N")
-
-
-class ParkerEtAl2020SSlabSAS(ParkerEtAl2020SSlab):
-    """
-    For the SA South region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SSlabSAS, self) \
-            .__init__(region="SA", saturation_region="SA_S")
-
-
-class ParkerEtAl2020SSlabTaiwanE(ParkerEtAl2020SSlab):
-    """
-    For the Taiwan East region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SSlabTaiwanE, self) \
-            .__init__(region="TW", saturation_region="TW_E")
-
-
-class ParkerEtAl2020SSlabTaiwanW(ParkerEtAl2020SSlab):
-    """
-    For the Taiwan West region.
-    """
-    def __init__(self):
-        super(ParkerEtAl2020SSlabTaiwanW, self) \
-            .__init__(region="TW", saturation_region="TW_W")
+gsim_aliases['ParkerEtAl2020SSlabAleutian'] = '''[ParkerEtAl2020SSlab]
+region="AK"
+saturation_region="Aleutian"
+'''
+gsim_aliases['ParkerEtAl2020SSlabAlaska'] = '''[ParkerEtAl2020SSlab]
+region="AK"
+'''
+gsim_aliases['ParkerEtAl2020SSlabCAMN'] = '''[ParkerEtAl2020SSlab]
+region="CAM"
+saturation_region="CAM_N"
+'''
+gsim_aliases['ParkerEtAl2020SSlabCAMS'] = '''[ParkerEtAl2020SSlab]
+region="CAM"
+saturation_region="CAM_S"
+'''
+gsim_aliases['ParkerEtAl2020SSlabSAN'] = '''[ParkerEtAl2020SSlab]
+region="SA"
+saturation_region="SA_N"
+'''
+gsim_aliases['ParkerEtAl2020SSlabSAS'] = '''[ParkerEtAl2020SSlab]
+region="SA"
+saturation_region="SA_S"
+'''
+gsim_aliases['ParkerEtAl2020SSlabTaiwanE'] = '''[ParkerEtAl2020SSlab]
+region="TW"
+saturation_region="TW_E"
+'''
+gsim_aliases['ParkerEtAl2020SSlabTaiwanW'] = '''[ParkerEtAl2020SSlab]
+region="TW"
+saturation_region="TW_W"
+'''
+gsim_aliases['ParkerEtAl2020SSlabCascadia'] = '''[ParkerEtAl2020SSlabB]
+region="Cascadia"
+'''
+gsim_aliases['ParkerEtAl2020SSlabCascadiaOut'] = '''[ParkerEtAl2020SSlabB]
+region="Cascadia"
+basin="out"
+'''
+gsim_aliases['ParkerEtAl2020SSlabCascadiaSeattle'] = '''
+[ParkerEtAl2020SSlabB]
+region="Cascadia"
+basin="Seattle"
+'''
+gsim_aliases['ParkerEtAl2020SSlabJapanPac'] = '''[ParkerEtAl2020SSlabB]
+region="JP"
+saturation_region="JP_Pac"
+'''
+gsim_aliases['ParkerEtAl2020SSlabJapanPhi'] = '''[ParkerEtAl2020SSlabB]
+region="JP"
+saturation_region="JP_Phi"
+'''
