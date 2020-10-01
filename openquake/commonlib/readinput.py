@@ -592,6 +592,7 @@ def get_ruptures(fname_csv):
     trts = aw.trts
     rups = []
     geoms = []
+    n_occ = 1
     for u, row in enumerate(aw.array):
         hypo = row['lon'], row['lat'], row['dep']
         dic = json.loads(row['extra'])
@@ -607,7 +608,7 @@ def get_ruptures(fname_csv):
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
         tup = (u, row['serial'], 'no-source', trts.index(row['trt']),
-               code[row['kind']], 1, row['mag'], row['rake'], rate,
+               code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, s1, s2, 0, 0)
         rups.append(tup)
         geoms.append(mesh.transpose(1, 2, 0).flatten())

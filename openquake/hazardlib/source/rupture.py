@@ -664,17 +664,6 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def get_eids(rup_array):
-    """
-    :param rup_array: a composite array with fields rup_id, n_occ and grp_id
-    """
-    all_eids = []
-    for rup in rup_array:
-        eids = numpy.arange(rup['n_occ'], dtype=U32)
-        all_eids.append(eids)
-    return numpy.concatenate(all_eids)
-
-
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture

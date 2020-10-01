@@ -264,7 +264,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         numpy.array([mesh], object))
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
-            aw.array['n_occ'] = gsim_lt.get_num_rlzs()
+            aw.array['n_occ'] = gsim_lt.get_num_paths()
             rup_array = aw.array
             hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
