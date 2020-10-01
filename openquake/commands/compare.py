@@ -34,7 +34,7 @@ def getdata(what, calc_ids, sitecol, sids):
     for extractor in extractors[1:]:
         oq = extractor.oqparam
         numpy.testing.assert_equal(
-            extractor.get('sitecol').array, sitecol.array)
+            extractor.get('sitecol')[['lon', 'lat']], sitecol[['lon', 'lat']])
         if what == 'hcurves':
             numpy.testing.assert_equal(oq.imtls.array, imtls.array)
         elif what == 'hmaps':
