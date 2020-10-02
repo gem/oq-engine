@@ -420,7 +420,8 @@ class GmfGetter(object):
                             hcurves[rsi2str(rlzi, sid, imt)] = poes[m]
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
-        gmfdata = self.get_gmfdata(mon)
+        if not oq.hazard_curves_from_gmfs:
+            gmfdata = self.get_gmfdata(mon)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
