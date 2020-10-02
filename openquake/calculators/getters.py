@@ -475,7 +475,7 @@ def gen_rupture_getters(dstore, srcfilter, ct):
     trt_by_grp = full_lt.trt_by_grp
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][()]
-    maxweight = rup_array['n_occ'].sum() / (ct or 1)
+    maxweight = rup_array['n_occ'].sum() / (ct*2 or 1)
     for block in general.block_splitter(
             rup_array, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('grp_id')):
