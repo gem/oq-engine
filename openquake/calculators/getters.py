@@ -399,7 +399,7 @@ class GmfGetter(object):
 
     def compute_gmfs_curves(self, rlzs, monitor):
         """
-        :param rlzs: an array of shapeE
+        :param rlzs: an array of shape E
         :returns: a dict with keys gmfdata, hcurves
         """
         oq = self.oqparam
