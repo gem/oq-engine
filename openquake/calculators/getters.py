@@ -481,29 +481,19 @@ def gen_rupture_getters(dstore, srcfilter, ct):
     samples = full_lt.get_samples_by_grp()
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][()]
-    items = list(general.group_array(rup_array, 'grp_id').items())
-    items.sort(key=lambda item: len(item[1]))  # other weights were much worse
-    maxweight = None
-    while items:
-        grp_id, rups = items.pop()  # from the largest group
-        if not rlzs_by_gsim[grp_id]:
-            # this may happen if a source model has no sources, like
-            # in event_based_risk/case_3
-            continue
+    maxweight = rup_array['n_occ'].sum() / (ct or 1)
+    nblocks = 0
+    for block in general.block_splitter(
+            rup_array, maxweight, operator.itemgetter('n_occ'),
+            key=operator.itemgetter('grp_id')):
+        grp_id = block[0]['grp_id']
         trt = trt_by_grp[grp_id]
-        proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
-        if not maxweight:
-            maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
-        nblocks = 0
-        for block in general.block_splitter(
-                proxies, maxweight, operator.attrgetter('weight')):
-            nblocks += 1
-            rgetter = RuptureGetter(
-                block, dstore.filename, grp_id,
-                trt, samples[grp_id], rlzs_by_gsim[grp_id])
-            yield rgetter
-        logging.info('Sent group %d: %d ruptures -> %d task(s)',
-                     grp_id, len(rups), nblocks)
+        proxies = list(_gen(block, srcfilter, trt, samples[grp_id]))
+        rgetter = RuptureGetter(proxies, dstore.filename, grp_id,
+                                trt, samples[grp_id], rlzs_by_gsim[grp_id])
+        yield rgetter
+        logging.info('Sent task %d: %d ruptures', nblocks, len(block))
+        nblocks += 1
 
 
 def get_ebruptures(dstore):
