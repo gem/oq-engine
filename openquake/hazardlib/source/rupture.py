@@ -670,7 +670,7 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, source_id, grp_id, n_occ, samples=1, id=None):
+    def __init__(self, rupture, source_id, grp_id, n_occ, id=None):
         # NB: when reading an exported ruptures.xml the rup_id will be 0
         # for the first rupture; it used to be the seed instead
         assert rupture.rup_id >= 0  # sanity check
@@ -678,7 +678,6 @@ class EBRupture(object):
         self.source_id = source_id
         self.grp_id = grp_id
         self.n_occ = n_occ
-        self.samples = samples
         self.id = id  # id of the rupture on the DataStore, to be overridden
 
     @property
@@ -763,12 +762,10 @@ class RuptureProxy(object):
 
     :param rec: a record with the rupture parameters
     :param nsites: approx number of sites affected by the rupture
-    :param samples: how many times the rupture is sampled
     """
-    def __init__(self, rec, nsites=None, samples=1):
+    def __init__(self, rec, nsites=None):
         self.rec = rec
         self.nsites = nsites
-        self.samples = samples
 
     @property
     def weight(self):
@@ -777,21 +774,21 @@ class RuptureProxy(object):
             heuristic weight for the underlying rupture, depending on the
             number of occurrences, number of samples and number of sites
         """
-        return self.samples * self['n_occ'] * (
+        return self['n_occ'] * (
             100 if self.nsites is None else max(self.nsites, 100))
 
     def __getitem__(self, name):
         return self.rec[name]
 
     # NB: requires the .geom attribute to be set
-    def to_ebr(self, trt, samples):
+    def to_ebr(self, trt):
         """
         :returns: EBRupture instance associated to the underlying rupture
         """
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self.rec['source_id'], self.rec['grp_id'],
-                        self.rec['n_occ'], samples)
+                        self.rec['n_occ'])
         ebr.id = self.rec['id']
         ebr.e0 = self.rec['e0']
         return ebr
