@@ -1,7 +1,0 @@
-eventID,Agency,year,month,day,hour,minute,second,longitude,latitude,depth,magnitude,classification
-1,XXX,1961,1,1,1,1,1.0,26.941,38.507,13.2,3.80,excluded
-1,XXX,1961,1,1,1,1,1.0,26.941,38.507,13.2,4.01,taken
-1,XXX,1961,1,1,1,1,1.0,26.941,38.507,13.2,4.21,taken
-1,XXX,1961,1,1,1,1,1.0,26.941,38.507,13.2,5.11,taken
-1,XXX,1991,1,1,1,1,1.0,26.941,38.507,13.2,3.70,taken
-1,XXX,1991,1,1,1,1,1.0,26.941,38.507,13.2,3.55,excluded
