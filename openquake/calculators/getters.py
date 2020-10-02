@@ -475,18 +475,14 @@ def gen_rupture_getters(dstore, srcfilter, ct):
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][()]
     maxweight = rup_array['n_occ'].sum() / (ct or 1)
-    nblocks = 0
     for block in general.block_splitter(
             rup_array, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('grp_id')):
         grp_id = block[0]['grp_id']
         trt = trt_by_grp[grp_id]
         proxies = [RuptureProxy(rec) for rec in block]
-        rgetter = RuptureGetter(proxies, dstore.filename, grp_id,
-                                trt, rlzs_by_gsim[grp_id])
-        yield rgetter
-        logging.info('Sent task %d: %d ruptures', nblocks, len(block))
-        nblocks += 1
+        yield RuptureGetter(proxies, dstore.filename, grp_id,
+                            trt, rlzs_by_gsim[grp_id])
 
 
 def get_ebruptures(dstore):
