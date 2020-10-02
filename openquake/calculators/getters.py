@@ -343,6 +343,8 @@ class GmfGetter(object):
             with mon:
                 ebr = proxy.to_ebr(trt)
                 sids = self.srcfilter.close_sids(proxy, trt)
+                if len(sids) == 0:  # filtered away
+                    continue
                 sitecol = self.sitecol.filtered(sids)
                 try:
                     computer = calc.gmf.GmfComputer(
@@ -461,13 +463,6 @@ def gen_rgetters(dstore, slc=slice(None)):
             yield rgetter
 
 
-def _gen(arr, srcfilter, trt):
-    for rec in arr:
-        sids = srcfilter.close_sids(rec, trt)
-        if len(sids):
-            yield RuptureProxy(rec, len(sids))
-
-
 def gen_rupture_getters(dstore, srcfilter, ct):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore`
@@ -486,7 +481,7 @@ def gen_rupture_getters(dstore, srcfilter, ct):
             key=operator.itemgetter('grp_id')):
         grp_id = block[0]['grp_id']
         trt = trt_by_grp[grp_id]
-        proxies = list(_gen(block, srcfilter, trt))
+        proxies = [RuptureProxy(rec) for rec in block]
         rgetter = RuptureGetter(proxies, dstore.filename, grp_id,
                                 trt, rlzs_by_gsim[grp_id])
         yield rgetter
