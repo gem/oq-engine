@@ -77,7 +77,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rup = NPPR(mag, rake, trt, hypoc, self.srfc1, pmf)
 
         # Compute distances
-        param = 'closest_pnts'
+        param = 'closest_point'
         sites = SiteCollection([Site(Point(0.25, -0.1, 0.0)),
                                 Site(Point(-0.1, 0.0, 0.0))])
         dsts = get_distances(rup, sites, param)
@@ -105,7 +105,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rup = NPPR(mag, rake, trt, hypoc, self.srfc2, pmf)
 
         # Compute distances
-        param = 'closest_pnts'
+        param = 'closest_point'
         sites = SiteCollection([Site(Point(0.25, -0.6, 0.0))])
         dsts = get_distances(rup, sites, param)
 
@@ -135,7 +135,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rups = [r for r in src.iter_ruptures()]
 
         # Compute distances
-        param = 'closest_pnts'
+        param = 'closest_point'
         sites = SiteCollection([Site(Point(0.0, 0.0, 0.0)),
                                 Site(Point(-0.2, 0.0, 0.0))])
         dsts = get_distances(rups[0], sites, param)
