@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Added 'closest_point' metric   
+
   [Michele Simionato]
   * Changed event based full enumeration to be consistent with sampling
   * Changed the GMF storage to be more pandas-friendly
