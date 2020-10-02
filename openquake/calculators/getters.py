@@ -336,13 +336,15 @@ class GmfGetter(object):
         """
         Yield a GmfComputer instance for each non-discarded rupture
         """
-        trt, samples = self.rupgetter.trt, self.rupgetter.samples
+        trt = self.rupgetter.trt
         with mon:
             proxies = self.rupgetter.get_proxies()
         for proxy in proxies:
             with mon:
-                ebr = proxy.to_ebr(trt, samples)
+                ebr = proxy.to_ebr(trt)
                 sids = self.srcfilter.close_sids(proxy, trt)
+                if len(sids) == 0:  # filtered away
+                    continue
                 sitecol = self.sitecol.filtered(sids)
                 try:
                     computer = calc.gmf.GmfComputer(
@@ -418,7 +420,8 @@ class GmfGetter(object):
                             hcurves[rsi2str(rlzi, sid, imt)] = poes[m]
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
-        gmfdata = self.get_gmfdata(mon)
+        if not oq.hazard_curves_from_gmfs:
+            gmfdata = self.get_gmfdata(mon)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
@@ -448,7 +451,6 @@ def gen_rgetters(dstore, slc=slice(None)):
     """
     full_lt = dstore['full_lt']
     trt_by_grp = full_lt.trt_by_grp
-    samples = full_lt.get_samples_by_grp()
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     nr = len(dstore['ruptures'])
@@ -458,15 +460,8 @@ def gen_rgetters(dstore, slc=slice(None)):
         for block in general.split_in_blocks(arr, len(arr) / nr):
             rgetter = RuptureGetter(
                 [RuptureProxy(rec) for rec in block], dstore.filename, grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+                trt_by_grp[grp_id], rlzs_by_gsim[grp_id])
             yield rgetter
-
-
-def _gen(arr, srcfilter, trt, samples):
-    for rec in arr:
-        sids = srcfilter.close_sids(rec, trt)
-        if len(sids):
-            yield RuptureProxy(rec, len(sids), samples)
 
 
 def gen_rupture_getters(dstore, srcfilter, ct):
@@ -478,32 +473,17 @@ def gen_rupture_getters(dstore, srcfilter, ct):
     """
     full_lt = dstore['full_lt']
     trt_by_grp = full_lt.trt_by_grp
-    samples = full_lt.get_samples_by_grp()
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][()]
-    items = list(general.group_array(rup_array, 'grp_id').items())
-    items.sort(key=lambda item: len(item[1]))  # other weights were much worse
-    maxweight = None
-    while items:
-        grp_id, rups = items.pop()  # from the largest group
-        if not rlzs_by_gsim[grp_id]:
-            # this may happen if a source model has no sources, like
-            # in event_based_risk/case_3
-            continue
+    maxweight = rup_array['n_occ'].sum() / (ct or 1)
+    for block in general.block_splitter(
+            rup_array, maxweight, operator.itemgetter('n_occ'),
+            key=operator.itemgetter('grp_id')):
+        grp_id = block[0]['grp_id']
         trt = trt_by_grp[grp_id]
-        proxies = list(_gen(rups, srcfilter, trt, samples[grp_id]))
-        if not maxweight:
-            maxweight = sum(p.weight for p in proxies) / (ct // 2 or 1)
-        nblocks = 0
-        for block in general.block_splitter(
-                proxies, maxweight, operator.attrgetter('weight')):
-            nblocks += 1
-            rgetter = RuptureGetter(
-                block, dstore.filename, grp_id,
-                trt, samples[grp_id], rlzs_by_gsim[grp_id])
-            yield rgetter
-        logging.info('Sent group %d: %d ruptures -> %d task(s)',
-                     grp_id, len(rups), nblocks)
+        proxies = [RuptureProxy(rec) for rec in block]
+        yield RuptureGetter(proxies, dstore.filename, grp_id,
+                            trt, rlzs_by_gsim[grp_id])
 
 
 def get_ebruptures(dstore):
@@ -513,7 +493,7 @@ def get_ebruptures(dstore):
     ebrs = []
     for rgetter in gen_rgetters(dstore):
         for proxy in rgetter.get_proxies():
-            ebrs.append(proxy.to_ebr(rgetter.trt, rgetter.samples))
+            ebrs.append(proxy.to_ebr(rgetter.trt))
     return ebrs
 
 
@@ -528,19 +508,15 @@ class RuptureGetter(object):
         source group index
     :param trt:
         tectonic region type string
-    :param samples:
-        number of samples of the group
     :param rlzs_by_gsim:
         dictionary gsim -> rlzs for the group
     """
-    def __init__(self, proxies, filename, grp_id, trt, samples,
-                 rlzs_by_gsim):
+    def __init__(self, proxies, filename, grp_id, trt, rlzs_by_gsim):
         self.proxies = proxies
         self.weight = sum(proxy.weight for proxy in proxies)
         self.filename = filename
         self.grp_id = grp_id
         self.trt = trt
-        self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         self.num_events = sum(int(proxy['n_occ']) for proxy in proxies)
 
@@ -555,7 +531,7 @@ class RuptureGetter(object):
         eid_rlz = []
         for rup in self.proxies:
             ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
-                            self.grp_id, rup['n_occ'], self.samples)
+                            self.grp_id, rup['n_occ'])
             for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
@@ -566,7 +542,7 @@ class RuptureGetter(object):
         :returns: a dictionary with the parameters of the rupture
         """
         assert len(self.proxies) == 1, 'Please specify a slice of length 1'
-        dic = {'trt': self.trt, 'samples': self.samples}
+        dic = {'trt': self.trt}
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             rec = self.proxies[0].rec
