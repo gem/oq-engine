@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
 import re
 import ast
 import sys
@@ -26,7 +26,7 @@ from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree, distance
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import general
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,

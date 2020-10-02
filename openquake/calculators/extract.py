@@ -1222,9 +1222,8 @@ class RuptureData(object):
     Container for information about the ruptures of a given
     tectonic region type.
     """
-    def __init__(self, trt, samples, gsims):
+    def __init__(self, trt, gsims):
         self.trt = trt
-        self.samples = samples
         self.cmaker = ContextMaker(trt, gsims)
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
@@ -1242,7 +1241,7 @@ class RuptureData(object):
         """
         data = []
         for proxy in proxies:
-            ebr = proxy.to_ebr(self.trt, self.samples)
+            ebr = proxy.to_ebr(self.trt)
             rup = ebr.rupture
             ctx = self.cmaker.make_rctx(rup)
             ruptparams = tuple(getattr(ctx, param) for param in self.params)
@@ -1280,8 +1279,7 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.gen_rgetters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        rup_data = RuptureData(
-            rgetter.trt, rgetter.samples, rgetter.rlzs_by_gsim)
+        rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r in rup_data.to_array(proxies):
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             coordset = sorted(set(coords))

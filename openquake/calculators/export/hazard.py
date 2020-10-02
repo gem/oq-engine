@@ -63,7 +63,7 @@ def export_ruptures_xml(ekey, dstore):
         ebrs = []
         for proxy in rgetter.get_proxies():
             events_by_ses = group_array(events[proxy['id']], 'ses_id')
-            ebr = proxy.to_ebr(rgetter.trt, rgetter.samples)
+            ebr = proxy.to_ebr(rgetter.trt)
             ebrs.append(ebr.export(events_by_ses))
         ruptures_by_grp[rgetter.grp_id].extend(ebrs)
     dest = dstore.export_path('ses.' + fmt)

@@ -1,9 +1,9 @@
 ============= ============= ====== ======== =====
 return_period kind          policy taxonomy value
-240           mean          A      RC       90   
-240           quantile-0.25 A      RC       86   
-480           mean          A      RC       719  
-480           quantile-0.25 A      RC       515  
-960           mean          A      RC       1_100
-960           quantile-0.25 A      RC       1_087
+240           mean          A      RC       114  
+240           quantile-0.25 A      RC       106  
+480           mean          A      RC       214  
+480           quantile-0.25 A      RC       199  
+960           mean          A      RC       332  
+960           quantile-0.25 A      RC       223  
 ============= ============= ====== ======== =====

@@ -305,8 +305,9 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             if 'maximum_intensity' in names_vals:
+                minint = self.minimum_intensity or {'default': 1E-2}
                 for imt in self.hazard_imtls:
-                    i1 = calc.filters.getdefault(self.minimum_intensity, 1E-3)
+                    i1 = calc.filters.getdefault(minint, imt)
                     i2 = calc.filters.getdefault(self.maximum_intensity, imt)
                     self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 20))
             delattr(self, 'intensity_measure_types')
