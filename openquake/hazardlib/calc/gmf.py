@@ -174,15 +174,15 @@ class GmfComputer(object):
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum():
                             if No:
-                                data.append((sids[i], eid, gmv) +
+                                data.append((sids[i], eid, rlz, gmv) +
                                             tuple(sp_out[:, i, :]))
                             else:
-                                data.append((sids[i], eid, gmv))
+                                data.append((sids[i], eid, rlz, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += e
         dt = F32, (len(min_iml),)
-        dtlist = [('sid', U32), ('eid', U32), ('gmv', dt)] + [
+        dtlist = [('sid', U32), ('eid', U32), ('rlz', U32), ('gmv', dt)] + [
             (out, dt) for sp in self.sec_perils for out in sp.outputs]
         d = numpy.array(data, dtlist)
         return d, time.time() - t0

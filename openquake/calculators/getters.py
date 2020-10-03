@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import operator
-import logging
 import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
@@ -397,9 +396,8 @@ class GmfGetter(object):
             return {}
         return general.group_array(data, 'sid')
 
-    def compute_gmfs_curves(self, rlzs, monitor):
+    def compute_gmfs_curves(self, monitor):
         """
-        :param rlzs: an array of shape E
         :returns: a dict with keys gmfdata, hcurves
         """
         oq = self.oqparam
@@ -410,7 +408,7 @@ class GmfGetter(object):
             gmfdata = self.get_gmfdata(mon)  # returned later
             hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
-                dic = group_by_rlz(hazardr, rlzs)
+                dic = general.group_array(hazardr, 'rlz')
                 for rlzi, array in dic.items():
                     with hc_mon:
                         poes = gmvs_to_poes(
@@ -430,19 +428,6 @@ class GmfGetter(object):
         res = dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt))
         return res
-
-
-# TODO: use pandas here
-def group_by_rlz(data, rlzs):
-    """
-    :param data: a composite array of D elements with a field `eid`
-    :param rlzs: an array of E >= D elements
-    :returns: a dictionary rlzi -> data for each realization
-    """
-    acc = general.AccumDict(accum=[])
-    for rec in data:
-        acc[rlzs[rec['eid']]].append(rec)
-    return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
 def gen_rgetters(dstore, slc=slice(None)):
