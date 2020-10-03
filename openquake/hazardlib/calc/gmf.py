@@ -141,7 +141,7 @@ class GmfComputer(object):
         data = []
         No = sum(len(sp.outputs) for sp in self.sec_perils)
         for gs, rlzs in rlzs_by_gsim.items():
-            num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
+            num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
             # it is better to have few calls producing big arrays
@@ -151,8 +151,8 @@ class GmfComputer(object):
                 arr = array[:, i, :]
                 arr[arr < miniml] = 0
             n = 0
-            for rlzi in rlzs:
-                eids = eids_by_rlz[rlzi] + self.e0
+            for rlz in rlzs:
+                eids = eids_by_rlz[rlz] + self.e0
                 e = len(eids)
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
@@ -160,7 +160,7 @@ class GmfComputer(object):
                     if not tot.sum():
                         continue
                     if sig_eps is not None:
-                        tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
+                        tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
                     sp_out = numpy.zeros((No,) + gmfa.shape)  # No, N, M
