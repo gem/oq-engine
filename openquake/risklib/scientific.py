@@ -1459,7 +1459,7 @@ class LossCurvesMapsBuilder(object):
         :param ses_ratio: ses ratio
         :yield: triples (rlzi, curves, losses)
         """
-        for rlzi, losses_df in losses_by_event.groupby('rlzi'):
+        for rlzi, losses_df in losses_by_event.groupby(losses_by_event.index):
             losses = numpy.array(losses_df)
             yield (rlzi, self.build_curves(losses, rlzi),
                    losses.sum(axis=0) * ses_ratio)
