@@ -92,7 +92,7 @@ def calc_risk(gmfs, param, monitor):
             assets = asset_df.to_records()  # fast
             acc['events_per_sid'] += len(haz)
             if param['avg_losses']:
-                ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
+                ws = weights[haz['rlz']]
             else:
                 ws = None
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
