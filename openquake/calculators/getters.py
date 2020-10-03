@@ -396,9 +396,8 @@ class GmfGetter(object):
             return {}
         return general.group_array(data, 'sid')
 
-    def compute_gmfs_curves(self, rlzs, monitor):
+    def compute_gmfs_curves(self, monitor):
         """
-        :param rlzs: an array of shape E
         :returns: a dict with keys gmfdata, hcurves
         """
         oq = self.oqparam

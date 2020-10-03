@@ -73,7 +73,7 @@ def compute_gmfs(rupgetter, param, monitor):
     srcfilter = monitor.read_pik('srcfilter')
     getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'],
                        param['sec_perils'])
-    return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
+    return getter.compute_gmfs_curves(monitor)
 
 
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
@@ -302,8 +302,6 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
             self.datastore.create_dset('gmf_data/time_by_rup',
                                        time_dt, (nrups,), fillvalue=None)
-        if oq.hazard_curves_from_gmfs:
-            self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
 
         # compute_gmfs in parallel
         nr = len(self.datastore['ruptures'])
