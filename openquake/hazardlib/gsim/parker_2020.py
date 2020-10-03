@@ -186,7 +186,7 @@ class ParkerEtAl2020SInter(GMPE):
         Magnitude scaling factor.
         """
         m_diff = mag - m_b
-        sfx = self._suffix()
+        sfx = self.SUFFIX
         if m_diff > 0:
             fm = C["c6" + sfx] * m_diff
             fm_pga = C_PGA["c6" + sfx] * m_diff
@@ -224,12 +224,6 @@ class ParkerEtAl2020SInter(GMPE):
 
         return a0, a0_pga
 
-    def _suffix(self):
-        """
-        Column name constant suffix based on class.
-        """
-        return ""
-
     def _path_term(self, C, C_PGA, mag, rrup, m_b):
         """
         Path term.
@@ -241,7 +235,7 @@ class ParkerEtAl2020SInter(GMPE):
 
         a0, a0_pga = self._a0(C, C_PGA, self.region)
 
-        c1n = "c1" + self._suffix()
+        c1n = "c1" + self.SUFFIX
         fp = C[c1n] * np.log(r) + (self.CONSTANTS["b4"] * mag) \
             * r_rref + a0 * r
         fp_pga = C_PGA[c1n] * np.log(r) + (self.CONSTANTS["b4"] * mag) \
@@ -388,6 +382,9 @@ class ParkerEtAl2020SInter(GMPE):
     10.0   0.046 0.708796298 -1.290203702 -0.193      -0.864100092 -0.864100092 1.364125851 -0.195874149  1.271671414 1.462671414 -0.473153721 -0.473153721  2.72   2.031     2.95            2.422           2.408      2.791     1.939       1.939       3.166    -1.676 -2.047  0.1  0         0         0         0         0         0         0         0         0               0          0         0          0        1.69  -0.067 1.194 2.35  -0.154  0.745  0      0       0  760 -0.395 -0.261 -0.321 -1.06  -0.302      -0.395 -0.42  -0.352  0       -0.03313 -0.0031  -0.327  0.182  0.121 0      0.345  0.265 -0.331    0.117       0.492 0.231 0.231  0     427 0.181     0.04  0.11     0.11     0.017
     """)
 
+    # constant table suffix
+    SUFFIX = ""
+
     CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
                  "vref_fnl": 760, "V1": 270, "vref": 760}
 
@@ -427,12 +424,6 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
             c0_col = self.region + "_c0slab"
         return C[c0_col], C_PGA[c0_col]
 
-    def _suffix(self):
-        """
-        Column name constant suffix based on class.
-        """
-        return "slab"
-
     def _path_term_h(self, mag, m_b=None):
         """
         H factor for path term, subduction slab.
@@ -456,6 +447,9 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
         if hypo_depth <= 20:
             return C["m"] * (20 - C["db"]) + C["d"]
         return C["m"] * (hypo_depth - C["db"]) + C["d"]
+
+    # constant table suffix
+    SUFFIX = "slab"
 
     MB_REGIONS = {"Aleutian": 7.98, "AK": 7.2, "Cascadia": 7.2,
                   "CAM_S": 7.6, "CAM_N": 7.4, "JP_Pac": 7.65, "JP_Phi": 7.55,
