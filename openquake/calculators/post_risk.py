@@ -73,13 +73,20 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
         eff_time, oq.risk_investigation_time)
 
 
-def accumdict(elt):
-    shp = elt.dtype['loss'].shape
-    acc = general.AccumDict(
-        accum=general.AccumDict(accum=numpy.zeros(shp, F32)))
-    for rec in elt:
-        acc[rec['rlzi']][rec['event_id']] += rec['loss']
-    return acc
+class AccumLoss(object):
+    def __init__(self, eid2rlz):
+        self.eid2rlz = eid2rlz
+
+    def accum(self, elt):
+        shp = elt.dtype['loss'].shape
+        print('----', shp)
+        acc = general.AccumDict(
+            accum=general.AccumDict(accum=numpy.zeros(shp, F32)))
+        for rec in elt:
+            eid = rec['event_id']
+            rlz = self.eid2rlz[eid]
+            acc[rlz][eid] += rec['loss']
+        return acc
 
 
 def post_ebrisk(dstore, aggkey, monitor):
@@ -94,20 +101,22 @@ def post_ebrisk(dstore, aggkey, monitor):
     agglist = [x if isinstance(x, list) else [x]
                for x in ast.literal_eval(aggkey)]
     idx = tuple(x[0] - 1 for x in agglist if len(x) == 1)
+    evs = dstore['events'][()]
+    al = AccumLoss(dict(evs[['id', 'rlz_id']]))
     acc = {}
     for ids in itertools.product(*agglist):
         key = ','.join(map(str, ids)) + ','
         try:
-            acc += accumdict(dstore['event_loss_table/' + key][:])
+            acc += al.accum(dstore['event_loss_table/' + key][:])
         except dstore.EmptyDataset:   # no data
             continue
     builder = get_loss_builder(dstore)
     out = {}
-    for rlzi, losses in acc.items():
+    for rlz, losses in acc.items():
         array = numpy.array(list(losses.values()))  # shape (E, L)
-        out[rlzi] = dict(agg_curves=builder.build_curves(array, rlzi),
-                         agg_losses=array.sum(axis=0) * ses_ratio,
-                         idx=idx)
+        out[rlz] = dict(agg_curves=builder.build_curves(array, rlz),
+                        agg_losses=array.sum(axis=0) * ses_ratio,
+                        idx=idx)
     return out
 
 
