@@ -11,12 +11,12 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 +## OpenQuake Engine version 2.6 (Gutenberg)
  
 -Current stable version is the **OpenQuake Engine 2.5** 'Fourier'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.5#openquake-engine.
--* [What's new](https://github.com/gem/oq-engine/blob/engine-2.5/doc/whats-new.md)
+-* [What's new](../engine-2.5/doc/whats-new.md)
 -
 +Starting from OpenQuake version 2.0 we have introduced a "code name" to honour earthquake scientists.
  
 +The code name for version 2.6 is **Gutenberg**, in memory of [Beno Gutenberg](https://en.wikipedia.org/wiki/Beno_Gutenberg).
-+* [What's new](https://github.com/gem/oq-engine/blob/engine-2.6/doc/whats-new.md)
++* [What's new](../engine-2.6/doc/whats-new.md)
 + 
 +## Documentation
 -## Documentation (master tree)
@@ -33,7 +33,7 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 Current stable version is the **OpenQuake Engine 3.10** 'Ulomov'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.10#openquake-engine.
 
-* [What's new](https://github.com/gem/oq-engine/blob/engine-3.10/doc/whats-new.md)
+* [What's new](../engine-3.10/doc/whats-new.md)
 
 ## Documentation (master tree)
 
