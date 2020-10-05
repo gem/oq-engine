@@ -142,12 +142,11 @@ class OqParamTestCase(unittest.TestCase):
             maximum_distance='{"wrong TRT": 200}')
         oq.inputs['source_model_logic_tree'] = 'something'
 
-        oq._gsims_by_trt = {'Active Shallow Crust': []}
+        oq._trts = {'Active Shallow Crust'}
         self.assertFalse(oq.is_valid_maximum_distance())
         self.assertIn('setting the maximum_distance for wrong TRT', oq.error)
 
-        oq._gsims_by_trt = {'Active Shallow Crust': [],
-                            'Stable Continental Crust': []}
+        oq._trts = {'Active Shallow Crust', 'Stable Continental Crust'}
         oq.maximum_distance = {'Active Shallow Crust': 200}
         self.assertFalse(oq.is_valid_maximum_distance())
         self.assertEqual('missing distance for Stable Continental Crust '
