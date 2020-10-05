@@ -63,7 +63,7 @@ def calc_risk(gmfs, param, monitor):
         weights = dstore['weights'][()]
     E = len(eids)
     L = len(param['lba'].loss_names)
-    elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
+    elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
     # aggkey -> eid -> loss
     acc = dict(events_per_sid=0, numlosses=numpy.zeros(2, int))  # (kept, tot)
     lba = param['lba']
@@ -71,7 +71,6 @@ def calc_risk(gmfs, param, monitor):
         accum=general.AccumDict(accum=numpy.zeros(L, F32)))
     lba.losses_by_E = numpy.zeros((E, L), F32)
     tempname = param['tempname']
-    eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     aggby = param['aggregate_by']
 
@@ -105,12 +104,12 @@ def calc_risk(gmfs, param, monitor):
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
-        ((event['id'], event['rlz_id'], losses)
+        ((event['id'], losses)
          for event, losses in zip(events, lba.losses_by_E) if losses.sum()),
         elt_dt)
     acc['alt'] = {idx: numpy.fromiter(  # already sorted by aid, ultra-fast
-        ((eid, eid2rlz[eid], loss) for eid, loss in lba.alt[idx].items()),
-        elt_dt) for idx in lba.alt}
+        ((eid, loss) for eid, loss in lba.alt[idx].items()), elt_dt)
+                  for idx in lba.alt}
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -200,7 +199,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
         self.param['minimum_asset_loss'] = mal
 
-        elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
+        elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
         for idxs, attrs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
             idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
