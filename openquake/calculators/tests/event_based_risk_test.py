@@ -243,7 +243,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='csv', hazard_calculation_id=str(hc_id))
         [fname] = export(('tot_curves-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
     def test_case_4(self):
         # Turkey with SHARE logic tree
