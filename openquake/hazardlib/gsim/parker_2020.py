@@ -160,13 +160,6 @@ class ParkerEtAl2020SInter(GMPE):
 
         return stddevs
 
-    def hypocentral_depth_estimate(self, ztor, width, dip):
-        """
-        Estimate hypocentral_depth if not available.
-        Ch. 4.3.3/Eqs. 4.16 & 4.17  of Parker et al. (2020).
-        """
-        return ztor + 0.48 * width * math.sin(dip)
-
     def _c0(self, C, C_PGA):
         """
         c0 factor.
