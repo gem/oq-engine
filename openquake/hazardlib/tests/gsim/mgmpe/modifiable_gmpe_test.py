@@ -18,8 +18,8 @@
 import numpy as np
 import unittest
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.gsim.base import registry
+from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.gsim.base import registry, CoeffsTable
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
@@ -71,3 +71,106 @@ class ModifiableGMPETest(unittest.TestCase):
         # Check that the total std now corresponds to the within event
         # standard deviation
         np.testing.assert_almost_equal(stds[0], estds[2])
+
+    def test_coefficients_as_dictionary(self):
+        """
+        """
+        input_coeffs = {"PGA": 1.0, "SA(0.2)": 2.0, "SA(3.0)": 3.0}
+        output_coeffs = ModifiableGMPE._dict_to_coeffs_table(input_coeffs,
+                                                             "XYZ")
+        self.assertListEqual(list(output_coeffs), ["XYZ"])
+        self.assertIsInstance(output_coeffs["XYZ"], CoeffsTable)
+        self.assertAlmostEqual(output_coeffs["XYZ"][PGA()]["XYZ"], 1.0)
+        self.assertAlmostEqual(output_coeffs["XYZ"][SA(0.2)]["XYZ"], 2.0)
+        self.assertAlmostEqual(output_coeffs["XYZ"][SA(3.0)]["XYZ"], 3.0)
+
+    def test_scale_median_scalar(self):
+        """Check the scaling of the median ground motion - scalar"""
+        gmpe_name = 'AkkarEtAlRjb2014'
+        stddevs = [const.StdDev.TOTAL]
+        gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
+        gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
+                             set_scale_median_scalar={'scaling_factor': 1.2})
+        mean_unscaled = gmm_unscaled.get_mean_and_stddevs(self.sites, self.rup,
+                                                          self.dists, self.imt,
+                                                          stddevs)[0]
+        mean = gmm.get_mean_and_stddevs(self.sites, self.rup,
+                                        self.dists, self.imt,
+                                        stddevs)[0]
+        np.testing.assert_almost_equal(np.exp(mean) / np.exp(mean_unscaled),
+                                       1.2 * np.ones(mean.shape))
+
+    def test_scale_median_vector(self):
+        """Check the scaling of the median ground motion - IMT-dependent"""
+        gmpe_name = 'AkkarEtAlRjb2014'
+        stddevs = [const.StdDev.TOTAL]
+        gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
+        gmm = ModifiableGMPE(
+            gmpe={gmpe_name: {}},
+            set_scale_median_vector={'scaling_factor': {"PGA": 0.9,
+                                                        "SA(0.2)": 1.1}})
+        for imt, sfact in zip([PGA(), SA(0.2)], [0.9, 1.1]):
+            mean_unscaled = gmm_unscaled.get_mean_and_stddevs(self.sites,
+                                                              self.rup,
+                                                              self.dists, imt,
+                                                              stddevs)[0]
+            mean = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
+                                            imt, stddevs)[0]
+            np.testing.assert_almost_equal(
+                np.exp(mean) / np.exp(mean_unscaled),
+                sfact * np.ones(mean.shape))
+
+    def test_scale_total_sigma_scalar(self):
+        """Check the scaling of the total stddev - scalar"""
+        gmpe_name = 'AkkarEtAlRjb2014'
+        stddevs = [const.StdDev.TOTAL]
+        gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
+        gmm = ModifiableGMPE(
+            gmpe={gmpe_name: {}},
+            set_scale_total_sigma_scalar={"scaling_factor": 1.2})
+        [stddev_unscaled] = gmm_unscaled.get_mean_and_stddevs(self.sites,
+                                                              self.rup,
+                                                              self.dists,
+                                                              self.imt,
+                                                              stddevs)[1]
+        [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup, self.dists,
+                                            self.imt, stddevs)[1]
+        np.testing.assert_array_almost_equal(stddev / stddev_unscaled,
+                                             1.2 * np.ones(stddev.shape))
+
+    def test_scale_total_sigma_vector(self):
+        """Check the scaling of the total stddev - vector"""
+        gmpe_name = 'AkkarEtAlRjb2014'
+        stddevs = [const.StdDev.TOTAL]
+        gmm_unscaled = ModifiableGMPE(gmpe={gmpe_name: {}})
+        gmm = ModifiableGMPE(
+            gmpe={gmpe_name: {}},
+            set_scale_total_sigma_vector={"scaling_factor": {"PGA": 0.9,
+                                                             "SA(0.2)": 1.1}})
+
+        for imt, sfact in zip([PGA(), SA(0.2)], [0.9, 1.1]):
+            [stddev_unscaled] = gmm_unscaled.get_mean_and_stddevs(self.sites,
+                                                                  self.rup,
+                                                                  self.dists,
+                                                                  imt,
+                                                                  stddevs)[1]
+            [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
+                                                self.dists, imt, stddevs)[1]
+            np.testing.assert_almost_equal(
+                stddev / stddev_unscaled,
+                sfact * np.ones(stddev.shape))
+
+    def test_fixed_total_sigma(self):
+        """Check the assignment of total sigma to a fixed value"""
+        gmpe_name = 'AkkarEtAlRjb2014'
+        stddevs = [const.StdDev.TOTAL]
+        gmm = ModifiableGMPE(
+            gmpe={gmpe_name: {}},
+            set_fixed_total_sigma={"total_sigma": {"PGA": 0.6,
+                                                   "SA(0.2)": 0.75}})
+
+        for imt, sfact in zip([PGA(), SA(0.2)], [0.6, 0.75]):
+            [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
+                                                self.dists, imt, stddevs)[1]
+            np.testing.assert_almost_equal(stddev,
+                                           sfact * np.ones(stddev.shape))
