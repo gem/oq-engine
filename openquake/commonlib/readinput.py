@@ -711,10 +711,8 @@ def _get_csm_cached(oq, full_lt, h5=None):
     # read the composite source model from the cache
     if not os.path.exists(oq.csm_cache):
         os.makedirs(oq.csm_cache)
-    checksum = get_checksum32(oq)
-    if h5:
-        h5.attrs['checksum32'] = checksum
-    fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
+    checksum = get_checksum32(oq, h5)
+    fname = os.path.join(oq.csm_cache, 'csm_%s.pik' % checksum)
     if os.path.exists(fname):
         logging.info('Reading %s', fname)
         with open(fname, 'rb') as f:
@@ -847,7 +845,7 @@ def get_crmodel(oqparam):
     return crm
 
 
-def get_exposure(oqparam):
+def get_exposure(oqparam, h5=None):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.asset.Asset` instances.
@@ -857,11 +855,22 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
+    if not os.path.exists(oqparam.csm_cache):
+        os.makedirs(oqparam.csm_cache)
+    checksum = get_checksum32(oqparam, h5)
+    fname = os.path.join(oqparam.csm_cache, 'exp_%s.pik' % checksum)
+    if os.path.exists(fname):
+        logging.info('Reading %s', fname)
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
     exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in oqparam.aggregate_by)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
+    logging.info('Saving %s', fname)
+    with open(fname, 'wb') as f:
+        pickle.dump(exposure, f)
     return exposure
 
 
