@@ -335,7 +335,7 @@ class OqParam(valid.ParamSet):
             gsim_lt = logictree.GsimLogicTree(path, ['*'])
 
             # check the IMTs vs the GSIMs
-            self._gsims_by_trt = gsim_lt.values
+            self._trts = set(gsim_lt.values)
             for gsims in gsim_lt.values.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
@@ -825,17 +825,17 @@ class OqParam(valid.ParamSet):
             return True  # don't apply validation
         gsim_lt = self.inputs['gsim_logic_tree']
         trts = set(self.maximum_distance)
-        unknown = ', '.join(trts - set(self._gsims_by_trt) - set(['default']))
+        unknown = ', '.join(trts - self._trts - {'default'})
         if unknown:
             self.error = ('setting the maximum_distance for %s which is '
                           'not in %s' % (unknown, gsim_lt))
             return False
         for trt, val in self.maximum_distance.items():
-            if trt not in self._gsims_by_trt and trt != 'default':
+            if trt not in self._trts and trt != 'default':
                 self.error = 'tectonic region %r not in %s' % (trt, gsim_lt)
                 return False
-        if 'default' not in trts and trts < set(self._gsims_by_trt):
-            missing = ', '.join(set(self._gsims_by_trt) - trts)
+        if 'default' not in trts and trts < self._trts:
+            missing = ', '.join(self._trts - trts)
             self.error = 'missing distance for %s and no default' % missing
             return False
         return True
