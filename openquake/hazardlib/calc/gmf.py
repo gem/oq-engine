@@ -118,11 +118,9 @@ class GmfComputer(object):
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
             self.source_id = rupture.source_id  # the underlying source
-            self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
             self.source_id = '?'
-            self.e0 = 0
         self.seed = rupture.rup_id
         self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
             sitecol, rupture)
@@ -152,8 +150,7 @@ class GmfComputer(object):
                 arr[arr < miniml] = 0
             n = 0
             for rlz in rlzs:
-                eids = eids_by_rlz[rlz] + self.e0
-                e = len(eids)
+                eids = eids_by_rlz[rlz]
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     tot = gmfa.sum(axis=0)  # shape (M,)
@@ -180,7 +177,7 @@ class GmfComputer(object):
                                 data.append((sids[i], eid, rlz, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
-                n += e
+                n += len(eids)
         dt = F32, (len(min_iml),)
         dtlist = [('sid', U32), ('eid', U32), ('rlz', U32), ('gmv', dt)] + [
             (out, dt) for sp in self.sec_perils for out in sp.outputs]

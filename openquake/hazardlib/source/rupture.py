@@ -670,7 +670,7 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, source_id, grp_id, n_occ, id=None):
+    def __init__(self, rupture, source_id, grp_id, n_occ, id=None, e0=0):
         # NB: when reading an exported ruptures.xml the rup_id will be 0
         # for the first rupture; it used to be the seed instead
         assert rupture.rup_id >= 0  # sanity check
@@ -678,7 +678,8 @@ class EBRupture(object):
         self.source_id = source_id
         self.grp_id = grp_id
         self.n_occ = n_occ
-        self.id = id  # id of the rupture on the DataStore, to be overridden
+        self.id = id  # id of the rupture on the DataStore
+        self.e0 = e0
 
     @property
     def rup_id(self):
@@ -698,7 +699,7 @@ class EBRupture(object):
         histo = general.random_histogram(
             self.n_occ, len(rlzs), self.rup_id)
         for rlz, n in zip(rlzs, histo):
-            dic[rlz] = numpy.arange(j, j + n, dtype=U32)
+            dic[rlz] = numpy.arange(j, j + n, dtype=U32) + self.e0
             j += n
         return dic
 
@@ -788,7 +789,5 @@ class RuptureProxy(object):
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self.rec['source_id'], self.rec['grp_id'],
-                        self.rec['n_occ'])
-        ebr.id = self.rec['id']
-        ebr.e0 = self.rec['e0']
+                        self.rec['n_occ'], self.rec['id'], self.rec['e0'])
         return ebr
