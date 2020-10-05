@@ -855,7 +855,7 @@ def get_exposure(oqparam, h5=None):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    if not os.path.exists(oqparam.csm_cache):
+    if oqparam.csm_cache and not os.path.exists(oqparam.csm_cache):
         os.makedirs(oqparam.csm_cache)
     checksum = get_checksum32(oqparam, h5)
     fname = os.path.join(oqparam.csm_cache, 'exp_%s.pik' % checksum)
@@ -868,9 +868,10 @@ def get_exposure(oqparam, h5=None):
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in oqparam.aggregate_by)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
-    logging.info('Saving %s', fname)
-    with open(fname, 'wb') as f:
-        pickle.dump(exposure, f)
+    if oqparam.csm_cache:
+        logging.info('Saving %s', fname)
+        with open(fname, 'wb') as f:
+            pickle.dump(exposure, f)
     return exposure
 
 
