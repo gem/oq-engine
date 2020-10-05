@@ -1508,8 +1508,8 @@ class LossesByAsset(object):
             if ws is not None:  # compute avg_losses, really fast
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
-            for eid, loss in zip(eids, losses.T):  # shape (E, A)
-                self.losses_by_E[eid][lni] += loss.sum()
+            for eid, loss in zip(eids, losses.sum(axis=0)):
+                self.losses_by_E[eid][lni] += loss
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
