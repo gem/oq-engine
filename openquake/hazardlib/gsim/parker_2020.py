@@ -95,12 +95,8 @@ class ParkerEtAl2020SInter(GMPE):
         c0, c0_pga = self._c0(C, C_PGA)
         fm, fm_pga = self._magnitude_scaling(C, C_PGA, rup.mag, m_b)
         fp, fp_pga = self._path_term(C, C_PGA, rup.mag, dists.rrup, m_b)
-        if hasattr(rup, 'hypo_depth'):
-            fd = self._depth_scaling(C, rup.hypo_depth)
-            fd_pga = self._depth_scaling(C_PGA, rup.hypo_depth)
-        else:
-            fd = 0
-            fd_pga = 0
+        fd = self._depth_scaling(C, rup)
+        fd_pga = self._depth_scaling(C_PGA, rup)
         fb = self._basin_term(C, sites)
         flin = self._linear_amplification(C, sites.vs30)
         fnl = self._non_linear_term(C, imt, sites.vs30, fp_pga, fm_pga, c0_pga,
@@ -346,7 +342,7 @@ class ParkerEtAl2020SInter(GMPE):
 
         return btf
 
-    def _depth_scaling(self, C, hypo_depth):
+    def _depth_scaling(self, C, rup):
         """
         Depth scaling is for slab.
         """
@@ -441,12 +437,12 @@ class ParkerEtAl2020SSlab(ParkerEtAl2020SInter):
             return C["a0slab"], C_PGA["a0slab"]
         return C[self.region + "_a0slab"], C_PGA[self.region + "_a0slab"]
 
-    def _depth_scaling(self, C, hypo_depth):
-        if hypo_depth >= C["db"]:
+    def _depth_scaling(self, C, rup):
+        if rup.hypo_depth >= C["db"]:
             return C["d"]
-        if hypo_depth <= 20:
+        if rup.hypo_depth <= 20:
             return C["m"] * (20 - C["db"]) + C["d"]
-        return C["m"] * (hypo_depth - C["db"]) + C["d"]
+        return C["m"] * (rup.hypo_depth - C["db"]) + C["d"]
 
     # constant table suffix
     SUFFIX = "slab"
