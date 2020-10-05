@@ -53,25 +53,22 @@ def calc_risk(gmfs, param, monitor):
     """
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    eids = numpy.unique(gmfs['eid'])
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
     with monitor('getting crmodel'):
         crmodel = monitor.read_pik('crmodel')
-        events = dstore['events'][list(eids)]
         weights = dstore['weights'][()]
-    E = len(eids)
     L = len(param['lba'].loss_names)
     elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
     # aggkey -> eid -> loss
     acc = dict(events_per_sid=0, numlosses=numpy.zeros(2, int))  # (kept, tot)
     lba = param['lba']
-    lba.alt = general.AccumDict(
+    lba.alt = general.AccumDict(  # idx -> eid -> loss
         accum=general.AccumDict(accum=numpy.zeros(L, F32)))
-    lba.losses_by_E = numpy.zeros((E, L), F32)
+    lba.losses_by_E = general.AccumDict(  # eid -> loss
+        accum=numpy.zeros(L, F32))
     tempname = param['tempname']
-    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     aggby = param['aggregate_by']
 
     minimum_loss = []
@@ -95,17 +92,16 @@ def calc_risk(gmfs, param, monitor):
             else:
                 ws = None
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
-            eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
             tagidxs = assets[aggby] if aggby else None
             acc['numlosses'] += lba.aggregate(
-                out, eidx, minimum_loss, tagidxs, ws)
+                out, haz['eid'], minimum_loss, tagidxs, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
-        ((event['id'], losses)
-         for event, losses in zip(events, lba.losses_by_E) if losses.sum()),
+        ((eid, losses)
+         for eid, losses in lba.losses_by_E.items() if losses.sum()),
         elt_dt)
     acc['alt'] = {idx: numpy.fromiter(  # already sorted by aid, ultra-fast
         ((eid, loss) for eid, loss in lba.alt[idx].items()), elt_dt)

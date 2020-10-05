@@ -1499,7 +1499,7 @@ class LossesByAsset(object):
                         losses[a], ded * avalues[a], lim * avalues[a])
                 yield self.lni[lt + '_ins'], ins_losses
 
-    def aggregate(self, out, eidx, minimum_loss, tagidxs, ws):
+    def aggregate(self, out, eids, minimum_loss, tagidxs, ws):
         """
         Populate .losses_by_A, .losses_by_E and .alt
         """
@@ -1508,7 +1508,8 @@ class LossesByAsset(object):
             if ws is not None:  # compute avg_losses, really fast
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
-            self.losses_by_E[eidx, lni] += losses.sum(axis=0)
+            for eid, loss in zip(eids, losses.T):  # shape (E, A)
+                self.losses_by_E[eid][lni] += loss.sum()
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
