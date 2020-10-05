@@ -225,9 +225,11 @@ class PostRiskCalculator(base.RiskCalculator):
         rlz_ids = ds['events']['rlz_id'][lbe['event_id']]
         dic = dict(enumerate(lbe['loss'].T))  # lti -> losses
         df = pandas.DataFrame(dic, rlz_ids)
-        for r, curves, losses in builder.gen_curves_by_rlz(df, oq.ses_ratio):
+        for r, losses_df in df.groupby(rlz_ids):
+            losses = numpy.array(losses_df)
+            curves = builder.build_curves(losses, r),
             ds['tot_curves-rlzs'][:, r] = curves  # PL
-            ds['tot_losses-rlzs'][:, r] = losses  # L
+            ds['tot_losses-rlzs'][:, r] = losses.sum(axis=0) * oq.ses_ratio
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         aggby = {tagname: encode(getattr(self.tagcol, tagname)[1:])
                  for tagname in oq.aggregate_by}
