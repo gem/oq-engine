@@ -41,7 +41,7 @@ Current stable version is the **OpenQuake Engine 3.10** 'Ulomov'. The documentat
 
 ### General overview
 
-* [About](https://github.com/gem/oq-engine/blob/master/doc/about.md)
+* [About](doc/about.md)
 * [FAQ](https://github.com/gem/oq-engine/blob/master/doc/faq.md)
 * [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
 * [OQ Commands](https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md)
