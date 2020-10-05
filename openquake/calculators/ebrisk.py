@@ -53,26 +53,22 @@ def calc_risk(gmfs, param, monitor):
     """
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    eids = numpy.unique(gmfs['eid'])
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
     with monitor('getting crmodel'):
         crmodel = monitor.read_pik('crmodel')
-        events = dstore['events'][list(eids)]
         weights = dstore['weights'][()]
-    E = len(eids)
     L = len(param['lba'].loss_names)
-    elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
+    elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
     # aggkey -> eid -> loss
     acc = dict(events_per_sid=0, numlosses=numpy.zeros(2, int))  # (kept, tot)
     lba = param['lba']
-    lba.alt = general.AccumDict(
+    lba.alt = general.AccumDict(  # idx -> eid -> loss
         accum=general.AccumDict(accum=numpy.zeros(L, F32)))
-    lba.losses_by_E = numpy.zeros((E, L), F32)
+    lba.losses_by_E = general.AccumDict(  # eid -> loss
+        accum=numpy.zeros(L, F32))
     tempname = param['tempname']
-    eid2rlz = dict(events[['id', 'rlz_id']])
-    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     aggby = param['aggregate_by']
 
     minimum_loss = []
@@ -92,25 +88,24 @@ def calc_risk(gmfs, param, monitor):
             assets = asset_df.to_records()  # fast
             acc['events_per_sid'] += len(haz)
             if param['avg_losses']:
-                ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
+                ws = weights[haz['rlz']]
             else:
                 ws = None
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
-            eidx = numpy.array([eid2idx[eid] for eid in haz['eid']])  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
             tagidxs = assets[aggby] if aggby else None
             acc['numlosses'] += lba.aggregate(
-                out, eidx, minimum_loss, tagidxs, ws)
+                out, haz['eid'], minimum_loss, tagidxs, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
-        ((event['id'], event['rlz_id'], losses)
-         for event, losses in zip(events, lba.losses_by_E) if losses.sum()),
+        ((eid, losses)
+         for eid, losses in lba.losses_by_E.items() if losses.sum()),
         elt_dt)
     acc['alt'] = {idx: numpy.fromiter(  # already sorted by aid, ultra-fast
-        ((eid, eid2rlz[eid], loss) for eid, loss in lba.alt[idx].items()),
-        elt_dt) for idx in lba.alt}
+        ((eid, loss) for eid, loss in lba.alt[idx].items()), elt_dt)
+                  for idx in lba.alt}
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -200,7 +195,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
         self.param['minimum_asset_loss'] = mal
 
-        elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
+        elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
         for idxs, attrs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
             idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,

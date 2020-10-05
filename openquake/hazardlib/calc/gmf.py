@@ -118,18 +118,15 @@ class GmfComputer(object):
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
             self.source_id = rupture.source_id  # the underlying source
-            self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
             self.source_id = '?'
-            self.e0 = 0
         self.seed = rupture.rup_id
         self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
             sitecol, rupture)
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
-        self.offset = 0  # can be overridden by the engine
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
@@ -137,12 +134,12 @@ class GmfComputer(object):
         """
         t0 = time.time()
         sids = self.sids
-        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim, self.offset)
+        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = []
         No = sum(len(sp.outputs) for sp in self.sec_perils)
         for gs, rlzs in rlzs_by_gsim.items():
-            num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
+            num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
             # it is better to have few calls producing big arrays
@@ -152,16 +149,15 @@ class GmfComputer(object):
                 arr = array[:, i, :]
                 arr[arr < miniml] = 0
             n = 0
-            for rlzi in rlzs:
-                eids = eids_by_rlz[rlzi] + self.e0
-                e = len(eids)
+            for rlz in rlzs:
+                eids = eids_by_rlz[rlz]
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     tot = gmfa.sum(axis=0)  # shape (M,)
                     if not tot.sum():
                         continue
                     if sig_eps is not None:
-                        tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
+                        tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
                     sp_out = numpy.zeros((No,) + gmfa.shape)  # No, N, M
@@ -175,15 +171,15 @@ class GmfComputer(object):
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum():
                             if No:
-                                data.append((sids[i], eid, gmv) +
+                                data.append((sids[i], eid, rlz, gmv) +
                                             tuple(sp_out[:, i, :]))
                             else:
-                                data.append((sids[i], eid, gmv))
+                                data.append((sids[i], eid, rlz, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
-                n += e
+                n += len(eids)
         dt = F32, (len(min_iml),)
-        dtlist = [('sid', U32), ('eid', U32), ('gmv', dt)] + [
+        dtlist = [('sid', U32), ('eid', U32), ('rlz', U32), ('gmv', dt)] + [
             (out, dt) for sp in self.sec_perils for out in sp.outputs]
         d = numpy.array(data, dtlist)
         return d, time.time() - t0

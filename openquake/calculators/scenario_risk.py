@@ -46,7 +46,7 @@ def _event_slice(num_gmfs, r):
 
 def ael_dt(loss_names, rlz=False):
     """
-    :returns: (asset_id, event_id, loss) or (asset_id, event_id, rlzi, loss)
+    :returns: (asset_id, event_id, loss) or (asset_id, event_id, loss)
     """
     L = len(loss_names),
     if rlz:
@@ -156,7 +156,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         loss_dt = self.oqparam.loss_dt()
         L = len(loss_dt.names)
-        dtlist = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
+        dtlist = [('event_id', U32), ('loss', (F32, (L,)))]
         R = self.R
         with self.monitor('saving outputs'):
             A = len(self.assetcol)
@@ -183,8 +183,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             # losses by event
             lbe = numpy.zeros(E, dtlist)
             lbe['event_id'] = range(E)
-            lbe['rlzi'] = (lbe['event_id'] //
-                           self.oqparam.number_of_ground_motion_fields)
             lbe['loss'] = res
             self.datastore['losses_by_event'] = lbe
             loss_types = self.oqparam.loss_dt().names

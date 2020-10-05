@@ -73,27 +73,7 @@ def compute_gmfs(rupgetter, param, monitor):
     srcfilter = monitor.read_pik('srcfilter')
     getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'],
                        param['sec_perils'])
-    return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
-
-
-def gmvs_to_mean_hcurves(dstore):
-    """
-    Convert GMFs into mean hazard curves. Works by keeping everything in
-    memory and it is extremely fast.
-    NB: parallelization would kill the performance.
-    """
-    oq = dstore['oqparam']
-    N = len(dstore['sitecol'])
-    M = len(oq.imtls)
-    L1 = len(oq.imtls.array) // M
-    gmf_df = dstore.read_df('gmf_data', 'sid')
-    mean = numpy.zeros((N, 1, M, L1))
-    for sid, df in gmf_df.groupby(gmf_df.index):
-        gmvs = [df[col].to_numpy() for col in df.columns
-                if col.startswith('gmv_')]
-        mean[sid, 0] = calc.gmvs_to_poes(
-            gmvs, oq.imtls, oq.ses_per_logic_tree_path)
-    return mean
+    return getter.compute_gmfs_curves(monitor)
 
 
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
@@ -194,6 +174,7 @@ class EventBasedCalculator(base.HazardCalculator):
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         M = len(self.oqparam.imtls)
+        sec_outputs = self.oqparam.get_sec_outputs()
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
@@ -205,11 +186,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 for m in range(M):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 data['gmv'][:, m])
-                secperils = data.dtype.names[3:]  # after sid, eid, gmv
                 for m in range(M):
-                    for peril in secperils:
-                        hdf5.extend(self.datastore[f'gmf_data/{peril}_{m}'],
-                                    data[peril][:, m])
+                    for sec_out in sec_outputs:
+                        hdf5.extend(self.datastore[f'gmf_data/{sec_out}_{m}'],
+                                    data[sec_out][:, m])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(data)
@@ -246,13 +226,15 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def _read_scenario_ruptures(self):
         oq = self.oqparam
+        gsim_lt = readinput.get_gsim_lt(self.oqparam)
         if oq.inputs['rupture_model'].endswith(('.xml', '.toml', '.txt')):
             self.gsims = readinput.get_gsims(oq)
             self.cmaker = ContextMaker(
                 '*', self.gsims,
                 {'maximum_distance': oq.maximum_distance,
                  'filter_distance': oq.filter_distance})
-            n_occ = numpy.array([oq.number_of_ground_motion_fields])
+            n_occ = numpy.array([
+                oq.number_of_ground_motion_fields * len(self.gsims)])
             rup = readinput.get_rupture(oq)
             ebr = EBRupture(rup, 0, 0, n_occ)
             ebr.e0 = 0
@@ -262,6 +244,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         numpy.array([mesh], object))
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
+            aw.array['n_occ'] = gsim_lt.get_num_paths()
             rup_array = aw.array
             hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
@@ -271,7 +254,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 ' of %s km from the rupture' % oq.maximum_distance(
                     rup.tectonic_region_type, rup.mag))
 
-        gsim_lt = readinput.get_gsim_lt(self.oqparam)
         # check the number of branchsets
         branchsets = len(gsim_lt._ltnode)
         if len(rup_array) == 1 and branchsets > 1:
@@ -320,13 +302,11 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
             self.datastore.create_dset('gmf_data/time_by_rup',
                                        time_dt, (nrups,), fillvalue=None)
-        if oq.hazard_curves_from_gmfs:
-            self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
 
         # compute_gmfs in parallel
         nr = len(self.datastore['ruptures'])
         self.datastore.swmr_on()
-        logging.info('Reading %d ruptures', nr)
+        logging.info('Reading {:_d} ruptures'.format(nr))
         iterargs = ((rgetter, self.param)
                     for rgetter in gen_rupture_getters(
                             self.datastore, self.srcfilter,
@@ -425,15 +405,6 @@ class EventBasedCalculator(base.HazardCalculator):
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
                         for sid in hmap:
                             ds[sid, s] = hmap[sid].array
-        elif (result and oq.maximum_intensity and oq.intensity_measure_types
-              and oq.investigation_time):
-            logging.info('Computing mean hcurves')
-            with self.monitor('computing mean hcurves'):
-                self.datastore['hcurves-stats'] = gmvs_to_mean_hcurves(
-                    self.datastore)
-                self.datastore.set_shape_attrs(
-                    'hcurves-stats', site_id=N, stat=['mean'],
-                    imt=list(oq.imtls), lvl=numpy.arange(L1))
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.compare_with_classical:  # compute classical curves

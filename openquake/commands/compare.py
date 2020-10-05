@@ -34,7 +34,7 @@ def getdata(what, calc_ids, sitecol, sids):
     for extractor in extractors[1:]:
         oq = extractor.oqparam
         numpy.testing.assert_equal(
-            extractor.get('sitecol').array, sitecol.array)
+            extractor.get('sitecol')[['lon', 'lat']], sitecol[['lon', 'lat']])
         if what == 'hcurves':
             numpy.testing.assert_equal(oq.imtls.array, imtls.array)
         elif what == 'hmaps':
@@ -124,7 +124,10 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             print('Generated %s' % f.name)
     else:
         print(views.rst_table(rows['all'], header))
-
+        if len(calc_ids) == 2 and what == 'hmaps':
+            ms = numpy.mean((array_imt[0] - array_imt[1])**2, axis=0)  # P
+            rows = [(str(poe), m) for poe, m in zip(poes, ms)]
+            print(views.rst_table(rows, ['poe', 'root of mean square diff']))
 
 compare.arg('what', '"hmaps", "hcurves" or "cumtime of"',
             choices={'hmaps', 'hcurves', 'cumtime'})

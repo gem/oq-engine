@@ -305,8 +305,9 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             if 'maximum_intensity' in names_vals:
+                minint = self.minimum_intensity or {'default': 1E-2}
                 for imt in self.hazard_imtls:
-                    i1 = calc.filters.getdefault(self.minimum_intensity, 1E-3)
+                    i1 = calc.filters.getdefault(minint, imt)
                     i2 = calc.filters.getdefault(self.maximum_intensity, imt)
                     self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 20))
             delattr(self, 'intensity_measure_types')
@@ -334,7 +335,7 @@ class OqParam(valid.ParamSet):
             gsim_lt = logictree.GsimLogicTree(path, ['*'])
 
             # check the IMTs vs the GSIMs
-            self._gsims_by_trt = gsim_lt.values
+            self._trts = set(gsim_lt.values)
             for gsims in gsim_lt.values.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
@@ -650,9 +651,8 @@ class OqParam(valid.ParamSet):
         """
         dt = F32, (len(self.imtls),)
         lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
-        for peril in self.get_sec_perils():
-            for output in peril.outputs:
-                lst.append((output, dt))
+        for out in self.get_sec_outputs():
+            lst.append((out, dt))
         return numpy.dtype(lst)
 
     def get_sec_perils(self):
@@ -661,6 +661,15 @@ class OqParam(valid.ParamSet):
         """
         return SecondaryPeril.instantiate(self.secondary_perils,
                                           self.sec_peril_params)
+
+    def get_sec_outputs(self):
+        """
+        :returns: a list of secondary outputs
+        """
+        outs = []
+        for sp in self.get_sec_perils():
+            outs.extend(sp.outputs)
+        return outs
 
     def no_imls(self):
         """
@@ -816,17 +825,17 @@ class OqParam(valid.ParamSet):
             return True  # don't apply validation
         gsim_lt = self.inputs['gsim_logic_tree']
         trts = set(self.maximum_distance)
-        unknown = ', '.join(trts - set(self._gsims_by_trt) - set(['default']))
+        unknown = ', '.join(trts - self._trts - {'default'})
         if unknown:
             self.error = ('setting the maximum_distance for %s which is '
                           'not in %s' % (unknown, gsim_lt))
             return False
         for trt, val in self.maximum_distance.items():
-            if trt not in self._gsims_by_trt and trt != 'default':
+            if trt not in self._trts and trt != 'default':
                 self.error = 'tectonic region %r not in %s' % (trt, gsim_lt)
                 return False
-        if 'default' not in trts and trts < set(self._gsims_by_trt):
-            missing = ', '.join(set(self._gsims_by_trt) - trts)
+        if 'default' not in trts and trts < self._trts:
+            missing = ', '.join(self._trts - trts)
             self.error = 'missing distance for %s and no default' % missing
             return False
         return True

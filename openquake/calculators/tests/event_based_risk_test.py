@@ -112,7 +112,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        self.assertEqual(aw.array, numpy.float32([779.6024]))
+        self.assertEqual(aw.array, numpy.float32([632.50055]))
 
         fnames = export(('tot_curves-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -243,7 +243,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='csv', hazard_calculation_id=str(hc_id))
         [fname] = export(('tot_curves-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
     def test_case_4(self):
         # Turkey with SHARE logic tree
@@ -330,7 +331,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
                       'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
-        self.assertEqual(len(arr.to_table()), 5)
+        self.assertEqual(len(arr.to_table()), 4)
 
         # aggregate by all loss types
         fnames = export(

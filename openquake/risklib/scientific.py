@@ -1453,17 +1453,6 @@ class LossCurvesMapsBuilder(object):
                 losses, self.return_periods, num_events, self.eff_time)
         return curves
 
-    def gen_curves_by_rlz(self, losses_by_event, ses_ratio):
-        """
-        :param losses_by_event: a dataframe
-        :param ses_ratio: ses ratio
-        :yield: triples (rlzi, curves, losses)
-        """
-        for rlzi, losses_df in losses_by_event.groupby('rlzi'):
-            losses = numpy.array(losses_df)
-            yield (rlzi, self.build_curves(losses, rlzi),
-                   losses.sum(axis=0) * ses_ratio)
-
 
 class LossesByAsset(object):
     """
@@ -1510,7 +1499,7 @@ class LossesByAsset(object):
                         losses[a], ded * avalues[a], lim * avalues[a])
                 yield self.lni[lt + '_ins'], ins_losses
 
-    def aggregate(self, out, eidx, minimum_loss, tagidxs, ws):
+    def aggregate(self, out, eids, minimum_loss, tagidxs, ws):
         """
         Populate .losses_by_A, .losses_by_E and .alt
         """
@@ -1519,7 +1508,8 @@ class LossesByAsset(object):
             if ws is not None:  # compute avg_losses, really fast
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
-            self.losses_by_E[eidx, lni] += losses.sum(axis=0)
+            for eid, loss in zip(eids, losses.sum(axis=0)):
+                self.losses_by_E[eid][lni] += loss
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):

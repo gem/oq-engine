@@ -330,10 +330,11 @@ def view_totlosses(token, dstore):
 def _portfolio_loss(dstore):
     R = dstore['full_lt'].get_num_rlzs()
     array = dstore['losses_by_event'][()]
+    rlzs = dstore['events']['rlz_id'][array['event_id']]
     L, = array.dtype['loss'].shape  # loss has shape L
     data = numpy.zeros((R, L), F32)
-    for row in array:
-        data[row['rlzi']] += row['loss']
+    for row, rlz in zip(array, rlzs):
+        data[rlz] += row['loss']
     return data
 
 
