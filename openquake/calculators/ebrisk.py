@@ -114,6 +114,7 @@ def calc_risk(gmfs, param, monitor):
 
 def start_ebrisk(dstore, slc, param, monitor):
     """
+    Launcher for ebrisk tasks
     """
     dstore.open('r')
     srcfilter = monitor.read_pik('srcfilter')
