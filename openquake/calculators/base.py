@@ -1050,8 +1050,6 @@ class RiskCalculator(HazardCalculator):
         smap.monitor.save_pik('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
-            logging.info('Sending hazard for %d assets, %d sites',
-                         block.weight, len(block))
             for ri in block:
                 # we must use eager reading for performance reasons:
                 # concurrent reading on the workers would be extra-slow;
