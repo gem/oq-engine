@@ -482,6 +482,20 @@ def get_ebruptures(dstore):
     return ebrs
 
 
+def get_eid_rlz(proxies, rlzs_by_gsim):
+    """
+    :returns: a composite array with the associations eid->rlz
+    """
+    eid_rlz = []
+    for rup in proxies:
+        ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
+                        rup['grp_id'], rup['n_occ'])
+        for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
+            for eid in eids:
+                eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
+    return numpy.array(eid_rlz, events_dt)
+
+
 # this is never called directly; gen_rupture_getters is used instead
 class RuptureGetter(object):
     """
@@ -508,19 +522,6 @@ class RuptureGetter(object):
     @property
     def num_ruptures(self):
         return len(self.proxies)
-
-    def get_eid_rlz(self):
-        """
-        :returns: a composite array with the associations eid->rlz
-        """
-        eid_rlz = []
-        for rup in self.proxies:
-            ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
-                            self.grp_id, rup['n_occ'])
-            for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
-                for eid in eids:
-                    eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
-        return numpy.array(eid_rlz, events_dt)
 
     def get_rupdict(self):
         """
