@@ -238,7 +238,7 @@ def list_outputs(db, job_id, full=True):
             out.append('%4d | %s' % (o.id, o.display_name))
         if truncated:
             out.append(
-                'Some outputs where not shown. You can see the full list '
+                'Some outputs were not shown. You can see the full list '
                 f'with the command\n`oq engine --list-outputs {job_id}`')
     return out
 
