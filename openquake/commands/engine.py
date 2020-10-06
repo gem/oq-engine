@@ -205,7 +205,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     if run:
         pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
         if reuse_hazard:
-            pars['csm_cache'] = datadir
+            pars['cachedir'] = datadir
         if hc_id:
             pars['hazard_calculation_id'] = str(hc_id)
         oqvalidation.OqParam.check(pars)
