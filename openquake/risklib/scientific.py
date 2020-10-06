@@ -142,7 +142,7 @@ class VulnerabilityFunction(object):
 
     def init(self):
         # called by CompositeRiskModel and by __setstate__
-        self.stddevs = self.covs * self.mean_loss_ratios
+        self._stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
         self.set_distribution(None)
@@ -300,7 +300,7 @@ class VulnerabilityFunction(object):
         lrem = numpy.empty((len(loss_ratios), len(self.imls)))
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
-                    zip(self.mean_loss_ratios, self.stddevs)):
+                    zip(self.mean_loss_ratios, self._stddevs)):
                 lrem[row, col] = self._distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
