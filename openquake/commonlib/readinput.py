@@ -705,7 +705,7 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def _get_cachedird(oq, full_lt, h5=None):
+def _get_cachedir(oq, full_lt, h5=None):
     # read the composite source model from the cache
     if not os.path.exists(oq.cachedir):
         os.makedirs(oq.cachedir)
@@ -739,7 +739,7 @@ def get_composite_source_model(oqparam, h5=None):
     """
     full_lt = get_full_lt(oqparam)
     if oqparam.cachedir and not oqparam.is_ucerf():
-        csm = _get_cachedird(oqparam, full_lt, h5)
+        csm = _get_cachedir(oqparam, full_lt, h5)
     else:
         csm = get_csm(oqparam, full_lt, h5)
     grp_ids = csm.get_grp_ids()
@@ -843,7 +843,7 @@ def get_crmodel(oqparam):
     return crm
 
 
-def get_exposure(oqparam, h5=None):
+def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.asset.Asset` instances.
