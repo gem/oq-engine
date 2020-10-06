@@ -243,7 +243,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         smap.monitor.save_pik('srcfilter', srcfilter)
         smap.monitor.save_pik('crmodel', self.crmodel)
         for rgetter in getters.gen_rupture_getters(
-                self.datastore, srcfilter, oq.concurrent_tasks):
+                self.datastore, oq.concurrent_tasks):
             smap.submit((rgetter, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:

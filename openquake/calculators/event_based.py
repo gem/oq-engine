@@ -22,7 +22,7 @@ import operator
 import numpy
 
 from openquake.baselib import hdf5, parallel
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, copyobj
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -227,24 +227,28 @@ class EventBasedCalculator(base.HazardCalculator):
     def _read_scenario_ruptures(self):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(self.oqparam)
-        if oq.inputs['rupture_model'].endswith(('.xml', '.toml', '.txt')):
+        G = gsim_lt.get_num_paths()
+        if oq.inputs['rupture_model'].endswith('.xml'):
+            ngmfs = oq.number_of_ground_motion_fields
             self.gsims = readinput.get_gsims(oq)
             self.cmaker = ContextMaker(
                 '*', self.gsims,
                 {'maximum_distance': oq.maximum_distance,
                  'filter_distance': oq.filter_distance})
-            n_occ = numpy.array([
-                oq.number_of_ground_motion_fields * len(self.gsims)])
             rup = readinput.get_rupture(oq)
-            ebr = EBRupture(rup, 0, 0, n_occ)
-            ebr.e0 = 0
-            rup_array = get_rup_array([ebr], self.srcfilter).array
             mesh = surface_to_array(rup.surface).transpose(1, 2, 0).flatten()
-            hdf5.extend(self.datastore['rupgeoms'],
-                        numpy.array([mesh], object))
+            if self.N > oq.max_sites_disagg:  # many sites, split rupture
+                ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
+                                  0, 0, G, e0=i * G) for i in range(ngmfs)]
+                meshes = numpy.array([mesh] * ngmfs, object)
+            else:  # keep a single rupture with a big occupation number
+                ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
+                meshes = numpy.array([mesh] * ngmfs, object)
+            rup_array = get_rup_array(ebrs, self.srcfilter).array
+            hdf5.extend(self.datastore['rupgeoms'], meshes)
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
-            aw.array['n_occ'] = gsim_lt.get_num_paths()
+            aw.array['n_occ'] = G
             rup_array = aw.array
             hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
@@ -309,8 +313,7 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Reading {:_d} ruptures'.format(nr))
         iterargs = ((rgetter, self.param)
                     for rgetter in gen_rupture_getters(
-                            self.datastore, self.srcfilter,
-                            oq.concurrent_tasks))
+                            self.datastore, oq.concurrent_tasks))
         smap = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)

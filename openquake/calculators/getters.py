@@ -430,36 +430,16 @@ class GmfGetter(object):
         return res
 
 
-def gen_rgetters(dstore, slc=slice(None)):
+def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     """
-    :yields: unfiltered RuptureGetters
+    :param dstore: a :class:`openquake.baselib.datastore.DataStore`
+    :param ct: number of concurrent tasks
+    :yields: RuptureGetters
     """
     full_lt = dstore['full_lt']
     trt_by_grp = full_lt.trt_by_grp
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    nr = len(dstore['ruptures'])
-    for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
-        if not rlzs_by_gsim.get(grp_id, []):  # the model has no sources
-            continue
-        for block in general.split_in_blocks(arr, len(arr) / nr):
-            rgetter = RuptureGetter(
-                [RuptureProxy(rec) for rec in block], dstore.filename, grp_id,
-                trt_by_grp[grp_id], rlzs_by_gsim[grp_id])
-            yield rgetter
-
-
-def gen_rupture_getters(dstore, srcfilter, ct):
-    """
-    :param dstore: a :class:`openquake.baselib.datastore.DataStore`
-    :param srcfilter: a :class:`openquake.hazardlib.calc.filters.SourceFilter`
-    :param ct: number of concurrent tasks
-    :yields: filtered RuptureGetters
-    """
-    full_lt = dstore['full_lt']
-    trt_by_grp = full_lt.trt_by_grp
-    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
-    rup_array = dstore['ruptures'][()]
     maxweight = rup_array['n_occ'].sum() / (ct*2 or 1)
     for block in general.block_splitter(
             rup_array, maxweight, operator.itemgetter('n_occ'),
@@ -476,10 +456,24 @@ def get_ebruptures(dstore):
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    for rgetter in gen_rgetters(dstore):
+    for rgetter in gen_rupture_getters(dstore):
         for proxy in rgetter.get_proxies():
             ebrs.append(proxy.to_ebr(rgetter.trt))
     return ebrs
+
+
+def get_eid_rlz(proxies, rlzs_by_gsim):
+    """
+    :returns: a composite array with the associations eid->rlz
+    """
+    eid_rlz = []
+    for rup in proxies:
+        ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
+                        rup['grp_id'], rup['n_occ'])
+        for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
+            for eid in eids:
+                eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
+    return numpy.array(eid_rlz, events_dt)
 
 
 # this is never called directly; gen_rupture_getters is used instead
@@ -508,19 +502,6 @@ class RuptureGetter(object):
     @property
     def num_ruptures(self):
         return len(self.proxies)
-
-    def get_eid_rlz(self):
-        """
-        :returns: a composite array with the associations eid->rlz
-        """
-        eid_rlz = []
-        for rup in self.proxies:
-            ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
-                            self.grp_id, rup['n_occ'])
-            for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
-                for eid in eids:
-                    eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
-        return numpy.array(eid_rlz, events_dt)
 
     def get_rupdict(self):
         """
