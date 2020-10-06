@@ -1,8 +1,13 @@
+  [Michele Simionato]
+  * Parallelized by `number_of_ground_motion_fields` in scenario calculations
+    with many sites
+  * Refactored ebrisk and reduced data transfer in event based
+
   [Viktor Polak]
   * Added the Parker et al. (2020) GMPE
 
   [Marco Pagani]
-  * Added 'closest_point' metric   
+  * Added 'closest_point' metric
 
   [Michele Simionato]
   * Changed event based full enumeration to be consistent with sampling
