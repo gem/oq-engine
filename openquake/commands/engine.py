@@ -143,7 +143,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
            export_output, export_outputs, exports='',
-           log_level='info', multi=False, reuse_hazard=False, param=''):
+           log_level='info', multi=False, reuse_input=False, param=''):
     """
     Run a calculation using the traditional command line API
     """
@@ -204,7 +204,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         hc_id = None
     if run:
         pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
-        if reuse_hazard:
+        if reuse_input:
             pars['cachedir'] = datadir
         if hc_id:
             pars['hazard_calculation_id'] = str(hc_id)
@@ -315,7 +315,7 @@ engine.opt('exports', 'Comma-separated string specifing the export formats, '
 engine.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
 engine.flg('multi', 'Run multiple job.inis in parallel')
-engine.flg('reuse_hazard', 'Read the source models from the cache (if any)')
+engine.flg('reuse_input', 'Read the sources|exposures from the cache (if any)')
 engine._add('param', '--param', '-p',
             help='Override parameters specified with the syntax '
             'NAME1=VALUE1,NAME2=VALUE2,...')
