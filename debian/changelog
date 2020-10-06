@@ -1,4 +1,26 @@
   [Michele Simionato]
+  * Extended `oq engine --reuse-input` to the exposure
+  * Parallelized by `number_of_ground_motion_fields` in scenario calculations
+    with many sites
+  * Refactored ebrisk and reduced data transfer in event based
+
+  [Viktor Polak]
+  * Added the Parker et al. (2020) GMPE
+
+  [Marco Pagani]
+  * Added 'closest_point' metric
+
+  [Michele Simionato]
+  * Changed event based full enumeration to be consistent with sampling
+  * Changed the GMF storage to be more pandas-friendly
+
+python3-oq-engine (3.10.0-1~xenial01) xenial; urgency=low
+
+  [Richard Styron]
+  * Added secondary perils ZhuLiquefactionGeneral and HazusLateralSpreading,
+    supplementing HazusLiquefaction and NewmarkDisplacement
+
+  [Michele Simionato]
   * Fixed a bug with site models containing non-float parameters
   * Raised the limit on the asset ID from 20 to 50 characters
   * Changed the /extract/events API to extract only the relevant events
@@ -144,6 +166,8 @@
     have homogeneous length across ruptures
   * Removed the dependency from PyYAML, replaced the .yml files in the HMTK with
     .toml files and added an utility `utils/yaml2toml`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 29 Sep 2020 11:53:24 +0000
 
 python3-oq-engine (3.9.0-1~xenial01) xenial; urgency=low
 

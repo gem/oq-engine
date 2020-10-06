@@ -23,7 +23,7 @@ import math
 
 import numpy.testing
 
-from openquake.baselib.general import group_array, countby, gettemp
+from openquake.baselib.general import countby, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
@@ -99,9 +99,9 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
-            gmf = group_array(dstore['gmf_data/data'], 'sid')
-            gmvs_site_0 = gmf[0]['gmv']
-            gmvs_site_1 = gmf[1]['gmv']
+            gmf = dstore.read_df('gmf_data', 'sid')
+            gmvs_site_0 = gmf.loc[0]['gmv_0']
+            gmvs_site_1 = gmf.loc[1]['gmv_0']
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_0, gmvs_site_1, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
@@ -146,7 +146,7 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
         # compute hcurves in postprocessing and compare with inprocessing
-        df = self.calc.datastore.read_df('gmf_data/data', 'sid').loc[0]
+        df = self.calc.datastore.read_df('gmf_data', 'sid').loc[0]
         gmvs = [df[col].to_numpy() for col in df.columns
                 if col.startswith('gmv_')]
         oq = self.calc.datastore['oqparam']
@@ -248,8 +248,9 @@ class EventBasedTestCase(CalculatorTestCase):
         # check MFD
         aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
         self.assertEqual(aw.duration, 30)  # 30 years
-        aae(aw.magnitudes, [4.9, 5.3], decimal=6)
-        aae(aw.mean_frequency, [0.016667, 0.006667], decimal=6)
+        aae(aw.magnitudes, [4.6, 4.7, 5., 5.1, 5.3], decimal=6)
+        aae(aw.mean_frequency, [0.01, 0.063333, 0.01, 0.043333, 0.006667],
+            decimal=6)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
@@ -299,7 +300,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 51)
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 51)
 
     def test_case_10(self):
         # this is a case with multiple files in the smlt uncertaintyModel
@@ -407,7 +408,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # check the relevant_events
         E = extract(self.calc.datastore, 'num_events')['num_events']
         e = len(extract(self.calc.datastore, 'events'))
-        self.assertAlmostEqual(e/E, 0.1954023)
+        self.assertAlmostEqual(e/E, 0.1607843137)
 
         # run again the GMF calculation, but this time from stored ruptures
         hid = str(self.calc.datastore.calc_id)
@@ -464,14 +465,21 @@ class EventBasedTestCase(CalculatorTestCase):
         mean, *others = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', mean)
 
-    def test_case_26(self):
+    def test_case_26_land(self):
         # cali landslide simplified
-        self.run_calc(case_26.__file__, 'job.ini')
-        df = self.calc.datastore.read_df('gmf_data/data', 'sid')
-        pd_mean = df[df['prob_disp_0'] > 0]['prob_disp_0'].mean()
-        nd_mean = df[df['newmark_disp_0'] > 0]['newmark_disp_0'].mean()
+        self.run_calc(case_26.__file__, 'job_land.ini')
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
+        pd_mean = df[df.prob_disp_0 > 0].prob_disp_0.mean()
+        nd_mean = df[df.newmark_disp_0 > 0].newmark_disp_0.mean()
         self.assertGreater(pd_mean, 0)
         self.assertGreater(nd_mean, 0)
+
+    def test_case_26_liq(self):
+        # cali liquefaction simplified
+        self.run_calc(case_26.__file__, 'job_liq.ini')
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
+        pd_mean = df[df.liq_prob_0 > 0].liq_prob_0.mean()
+        self.assertGreater(pd_mean, 0)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

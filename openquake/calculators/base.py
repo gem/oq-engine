@@ -39,7 +39,6 @@ from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
-from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, util
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -403,7 +402,7 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    def src_filter(self, filename=None):
+    def src_filter(self):
         """
         :returns: a SourceFilter/UcerfFilter
         """
@@ -412,10 +411,9 @@ class HazardCalculator(BaseCalculator):
             sitecol = self.sitecol.complete
         else:  # can happen to the ruptures-only calculator
             sitecol = None
-            filename = None
         if oq.is_ucerf():
-            return UcerfFilter(sitecol, oq.maximum_distance, filename)
-        return SourceFilter(sitecol, oq.maximum_distance, filename)
+            return UcerfFilter(sitecol, oq.maximum_distance)
+        return SourceFilter(sitecol, oq.maximum_distance)
 
     @property
     def E(self):
@@ -471,12 +469,8 @@ class HazardCalculator(BaseCalculator):
             check_amplification(df, self.sitecol)
             self.af = AmplFunction.from_dframe(df)
 
-        if getattr(self, 'sitecol', None):
-            # can be None for the ruptures-only calculator
-            with hdf5.File(self.datastore.tempname, 'w') as tmp:
-                tmp['sitecol'] = self.sitecol
-        elif (oq.calculation_mode == 'disaggregation' and
-              oq.max_sites_disagg < len(self.sitecol)):
+        if (oq.calculation_mode == 'disaggregation' and
+                oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
@@ -836,8 +830,7 @@ class HazardCalculator(BaseCalculator):
             self.amplifier = None
 
         # manage secondary perils
-        sec_perils = SecondaryPeril.instantiate(oq.secondary_perils,
-                                                oq.sec_peril_params)
+        sec_perils = oq.get_sec_perils()
         for sp in sec_perils:
             sp.prepare(self.sitecol)  # add columns as needed
 
@@ -984,6 +977,9 @@ class RiskCalculator(HazardCalculator):
             meth = getattr(self, '_gen_riskinputs_' + kind)
             riskinputs = list(meth(dstore))
         assert riskinputs
+        if all(isinstance(ri.hazard_getter, getters.ZeroGetter)
+               for ri in riskinputs):
+            raise RuntimeError(f'the {kind}s are all zeros on the assets')
         logging.info('Built %d risk inputs', len(riskinputs))
         return riskinputs
 
@@ -994,13 +990,22 @@ class RiskCalculator(HazardCalculator):
         if 'gmf_data' not in dstore:
             raise InvalidFile('Did you forget gmfs_csv in %s?'
                               % self.oqparam.inputs['job_ini'])
-        rlzs = dstore['events']['rlz_id']
-        assets_by_site = self.assetcol.assets_by_site()
-        for sid, assets in enumerate(assets_by_site):
+        with self.monitor('reading GMFs'):
+            rlzs = dstore['events']['rlz_id']
+            gmf_df = dstore.read_df('gmf_data', 'sid')
+            by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
+        logging.info('Grouped the GMFs by site ID')
+        for sid, assets in enumerate(self.assetcol.assets_by_site()):
             if len(assets) == 0:
                 continue
-            getter = getters.GmfDataGetter(dstore, [sid], rlzs, self.R)
-            if len(dstore['gmf_data/data']) == 0:
+            try:
+                df = by_sid[sid]
+            except KeyError:
+                getter = getters.ZeroGetter(sid, self.R)
+            else:
+                df['rlzs'] = rlzs[df.eid.to_numpy()]
+                getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
+            if len(dstore['gmf_data/gmv_0']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
@@ -1042,22 +1047,16 @@ class RiskCalculator(HazardCalculator):
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
+        smap.monitor.save_pik('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
-            logging.info('Sending hazard for %d assets, %d sites',
-                         block.weight, len(block))
             for ri in block:
                 # we must use eager reading for performance reasons:
                 # concurrent reading on the workers would be extra-slow;
                 # also, I could not get lazy reading to work with
                 # the SWMR mode for event_based_risk
                 ri.hazard_getter.init()
-            smap.submit((block, self.crmodel, self.param))
-            for ri in block:  # save memory
-                try:
-                    ri.hazard_getter.data.clear()
-                except AttributeError:  # no data
-                    pass
+            smap.submit((block, self.param))
         return smap.reduce(self.combine)
 
     def combine(self, acc, res):
@@ -1084,7 +1083,14 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
            for s in numpy.arange(N, dtype=U32)
            for ei, event in enumerate(events)]
     gmfa = numpy.array(lst, dstore['oqparam'].gmf_data_dt())
-    dstore['gmf_data/data'] = gmfa
+    dstore['gmf_data/sid'] = gmfa['sid']
+    dstore['gmf_data/eid'] = gmfa['eid']
+    cols = ['sid', 'eid']
+    for m in range(M):
+        col = f'gmv_{m}'
+        cols.append(col)
+        dstore['gmf_data/' + col] = gmfa['gmv'][:, m]
+    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
     dic = general.group_array(gmfa, 'sid')
     lst = []
     all_sids = sitecol.complete.sids
@@ -1094,7 +1100,6 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
         lst.append((offset, offset + n))
         offset += n
     dstore['gmf_data/imts'] = ' '.join(imts)
-    dstore['gmf_data/indices'] = numpy.array(lst, U32)
 
 
 def import_gmfs(dstore, fname, sids):
@@ -1145,21 +1150,38 @@ def import_gmfs(dstore, fname, sids):
     dstore['events'] = events
     # store the GMFs
     dic = general.group_array(arr, 'sid')
-    lst = []
     offset = 0
     gmvlst = []
     for sid in sids:
         n = len(dic.get(sid, []))
-        lst.append((offset, offset + n))
         if n:
             offset += n
             gmvs = dic[sid]
             gmvlst.append(gmvs)
-    dstore['gmf_data/data'] = numpy.concatenate(gmvlst)
-    dstore['gmf_data/indices'] = numpy.array(lst, U32)
-    dstore['gmf_data/imts'] = ' '.join(imts)
+    data = numpy.concatenate(gmvlst)
+    create_gmf_data(dstore, len(oq.imtls), data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
+
+
+def create_gmf_data(dstore, M, secperils=(), data=None):
+    dstore.create_dset('gmf_data/sid', U32)
+    dstore.create_dset('gmf_data/eid', U32)
+    cols = ['sid', 'eid']
+    if data is not None:
+        dstore['gmf_data/sid'] = data['sid']
+        dstore['gmf_data/eid'] = data['eid']
+    for m in range(M):
+        col = f'gmv_{m}'
+        cols.append(col)
+        dstore.create_dset('gmf_data/' + col, F32)
+        if data is not None:
+            dstore[f'gmf_data/' + col] = data['gmv'][:, m]
+        for peril in secperils:
+            for out in peril.outputs:
+                dstore.create_dset(f'gmf_data/{out}_{m}', F32)
+                cols.append(f'{out}_{m}')
+    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
 
 
 def save_exposed_values(dstore, assetcol, lossnames, tagnames):

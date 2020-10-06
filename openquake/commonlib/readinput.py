@@ -46,7 +46,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
-from openquake.risklib.riskmodels import get_risk_models
+from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
 from openquake.commonlib import logictree
@@ -636,8 +636,6 @@ def get_rupture(oqparam):
         conv = sourceconverter.RuptureConverter(
             oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
         rup = conv.convert_node(rup_node)
-    elif rup_model.endswith(('.txt', '.toml')):
-        rup = rupture.from_toml(open(rup_model).read())
     else:
         raise ValueError('Unrecognized ruptures model %s' % rup_model)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
@@ -707,14 +705,12 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def _get_csm_cached(oq, full_lt, h5=None):
+def _get_cachedir(oq, full_lt, h5=None):
     # read the composite source model from the cache
-    if not os.path.exists(oq.csm_cache):
-        os.makedirs(oq.csm_cache)
-    checksum = get_checksum32(oq)
-    if h5:
-        h5.attrs['checksum32'] = checksum
-    fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
+    if not os.path.exists(oq.cachedir):
+        os.makedirs(oq.cachedir)
+    checksum = get_checksum32(oq, h5)
+    fname = os.path.join(oq.cachedir, 'csm_%s.pik' % checksum)
     if os.path.exists(fname):
         logging.info('Reading %s', fname)
         with open(fname, 'rb') as f:
@@ -742,8 +738,8 @@ def get_composite_source_model(oqparam, h5=None):
          an open hdf5.File where to store the source info
     """
     full_lt = get_full_lt(oqparam)
-    if oqparam.csm_cache and not oqparam.is_ucerf():
-        csm = _get_csm_cached(oqparam, full_lt, h5)
+    if oqparam.cachedir and not oqparam.is_ucerf():
+        csm = _get_cachedir(oqparam, full_lt, h5)
     else:
         csm = get_csm(oqparam, full_lt, h5)
     grp_ids = csm.get_grp_ids()
@@ -829,32 +825,21 @@ def get_crmodel(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    riskdict = get_risk_models(oqparam)
-    oqparam.set_risk_imtls(riskdict)
+    risklist = get_risk_functions(oqparam)
+    oqparam.set_risk_imtls(risklist)
+    consdict = {}
     if 'consequence' in oqparam.inputs:
         # build consdict of the form cname_by_tagname -> tag -> array
-        consdict = {}
         for by, fname in oqparam.inputs['consequence'].items():
-            dtypedict = {by: str, 'cname': str, 'loss_type': str, None: float}
-            dic = group_array(hdf5.read_csv(fname, dtypedict).array, 'cname')
+            dtypedict = {
+                by: str, 'cname': str, 'loss_type': str, None: float}
+            dic = group_array(
+                hdf5.read_csv(fname, dtypedict).array, 'cname')
             for cname, group in dic.items():
-                bytag = {tag: _cons_coeffs(grp, riskdict.limit_states)
+                bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
                          for tag, grp in group_array(group, by).items()}
                 consdict['%s_by_%s' % (cname, by)] = bytag
-    else:
-        # legacy approach, extract the consequences from the risk models
-        consdict = {'losses_by_taxonomy': {}}
-        for taxo, dic in riskdict.items():
-            coeffs_by_lt = {lt: dic.pop((lt, kind)) for lt, kind in list(dic)
-                            if kind == 'consequence'}
-            if coeffs_by_lt:
-                dtlist = [(lt, F32) for lt in coeffs_by_lt]
-                coeffs = numpy.zeros(len(riskdict.limit_states), dtlist)
-                for lt, cf in coeffs_by_lt.items():
-                    coeffs[lt] = cf
-                consdict['losses_by_taxonomy'][taxo] = coeffs
-
-    crm = riskmodels.CompositeRiskModel(oqparam, riskdict, consdict)
+    crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
 
@@ -868,11 +853,23 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
+    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
+        os.makedirs(oqparam.cachedir)
+    checksum = _checksum(oqparam.inputs['exposure'])
+    fname = os.path.join(oqparam.cachedir, 'exp_%s.pik' % checksum)
+    if os.path.exists(fname):
+        logging.info('Reading %s', fname)
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
     exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in oqparam.aggregate_by)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
+    if oqparam.cachedir:
+        logging.info('Saving %s', fname)
+        with open(fname, 'wb') as f:
+            pickle.dump(exposure, f)
     return exposure
 
 
@@ -960,7 +957,7 @@ def get_pmap_from_csv(oqparam, fnames):
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
-    oqparam.set_risk_imtls(get_risk_models(oqparam))
+    oqparam.set_risk_imtls(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
     num_levels = sum(len(imls) for imls in oqparam.imtls.values())
@@ -1118,17 +1115,22 @@ def get_input_files(oqparam, hazard=False):
     return sorted(fnames)
 
 
-def _checksum(fname, checksum):
-    if not os.path.exists(fname):
-        zpath = os.path.splitext(fname)[0] + '.zip'
-        if not os.path.exists(zpath):
-            raise OSError('No such file: %s or %s' % (fname, zpath))
-        with open(zpath, 'rb') as f:
-            data = f.read()
-    else:
-        with open(fname, 'rb') as f:
-            data = f.read()
-    return zlib.adler32(data, checksum)
+def _checksum(fnames, checksum=0):
+    """
+    :returns: the 32 bit checksum of a list of files
+    """
+    for fname in fnames:
+        if not os.path.exists(fname):
+            zpath = os.path.splitext(fname)[0] + '.zip'
+            if not os.path.exists(zpath):
+                raise OSError('No such file: %s or %s' % (fname, zpath))
+            with open(zpath, 'rb') as f:
+                data = f.read()
+        else:
+            with open(fname, 'rb') as f:
+                data = f.read()
+        checksum = zlib.adler32(data, checksum)
+    return checksum
 
 
 def get_checksum32(oqparam, h5=None):
@@ -1139,9 +1141,7 @@ def get_checksum32(oqparam, h5=None):
     """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
-    checksum = 0
-    for fname in get_input_files(oqparam, hazard=True):
-        checksum = _checksum(fname, checksum)
+    checksum = _checksum(get_input_files(oqparam, hazard=True))
     hazard_params = []
     for key, val in vars(oqparam).items():
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
@@ -1150,7 +1150,7 @@ def get_checksum32(oqparam, h5=None):
                    'pointsource_distance', 'minimum_magnitude'):
             hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
-        checksum = zlib.adler32(data, checksum) & 0xffffffff
+        checksum = zlib.adler32(data, checksum)
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum

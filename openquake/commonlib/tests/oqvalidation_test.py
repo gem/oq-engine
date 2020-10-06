@@ -142,12 +142,11 @@ class OqParamTestCase(unittest.TestCase):
             maximum_distance='{"wrong TRT": 200}')
         oq.inputs['source_model_logic_tree'] = 'something'
 
-        oq._gsims_by_trt = {'Active Shallow Crust': []}
+        oq._trts = {'Active Shallow Crust'}
         self.assertFalse(oq.is_valid_maximum_distance())
         self.assertIn('setting the maximum_distance for wrong TRT', oq.error)
 
-        oq._gsims_by_trt = {'Active Shallow Crust': [],
-                            'Stable Continental Crust': []}
+        oq._trts = {'Active Shallow Crust', 'Stable Continental Crust'}
         oq.maximum_distance = {'Active Shallow Crust': 200}
         self.assertFalse(oq.is_valid_maximum_distance())
         self.assertEqual('missing distance for Stable Continental Crust '
@@ -327,16 +326,6 @@ class OqParamTestCase(unittest.TestCase):
             ).set_risk_imtls({})
         self.assertIn("There is a single IMT, the uniform_hazard_spectra plot "
                       "will contain a single point", w.call_args[0][0])
-
-    def test_set_risk_imtls(self):
-        oq = object.__new__(OqParam)
-        vf = mock.Mock()
-        vf.imt = 'SA (0.1)'
-        vf.imls = [0.1, 0.2]
-        rm = dict(taxo={('structural', 'vulnerability'): vf})
-        with self.assertRaises(KeyError) as ctx:
-            oq.set_risk_imtls(rm)
-        self.assertIn("'SA '", str(ctx.exception))
 
     def test_gmfs_but_no_sites(self):
         inputs = fakeinputs.copy()

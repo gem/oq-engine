@@ -617,7 +617,10 @@ def build_dt(dtypedict, names):
         try:
             dt = dtypedict[name]
         except KeyError:
-            dt = dtypedict[None]
+            if None in dtypedict:
+                dt = dtypedict[None]
+            else:
+                raise KeyError('Missing dtype for field %r' % name)
         lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 
@@ -734,7 +737,7 @@ def save_npz(obj, path):
             continue
         elif isinstance(val, str):
             # without this oq extract would fail
-            a[key] = numpy.array(val.encode('utf-8'))
+            a[key] = val.encode('utf-8')
         else:
             a[key] = _fix_array(val, key)
     numpy.savez_compressed(path, **a)

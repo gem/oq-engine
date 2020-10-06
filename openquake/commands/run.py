@@ -109,7 +109,8 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, loglevel, hc, exports,
                 hc_id = None
                 rlz_ids = ()
             oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
-            vars(oqparam).update(params)
+            if not oqparam.cachedir:  # enable caching
+                oqparam.cachedir = datastore.get_datadir()
             if hc_id and hc_id < 0:  # interpret negative calculation ids
                 calc_ids = datastore.get_calc_ids()
                 try:
@@ -121,7 +122,7 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, loglevel, hc, exports,
             calc = base.calculators(oqparam, calc_id)
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
-                     rlz_ids=rlz_ids)
+                     rlz_ids=rlz_ids, **params)
         else:  # run hazard + risk
             calc = run2(
                 job_inis[0], job_inis[1], calc_id, concurrent_tasks, pdb,

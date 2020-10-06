@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
 import re
 import ast
 import sys
@@ -26,7 +26,7 @@ from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree, distance
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import general
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
@@ -282,43 +282,16 @@ class SourceFilter(object):
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
-    def __init__(self, sitecol, integration_distance, filename=None):
+    def __init__(self, sitecol, integration_distance):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
         elif sitecol is None:
             integration_distance = {}
-        self.filename = filename
+        self.sitecol = sitecol
         self.integration_distance = (
             integration_distance
             if isinstance(integration_distance, MagDepDistance)
             else MagDepDistance(integration_distance))
-        if not filename:  # keep the sitecol in memory
-            self.__dict__['sitecol'] = sitecol
-
-    def __getstate__(self):
-        if self.filename:
-            # in the engine self.filename is the .hdf5 cache file
-            return dict(filename=self.filename,
-                        integration_distance=self.integration_distance)
-        else:
-            # when using calc_hazard_curves without an .hdf5 cache file
-            return dict(filename=None, sitecol=self.sitecol,
-                        integration_distance=self.integration_distance)
-
-    @property
-    def sitecol(self):
-        """
-        Read the site collection from .filename and cache it
-        """
-        if 'sitecol' in vars(self):
-            return self.__dict__['sitecol']
-        if self.filename is None:
-            return
-        elif not os.path.exists(self.filename):
-            raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
-        with hdf5.File(self.filename, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5.get('sitecol')
-        return sc
 
     def get_rectangle(self, src):
         """
