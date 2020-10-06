@@ -1,4 +1,4 @@
-#,,,,,,,,,,,,"generated_by='OpenQuake engine 3.11.0-gitf1e8a8f996', start_date='2020-09-30T09:23:56', checksum=244203017"
+#,,,,,,,,,,,,"generated_by='OpenQuake engine 3.11.0-git94d552200d', start_date='2020-10-06T06:14:20', checksum=3916188954"
 asset_id,Material,Municipio,Provincia,Region,taxonomy,lon,lat,structural~no_damage,structural~slight,structural~moderate,structural~extensive,structural~complete
 asset_4291,Masonry with reinforcement,PEPILLO SALCEDO,MONTE CRISTI,REGIÓN CIBAO NOROESTE,MCF_LWAL-DNO_H3,-71.65401,19.66566,8.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00,0.000000E+00
 asset_8638,Masonry with reinforcement,SAN JUAN,SAN JUAN,REGIÓN EL VALLE,MR_LWAL-DNO_H1,-71.32667,18.96847,2.289145E+01,1.083020E-01,2.460630E-04,0.000000E+00,0.000000E+00
