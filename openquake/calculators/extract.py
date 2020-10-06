@@ -1044,7 +1044,7 @@ def extract_event_info(dstore, eidx):
     """
     event = dstore['events'][int(eidx)]
     ridx = event['rup_id']
-    [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
+    [getter] = getters.gen_rupture_getters(dstore, slc=slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz_id']
     full_lt = dstore['full_lt']
@@ -1277,7 +1277,7 @@ def extract_rupture_info(dstore, what):
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    for rgetter in getters.gen_rgetters(dstore):
+    for rgetter in getters.gen_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r in rup_data.to_array(proxies):
@@ -1312,7 +1312,7 @@ def extract_ruptures(dstore, what):
     bio = io.StringIO()
     first = True
     trts = list(dstore.getitem('full_lt').attrs['trts'])
-    for rgetter in getters.gen_rgetters(dstore):
+    for rgetter in getters.gen_rupture_getters(dstore):
         rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
                 for proxy in rgetter.get_proxies(min_mag)]
         arr = rupture.to_csv_array(rups)
