@@ -38,6 +38,7 @@ NB: parallelization would kill the performance::
             gmvs, oq.imtls, oq.ses_per_logic_tree_path)
     return mean
 """
+import itertools
 import warnings
 import logging
 import numpy
@@ -289,7 +290,7 @@ class RuptureImporter(object):
         :param rup_array: an array of ruptures with fields grp_id
         :returns: a list of RuptureGetters
         """
-        from openquake.calculators.getters import RuptureGetter, gen_rgetters
+        from openquake.calculators.getters import get_eid_rlz, gen_rgetters
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         self.check_overflow(E)  # check the number of events
@@ -301,13 +302,13 @@ class RuptureImporter(object):
         # this is very fast: I saw 30 million events associated in 1 minute!
         logging.info('Associating event_id -> rlz_id for {:_d} events '
                      'and {:_d} ruptures'.format(len(events), len(rup_array)))
+        iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
         if len(events) < 1E5:
-            it = map(RuptureGetter.get_eid_rlz, rgetters)
+            it = itertools.starmap(get_eid_rlz, iterargs)
         else:
-            it = parallel.Starmap(RuptureGetter.get_eid_rlz,
-                                  ((rgetter,) for rgetter in rgetters),
-                                  progress=logging.debug,
-                                  h5=self.datastore.hdf5)
+            it = parallel.Starmap(
+                get_eid_rlz, iterargs, progress=logging.debug,
+                h5=self.datastore.hdf5)
         i = 0
         for eid_rlz in it:
             for er in eid_rlz:
