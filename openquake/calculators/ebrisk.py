@@ -24,7 +24,6 @@ import numpy
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.baselib.python3compat import zip
 from openquake.hazardlib.calc.filters import getdefault
-from openquake.risklib import riskmodels
 from openquake.risklib.scientific import LossesByAsset
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
@@ -113,6 +112,16 @@ def calc_risk(gmfs, param, monitor):
     return acc
 
 
+def start_ebrisk(dstore, slc, param, monitor):
+    """
+    """
+    dstore.open('r')
+    srcfilter = monitor.read_pik('srcfilter')
+    for rgetter in getters.gen_rupture_getters(dstore, slc=slc):
+        for rg in rgetter.split(srcfilter, 10):
+            yield ebrisk, rg, param
+
+
 def ebrisk(rupgetter, param, monitor):
     """
     :param rupgetter: RuptureGetter with multiple ruptures
@@ -167,7 +176,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating event loss tables
     """
-    core_task = ebrisk
+    core_task = start_ebrisk
     is_stochastic = True
     precalc = 'event_based'
     accept_precalc = ['event_based', 'event_based_risk']
@@ -236,15 +245,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
         self.numlosses = 0
+        nr = len(self.datastore['ruptures'])
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
-        smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
         smap.monitor.save_pik('srcfilter', srcfilter)
         smap.monitor.save_pik('crmodel', self.crmodel)
-        for rgetter in getters.gen_rupture_getters(
-                self.datastore, oq.concurrent_tasks):
-            smap.submit((rgetter, self.param))
+        for slc in general.gen_slices(0, nr, (nr // 10) or 1):
+            smap.submit((self.datastore, slc, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
             self.datastore['event_loss_table/indices'] = self.indices

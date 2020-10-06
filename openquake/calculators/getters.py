@@ -544,6 +544,17 @@ class RuptureGetter(object):
                 proxies.append(proxy)
         return proxies
 
+    def split(self, srcfilter, hint=1):
+        proxies = []
+        for proxy in self.proxies:
+            sids = srcfilter.close_sids(proxy.rec, self.trt)
+            if len(sids):
+                proxies.append(RuptureProxy(proxy.rec, len(sids)))
+        maxw = sum(p.weight for p in proxies) / hint
+        for block in general.block_splitter(proxies, maxw):
+            yield RuptureGetter(block, self.filename, self.grp_id, self.trt,
+                                self.rlzs_by_gsim)
+
     def __len__(self):
         return len(self.proxies)
 
