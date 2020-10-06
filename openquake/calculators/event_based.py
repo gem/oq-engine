@@ -22,7 +22,7 @@ import operator
 import numpy
 
 from openquake.baselib import hdf5, parallel
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, copyobj
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -238,8 +238,8 @@ class EventBasedCalculator(base.HazardCalculator):
             rup = readinput.get_rupture(oq)
             mesh = surface_to_array(rup.surface).transpose(1, 2, 0).flatten()
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
-                ebrs = [EBRupture(rup, 0, 0, G, rup.rup_id + i, i * G)
-                        for i in range(ngmfs)]
+                ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
+                                  0, 0, G, e0=i * G) for i in range(ngmfs)]
                 meshes = numpy.array([mesh] * ngmfs, object)
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]

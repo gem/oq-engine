@@ -686,7 +686,7 @@ class EBRupture(object):
         """
         Serial number of the rupture
         """
-        return self.id or self.rupture.rup_id
+        return self.rupture.rup_id
 
     def get_eids_by_rlz(self, rlzs_by_gsim):
         """
