@@ -75,17 +75,16 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
 
 
 class AccumLoss(object):
-    def __init__(self, L, eid2rlz):
+    def __init__(self, L, rlz_id):
         self.L = L
-        self.eid2rlz = eid2rlz
+        self.rlz_id = rlz_id
         self.acc = general.AccumDict(
             accum=general.AccumDict(accum=numpy.zeros((L,), F32)))
 
     def accum(self, elt):
         for rec in elt:
             eid = rec['event_id']
-            rlz = self.eid2rlz[eid]
-            self.acc[rlz][eid] += rec['loss']
+            self.acc[self.rlz_id[eid]][eid] += rec['loss']
 
 
 def post_ebrisk(dstore, aggkey, monitor):
@@ -101,8 +100,7 @@ def post_ebrisk(dstore, aggkey, monitor):
     agglist = [x if isinstance(x, list) else [x]
                for x in ast.literal_eval(aggkey)]
     idx = tuple(x[0] - 1 for x in agglist if len(x) == 1)
-    evs = dstore['events'][()]
-    al = AccumLoss(L, dict(evs[['id', 'rlz_id']]))
+    al = AccumLoss(L, dstore['events']['rlz_id'])
     for ids in itertools.product(*agglist):
         key = ','.join(map(str, ids)) + ','
         try:
