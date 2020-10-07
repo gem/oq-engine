@@ -24,7 +24,6 @@ import numpy
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.baselib.python3compat import zip
 from openquake.hazardlib.calc.filters import getdefault
-from openquake.risklib import riskmodels
 from openquake.risklib.scientific import LossesByAsset
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
@@ -113,6 +112,24 @@ def calc_risk(gmfs, param, monitor):
     return acc
 
 
+def start_ebrisk(rgetter, param, monitor):
+    """
+    Launcher for ebrisk tasks
+    """
+    srcfilter = monitor.read_pik('srcfilter')
+    rgetters = list(rgetter.split(srcfilter, param['ebrisk_maxsize']))
+    for rg in rgetters[:-1]:
+        msg = 'produced subtask'
+        try:
+            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                       'ebrisk#%d' % monitor.task_no, msg)
+        except Exception:  # for `oq run`
+            print(msg)
+        yield ebrisk, rg, param
+    if rgetters:
+        yield ebrisk(rgetters[-1], param, monitor)
+
+
 def ebrisk(rupgetter, param, monitor):
     """
     :param rupgetter: RuptureGetter with multiple ruptures
@@ -136,22 +153,12 @@ def ebrisk(rupgetter, param, monitor):
             nbytes += data.nbytes
         gmf_info.append((c.ebrupture.id, mon_haz.task_no, len(c.sids),
                          data.nbytes, mon_haz.dt))
-        if nbytes > param['ebrisk_maxsize']:
-            msg = 'produced subtask'
-            try:
-                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                           'ebrisk#%d' % monitor.task_no, msg)
-            except Exception:  # for `oq run`
-                print(msg)
-            yield calc_risk, numpy.concatenate(gmfs), param
-            nbytes = 0
-            gmfs = []
-    res = {}
-    if gmfs:
-        res.update(calc_risk(numpy.concatenate(gmfs), param, monitor))
+    if not gmfs:
+        return {}
+    res = calc_risk(numpy.concatenate(gmfs), param, monitor)
     if gmf_info:
         res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
-    yield res
+    return res
 
 
 def gen_indices(tagcol, aggby):
@@ -167,7 +174,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating event loss tables
     """
-    core_task = ebrisk
+    core_task = start_ebrisk
     is_stochastic = True
     precalc = 'event_based'
     accept_precalc = ['event_based', 'event_based_risk']
@@ -181,7 +188,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                           self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
-        self.param['ebrisk_maxsize'] = oq.ebrisk_maxsize
+        self.param['ebrisk_maxsize'] = int(oq.ebrisk_maxsize)
         self.A = A = len(self.assetcol)
         self.L = L = len(lba.loss_names)
         self.check_number_loss_curves()
@@ -238,13 +245,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.numlosses = 0
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
-        smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
         smap.monitor.save_pik('srcfilter', srcfilter)
         smap.monitor.save_pik('crmodel', self.crmodel)
-        for rgetter in getters.gen_rupture_getters(
+        for rg in getters.gen_rupture_getters(
                 self.datastore, oq.concurrent_tasks):
-            smap.submit((rgetter, self.param))
+            smap.submit((rg, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
             self.datastore['event_loss_table/indices'] = self.indices

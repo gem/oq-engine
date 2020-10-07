@@ -32,6 +32,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
+weight = operator.attrgetter('weight')
 
 
 def build_stat_curve(poes, imtls, stat, weights):
@@ -441,7 +442,7 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     rup_array.sort(order='grp_id')  # avoid generating too many tasks
-    maxweight = rup_array['n_occ'].sum() / (ct*2 or 1)
+    maxweight = rup_array['n_occ'].sum() / (ct or 1)
     for block in general.block_splitter(
             rup_array, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('grp_id')):
@@ -543,6 +544,19 @@ class RuptureGetter(object):
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 proxies.append(proxy)
         return proxies
+
+    def split(self, srcfilter, maxw):
+        """
+        :yields: RuptureProxies with weight < maxw
+        """
+        proxies = []
+        for proxy in self.proxies:
+            sids = srcfilter.close_sids(proxy.rec, self.trt)
+            if len(sids):
+                proxies.append(RuptureProxy(proxy.rec, len(sids)))
+        for block in general.block_splitter(proxies, maxw, weight):
+            yield RuptureGetter(block, self.filename, self.grp_id, self.trt,
+                                self.rlzs_by_gsim)
 
     def __len__(self):
         return len(self.proxies)
