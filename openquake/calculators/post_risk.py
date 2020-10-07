@@ -65,27 +65,13 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     oq = dstore['oqparam']
     weights = dstore['weights'][()]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = general.countby(dstore['events'][()], 'rlz_id')
+    num_events = numpy.bincount(dstore['events']['rlz_id'])
     periods = return_periods or oq.return_periods or scientific.return_periods(
-        eff_time, max(num_events.values()))
+        eff_time, num_events.max())
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
-        loss_dt or oq.loss_dt(), weights, num_events,
+        loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
         eff_time, oq.risk_investigation_time)
-
-
-class AccumLoss(object):
-    def __init__(self, L, eid2rlz):
-        self.L = L
-        self.eid2rlz = eid2rlz
-        self.acc = general.AccumDict(
-            accum=general.AccumDict(accum=numpy.zeros((L,), F32)))
-
-    def accum(self, elt):
-        for rec in elt:
-            eid = rec['event_id']
-            rlz = self.eid2rlz[eid]
-            self.acc[rlz][eid] += rec['loss']
 
 
 def post_ebrisk(dstore, aggkey, monitor):
@@ -101,18 +87,22 @@ def post_ebrisk(dstore, aggkey, monitor):
     agglist = [x if isinstance(x, list) else [x]
                for x in ast.literal_eval(aggkey)]
     idx = tuple(x[0] - 1 for x in agglist if len(x) == 1)
-    evs = dstore['events'][()]
-    al = AccumLoss(L, dict(evs[['id', 'rlz_id']]))
+    rlz_id = dstore['events']['rlz_id']
+    E = len(rlz_id)
+    arr = numpy.zeros((E, L))
     for ids in itertools.product(*agglist):
         key = ','.join(map(str, ids)) + ','
         try:
-            al.accum(dstore['event_loss_table/' + key][:])
+            recs = dstore['event_loss_table/' + key][()]
         except dstore.EmptyDataset:   # no data
             continue
+        for rec in recs:
+            arr[rec['event_id']] += rec['loss']
     builder = get_loss_builder(dstore)
     out = {}
-    for rlz, losses in al.acc.items():
-        array = numpy.array(list(losses.values()))  # shape (E, L)
+    for rlz in numpy.unique(rlz_id):
+        # DO NOT USE groupby here! you would run out of memory
+        array = arr[rlz_id == rlz]  # shape E', L
         out[rlz] = dict(agg_curves=builder.build_curves(array, rlz),
                         agg_losses=array.sum(axis=0) * oq.ses_ratio,
                         idx=idx)

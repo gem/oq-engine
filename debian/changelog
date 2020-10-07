@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced memory occupation in post_ebrisk
   * Optimized loss aggregation in ebrisk calculations
   * Extended `oq engine --reuse-input` to the exposure
   * Parallelized by `number_of_ground_motion_fields` in scenario calculations
