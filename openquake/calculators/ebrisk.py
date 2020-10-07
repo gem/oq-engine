@@ -148,11 +148,11 @@ def ebrisk(rupgetter, param, monitor):
     with mon_haz:
         for c in gg.gen_computers(mon_rup):
             data, time_by_rup = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
-        if len(data):
-            gmfs.append(data)
-            nbytes += data.nbytes
-        gmf_info.append((c.ebrupture.id, mon_haz.task_no, len(c.sids),
-                         data.nbytes, mon_haz.dt))
+            if len(data):
+                gmfs.append(data)
+                nbytes += data.nbytes
+                gmf_info.append((c.ebrupture.id, mon_haz.task_no, len(c.sids),
+                                 data.nbytes, mon_haz.dt))
     if not gmfs:
         return {}
     res = calc_risk(numpy.concatenate(gmfs), param, monitor)
