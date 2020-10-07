@@ -126,7 +126,8 @@ def start_ebrisk(rgetter, param, monitor):
         except Exception:  # for `oq run`
             print(msg)
         yield ebrisk, rg, param
-    yield ebrisk(rgetters[-1], param, monitor)
+    if rgetters:
+        yield ebrisk(rgetters[-1], param, monitor)
 
 
 def ebrisk(rupgetter, param, monitor):
