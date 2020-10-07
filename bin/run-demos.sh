@@ -48,7 +48,7 @@ oq db set_status -1 executing
 oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
 
 echo "Testing ShakeMap calculator"
-oq engine --run $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/pre-job.ini $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/job.ini -p shakemap_id=usp000fjta
+oq engine --run $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/pre-job.ini $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/job.ini
 
 
 # run ebrisk
