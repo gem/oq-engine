@@ -102,7 +102,6 @@ def post_ebrisk(dstore, aggkey, monitor):
     idx = tuple(x[0] - 1 for x in agglist if len(x) == 1)
     rlz_id = dstore['events']['rlz_id']
     E = len(rlz_id)
-    print('Requiring %s' % general.humansize(E*L*8))
     arr = numpy.zeros((E, L))
     for ids in itertools.product(*agglist):
         key = ','.join(map(str, ids)) + ','
@@ -113,11 +112,9 @@ def post_ebrisk(dstore, aggkey, monitor):
             continue
     builder = get_loss_builder(dstore)
     out = {}
-    acc = general.AccumDict(accum=[])
-    for rlz, losses in zip(rlz_id, arr):
-        acc[rlz].append(losses)
-    for rlz, losses in acc.items():
-        array = numpy.array(losses)  # shape (E', L)
+    df = pandas.DataFrame({ln: arr[:, ln] for ln in range(L)}, index=rlz_id)
+    for rlz, losses_df in df.groupby(df.index):
+        array = numpy.array(losses_df)  # shape (E', L)
         out[rlz] = dict(agg_curves=builder.build_curves(array, rlz),
                         agg_losses=array.sum(axis=0) * oq.ses_ratio,
                         idx=idx)
