@@ -119,8 +119,16 @@ def start_ebrisk(dstore, slc, param, monitor):
     dstore.open('r')
     srcfilter = monitor.read_pik('srcfilter')
     for rgetter in getters.gen_rupture_getters(dstore, slc=slc):
-        for rg in rgetter.split(srcfilter, 10):
+        rgetters = list(rgetter.split(srcfilter, param['ebrisk_maxsize']))
+        for rg in rgetters[:-1]:
+            msg = 'produced subtask'
+            try:
+                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                           'ebrisk#%d' % monitor.task_no, msg)
+            except Exception:  # for `oq run`
+                print(msg)
             yield ebrisk, rg, param
+        yield ebrisk(rgetters[-1], param, monitor)
 
 
 def ebrisk(rupgetter, param, monitor):
@@ -146,22 +154,12 @@ def ebrisk(rupgetter, param, monitor):
             nbytes += data.nbytes
         gmf_info.append((c.ebrupture.id, mon_haz.task_no, len(c.sids),
                          data.nbytes, mon_haz.dt))
-        if nbytes > param['ebrisk_maxsize']:
-            msg = 'produced subtask'
-            try:
-                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                           'ebrisk#%d' % monitor.task_no, msg)
-            except Exception:  # for `oq run`
-                print(msg)
-            yield calc_risk, numpy.concatenate(gmfs), param
-            nbytes = 0
-            gmfs = []
-    res = {}
-    if gmfs:
-        res.update(calc_risk(numpy.concatenate(gmfs), param, monitor))
+    if not gmfs:
+        return {}
+    res = calc_risk(numpy.concatenate(gmfs), param, monitor)
     if gmf_info:
         res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
-    yield res
+    return res
 
 
 def gen_indices(tagcol, aggby):

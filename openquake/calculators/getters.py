@@ -32,6 +32,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
+weight = operator.attrgetter('weight')
 
 
 def build_stat_curve(poes, imtls, stat, weights):
@@ -544,14 +545,14 @@ class RuptureGetter(object):
                 proxies.append(proxy)
         return proxies
 
-    def split(self, srcfilter, hint=1):
+    def split(self, srcfilter, maxw):
         proxies = []
         for proxy in self.proxies:
             sids = srcfilter.close_sids(proxy.rec, self.trt)
             if len(sids):
                 proxies.append(RuptureProxy(proxy.rec, len(sids)))
-        maxw = sum(p.weight for p in proxies) / hint
-        for block in general.block_splitter(proxies, maxw):
+        for block in general.block_splitter(proxies, maxw, weight):
+            print(f'{block.weight=}')
             yield RuptureGetter(block, self.filename, self.grp_id, self.trt,
                                 self.rlzs_by_gsim)
 
