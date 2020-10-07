@@ -188,7 +188,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                           self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
-        self.param['ebrisk_maxsize'] = oq.ebrisk_maxsize
+        self.param['ebrisk_maxsize'] = int(oq.ebrisk_maxsize)
         self.A = A = len(self.assetcol)
         self.L = L = len(lba.loss_names)
         self.check_number_loss_curves()
