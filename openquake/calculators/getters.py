@@ -442,7 +442,7 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     rup_array.sort(order='grp_id')  # avoid generating too many tasks
-    maxweight = rup_array['n_occ'].sum() / (ct*2 or 1)
+    maxweight = rup_array['n_occ'].sum() / (ct or 1)
     for block in general.block_splitter(
             rup_array, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('grp_id')):
