@@ -37,20 +37,41 @@ class HassaniAtkinson2020SInter(GMPE):
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
+    #: Supported intensity measure types are spectral acceleration,
+    #: peak ground acceleration and peak ground velocity
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
+        PGV,
+        PGA,
+        SA
+    ])
+
+    #: Supported intensity measure component is the geometric mean component
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL,
+        const.StdDev.INTER_EVENT,
+        const.StdDev.INTRA_EVENT
+    ])
+
+    REQUIRES_DISTANCES = {'rrup'}
+
     REQUIRES_RUPTURE_PARAMETERS = {'hypo_depth', 'mag'}
 
-    REQUIRES_SITES_PARAMETERS = {'rrup', 'vs30', 'z2pt5'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
-    def __init__(self, backarc=0, forearc_ne=1, forearc_sw=0):
+    def __init__(self, backarc=0, forearc_ne=1, forearc_sw=0, fpeak=-1):
         """
-        Set proportion of rrups in backarc, forearc_ne and forearc_sw.
-        Single value or numpy array of length sites.
+        Aditional parameters.
         """
         super().__init__(backarc=backarc, forearc_ne=forearc_ne,
-                         forearc_sw=forearc_sw)
+                         forearc_sw=forearc_sw, fpeak=fpeak)
+        # set proportion of rrups in backarc, forearc_ne and forearc_sw
         self.backarc = backarc
         self.forearc_ne = forearc_ne
         self.forearc_sw = forearc_sw
+        # peak frequency of the horizontal-to-vertical spectral ratio
+        self.fpeak = fpeak
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -63,11 +84,11 @@ class HassaniAtkinson2020SInter(GMPE):
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
 
-        # other params: fpeak
         dsigma = self._dsigma(rup.hypo_depth)
         fm = self._fm_ha18(C, rup.mag)
         fm_pga = self._fm_ha18(C_PGA, rup.mag)
-        fz, fz_pga = self._fz_ha18(C, C_PGA, rup.mag, dists.rrup)
+        fz = self._fz_ha18(C, rup.mag, dists.rrup)
+        fz_pga = self._fz_ha18(C_PGA, rup.mag, dists.rrup)
         fdsigma = self._fds_ha18(C, rup.mag, dsigma)
         fdsigma_pga = self._fds_ha18(C_PGA, rup.mag, dsigma)
         fkappa = self._fkp_ha18(C, rup.mag, dsigma)
@@ -80,9 +101,9 @@ class HassaniAtkinson2020SInter(GMPE):
                           fkappa_pga + fgamma_pga + self.CONST_REGION['cc'] +
                           clf_pga + C_PGA['chf'] + C_PGA['amp_cr'])
         fsnonlin = self._fsnonlin_ss14(C, sites.vs30, pga_rock)
-        fvs30 = self._fvs30(sites.vs30)
-        fz2p5 = self._fz2pt5(sites.z2p5)
-        ffpeak = self._ffpeak(C, fpeak)
+        fvs30 = self._fvs30(C, sites.vs30)
+        fz2p5 = self._fz2pt5(C, sites.z2pt5)
+        ffpeak = self._ffpeak(C)
     
         mean = 10 ** (fm + fdsigma + fz + fkappa + fgamma
                       + self.CONST_REGION['cc'] + clf + C['chf'] + C['amp_cr']
@@ -128,12 +149,12 @@ class HassaniAtkinson2020SInter(GMPE):
             return clf0 + clf1 * (min(mag, self.CONSTANTS["mlf1"]) - mlf0)
         return clf0
 
-    def _dsigma(self, dp):
+    def _dsigma(self, hypo_depth):
         out = self.CONST_REGION['cd0']
         dp0 = self.CONST_REGION['dp0']
-        if dp > dp0:
+        if hypo_depth > dp0:
             out += self.CONST_REGION['cd1'] \
-                   * (min(dp, self.CONST_REGION['dp1']) - dp0)
+                   * (min(hypo_depth, self.CONST_REGION['dp1']) - dp0)
 
         return 10 ** out
 
@@ -147,14 +168,14 @@ class HassaniAtkinson2020SInter(GMPE):
         return eds0 + eds1 * math.log10(dsigma) \
                + eds2 * math.log10(dsigma) ** 2
 
-    def _ffpeak(self, C, fpeak):
-        if C['f'] == -9:
+    def _ffpeak(self, C):
+        if C['f'] == -9 or fpeak <= 0:
             # TODO: check if imt has period and use below too
-            # pgv pga
+            # pgv, pga or unknown fpeak
             return 0
 
         s = self.CONSTANTS
-        x = fpeak / 10 ** C['f']
+        x = self.fpeak / 10 ** C['f']
 
         if x < 0:
             return 0
@@ -192,69 +213,64 @@ class HassaniAtkinson2020SInter(GMPE):
                + ek0[2] * l10kp ** 3 + ek0[3] * l10kp ** 4
 
     def _fm_ha18(self, C, mag):
-        if mag <= C'mh']:
+        if mag <= C['mh']:
             return C['e0'] + C['e1'] * (mag - C['mh']) \
                    + C['e2'] * (mag - C['mh']) ** 2
         return C['e0'] + C['e3'] * (mag - C['mh'])
 
     def _fsnonlin_ss14(self, C, vs30, pga_rock):
-        vref = self.CONSTANTS['vref']
-        vmin = self.CONSTANTS['vmin']
+        s = self.CONSTANTS
 
-        f2 = C['f4'] * (np.exp(C['f5'] * (np.minimum(vs30, vref) - vmin)) \
-             - math.exp(C['f5'] * (vref - vmin)))
+        f2 = C['f4'] * (np.exp(C['f5']
+                        * (np.minimum(vs30, s['vref']) - s['vmin'])) \
+             - math.exp(C['f5'] * (s['vref'] - s['vmin'])))
 
-        return C'f1'] + f2 * np.log((PGA_rock + C['f3']) / C['f3'])
+        return s['f1'] + f2 * np.log((pga_rock + s['f3']) / s['f3'])
 
-    def _fvs30(vs30):
-        # TODO: np.where
-        if vs30 <= self.CONSTANTS['v0']:
-            return C['cv1'] \
-                   * math.log10(self.CONSTANTS['v0'] / self.CONSTANTS['vref']) \
-                   + (C['cv2'] - C['cv1']) \
-                   * math.log10(self.CONSTANTS['v1'] / self.CONSTANTS['vref'])
-        if vs30 <= self.CONSTANTS['v1']:
-            return C['cv1'] * math.log10(vs30 / self.CONSTANTS['vref']) \
-                + (C['cv2'] - C['cv1']) \
-                * math.log10(self.CONSTANTS['v1'] / self.CONSTANTS['vref'])
-        if vs30 <= self.CONSTANTS['v2']:
-            return C['cv2'] * math.log10(vs30 / self.CONSTANTS['vref'])
-        return C['cv2'] * math.log10(self.CONSTANTS['v2'] / self.CONSTANTS['vref'])
+    def _fvs30(self, C, vs30):
+        s = self.CONSTANTS
+        fvs30 = np.where(vs30 <= s['v0'],
+                         C['cv1'] * math.log10(s['v0'] / s['vref'])
+                         + (C['cv2'] - C['cv1'])
+                         * math.log10(s['v1'] / s['vref']),
+                         C['cv2'] * math.log10(s['v2'] / s['vref']))
+        fvs30 = np.where((s['v0'] < vs30) & (vs30 <= s['v1']),
+                         C['cv1'] * np.log10(vs30 / s['vref'])
+                         + (C['cv2'] - C['cv1'])
+                         * math.log10(s['v1'] / s['vref']), fvs30)
+        return np.where((s['v1'] < vs30) & (vs30 <= s['v2']),
+                        C['cv2'] * np.log10(vs30 / s['vref']), fvs30)
 
-    def _FZ2p5(z2p5):
-        # TODO: np.where
-        if z2p5 < 0:
-            return 0
-        if z2p5 <= self.CONSTANTS['zx0']:
-            return C['cz0']
-        if z2p5 <= self.CONSTANTS['zx1']:
-            return C['cz0'] + C['cz1'] * math.log10(z2p5 / self.CONSTANTS['zx0'])
-        if z2p5 <= self.CONSTANTS['zx2']:
-            return C['cz0'] + C['cz1'] \
-                   * math.log10(self.CONSTANTS['zx1'] / self.CONSTANTS['zx0']) \
-                   + C['cz2'] * math.log10(z2p5 / self.CONSTANTS['zx1'])
-        return C['cz0'] + C['cz1'] \
-               * math.log10(self.CONTSANTS['zx1'] / self.CONSTANTS['zx0']) \
-               + C['cz2'] \
-               * math.log10(self.CONSTANTS['zx2'] / self.CONSTANTS['zx1'])
+    def _fz2pt5(self, C, z2pt5):
+        s = self.CONSTANTS
+        fz2pt5 = np.where(z2pt5 > 0, C['cz0'], 0)
+        fz2pt5 = np.where((s['zx0'] < z2pt5) & (z2pt5 <= s['zx1']),
+                          C['cz0'] + C['cz1'] * np.log10(z2pt5 / s['zx0']),
+                          fz2pt5)
+        # TODO: z2pt5 < 0 still always takes log
+        fz2pt5 = np.where((s['zx1'] < z2pt5)  & (z2pt5 <= s['zx2']),
+                          C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0'])
+                          + C['cz2'] * np.log10(z2pt5 / s['zx1']), fz2pt5)
+        return np.where(s['zx2'] < z2pt5,
+                        C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0'])
+                        + C['cz2'] * math.log10(s['zx2'] / s['zx1']), fz2pt5)
 
-    def _fz_ha18(self, C, C_PGA, mag, rrup):
+    def _fz_ha18(self, C, mag, rrup):
+        s = self.CONSTANTS
         h = 10 ** (-0.405 + 0.235 * mag)
         ref = np.sqrt(rrup ** 2 + h ** 2)
         rref = math.sqrt(1 ** 2 + h ** 2)
         rt = self.CONST_REGION['rt']
 
-        # TODO: np.where, also for C_PGA
-        if ref <= rt:
-            return self.CONSTANTS['b1'] * math.log10(ref) \
-                   + (C['b3'] + C['b4'] * mag) * math.log10(ref / rref)
-        return self.CONSTANTS['b1'] * math.log10(rt) \
-               + self.CONSTANTS['b2'] * math.log10(ref / rt) \
-               + (C['b3'] + C['b4'] * mag) * math.log10(ref / rref)
+        return np.where(ref <= rt, s['b1'] * np.log10(ref)
+                        + (C['b3'] + C['b4'] * mag) * np.log10(ref / rref),
+                        s['b1'] * math.log10(rt)
+                        + s['b2'] * np.log10(ref / rt)
+                        + (C['b3'] + C['b4'] * mag) * np.log10(ref / rref))
 
     # periods given by 1 / 10 ** COEFFS['f']
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT       f   amp_cr b3     b4      chf    clf0_if clf1_if clf0_is clf1_is clf0_cr clf1_cr CV1    CV2      cz0      cz1      cz2      barc_if  farc_ne_if farc_sw_if barc_is  farc_ne_is farc_sw_is barc_cr   farc_ne_cr  farc_sw_cr  d000        d001      d002         d010        d011        d012         d020        d021        d022        d030        d031       d032        d100       d101        d102        d110        d111        d112        d120        d121       d122        d130        d131       d132       d200       d201       d202       d210        d211       d212       d220        d221       d222       d230       d231       d232      d300      d301       d302      d310       d311      d312       d320       d321      d322      d330      d331      d332     mh   e0      e1       e2      e3       f4      f5      g10       g11       g12       g13       g14       g20       g21       g22       g23       g24      tau   ps2s  pss_if pss_is pss_cr s_if  s_is  s_cr
+    IMT       f   amp_cr b3     b4      chf    clf0_if clf1_if clf0_is clf1_is clf0_cr clf1_cr cv1    cv2      cz0      cz1      cz2      barc_if  farc_ne_if farc_sw_if barc_is  farc_ne_is farc_sw_is barc_cr   farc_ne_cr  farc_sw_cr  d000        d001      d002         d010        d011        d012         d020        d021        d022        d030        d031       d032        d100       d101        d102        d110        d111        d112        d120        d121       d122        d130        d131       d132       d200       d201       d202       d210        d211       d212       d220        d221       d222       d230       d231       d232      d300      d301       d302      d310       d311      d312       d320       d321      d322      d330      d331      d332     mh   e0      e1       e2      e3       f4      f5      g10       g11       g12       g13       g14       g20       g21       g22       g23       g24      tau   ps2s  pss_if pss_is pss_cr s_if  s_is  s_cr
     pgv      -9   0     -0.4414 0.0394  0.204  0       0       0       0       0        0     -0.667 -0.866   -0.046    0.166   -0.068   -0.00281 -0.0015    -0.00048   -0.00327 -0.00148   -0.0024    -0.00406  -0.00242    -0.00278   -40.826164   40.113039 -5.102129   155.252313 -182.36868    27.033349  -196.671754  258.210795  -42.36533    82.357479 -116.454408  20.537609  -31.558927  36.874774   -5.739549  125.277771 -161.306518   27.874045 -163.436869  223.266447 -41.391833   69.903157  -99.25266   19.350221 -10.37628   13.051401  -2.256509  41.867738  -56.055028  10.530332 -55.192594   76.696014 -15.238462  23.77607  -33.832713   6.996974 -1.229433  1.604051  -0.296017  4.993482  -6.816711  1.350202  -6.609082   9.262415 -1.92463   2.854701 -4.066423  0.874373 8.8  3.30208 0.43897 -0.01672 0.41464 -0.0434 -0.0084  0.444251  0.056972  0.003644 -0.004046  0.000353 -0.094203  0.053343 -0.014163  0.001919 -0.0001   0.482 0.293 0.386  0.376  0.401  0.683 0.678 0.692
     pga      -9   0     -0.4565 0.0382  0.574  0       0       0       0       0        0     -0.16  -0.612    0        0        0       -0.00684 -0.00273   -0.00456   -0.00541 -0.00167   -0.00396   -0.00688  -0.00476    -0.00484   -51.098718   32.578796 -0.602711   193.376939 -154.536656    8.970141  -246.377014  224.30934   -19.056039  103.867407 -102.862801  10.767404  -44.562063  38.708279   -3.922374  176.725188 -170.793471   21.015529 -230.932652  237.86616  -33.083719   99.136459 -106.274886  16.078647 -16.422438  15.847931  -2.168642  65.997737  -67.973039  10.385514 -87.070182   93.033435 -15.329737  37.638662 -41.09486    7.148396 -2.134042  2.150893  -0.337012  8.618758  -9.089596  1.542771 -11.416684  12.32449  -2.213236  4.950046 -5.410116  1.012283 7.4  4.37376 0.33001 -0.0094  0.30153 -0.0651 -0.007   0.709663 -0.038392  0.013081 -0.001138  0.000024 -0.032385  0.019043 -0.004517  0.000375 -0.000009 0.513 0.422 0.411  0.452  0.496  0.781 0.803 0.829
      0.01     2.0 0.678 -0.4321 0.0353 -0.09   0       0       0       0       0        0     -0.163 -0.598    0        0        0       -0.00686 -0.00274   -0.00457   -0.00544 -0.00168   -0.00398   -0.00693  -0.0048     -0.00489   -41.010798   20.984834  4.332932   143.725915 -112.573964   -8.798757  -185.502717  174.262586    2.145698   78.793199  -83.128703   2.380509  -35.56513   27.797776    0.50508   130.2847   -131.140942    4.976749 -173.646134  190.435518 -13.863902   75.476551  -87.53478    8.453463 -13.145747  11.601671  -0.552587  48.068218  -52.451102   4.478831 -64.765944   74.387032  -8.20745   28.388967 -33.704532   4.310521 -1.715884  1.576223  -0.13206   6.206072  -6.977314  0.786463  -8.387874   9.776758 -1.295275  3.688342 -4.397405  0.644874 7.15 4.64514 0.34404 -0.00816 0.30565 -0.0644 -0.007   1.472416 -0.541245  0.133779 -0.013606  0.000492 -0.222277  0.146276 -0.035353  0.00358  -0.00013  0.513 0.423 0.411  0.450  0.496  0.782 0.803 0.830
