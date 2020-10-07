@@ -112,23 +112,21 @@ def calc_risk(gmfs, param, monitor):
     return acc
 
 
-def start_ebrisk(dstore, slc, param, monitor):
+def start_ebrisk(rgetter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    dstore.open('r')
     srcfilter = monitor.read_pik('srcfilter')
-    for rgetter in getters.gen_rupture_getters(dstore, slc=slc):
-        rgetters = list(rgetter.split(srcfilter, param['ebrisk_maxsize']))
-        for rg in rgetters[:-1]:
-            msg = 'produced subtask'
-            try:
-                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                           'ebrisk#%d' % monitor.task_no, msg)
-            except Exception:  # for `oq run`
-                print(msg)
-            yield ebrisk, rg, param
-        yield ebrisk(rgetters[-1], param, monitor)
+    rgetters = list(rgetter.split(srcfilter, param['ebrisk_maxsize']))
+    for rg in rgetters[:-1]:
+        msg = 'produced subtask'
+        try:
+            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                       'ebrisk#%d' % monitor.task_no, msg)
+        except Exception:  # for `oq run`
+            print(msg)
+        yield ebrisk, rg, param
+    yield ebrisk(rgetters[-1], param, monitor)
 
 
 def ebrisk(rupgetter, param, monitor):
@@ -244,14 +242,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
         self.numlosses = 0
-        nr = len(self.datastore['ruptures'])
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
         smap.monitor.save_pik('srcfilter', srcfilter)
         smap.monitor.save_pik('crmodel', self.crmodel)
-        for slc in general.gen_slices(0, nr, (nr // 10) or 1):
-            smap.submit((self.datastore, slc, self.param))
+        for rg in getters.gen_rupture_getters(
+                self.datastore, oq.concurrent_tasks):
+            smap.submit((rg, self.param))
         smap.reduce(self.agg_dicts)
         if self.indices:
             self.datastore['event_loss_table/indices'] = self.indices
