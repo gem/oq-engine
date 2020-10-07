@@ -100,17 +100,22 @@ def post_ebrisk(dstore, aggkey, monitor):
     agglist = [x if isinstance(x, list) else [x]
                for x in ast.literal_eval(aggkey)]
     idx = tuple(x[0] - 1 for x in agglist if len(x) == 1)
-    al = AccumLoss(L, dstore['events']['rlz_id'])
+    rlz_id = dstore['events']['rlz_id']
+    arr = numpy.zeros((len(rlz_id), L))  # E, L
     for ids in itertools.product(*agglist):
         key = ','.join(map(str, ids)) + ','
         try:
-            al.accum(dstore['event_loss_table/' + key][:])
+            for rec in dstore['event_loss_table/' + key][:]:
+                arr[rec['event_id']] += rec['loss']
         except dstore.EmptyDataset:   # no data
             continue
     builder = get_loss_builder(dstore)
     out = {}
-    for rlz, losses in al.acc.items():
-        array = numpy.array(list(losses.values()))  # shape (E, L)
+    acc = general.AccumDict(accum=[])
+    for rlz, losses in zip(rlz_id, arr):
+        acc[rlz].append(losses)
+    for rlz, losses in acc.items():
+        array = numpy.array(losses)  # shape (E', L)
         out[rlz] = dict(agg_curves=builder.build_curves(array, rlz),
                         agg_losses=array.sum(axis=0) * oq.ses_ratio,
                         idx=idx)
