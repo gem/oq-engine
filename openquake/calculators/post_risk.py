@@ -65,12 +65,12 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     oq = dstore['oqparam']
     weights = dstore['weights'][()]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = general.countby(dstore['events'][()], 'rlz_id')
+    num_events = numpy.bincount(dstore['events']['rlz_id'])
     periods = return_periods or oq.return_periods or scientific.return_periods(
-        eff_time, max(num_events.values()))
+        eff_time, num_events.max())
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
-        loss_dt or oq.loss_dt(), weights, num_events,
+        loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
         eff_time, oq.risk_investigation_time)
 
 
