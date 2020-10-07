@@ -74,19 +74,6 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
         eff_time, oq.risk_investigation_time)
 
 
-class AccumLoss(object):
-    def __init__(self, L, rlz_id):
-        self.L = L
-        self.rlz_id = rlz_id
-        self.acc = general.AccumDict(
-            accum=general.AccumDict(accum=numpy.zeros((L,), F32)))
-
-    def accum(self, elt):
-        for rec in elt:
-            eid = rec['event_id']
-            self.acc[self.rlz_id[eid]][eid] += rec['loss']
-
-
 def post_ebrisk(dstore, aggkey, monitor):
     """
     :param dstore: a DataStore instance
