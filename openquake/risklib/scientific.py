@@ -1515,6 +1515,8 @@ class LossesByAsset(object):
                 for a, asset in enumerate(out.assets):
                     ls = losses[a]
                     ok = ls > minimum_loss[lni]
+                    if not ok.sum():
+                        continue
                     idx = ','.join(map(str, tagidxs[a])) + ','
                     kept = 0
                     for loss, eid in zip(ls[ok], out.eids[ok]):
