@@ -106,15 +106,16 @@ def post_ebrisk(dstore, aggkey, monitor):
     for ids in itertools.product(*agglist):
         key = ','.join(map(str, ids)) + ','
         try:
-            for rec in dstore['event_loss_table/' + key][:]:
-                arr[rec['event_id']] += rec['loss']
+            recs = dstore['event_loss_table/' + key][()]
         except dstore.EmptyDataset:   # no data
             continue
+        for rec in recs:
+            arr[rec['event_id']] += rec['loss']
     builder = get_loss_builder(dstore)
     out = {}
-    df = pandas.DataFrame({ln: arr[:, ln] for ln in range(L)}, index=rlz_id)
-    for rlz, losses_df in df.groupby(df.index):
-        array = numpy.array(losses_df)  # shape (E', L)
+    for rlz in numpy.unique(rlz_id):
+        # DO NOT USE groupby here! you would run out of memory
+        array = arr[rlz_id == rlz]  # shape E', L
         out[rlz] = dict(agg_curves=builder.build_curves(array, rlz),
                         agg_losses=array.sum(axis=0) * oq.ses_ratio,
                         idx=idx)
