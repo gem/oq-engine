@@ -1513,12 +1513,13 @@ class LossesByAsset(object):
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
+                    ls = losses[a]
+                    ok = ls > minimum_loss[lni]
                     idx = ','.join(map(str, tagidxs[a])) + ','
                     kept = 0
-                    for loss, eid in zip(losses[a], out.eids):
-                        if loss >= minimum_loss[lni]:
-                            self.alt[idx][eid][lni] += loss
-                            kept += 1
+                    for loss, eid in zip(ls[ok], out.eids[ok]):
+                        self.alt[idx][eid][lni] += loss
+                        kept += 1
                     numlosses += numpy.array([kept, len(losses[a])])
         return numlosses
 
