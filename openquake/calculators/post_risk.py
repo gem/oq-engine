@@ -101,7 +101,9 @@ def post_ebrisk(dstore, aggkey, monitor):
                for x in ast.literal_eval(aggkey)]
     idx = tuple(x[0] - 1 for x in agglist if len(x) == 1)
     rlz_id = dstore['events']['rlz_id']
-    arr = numpy.zeros((len(rlz_id), L))  # E, L
+    E = len(rlz_id)
+    print('Requiring %s' % general.humansize(E*L*8))
+    arr = numpy.zeros((E, L))
     for ids in itertools.product(*agglist):
         key = ','.join(map(str, ids)) + ','
         try:
