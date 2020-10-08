@@ -584,7 +584,7 @@ def submit_job(job_ini, username, hazard_job_id=None):
     and run it in a new process. Returns the job ID and PID.
     """
     job_id = logs.init('job')
-    oq = engine.job_from_file(
+    oq = engine.job_from(
         job_ini, job_id, username, hazard_calculation_id=hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,

@@ -51,7 +51,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     Run jobs using the specified config file and other options.
 
     :param str job_inis:
-        A list of paths to .ini files.
+        A list of paths to .ini files, or a list of job dictionaries
     :param str log_level:
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
@@ -70,8 +70,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         # NB: the logs must be initialized BEFORE everything
         job_id = logs.init('job', getattr(logging, log_level.upper()))
         with logs.handle(job_id, log_level, log_file):
-            oqparam = eng.job_from_file(os.path.abspath(job_ini), job_id,
-                                        username, **kw)
+            oqparam = eng.job_from(job_ini, job_id, username, **kw)
         if (not jobparams and not multi
                 and 'hazard_calculation_id' not in kw):
             kw['hazard_calculation_id'] = job_id

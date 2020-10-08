@@ -211,7 +211,7 @@ def _update(params, items, base_path):
 
 def get_params(job_ini, **kw):
     """
-    Parse a .ini or .toml config file, or a .zip archive
+    Parse a .ini file or a .zip archive
 
     :param job_ini:
         Configuration file or zip archive
@@ -224,14 +224,6 @@ def get_params(job_ini, **kw):
     job_ini = os.path.abspath(job_ini)
     base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
-
-    if job_ini.endswith('.json'):
-        params['validated'] = True
-        with open(job_ini) as cfg:
-            params.update(json.load(cfg))
-        _update(params, kw.items(), base_path)  # override on demand
-        return params
-
     input_zip = None
     if job_ini.endswith('.zip'):
         input_zip = job_ini
@@ -307,7 +299,9 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
 
     OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)
-    if not isinstance(job_ini, dict):
+    if isinstance(job_ini, dict):
+        job_ini['validated'] = True
+    else:
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini))
     if hc_id:
