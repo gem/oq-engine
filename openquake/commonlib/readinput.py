@@ -31,7 +31,6 @@ import functools
 import configparser
 import collections
 
-import toml
 import numpy
 import requests
 
@@ -226,10 +225,10 @@ def get_params(job_ini, **kw):
     base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
-    if job_ini.endswith('.toml'):
+    if job_ini.endswith('.json'):
         params['validated'] = True
         with open(job_ini) as cfg:
-            params.update(toml.load(cfg))
+            params.update(json.load(cfg))
         _update(params, kw.items(), base_path)  # override on demand
         return params
 

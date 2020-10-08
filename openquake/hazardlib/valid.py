@@ -23,8 +23,9 @@ Validation library for the engine, the desktop tools, and anything else
 import os
 import re
 import ast
-import logging
+import json
 import toml
+import logging
 import numpy
 
 from openquake.baselib.general import distinct
@@ -1266,10 +1267,13 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
                 doc = docstring.format(**vars(self))
                 raise ValueError(doc)
 
-    def __bytes__(self):
+    def json(self):
+        """
+        :returns: the parameters as a JSON string
+        """
         dic = {k: _fix_toml(v)
                for k, v in self.__dict__.items() if not k.startswith('_')}
-        return toml.dumps(dic).encode('utf8')
+        return json.dumps(dic)
 
     def __iter__(self):
         for item in sorted(vars(self).items()):

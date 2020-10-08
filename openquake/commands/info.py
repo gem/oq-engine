@@ -158,7 +158,7 @@ def info(what, report=False):
             if report:
                 print('Generated', reportwriter.build_report(what))
             else:
-                print(readinput.get_oqparam(what))
+                print(readinput.get_oqparam(what).json())
         if mon.duration > 1:
             print(mon)
     elif what:

@@ -261,6 +261,9 @@ class OqParam(valid.ParamSet):
             md = calc.filters.MagDepDistance()
             md.update(names_vals['maximum_distance'])
             self.maximum_distance = md
+            if 'pointsource_distance' in names_vals:
+                self.pointsource_distance = valid.MagDepDistance.new(
+                            names_vals['pointsource_distance'])
             if 'region_constraint' in names_vals:
                 self.region = valid.wkt_polygon(
                     names_vals['region_constraint'])
