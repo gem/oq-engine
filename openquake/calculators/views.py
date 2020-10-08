@@ -675,6 +675,17 @@ def view_gmf(token, dstore):
     return str(gmf)
 
 
+@view.add('gmf_error')
+def view_gmf_error(token, dstore):
+    """
+    Display a gmf relative error for seed dependency
+    """
+    gmvs = dstore['gmf_data/gmv_0'][:]
+    numpy.random.shuffle(gmvs)
+    vals = [arr.sum() for arr in numpy.array_split(gmvs, 10)]
+    return numpy.std(vals) / numpy.mean(vals)
+
+
 @view.add('mean_disagg')
 def view_mean_disagg(token, dstore):
     """
