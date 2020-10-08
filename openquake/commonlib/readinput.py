@@ -38,7 +38,7 @@ import requests
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, AccumDict)
-from openquake.baselib.python3compat import decode, zip
+from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
@@ -201,11 +201,13 @@ def _update(params, items, base_path):
                 reqv = params['inputs']['reqv']
             except KeyError:
                 params['inputs']['reqv'] = {key: fname}
-                params['pointsource_distance'] = '0'
             else:
                 reqv.update({key: fname})
         else:
             params[key] = value
+
+    if 'reqv' in params['inputs']:
+        params['pointsource_distance'] = '0'
 
 
 def get_params(job_ini, **kw):
@@ -225,6 +227,7 @@ def get_params(job_ini, **kw):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     if job_ini.endswith('.toml'):
+        params['validated'] = True
         with open(job_ini) as cfg:
             params.update(toml.load(cfg))
         _update(params, kw.items(), base_path)  # override on demand
@@ -312,7 +315,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
         job_ini.update(hazard_calculation_id=str(hc_id))
     job_ini.update(kw)
     oqparam = OqParam(**job_ini)
-    if validate:
+    if validate and 'validated' not in job_ini:
         oqparam.validate()
     return oqparam
 
