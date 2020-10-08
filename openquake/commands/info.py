@@ -65,18 +65,6 @@ def source_model_info(sm_nodes):
     return rst_table(out)
 
 
-def print_full_lt(fname):
-    """
-    Parse the composite source model and
-    prints information about its composition and the full logic tree
-    """
-    oqparam = readinput.get_oqparam(fname)
-    full_lt = readinput.get_full_lt(oqparam)
-    print(full_lt)
-    print('See http://docs.openquake.org/oq-engine/stable/'
-          'effective-realizations.html for an explanation')
-
-
 def do_build_reports(directory):
     """
     Walk the directory and builds pre-calculation reports for all the
@@ -170,7 +158,7 @@ def info(what, report=False):
             if report:
                 print('Generated', reportwriter.build_report(what))
             else:
-                print_full_lt(what)
+                print(readinput.get_oqparam(what).json())
         if mon.duration > 1:
             print(mon)
     elif what:

@@ -244,12 +244,12 @@ def register_signals():
         pass
 
 
-def job_from_file(job_ini, job_id, username, **kw):
+def job_from(job_ini, job_id, username, **kw):
     """
-    Create a full job profile from a job config file.
+    Create a full job profile from a job config file or a job dict
 
     :param job_ini:
-        Path to a job.ini file
+        Path to a job.ini file or job dictionary
     :param job_id:
         ID of the created job
     :param username:

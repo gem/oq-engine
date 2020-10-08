@@ -23,8 +23,9 @@ Validation library for the engine, the desktop tools, and anything else
 import os
 import re
 import ast
-import logging
+import json
 import toml
+import logging
 import numpy
 
 from openquake.baselib.general import distinct
@@ -101,7 +102,9 @@ def _fix_toml(v):
     # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
     # using toml.loads(s, _dict=dict) would be the right way, but it does
     # not work :-(
-    if hasattr(v, 'items'):
+    if isinstance(v, numpy.ndarray):
+        return list(v)
+    elif hasattr(v, 'items'):
         return {k1: _fix_toml(v1) for k1, v1 in v.items()}
     return v
 
@@ -1263,6 +1266,14 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
                     line.strip() for line in is_valid.__doc__.splitlines())
                 doc = docstring.format(**vars(self))
                 raise ValueError(doc)
+
+    def json(self):
+        """
+        :returns: the parameters as a JSON string
+        """
+        dic = {k: _fix_toml(v)
+               for k, v in self.__dict__.items() if not k.startswith('_')}
+        return json.dumps(dic)
 
     def __iter__(self):
         for item in sorted(vars(self).items()):
