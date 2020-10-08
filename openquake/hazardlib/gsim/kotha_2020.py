@@ -172,7 +172,8 @@ class KothaEtAl2020(GMPE):
         """
         Instantiate setting the sigma_mu_epsilon and c3 terms
         """
-        super().__init__(**kwargs)
+        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, c3=c3,
+                         ergodic=ergodic, **kwargs)
         if isinstance(c3, dict):
             # Inputing c3 as a dictionary sorted by the string representation
             # of the IMT

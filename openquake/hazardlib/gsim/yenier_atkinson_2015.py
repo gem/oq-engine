@@ -72,7 +72,7 @@ class YenierAtkinson2015BSSA(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     def __init__(self, focal_depth=None, region='CENA', **kwargs):
-        super().__init__(**kwargs) 
+        super().__init__(focal_depth=focal_depth, region=region, **kwargs) 
         self.focal_depth = focal_depth
         self.region = region
 

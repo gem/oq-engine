@@ -48,7 +48,8 @@ class SplitSigmaGMPE(GMPE):
 
     def __init__(self, gmpe_name, within_absolute=None, between_absolute=None,
                  **kwargs):
-        super().__init__(gmpe_name=gmpe_name, **kwargs)
+        super().__init__(gmpe_name=gmpe_name, within_absolute=within_absolute,
+                         between_absolute=between_absolute, **kwargs)
         # Create the original GMPE
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
