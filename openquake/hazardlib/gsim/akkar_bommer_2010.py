@@ -85,6 +85,9 @@ class AkkarBommer2010(GMPE):
     #: Required distance measure is RRup (eq. 1, page 199).
     REQUIRES_DISTANCES = {'rjb'}
 
+    #: Reference Vs30. See page 2983 (top or right column)
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.0
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
