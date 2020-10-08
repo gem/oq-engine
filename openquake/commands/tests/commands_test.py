@@ -84,9 +84,7 @@ class Print(object):
 
 
 class InfoTestCase(unittest.TestCase):
-    EXPECTED = '''<FullLogicTree
-b1, x15.xml, weight=1.0: 1 realization(s)>
-See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation'''
+    EXPECTED = "<OqParam area_source_discretization=10.0, base_path="
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -148,7 +146,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
             info(path)
-        self.assertIn('<FullLogicTree\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
+        self.assertIn('area_source_discretization=10', str(p))
 
     def test_logictree(self):
         path = os.path.join(os.path.dirname(case_9.__file__),

@@ -115,7 +115,7 @@ class MagDepDistance(dict):
 
         >>> md = MagDepDistance.new('50')
         >>> md
-        {'default': [(1, 50), (10, 50)]}
+        {'default': [(1.0, 50), (10.0, 50)]}
         >>> md.max()
         {'default': 50}
         >>> md.interp(dict(default=[5.0, 5.1, 5.2])); md.ddic
@@ -131,7 +131,7 @@ class MagDepDistance(dict):
                         raise ValueError('Invalid magnitude %s' % mag)
             else:  # assume scalar distance
                 assert items == -1 or items >= 0, items
-                self[trt] = [(1, items), (10, items)]
+                self[trt] = [(1., items), (10., items)]
         return self
 
     def interp(self, mags_by_trt):

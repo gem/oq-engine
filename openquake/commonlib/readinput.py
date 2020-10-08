@@ -30,6 +30,8 @@ import tempfile
 import functools
 import configparser
 import collections
+
+import toml
 import numpy
 import requests
 
@@ -199,6 +201,7 @@ def _update(params, items, base_path):
                 reqv = params['inputs']['reqv']
             except KeyError:
                 params['inputs']['reqv'] = {key: fname}
+                params['pointsource_distance'] = '0'
             else:
                 reqv.update({key: fname})
         else:
@@ -216,6 +219,17 @@ def get_params(job_ini, **kw):
     :returns:
         A dictionary of parameters
     """
+    # directory containing the config files we're parsing
+    job_ini = os.path.abspath(job_ini)
+    base_path = os.path.dirname(job_ini)
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
+
+    if job_ini.endswith('.toml'):
+        with open(job_ini) as cfg:
+            params.update(toml.load(cfg))
+        _update(params, kw.items(), base_path)  # override on demand
+        return params
+
     input_zip = None
     if job_ini.endswith('.zip'):
         input_zip = job_ini
@@ -224,27 +238,21 @@ def get_params(job_ini, **kw):
                       'job.ini', 'job_risk.ini'])
         if not job_inis:
             raise NameError('Could not find job.ini inside %s' % input_zip)
+        job_ini = job_inis[0]
 
     if not os.path.exists(job_ini):
         raise IOError('File not found: %s' % job_ini)
 
+    base_path = os.path.dirname(job_ini)
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser()
     cp.read([job_ini], encoding='utf8')
-
-    # directory containing the config files we're parsing
-    job_ini = os.path.abspath(job_ini)
-    base_path = decode(os.path.dirname(job_ini))
-    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
-    if input_zip:
-        params['inputs']['input_zip'] = os.path.abspath(input_zip)
-
     for sect in cp.sections():
         _update(params, cp.items(sect), base_path)
-    _update(params, kw.items(), base_path)  # override on demand
 
-    if params['inputs'].get('reqv'):
-        # using pointsource_distance=0 because of the reqv approximation
-        params['pointsource_distance'] = '0'
+    if input_zip:
+        params['inputs']['input_zip'] = os.path.abspath(input_zip)
+    _update(params, kw.items(), base_path)  # override on demand
 
     return params
 

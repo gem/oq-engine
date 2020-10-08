@@ -1266,10 +1266,10 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
                 doc = docstring.format(**vars(self))
                 raise ValueError(doc)
 
-    def __str__(self):
+    def __bytes__(self):
         dic = {k: _fix_toml(v)
                for k, v in self.__dict__.items() if not k.startswith('_')}
-        return toml.dumps(dic)
+        return toml.dumps(dic).encode('utf8')
 
     def __iter__(self):
         for item in sorted(vars(self).items()):
