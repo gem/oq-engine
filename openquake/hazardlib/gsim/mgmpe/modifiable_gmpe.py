@@ -128,7 +128,7 @@ class ModifiableGMPE(GMPE):
         """
         :param scaling_factor:
             Simple scaling factor (in linear space) to increase/decrease median
-            that applies to all IMT
+            ground motion, which applies to all IMTs
         """
         self.mean += np.log(scaling_factor)
 
@@ -153,8 +153,7 @@ class ModifiableGMPE(GMPE):
 
     def set_scale_total_sigma_vector(self, imt, scaling_factor):
         """
-        Scale the total standard deviations by a IMT-dependent constant scalar
-        factor
+        Scale the total standard deviations by a IMT-dependent scalar factor
         :param scaling_factor:
             IMT-dependent total standard deviation scaling factors as a
             CoeffsTable

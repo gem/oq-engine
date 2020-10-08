@@ -73,8 +73,7 @@ class ModifiableGMPETest(unittest.TestCase):
         np.testing.assert_almost_equal(stds[0], estds[2])
 
     def test_coefficients_as_dictionary(self):
-        """
-        """
+        """Check the parsing of the coefficients to a dictionary"""
         input_coeffs = {"PGA": 1.0, "SA(0.2)": 2.0, "SA(3.0)": 3.0}
         output_coeffs = ModifiableGMPE._dict_to_coeffs_table(input_coeffs,
                                                              "XYZ")
