@@ -362,8 +362,14 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     G = getattr(oq, 'number_of_ground_motion_fields', 1)
     R = dstore['full_lt'].get_num_rlzs()
-    means = dstore['losses_by_event']['loss'].sum(axis=0) / R / G
-    return rst_table([means], oq.loss_names)
+    loss = dstore['losses_by_event']['loss']  # shape (E, L)
+    E = len(loss)
+    means = loss.sum(axis=0) / R / G
+    n = 3
+    sums = [loss[numpy.arange(i, E, n)].sum(axis=0) for i in range(n)]
+    errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
+    rows = [['mean'] + list(means), ['error'] + list(errors)]
+    return rst_table(rows, ['loss'] + oq.loss_names)
 
 
 def sum_table(records):
