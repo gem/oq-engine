@@ -265,7 +265,7 @@ def get_oq(text):
     Returns an OqParam instance from a configuration string. For instance:
 
     >>> get_oq('maximum_distance=200')
-    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': [(1, 200), (10, 200)]}, risk_investigation_time=None>
+    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': [(1.0, 200), (10.0, 200)]}, risk_investigation_time=None>
     """
     # UGLY: this is here to avoid circular imports
     from openquake.calculators import base
