@@ -84,15 +84,12 @@ class Print(object):
 
 
 class InfoTestCase(unittest.TestCase):
-    EXPECTED = '''<FullLogicTree
-b1, x15.xml, weight=1.0: 1 realization(s)>
-See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
             info(path)
-        self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
+        self.assertIn('hazard_imtls', str(p))
 
     # poor man tests: checking that the flags produce a few characters
     # (more than 10) and do not break; I am not checking the precise output
@@ -148,7 +145,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
             info(path)
-        self.assertIn('<FullLogicTree\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
+        self.assertIn('Classical Hazard QA Test, Case 9', str(p))
 
     def test_logictree(self):
         path = os.path.join(os.path.dirname(case_9.__file__),

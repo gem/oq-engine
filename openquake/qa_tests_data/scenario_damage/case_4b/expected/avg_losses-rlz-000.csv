@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.11.0-gitccd8d07805', start_date='2020-09-30T09:46:56', checksum=3590982611, investigation_time=None, risk_investigation_time=None"
+#,,,,,,"generated_by='OpenQuake engine 3.11.0-git96c2644d86', start_date='2020-10-06T04:56:22', checksum=3590982611, investigation_time=None, risk_investigation_time=None"
 asset_id,taxonomy,lon,lat,contents,nonstructural,structural
 a3,tax1,-122.57000,38.11300,4.87192E+02,4.36193E+02,1.68937E+01
 a2,tax2,-122.11400,38.11300,3.61020E+02,1.23360E+03,8.16028E+01

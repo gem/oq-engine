@@ -118,17 +118,24 @@ class GmfComputer(object):
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
             self.source_id = rupture.source_id  # the underlying source
-            self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
             self.source_id = '?'
-            self.e0 = 0
         self.seed = rupture.rup_id
         self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
             sitecol, rupture)
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
+        if truncation_level is None:
+            self.distribution = scipy.stats.norm()
+        elif truncation_level == 0:
+            self.distribution = None
+        else:
+            assert truncation_level > 0, truncation_level
+            self.distribution = scipy.stats.truncnorm(
+                - truncation_level, truncation_level)
+
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
@@ -152,8 +159,7 @@ class GmfComputer(object):
                 arr[arr < miniml] = 0
             n = 0
             for rlz in rlzs:
-                eids = eids_by_rlz[rlz] + self.e0
-                e = len(eids)
+                eids = eids_by_rlz[rlz]
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     tot = gmfa.sum(axis=0)  # shape (M,)
@@ -180,7 +186,7 @@ class GmfComputer(object):
                                 data.append((sids[i], eid, rlz, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
-                n += e
+                n += len(eids)
         dt = F32, (len(min_iml),)
         dtlist = [('sid', U32), ('eid', U32), ('rlz', U32), ('gmv', dt)] + [
             (out, dt) for sp in self.sec_perils for out in sp.outputs]
@@ -227,7 +233,7 @@ class GmfComputer(object):
                    epsilons(num_events))
         """
         dctx = self.dctx.roundup(gsim.minimum_distance)
-        if self.truncation_level == 0:
+        if self.distribution is None:
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
@@ -239,13 +245,6 @@ class GmfComputer(object):
             return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
-        elif self.truncation_level is None:
-            distribution = scipy.stats.norm()
-        else:
-            assert self.truncation_level > 0, self.truncation_level
-            distribution = scipy.stats.truncnorm(
-                - self.truncation_level, self.truncation_level)
-
         num_sids = len(self.sids)
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
@@ -262,7 +261,7 @@ class GmfComputer(object):
             mean = mean.reshape(mean.shape + (1, ))
 
             total_residual = stddev_total * rvs(
-                distribution, num_sids, num_events)
+                self.distribution, num_sids, num_events)
             gmf = to_imt_unit_values(mean + total_residual, imt)
             stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
@@ -275,7 +274,7 @@ class GmfComputer(object):
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
             intra_residual = stddev_intra * rvs(
-                distribution, num_sids, num_events)
+                self.distribution, num_sids, num_events)
 
             if self.correlation_model is not None:
                 intra_residual = self.correlation_model.apply_correlation(
@@ -284,7 +283,7 @@ class GmfComputer(object):
                 if len(sh) == 1:  # a vector
                     intra_residual = intra_residual.reshape(sh + (1,))
 
-            epsilons = rvs(distribution, num_events)
+            epsilons = rvs(self.distribution, num_events)
             inter_residual = stddev_inter * epsilons
 
             gmf = to_imt_unit_values(

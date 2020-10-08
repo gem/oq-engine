@@ -115,7 +115,7 @@ class OqParam(valid.ParamSet):
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
-    csm_cache = valid.Param(valid.utf8, '')
+    cachedir = valid.Param(valid.utf8, '')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
@@ -220,7 +220,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
-    ebrisk_maxsize = valid.Param(valid.positivefloat, 1E8)  # used in ebrisk
+    ebrisk_maxsize = valid.Param(valid.positivefloat, 5E9)  # used in ebrisk
     min_weight = valid.Param(valid.positiveint, 6_000)  # used in classical
     max_weight = valid.Param(valid.positiveint, 300_000)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
@@ -255,6 +255,20 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
+        if 'validated' in names_vals:
+            # assume most attributes already validated
+            vars(self).update(names_vals)
+            md = calc.filters.MagDepDistance()
+            md.update(names_vals['maximum_distance'])
+            self.maximum_distance = md
+            if 'pointsource_distance' in names_vals:
+                self.pointsource_distance = valid.MagDepDistance.new(
+                            names_vals['pointsource_distance'])
+            if 'region_constraint' in names_vals:
+                self.region = valid.wkt_polygon(
+                    names_vals['region_constraint'])
+            return
+
         # support legacy names
         for name in list(names_vals):
             if name == 'quantile_hazard_curves':

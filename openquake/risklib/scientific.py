@@ -142,7 +142,7 @@ class VulnerabilityFunction(object):
 
     def init(self):
         # called by CompositeRiskModel and by __setstate__
-        self.stddevs = self.covs * self.mean_loss_ratios
+        self._stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
         self.set_distribution(None)
@@ -300,7 +300,7 @@ class VulnerabilityFunction(object):
         lrem = numpy.empty((len(loss_ratios), len(self.imls)))
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
-                    zip(self.mean_loss_ratios, self.stddevs)):
+                    zip(self.mean_loss_ratios, self._stddevs)):
                 lrem[row, col] = self._distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
@@ -1513,12 +1513,15 @@ class LossesByAsset(object):
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
+                    ls = losses[a]
+                    ok = ls > minimum_loss[lni]
+                    if not ok.sum():
+                        continue
                     idx = ','.join(map(str, tagidxs[a])) + ','
                     kept = 0
-                    for loss, eid in zip(losses[a], out.eids):
-                        if loss >= minimum_loss[lni]:
-                            self.alt[idx][eid][lni] += loss
-                            kept += 1
+                    for loss, eid in zip(ls[ok], out.eids[ok]):
+                        self.alt[idx][eid][lni] += loss
+                        kept += 1
                     numlosses += numpy.array([kept, len(losses[a])])
         return numlosses
 

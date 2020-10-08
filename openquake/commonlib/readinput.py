@@ -30,13 +30,14 @@ import tempfile
 import functools
 import configparser
 import collections
+
 import numpy
 import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, AccumDict)
-from openquake.baselib.python3compat import decode, zip
+from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
@@ -204,48 +205,48 @@ def _update(params, items, base_path):
         else:
             params[key] = value
 
+    if 'reqv' in params['inputs']:
+        params['pointsource_distance'] = '0'
 
-def get_params(job_inis, **kw):
+
+def get_params(job_ini, **kw):
     """
-    Parse one or more INI-style config files.
+    Parse a .ini file or a .zip archive
 
-    :param job_inis:
-        List of configuration files (or list containing a single zip archive)
+    :param job_ini:
+        Configuration file or zip archive
     :param kw:
         Optionally override some parameters
     :returns:
         A dictionary of parameters
     """
+    # directory containing the config files we're parsing
+    job_ini = os.path.abspath(job_ini)
+    base_path = os.path.dirname(job_ini)
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     input_zip = None
-    if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
-        input_zip = job_inis[0]
+    if job_ini.endswith('.zip'):
+        input_zip = job_ini
         job_inis = extract_from_zip(
-            job_inis[0], ['job_hazard.ini', 'job_haz.ini',
-                          'job.ini', 'job_risk.ini'])
+            job_ini, ['job_hazard.ini', 'job_haz.ini',
+                      'job.ini', 'job_risk.ini'])
         if not job_inis:
             raise NameError('Could not find job.ini inside %s' % input_zip)
+        job_ini = job_inis[0]
 
-    not_found = [ini for ini in job_inis if not os.path.exists(ini)]
-    if not_found:  # something was not found
-        raise IOError('File not found: %s' % not_found[0])
+    if not os.path.exists(job_ini):
+        raise IOError('File not found: %s' % job_ini)
 
-    cp = configparser.ConfigParser()
-    cp.read(job_inis, encoding='utf8')
-
-    # directory containing the config files we're parsing
-    job_ini = os.path.abspath(job_inis[0])
-    base_path = decode(os.path.dirname(job_ini))
+    base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
-    if input_zip:
-        params['inputs']['input_zip'] = os.path.abspath(input_zip)
-
+    cp = configparser.ConfigParser()
+    cp.read([job_ini], encoding='utf8')
     for sect in cp.sections():
         _update(params, cp.items(sect), base_path)
-    _update(params, kw.items(), base_path)  # override on demand
 
-    if params['inputs'].get('reqv'):
-        # using pointsource_distance=0 because of the reqv approximation
-        params['pointsource_distance'] = '0'
+    if input_zip:
+        params['inputs']['input_zip'] = os.path.abspath(input_zip)
+    _update(params, kw.items(), base_path)  # override on demand
 
     return params
 
@@ -255,7 +256,7 @@ def get_oq(text):
     Returns an OqParam instance from a configuration string. For instance:
 
     >>> get_oq('maximum_distance=200')
-    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': [(1, 200), (10, 200)]}, risk_investigation_time=None>
+    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': [(1.0, 200), (10.0, 200)]}, risk_investigation_time=None>
     """
     # UGLY: this is here to avoid circular imports
     from openquake.calculators import base
@@ -298,14 +299,16 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
 
     OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)
-    if not isinstance(job_ini, dict):
+    if isinstance(job_ini, dict):
+        job_ini['validated'] = True
+    else:
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        job_ini = get_params([os.path.join(basedir, job_ini)])
+        job_ini = get_params(os.path.join(basedir, job_ini))
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
     job_ini.update(kw)
     oqparam = OqParam(**job_ini)
-    if validate:
+    if validate and 'validated' not in job_ini:
         oqparam.validate()
     return oqparam
 
@@ -636,8 +639,6 @@ def get_rupture(oqparam):
         conv = sourceconverter.RuptureConverter(
             oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
         rup = conv.convert_node(rup_node)
-    elif rup_model.endswith(('.txt', '.toml')):
-        rup = rupture.from_toml(open(rup_model).read())
     else:
         raise ValueError('Unrecognized ruptures model %s' % rup_model)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
@@ -707,14 +708,12 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def _get_csm_cached(oq, full_lt, h5=None):
+def _get_cachedir(oq, full_lt, h5=None):
     # read the composite source model from the cache
-    if not os.path.exists(oq.csm_cache):
-        os.makedirs(oq.csm_cache)
-    checksum = get_checksum32(oq)
-    if h5:
-        h5.attrs['checksum32'] = checksum
-    fname = os.path.join(oq.csm_cache, '%s.pik' % checksum)
+    if not os.path.exists(oq.cachedir):
+        os.makedirs(oq.cachedir)
+    checksum = get_checksum32(oq, h5)
+    fname = os.path.join(oq.cachedir, 'csm_%s.pik' % checksum)
     if os.path.exists(fname):
         logging.info('Reading %s', fname)
         with open(fname, 'rb') as f:
@@ -742,8 +741,8 @@ def get_composite_source_model(oqparam, h5=None):
          an open hdf5.File where to store the source info
     """
     full_lt = get_full_lt(oqparam)
-    if oqparam.csm_cache and not oqparam.is_ucerf():
-        csm = _get_csm_cached(oqparam, full_lt, h5)
+    if oqparam.cachedir and not oqparam.is_ucerf():
+        csm = _get_cachedir(oqparam, full_lt, h5)
     else:
         csm = get_csm(oqparam, full_lt, h5)
     grp_ids = csm.get_grp_ids()
@@ -857,11 +856,23 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
+    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
+        os.makedirs(oqparam.cachedir)
+    checksum = _checksum(oqparam.inputs['exposure'])
+    fname = os.path.join(oqparam.cachedir, 'exp_%s.pik' % checksum)
+    if os.path.exists(fname):
+        logging.info('Reading %s', fname)
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
     exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in oqparam.aggregate_by)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
+    if oqparam.cachedir:
+        logging.info('Saving %s', fname)
+        with open(fname, 'wb') as f:
+            pickle.dump(exposure, f)
     return exposure
 
 
@@ -1107,17 +1118,22 @@ def get_input_files(oqparam, hazard=False):
     return sorted(fnames)
 
 
-def _checksum(fname, checksum):
-    if not os.path.exists(fname):
-        zpath = os.path.splitext(fname)[0] + '.zip'
-        if not os.path.exists(zpath):
-            raise OSError('No such file: %s or %s' % (fname, zpath))
-        with open(zpath, 'rb') as f:
-            data = f.read()
-    else:
-        with open(fname, 'rb') as f:
-            data = f.read()
-    return zlib.adler32(data, checksum)
+def _checksum(fnames, checksum=0):
+    """
+    :returns: the 32 bit checksum of a list of files
+    """
+    for fname in fnames:
+        if not os.path.exists(fname):
+            zpath = os.path.splitext(fname)[0] + '.zip'
+            if not os.path.exists(zpath):
+                raise OSError('No such file: %s or %s' % (fname, zpath))
+            with open(zpath, 'rb') as f:
+                data = f.read()
+        else:
+            with open(fname, 'rb') as f:
+                data = f.read()
+        checksum = zlib.adler32(data, checksum)
+    return checksum
 
 
 def get_checksum32(oqparam, h5=None):
@@ -1128,9 +1144,7 @@ def get_checksum32(oqparam, h5=None):
     """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
-    checksum = 0
-    for fname in get_input_files(oqparam, hazard=True):
-        checksum = _checksum(fname, checksum)
+    checksum = _checksum(get_input_files(oqparam, hazard=True))
     hazard_params = []
     for key, val in vars(oqparam).items():
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
@@ -1139,7 +1153,7 @@ def get_checksum32(oqparam, h5=None):
                    'pointsource_distance', 'minimum_magnitude'):
             hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
-        checksum = zlib.adler32(data, checksum) & 0xffffffff
+        checksum = zlib.adler32(data, checksum)
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum

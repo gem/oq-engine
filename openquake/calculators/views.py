@@ -658,18 +658,14 @@ def view_global_gmfs(token, dstore):
     return rst_table([row], header=imtls)
 
 
-@view.add('gmv_by_rup')
-def view_gmv_by_rup(token, dstore):
+@view.add('gmf')
+def view_gmf(token, dstore):
     """
-    Display a synthetic gmv per rupture serial for debugging purposes
+    Display a mean gmf for debugging purposes
     """
-    rup_id = dstore['events']['rup_id']
-    serial = dstore['ruptures']['serial']
-    data = dstore.read_df('gmf_data', 'eid')
-    gmv = fast_agg3(data, 'eid', ['gmv'])
-    gmv['eid'] = serial[rup_id[gmv['eid']]]
-    gm = fast_agg3(gmv, 'eid', ['gmv'])
-    return rst_table(gm, header=['serial', 'gmv'])
+    df = dstore.read_df('gmf_data', 'sid')
+    gmf = df.groupby(df.index).mean()
+    return str(gmf)
 
 
 @view.add('mean_disagg')

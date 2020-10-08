@@ -1,5 +1,17 @@
+  [Michele Simionato]
+  * Reduced memory occupation in post_ebrisk
+  * Optimized loss aggregation in ebrisk calculations
+  * Extended `oq engine --reuse-input` to the exposure
+  * Parallelized by `number_of_ground_motion_fields` in scenario calculations
+    with many sites
+  * Refactored ebrisk (with a 10x speedup in "aggregate risk" in at least one
+    calculation for Canada) and reduced data transfer in event based
+
+  [Viktor Polak]
+  * Added the Parker et al. (2020) GMPE
+
   [Marco Pagani]
-  * Added 'closest_point' metric   
+  * Added 'closest_point' metric
 
   [Michele Simionato]
   * Changed event based full enumeration to be consistent with sampling

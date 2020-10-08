@@ -20,14 +20,11 @@ import shutil
 import json
 import logging
 import os
-import sys
 import tempfile
-import subprocess
-import threading
+import multiprocessing
 import traceback
 import signal
 import zlib
-import pickle
 import urllib.parse as urlparse
 import re
 import psutil
@@ -62,6 +59,8 @@ from wsgiref.util import FileWrapper
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
+
+Process = multiprocessing.get_context('spawn').Process
 
 
 METHOD_NOT_ALLOWED = 405
@@ -561,42 +560,21 @@ def calc_run(request):
                         status=status)
 
 
-# run calcs on the WebServer machine
-RUNCALC = '''\
-import os, sys, pickle
-from openquake.baselib import config
-from openquake.commonlib import logs
-from openquake.engine import engine
-if __name__ == '__main__':
-    oqparam = pickle.loads(%(pik)r)
-    logs.init(%(job_id)s)
-    engine.run_calc(
-        %(job_id)s, oqparam, '',
-       hazard_calculation_id=%(hazard_job_id)s,
-       username='%(username)s')
-    os.remove(__file__)
-'''
-
-
 def submit_job(job_ini, username, hazard_job_id=None):
     """
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id = logs.init('job')
-    oq = engine.job_from_file(
+    job_id = logs.init('job', logging.INFO)
+    oq = engine.job_from(
         job_ini, job_id, username, hazard_calculation_id=hazard_job_id)
-    pik = pickle.dumps(oq, protocol=0)  # human readable protocol
-    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,
-                          username=username)
-    tmp_py = gettemp(code, suffix='.py')
-    # print(code, tmp_py)  # useful when debugging
-    devnull = subprocess.DEVNULL
-    popen = subprocess.Popen([sys.executable, tmp_py],
-                             stdin=devnull, stdout=devnull, stderr=devnull)
-    threading.Thread(target=popen.wait).start()
-    logs.dbcmd('update_job', job_id, {'pid': popen.pid})
-    return job_id, popen.pid
+    proc = Process(target=engine.run_calc,
+                   args=(job_id, oq, '', 'info', None),
+                   kwargs=dict(hazard_calculation_id=hazard_job_id,
+                               username=username))
+    proc.start()
+    logs.dbcmd('update_job', job_id, {'pid': proc.pid})
+    return job_id, proc.pid
 
 
 @require_http_methods(['GET'])
