@@ -99,7 +99,7 @@ class PitilakisEtAl2018(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 800.0
 
     def __init__(self, gmpe_name, reference_velocity=None, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
         if isinstance(gmpe_name, str):
             self.gmpe = registry[gmpe_name](**kwargs)
         else:
@@ -319,7 +319,7 @@ class Eurocode8Amplification(PitilakisEtAl2018):
     DEFINED_FOR_REFERENCE_VELOCITY = 800.0
 
     def __init__(self, gmpe_name, reference_velocity=800.0, **kwargs):
-        super().__init__(gmpe_name=gmpe_name)
+        super().__init__(gmpe_name=gmpe_name, **kwargs)
         self.rock_vs30 = reference_velocity if reference_velocity else\
             self.DEFINED_FOR_REFERENCE_VELOCITY
         for name in uppernames:
@@ -533,7 +533,7 @@ class SandikkayaDinsever2018(GMPE):
 
     def __init__(self, gmpe_name, reference_velocity=760., region=None,
                  phi_0=None, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
         if isinstance(gmpe_name, str):
             self.gmpe = registry[gmpe_name](**kwargs)
         else:
