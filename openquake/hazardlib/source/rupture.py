@@ -664,30 +664,13 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
-    """
-    :param rup_array: a composite array with fields rup_id, n_occ and grp_id
-    :param samples_by_grp: a dictionary grp_id -> samples
-    :param num_rlzs_by_grp: a dictionary grp_id -> num_rlzs
-    """
-    all_eids = []
-    for rup in rup_array:
-        grp_id = rup['grp_id']
-        samples = samples_by_grp[grp_id]
-        num_rlzs = num_rlzs_by_grp[grp_id]
-        num_events = rup['n_occ'] if samples > 1 else rup['n_occ'] * num_rlzs
-        eids = numpy.arange(num_events, dtype=U32)
-        all_eids.append(eids)
-    return numpy.concatenate(all_eids)
-
-
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, source_id, grp_id, n_occ, samples=1, id=None):
+    def __init__(self, rupture, source_id, grp_id, n_occ, id=None, e0=0):
         # NB: when reading an exported ruptures.xml the rup_id will be 0
         # for the first rupture; it used to be the seed instead
         assert rupture.rup_id >= 0  # sanity check
@@ -695,8 +678,8 @@ class EBRupture(object):
         self.source_id = source_id
         self.grp_id = grp_id
         self.n_occ = n_occ
-        self.samples = samples
-        self.id = id  # id of the rupture on the DataStore, to be overridden
+        self.id = id  # id of the rupture on the DataStore
+        self.e0 = e0
 
     @property
     def rup_id(self):
@@ -707,35 +690,24 @@ class EBRupture(object):
 
     def get_eids_by_rlz(self, rlzs_by_gsim):
         """
-        :param n_occ: number of occurrences
         :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-        :param samples: number of samples in current source group
         :returns: a dictionary rlz index -> eids array
         """
         j = 0
         dic = {}
-        if self.samples == 1:  # full enumeration or akin to it
-            for rlzs in rlzs_by_gsim.values():
-                for rlz in rlzs:
-                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U32)
-                    j += self.n_occ
-        else:  # associated eids to the realizations
-            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-            assert len(rlzs) == self.samples, (len(rlzs), self.samples)
-            histo = general.random_histogram(
-                self.n_occ, self.samples, self.rup_id)
-            for rlz, n in zip(rlzs, histo):
-                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
-                j += n
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        histo = general.random_histogram(
+            self.n_occ, len(rlzs), self.rup_id)
+        for rlz, n in zip(rlzs, histo):
+            dic[rlz] = numpy.arange(j, j + n, dtype=U32) + self.e0
+            j += n
         return dic
 
-    def get_eids(self, num_rlzs):
+    def get_eids(self):
         """
-        :param num_rlzs: the number of realizations for the given group
         :returns: an array of event IDs
         """
-        num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
-        return numpy.arange(num_events, dtype=U32)
+        return numpy.arange(self.n_occ, dtype=U32)
 
     def export(self, events_by_ses):
         """
@@ -791,12 +763,10 @@ class RuptureProxy(object):
 
     :param rec: a record with the rupture parameters
     :param nsites: approx number of sites affected by the rupture
-    :param samples: how many times the rupture is sampled
     """
-    def __init__(self, rec, nsites=None, samples=1):
+    def __init__(self, rec, nsites=None):
         self.rec = rec
         self.nsites = nsites
-        self.samples = samples
 
     @property
     def weight(self):
@@ -805,21 +775,19 @@ class RuptureProxy(object):
             heuristic weight for the underlying rupture, depending on the
             number of occurrences, number of samples and number of sites
         """
-        return self.samples * self['n_occ'] * (
+        return self['n_occ'] * (
             100 if self.nsites is None else max(self.nsites, 100))
 
     def __getitem__(self, name):
         return self.rec[name]
 
     # NB: requires the .geom attribute to be set
-    def to_ebr(self, trt, samples):
+    def to_ebr(self, trt):
         """
         :returns: EBRupture instance associated to the underlying rupture
         """
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self.rec['source_id'], self.rec['grp_id'],
-                        self.rec['n_occ'], samples)
-        ebr.id = self.rec['id']
-        ebr.e0 = self.rec['e0']
+                        self.rec['n_occ'], self.rec['id'], self.rec['e0'])
         return ebr

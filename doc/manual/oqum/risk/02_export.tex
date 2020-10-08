@@ -1,5 +1,5 @@
 To obtain a list of all risk calculations that have been previously run
-(successfully or unsuccessfully), or are currently running, the following
+(successfully or unsuccessfully), or that are currently running, the following
 command can be employed:
 
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
@@ -16,14 +16,15 @@ Which will display a list of risk calculations as presented below.
 
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
 job_id |     status |          start_time |     description
-     1 | successful | 2015-12-02 08:50:30  | Scenario damage example
-     2 |     failed | 2015-12-03 09:56:17  | Scenario risk example
-     3 | successful | 2015-12-04 10:45:32  | Scenario risk example
-     4 | successful | 2015-12-04 10:48:33  | Classical risk example
+     1 |   complete | 2015-12-02 08:50:30 | Scenario damage example
+     2 |     failed | 2015-12-03 09:56:17 | Scenario risk example
+     3 |   complete | 2015-12-04 10:45:32 | Scenario risk example
+     4 |   complete | 2015-12-04 10:48:33 | Classical risk example
+     5 |   complete | 2020-07-09 13:47:45 | Event based risk aggregation example     
 \end{minted}
 
-Then, in order to display a list of the risk outputs from a given job, the
-following command can be used:
+Then, in order to display a list of the risk outputs from a given job which has
+completed successfully, the following command can be used:
 
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
 user@ubuntu:~\$ oq engine --list-outputs <risk_calculation_id>
@@ -39,14 +40,28 @@ which will display a list of outputs for the calculation requested, as
 presented below:
 
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
-Calculation 4 results:
-id | name
-29 | loss_curve
-30 | loss_map
+Calculation 5 results:
+  id | name
+  11 | Aggregate Event Losses
+   1 | Aggregate Loss Curves
+   2 | Aggregate Loss Curves Statistics
+   3 | Aggregate Losses
+   4 | Aggregate Losses Statistics
+   5 | Average Asset Losses Statistics
+  13 | Earthquake Ruptures
+   6 | Events
+   7 | Full Report
+  10 | Input Files
+  12 | Realizations
+  14 | Source Loss Table
+  15 | Total Loss Curves
+  16 | Total Loss Curves Statistics
+  17 | Total Losses
+  18 | Total Losses Statistics
 \end{minted}
 
 Then, in order to export all of the risk calculation outputs in the
-appropriate xml format, the following command can be used:
+default file format (csv for most outputs), the following command can be used:
 
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
 user@ubuntu:~\$ oq engine --export-outputs <risk_calculation_id> <output_directory>

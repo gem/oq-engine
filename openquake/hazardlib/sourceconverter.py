@@ -349,13 +349,11 @@ def convert_nonParametricSeismicSource(fname, node):
     nps.splittable = 'rup_weights' not in node.attrib
     path = os.path.splitext(fname)[0] + '.hdf5'
     hdf5_fname = path if os.path.exists(path) else None
-    if hdf5_fname:
-        # read the rupture data from the HDF5 file
-        assert node.text is None, node.text
+    if hdf5_fname and node.text is None:
+        # gridded source, read the rupture data from the HDF5 file
         with hdf5.File(hdf5_fname, 'r') as h:
             dic = {k: d[:] for k, d in h[node['id']].items()}
-        nps.fromdict(dic, rups_weights)
-        num_probs = len(dic['probs_occur'])
+            nps.fromdict(dic, rups_weights)
     else:
         # read the rupture data from the XML nodes
         num_probs = None
@@ -373,7 +371,6 @@ def convert_nonParametricSeismicSource(fname, node):
             rup.tectonic_region_type = trt
             rup.weight = None if rups_weights is None else rups_weights[i]
             nps.data.append((rup, probs))
-    nps.num_probs_occur = num_probs
     return nps
 
 

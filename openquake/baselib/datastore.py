@@ -27,7 +27,7 @@ import numpy
 import h5py
 import pandas
 
-from openquake.baselib import hdf5, config, performance, python3compat
+from openquake.baselib import hdf5, config, performance, python3compat, general
 
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
@@ -473,18 +473,25 @@ class DataStore(collections.abc.MutableMapping):
         data = bytes(numpy.asarray(self[key][()]))
         return io.BytesIO(gzip.decompress(data))
 
-    def read_df(self, key, index=None, sel=()):
+    def read_df(self, key, index=None, sel=(), slc=slice(None)):
         """
         :param key: name of the structured dataset
         :param index: if given, name of the "primary key" field
         :param sel: dictionary used to select subsets of the dataset
+        :param slc: slice object to extract a slice of the dataset
         :returns: pandas DataFrame associated to the dataset
         """
         dset = self.getitem(key)
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
-        if 'shape_descr' in dset.attrs:
+        elif 'shape_descr' in dset.attrs:
             return dset2df(dset, index, sel)
+        elif '__pdcolumns__' in dset.attrs:
+            columns = dset.attrs['__pdcolumns__'].split()
+            dic = {col: dset[col][slc] for col in columns if col != index}
+            if index is not None:
+                index = dset[index][slc]
+            return pandas.DataFrame(dic, index=index)
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
@@ -505,6 +512,20 @@ class DataStore(collections.abc.MutableMapping):
             else:  # scalar field
                 data[name] = arr
         return pandas.DataFrame.from_records(data, index=index)
+
+    def read_unique(self, key, field):
+        """
+        :param key: key to a dataset containing a structured array
+        :param field: a field in the structured array
+        :returns: sorted, unique values
+        Works with chunks of 1M records
+        """
+        unique = set()
+        dset = self.getitem(key)
+        for slc in general.gen_slices(0, len(dset), 10_000_000):
+            arr = numpy.unique(dset[slc][field])
+            unique.update(arr)
+        return sorted(unique)
 
     def sel(self, key, **kw):
         """

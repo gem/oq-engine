@@ -102,7 +102,7 @@ class Realization(object):
     Generic Realization object with attributes value, weight, ordinal, lt_path,
     samples.
     """
-    def __init__(self, value, weight, ordinal, lt_path, samples):
+    def __init__(self, value, weight, ordinal, lt_path, samples=1):
         self.value = value
         self.weight = weight
         self.ordinal = ordinal
@@ -424,16 +424,14 @@ class SourceModelLogicTree(object):
                     weight = numpy.prod([br.weight for br in branches])
                 else:
                     raise NotImplementedError(self.sampling_method)
-                yield Realization(name, weight, ordinal, tuple(smlt_path_ids),
-                                  samples=1)
+                yield Realization(name, weight, ordinal, tuple(smlt_path_ids))
                 ordinal += 1
         else:  # full enumeration
             ordinal = 0
             for weight, branches in self.root_branchset.enumerate_paths():
                 name = branches[0].value  # source model name
-                smlt_branch_ids = [branch.branch_id for branch in branches]
-                yield Realization(name, weight, ordinal,
-                                  tuple(smlt_branch_ids), 1)
+                branch_ids = [branch.branch_id for branch in branches]
+                yield Realization(name, weight, ordinal, tuple(branch_ids))
                 ordinal += 1
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
@@ -835,7 +833,7 @@ class GsimLogicTree(object):
         dt = [('trt', hdf5.vstr), ('branch', hdf5.vstr),
               ('uncertainty', hdf5.vstr)] + [
             (weight, float) for weight in sorted(weights)]
-        branches = [(b.trt, b.id, b.gsim) +
+        branches = [(b.trt, b.id, repr(b.gsim)) +
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches if b.effective]
         dic = {}
@@ -937,8 +935,6 @@ class GsimLogicTree(object):
         """
         Return the effective number of paths in the tree.
         """
-        # NB: the algorithm assume a symmetric logic tree for the GSIMs;
-        # in the future we may relax such assumption
         num_branches = self.get_num_branches()
         if not sum(num_branches.values()):
             return 0
@@ -1045,7 +1041,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            rlz = Realization(tuple(value), weight, i, tuple(lt_uid), 1)
+            rlz = Realization(tuple(value), weight, i, tuple(lt_uid))
             rlzs.append(rlz)
         return rlzs
 
@@ -1068,7 +1064,7 @@ class GsimLogicTree(object):
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
                 value.append(branch.gsim)
-            yield Realization(tuple(value), weight, i, tuple(lt_uid), 1)
+            yield Realization(tuple(value), weight, i, tuple(lt_uid))
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %
@@ -1175,11 +1171,11 @@ class FullLogicTree(object):
         gsim_lt = gsimlt or GsimLogicTree.from_('[FromFile]')
         fakeSM = Realization(
             'scenario', weight=1,  ordinal=0, lt_path='b1', samples=1)
-        info = object.__new__(cls)
-        info.source_model_lt = SourceModelLogicTree.fake()
-        info.gsim_lt = gsim_lt
-        info.sm_rlzs = [fakeSM]
-        return info
+        self = object.__new__(cls)
+        self.source_model_lt = SourceModelLogicTree.fake()
+        self.gsim_lt = gsim_lt
+        self.sm_rlzs = [fakeSM]
+        return self
 
     def __init__(self, source_model_lt, gsim_lt):
         self.source_model_lt = source_model_lt
@@ -1187,9 +1183,16 @@ class FullLogicTree(object):
         self.init()  # set .sm_rlzs and .trt_by_grp
 
     def init(self):
-        # NB: the number of effective rlzs can be less than the number
-        # of realizations in case of sampling
-        self.sm_rlzs = get_effective_rlzs(self.source_model_lt)
+        if self.source_model_lt.num_samples:
+            # NB: the number of effective rlzs can be less than the number
+            # of realizations in case of sampling
+            self.sm_rlzs = get_effective_rlzs(self.source_model_lt)
+        else:  # full enumeration
+            samples = self.gsim_lt.get_num_paths()
+            self.sm_rlzs = []
+            for sm_rlz in self.source_model_lt:
+                sm_rlz.samples = samples
+                self.sm_rlzs.append(sm_rlz)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
 
     def get_eri_by_ltp(self):
@@ -1274,7 +1277,9 @@ class FullLogicTree(object):
         rlzs = []
         self._gsims_by_trt = AccumDict(accum=set())  # trt -> gsims
         if self.num_samples:  # sampling
-            sm_rlzs = list(self.source_model_lt)  # uses self.seed
+            sm_rlzs = []
+            for sm_rlz in self.sm_rlzs:
+                sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(self.num_samples, self.seed + 1,
                                             self.sampling_method)
             for t, trt in enumerate(self.gsim_lt.values):
@@ -1308,6 +1313,17 @@ class FullLogicTree(object):
                     rlz.weight = rlz.weight / tot_weight
         return rlzs
 
+    def get_rlzs_by_eri(self):
+        """
+        :returns: a dict eri -> rlzs
+        """
+        smltpath = operator.attrgetter('sm_lt_path')
+        eri_by_ltp = self.get_eri_by_ltp()
+        rlzs = self.get_realizations()
+        dic = {eri_by_ltp['_'.join(ltp)]: rlzs for ltp, rlzs in groupby(
+            rlzs, smltpath).items()}
+        return dic
+
     def get_rlzs_by_gsim(self, grp_id):
         """
         :returns: a dictionary gsim -> array of rlz indices
@@ -1320,7 +1336,8 @@ class FullLogicTree(object):
                 for gid in self.grp_ids(sm.ordinal):
                     trti, eri = divmod(gid, len(self.sm_rlzs))
                     for rlz in rlzs:
-                        if eri_by_ltp['_'.join(rlz.sm_lt_path)] == eri:
+                        idx = eri_by_ltp['_'.join(rlz.sm_lt_path)]
+                        if idx == eri:
                             acc[gid][rlz.gsim_rlz.value[trti]].append(
                                 rlz.ordinal)
             self._rlzs_by_grp = {}

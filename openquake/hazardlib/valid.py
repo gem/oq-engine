@@ -32,7 +32,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.calc.filters import MagDepDistance, floatdict
+from openquake.hazardlib.calc.filters import MagDepDistance, floatdict  # needed
 
 PRECISION = pmf.PRECISION
 
@@ -304,7 +304,7 @@ class SimpleId(object):
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
-ASSET_ID_LENGTH = 100
+ASSET_ID_LENGTH = 50  # length that makes Murray happy
 
 simple_id = SimpleId(MAX_ID_LENGTH)
 asset_id = SimpleId(ASSET_ID_LENGTH)

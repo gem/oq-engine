@@ -1,6 +1,6 @@
-======================== ===================
-Total number of ruptures 5                  
-Total number of events   52                 
-Rupture multiplicity     10                 
-Events by rlz            12 12 12 12 1 1 1 1
-======================== ===================
+======================== ==============
+Total number of ruptures 5             
+Total number of events   48            
+Rupture multiplicity     9.60000       
+Events by rlz            8 18 10 10 1 1
+======================== ==============

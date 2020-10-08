@@ -30,8 +30,8 @@ class UcerfTestCase(CalculatorTestCase):
         gmv_uc = view('global_gmfs', self.calc.datastore)
         # check the distribution of the events
         self.assertEventsByRlz(
-            [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
-             1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0,
+             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)

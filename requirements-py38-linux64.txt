@@ -46,3 +46,6 @@ https://wheelhouse.openquake.org/v3/linux/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py38/kiwisolver-1.1.0-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/matplotlib-3.1.2-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/pyproj-2.5.0-cp38-cp38-manylinux1_x86_64.whl
+
+### GDAL ###
+https://wheelhouse.openquake.org/v3/linux/py38/GDAL-3.1.2-cp38-cp38-manylinux2014_x86_64.whl

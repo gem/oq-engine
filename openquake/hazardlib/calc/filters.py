@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
 import re
 import ast
 import sys
@@ -26,7 +26,7 @@ from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree, distance
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import general
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
@@ -118,8 +118,8 @@ class MagDepDistance(dict):
         {'default': [(1, 50), (10, 50)]}
         >>> md.max()
         {'default': 50}
-        >>> md.interp(dict(default=['5.0', '5.1', '5.2'])); md.ddic
-        {'default': {'5.0': 50.0, '5.1': 50.0, '5.2': 50.0}}
+        >>> md.interp(dict(default=[5.0, 5.1, 5.2])); md.ddic
+        {'default': {'5.00': 50.0, '5.10': 50.0, '5.20': 50.0}}
         """
         items_by_trt = floatdict(value.replace('?', '-1'))
         self = cls()
@@ -147,16 +147,19 @@ class MagDepDistance(dict):
             else:
                 ms = numpy.float64(mags)
             dists = numpy.interp(ms, xs, ys)
-            ddic[trt] = dict(zip(mags, dists))
+            ddic[trt] = {'%.2f' % mag: dist for mag, dist in zip(ms, dists)}
         self.ddic = ddic
 
     def __call__(self, trt, mag=None):
         if not self:
             return MAX_DISTANCE
-        elif mag is None or not hasattr(self, 'ddic'):
+        elif mag is None:
             return getdefault(self, trt)[-1][1]
-        elif mag and trt in self.ddic:
+        elif hasattr(self, 'ddic'):
             return self.ddic[trt]['%.2f' % mag]
+        else:
+            xs, ys = zip(*getdefault(self, trt))
+            return numpy.interp(mag, xs, ys)
 
     def max(self):
         """
@@ -279,43 +282,16 @@ class SourceFilter(object):
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
-    def __init__(self, sitecol, integration_distance, filename=None):
+    def __init__(self, sitecol, integration_distance):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
         elif sitecol is None:
             integration_distance = {}
-        self.filename = filename
+        self.sitecol = sitecol
         self.integration_distance = (
             integration_distance
             if isinstance(integration_distance, MagDepDistance)
             else MagDepDistance(integration_distance))
-        if not filename:  # keep the sitecol in memory
-            self.__dict__['sitecol'] = sitecol
-
-    def __getstate__(self):
-        if self.filename:
-            # in the engine self.filename is the .hdf5 cache file
-            return dict(filename=self.filename,
-                        integration_distance=self.integration_distance)
-        else:
-            # when using calc_hazard_curves without an .hdf5 cache file
-            return dict(filename=None, sitecol=self.sitecol,
-                        integration_distance=self.integration_distance)
-
-    @property
-    def sitecol(self):
-        """
-        Read the site collection from .filename and cache it
-        """
-        if 'sitecol' in vars(self):
-            return self.__dict__['sitecol']
-        if self.filename is None:
-            return
-        elif not os.path.exists(self.filename):
-            raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
-        with hdf5.File(self.filename, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5.get('sitecol')
-        return sc
 
     def get_rectangle(self, src):
         """
