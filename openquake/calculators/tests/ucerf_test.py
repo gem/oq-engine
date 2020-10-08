@@ -30,8 +30,8 @@ class UcerfTestCase(CalculatorTestCase):
         gmv_uc = view('global_gmfs', self.calc.datastore)
         # check the distribution of the events
         self.assertEventsByRlz(
-            [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
-             1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0,
+             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
@@ -58,7 +58,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
         # check the distribution of the events
-        self.assertEventsByRlz([15, 19])
+        self.assertEventsByRlz([15, 18])
 
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini',

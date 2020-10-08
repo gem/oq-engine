@@ -46,8 +46,8 @@
 # liability for use of the software.
 
 """
-Module :mod:`openquake.hmtk.parsers.catalogue.base` defines an abstract base class
-for :class:`CatalogueParser <BaseCatalogueParser>`.
+Module :mod:`openquake.hmtk.parsers.catalogue.base` defines an abstract base
+class for :class:`CatalogueParser <BaseCatalogueParser>`.
 """
 import abc
 import os.path
@@ -63,7 +63,7 @@ class BaseCatalogueParser(object):
         """
         self.input_file = input_file
         if not os.path.exists(self.input_file):
-            raise IOError('File not found')
+            raise IOError('File not found: %s' % input_file)
 
     @abc.abstractmethod
     def read_file(self):

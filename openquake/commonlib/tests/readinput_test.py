@@ -95,7 +95,7 @@ export_dir = %s
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'collapse_level': 0,
-                'maximum_distance': {'default': 1.0},
+                'maximum_distance': {'default': [(1, 1), (10, 1)]},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -144,8 +144,7 @@ maximum_distance=[(200, 8)]
 """)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_oqparam(source)
-        self.assertIn('magnitude 200.0 is bigger than the maximum (11): '
-                      'could not convert to maximum_distance:',
+        self.assertIn('Invalid magnitude 200: could not convert to new',
                       str(ctx.exception))
 
 
@@ -329,6 +328,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
     def test_zero_number(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = False
@@ -346,6 +346,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
     def test_invalid_asset_id(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure1]}
@@ -362,6 +363,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
     def test_no_assets(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = True
@@ -380,6 +382,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.ignore_missing_costs = []
@@ -397,6 +400,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
     def test_invalid_taxonomy(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure3]}

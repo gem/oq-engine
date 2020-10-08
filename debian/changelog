@@ -1,9 +1,62 @@
   [Michele Simionato]
   * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
+  * Reduced memory occupation in post_ebrisk
+  * Optimized loss aggregation in ebrisk calculations
+  * Extended `oq engine --reuse-input` to the exposure
+  * Parallelized by `number_of_ground_motion_fields` in scenario calculations
+    with many sites
+  * Refactored ebrisk (with a 10x speedup in "aggregate risk" in at least one
+    calculation for Canada) and reduced data transfer in event based
+
+  [Viktor Polak]
+  * Added the Parker et al. (2020) GMPE
+
+  [Marco Pagani]
+  * Added 'closest_point' metric
+
+  [Michele Simionato]
+  * Changed event based full enumeration to be consistent with sampling
+  * Changed the GMF storage to be more pandas-friendly
+
+python3-oq-engine (3.10.0-1~xenial01) xenial; urgency=low
+
+  [Richard Styron]
+  * Added secondary perils ZhuLiquefactionGeneral and HazusLateralSpreading,
+    supplementing HazusLiquefaction and NewmarkDisplacement
+
+  [Michele Simionato]
+  * Fixed a bug with site models containing non-float parameters
+  * Raised the limit on the asset ID from 20 to 50 characters
+  * Changed the /extract/events API to extract only the relevant events
+  * Removed the GMF npz exporter
+  * Speed-up risk saving in scenario_risk and scenario_damage
+
+  [Antonio Ettorre]
+  * Bumped GDAL to version 3.1.2
+
+  [Michele Simionato]
+  * Optimized scenario_damage for the case of many sites
+  * Implemented secondary perils
+  * Fixed a 32 bit/64 bit bug in `oq prepare_site_model` when sites.csv is
+    the same as the vs30.csv file
+  * Parallelized by GSIM when there is a single rupture
+
+  [Francis Bernales]
+  * Added the Stewart et al. (2016) GMPE
+  * Added the Bozorgnia & Campbell (2016) GMPE
+  * Added the Gulerce et al. (2017) GMPE
+
+  [Michele Simionato]
+  * Unified source model logic tree sampling with gsim logic tree sampling
+  * Added `early_latin` and `late_latin` sampling algorithms
+  * Changed the logic tree sampling algorithm and made it possible to use
+    both `early_weights` and `late_weights`
+  * Restored magnitude-dependent maximum distance
+>>>>>>> origin/master
   * Displaying the hazard maps in the WebUI for debugging purposes
   * Used the hazard map to get the disaggregation IML from the disaggregation
     PoE and added a warning for zero hazard
-  * Internal: implemented multi-run functionality
+  * Internal: implemented multi-run functionality (``oq engine --multi --run``)
   * Reduced tremendously the data transfer in disaggregation calculations
   * Internal: introduced compress/decompress utilities
   * Reduced the memory and disk space occupation in classical calculations with
@@ -109,7 +162,7 @@
   * Ported the method serialise_to_hmtk_csv implemented in the corresponding
     class of the catalogue toolkit + added a test into the GCMTCatalogue class.
   * Added a modifiable GMPE using the site term of CY14.
-  * Added a generalised modificable GMPE. This first version allows the 
+  * Added a generalised modificable GMPE. This first version allows the
     definition of the epsilon of the within event residual.
 
   [Michele Simionato]
@@ -118,6 +171,8 @@
     have homogeneous length across ruptures
   * Removed the dependency from PyYAML, replaced the .yml files in the HMTK with
     .toml files and added an utility `utils/yaml2toml`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 29 Sep 2020 11:53:24 +0000
 
 python3-oq-engine (3.9.0-1~xenial01) xenial; urgency=low
 

@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import abc
 import copy
 import time
@@ -36,15 +37,16 @@ from openquake.hazardlib import const, imt as imt_module
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim import base
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
 bymag = operator.attrgetter('mag')
 bydist = operator.attrgetter('dist')
 I16 = numpy.int16
-KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
+tmp = 'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc '
+tmp += 'closest_point'
+KNOWN_DISTANCES = frozenset(tmp.split())
 
 
 def get_distances(rupture, sites, param):
@@ -74,6 +76,11 @@ def get_distances(rupture, sites, param):
         dist = rupture.surface.get_azimuth(sites)
     elif param == 'azimuth_cp':
         dist = rupture.surface.get_azimuth_of_closest_point(sites)
+    elif param == 'closest_point':
+        t = rupture.surface.get_closest_points(sites)
+        dist = numpy.array([(lo, la, de) for lo, la, de in zip(t.lons,
+                                                               t.lats,
+                                                               t.depths)])
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
@@ -168,16 +175,14 @@ class ContextMaker(object):
 
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
-
         self.af = param.get('af', None)
-
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = (
-            param.get('maximum_distance') or IntegrationDistance({}))
+            param.get('maximum_distance') or MagDepDistance({}))
         self.trunclevel = param.get('truncation_level')
         self.effect = param.get('effect')
         for req in self.REQUIRES:
@@ -312,7 +317,7 @@ class ContextMaker(object):
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
         :returns:
-            Tuple of two items: sites and distances context.
+            Tuple of three items: rupture, sites and distances context.
 
         :raises ValueError:
             If any of declared required parameters (site, rupture and
@@ -339,7 +344,8 @@ class ContextMaker(object):
         ctxs = []
         for rup in ruptures:
             try:
-                ctx, r_sites, dctx = self.make_contexts(sites, rup)
+                ctx, r_sites, dctx = self.make_contexts(
+                    getattr(rup, 'sites', sites), rup)
             except FarAwayRupture:
                 continue
             for par in self.REQUIRES_SITES_PARAMETERS:
@@ -363,6 +369,9 @@ class ContextMaker(object):
         :param ctxs: a list of pairs (rup, dctx)
         :returns: collapsed contexts
         """
+        if len(ctxs) == 1:
+            return ctxs
+
         if self.collapse_level >= 3:  # hack, ignore everything except mag
             rrp = ['mag']
             rnd = 0  # round distances to 1 km
@@ -952,7 +961,7 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     :param mags: an ordered list of magnitude strings with format %.2f
     :param sitecol1: a SiteCollection with a single site
     :param gsims_by_trt: a dictionary trt -> gsims
-    :param maximum_distance: an IntegrationDistance object
+    :param maximum_distance: an MagDepDistance object
     :param imtls: a DictArray with intensity measure types and levels
     :returns: a dict magnitude-string -> array(#dists, #trts)
     """
@@ -992,8 +1001,10 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
     aw = hdf5.ArrayWrapper((), {})
     # computing the effect make sense only if all IMTs have the same
     # unity of measure; for simplicity we will consider only PGA and SA
-    psd = (oq.pointsource_distance.interp(mags)
-           if oq.pointsource_distance is not None else {})
+    psd = oq.pointsource_distance
+    if psd is not None:
+        psd.interp(mags)
+        psd = psd.ddic
     if psd:
         logging.info('Computing effect of the ruptures')
         allmags = set()
@@ -1012,12 +1023,12 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
         minint = oq.minimum_intensity.get('default', 0)
         for trt, eff in effect.items():
             if minint:
-                oq.maximum_distance.magdist[trt] = eff.dist_by_mag(minint)
+                oq.maximum_distance.ddic[trt] = eff.dist_by_mag(minint)
             # build a dict trt -> mag -> dst
             if psd and set(psd[trt].values()) == {-1}:
-                maxdist = oq.maximum_distance[trt]
+                maxdist = oq.maximum_distance(trt)
                 psd[trt] = eff.dist_by_mag(eff.collapse_value(maxdist))
-    return aw, psd
+    return aw
 
 
 # not used right now

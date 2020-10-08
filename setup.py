@@ -79,11 +79,10 @@ extras_require = {
                 "gunicorn",
                 "python-prctl ==1.6.1",
                 "setproctitle"],
-    'plotting':  [
-        'basemap >=1.0',
+    'osgeo':  [
         'pyproj >=1.9',
+        'GDAL >= 2.4',
     ],
-    'platform': ["GDAL >=2.3, <3"],
     'dev':  [
         'pytest >=4.5',
         'flake8 >=3.5, <3.8',

@@ -309,12 +309,19 @@ class CompositeSourceModel:
         return [src for src_group in self.src_groups
                 for src in src_group]
 
-    def get_num_probs_occur(self):
+    def get_groups(self, eri):
         """
-        :returns: the number of probs_occur from the underlying nonpar sources
+        :param eri: effective source model realization ID
+        :returns: SourceGroups associated to the given `eri`
         """
-        return max(getattr(src, 'num_probs_occur', 0)
-                   for src in self.get_sources())
+        src_groups = []
+        for sg in self.src_groups:
+            grp_id = self.full_lt.get_grp_id(sg.trt, eri)
+            src_group = copy.copy(sg)
+            src_group.sources = [src for src in sg if grp_id in src.grp_ids]
+            if len(src_group):
+                src_groups.append(src_group)
+        return src_groups
 
     def get_floating_spinning_factors(self):
         """

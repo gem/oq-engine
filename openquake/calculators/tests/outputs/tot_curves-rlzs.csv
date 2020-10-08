@@ -1,3 +1,3 @@
-#,,,,,"generated_by='OpenQuake engine 3.10.0-git74409ddbf1', start_date='2020-05-28T15:32:44', checksum=669914587, kind='tot_curves-rlzs', risk_investigation_time=50.0"
+#,,,,,"generated_by='OpenQuake engine 3.10.0-gitace1f5250e', start_date='2020-09-21T08:53:51', checksum=2241161351, kind='tot_curves-rlzs', risk_investigation_time=50.0"
 return_period,rlz,loss_type,loss_value,loss_ratio,annual_frequency_of_exceedence
 10,0,structural,1.58760E+03,1.44327E-01,1.00000E-01

@@ -132,12 +132,19 @@ site_param_dt = {
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
 
-    # parameters for geotechnic hazard
-    'liquefaction_susceptibility': numpy.int16,
-    'landsliding_susceptibility': numpy.int16,
+    # parameters for secondary perils
+    'friction_mid': numpy.float64,
+    'cohesion_mid': numpy.float64,
+    'saturation': numpy.float64,
+    'dry_density': numpy.float64,
+    'Fs': numpy.float64,
+    'crit_accel': numpy.float64,
+    'unit': (numpy.string_, 5),
+    'liq_susc_cat': (numpy.string_, 2),
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
+    'gwd': numpy.float64,
     'cti': numpy.float64,
     'dc': numpy.float64,
     'dr': numpy.float64,
@@ -278,7 +285,7 @@ class SiteCollection(object):
         new.complete = self.complete
         return new
 
-    def add_col(self, colname, dtype):
+    def add_col(self, colname, dtype, values=None):
         """
         Add a column to the underlying array
         """
@@ -288,6 +295,8 @@ class SiteCollection(object):
         arr = numpy.zeros(len(self), dtlist)
         for name in names:
             arr[name] = self.array[name]
+        if values is not None:
+            arr[colname] = values
         self.array = arr
 
     def make_complete(self):

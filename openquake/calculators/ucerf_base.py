@@ -233,7 +233,8 @@ class UCERFSource(BaseSeismicSource):
         """
         new = copy.copy(self)
         new.grp_id = grp_id
-        new.source_id = branch_id
+        new.source_id = branch_id  # i.e. FM3_1/ABM/Shaw09Mod/
+        # DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
         new.idx_set = build_idx_set(branch_id, self.start_date)
         with h5py.File(self.source_file, "r") as hdf5:
             new.start = 0

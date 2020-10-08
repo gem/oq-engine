@@ -721,6 +721,7 @@ class Starmap(object):
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
         self.monitor = Monitor(task_func.__name__)
+        self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
@@ -741,6 +742,7 @@ class Starmap(object):
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
+        self.t0 = time.time()
         if self.distribute == 'zmq':  # add a check
             err = workerpool.check_status()
             if err:
@@ -755,12 +757,8 @@ class Starmap(object):
         total = submitted + queued
         done = submitted - self.todo
         percent = int(float(done) / total * 100)
-        fname = self.task_func.__name__
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
-            nbytes = sum(self.sent[fname].values())
-            self.progress('%s %s sent, %d submitted, %d queued',
-                          self.name, humansize(nbytes), submitted, queued)
         elif percent > self.prev_percent:
             self.progress('%s %3d%% [%d submitted, %d queued]',
                           self.name, percent, submitted, queued)
@@ -774,6 +772,7 @@ class Starmap(object):
         monitor = monitor or self.monitor
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # first time
+            self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
@@ -846,6 +845,11 @@ class Starmap(object):
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
+
+        nbytes = sum(self.sent[self.task_func.__name__].values())
+        if nbytes > 1E6:
+            logging.info('Sent %d tasks, %s in %d seconds', len(self.tasks),
+                         humansize(nbytes), time.time() - self.t0)
 
         isocket = iter(self.socket)
         self.todo = len(self.tasks)

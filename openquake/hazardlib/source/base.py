@@ -41,7 +41,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     splittable = True
     serial = 0  # set in init_serials
     checksum = 0  # set in source_reader
-    grp_id = ()
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
