@@ -84,13 +84,12 @@ class Print(object):
 
 
 class InfoTestCase(unittest.TestCase):
-    EXPECTED = "<OqParam area_source_discretization=10.0, base_path="
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
             info(path)
-        self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
+        self.assertIn('hazard_imtls', str(p))
 
     # poor man tests: checking that the flags produce a few characters
     # (more than 10) and do not break; I am not checking the precise output
@@ -146,7 +145,7 @@ class InfoTestCase(unittest.TestCase):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
             info(path)
-        self.assertIn('area_source_discretization=10', str(p))
+        self.assertIn('Classical Hazard QA Test, Case 9', str(p))
 
     def test_logictree(self):
         path = os.path.join(os.path.dirname(case_9.__file__),
