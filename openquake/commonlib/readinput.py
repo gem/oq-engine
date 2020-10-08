@@ -205,35 +205,34 @@ def _update(params, items, base_path):
             params[key] = value
 
 
-def get_params(job_inis, **kw):
+def get_params(job_ini, **kw):
     """
-    Parse one or more INI-style config files.
+    Parse a .ini or .toml config file, or a .zip archive
 
-    :param job_inis:
-        List of configuration files (or list containing a single zip archive)
+    :param job_ini:
+        Configuration file or zip archive
     :param kw:
         Optionally override some parameters
     :returns:
         A dictionary of parameters
     """
     input_zip = None
-    if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
-        input_zip = job_inis[0]
+    if job_ini.endswith('.zip'):
+        input_zip = job_ini
         job_inis = extract_from_zip(
-            job_inis[0], ['job_hazard.ini', 'job_haz.ini',
-                          'job.ini', 'job_risk.ini'])
+            job_ini, ['job_hazard.ini', 'job_haz.ini',
+                      'job.ini', 'job_risk.ini'])
         if not job_inis:
             raise NameError('Could not find job.ini inside %s' % input_zip)
 
-    not_found = [ini for ini in job_inis if not os.path.exists(ini)]
-    if not_found:  # something was not found
-        raise IOError('File not found: %s' % not_found[0])
+    if not os.path.exists(job_ini):
+        raise IOError('File not found: %s' % job_ini)
 
     cp = configparser.ConfigParser()
-    cp.read(job_inis, encoding='utf8')
+    cp.read([job_ini], encoding='utf8')
 
     # directory containing the config files we're parsing
-    job_ini = os.path.abspath(job_inis[0])
+    job_ini = os.path.abspath(job_ini)
     base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     if input_zip:
@@ -300,7 +299,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
         calculators or base.calculators)
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        job_ini = get_params([os.path.join(basedir, job_ini)])
+        job_ini = get_params(os.path.join(basedir, job_ini))
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
     job_ini.update(kw)
