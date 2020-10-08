@@ -117,7 +117,7 @@ def start_ebrisk(rgetter, param, monitor):
     Launcher for ebrisk tasks
     """
     srcfilter = monitor.read_pik('srcfilter')
-    rgetters = list(rgetter.split(srcfilter, param['ebrisk_maxsize']))
+    rgetters = list(rgetter.split(srcfilter, param['maxweight']))
     for rg in rgetters[:-1]:
         msg = 'produced subtask'
         try:
@@ -188,7 +188,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                           self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
-        self.param['ebrisk_maxsize'] = int(oq.ebrisk_maxsize)
+        ct = oq.concurrent_tasks or 1
+        self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(lba.loss_names)
         self.check_number_loss_curves()
