@@ -103,7 +103,7 @@ class HassaniAtkinson2020SInter(GMPE):
         fsnonlin = self._fsnonlin_ss14(C, sites.vs30, pga_rock)
         fvs30 = self._fvs30(C, sites.vs30)
         fz2pt5 = self._fz2pt5(C, sites.z2pt5)
-        ffpeak = self._ffpeak(C)
+        ffpeak = self._ffpeak(C, imt)
     
         mean = 10 ** (fm + fdsigma + fz + fkappa + fgamma
                       + self.CONST_REGION['cc'] + clf + C['chf']
@@ -114,10 +114,9 @@ class HassaniAtkinson2020SInter(GMPE):
             mean = mean / 981
         mean = np.log(mean)
 
-        #print(sites.vs30, rup.mag, dists.rrup)
         if C['b3'] == -0.2813:
-            #print(fm, fdsigma, fz[-1], fkappa, fgamma[-1], self.CONST_REGION['cc'], clf, C['chf'], C['amp_cr'], fvs30[-1], fz2pt5[-1], ffpeak, fsnonlin[-1])
-            print(mean)
+            print(fm, fdsigma, fz[-1], fkappa, fgamma[-1], self.CONST_REGION['cc'], clf, C['chf'], C['amp_cr'], fvs30[-1], fz2pt5[-1], ffpeak, fsnonlin[-1])
+            print(np.exp(mean)*981)
 
         stddevs = self.get_stddevs(C, stddev_types)
 
@@ -178,22 +177,19 @@ class HassaniAtkinson2020SInter(GMPE):
         return eds0 + eds1 * math.log10(dsigma) \
                + eds2 * math.log10(dsigma) ** 2
 
-    def _ffpeak(self, C):
-        if C['f'] == -9 or self.fpeak <= 0:
-            # TODO: check if imt has period and use below too
+    def _ffpeak(self, C, imt):
+        if not imt.name == "SA" or self.fpeak <= 0:
             # pgv, pga or unknown fpeak
             return 0
 
         s = self.CONSTANTS
         x = self.fpeak / 10 ** C['f']
 
-        if x < 0:
-            return 0
         if x <= s['x0']:
             return s['cfp0']
-        elif x <= s['x1']:
+        if x <= s['x1']:
             return s['cfp0'] + s['cfp1'] * math.log10(x / s['x0'])
-        elif x <= s['x2']:
+        if x <= s['x2']:
             return s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
                    + s['cfp2'] * math.log10(x / s['x1'])
         return s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
@@ -253,19 +249,20 @@ class HassaniAtkinson2020SInter(GMPE):
 
     def _fz2pt5(self, C, z2pt5):
         s = self.CONSTANTS
-        # mask values for log
-        masked = np.where(z2pt5 > 0, z2pt5, 1)
-        fz2pt5 = np.where(z2pt5 > 0, C['cz0'], 0)
-        fz2pt5 = np.where((s['zx0'] < z2pt5) & (z2pt5 <= s['zx1']),
-                          C['cz0'] + C['cz1'] * np.log10(masked / s['zx0']),
-                          fz2pt5)
-        # TODO: z2pt5 < 0 still always takes log
-        fz2pt5 = np.where((s['zx1'] < z2pt5)  & (z2pt5 <= s['zx2']),
-                          C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0'])
-                          + C['cz2'] * np.log10(masked / s['zx1']), fz2pt5)
-        return np.where(s['zx2'] < z2pt5,
-                        C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0'])
-                        + C['cz2'] * math.log10(s['zx2'] / s['zx1']), fz2pt5)
+        fz2pt5 = np.where(z2pt5 >= 0, C['cz0'], 0)
+
+        idx = np.where((s['zx0'] < z2pt5) & (z2pt5 <= s['zx1']))
+        fz2pt5[idx] = C['cz0'] + C['cz1'] * np.log10(z2pt5[idx] / s['zx0'])
+
+        idx = np.where((s['zx1'] < z2pt5)  & (z2pt5 <= s['zx2']))
+        fz2pt5[idx] = C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0']) \
+                      + C['cz2'] * np.log10(z2pt5[idx] / s['zx1'])
+
+        idx = np.where(s['zx2'] < z2pt5)
+        fz2pt5[idx] = C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0']) \
+                      + C['cz2'] * math.log10(s['zx2'] / s['zx1'])
+
+        return fz2pt5
 
     def _fz_ha18(self, C, mag, rrup):
         s = self.CONSTANTS
