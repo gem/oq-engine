@@ -37,12 +37,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore, hdf5
+from openquake.baselib import datastore, hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim, valid
-
-
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base
 from openquake.calculators.export import export
@@ -70,7 +68,7 @@ XML = 'application/xml'
 JSON = 'application/json'
 HDF5 = 'application/x-hdf'
 
-DEFAULT_LOG_LEVEL = 'info'
+DEFAULT_LOG_LEVEL = config.distribution.log_level
 
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
@@ -569,7 +567,7 @@ def submit_job(job_ini, username, hazard_job_id=None):
     oq = engine.job_from(
         job_ini, job_id, username, hazard_calculation_id=hazard_job_id)
     proc = Process(target=engine.run_calc,
-                   args=(job_id, oq, '', 'info', None),
+                   args=(job_id, oq, '', DEFAULT_LOG_LEVEL, None),
                    kwargs=dict(hazard_calculation_id=hazard_job_id,
                                username=username))
     proc.start()
