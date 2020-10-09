@@ -305,7 +305,7 @@ def extract_assets(dstore, what):
             tagidx, = numpy.where(dic[tag] == val)
             cond |= arr[tag] == tagidx
         arr = arr[cond]
-    return ArrayWrapper(arr, dic)
+    return ArrayWrapper(arr, dict(json=dumps(dic)))
 
 
 @extract.add('asset_risk')
