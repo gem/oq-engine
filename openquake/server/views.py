@@ -717,22 +717,22 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()
-    query_string = ''
+    path = request.get_full_path()
+    n = len(request.path_info)
+    query_string = unquote_plus(path[n:])
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
             fd, fname = tempfile.mkstemp(
                 prefix=what.replace('/', '-'), suffix='.npz')
             os.close(fd)
-            n = len(request.path_info)
-            query_string = unquote_plus(request.get_full_path()[n:])
             obj = _extract(ds, what + query_string)
             hdf5.save_npz(obj, fname)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
-            content='%s: %s in /extract/%s\n%s' %
-            (exc.__class__.__name__, exc, what + query_string, tb),
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, path, tb),
             content_type='text/plain', status=500)
 
     # stream the data back
