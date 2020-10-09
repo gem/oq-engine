@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Improved submitting calculations to the WebAPI: now they can be run on a zmq
+    cluster, serialize_jobs is honored and the log level is configurable
+
   [Graeme Weatherill]
   * Adds new methods to the modifiable GMPE to apply linear scaling factors
     to the median and standard deviation (IMT-dependent and IMT-independent)
