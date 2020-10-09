@@ -114,7 +114,7 @@ class EngineServerTestCase(unittest.TestCase):
             raise ValueError(b'Invalid JSON response: %r' % resp.content)
         if resp.status_code == 200:  # ok case
             pid = js['pid']
-            time.sleep(1)  # wait a bit for the calc to start
+            time.sleep(5)  # wait a bit for the calc to start
             return get_job_id(pid)
         else:  # error case
             return ''.join(js)  # traceback string
