@@ -258,9 +258,14 @@ class OqParam(valid.ParamSet):
         if 'validated' in names_vals:
             # assume most attributes already validated
             vars(self).update(names_vals)
-            md = calc.filters.MagDepDistance()
-            md.update(names_vals['maximum_distance'])
-            self.maximum_distance = md
+            if 'hazard_calculation_id' in names_vals and isinstance(
+                    names_vals['hazard_calculation_id'], str):
+                self.hazard_calculation_id = int(
+                    names_vals['hazard_calculation_id'])
+            if 'maximum_distance' in names_vals and isinstance(
+                    names_vals['maximum_distance'], str):
+                self.maximum_distance = valid.MagDepDistance.new(
+                            names_vals['maximum_distance'])
             if 'pointsource_distance' in names_vals and isinstance(
                     names_vals['pointsource_distance'], str):
                 self.pointsource_distance = valid.MagDepDistance.new(
