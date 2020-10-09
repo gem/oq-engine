@@ -392,6 +392,16 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     dist = parallel.oq_distribute()
     jobparams = []
     multi = kw.pop('multi', None)
+    if len(job_inis) == 1:
+        oq = readinput.get_oqparam(job_inis[0])
+        dic = {k: v for k, v in vars(oq).items() if not k.startswith('_')}
+        [(param, values)] = oq.sensitivity_analysis.items()
+        job_inis = []
+        for value in values:
+            new = dic.copy()
+            new[param] = value
+            job_inis.append(dic)
+
     for job_ini in job_inis:
         # NB: the logs must be initialized BEFORE everything
         job_id = logs.init('job', getattr(logging, log_level.upper()))
