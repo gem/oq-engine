@@ -34,7 +34,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51, case_52)
+    case_50, case_51, case_52, case_53, case_54)
 
 aac = numpy.testing.assert_allclose
 
@@ -269,11 +269,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\
 hazard_curve-max-PGA.csv,
-hazard_curve-max-SA(0.1).csv
 hazard_curve-mean-PGA.csv
-hazard_curve-mean-SA(0.1).csv
 hazard_curve-std-PGA.csv
-hazard_curve-std-SA(0.1).csv
 hazard_uhs-max.csv
 hazard_uhs-mean.csv
 hazard_uhs-std.csv
@@ -289,7 +286,7 @@ hazard_uhs-std.csv
         # npz exports
         [fname] = export(('hmaps', 'npz'), self.calc.datastore)
         arr = numpy.load(fname)['all']
-        self.assertEqual(arr['mean'].dtype.names, ('PGA', 'SA(0.1)'))
+        self.assertEqual(arr['mean'].dtype.names, ('PGA',))
         [fname] = export(('uhs', 'npz'), self.calc.datastore)
         arr = numpy.load(fname)['all']
         self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
@@ -484,8 +481,6 @@ hazard_uhs-std.csv
         probs_occur = self.calc.datastore['mag_8.20/rctx']['probs_occur']
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 4)  # 2 nonparam rups x 2
-        npo = self.calc.csm.get_num_probs_occur()  # 2 probs_occur per rupture
-        self.assertEqual(npo, 2)
 
         # make sure there is an error when trying to disaggregate
         with self.assertRaises(NotImplementedError):
@@ -733,3 +728,31 @@ hazard_uhs-std.csv
         aac(haz, 0.558779, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         aac(ws, [0.1] * 10)  # equal weights
+
+    def test_case_53(self):
+        # Test case with 4-branch scaled backbone logic tree
+        # (2 median, 2 stddev adjustments) using the ModifiableGMPE and the
+        # period-independent adjustment factors
+        self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
+                               "hazard_curve-rlz-000-SA(0.5).csv",
+                               "hazard_curve-rlz-001-PGA.csv",
+                               "hazard_curve-rlz-001-SA(0.5).csv",
+                               "hazard_curve-rlz-002-PGA.csv",
+                               "hazard_curve-rlz-002-SA(0.5).csv",
+                               "hazard_curve-rlz-003-PGA.csv",
+                               "hazard_curve-rlz-003-SA(0.5).csv"],
+                              case_53.__file__)
+
+    def test_case_54(self):
+        # Test case with 4-branch scaled backbone logic tree
+        # (2 median, 2 stddev adjustments) using the ModifiableGMPE and the
+        # period-dependent adjustment factors
+        self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
+                               "hazard_curve-rlz-000-SA(0.5).csv",
+                               "hazard_curve-rlz-001-PGA.csv",
+                               "hazard_curve-rlz-001-SA(0.5).csv",
+                               "hazard_curve-rlz-002-PGA.csv",
+                               "hazard_curve-rlz-002-SA(0.5).csv",
+                               "hazard_curve-rlz-003-PGA.csv",
+                               "hazard_curve-rlz-003-SA(0.5).csv"],
+                              case_54.__file__)

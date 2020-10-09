@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import csv
+import json
 import logging
 import numpy
 import shapely
@@ -223,10 +224,10 @@ class MultiRiskCalculator(base.RiskCalculator):
         """
         Compute aggregated risk
         """
-        md = extract(self.datastore, 'exposure_metadata')
-        categories = [cat.replace('value-', 'loss-') for cat in md] + [
+        md = json.loads(extract(self.datastore, 'exposure_metadata').json)
+        categories = [cat.replace('value-', 'loss-') for cat in md['names']] + [
             ds + '-structural' for ds in self.crmodel.damage_states]
-        multi_risk = list(md.array)
+        multi_risk = md['names']
         multi_risk += sorted(
             set(arr.dtype.names) -
             set(self.datastore['assetcol/array'].dtype.names))

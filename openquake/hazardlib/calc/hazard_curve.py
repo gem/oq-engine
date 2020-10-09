@@ -24,26 +24,15 @@ than 20 lines of code:
 .. code-block:: python
 
    import sys
-   import logging
-   from openquake.baselib import parallel
-   from openquake.hazardlib.calc.filters import SourceFilter
-   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-   from openquake.commonlib import readinput
+   from openquake.commonlib import logs
+   from openquake.calculators.base import get_calc
 
    def main(job_ini):
-       logging.basicConfig(level=logging.INFO)
-       oq = readinput.get_oqparam(job_ini)
-       sitecol = readinput.get_site_collection(oq)
-       src_filter = SourceFilter(sitecol, oq.maximum_distance)
-       csm = readinput.get_composite_source_model(oq, srcfilter=src_filter)
-       for sm in csm.full_lt.sm_rlzs:
-           for rlz in csm.full_lt.get_rlzs(sm.ordinal):
-               gsim_by_trt = csm.full_lt.gsim_by_trt(rlz)
-               hcurves = calc_hazard_curves(
-                   sm.src_groups, src_filter, oq.imtls,
-                   gsim_by_trt, oq.truncation_level,
-                   parallel.Starmap.apply)
-           print('rlz=%s, hcurves=%s' % (rlz, hcurves))
+       calc_id = logs.init()
+       calc = get_calc(job_ini, calc_id)
+       calc.run(individual_curves='true', shutdown=True)
+       print('The hazard curves are in %s::/hcurves-rlzs'
+             % calc.datastore.filename)
 
    if __name__ == '__main__':
        main(sys.argv[1])  # path to a job.ini file
@@ -56,7 +45,7 @@ the engine manages all the realizations at once.
 import operator
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
-from openquake.baselib.general import DictArray, groupby, AccumDict, compress
+from openquake.baselib.general import DictArray, groupby, AccumDict
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -136,6 +125,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
                 rup_data=rup_data, extra=extra)
 
 
+# not used in the engine, only in tests and possibly notebooks
 def calc_hazard_curves(
         groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
         apply=sequential_apply, filter_distance='rjb', reqv=None, **kwargs):
@@ -184,7 +174,8 @@ def calc_hazard_curves(
     idx = 0
     for i, grp in enumerate(groups):
         for src in grp:
-            src.grp_id = i
+            if not hasattr(src, 'grp_id'):
+                src.grp_id = i  # fix grp_id
             src.id = idx
             idx += 1
     imtls = DictArray(imtls)

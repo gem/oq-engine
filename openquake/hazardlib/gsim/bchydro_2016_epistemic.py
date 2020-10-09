@@ -267,7 +267,7 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -343,7 +343,7 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -421,7 +421,7 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -506,7 +506,7 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -584,7 +584,7 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -662,7 +662,7 @@ class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")

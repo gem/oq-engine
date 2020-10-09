@@ -168,11 +168,12 @@ class KothaEtAl2020(GMPE):
     #: Required distance measure is Rjb (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def __init__(self, sigma_mu_epsilon=0.0, c3=None, ergodic=True):
+    def __init__(self, sigma_mu_epsilon=0.0, c3=None, ergodic=True, **kwargs):
         """
         Instantiate setting the sigma_mu_epsilon and c3 terms
         """
-        super().__init__()
+        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, c3=c3,
+                         ergodic=ergodic, **kwargs)
         if isinstance(c3, dict):
             # Inputing c3 as a dictionary sorted by the string representation
             # of the IMT

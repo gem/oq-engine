@@ -114,12 +114,13 @@ RM       4_000
 
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=2E-6)
+                              delta=5E-6)
 
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # one per realization
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=5E-6)
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
@@ -173,7 +174,7 @@ RM       4_000
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         df = read_csv(fname, index='event_id')
         nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
-        self.assertEqual(nodamage, 1068763.0)
+        self.assertEqual(nodamage, 1086437.0)
 
         [fname] = export(('avg_damages-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_damages.csv', fname)
@@ -182,9 +183,6 @@ RM       4_000
         self.assertEqualFiles('expected/losses_asset.csv', fname)
 
     def test_case_10(self):
-        # case with more IMTs in the imported GMFs than required
-        self.run_calc(case_10.__file__, 'job.ini')
-
-        fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
-        for i, fname in enumerate(fnames):
-            self.assertEqualFiles('expected/avg_damages-%d.csv' % i, fname)
+        # error case: there a no RiskInputs
+        with self.assertRaises(RuntimeError):
+            self.run_calc(case_10.__file__, 'job.ini')
