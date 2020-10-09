@@ -34,6 +34,7 @@ import tempfile
 import string
 import random
 from django.test import Client
+from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.baselib.workerpool import TimeoutError
@@ -46,6 +47,14 @@ from openquake.commands import engine
 def loadnpz(lines):
     bio = io.BytesIO(b''.join(ln for ln in lines))
     return numpy.load(bio)
+
+
+def get_job_id(pid):
+    q = "SELECT max(id) FROM job WHERE pid=?x"
+    rows = dbcmd(q, pid)
+    if not rows:
+        print(dbcmd("SELECT id FROM job WHERE pid=?x", pid))
+    return rows[0][0]
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -70,6 +79,9 @@ class EngineServerTestCase(unittest.TestCase):
             js = resp.content.decode('utf8')
         else:
             js = bytes(loadnpz(resp.streaming_content)['json'])
+        if not js:
+            print('Empty json from ')
+            return {}
         try:
             return json.loads(js)
         except Exception:
@@ -95,6 +107,7 @@ class EngineServerTestCase(unittest.TestCase):
         raise TimeoutError(running_calcs)
 
     def postzip(self, archive):
+        config.distribution['log_level'] = 'warning'
         with open(os.path.join(self.datadir, archive), 'rb') as a:
             resp = self.post('run', dict(archive=a))
         try:
@@ -104,7 +117,7 @@ class EngineServerTestCase(unittest.TestCase):
         if resp.status_code == 200:  # ok case
             pid = js['pid']
             time.sleep(1)  # wait a bit for the calc to start
-            return pid
+            return get_job_id(pid)
         else:  # error case
             return ''.join(js)  # traceback string
 
@@ -135,8 +148,7 @@ class EngineServerTestCase(unittest.TestCase):
         assert resp.status_code == 404, resp
 
     def test_ok(self):
-        self.postzip('archive_ok.zip')
-        return
+        job_id = self.postzip('archive_ok.zip')
         self.wait()
         log = self.get('%s/log/:' % job_id)
         self.assertGreater(len(log), 0)
@@ -236,8 +248,7 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertGreater(len(got['array']), 0)
 
     def test_classical(self):
-        self.postzip('classical.zip')
-        return
+        job_id = self.postzip('classical.zip')
         self.wait()
         # check that we get at least the following 6 outputs
         # fullreport, input, hcurves, hmaps, realizations, events
@@ -271,10 +282,9 @@ class EngineServerTestCase(unittest.TestCase):
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
-        self.postzip('archive_err_1.zip')
-        return
+        job_id = self.postzip('archive_err_1.zip')
         self.wait()
-    
+
         # download the datastore, even if incomplete
         resp = self.c.get('/v1/calc/%s/datastore' % job_id)
         self.assertEqual(resp.status_code, 200)
@@ -290,14 +300,12 @@ class EngineServerTestCase(unittest.TestCase):
 
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
-        self.postzip('archive_err_2.zip')
-        return
+        tb_str = self.postzip('archive_err_2.zip')
         self.assertIn('No such file', tb_str)
 
     def test_err_3(self):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
-        self.postzip('archive_err_3.zip')
-        return
+        tb_str = self.postzip('archive_err_3.zip')
         self.assertIn('Could not find any file of the form', tb_str)
 
     def test_available_gsims(self):

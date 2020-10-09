@@ -68,8 +68,6 @@ XML = 'application/xml'
 JSON = 'application/json'
 HDF5 = 'application/x-hdf'
 
-DEFAULT_LOG_LEVEL = config.distribution.log_level
-
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
 #: XML by default.
@@ -558,13 +556,18 @@ def calc_run(request):
                         status=status)
 
 
-def submit_job(job_ini, username, hazard_job_id=None):
+def submit_job(job_ini, username, hazard_calculation_id=None):
     """
     Create a job object from the given job.ini file in the job directory
-    and run it in a new process. Returns the job ID and PID.
+    and run it in a new process. Returns a PID.
     """
+    # errors in validating oqparam are reported immediately
+    params = vars(readinput.get_oqparam(job_ini))
+    # errors in the calculation are not reported but are visible in the log
     proc = Process(target=engine.run_jobs,
-                   args=([job_ini], DEFAULT_LOG_LEVEL, None, '', username))
+                   args=([params], config.distribution.log_level, None,
+                         '', username),
+                   kwargs={'hazard_calculation_id': hazard_calculation_id})
     proc.start()
     return proc
 

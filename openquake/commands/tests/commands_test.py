@@ -31,6 +31,7 @@ from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
+from openquake.engine.engine import run_jobs
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
@@ -39,7 +40,6 @@ from openquake.commands.export import export
 from openquake.commands.extract import extract
 from openquake.commands.sample import sample
 from openquake.commands.reduce_sm import reduce_sm
-from openquake.commands.engine import run_jobs
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
