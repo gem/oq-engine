@@ -499,8 +499,9 @@ class HazardCalculator(BaseCalculator):
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
         if self.amplifier:
+            gsim_lt = readinput.get_gsim_lt(oq)
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
-                                 self.full_lt.gsim_lt.values)
+                                 gsim_lt.values)
 
     def save_multi_peril(self):
         """Defined in MultiRiskCalculator"""

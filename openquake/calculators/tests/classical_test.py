@@ -747,13 +747,11 @@ hazard_uhs-std.csv
                                "hazard_curve-rlz-003-SA(0.5).csv"],
                               case_54.__file__)
 
-
     def test_case_55(self):
-
         # test with amplification function == 1
-        print(case_55.__file__)
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_55.__file__)
         hc_id = str(self.calc.datastore.calc_id)
+
         # test with amplification function == 2
         self.run_calc(case_55.__file__, 'job.ini',
                       hazard_calculation_id=hc_id,
