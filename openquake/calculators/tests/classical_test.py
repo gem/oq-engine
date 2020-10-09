@@ -34,7 +34,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51, case_52, case_53, case_54)
+    case_50, case_51, case_52, case_53, case_54, case_55)
 
 aac = numpy.testing.assert_allclose
 
@@ -555,22 +555,12 @@ hazard_uhs-std.csv
         self.assertEqual(self.calc.R, 9)  # there are 9 realizations
 
     def test_case_37(self):
-        # test with amplification function == 1
-        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_37.__file__)
-        hc_id = str(self.calc.datastore.calc_id)
-        # test with amplification function == 2
-        self.run_calc(case_37.__file__, 'job.ini',
-                      hazard_calculation_id=hc_id,
-                      amplification_csv='amplification2.csv')
-        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ampl_curve-PGA.csv', fname)
-
-        # test with amplification function == 2 and no levels
-        self.run_calc(case_37.__file__, 'job.ini',
-                      hazard_calculation_id=hc_id,
-                      amplification_csv='amplification2bis.csv')
-        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
+        # Christchurch
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "quantile_curve-0.16-PGA.csv",
+                               "quantile_curve-0.5-PGA.csv",
+                               "quantile_curve-0.84-PGA.csv"],
+                              case_37.__file__)
 
     def test_case_38(self):
         # BC Hydro GMPEs with epistemic adjustments
@@ -756,3 +746,24 @@ hazard_uhs-std.csv
                                "hazard_curve-rlz-003-PGA.csv",
                                "hazard_curve-rlz-003-SA(0.5).csv"],
                               case_54.__file__)
+
+
+    def test_case_55(self):
+
+        # test with amplification function == 1
+        print(case_55.__file__)
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_55.__file__)
+        hc_id = str(self.calc.datastore.calc_id)
+        # test with amplification function == 2
+        self.run_calc(case_55.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      amplification_csv='amplification2.csv')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ampl_curve-PGA.csv', fname)
+
+        # test with amplification function == 2 and no levels
+        self.run_calc(case_55.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      amplification_csv='amplification2bis.csv')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)

@@ -1,7 +1,7 @@
 
 | Test ID | Description |
 |---------|-------------|
-| case_1  | | 
+| case_1  | Checks .npz export, raises error when all source are discarded and checks wrong .ini | 
 | case_2  | | 
 | case_3  | | 
 | case_4  | | 
@@ -55,3 +55,4 @@
 | case_52 | |
 | case_53 | Tests the modifiable GMPE with imt-independent linear scaling factors on median and standard deviation |
 | case_54 | Tests the modifiable GMPE with imt-dependent linear scaling factors on median and standard deviation |
+| case_55 | Tests the use of amplification functions |
