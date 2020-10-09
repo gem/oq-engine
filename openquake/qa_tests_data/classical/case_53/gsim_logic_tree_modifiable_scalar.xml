@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
+<logicTree logicTreeID='lt1'>
+
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="Active Shallow Crust">
+
+        <logicTreeBranch branchID="low_median_low_sigma">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.AkkarEtAlRjb2014 = {}
+                set_scale_median_scalar.scaling_factor = 0.9
+                set_scale_total_sigma_scalar.scaling_factor = 0.8
+            </uncertaintyModel>
+            <uncertaintyWeight>0.3</uncertaintyWeight>
+        </logicTreeBranch>
+        
+        <logicTreeBranch branchID="high_median_low_sigma">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.AkkarEtAlRjb2014 = {}
+                set_scale_median_scalar.scaling_factor = 1.2
+                set_scale_total_sigma_scalar.scaling_factor = 0.8
+            </uncertaintyModel>
+            <uncertaintyWeight>0.3</uncertaintyWeight>
+        </logicTreeBranch>
+        
+        <logicTreeBranch branchID="low_median_high_sigma">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.AkkarEtAlRjb2014 = {}
+                set_scale_median_scalar.scaling_factor = 0.9
+                set_scale_total_sigma_scalar.scaling_factor = 1.1
+            </uncertaintyModel>
+            <uncertaintyWeight>0.2</uncertaintyWeight>
+        </logicTreeBranch>
+        
+        <logicTreeBranch branchID="high_median_high_sigma">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.AkkarEtAlRjb2014 = {}
+                set_scale_median_scalar.scaling_factor = 1.2
+                set_scale_total_sigma_scalar.scaling_factor = 1.1
+            </uncertaintyModel>
+            <uncertaintyWeight>0.2</uncertaintyWeight>
+        </logicTreeBranch>
+    </logicTreeBranchSet>
+</logicTree>
+</nrml>
