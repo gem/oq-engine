@@ -551,7 +551,6 @@ def calc_run(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        assert job_id is not None
         response_data = dict(status='created', job_id=job_id)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -571,9 +570,10 @@ def submit_job(job_ini, username, hazard_calculation_id=None):
                          '', username),
                    kwargs={'hazard_calculation_id': hazard_calculation_id})
     proc.start()
-    time.sleep(1)  # wait a bit
-    jobs = logs.dbcmd("SELECT max(id) FROM job WHERE pid=?x", proc.pid)
-    return jobs[0][0]
+    time.sleep(2)  # wait a bit for the job_id to be generated
+    rows = logs.dbcmd("SELECT max(id) FROM job WHERE pid=?x", proc.pid)
+    assert rows and rows[0][0], rows
+    return rows[0][0]
 
 
 @require_http_methods(['GET'])
