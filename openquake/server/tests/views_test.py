@@ -34,6 +34,7 @@ import tempfile
 import string
 import random
 from django.test import Client
+from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.baselib.workerpool import TimeoutError
@@ -46,6 +47,12 @@ from openquake.commands import engine
 def loadnpz(lines):
     bio = io.BytesIO(b''.join(ln for ln in lines))
     return numpy.load(bio)
+
+
+def get_job_id(pid):
+    jobs = dbcmd("SELECT * FROM job WHERE pid=?x ORDER by id", pid)
+    assert len(jobs), jobs
+    return jobs[-1].id
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -70,10 +77,13 @@ class EngineServerTestCase(unittest.TestCase):
             js = resp.content.decode('utf8')
         else:
             js = bytes(loadnpz(resp.streaming_content)['json'])
+        if not js:
+            print('Empty json from ')
+            return {}
         try:
             return json.loads(js)
         except Exception:
-            print('Invalid JSON, see %s' % gettemp(resp.content),
+            print('Invalid JSON, see %s' % gettemp(resp.content, remove=False),
                   file=sys.stderr)
             return {}
 
@@ -95,6 +105,7 @@ class EngineServerTestCase(unittest.TestCase):
         raise TimeoutError(running_calcs)
 
     def postzip(self, archive):
+        config.distribution['log_level'] = 'warning'
         with open(os.path.join(self.datadir, archive), 'rb') as a:
             resp = self.post('run', dict(archive=a))
         try:
@@ -102,10 +113,9 @@ class EngineServerTestCase(unittest.TestCase):
         except Exception:
             raise ValueError(b'Invalid JSON response: %r' % resp.content)
         if resp.status_code == 200:  # ok case
-            job_id = js['job_id']
-            self.job_ids.append(job_id)
-            time.sleep(1)  # wait a bit for the calc to start
-            return job_id
+            pid = js['pid']
+            time.sleep(5)  # wait a bit for the calc to start
+            return get_job_id(pid)
         else:  # error case
             return ''.join(js)  # traceback string
 
@@ -174,6 +184,8 @@ class EngineServerTestCase(unittest.TestCase):
         # check assets
         resp = self.c.get(
             extract_url + 'assets?taxonomy=MC-RLSB-2&taxonomy=W-SLFB-1')
+        if resp.status_code == 500:  # should never happen
+            raise RuntimeError(resp.content.decode('utf8'))
         got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 25)
 

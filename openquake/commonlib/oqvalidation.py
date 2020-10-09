@@ -255,6 +255,22 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
+        if 'validated' in names_vals:
+            # assume most attributes already validated
+            vars(self).update(names_vals)
+            md = calc.filters.MagDepDistance()
+            md.update(names_vals['maximum_distance'])
+            self.maximum_distance = md
+            if 'pointsource_distance' in names_vals and isinstance(
+                    names_vals['pointsource_distance'], str):
+                self.pointsource_distance = valid.MagDepDistance.new(
+                            names_vals['pointsource_distance'])
+            if 'region_constraint' in names_vals and isinstance(
+                  names_vals['region_constraint'], str):
+                self.region = valid.wkt_polygon(
+                    names_vals['region_constraint'])
+            return
+
         # support legacy names
         for name in list(names_vals):
             if name == 'quantile_hazard_curves':

@@ -62,7 +62,7 @@ investigation_time = 50
 export_dir = %s
         """ % (site_model_input, TMP))
         with self.assertRaises(ValueError) as ctx:
-            readinput.get_params([job_config])
+            readinput.get_params(job_config)
         self.assertIn('is an absolute path', str(ctx.exception))
 
     def test_get_oqparam_with_sites_csv(self):

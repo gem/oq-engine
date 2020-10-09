@@ -244,12 +244,12 @@ def register_signals():
         pass
 
 
-def job_from_file(job_ini, job_id, username, **kw):
+def job_from(job_ini, job_id, username, **kw):
     """
-    Create a full job profile from a job config file.
+    Create a full job profile from a job config file or a job dict
 
     :param job_ini:
-        Path to a job.ini file
+        Path to a job.ini file or job dictionary
     :param job_id:
         ID of the created job
     :param username:
@@ -369,6 +369,73 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
         finally:
             parallel.Starmap.shutdown()
     return calc
+
+
+def run_jobs(job_inis, log_level='info', log_file=None, exports='',
+             username=getpass.getuser(), **kw):
+    """
+    Run jobs using the specified config file and other options.
+
+    :param str job_inis:
+        A list of paths to .ini files, or a list of job dictionaries
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param exports:
+        A comma-separated string of export types requested by the user.
+    :param username:
+        Name of the user running the job
+    :param kw:
+        Extra parameters like hazard_calculation_id and calculation_mode
+    """
+    dist = parallel.oq_distribute()
+    jobparams = []
+    multi = kw.pop('multi', None)
+    for job_ini in job_inis:
+        # NB: the logs must be initialized BEFORE everything
+        job_id = logs.init('job', getattr(logging, log_level.upper()))
+        with logs.handle(job_id, log_level, log_file):
+            oqparam = job_from(job_ini, job_id, username, **kw)
+        if (not jobparams and not multi
+                and 'hazard_calculation_id' not in kw):
+            kw['hazard_calculation_id'] = job_id
+        jobparams.append((job_id, oqparam))
+    jobarray = len(jobparams) > 1 and multi
+    try:
+        poll_queue(job_id, poll_time=15)
+        # wait for an empty slot or a CTRL-C
+    except BaseException:
+        # the job aborted even before starting
+        for job_id, oqparam in jobparams:
+            logs.dbcmd('finish', job_id, 'aborted')
+        return jobparams
+    else:
+        for job_id, oqparam in jobparams:
+            dic = {'status': 'executing', 'pid': _PID}
+            if jobarray:
+                dic['hazard_calculation_id'] = jobparams[0][0]
+            logs.dbcmd('update_job', job_id, dic)
+    try:
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Asking the DbServer to start the workers')
+            logs.dbcmd('zmq_start')  # start the zworkers
+            logs.dbcmd('zmq_wait')  # wait for them to go up
+        allargs = [(job_id, oqparam, exports, log_level, log_file)
+                   for job_id, oqparam in jobparams]
+        if jobarray:
+            with general.start_many(run_calc, allargs):
+                pass
+        else:
+            for args in allargs:
+                run_calc(*args)
+    finally:
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Stopping the zworkers')
+            logs.dbcmd('zmq_stop')
+        elif dist.startswith('celery'):
+            celery_cleanup(config.distribution.terminate_workers_on_revoke)
+    return jobparams
 
 
 def version_triple(tag):

@@ -20,14 +20,11 @@ import shutil
 import json
 import logging
 import os
-import sys
 import tempfile
-import subprocess
-import threading
+import multiprocessing
 import traceback
 import signal
 import zlib
-import pickle
 import urllib.parse as urlparse
 import re
 import psutil
@@ -40,12 +37,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore, hdf5
+from openquake.baselib import datastore, hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim, valid
-
-
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base
 from openquake.calculators.export import export
@@ -63,6 +58,8 @@ from wsgiref.util import FileWrapper
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
+Process = multiprocessing.get_context('spawn').Process
+
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -70,8 +67,6 @@ NOT_IMPLEMENTED = 501
 XML = 'application/xml'
 JSON = 'application/json'
 HDF5 = 'application/x-hdf'
-
-DEFAULT_LOG_LEVEL = 'info'
 
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
@@ -547,7 +542,7 @@ def calc_run(request):
 
     user = utils.get_user(request)
     try:
-        job_id, pid = submit_job(inifiles[0], user, hazard_job_id)
+        pid = submit_job(inifiles[0], user, hazard_job_id).pid
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -555,48 +550,26 @@ def calc_run(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        response_data = dict(job_id=job_id, status='created', pid=pid)
+        response_data = dict(status='created', pid=pid)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
 
-# run calcs on the WebServer machine
-RUNCALC = '''\
-import os, sys, pickle
-from openquake.baselib import config
-from openquake.commonlib import logs
-from openquake.engine import engine
-if __name__ == '__main__':
-    oqparam = pickle.loads(%(pik)r)
-    logs.init(%(job_id)s)
-    engine.run_calc(
-        %(job_id)s, oqparam, '',
-       hazard_calculation_id=%(hazard_job_id)s,
-       username='%(username)s')
-    os.remove(__file__)
-'''
-
-
-def submit_job(job_ini, username, hazard_job_id=None):
+def submit_job(job_ini, username, hazard_calculation_id=None):
     """
     Create a job object from the given job.ini file in the job directory
-    and run it in a new process. Returns the job ID and PID.
+    and run it in a new process. Returns a PID.
     """
-    job_id = logs.init('job')
-    oq = engine.job_from_file(
-        job_ini, job_id, username, hazard_calculation_id=hazard_job_id)
-    pik = pickle.dumps(oq, protocol=0)  # human readable protocol
-    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,
-                          username=username)
-    tmp_py = gettemp(code, suffix='.py')
-    # print(code, tmp_py)  # useful when debugging
-    devnull = subprocess.DEVNULL
-    popen = subprocess.Popen([sys.executable, tmp_py],
-                             stdin=devnull, stdout=devnull, stderr=devnull)
-    threading.Thread(target=popen.wait).start()
-    logs.dbcmd('update_job', job_id, {'pid': popen.pid})
-    return job_id, popen.pid
+    # errors in validating oqparam are reported immediately
+    params = vars(readinput.get_oqparam(job_ini))
+    # errors in the calculation are not reported but are visible in the log
+    proc = Process(target=engine.run_jobs,
+                   args=([params], config.distribution.log_level, None,
+                         '', username),
+                   kwargs={'hazard_calculation_id': hazard_calculation_id})
+    proc.start()
+    return proc
 
 
 @require_http_methods(['GET'])
@@ -744,22 +717,22 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()
-    query_string = ''
+    path = request.get_full_path()
+    n = len(request.path_info)
+    query_string = unquote_plus(path[n:])
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
             fd, fname = tempfile.mkstemp(
                 prefix=what.replace('/', '-'), suffix='.npz')
             os.close(fd)
-            n = len(request.path_info)
-            query_string = unquote_plus(request.get_full_path()[n:])
             obj = _extract(ds, what + query_string)
             hdf5.save_npz(obj, fname)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
-            content='%s: %s in /extract/%s\n%s' %
-            (exc.__class__.__name__, exc, what + query_string, tb),
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, path, tb),
             content_type='text/plain', status=500)
 
     # stream the data back

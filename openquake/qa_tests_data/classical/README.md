@@ -52,3 +52,6 @@
 | case_49 | Test the use of the convolution method to amplify the motion |
 | case_50 | Test the use of the kernel method to amplify the motion |
 | case_51 | Test the use of a modifiable GMPE |
+| case_52 | |
+| case_53 | Tests the modifiable GMPE with imt-independent linear scaling factors on median and standard deviation |
+| case_54 | Tests the modifiable GMPE with imt-dependent linear scaling factors on median and standard deviation |
