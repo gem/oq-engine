@@ -299,16 +299,14 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
 
     OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)
-    if isinstance(job_ini, dict):
-        job_ini['validated'] = True
-    else:
+    if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini))
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
     job_ini.update(kw)
     oqparam = OqParam(**job_ini)
-    if validate and 'validated' not in job_ini:
+    if validate and '_job_id' not in job_ini:
         oqparam.validate()
     return oqparam
 

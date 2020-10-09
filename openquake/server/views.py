@@ -564,16 +564,15 @@ def submit_job(job_ini, username, hazard_calculation_id=None):
     """
     # errors in validating oqparam are reported immediately
     params = vars(readinput.get_oqparam(job_ini))
+    job_id = logs.init('job')
+    params['_job_id'] = job_id
     # errors in the calculation are not reported but are visible in the log
     proc = Process(target=engine.run_jobs,
                    args=([params], config.distribution.log_level, None,
                          '', username),
                    kwargs={'hazard_calculation_id': hazard_calculation_id})
     proc.start()
-    time.sleep(2)  # wait a bit for the job_id to be generated
-    rows = logs.dbcmd("SELECT max(id) FROM job WHERE pid=?x", proc.pid)
-    assert rows and rows[0][0], rows
-    return rows[0][0]
+    return job_id
 
 
 @require_http_methods(['GET'])

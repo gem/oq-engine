@@ -392,9 +392,15 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     dist = parallel.oq_distribute()
     jobparams = []
     multi = kw.pop('multi', None)
+    lvl = getattr(logging, log_level.upper())
     for job_ini in job_inis:
         # NB: the logs must be initialized BEFORE everything
-        job_id = logs.init('job', getattr(logging, log_level.upper()))
+        try:
+            job_id = int(job_ini['_job_id'])  # if already there
+        except KeyError:
+            job_id = logs.init('job', lvl)  # create job_id
+        else:
+            logs.init(job_id, lvl)
         with logs.handle(job_id, log_level, log_file):
             oqparam = job_from(job_ini, job_id, username, **kw)
         if (not jobparams and not multi
