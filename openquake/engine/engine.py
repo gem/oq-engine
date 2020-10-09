@@ -27,6 +27,7 @@ import time
 import signal
 import getpass
 import logging
+import itertools
 import traceback
 import platform
 import psutil
@@ -396,12 +397,13 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         oq = readinput.get_oqparam(job_inis[0], **kw)
         dic = {k: v for k, v in vars(oq).items() if not k.startswith('_')}
         if 'sensitivity_analysis' in dic:
-            [(param, values)] = oq.sensitivity_analysis.items()
             job_inis = []
-            for value in values:
+            for values in itertools.product(
+                    *oq.sensitivity_analysis.values()):
                 new = dic.copy()
-                new[param] = value
-                job_inis.append(dic)
+                for param, value in zip(oq.sensitivity_analysis, values):
+                    new[param] = value
+                job_inis.append(new)
         else:
             job_inis = [dic]
 
