@@ -21,6 +21,7 @@ import ast
 import csv
 import inspect
 import tempfile
+import warnings
 import importlib
 import itertools
 from urllib.parse import quote_plus, unquote_plus
@@ -740,4 +741,7 @@ def save_npz(obj, path):
             a[key] = val.encode('utf-8')
         else:
             a[key] = _fix_array(val, key)
-    numpy.savez_compressed(path, **a)
+    # avoid https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=UserWarning)
+        numpy.savez_compressed(path, **a)

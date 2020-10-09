@@ -184,6 +184,8 @@ class EngineServerTestCase(unittest.TestCase):
         # check assets
         resp = self.c.get(
             extract_url + 'assets?taxonomy=MC-RLSB-2&taxonomy=W-SLFB-1')
+        if resp.status_code == 500:  # should never happen
+            raise RuntimeError(resp.content.decode('utf8'))
         got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 25)
 
