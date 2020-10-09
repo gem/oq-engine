@@ -49,12 +49,6 @@ def loadnpz(lines):
     return numpy.load(bio)
 
 
-def get_job_id(pid):
-    jobs = dbcmd("SELECT * FROM job WHERE pid=?x ORDER by id", pid)
-    assert len(jobs), jobs
-    return jobs[-1].id
-
-
 class EngineServerTestCase(unittest.TestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -113,9 +107,7 @@ class EngineServerTestCase(unittest.TestCase):
         except Exception:
             raise ValueError(b'Invalid JSON response: %r' % resp.content)
         if resp.status_code == 200:  # ok case
-            pid = js['pid']
-            time.sleep(5)  # wait a bit for the calc to start
-            return get_job_id(pid)
+            return js['job_id']
         else:  # error case
             return ''.join(js)  # traceback string
 
