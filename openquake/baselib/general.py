@@ -371,7 +371,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
 _tmp_paths = []
 
 
-def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     """Create temporary file with the given content.
 
     Please note: the temporary file can be deleted by the caller or not.
@@ -386,7 +386,8 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         if not os.path.exists(dir):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
-    _tmp_paths.append(path)
+    if remove:
+        _tmp_paths.append(path)
     with os.fdopen(fh, "wb") as fh:
         if content:
             if hasattr(content, 'encode'):

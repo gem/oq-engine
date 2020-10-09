@@ -50,11 +50,9 @@ def loadnpz(lines):
 
 
 def get_job_id(pid):
-    q = "SELECT max(id) FROM job WHERE pid=?x"
-    rows = dbcmd(q, pid)
-    if not rows:
-        print(dbcmd("SELECT id FROM job WHERE pid=?x", pid))
-    return rows[0][0]
+    jobs = dbcmd("SELECT * FROM job WHERE pid=?x ORDER by id", pid)
+    assert len(jobs), jobs
+    return jobs[-1].id
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -85,7 +83,7 @@ class EngineServerTestCase(unittest.TestCase):
         try:
             return json.loads(js)
         except Exception:
-            print('Invalid JSON, see %s' % gettemp(resp.content),
+            print('Invalid JSON, see %s' % gettemp(resp.content, remove=False),
                   file=sys.stderr)
             return {}
 
