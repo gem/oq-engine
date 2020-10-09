@@ -570,7 +570,7 @@ def submit_job(job_ini, username, hazard_calculation_id=None):
                          '', username),
                    kwargs={'hazard_calculation_id': hazard_calculation_id})
     proc.start()
-    time.sleep(2)  # wait a bit for the job_id to be generated
+    time.sleep(5)  # wait a bit for the job_id to be generated
     rows = logs.dbcmd("SELECT max(id) FROM job WHERE pid=?x", proc.pid)
     assert rows and rows[0][0], rows
     return rows[0][0]
