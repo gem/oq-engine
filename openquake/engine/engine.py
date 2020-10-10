@@ -395,12 +395,11 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     lvl = getattr(logging, log_level.upper())
     for job_ini in job_inis:
         # NB: the logs must be initialized BEFORE everything
-        try:
-            job_id = int(job_ini['_job_id'])  # if already there
-        except KeyError:
-            job_id = logs.init('job', lvl)  # create job_id
-        else:
+        if isinstance(job_ini, dict) and '_job_id' in job_ini:
+            job_id = job_ini['_job_id']  # already there
             logs.init(job_id, lvl)
+        else:
+            job_id = logs.init('job', lvl)  # create job_id
         with logs.handle(job_id, log_level, log_file):
             oqparam = job_from(job_ini, job_id, username, **kw)
         if (not jobparams and not multi
