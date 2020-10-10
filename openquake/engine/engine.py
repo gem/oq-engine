@@ -375,7 +375,11 @@ def _init_logs(dic, lvl):
         dic['_job_id'] = logs.init('job', lvl)
 
 
-def inis_to_dicts(job_inis, lvl):
+def create_jobs(job_inis, loglvl):
+    """
+    Create job records on the database (if not already there) and configure
+    the logging.
+    """
     dicts = []
     for job_ini in job_inis:
         dic = job_ini if isinstance(job_ini, dict) else vars(
@@ -384,14 +388,14 @@ def inis_to_dicts(job_inis, lvl):
             for values in itertools.product(
                     *dic['sensitivity_analysis'].values()):
                 new = dic.copy()
-                _init_logs(new, lvl)
+                _init_logs(new, loglvl)
                 if '_job_id' in dic:
                     del dic['_job_id']
                 for param, value in zip(dic['sensitivity_analysis'], values):
                     new[param] = value
                 dicts.append(new)
         else:
-            _init_logs(dic, lvl)
+            _init_logs(dic, loglvl)
             dicts.append(dic)
     return dicts
 
@@ -417,13 +421,11 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     dist = parallel.oq_distribute()
     jobparams = []
     multi = kw.pop('multi', None)
-    lvl = getattr(logging, log_level.upper())
-    jobs = inis_to_dicts(job_inis, lvl)
+    loglvl = getattr(logging, log_level.upper())
+    jobs = create_jobs(job_inis, loglvl)
     first = jobs[0]['_job_id']
     for job in jobs:
-        # the logs must be initialized before everything
         job_id = job['_job_id']
-        logs.init(job_id, lvl)
         if (jobparams and not multi and 'sensitivity_analysis' not in job
                 and 'hazard_calculation_id' not in kw):
             kw['hazard_calculation_id'] = first
