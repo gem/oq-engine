@@ -551,7 +551,7 @@ def positiveint(value):
     :param value: input string
     :returns: positive integer
     """
-    val = value.lower()
+    val = str(value).lower()
     if val == 'true':
         return 1
     elif val == 'false':
@@ -620,7 +620,7 @@ def boolean(value):
         ...
     ValueError: Not a boolean: t
     """
-    value = value.strip().lower()
+    value = str(value).strip().lower()
     try:
         return _BOOL_DICT[value]
     except KeyError:
