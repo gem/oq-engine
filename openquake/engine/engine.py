@@ -360,6 +360,7 @@ def create_jobs(job_inis, loglvl, kw):
                 for param, value in pars.items():
                     new[param] = value
                 new['description'] = '%s %s' % (new['description'], pars)
+                logging.info('Generating job with %s', pars)
                 dicts.append(new)
         else:
             _init_logs(dic, loglvl)
