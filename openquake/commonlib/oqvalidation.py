@@ -259,20 +259,16 @@ class OqParam(valid.ParamSet):
         if '_job_id' in names_vals:
             # assume most attributes already validated
             vars(self).update(names_vals)
-            if 'hazard_calculation_id' in names_vals and isinstance(
-                    names_vals['hazard_calculation_id'], str):
+            if 'hazard_calculation_id' in names_vals:
                 self.hazard_calculation_id = int(
                     names_vals['hazard_calculation_id'])
-            if 'maximum_distance' in names_vals and isinstance(
-                    names_vals['maximum_distance'], str):
+            if 'maximum_distance' in names_vals:
                 self.maximum_distance = valid.MagDepDistance.new(
-                            names_vals['maximum_distance'])
-            if 'pointsource_distance' in names_vals and isinstance(
-                    names_vals['pointsource_distance'], str):
+                            str(names_vals['maximum_distance']))
+            if 'pointsource_distance' in names_vals:
                 self.pointsource_distance = valid.MagDepDistance.new(
-                            names_vals['pointsource_distance'])
-            if 'region_constraint' in names_vals and isinstance(
-                  names_vals['region_constraint'], str):
+                    str(names_vals['pointsource_distance']))
+            if 'region_constraint' in names_vals:
                 self.region = valid.wkt_polygon(
                     names_vals['region_constraint'])
             return
@@ -335,7 +331,6 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         self._risk_files = get_risk_files(self.inputs)
 
-        self.check_source_model()
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'debug')
             self.check_missing('gsim_logic_tree', 'debug')
@@ -959,11 +954,10 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-            'multi_peril' in self.inputs or 'rupture_model' in self.inputs
-            or 'scenario' in self.calculation_mode):
+                'multi_peril' in self.inputs or 'rupture_model' in self.inputs
+                or 'scenario' in self.calculation_mode):
             return
         if ('source_model_logic_tree' not in self.inputs and
-                self.inputs['job_ini'] != '<in-memory>' and
                 not self.hazard_calculation_id):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %

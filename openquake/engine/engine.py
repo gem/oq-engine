@@ -245,41 +245,6 @@ def register_signals():
         pass
 
 
-def job_from(job_dict, job_id, username, **kw):
-    """
-    Create a full job profile from a job config file or a job dict
-
-    :param job_ini:
-        Job dictionary
-    :param job_id:
-        ID of the created job
-    :param username:
-        The user who will own this job profile and all results
-    :param kw:
-         Extra parameters including `calculation_mode` and `exposure_file`
-    :returns:
-        an oqparam instance
-    """
-    hc_id = kw.pop('hazard_calculation_id', None)
-    oq = readinput.get_oqparam(job_dict, hc_id=hc_id, **kw)
-    if 'calculation_mode' in kw:
-        oq.calculation_mode = kw.pop('calculation_mode')
-    if 'description' in kw:
-        oq.description = kw.pop('description')
-    if 'exposure_file' in kw:  # hack used in commands.engine
-        fnames = kw.pop('exposure_file').split()
-        if fnames:
-            oq.inputs['exposure'] = fnames
-        elif 'exposure' in oq.inputs:
-            del oq.inputs['exposure']
-    logs.dbcmd('update_job', job_id,
-               dict(calculation_mode=oq.calculation_mode,
-                    description=oq.description,
-                    user_name=username,
-                    hazard_calculation_id=hc_id))
-    return oq
-
-
 def poll_queue(job_id, poll_time):
     """
     Check the queue of executing/submitted jobs and exit when there is
@@ -375,15 +340,15 @@ def _init_logs(dic, lvl):
         dic['_job_id'] = logs.init('job', lvl)
 
 
-def create_jobs(job_inis, loglvl):
+def create_jobs(job_inis, loglvl, kw):
     """
     Create job records on the database (if not already there) and configure
     the logging.
     """
     dicts = []
-    for job_ini in job_inis:
+    for i, job_ini in enumerate(job_inis):
         dic = job_ini if isinstance(job_ini, dict) else vars(
-            readinput.get_oqparam(job_ini))
+            readinput.get_oqparam(job_ini, validate=0, **kw))
         if 'sensitivity_analysis' in dic:
             for values in itertools.product(
                     *dic['sensitivity_analysis'].values()):
@@ -422,15 +387,20 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     jobparams = []
     multi = kw.pop('multi', None)
     loglvl = getattr(logging, log_level.upper())
-    jobs = create_jobs(job_inis, loglvl)
-    first = jobs[0]['_job_id']
+    jobs = create_jobs(job_inis, loglvl, kw)
+    hc_id = kw.pop('hazard_calculation_id', None)
     for job in jobs:
         job_id = job['_job_id']
-        if (jobparams and not multi and 'sensitivity_analysis' not in job
-                and 'hazard_calculation_id' not in kw):
-            kw['hazard_calculation_id'] = first
         with logs.handle(job_id, log_level, log_file):
-            oqparam = job_from(job, job_id, username, **kw)
+            oqparam = readinput.get_oqparam(job, hc_id=hc_id, **kw)
+        logs.dbcmd('update_job', job_id,
+                   dict(calculation_mode=oqparam.calculation_mode,
+                        description=oqparam.description,
+                        user_name=username,
+                        hazard_calculation_id=hc_id))
+        if (not jobparams and not multi and hc_id is None
+                and 'sensitivity_analysis' not in job):
+            hc_id = job_id
         jobparams.append((job_id, oqparam))
     jobarray = len(jobparams) > 1 and multi
     try:
