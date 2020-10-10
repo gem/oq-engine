@@ -393,6 +393,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     dist = parallel.oq_distribute()
     jobparams = []
     multi = kw.pop('multi', None)
+    lvl = getattr(logging, log_level.upper())
     if len(job_inis) == 1:
         oq = readinput.get_oqparam(job_inis[0], **kw)
         dic = {k: v for k, v in vars(oq).items() if not k.startswith('_')}
@@ -401,6 +402,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
             for values in itertools.product(
                     *oq.sensitivity_analysis.values()):
                 new = dic.copy()
+                new['_job_id'] = logs.init('job', lvl)
                 for param, value in zip(oq.sensitivity_analysis, values):
                     new[param] = value
                 job_inis.append(new)
@@ -409,12 +411,15 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
 
     for job_ini in job_inis:
         # NB: the logs must be initialized BEFORE everything
-        job_id = logs.init('job', getattr(logging, log_level.upper()))
+        if isinstance(job_ini, dict) and '_job_id' in job_ini:
+            job_id = job_ini['_job_id']  # already there
+        else:
+            job_id = logs.init('job', lvl)  # create job_id
+            if (not jobparams and not multi
+                    and 'hazard_calculation_id' not in kw):
+                kw['hazard_calculation_id'] = job_id
         with logs.handle(job_id, log_level, log_file):
             oqparam = job_from(job_ini, job_id, username, **kw)
-        if (not jobparams and not multi
-                and 'hazard_calculation_id' not in kw):
-            kw['hazard_calculation_id'] = job_id
         jobparams.append((job_id, oqparam))
     jobarray = len(jobparams) > 1 and multi
     try:

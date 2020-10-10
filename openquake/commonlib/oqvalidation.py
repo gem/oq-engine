@@ -256,7 +256,7 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
-        if 'validated' in names_vals:
+        if '_job_id' in names_vals:
             # assume most attributes already validated
             vars(self).update(names_vals)
             if 'hazard_calculation_id' in names_vals and isinstance(

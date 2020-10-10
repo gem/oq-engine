@@ -18,6 +18,7 @@
 
 import shutil
 import json
+import time
 import logging
 import os
 import tempfile
@@ -542,7 +543,7 @@ def calc_run(request):
 
     user = utils.get_user(request)
     try:
-        pid = submit_job(inifiles[0], user, hazard_job_id).pid
+        job_id = submit_job(inifiles[0], user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -550,7 +551,7 @@ def calc_run(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        response_data = dict(status='created', pid=pid)
+        response_data = dict(status='created', job_id=job_id)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
@@ -563,13 +564,15 @@ def submit_job(job_ini, username, hazard_calculation_id=None):
     """
     # errors in validating oqparam are reported immediately
     params = vars(readinput.get_oqparam(job_ini))
+    job_id = logs.init('job')
+    params['_job_id'] = job_id
     # errors in the calculation are not reported but are visible in the log
     proc = Process(target=engine.run_jobs,
                    args=([params], config.distribution.log_level, None,
                          '', username),
                    kwargs={'hazard_calculation_id': hazard_calculation_id})
     proc.start()
-    return proc
+    return job_id
 
 
 @require_http_methods(['GET'])
