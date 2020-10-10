@@ -356,8 +356,10 @@ def create_jobs(job_inis, loglvl, kw):
                 _init_logs(new, loglvl)
                 if '_job_id' in dic:
                     del dic['_job_id']
-                for param, value in zip(dic['sensitivity_analysis'], values):
+                pars = dict(zip(dic['sensitivity_analysis'], values))
+                for param, value in pars.items():
                     new[param] = value
+                new['description'] = '%s %s' % (new['description'], pars)
                 dicts.append(new)
         else:
             _init_logs(dic, loglvl)
