@@ -245,12 +245,12 @@ def register_signals():
         pass
 
 
-def job_from(job_ini, job_id, username, **kw):
+def job_from(job_dict, job_id, username, **kw):
     """
     Create a full job profile from a job config file or a job dict
 
     :param job_ini:
-        Path to a job.ini file or job dictionary
+        Job dictionary
     :param job_id:
         ID of the created job
     :param username:
@@ -261,11 +261,7 @@ def job_from(job_ini, job_id, username, **kw):
         an oqparam instance
     """
     hc_id = kw.pop('hazard_calculation_id', None)
-    try:
-        oq = readinput.get_oqparam(job_ini, hc_id=hc_id, **kw)
-    except Exception:
-        logs.dbcmd('finish', job_id, 'deleted')
-        raise
+    oq = readinput.get_oqparam(job_dict, hc_id=hc_id, **kw)
     if 'calculation_mode' in kw:
         oq.calculation_mode = kw.pop('calculation_mode')
     if 'description' in kw:
@@ -372,6 +368,34 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
     return calc
 
 
+def _init_logs(dic, lvl):
+    if '_job_id' in dic:
+        logs.init(dic['_job_id'], lvl)
+    else:
+        dic['_job_id'] = logs.init('job', lvl)
+
+
+def inis_to_dicts(job_inis, lvl):
+    dicts = []
+    for job_ini in job_inis:
+        dic = job_ini if isinstance(job_ini, dict) else vars(
+            readinput.get_oqparam(job_ini))
+        if 'sensitivity_analysis' in dic:
+            for values in itertools.product(
+                    *dic['sensitivity_analysis'].values()):
+                new = dic.copy()
+                _init_logs(new, lvl)
+                if '_job_id' in dic:
+                    del dic['_job_id']
+                for param, value in zip(dic['sensitivity_analysis'], values):
+                    new[param] = value
+                dicts.append(new)
+        else:
+            _init_logs(dic, lvl)
+            dicts.append(dic)
+    return dicts
+
+
 def run_jobs(job_inis, log_level='info', log_file=None, exports='',
              username=getpass.getuser(), **kw):
     """
@@ -394,32 +418,17 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     jobparams = []
     multi = kw.pop('multi', None)
     lvl = getattr(logging, log_level.upper())
-    if len(job_inis) == 1:
-        oq = readinput.get_oqparam(job_inis[0], **kw)
-        dic = {k: v for k, v in vars(oq).items() if not k.startswith('_')}
-        if 'sensitivity_analysis' in dic:
-            job_inis = []
-            for values in itertools.product(
-                    *oq.sensitivity_analysis.values()):
-                new = dic.copy()
-                new['_job_id'] = logs.init('job', lvl)
-                for param, value in zip(oq.sensitivity_analysis, values):
-                    new[param] = value
-                job_inis.append(new)
-        else:
-            job_inis = [dic]
-
-    for job_ini in job_inis:
-        # NB: the logs must be initialized BEFORE everything
-        if isinstance(job_ini, dict) and '_job_id' in job_ini:
-            job_id = job_ini['_job_id']  # already there
-        else:
-            job_id = logs.init('job', lvl)  # create job_id
-            if (not jobparams and not multi
-                    and 'hazard_calculation_id' not in kw):
-                kw['hazard_calculation_id'] = job_id
+    jobs = inis_to_dicts(job_inis, lvl)
+    first = jobs[0]['_job_id']
+    for job in jobs:
+        # the logs must be initialized before everything
+        job_id = job['_job_id']
+        logs.init(job_id, lvl)
+        if (jobparams and not multi and 'sensitivity_analysis' not in job
+                and 'hazard_calculation_id' not in kw):
+            kw['hazard_calculation_id'] = first
         with logs.handle(job_id, log_level, log_file):
-            oqparam = job_from(job_ini, job_id, username, **kw)
+            oqparam = job_from(job, job_id, username, **kw)
         jobparams.append((job_id, oqparam))
     jobarray = len(jobparams) > 1 and multi
     try:
