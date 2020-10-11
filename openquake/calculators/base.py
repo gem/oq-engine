@@ -540,6 +540,10 @@ class HazardCalculator(BaseCalculator):
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
+            with hdf5.File(self.datastore.tempname, 'a') as t:
+                t['oqparam'] = oq
+                t['rlzs_by_grp'] = fake.get_rlzs_by_grp()
+                t['poes/grp-00'] = fix_ones(readinput.pmap)
             self.realizations = fake.get_realizations()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
@@ -974,6 +978,8 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
+            elif kind == 'poe':
+                dstore = self.datastore.tempname
             else:
                 dstore = self.datastore
             meth = getattr(self, '_gen_riskinputs_' + kind)
@@ -1007,10 +1013,6 @@ class RiskCalculator(HazardCalculator):
                               len(block), sid)
 
     def _gen_riskinputs_poe(self, dstore):
-        hazard = 'poes' in dstore
-        if not hazard:
-            raise InvalidFile('Did you forget hazard_curves_csv in %s?'
-                              % self.oqparam.inputs['job_ini'])
         assets_by_site = self.assetcol.assets_by_site()
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
@@ -1047,7 +1049,8 @@ class RiskCalculator(HazardCalculator):
                 # concurrent reading on the workers would be extra-slow;
                 # also, I could not get lazy reading to work with
                 # the SWMR mode for event_based_risk
-                ri.hazard_getter.init()
+                if not isinstance(ri.hazard_getter, getters.PmapGetter):
+                    ri.hazard_getter.init()
             smap.submit((block, self.param))
             for ri in block:  # save memory
                 try:
