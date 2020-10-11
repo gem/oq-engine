@@ -104,7 +104,7 @@ class HassaniAtkinson2020SInter(GMPE):
         fvs30 = self._fvs30(C, sites.vs30)
         fz2pt5 = self._fz2pt5(C, sites.z2pt5)
         ffpeak = self._ffpeak(C, imt)
-    
+
         mean = 10 ** (fm + fdsigma + fz + fkappa + fgamma
                       + self.CONST_REGION['cc'] + clf + C['chf']
                       + C['amp_cr'] + fvs30 + fz2pt5 + ffpeak + fsnonlin)
@@ -114,35 +114,27 @@ class HassaniAtkinson2020SInter(GMPE):
             mean = mean / 981
         mean = np.log(mean)
 
-        if C['b3'] == -0.2813:
-            print(fm, fdsigma, fz[-1], fkappa, fgamma[-1], self.CONST_REGION['cc'], clf, C['chf'], C['amp_cr'], fvs30[-1], fz2pt5[-1], ffpeak, fsnonlin[-1])
-            print(np.exp(mean)*981)
-
         stddevs = self.get_stddevs(C, stddev_types)
 
         return mean, stddevs
 
     def get_stddevs(self, C, stddev_types):
-        # between event standard deviations
-        tau = C['tau']
-        # site to site standard deviations
-        phis2s = C['ps2s']
-        # within site standard deviations
-        phiss = C['pss' + self.SUFFIX]
-        phi = math.sqrt(phis2s ** 2 + phiss ** 2)
-        sigma = C['s' + self.SUFFIX]
-        return sigma, tau, phi, phiss, phis2s
+        """
+        Between event standard deviations as tau.
+        Intra event from site to site stddev and within site stddev.
+        """
+        phi = math.sqrt(C['ps2s'] ** 2 + C['pss' + self.SUFFIX] ** 2)
 
         stddevs = []
-
         for stddev in stddev_types:
             assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(phis2s ** 2 + phiss ** 2))
+                stddevs.append(np.repeat(math.sqrt(phi ** 2 + C['tau'] ** 2),
+                                         len(vs30)))
             elif stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(np.repeat(C["tau"], len(vs30)))
+                stddevs.append(np.repeat(C['tau'], len(vs30)))
             elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append('?')
+                stddevs.append(np.repeat(phi, len(vs30)))
 
         return stddevs
 
@@ -175,7 +167,7 @@ class HassaniAtkinson2020SInter(GMPE):
         eds0 = -2 * eds1 - 4 * eds2
 
         return eds0 + eds1 * math.log10(dsigma) \
-               + eds2 * math.log10(dsigma) ** 2
+            + eds2 * math.log10(dsigma) ** 2
 
     def _ffpeak(self, C, imt):
         if not imt.name == "SA" or self.fpeak <= 0:
@@ -193,16 +185,16 @@ class HassaniAtkinson2020SInter(GMPE):
             return s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
                    + s['cfp2'] * math.log10(x / s['x1'])
         return s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
-               + s['cfp2'] * math.log10(s['x2'] / s['x1']) \
-               + s['cfp3'] * math.log10(x / s['x2'])
+            + s['cfp2'] * math.log10(s['x2'] / s['x1']) \
+            + s['cfp3'] * math.log10(x / s['x2'])
 
     def _fgamma(self, C, rrup):
         # proportion sum for normalised values with rrup factor
         p_sum = rrup / (self.backarc + self.forearc_ne + self.forearc_sw)
 
         return C['barc' + self.SUFFIX] * self.backarc * p_sum \
-               + C['farc_ne' + self.SUFFIX] * self.forearc_ne * p_sum \
-               + C['farc_sw' + self.SUFFIX] * self.forearc_sw * p_sum
+            + C['farc_ne' + self.SUFFIX] * self.forearc_ne * p_sum \
+            + C['farc_sw' + self.SUFFIX] * self.forearc_sw * p_sum
 
     def _fkp_ha18(self, C, mag, dsigma):
         l10kp = math.log10(self.CONSTANTS['kappa'])
@@ -215,8 +207,8 @@ class HassaniAtkinson2020SInter(GMPE):
                                    C[f'd{i}{j}0']], math.log10(dsigma))
             ek0[i] = np.polyval(p[::-1], math.log10(mag))
         return 3 * ek0[0] - 9 * ek0[1] + 27 * ek0[2] - 81 * ek0[3] \
-               + ek0[0] * l10kp + ek0[1] * l10kp ** 2 \
-               + ek0[2] * l10kp ** 3 + ek0[3] * l10kp ** 4
+            + ek0[0] * l10kp + ek0[1] * l10kp ** 2 \
+            + ek0[2] * l10kp ** 3 + ek0[3] * l10kp ** 4
 
     def _fm_ha18(self, C, mag):
         if mag <= C['mh']:
@@ -228,8 +220,8 @@ class HassaniAtkinson2020SInter(GMPE):
         s = self.CONSTANTS
 
         f2 = C['f4'] * (np.exp(C['f5']
-                        * (np.minimum(vs30, s['vref']) - s['vmin'])) \
-             - math.exp(C['f5'] * (s['vref'] - s['vmin'])))
+                        * (np.minimum(vs30, s['vref']) - s['vmin']))
+                        - math.exp(C['f5'] * (s['vref'] - s['vmin'])))
 
         return s['f1'] + f2 * np.log((pga_rock + s['f3']) / s['f3'])
 
@@ -254,13 +246,13 @@ class HassaniAtkinson2020SInter(GMPE):
         idx = np.where((s['zx0'] < z2pt5) & (z2pt5 <= s['zx1']))
         fz2pt5[idx] = C['cz0'] + C['cz1'] * np.log10(z2pt5[idx] / s['zx0'])
 
-        idx = np.where((s['zx1'] < z2pt5)  & (z2pt5 <= s['zx2']))
+        idx = np.where((s['zx1'] < z2pt5) & (z2pt5 <= s['zx2']))
         fz2pt5[idx] = C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0']) \
-                      + C['cz2'] * np.log10(z2pt5[idx] / s['zx1'])
+            + C['cz2'] * np.log10(z2pt5[idx] / s['zx1'])
 
         idx = np.where(s['zx2'] < z2pt5)
         fz2pt5[idx] = C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0']) \
-                      + C['cz2'] * math.log10(s['zx2'] / s['zx1'])
+            + C['cz2'] * math.log10(s['zx2'] / s['zx1'])
 
         return fz2pt5
 
