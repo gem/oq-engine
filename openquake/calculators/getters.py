@@ -123,7 +123,10 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
-        self.rlzs_by_grp = self.dstore['full_lt'].get_rlzs_by_grp()
+        if 'rlzs_by_grp' in self.dstore:
+            self.rlzs_by_grp = self.dstore['rlzs_by_grp']
+        else:
+            self.rlzs_by_grp = self.dstore['full_lt'].get_rlzs_by_grp()
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
