@@ -38,7 +38,7 @@ def classical_damage(riskinputs, param, monitor):
     :yields:
         dictionaries asset_ordinal -> damage(R, L, D)
     """
-    crmodel = monitor.read_pik('crmodel')
+    crmodel = monitor.read('crmodel')
     for ri in riskinputs:
         R = ri.hazard_getter.num_rlzs
         L = len(crmodel.lti)

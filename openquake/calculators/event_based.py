@@ -70,7 +70,7 @@ def compute_gmfs(rupgetter, param, monitor):
     Compute GMFs and optionally hazard curves
     """
     oq = param['oqparam']
-    srcfilter = monitor.read_pik('srcfilter')
+    srcfilter = monitor.read('srcfilter')
     getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'],
                        param['sec_perils'])
     return getter.compute_gmfs_curves(monitor)
@@ -319,7 +319,7 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)
-        smap.monitor.save_pik('srcfilter', self.srcfilter)
+        smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in self.datastore:
             return acc

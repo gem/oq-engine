@@ -1049,7 +1049,7 @@ class RiskCalculator(HazardCalculator):
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
-        smap.monitor.save_pik('crmodel', self.crmodel)
+        smap.monitor.save('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
             for ri in block:

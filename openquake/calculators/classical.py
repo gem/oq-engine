@@ -74,7 +74,7 @@ def get_extreme_poe(array, imtls):
 
 
 def classical_(srcs, gsims, params, monitor):
-    srcfilter = monitor.read_pik('srcfilter')
+    srcfilter = monitor.read('srcfilter')
     return classical(srcs, srcfilter, gsims, params, monitor)
 
 
@@ -84,7 +84,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
-    srcfilter = monitor.read_pik('srcfilter')
+    srcfilter = monitor.read('srcfilter')
     # first check if we are sampling the sources
     ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     if ss:
@@ -129,7 +129,7 @@ def preclassical(srcs, gsims, params, monitor):
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
     with monitor("splitting/filtering sources"):
-        srcfilter = monitor.read_pik('srcfilter')
+        srcfilter = monitor.read('srcfilter')
         splits, _stime = split_sources(srcs)
     totrups = 0
     maxradius = 0
@@ -363,7 +363,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['effect_by_mag_dst'] = aw
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
                                 num_cores=oq.num_cores)
-        smap.monitor.save_pik('srcfilter', self.src_filter())
+        smap.monitor.save('srcfilter', self.src_filter())
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
