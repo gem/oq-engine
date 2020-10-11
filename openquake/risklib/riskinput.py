@@ -146,7 +146,8 @@ class RiskInput(object):
         hazard_getter = self.hazard_getter
         [sid] = hazard_getter.sids
         if haz is None:
-            haz = hazard_getter.get_hazard()
+            with monitor('getting hazard', measuremem=False):
+                haz = hazard_getter.get_hazard()
         if isinstance(haz, dict):  # scenario, event_based
             items = haz.items()
         else:  # list of length R, classical

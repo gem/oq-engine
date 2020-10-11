@@ -68,7 +68,10 @@ class DisaggregationTestCase(CalculatorTestCase):
         # disaggregation by source group
         rlzs = self.calc.datastore['full_lt'].get_realizations()
         ws = [rlz.weight for rlz in rlzs]
-        pgetter = getters.PmapGetter(self.calc.datastore, ws)
+        sids = self.calc.sitecol.sids
+        oq = self.calc.oqparam
+        pgetter = getters.PmapGetter(self.calc.datastore, ws, sids,
+                                     oq.imtls, oq.poes)
         pgetter.init()
         pmaps = []
         for grp in sorted(pgetter.dstore['poes']):
