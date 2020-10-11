@@ -75,13 +75,14 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, weights, sids=None, poes=()):
+    def __init__(self, dstore, weights, sids, imtls=(), poes=()):
         self.dstore = dstore
-        self.sids = dstore['sitecol'].sids if sids is None else sids
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
             self.weights = weights
+        self.sids = sids
+        self.imtls = imtls
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
@@ -118,11 +119,6 @@ class PmapGetter(object):
             self.dstore = hdf5.File(self.dstore, 'r')
         else:
             self.dstore.open('r')  # if not
-        if self.sids is None:
-            self.sids = self.dstore['sitecol'].sids
-        oq = self.dstore['oqparam']
-        self.imtls = oq.imtls
-        self.poes = self.poes or oq.poes
         if 'rlzs_by_grp' in self.dstore:
             self.rlzs_by_grp = self.dstore['rlzs_by_grp']
         else:

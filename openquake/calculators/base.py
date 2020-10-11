@@ -1029,7 +1029,7 @@ class RiskCalculator(HazardCalculator):
                 continue
             # hcurves, shape (R, N)
             ws = [rlz.weight for rlz in self.realizations]
-            getter = getters.PmapGetter(dstore, ws, [sid])
+            getter = getters.PmapGetter(dstore, ws, [sid], self.oqparam.imtls)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
                 yield riskinput.RiskInput(sid, getter, numpy.array(block))
