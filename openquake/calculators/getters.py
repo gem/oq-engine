@@ -200,35 +200,6 @@ class PmapGetter(object):
                         res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
         return res.reshape(self.N, self.R, self.M, -1)
 
-    def items(self, kind=''):
-        """
-        Extract probability maps from the datastore, possibly generating
-        on the fly the ones corresponding to the individual realizations.
-        Yields pairs (tag, pmap).
-
-        :param kind:
-            the kind of PoEs to extract; if not given, returns the realization
-            if there is only one or the statistics otherwise.
-        """
-        num_rlzs = len(self.weights)
-        if not kind or kind == 'all':  # use default
-            if 'hcurves' in self.dstore:
-                for k in sorted(self.dstore['hcurves']):
-                    yield k, self.dstore['hcurves/' + k][()]
-            elif num_rlzs == 1:
-                yield 'mean', self.get(0)
-            return
-        if 'poes' in self.dstore and kind in ('rlzs', 'all'):
-            for rlzi in range(num_rlzs):
-                hcurves = self.get(rlzi)
-                yield 'rlz-%03d' % rlzi, hcurves
-        elif 'poes' in self.dstore and kind.startswith('rlz-'):
-            yield kind, self.get(int(kind[4:]))
-        if 'hcurves' in self.dstore and kind == 'stats':
-            for k in sorted(self.dstore['hcurves']):
-                if not k.startswith('rlz'):
-                    yield k, self.dstore['hcurves/' + k][()]
-
     def get_mean(self, grp=None):
         """
         Compute the mean curve as a ProbabilityMap
