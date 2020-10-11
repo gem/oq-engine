@@ -205,7 +205,8 @@ class ClassicalTestCase(CalculatorTestCase):
             case_11.__file__)
 
         # checking PmapGetter.get_pcurve
-        pgetter = PmapGetter(self.calc.datastore, self.calc.weights)
+        pgetter = PmapGetter(self.calc.datastore, self.calc.weights,
+                             self.calc.sitecol.sids, self.calc.oqparam.imtls)
         poes = pgetter.get_hcurves(pgetter.init())[0]
         mean = self.calc.datastore.sel('hcurves-stats', stat='mean', sid=0)
         mean2 = poes.T @ numpy.array([w['weight'] for w in self.calc.weights])
