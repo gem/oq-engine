@@ -601,10 +601,11 @@ def view_global_hcurves(token, dstore):
     curves.
     """
     oq = dstore['oqparam']
-    nsites = len(dstore['sitecol'])
+    sitecol = dstore['sitecol']
+    nsites = len(sitecol)
     rlzs = dstore['full_lt'].get_realizations()
     weights = [rlz.weight for rlz in rlzs]
-    mean = getters.PmapGetter(dstore, weights).get_mean()
+    mean = getters.PmapGetter(dstore, weights, sitecol.sids).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
@@ -729,7 +730,8 @@ def view_pmap(token, dstore):
     pmap = {}
     rlzs = dstore['full_lt'].get_realizations()
     weights = [rlz.weight for rlz in rlzs]
-    pgetter = getters.PmapGetter(dstore, weights)
+    pgetter = getters.PmapGetter(dstore, weights, dstore['sitecol'].sids,
+                                 dstore['oqparam'].imtls)
     pmap = pgetter.get_mean(grp)
     return str(pmap)
 
