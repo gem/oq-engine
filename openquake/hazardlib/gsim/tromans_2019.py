@@ -221,8 +221,11 @@ class TromansEtAl2019(GMPE):
 
     def __init__(self, gmpe_name, branch="central",
                  homoskedastic_sigma=False,  scaling_factor=None,
-                 vskappa=None, phi_ds2s=True):
-        super().__init__(gmpe_name=gmpe_name)
+                 vskappa=None, phi_ds2s=True, **kwargs):
+        super().__init__(gmpe_name=gmpe_name, branch=branch,
+                         homoskedastic_sigma=homoskedastic_sigma,
+                         scaling_factor=scaling_factor, vskappa=vskappa,
+                         phi_ds2s=phi_ds2s, **kwargs)
         self.gmpe = registry[gmpe_name]()
         # Update the required_parameters
         for name in uppernames:
@@ -310,10 +313,11 @@ class TromansEtAl2019SigmaMu(TromansEtAl2019):
 
     def __init__(self, gmpe_name, branch="central", sigma_mu_epsilon=0.0,
                  homoskedastic_sigma=False,  scaling_factor=None,
-                 vskappa=None):
+                 vskappa=None, **kwargs):
         super().__init__(gmpe_name=gmpe_name, branch=branch,
                          homoskedastic_sigma=homoskedastic_sigma,
-                         scaling_factor=scaling_factor, vskappa=vskappa)
+                         scaling_factor=scaling_factor, vskappa=vskappa,
+                         **kwargs)
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):

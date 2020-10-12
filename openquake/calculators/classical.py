@@ -74,7 +74,7 @@ def get_extreme_poe(array, imtls):
 
 
 def classical_(srcs, gsims, params, monitor):
-    srcfilter = monitor.read_pik('srcfilter')
+    srcfilter = monitor.read('srcfilter')
     return classical(srcs, srcfilter, gsims, params, monitor)
 
 
@@ -84,7 +84,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
-    srcfilter = monitor.read_pik('srcfilter')
+    srcfilter = monitor.read('srcfilter')
     # first check if we are sampling the sources
     ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     if ss:
@@ -129,7 +129,7 @@ def preclassical(srcs, gsims, params, monitor):
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
     with monitor("splitting/filtering sources"):
-        srcfilter = monitor.read_pik('srcfilter')
+        srcfilter = monitor.read('srcfilter')
         splits, _stime = split_sources(srcs)
     totrups = 0
     maxradius = 0
@@ -363,7 +363,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['effect_by_mag_dst'] = aw
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
                                 num_cores=oq.num_cores)
-        smap.monitor.save_pik('srcfilter', self.src_filter())
+        smap.monitor.save('srcfilter', self.src_filter())
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
@@ -515,9 +515,14 @@ class ClassicalCalculator(base.HazardCalculator):
         if nr:  # few sites, log the number of ruptures per magnitude
             logging.info('%s', nr)
         oq = self.oqparam
+        if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
+            with hdf5.File(self.datastore.tempname, 'a') as cache:
+                cache['oqparam'] = oq
+                cache['rlzs_by_grp'] = self.full_lt.get_rlzs_by_grp()
         data = []
         weights = [rlz.weight for rlz in self.realizations]
-        pgetter = getters.PmapGetter(self.datastore, weights)
+        pgetter = getters.PmapGetter(
+            self.datastore, weights, self.sitecol.sids, oq.imtls)
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
@@ -531,6 +536,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     trt = self.full_lt.trt_by_grp[key]
                     name = 'poes/grp-%02d' % key
                     self.datastore[name] = pmap
+                    if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
+                        with hdf5.File(self.datastore.tempname, 'a') as cache:
+                            cache[name] = pmap
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
@@ -579,7 +587,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Building hazard statistics')
         self.weights = [rlz.weight for rlz in self.realizations]
         allargs = [  # this list is very fast to generate
-            (getters.PmapGetter(self.datastore, self.weights, t.sids, oq.poes),
+            (getters.PmapGetter(
+                self.datastore, self.weights, t.sids, oq.imtls, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg,
              self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
@@ -587,7 +596,6 @@ class ClassicalCalculator(base.HazardCalculator):
             dist = 'no'
         else:
             dist = None  # parallelize as usual
-            self.datastore.swmr_on()
         parallel.Starmap(
             build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)

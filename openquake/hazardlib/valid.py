@@ -522,6 +522,8 @@ def coordinates(value):
     ...
     ValueError: Found overlapping site #2,  0 0 -1
     """
+    if isinstance(value, list):  # assume list of lists/tuples
+        return [point(' '.join(map(str, v))) for v in value]
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
     points = []
@@ -551,7 +553,7 @@ def positiveint(value):
     :param value: input string
     :returns: positive integer
     """
-    val = value.lower()
+    val = str(value).lower()
     if val == 'true':
         return 1
     elif val == 'false':
@@ -620,7 +622,7 @@ def boolean(value):
         ...
     ValueError: Not a boolean: t
     """
-    value = value.strip().lower()
+    value = str(value).strip().lower()
     try:
         return _BOOL_DICT[value]
     except KeyError:

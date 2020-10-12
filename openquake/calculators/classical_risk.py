@@ -36,7 +36,7 @@ def classical_risk(riskinputs, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    crmodel = monitor.read_pik('crmodel')
+    crmodel = monitor.read('crmodel')
     result = dict(loss_curves=[], stat_curves=[])
     weights = [w['default'] for w in param['weights']]
     statnames, stats = zip(*param['stats'])

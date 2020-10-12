@@ -75,13 +75,14 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, weights, sids=None, poes=()):
+    def __init__(self, dstore, weights, sids, imtls=(), poes=()):
         self.dstore = dstore
-        self.sids = dstore['sitecol'].sids if sids is None else sids
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
             self.weights = weights
+        self.sids = sids
+        self.imtls = imtls
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
@@ -118,12 +119,10 @@ class PmapGetter(object):
             self.dstore = hdf5.File(self.dstore, 'r')
         else:
             self.dstore.open('r')  # if not
-        if self.sids is None:
-            self.sids = self.dstore['sitecol'].sids
-        oq = self.dstore['oqparam']
-        self.imtls = oq.imtls
-        self.poes = self.poes or oq.poes
-        self.rlzs_by_grp = self.dstore['full_lt'].get_rlzs_by_grp()
+        if 'rlzs_by_grp' in self.dstore:
+            self.rlzs_by_grp = self.dstore['rlzs_by_grp']
+        else:
+            self.rlzs_by_grp = self.dstore['full_lt'].get_rlzs_by_grp()
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
@@ -200,35 +199,6 @@ class PmapGetter(object):
                     for rlz in rlzis:
                         res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
         return res.reshape(self.N, self.R, self.M, -1)
-
-    def items(self, kind=''):
-        """
-        Extract probability maps from the datastore, possibly generating
-        on the fly the ones corresponding to the individual realizations.
-        Yields pairs (tag, pmap).
-
-        :param kind:
-            the kind of PoEs to extract; if not given, returns the realization
-            if there is only one or the statistics otherwise.
-        """
-        num_rlzs = len(self.weights)
-        if not kind or kind == 'all':  # use default
-            if 'hcurves' in self.dstore:
-                for k in sorted(self.dstore['hcurves']):
-                    yield k, self.dstore['hcurves/' + k][()]
-            elif num_rlzs == 1:
-                yield 'mean', self.get(0)
-            return
-        if 'poes' in self.dstore and kind in ('rlzs', 'all'):
-            for rlzi in range(num_rlzs):
-                hcurves = self.get(rlzi)
-                yield 'rlz-%03d' % rlzi, hcurves
-        elif 'poes' in self.dstore and kind.startswith('rlz-'):
-            yield kind, self.get(int(kind[4:]))
-        if 'hcurves' in self.dstore and kind == 'stats':
-            for k in sorted(self.dstore['hcurves']):
-                if not k.startswith('rlz'):
-                    yield k, self.dstore['hcurves/' + k][()]
 
     def get_mean(self, grp=None):
         """

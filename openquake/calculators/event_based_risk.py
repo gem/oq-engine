@@ -46,7 +46,7 @@ def event_based_risk(riskinputs, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    crmodel = monitor.read_pik('crmodel')
+    crmodel = monitor.read('crmodel')
     L = len(crmodel.lti)
     tempname = param['tempname']
     for ri in riskinputs:

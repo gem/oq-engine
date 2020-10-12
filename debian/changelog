@@ -1,5 +1,9 @@
-  [Michele Simionato]
+  [Marco Pagani]
   * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
+
+  [Michele Simionato]
+  * Restored reading from the workers in classical_risk and classical_damage
+  * Implemented `sensitivity_analysis`
   * Fixed an npz saving error in /extract/assets affecting the QGIS plugin
   * Improved submitting calculations to the WebAPI: now they can be run on a zmq
     cluster, serialize_jobs is honored and the log level is configurable
