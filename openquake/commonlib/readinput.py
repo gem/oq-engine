@@ -251,24 +251,6 @@ def get_params(job_ini, **kw):
     return params
 
 
-def get_oq(text):
-    """
-    Returns an OqParam instance from a configuration string. For instance:
-
-    >>> get_oq('maximum_distance=200')
-    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': [(1.0, 200), (10.0, 200)]}, risk_investigation_time=None>
-    """
-    # UGLY: this is here to avoid circular imports
-    from openquake.calculators import base
-    OqParam.calculation_mode.validator.choices = tuple(base.calculators)
-    cp = configparser.ConfigParser()
-    cp.read_string('[general]\ncalculation_mode=classical\n' + text)
-    dic = dict(cp['general'])
-    dic['inputs'] = dict(job_ini='<in-memory>')
-    oq = OqParam(**dic)
-    return oq
-
-
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
                 **kw):
     """
@@ -307,6 +289,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
     job_ini.update(kw)
     oqparam = OqParam(**job_ini)
     if validate and '_job_id' not in job_ini:
+        oqparam.check_source_model()
         oqparam.validate()
     return oqparam
 

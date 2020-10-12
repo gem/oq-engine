@@ -485,6 +485,15 @@ class EngineRunJobTestCase(unittest.TestCase):
         self.assertEqual(r1.hazard_calculation_id, r1.id)
         self.assertEqual(r2.hazard_calculation_id, r1.id)
 
+    def test_sensitivity(self):
+        job_ini = gettemp('''[general]
+description = sensitivity test
+calculation_mode = scenario
+sites = 0 0
+sensitivity_analysis = {
+  'maximum_distance': [100, 200]}''')
+        run_jobs([job_ini])
+
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
