@@ -14,7 +14,6 @@
 
   [Michele Simionato]
   * Made it possible to control the log level of jobs spawned by the WebAPI
->>>>>>> origin
   * Reduced memory occupation in post_ebrisk
   * Optimized loss aggregation in ebrisk calculations
   * Extended `oq engine --reuse-input` to the exposure

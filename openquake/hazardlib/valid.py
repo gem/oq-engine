@@ -66,7 +66,7 @@ class FromFile(object):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
-    DEFINED_FOR_REFERENCE_VELOCITY = 0
+    DEFINED_FOR_REFERENCE_VELOCITY = None
     kwargs = {}
 
     def init(self):
