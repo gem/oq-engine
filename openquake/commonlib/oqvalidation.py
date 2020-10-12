@@ -271,6 +271,14 @@ class OqParam(valid.ParamSet):
             if 'region_constraint' in names_vals:
                 self.region = valid.wkt_polygon(
                     names_vals['region_constraint'])
+            if 'minimum_magnitude' in names_vals:
+                self.minimum_magnitude = valid.floatdict(
+                    str(names_vals['minimum_magnitude']))
+            if 'minimum_intensity' in names_vals:
+                self.minimum_intensity = valid.floatdict(
+                    str(names_vals['minimum_intensity']))
+            if 'sites' in names_vals:
+                self.sites = valid.coordinates(names_vals['sites'])
             return
 
         # support legacy names

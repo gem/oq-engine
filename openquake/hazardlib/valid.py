@@ -522,6 +522,8 @@ def coordinates(value):
     ...
     ValueError: Found overlapping site #2,  0 0 -1
     """
+    if isinstance(value, list):  # assume list of lists/tuples
+        return [point(' '.join(map(str, v))) for v in value]
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
     points = []
