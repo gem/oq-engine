@@ -58,7 +58,7 @@ def build_area_source_geometry(area_source):
     lower_depth_node = Node(
         "lowerSeismoDepth", text=area_source.lower_seismogenic_depth)
     return Node(
-        "areaGeometry", {'discretization': area_source.area_discretization},
+        "areaGeometry",
         nodes=[polygon_node, upper_depth_node, lower_depth_node])
 
 

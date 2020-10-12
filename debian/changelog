@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the sourcewriter to not save the `area_source_discretization`
   * Restored reading from the workers in classical_risk and classical_damage
   * Implemented `sensitivity_analysis`
   * Fixed an npz saving error in /extract/assets affecting the QGIS plugin
