@@ -69,7 +69,7 @@ def scenario_damage(riskinputs, param, monitor):
 
     `d_asset` and `d_tag` are related to the damage distributions.
     """
-    crmodel = monitor.read_pik('crmodel')
+    crmodel = monitor.read('crmodel')
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()

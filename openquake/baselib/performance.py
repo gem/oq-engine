@@ -265,25 +265,30 @@ class Monitor(object):
         vars(new).update(kw)
         return new
 
-    def save_pik(self, key, obj):
+    def save(self, key, obj):
         """
         :param key: key in the _tmp.hdf5 file
         :param obj: big object to store in pickle format
         """
         tmp = self.filename[:-5] + '_tmp.hdf5'
-        f = (hdf5.File(tmp, 'r+') if os.path.exists(tmp)
-             else hdf5.File(tmp, 'w'))
+        f = hdf5.File(tmp, 'a') if os.path.exists(tmp) else hdf5.File(tmp, 'w')
         with f:
-            f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+            if isinstance(obj, numpy.ndarray):
+                f[key] = obj
+            else:
+                f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def read_pik(self, key):
+    def read(self, key):
         """
         :param key: key in the _tmp.hdf5 file
         :return: unpickled object
         """
         tmp = self.filename[:-5] + '_tmp.hdf5'
         with hdf5.File(tmp, 'r') as f:
-            return pickle.loads(f[key][()])
+            data = f[key][()]
+            if data.shape:
+                return data
+            return pickle.loads(data)
 
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
