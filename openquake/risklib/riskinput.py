@@ -18,6 +18,7 @@
 
 import logging
 import numpy
+import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array, AccumDict
@@ -59,7 +60,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     if hasattr(haz, 'array'):  # classical
         eids = []
         data = [haz.array[crmodel.imtls(imt), 0] for imt in crmodel.imtls]
-    elif isinstance(haz, numpy.ndarray):
+    elif isinstance(haz, pandas.DataFrame):
         # NB: in GMF-based calculations the order in which
         # the gmfs are stored is random since it depends on
         # which hazard task ends first; here we reorder
@@ -69,6 +70,13 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         # sample method would receive the means in random
         # order and produce random results even if the
         # seed is set correctly; very tricky indeed! (MS)
+        haz.sort_values('eid', inplace=True)
+        eids = haz.eid.to_numpy()
+        lst = [haz[col].to_numpy() for col in haz.columns
+               if col.startswith('gmv_')]
+        data = numpy.array(lst).T  # shape (E, M)
+    elif isinstance(haz, numpy.ndarray):
+        # ebrisk
         haz.sort(order='eid')
         eids = haz['eid']
         data = haz['gmv']  # shape (E, M)
@@ -126,19 +134,20 @@ class RiskInput(object):
             aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
 
-    def gen_outputs(self, cr_model, monitor, tempname=None, haz=None):
+    def gen_outputs(self, crmodel, monitor, tempname=None, haz=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
 
-        :param cr_model: a CompositeRiskModel instance
+        :param crmodel: a CompositeRiskModel instance
         :param monitor: a monitor object used to measure the performance
         """
         self.monitor = monitor
         hazard_getter = self.hazard_getter
         [sid] = hazard_getter.sids
         if haz is None:
-            haz = hazard_getter.get_hazard()
+            with monitor('getting hazard', measuremem=False):
+                haz = hazard_getter.get_hazard()
         if isinstance(haz, dict):  # scenario, event_based
             items = haz.items()
         else:  # list of length R, classical
@@ -150,7 +159,7 @@ class RiskInput(object):
             # thing since it calls get_output directly
             assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
             for rlzi, haz_by_rlzi in items:
-                out = get_output(cr_model, assets_by_taxo, haz_by_rlzi, rlzi)
+                out = get_output(crmodel, assets_by_taxo, haz_by_rlzi, rlzi)
                 yield out
 
     def __repr__(self):

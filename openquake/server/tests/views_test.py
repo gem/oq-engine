@@ -34,6 +34,7 @@ import tempfile
 import string
 import random
 from django.test import Client
+from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.baselib.workerpool import TimeoutError
@@ -70,10 +71,13 @@ class EngineServerTestCase(unittest.TestCase):
             js = resp.content.decode('utf8')
         else:
             js = bytes(loadnpz(resp.streaming_content)['json'])
+        if not js:
+            print('Empty json from ')
+            return {}
         try:
             return json.loads(js)
         except Exception:
-            print('Invalid JSON, see %s' % gettemp(resp.content),
+            print('Invalid JSON, see %s' % gettemp(resp.content, remove=False),
                   file=sys.stderr)
             return {}
 
@@ -95,6 +99,7 @@ class EngineServerTestCase(unittest.TestCase):
         raise TimeoutError(running_calcs)
 
     def postzip(self, archive):
+        config.distribution['log_level'] = 'warning'
         with open(os.path.join(self.datadir, archive), 'rb') as a:
             resp = self.post('run', dict(archive=a))
         try:
@@ -102,10 +107,7 @@ class EngineServerTestCase(unittest.TestCase):
         except Exception:
             raise ValueError(b'Invalid JSON response: %r' % resp.content)
         if resp.status_code == 200:  # ok case
-            job_id = js['job_id']
-            self.job_ids.append(job_id)
-            time.sleep(1)  # wait a bit for the calc to start
-            return job_id
+            return js['job_id']
         else:  # error case
             return ''.join(js)  # traceback string
 
@@ -166,13 +168,16 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check exposure_metadata
         resp = self.c.get(extract_url + 'exposure_metadata')
-        got = loadnpz(resp.streaming_content)
-        self.assertEqual(sorted(got['tagnames']), [b'taxonomy'])
-        self.assertEqual(sorted(got['array']), ['number', 'value-structural'])
+        got = loadnpz(resp.streaming_content)['json']
+        dic = json.loads(bytes(got))
+        self.assertEqual(sorted(dic['tagnames']), ['taxonomy'])
+        self.assertEqual(sorted(dic['names']), ['number', 'value-structural'])
 
         # check assets
         resp = self.c.get(
             extract_url + 'assets?taxonomy=MC-RLSB-2&taxonomy=W-SLFB-1')
+        if resp.status_code == 500:  # should never happen
+            raise RuntimeError(resp.content.decode('utf8'))
         got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 25)
 
@@ -237,7 +242,6 @@ class EngineServerTestCase(unittest.TestCase):
     def test_classical(self):
         job_id = self.postzip('classical.zip')
         self.wait()
-
         # check that we get at least the following 6 outputs
         # fullreport, input, hcurves, hmaps, realizations, events
         # we can add more outputs in the future

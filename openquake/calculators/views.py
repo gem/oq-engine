@@ -35,10 +35,8 @@ from openquake.commonlib import util, calc
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
 from openquake.calculators import getters
-from openquake.calculators.extract import extract
+from openquake.calculators.extract import extract, FLOAT, INT
 
-FLOAT = (float, numpy.float32, numpy.float64)
-INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 F32 = numpy.float32
 U32 = numpy.uint32
 
@@ -329,14 +327,14 @@ def view_totlosses(token, dstore):
     return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
 
 
-# for event based risk and ebrisk
-def portfolio_loss(dstore):
+def _portfolio_loss(dstore):
     R = dstore['full_lt'].get_num_rlzs()
     array = dstore['losses_by_event'][()]
+    rlzs = dstore['events']['rlz_id'][array['event_id']]
     L, = array.dtype['loss'].shape  # loss has shape L
     data = numpy.zeros((R, L), F32)
-    for row in array:
-        data[row['rlzi']] += row['loss']
+    for row, rlz in zip(array, rlzs):
+        data[rlz] += row['loss']
     return data
 
 
@@ -348,7 +346,7 @@ def view_portfolio_losses(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    data = portfolio_loss(dstore).view(loss_dt)[:, 0]
+    data = _portfolio_loss(dstore).view(loss_dt)[:, 0]
     rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision
@@ -358,15 +356,14 @@ def view_portfolio_losses(token, dstore):
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
-    The mean and stddev loss for the full portfolio for each loss type,
-    extracted from the event loss table, averaged over the realizations
+    The mean full portfolio loss for each loss type,
+    extracted from the event loss table.
     """
-    data = portfolio_loss(dstore)  # shape (R, L)
-    loss_types = list(dstore['oqparam'].loss_dt().names)
-    header = ['portfolio_loss'] + loss_types
-    mean = ['mean'] + [row.mean() for row in data.T]
-    stddev = ['stddev'] + [row.std(ddof=1) for row in data.T]
-    return rst_table([mean, stddev], header)
+    oq = dstore['oqparam']
+    G = getattr(oq, 'number_of_ground_motion_fields', 1)
+    R = dstore['full_lt'].get_num_rlzs()
+    means = dstore['losses_by_event']['loss'].sum(axis=0) / R / G
+    return rst_table([means], oq.loss_names)
 
 
 def sum_table(records):
@@ -604,10 +601,11 @@ def view_global_hcurves(token, dstore):
     curves.
     """
     oq = dstore['oqparam']
-    nsites = len(dstore['sitecol'])
+    sitecol = dstore['sitecol']
+    nsites = len(sitecol)
     rlzs = dstore['full_lt'].get_realizations()
     weights = [rlz.weight for rlz in rlzs]
-    mean = getters.PmapGetter(dstore, weights).get_mean()
+    mean = getters.PmapGetter(dstore, weights, sitecol.sids).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
@@ -653,25 +651,22 @@ def view_global_hmaps(token, dstore):
 @view.add('global_gmfs')
 def view_global_gmfs(token, dstore):
     """
-    Display GMFs averaged on everything for debugging purposes
+    Display GMFs on the first IMT averaged on everything for debugging purposes
     """
     imtls = dstore['oqparam'].imtls
-    row = dstore['gmf_data/data']['gmv'].mean(axis=0)
+    row = [dstore[f'gmf_data/gmv_{m}'][:].mean(axis=0)
+           for m in range(len(imtls))]
     return rst_table([row], header=imtls)
 
 
-@view.add('gmv_by_rup')
-def view_gmv_by_rup(token, dstore):
+@view.add('gmf')
+def view_gmf(token, dstore):
     """
-    Display a synthetic gmv per rupture serial for debugging purposes
+    Display a mean gmf for debugging purposes
     """
-    rup_id = dstore['events']['rup_id']
-    serial = dstore['ruptures']['serial']
-    data = dstore['gmf_data/data'][()]
-    gmv = fast_agg3(data, 'eid', ['gmv'])
-    gmv['eid'] = serial[rup_id[gmv['eid']]]
-    gm = fast_agg3(gmv, 'eid', ['gmv'])
-    return rst_table(gm, header=['serial', 'gmv'])
+    df = dstore.read_df('gmf_data', 'sid')
+    gmf = df.groupby(df.index).mean()
+    return str(gmf)
 
 
 @view.add('mean_disagg')
@@ -735,7 +730,8 @@ def view_pmap(token, dstore):
     pmap = {}
     rlzs = dstore['full_lt'].get_realizations()
     weights = [rlz.weight for rlz in rlzs]
-    pgetter = getters.PmapGetter(dstore, weights)
+    pgetter = getters.PmapGetter(dstore, weights, dstore['sitecol'].sids,
+                                 dstore['oqparam'].imtls)
     pmap = pgetter.get_mean(grp)
     return str(pmap)
 
@@ -782,8 +778,8 @@ def view_gmvs_to_hazard(token, dstore):
     assert rlz < dstore['full_lt'].get_num_rlzs()
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
-    data = dstore['gmf_data/data'][()]
-    data = data[(data['sid'] == sid) & (data['rlzi'] == rlz)]
+    data = dstore.read_df('gmf_data', 'sid').loc[sid]
+    data = data['rlzi'] == rlz
     tbl = []
     gmv = data['gmv']
     for imti, (imt, imls) in enumerate(oq.imtls.items()):
@@ -802,8 +798,8 @@ def view_gmvs(token, dstore):
     """
     sid = int(token.split(':')[1])  # called as view_gmvs:sid
     assert sid in dstore['sitecol'].sids
-    data = dstore['gmf_data/data'][()]
-    gmvs = data[data['sid'] == sid]['gmv']
+    data = dstore.read_df('gmf_data', 'sid')
+    gmvs = data.loc[sid]['gmv']
     return rst_table(gmvs)
 
 
@@ -818,6 +814,16 @@ def view_events_by_mag(token, dstore):
     for mag, grp in group_array(rups, 'mag').items():
         counts[mag] = sum(num_evs[rup_id] for rup_id in grp['id'])
     return rst_table(counts.items(), ['mag', 'num_events'])
+
+
+@view.add('ebrups_by_mag')
+def view_ebrups_by_mag(token, dstore):
+    """
+    Show how many event based ruptures there are for each magnitude
+    """
+    mags = dstore['ruptures']['mag']
+    uniq, counts = numpy.unique(mags, return_counts=True)
+    return rst_table(zip(uniq, counts), ['mag', 'num_ruptures'])
 
 
 @view.add('maximum_intensity')
@@ -838,4 +844,6 @@ def view_extreme(token, dstore):
     mean = dstore.sel('hmaps-stats', stat='mean')[:, 0, 0, -1]  # shape N1MP
     site_ids, = numpy.where(mean == mean.max())
     arr = dstore['sitecol'][site_ids]
-    return write_csv(io.StringIO(), arr)
+    sio = io.StringIO()
+    write_csv(sio, arr)
+    return sio.getvalue()

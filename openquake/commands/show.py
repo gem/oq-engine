@@ -41,7 +41,9 @@ def print_(aw):
     elif hasattr(aw, 'shape_descr'):
         print(rst_table(aw.to_table()))
     if hasattr(aw, 'array') and aw.dtype.names:
-        print(write_csv(io.StringIO(), aw.array))
+        sio = io.StringIO()
+        write_csv(sio, aw.array)
+        print(sio.getvalue())
 
 
 @sap.script

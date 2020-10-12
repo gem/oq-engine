@@ -660,7 +660,8 @@ def write_source_model(dest, sources_or_groups, name=None,
         # remove duplicate content from nodes
         for grp_node in nodes:
             for src_node in grp_node:
-                src_node.nodes = []
+                if src_node["id"] in ddict:
+                    src_node.nodes = []
         # save HDF5 file
         dest5 = os.path.splitext(dest)[0] + '.hdf5'
         with hdf5.File(dest5, 'w') as h:

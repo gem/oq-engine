@@ -249,7 +249,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.M = len(self.imts)
         ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
         self.pgetter = getters.PmapGetter(
-            self.datastore, ws, self.sitecol.sids)
+            self.datastore, ws, self.sitecol.sids, oq.imtls, oq.poes)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:

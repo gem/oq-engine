@@ -15,6 +15,30 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+Here is an example of how to convert GMFs into mean hazard curves. Works
+in the case of sampling, when the weights are all equal. It keeps
+everything in memory and it is extremely fast.
+NB: parallelization would kill the performance::
+
+ def gmvs_to_mean_hcurves(dstore):
+    # Convert GMFs into mean hazard curves. Works by keeping everything in
+    # memory and it is extremely fast.
+    # NB: parallelization would kill the performance.
+    oq = dstore['oqparam']
+    N = len(dstore['sitecol'])
+    M = len(oq.imtls)
+    L1 = len(oq.imtls.array) // M
+    gmf_df = dstore.read_df('gmf_data', 'sid')
+    mean = numpy.zeros((N, 1, M, L1))
+    for sid, df in gmf_df.groupby(gmf_df.index):
+        gmvs = [df[col].to_numpy() for col in df.columns
+                if col.startswith('gmv_')]
+        mean[sid, 0] = calc.gmvs_to_poes(
+            gmvs, oq.imtls, oq.ses_per_logic_tree_path)
+    return mean
+"""
+import itertools
 import warnings
 import logging
 import numpy
@@ -145,7 +169,7 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     (``imls``), compute hazard curve probabilities of exceedance.
 
     :param gmvs:
-        A list of ground motion values, as floats.
+        Am array of ground motion values, as floats.
     :param imls:
         A list of intensity measure levels, as floats.
     :param ses_per_logic_tree_path:
@@ -159,9 +183,25 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     # here is an example: imls = [0.03, 0.04, 0.05], gmvs=[0.04750576]
     # => num_exceeding = [1, 1, 0] coming from 0.04750576 > [0.03, 0.04, 0.05]
     imls = numpy.array(imls).reshape((len(imls), 1))
-    num_exceeding = numpy.sum(numpy.array(gmvs) >= imls, axis=1)
+    num_exceeding = numpy.sum(gmvs >= imls, axis=1)
     poes = 1 - numpy.exp(- num_exceeding / ses_per_logic_tree_path)
     return poes
+
+
+def gmvs_to_poes(gmvs, imtls, ses_per_logic_tree_path):
+    """
+    :param gmvs: an array of GMVs of shape (M, E)
+    :param imtls: a dictionary imt -> imls with M IMTs and L levels
+    :param ses_per_logic_tree_path: a positive integer
+    :returns: an array of PoEs of shape (M, L)
+    """
+    M = len(imtls)
+    assert len(gmvs) == M, (len(gmvs), M)
+    L = len(imtls[next(iter(imtls))])
+    arr = numpy.zeros((M, L))
+    for m, imls in enumerate(imtls.values()):
+        arr[m] = _gmvs_to_haz_curve(gmvs[m], imls, ses_per_logic_tree_path)
+    return arr
 
 
 # ################## utilities for classical calculators ################ #
@@ -250,26 +290,27 @@ class RuptureImporter(object):
         :param rup_array: an array of ruptures with fields grp_id
         :returns: a list of RuptureGetters
         """
-        from openquake.calculators.getters import RuptureGetter, gen_rgetters
+        from openquake.calculators.getters import (
+            get_eid_rlz, gen_rupture_getters)
         # this is very fast compared to saving the ruptures
-        eids = rupture.get_eids(
-            rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
-        self.check_overflow(len(eids))  # check the number of events
-        events = numpy.zeros(len(eids), rupture.events_dt)
+        E = rup_array['n_occ'].sum()
+        self.check_overflow(E)  # check the number of events
+        events = numpy.zeros(E, rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = gen_rgetters(self.datastore)
+        rgetters = gen_rupture_getters(
+            self.datastore, self.oqparam.concurrent_tasks)
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Building assocs event_id -> rlz_id for {:_d} events'
-                     ' and {:_d} ruptures'.format(len(events), len(rup_array)))
+        logging.info('Associating event_id -> rlz_id for {:_d} events '
+                     'and {:_d} ruptures'.format(len(events), len(rup_array)))
+        iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
         if len(events) < 1E5:
-            it = map(RuptureGetter.get_eid_rlz, rgetters)
+            it = itertools.starmap(get_eid_rlz, iterargs)
         else:
-            it = parallel.Starmap(RuptureGetter.get_eid_rlz,
-                                  ((rgetter,) for rgetter in rgetters),
-                                  progress=logging.debug,
-                                  h5=self.datastore.hdf5)
+            it = parallel.Starmap(
+                get_eid_rlz, iterargs, progress=logging.debug,
+                h5=self.datastore.hdf5)
         i = 0
         for eid_rlz in it:
             for er in eid_rlz:

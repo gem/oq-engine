@@ -133,12 +133,19 @@ site_param_dt = {
     'geology': (numpy.string_, 20),
     'amplfactor': numpy.float64,
 
-    # parameters for geotechnic hazard
-    'liquefaction_susceptibility': numpy.int16,
-    'landsliding_susceptibility': numpy.int16,
+    # parameters for secondary perils
+    'friction_mid': numpy.float64,
+    'cohesion_mid': numpy.float64,
+    'saturation': numpy.float64,
+    'dry_density': numpy.float64,
+    'Fs': numpy.float64,
+    'crit_accel': numpy.float64,
+    'unit': (numpy.string_, 5),
+    'liq_susc_cat': (numpy.string_, 2),
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
+    'gwd': numpy.float64,
     'cti': numpy.float64,
     'dc': numpy.float64,
     'dr': numpy.float64,

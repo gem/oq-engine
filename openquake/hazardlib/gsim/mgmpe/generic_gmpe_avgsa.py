@@ -62,7 +62,8 @@ class GenericGmpeAvgSA(GMPE):
 
     def __init__(self, gmpe_name, avg_periods, corr_func='none', **kwargs):
 
-        super().__init__(gmpe_name=gmpe_name)
+        super().__init__(gmpe_name=gmpe_name, avg_periods=avg_periods,
+                         corr_func=corr_func, **kwargs)
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
         self.avg_periods = avg_periods

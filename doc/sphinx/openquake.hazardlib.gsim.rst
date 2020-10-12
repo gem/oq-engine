@@ -290,6 +290,14 @@ boore_atkinson_2011
     :undoc-members:
     :show-inheritance:
 
+bozorgnia_campbell_2016
+-----------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bozorgnia_campbell_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 bradley_2013
 --------------------------------------------
 
@@ -803,6 +811,14 @@ pankow_pechmann_2004
     :undoc-members:
     :show-inheritance:
 
+parker_2020
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.parker_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pezeshk_2011
 --------------------------------------------
 
@@ -911,6 +927,14 @@ somerville_2009
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.somerville_2009
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stewart_2016
+-----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.stewart_2016
     :members:
     :undoc-members:
     :show-inheritance:

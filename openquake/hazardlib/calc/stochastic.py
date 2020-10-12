@@ -207,7 +207,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
         for rup_key in rup_data[src_key]:
             rup, source_id, grp_id = rup_data[src_key][rup_key]
             cnt = rup_counter[src_key][rup_key]
-            ebr = EBRupture(rup, source_id, grp_id, cnt, samples)
+            ebr = EBRupture(rup, source_id, grp_id, cnt)
             eb_ruptures.append(ebr)
 
     return eb_ruptures, calc_times
@@ -261,7 +261,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
             for rup, grp_id, n_occ in src.sample_ruptures(samples * num_ses):
-                ebr = EBRupture(rup, src.source_id, grp_id, n_occ, samples)
+                ebr = EBRupture(rup, src.source_id, grp_id, n_occ)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
             try:
