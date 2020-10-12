@@ -51,7 +51,7 @@ class HassaniAtkinson2020SSlabTestCase(BaseGSIMTestCase):
 
     def test_fpeak(self):
         self.check('HA20/HassaniAtkinson2020SSlabFpeak_MEAN.csv',
-                   max_discrep_percentage=0.1, fpeak=4)
+                   max_discrep_percentage=0.1)
 
     def test_stddev(self):
         self.check('HA20/HassaniAtkinson2020SSlab_STDDEV.csv',

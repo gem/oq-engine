@@ -58,23 +58,20 @@ class HassaniAtkinson2020SInter(GMPE):
 
     REQUIRES_RUPTURE_PARAMETERS = {'hypo_depth', 'mag'}
 
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
+    REQUIRES_SITES_PARAMETERS = {'fpeak', 'vs30', 'z2pt5'}
 
-    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0,
-                 fpeak=-1):
+    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0):
         """
         Aditional parameters.
         """
         super().__init__(kappa=kappa, backarc=backarc, forearc_ne=forearc_ne,
-                         forearc_sw=forearc_sw, fpeak=fpeak)
+                         forearc_sw=forearc_sw)
         # kappa parameter
         self.kappa = kappa
         # set proportion of rrups in backarc, forearc_ne and forearc_sw
         self.backarc = backarc
         self.forearc_ne = forearc_ne
         self.forearc_sw = forearc_sw
-        # peak frequency of the horizontal-to-vertical spectral ratio
-        self.fpeak = fpeak
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -106,7 +103,7 @@ class HassaniAtkinson2020SInter(GMPE):
         fsnonlin = self._fsnonlin_ss14(C, sites.vs30, pga_rock)
         fvs30 = self._fvs30(C, sites.vs30)
         fz2pt5 = self._fz2pt5(C, sites.z2pt5)
-        ffpeak = self._ffpeak(C, imt)
+        ffpeak = self._ffpeak(C, imt, sites.fpeak)
 
         mean = 10 ** (fm + fdsigma + fz + fkappa + fgamma
                       + self.CONST_REGION['cc'] + clf + C['chf']
@@ -177,27 +174,32 @@ class HassaniAtkinson2020SInter(GMPE):
         return eds0 + eds1 * math.log10(dsigma) \
             + eds2 * math.log10(dsigma) ** 2
 
-    def _ffpeak(self, C, imt):
+    def _ffpeak(self, C, imt, fpeak):
         """
         Fpeak factor.
         """
-        if not imt.name == "SA" or self.fpeak <= 0:
+        if not imt.name == "SA" or max(fpeak) <= 0:
             # pgv, pga or unknown fpeak
             return 0
 
         s = self.CONSTANTS
-        x = self.fpeak / 10 ** C['f']
+        x = fpeak / 10 ** C['f']
 
-        if x <= s['x0']:
-            return s['cfp0']
-        if x <= s['x1']:
-            return s['cfp0'] + s['cfp1'] * math.log10(x / s['x0'])
-        if x <= s['x2']:
-            return s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
-                   + s['cfp2'] * math.log10(x / s['x1'])
-        return s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
+        ffpeak = np.where(fpeak <= 0, 0, s['cfp0'])
+
+        idx = np.where((s['x0'] < x) & (x <= s['x1']))
+        ffpeak[idx] = s['cfp0'] + s['cfp1'] * np.log10(x[idx] / s['x0'])
+
+        idx = np.where((s['x1'] < x) & (x <= s['x2']))
+        ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
+            + s['cfp2'] * np.log10(x[idx] / s['x1'])
+
+        idx = np.where(s['x2'] < x)
+        ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
             + s['cfp2'] * math.log10(s['x2'] / s['x1']) \
-            + s['cfp3'] * math.log10(x / s['x2'])
+            + s['cfp3'] * np.log10(x[idx] / s['x2'])
+
+        return ffpeak
 
     def _fgamma(self, C, rrup):
         """
