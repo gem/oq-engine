@@ -346,6 +346,8 @@ def create_jobs(job_inis, loglvl, kw):
     the logging.
     """
     dicts = []
+    # setting the handlers before any call to `readinput.get_oqparam`
+    # to avoid using the default logger which is in WARN level
     fmt = '[%(asctime)s %(levelname)s] %(message)s'
     for handler in logging.root.handlers:
         f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
