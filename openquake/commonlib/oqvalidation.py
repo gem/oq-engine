@@ -290,6 +290,8 @@ class OqParam(valid.ParamSet):
             elif name == 'max':
                 names_vals['max'] = names_vals.pop(name)
         super().__init__(**names_vals)
+        if 'job_ini' not in self.inputs:
+            self.inputs['job_ini'] = '<in-memory>'
         job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
             raise InvalidFile('Missing calculation_mode in %s' % job_ini)
