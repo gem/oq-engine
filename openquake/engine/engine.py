@@ -346,6 +346,10 @@ def create_jobs(job_inis, loglvl, kw):
     the logging.
     """
     dicts = []
+    fmt = '[%(asctime)s %(levelname)s] %(message)s'
+    for handler in logging.root.handlers:
+        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(f)
     for i, job_ini in enumerate(job_inis):
         dic = job_ini if isinstance(job_ini, dict) else vars(
             readinput.get_oqparam(job_ini, validate=0, **kw))
@@ -360,7 +364,7 @@ def create_jobs(job_inis, loglvl, kw):
                 for param, value in pars.items():
                     new[param] = value
                 new['description'] = '%s %s' % (new['description'], pars)
-                logging.info('Generating job with %s', pars)
+                logging.info('Job with %s', pars)
                 dicts.append(new)
         else:
             _init_logs(dic, loglvl)
