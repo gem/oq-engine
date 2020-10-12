@@ -1,3 +1,7 @@
+  [Viktor Polak]
+  * Added fpeak site parameter
+  * Added the Hassani and Atkinson (2020) GMPE
+
   [Michele Simionato]
   * Changed the sourcewriter to not save the `area_source_discretization`
   * Restored reading from the workers in classical_risk and classical_damage
