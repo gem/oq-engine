@@ -30,6 +30,7 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
 
+
 class ModifiableGMPE(GMPE):
     """
     This is a fully configurable GMPE
@@ -44,8 +45,8 @@ class ModifiableGMPE(GMPE):
            variability i.e. the returned mean is the original + tau * episilon
            and sigma tot is equal to sigma_within
         - 'apply_swiss_amplification' This applies intensity amplification
-           factors to the mean intensity returned by the parent GMPE/IPE based on the
-           input 'amplfactor' site parameter 
+           factors to the mean intensity returned by the parent GMPE/IPE based
+           on the input 'amplfactor' site parameter
     """
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
@@ -80,7 +81,7 @@ class ModifiableGMPE(GMPE):
         for spec of input and result values.
         """
         working_std_types = copy.copy(stddev_types)
-		
+
         if 'set_between_epsilon' in self.params:
             if (const.StdDev.INTER_EVENT not in
                     self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
@@ -88,6 +89,7 @@ class ModifiableGMPE(GMPE):
             working_std_types.append(const.StdDev.INTER_EVENT)
             working_std_types.append(const.StdDev.INTRA_EVENT)
             working_std_types.append(const.StdDev.TOTAL)
+
         if 'apply_swiss_amplification' in self.params:
             REQUIRES_SITES_PARAMETERS = set(('amplfactor', ))
 
@@ -99,14 +101,10 @@ class ModifiableGMPE(GMPE):
         for key, val in zip(working_std_types, ostds):
             setattr(self, key, val)
         self.mean = omean
-		
+
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
-#            if methname == 'apply_swiss_amplification':
-#                getattr(self, methname)(sites)
-#            else:
-#                getattr(self, methname)(**kw)
-            getattr(self, methname)(imt, **kw)
+            getattr(self, methname)(sites, rup, dists, imt, **kw)
 
         # Return the standard deviation types as originally requested
         outs = []
@@ -114,18 +112,14 @@ class ModifiableGMPE(GMPE):
             outs.append(getattr(self, key))
 
         return self.mean, outs
-        
-    def apply_swiss_amplification(self,sites):
-        """
-		Adds amplfactor to mean
-        """	
-        self.mean = self.mean + sites.amplfactor
-        
-    def set_between_epsilon(self, epsilon_tau):
-=======
 
-    def set_between_epsilon(self, imt, epsilon_tau):
->>>>>>> origin
+    def apply_swiss_amplification(self, sites, rup, dists, imt):
+        """
+        Adds amplfactor to mean
+        """
+        self.mean = self.mean + sites.amplfactor
+
+    def set_between_epsilon(self, sites, rup, dists, imt, epsilon_tau):
         """
         :param epsilon_tau:
             the epsilon value used to constrain the between event variability
@@ -142,7 +136,7 @@ class ModifiableGMPE(GMPE):
         keyb = const.StdDev.INTRA_EVENT
         setattr(self, keya, getattr(self, keyb))
 
-    def set_scale_median_scalar(self, imt, scaling_factor):
+    def set_scale_median_scalar(self, sites, rup, dists, imt, scaling_factor):
         """
         :param scaling_factor:
             Simple scaling factor (in linear space) to increase/decrease median
@@ -150,7 +144,7 @@ class ModifiableGMPE(GMPE):
         """
         self.mean += np.log(scaling_factor)
 
-    def set_scale_median_vector(self, imt, scaling_factor):
+    def set_scale_median_vector(self, sites, rup, dists, imt, scaling_factor):
         """
         :param scaling_factor:
             IMT-dependent median scaling factors (in linear space) as
@@ -159,7 +153,8 @@ class ModifiableGMPE(GMPE):
         C = scaling_factor[imt]
         self.mean += np.log(C["scaling_factor"])
 
-    def set_scale_total_sigma_scalar(self, imt, scaling_factor):
+    def set_scale_total_sigma_scalar(self, sites, rup, dists, imt,
+                                     scaling_factor):
         """
         Scale the total standard deviations by a constant scalar factor
         :param scaling_factor:
@@ -169,7 +164,8 @@ class ModifiableGMPE(GMPE):
         total_stddev *= scaling_factor
         setattr(self, const.StdDev.TOTAL, total_stddev)
 
-    def set_scale_total_sigma_vector(self, imt, scaling_factor):
+    def set_scale_total_sigma_vector(self, sites, rup, dists, imt, 
+                                     scaling_factor):
         """
         Scale the total standard deviations by a IMT-dependent scalar factor
         :param scaling_factor:
@@ -181,7 +177,7 @@ class ModifiableGMPE(GMPE):
         total_stddev *= C["scaling_factor"]
         setattr(self, const.StdDev.TOTAL, total_stddev)
 
-    def set_fixed_total_sigma(self, imt, total_sigma):
+    def set_fixed_total_sigma(self, sites, rup, dists, imt, total_sigma):
         """
         Sets the total standard deviations to a fixed value per IMT
         :param total_sigma:
