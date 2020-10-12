@@ -515,7 +515,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if nr:  # few sites, log the number of ruptures per magnitude
             logging.info('%s', nr)
         oq = self.oqparam
-        if oq.calculation_mode.endswith(('risk', 'damage')):
+        if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
             with hdf5.File(self.datastore.tempname, 'a') as cache:
                 cache['oqparam'] = oq
                 cache['rlzs_by_grp'] = self.full_lt.get_rlzs_by_grp()
@@ -536,7 +536,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     trt = self.full_lt.trt_by_grp[key]
                     name = 'poes/grp-%02d' % key
                     self.datastore[name] = pmap
-                    if oq.calculation_mode.endswith(('risk', 'damage')):
+                    if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
                         with hdf5.File(self.datastore.tempname, 'a') as cache:
                             cache[name] = pmap
                     extreme = max(
