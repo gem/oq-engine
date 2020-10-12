@@ -151,6 +151,7 @@ site_param_dt = {
     'dwb': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
+    'fpeak': numpy.float64,
 
     # other parameters
     'custom_site_id': numpy.uint32,
