@@ -37,6 +37,10 @@ class HassaniAtkinson2020SInterTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1,
                    backarc=0.2, forearc_ne=0.5, forearc_sw=0.3)
 
+    def test_stddev(self):
+        self.check('HA20/HassaniAtkinson2020SInter_STDDEV.csv',
+                   max_discrep_percentage=0.1)
+
 
 class HassaniAtkinson2020SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = HassaniAtkinson2020SSlab
@@ -49,10 +53,18 @@ class HassaniAtkinson2020SSlabTestCase(BaseGSIMTestCase):
         self.check('HA20/HassaniAtkinson2020SSlabFpeak_MEAN.csv',
                    max_discrep_percentage=0.1, fpeak=4)
 
+    def test_stddev(self):
+        self.check('HA20/HassaniAtkinson2020SSlab_STDDEV.csv',
+                   max_discrep_percentage=0.1)
+
 
 class HassaniAtkinson2020AscTestCase(BaseGSIMTestCase):
     GSIM_CLASS = HassaniAtkinson2020Asc
 
     def test_mean(self):
         self.check('HA20/HassaniAtkinson2020Asc_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_stddev(self):
+        self.check('HA20/HassaniAtkinson2020Asc_STDDEV.csv',
                    max_discrep_percentage=0.1)

@@ -60,12 +60,15 @@ class HassaniAtkinson2020SInter(GMPE):
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
-    def __init__(self, backarc=0, forearc_ne=1, forearc_sw=0, fpeak=-1):
+    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0,
+                 fpeak=-1):
         """
         Aditional parameters.
         """
-        super().__init__(backarc=backarc, forearc_ne=forearc_ne,
+        super().__init__(kappa=kappa, backarc=backarc, forearc_ne=forearc_ne,
                          forearc_sw=forearc_sw, fpeak=fpeak)
+        # kappa parameter
+        self.kappa = kappa
         # set proportion of rrups in backarc, forearc_ne and forearc_sw
         self.backarc = backarc
         self.forearc_ne = forearc_ne
@@ -122,19 +125,18 @@ class HassaniAtkinson2020SInter(GMPE):
         """
         Between event standard deviations as tau.
         Intra event from site to site stddev and within site stddev.
+        Total given in COEFFS to 3dp.
         """
-        phi = math.sqrt(C['ps2s'] ** 2 + C['pss' + self.SUFFIX] ** 2)
-
         stddevs = []
         for stddev in stddev_types:
             assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev == const.StdDev.TOTAL:
-                stddevs.append(np.repeat(math.sqrt(phi ** 2 + C['tau'] ** 2),
-                                         len(vs30)))
+                stddevs.append(C['s' + self.SUFFIX])
             elif stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(np.repeat(C['tau'], len(vs30)))
+                stddevs.append(C['tau'])
             elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.repeat(phi, len(vs30)))
+                stddevs.append(math.sqrt(C['ps2s'] ** 2
+                                         + C['pss' + self.SUFFIX] ** 2))
 
         return stddevs
 
@@ -151,6 +153,9 @@ class HassaniAtkinson2020SInter(GMPE):
         return clf0
 
     def _dsigma(self, hypo_depth):
+        """
+        Hypocentre depth factor.
+        """
         out = self.CONST_REGION['cd0']
         dp0 = self.CONST_REGION['dp0']
         if hypo_depth > dp0:
@@ -160,6 +165,9 @@ class HassaniAtkinson2020SInter(GMPE):
         return 10 ** out
 
     def _fds_ha18(self, C, mag, dsigma):
+        """
+        Dsigma factor.
+        """
         eds1 = np.polyval([C['g14'], C['g13'], C['g12'], C['g11'], C['g10']],
                           mag)
         eds2 = np.polyval([C['g24'], C['g23'], C['g22'], C['g21'], C['g20']],
@@ -170,6 +178,9 @@ class HassaniAtkinson2020SInter(GMPE):
             + eds2 * math.log10(dsigma) ** 2
 
     def _ffpeak(self, C, imt):
+        """
+        Fpeak factor.
+        """
         if not imt.name == "SA" or self.fpeak <= 0:
             # pgv, pga or unknown fpeak
             return 0
@@ -189,6 +200,9 @@ class HassaniAtkinson2020SInter(GMPE):
             + s['cfp3'] * math.log10(x / s['x2'])
 
     def _fgamma(self, C, rrup):
+        """
+        Gamma factor.
+        """
         # proportion sum for normalised values with rrup factor
         p_sum = rrup / (self.backarc + self.forearc_ne + self.forearc_sw)
 
@@ -197,7 +211,10 @@ class HassaniAtkinson2020SInter(GMPE):
             + C['farc_sw' + self.SUFFIX] * self.forearc_sw * p_sum
 
     def _fkp_ha18(self, C, mag, dsigma):
-        l10kp = math.log10(self.CONSTANTS['kappa'])
+        """
+        Kappa factor for B/C site condition of Japan.
+        """
+        l10kp = math.log10(self.kappa)
 
         p = np.zeros(4)
         ek0 = np.zeros(4)
@@ -211,21 +228,30 @@ class HassaniAtkinson2020SInter(GMPE):
             + ek0[2] * l10kp ** 3 + ek0[3] * l10kp ** 4
 
     def _fm_ha18(self, C, mag):
+        """
+        Magnitude factor.
+        """
         if mag <= C['mh']:
             return C['e0'] + C['e1'] * (mag - C['mh']) \
                    + C['e2'] * (mag - C['mh']) ** 2
         return C['e0'] + C['e3'] * (mag - C['mh'])
 
     def _fsnonlin_ss14(self, C, vs30, pga_rock):
+        """
+        Non-linear factor.
+        """
         s = self.CONSTANTS
 
         f2 = C['f4'] * (np.exp(C['f5']
-                        * (np.minimum(vs30, s['vref']) - s['vmin']))
+                               * (np.minimum(vs30, s['vref']) - s['vmin']))
                         - math.exp(C['f5'] * (s['vref'] - s['vmin'])))
 
         return s['f1'] + f2 * np.log((pga_rock + s['f3']) / s['f3'])
 
     def _fvs30(self, C, vs30):
+        """
+        Vs30 factor.
+        """
         s = self.CONSTANTS
         fvs30 = np.where(vs30 <= s['v0'],
                          C['cv1'] * math.log10(s['v0'] / s['vref'])
@@ -240,6 +266,9 @@ class HassaniAtkinson2020SInter(GMPE):
                         C['cv2'] * np.log10(vs30 / s['vref']), fvs30)
 
     def _fz2pt5(self, C, z2pt5):
+        """
+        Z2pt5 factor.
+        """
         s = self.CONSTANTS
         fz2pt5 = np.where(z2pt5 >= 0, C['cz0'], 0)
 
@@ -257,6 +286,9 @@ class HassaniAtkinson2020SInter(GMPE):
         return fz2pt5
 
     def _fz_ha18(self, C, mag, rrup):
+        """
+        Z factor.
+        """
         s = self.CONSTANTS
         h = 10 ** (-0.405 + 0.235 * mag)
         ref = np.sqrt(rrup ** 2 + h ** 2)
@@ -310,7 +342,7 @@ class HassaniAtkinson2020SInter(GMPE):
     # constant table suffix
     SUFFIX = "_if"
 
-    CONSTANTS = {"mlf0": 5.5, "mlf1": 7, "kappa": 0.04, "f1": 0, "f3": 98.1,
+    CONSTANTS = {"mlf0": 5.5, "mlf1": 7, "f1": 0, "f3": 98.1,
                  "b1": -1.3, "b2": -0.5, "v0": 100, "v1": 250, "v2": 1000,
                  "zx0": 150, "zx1": 800, "zx2": 4200,
                  "cfp0": -0.011, "cfp1": 0.421, "cfp2": -0.604, "cfp3": 0.086,
