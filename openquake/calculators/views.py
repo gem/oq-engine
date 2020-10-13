@@ -605,7 +605,8 @@ def view_global_hcurves(token, dstore):
     nsites = len(sitecol)
     rlzs = dstore['full_lt'].get_realizations()
     weights = [rlz.weight for rlz in rlzs]
-    mean = getters.PmapGetter(dstore, weights, sitecol.sids).get_mean()
+    mean = getters.PmapGetter(
+        dstore, weights, sitecol.sids, oq.imtls).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
