@@ -119,10 +119,8 @@ class PmapGetter(object):
             self.dstore = hdf5.File(self.dstore, 'r')
         else:
             self.dstore.open('r')  # if not
-        if 'rlzs_by_grp' in self.dstore:
-            self.rlzs_by_grp = self.dstore['rlzs_by_grp']
-        else:
-            self.rlzs_by_grp = self.dstore['full_lt'].get_rlzs_by_grp()
+        self.rlzs_by_grp = {grp: dset[()] for grp, dset in
+                            self.dstore['rlzs_by_grp'].items()}
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
