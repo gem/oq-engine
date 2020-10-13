@@ -50,7 +50,6 @@ python3-oq-engine (3.10.0-1~xenial01) xenial; urgency=low
   * Changed the /extract/events API to extract only the relevant events
   * Removed the GMF npz exporter
   * Speed-up risk saving in scenario_risk and scenario_damage
->>>>>>> origin
 
   [Antonio Ettorre]
   * Bumped GDAL to version 3.1.2

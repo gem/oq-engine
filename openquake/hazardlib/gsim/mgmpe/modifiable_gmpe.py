@@ -91,7 +91,7 @@ class ModifiableGMPE(GMPE):
             working_std_types.append(const.StdDev.TOTAL)
 
         if 'apply_swiss_amplification' in self.params:
-            REQUIRES_SITES_PARAMETERS = set(('amplfactor', ))
+            self.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
         # Compute the original mean and standard deviations
         omean, ostds = self.gmpe.get_mean_and_stddevs(
@@ -164,7 +164,7 @@ class ModifiableGMPE(GMPE):
         total_stddev *= scaling_factor
         setattr(self, const.StdDev.TOTAL, total_stddev)
 
-    def set_scale_total_sigma_vector(self, sites, rup, dists, imt, 
+    def set_scale_total_sigma_vector(self, sites, rup, dists, imt,
                                      scaling_factor):
         """
         Scale the total standard deviations by a IMT-dependent scalar factor

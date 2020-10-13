@@ -57,8 +57,7 @@ class BaumontEtAl2018High2210IAVGDC30n7(GMPE):
     for high attenuation, MinDc=30 and Min = 7 int. classes
     and IAVG as the base classes
 
-    implemented by laurentiu.danciu@sed.ethz.ch
-
+    Implemented by laurentiu.danciu@sed.ethz.ch
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST

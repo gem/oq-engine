@@ -19,7 +19,6 @@
 """
 Module exports :
 class:`FaccioliCauzzi2006`
-
 """
 
 import numpy as np
@@ -37,8 +36,7 @@ class FaccioliCauzzi2006(GMPE):
     Geneva, Switzerland, 3-8 September 2006
     Paper Number: 569
 
-    implemented by laurentiu.danciu@sed.ethz.ch
-
+    Implemented by laurentiu.danciu@sed.ethz.ch
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -67,7 +65,8 @@ class FaccioliCauzzi2006(GMPE):
 
         mean = self._compute_mean(C, rup, dists)
 
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=dists.repi.shape)
+        stddevs = self._get_stddevs(
+            C, stddev_types, num_sites=dists.repi.shape)
 
         return mean, stddevs
 

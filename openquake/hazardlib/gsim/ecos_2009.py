@@ -22,7 +22,6 @@ class:`ECOS2009`,
 class:`ECOS2009Highest`
 """
 import numpy as np
-from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -43,7 +42,7 @@ class ECOS2009(GMPE):
     Coefficients a,b are taken from Table 4 on page 19.
     Coefficients alpha,beta are taken from Table 5 on page 19.
 
-    implemented by laurentiu.danciu@sed.ethz.ch
+    Implemented by laurentiu.danciu@sed.ethz.ch
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
