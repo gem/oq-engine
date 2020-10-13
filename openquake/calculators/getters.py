@@ -78,7 +78,7 @@ class PmapGetter(object):
     """
     def __init__(self, dstore, weights, sids=None, poes=()):
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
-        self.sids = dstore['sitecol'].sids if sids is None else sids
+        self.sids = sids
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
