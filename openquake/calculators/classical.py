@@ -515,9 +515,14 @@ class ClassicalCalculator(base.HazardCalculator):
         if nr:  # few sites, log the number of ruptures per magnitude
             logging.info('%s', nr)
         oq = self.oqparam
+        with hdf5.File(self.datastore.tempname, 'a') as cache:
+            cache['oqparam'] = oq
+            cache['rlzs_by_grp'] = self.full_lt.get_rlzs_by_grp()
         data = []
         weights = [rlz.weight for rlz in self.realizations]
-        pgetter = getters.PmapGetter(self.datastore, weights)
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
+        pgetter = getters.PmapGetter(dstore, weights)
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
@@ -531,6 +536,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     trt = self.full_lt.trt_by_grp[key]
                     name = 'poes/grp-%02d' % key
                     self.datastore[name] = pmap
+                    with hdf5.File(self.datastore.tempname, 'a') as cache:
+                        cache[name] = pmap
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
@@ -578,8 +585,10 @@ class ClassicalCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks or 1
         logging.info('Building hazard statistics')
         self.weights = [rlz.weight for rlz in self.realizations]
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
         allargs = [  # this list is very fast to generate
-            (getters.PmapGetter(self.datastore, self.weights, t.sids, oq.poes),
+            (getters.PmapGetter(dstore, self.weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg,
              self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
@@ -662,7 +671,8 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     with monitor('read PoEs'):
         pgetter.init()
         if amplifier:
-            ampcode = pgetter.dstore['sitecol'].ampcode
+            with hdf5.File(pgetter.filename, 'r') as f:
+                ampcode = f['sitecol'].ampcode
             imtls = DictArray({imt: amplifier.amplevels
                                for imt in pgetter.imtls})
         else:
