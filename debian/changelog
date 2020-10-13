@@ -7,6 +7,7 @@
     intensity of the parent IPE based on the ‘amplfactor’ site parameter
 
   [Michele Simionato]
+  * Avoided warnings in classical_damage due to PoE == 1
   * Changed the sourcewriter to not save the `area_source_discretization`
   * Restored reading from the workers in classical_risk and classical_damage
   * Implemented `sensitivity_analysis`
