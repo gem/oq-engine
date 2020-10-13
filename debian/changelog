@@ -3,7 +3,7 @@
 
   [Laurentiu Danciu and Athanasios Papadopoulos]
   * Implemented intensity prediction equations for use in the Swiss Risk Model.
-    The new IPEs refer to models obtained from the ECOS (2009), Faccioli and 
+    The new IPEs refer to models obtained from the ECOS (2009), Faccioli and
     Cauzzi (2006), Bindi et al. (2011), and Baumont et al. (2018) studies.
   * Added new float site parameter 'amplfactor'
   * Extended the ModifiableGMPE class to allow amplification of the
@@ -76,7 +76,6 @@ python3-oq-engine (3.10.0-1~xenial01) xenial; urgency=low
   * Changed the logic tree sampling algorithm and made it possible to use
     both `early_weights` and `late_weights`
   * Restored magnitude-dependent maximum distance
->>>>>>> origin/master
   * Displaying the hazard maps in the WebUI for debugging purposes
   * Used the hazard map to get the disaggregation IML from the disaggregation
     PoE and added a warning for zero hazard
