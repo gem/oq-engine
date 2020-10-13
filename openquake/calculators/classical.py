@@ -586,9 +586,11 @@ class ClassicalCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks or 1
         logging.info('Building hazard statistics')
         self.weights = [rlz.weight for rlz in self.realizations]
+        dstore = (self.datastore.parent if oq.hazard_calculation_id
+                  else self.datastore)
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(
-                self.datastore, self.weights, t.sids, oq.imtls, oq.poes),
+                dstore, self.weights, t.sids, oq.imtls, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg,
              self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
