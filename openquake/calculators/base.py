@@ -278,8 +278,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
                 # remove temporary hdf5 file, if any
                 if os.path.exists(self.datastore.tempname) and remove:
-                    pass
-                    # os.remove(self.datastore.tempname)
+                    os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
 
     def core_task(*args):
