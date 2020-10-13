@@ -520,7 +520,9 @@ class ClassicalCalculator(base.HazardCalculator):
             cache['rlzs_by_grp'] = self.full_lt.get_rlzs_by_grp()
         data = []
         weights = [rlz.weight for rlz in self.realizations]
-        pgetter = getters.PmapGetter(self.datastore, weights)
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
+        pgetter = getters.PmapGetter(dstore, weights)
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
@@ -583,8 +585,10 @@ class ClassicalCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks or 1
         logging.info('Building hazard statistics')
         self.weights = [rlz.weight for rlz in self.realizations]
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
         allargs = [  # this list is very fast to generate
-            (getters.PmapGetter(self.datastore, self.weights, t.sids, oq.poes),
+            (getters.PmapGetter(dstore, self.weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg,
              self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
@@ -667,7 +671,8 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     with monitor('read PoEs'):
         pgetter.init()
         if amplifier:
-            ampcode = pgetter.dstore['sitecol'].ampcode
+            with hdf5.File(pgetter.filename, 'r') as f:
+                ampcode = f['sitecol'].ampcode
             imtls = DictArray({imt: amplifier.amplevels
                                for imt in pgetter.imtls})
         else:
