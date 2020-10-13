@@ -366,6 +366,8 @@ class ClassicalCalculator(base.HazardCalculator):
         smap.monitor.save('srcfilter', self.src_filter())
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
+        rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
+        self.datastore['rlzs_by_grp'] = rlzs_by_grp
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
