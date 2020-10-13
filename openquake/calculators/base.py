@@ -497,6 +497,12 @@ class HazardCalculator(BaseCalculator):
                 and not oq.save_disk_space):
             self.gzip_inputs()
 
+        # check DEFINED_FOR_REFERENCE_VELOCITY
+        if self.amplifier:
+            gsim_lt = readinput.get_gsim_lt(oq)
+            self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
+                                 gsim_lt.values)
+
     def save_multi_peril(self):
         """Defined in MultiRiskCalculator"""
 
@@ -823,7 +829,6 @@ class HazardCalculator(BaseCalculator):
             df = readinput.get_amplification(oq)
             check_amplification(df, self.sitecol)
             self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
-            self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance)
             if oq.amplification_method == 'kernel':
                 # TODO: need to add additional checks on the main calculation
                 # methodology since the kernel method is currently tested only
