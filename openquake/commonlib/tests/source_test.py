@@ -142,7 +142,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             polygon=polygon,
-            area_discretization=2,
+            area_discretization=1,
             temporal_occurrence_model=PoissonTOM(50.))
         return area
 

@@ -76,7 +76,7 @@ class PmapGetter(object):
     :param sids: the subset of sites to consider (if None, all sites)
     """
     def __init__(self, dstore, weights, sids, imtls=(), poes=()):
-        self.dstore = dstore
+        self.filename = dstore if isinstance(dstore, str) else dstore.filename
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
@@ -115,21 +115,16 @@ class PmapGetter(object):
         """
         if hasattr(self, '_pmap_by_grp'):  # already initialized
             return self._pmap_by_grp
-        if isinstance(self.dstore, str):
-            self.dstore = hdf5.File(self.dstore, 'r')
-        else:
-            self.dstore.open('r')  # if not
-        if 'rlzs_by_grp' in self.dstore:
-            self.rlzs_by_grp = self.dstore['rlzs_by_grp']
-        else:
-            self.rlzs_by_grp = self.dstore['full_lt'].get_rlzs_by_grp()
+        dstore = hdf5.File(self.filename, 'r')
+        self.rlzs_by_grp = {grp: dset[()] for grp, dset in
+                            dstore['rlzs_by_grp'].items()}
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
-        if 'poes' in self.dstore:
+        if 'poes' in dstore:
             # build probability maps restricted to the given sids
             ok_sids = set(self.sids)
-            for grp, dset in self.dstore['poes'].items():
+            for grp, dset in dstore['poes'].items():
                 ds = dset['array']
                 L, G = ds.shape[1:]
                 pmap = probability_map.ProbabilityMap(L, G)
@@ -138,6 +133,7 @@ class PmapGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
+        dstore.close()
         return self._pmap_by_grp
 
     # used in risk calculation where there is a single site per getter
