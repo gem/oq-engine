@@ -401,7 +401,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     msg = ('{} is suspiciously large, containing {:_d} '
                            'ruptures with complex_fault_mesh_spacing={} km')
                     spc = oq.complex_fault_mesh_spacing
-                    logging.warning(msg.format(src, src.num_ruptures, spc))
+                    logging.info(msg.format(src, src.num_ruptures, spc))
         hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
             self.N / oq.max_sites_per_tile)
         srcfilters = self.src_filter().split_in_tiles(hint)
