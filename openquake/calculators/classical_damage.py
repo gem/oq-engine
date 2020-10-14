@@ -16,11 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import numpy
-
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib import stats
-from openquake.calculators import base, classical_risk
+from openquake.calculators import base, classical_risk, views
 
 F32 = numpy.float32
 
@@ -76,3 +76,4 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
                              assets=self.assetcol['id'],
                              loss_types=self.oqparam.loss_names,
                              dmg_state=self.crmodel.damage_states)
+        logging.info('\n' + views.view('portfolio_damage', self.datastore))

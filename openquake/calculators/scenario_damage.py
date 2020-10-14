@@ -21,7 +21,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.calculators import base
+from openquake.calculators import base, views
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -199,6 +199,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
+        logging.info('\n' + views.view('portfolio_damage', self.datastore))
         self.sanity_check()
 
         # damage by event: make sure the sum of the buildings is consistent
