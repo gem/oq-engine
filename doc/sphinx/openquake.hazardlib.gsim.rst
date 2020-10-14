@@ -779,6 +779,14 @@ pankow_pechmann_2004
     :undoc-members:
     :show-inheritance:
 
+parker_2020
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.parker_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pezeshk_2011
 --------------------------------------------
 
