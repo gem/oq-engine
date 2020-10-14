@@ -542,9 +542,8 @@ class PmapMaker(object):
                             probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
-        with self.cmaker.mon('iter_ruptures', measuremem=False):
-            return list(src.iter_ruptures(shift_hypo=self.shift_hypo,
-                                          mag=filtermag))
+        return list(src.iter_ruptures(
+            shift_hypo=self.shift_hypo, mag=filtermag))
 
     def _make_ctxs(self, rups, sites, gidx, grp_ids):
         with self.ctx_mon:
