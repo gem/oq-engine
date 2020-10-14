@@ -1,3 +1,14 @@
+  [Laurentiu Danciu and Athanasios Papadopoulos]
+  * Implemented intensity prediction equations for use in the Swiss Risk Model.
+    The new IPEs refer to models obtained from the ECOS (2009), Faccioli and 
+    Cauzzi (2006), Bindi et al. (2011), and Baumont et al. (2018) studies.
+  * Added new float site parameter 'amplfactor'
+  * Extended the ModifiableGMPE class to allow amplification of the
+    intensity of the parent IPE based on the ‘amplfactor’ site parameter
+
+  [Aniruh Rao]
+  * Fixed the glossary in the manual
+
   [Michele Simionato]
   * Avoided storing too much performance_data when pointsource_distance is on
   * Fixed performance regression in classical_risk, classical_damage,
