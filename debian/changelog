@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Avoided storing too much performance_data when pointsource_distance is on
+  * Fixed performance regression in classical_risk, classical_damage,
+    classical_bcr
   * Fixed `oq engine --run job.ini` for ShakeMap calculations
 
 python3-oq-engine (3.10.0-1~xenial01) xenial; urgency=low
