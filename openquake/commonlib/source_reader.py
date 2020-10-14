@@ -48,18 +48,14 @@ def random_filtered_sources(sources, srcfilter, seed):
     return []
 
 
-def read_source_model(fname, converter, srcfilter, monitor):
+def read_source_model(fname, converter, monitor):
     """
     :param fname: path to a source model XML file
     :param converter: SourceConverter
-    :param srcfilter: None unless OQ_SAMPLE_SOURCES is set
     :param monitor: a Monitor instance
     :returns: a SourceModel instance
     """
     [sm] = nrml.read_source_models([fname], converter)
-    if srcfilter:  # if OQ_SAMPLE_SOURCES is set sample the close sources
-        for i, sg in enumerate(sm.src_groups):
-            sg.sources = random_filtered_sources(sg.sources, srcfilter, i)
     return {fname: sm}
 
 
@@ -106,7 +102,6 @@ def get_csm(oq, full_lt, h5=None):
     logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     classical = not oq.is_event_based()
     if oq.is_ucerf():
-        sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         src_groups = []
         for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
@@ -119,22 +114,14 @@ def get_csm(oq, full_lt, h5=None):
             src.samples = sm_rlz.samples
             if classical:
                 src.ruptures_per_block = oq.ruptures_per_block
-                if sample:
-                    sg.sources = [list(src)[0]]  # take the first source
-                else:
-                    sg.sources = list(src)
+                sg.sources = list(src)
                 # add background point sources
-                sg.sources.extend(src.get_background_sources(sample))
+                sg.sources.extend(src.get_background_sources())
             else:  # event_based, use one source
                 sg.sources = [src]
         return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
-    if 'OQ_SAMPLE_SOURCES' in os.environ and h5:
-        srcfilter = calc.filters.SourceFilter(
-            h5['sitecol'], h5['oqparam'].maximum_distance)
-    else:
-        srcfilter = None
 
     # NB: the source models file are often NOT in the shared directory
     # (for instance in oq-engine/demos) so the processpool must be used
@@ -143,7 +130,7 @@ def get_csm(oq, full_lt, h5=None):
     # NB: h5 is None in logictree_test.py
     allargs = []
     for fname in full_lt.source_model_lt.info.smpaths:
-        allargs.append((fname, converter, srcfilter))
+        allargs.append((fname, converter))
     smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel

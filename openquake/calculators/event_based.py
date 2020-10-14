@@ -153,8 +153,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         if len(self.datastore['ruptures']) == 0:
-            if os.environ.get('OQ_SAMPLE_SOURCES'):
-                raise SystemExit(0)  # success even with no ruptures
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'investigation time is too short')
 
