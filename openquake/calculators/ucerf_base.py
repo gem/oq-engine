@@ -106,8 +106,8 @@ class UcerfFilter(SourceFilter):
                 ridx = set()
                 for arr in src.all_ridx:
                     ridx.update(arr)
-                src.indices = self.get_indices(src, ridx, src.mags.max())
-                if len(src.indices):
+                indices = self.get_indices(src, ridx, src.mags.max())
+                if len(indices):
                     yield src
             else:  # background sources
                 yield from super().filter([src])

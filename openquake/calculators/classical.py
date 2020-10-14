@@ -96,7 +96,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     # compared to splitting only the big sources
     with monitor("splitting/filtering sources"):
         splits, _stime = split_sources(srcs)
-        sources = list(srcfilter.filter(splits))
+        sources = [src for src, _idx in srcfilter.filter(splits)]
     if not sources:
         yield {'pmap': {}}
         return
@@ -104,7 +104,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     N = len(srcfilter.sitecol.complete)
 
     def weight(src):
-        n = 10 * numpy.sqrt(len(src.indices) / N)
+        n = 10 * numpy.sqrt(src.nsites / N)
         return src.weight * params['rescale_weight'] * n
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
