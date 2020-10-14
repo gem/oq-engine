@@ -274,11 +274,8 @@ def split_sources(srcs):
 
 class SourceFilter(object):
     """
-    Filter objects have a .filter method yielding filtered sources,
-    i.e. sources with an attribute .indices, containg the IDs of the sites
-    within the given maximum distance. There is also a .new method
-    that filters the sources in parallel and returns a dictionary
-    grp_id -> filtered sources.
+    Filter objects have a .filter method yielding filtered sources
+    and the IDs of the sites within the given maximum distance.
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
@@ -307,20 +304,9 @@ class SourceFilter(object):
         Returns the sites within the integration distance from the source,
         or None.
         """
-        source_sites = list(self([source]))
-        if source_sites:
-            return source_sites[0][1]
-
-    def __call__(self, sources):
-        """
-        :yields: pairs (src, sites)
-        """
-        if not self.integration_distance:  # do not filter
-            for src in sources:
-                yield src, self.sitecol
-            return
-        for src in self.filter(sources):
-            yield src, self.sitecol.filtered(src.indices)
+        source_indices = list(self.filter([source]))
+        if source_indices:
+            return self.sitecol.filtered(source_indices[0][1])
 
     def get_sources_sites(self, sources):
         """
@@ -330,9 +316,9 @@ class SourceFilter(object):
         """
         acc = general.AccumDict(accum=[])  # indices -> srcs
         srcs, _split_time = split_sources(sources)
-        for src in self.filter(srcs):
+        for src, indices in self.filter(srcs):
             src_id = re.sub(r':\d+$', '', src.source_id)
-            acc[(src_id, src.grp_id) + tuple(src.indices)].append(src)
+            acc[(src_id, src.grp_id) + tuple(indices)].append(src)
         for tup, srcs in acc.items():
             yield srcs, self.sitecol.filtered(tup[2:])
 
@@ -373,25 +359,23 @@ class SourceFilter(object):
     def filter(self, sources):
         """
         :param sources: a sequence of sources
-        :yields: sources with .indices
+        :yields: sources with indices
         """
         if self.sitecol is None:  # nofilter
-            yield from sources
+            for src in sources:
+                yield src, None
             return
         for src in sources:
-            if hasattr(src, 'indices'):   # already filtered
-                yield src
-                continue
             try:
                 box = self.integration_distance.get_affected_box(src)
             except BBoxError:  # too large, don't filter
-                src.indices = self.sitecol.sids
-                yield src
+                src.nsites = len(self.sitecol)
+                yield src, self.sitecol.sids
                 continue
             indices = self.sitecol.within_bbox(box)
             if len(indices):
-                src.indices = indices
-                yield src
+                src.nsites = len(indices)
+                yield src, indices
 
     def within_bbox(self, srcs):
         """
