@@ -85,13 +85,6 @@ def classical_split_filter(srcs, gsims, params, monitor):
     maxweight ruptures.
     """
     srcfilter = monitor.read('srcfilter')
-    # first check if we are sampling the sources
-    ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    if ss:
-        splits, stime = split_sources(srcs)
-        srcs = random_filtered_sources(splits, srcfilter, ss)
-        yield classical(srcs, srcfilter, gsims, params, monitor)
-        return
     # NB: splitting all the sources improves the distribution significantly,
     # compared to splitting only the big sources
     with monitor("splitting/filtering sources"):

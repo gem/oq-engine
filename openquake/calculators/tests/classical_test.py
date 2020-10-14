@@ -261,11 +261,6 @@ class ClassicalTestCase(CalculatorTestCase):
         G = 1  # and not 2
         self.calc.datastore['poes/grp-00'].array.shape[-1] == G
 
-        # test preclassical and OQ_SAMPLE_SOURCES
-        with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
-            self.run_calc(
-                case_14.__file__, 'job.ini', calculation_mode='preclassical')
-
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\
