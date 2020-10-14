@@ -304,20 +304,9 @@ class SourceFilter(object):
         Returns the sites within the integration distance from the source,
         or None.
         """
-        source_sites = list(self([source]))
-        if source_sites:
-            return source_sites[0][1]
-
-    def __call__(self, sources):
-        """
-        :yields: pairs (src, sites)
-        """
-        if not self.integration_distance:  # do not filter
-            for src in sources:
-                yield src, self.sitecol
-            return
-        for src, indices in self.filter(sources):
-            yield src, self.sitecol.filtered(indices)
+        source_indices = list(self.filter([source]))
+        if source_indices:
+            return self.sitecol.filtered(source_indices[0][1])
 
     def get_sources_sites(self, sources):
         """
