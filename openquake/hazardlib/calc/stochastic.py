@@ -199,7 +199,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                 # Store info
                 dt = time.time() - t0
                 calc_times[src.source_id] += numpy.array(
-                    [len(rup_data[src.id]), len(_sites), dt])
+                    [len(rup_data[src.id]), src.nsites, dt])
         elif param['src_interdep'] == 'mutex':
             raise NotImplementedError('src_interdep == mutex')
     # Create event based ruptures
