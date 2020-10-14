@@ -95,7 +95,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
-        yield classical, block, gsims, params
+        yield classical, block, srcfilter, gsims, params
     if monitor.calc_id and subtasks:
         msg = 'produced %d subtask(s) with mean weight %d' % (
             subtasks, numpy.mean([b.weight for b in blocks[:-1]]))
@@ -222,7 +222,6 @@ class ClassicalCalculator(base.HazardCalculator):
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
         zd = AccumDict()
-        num_levels = len(self.oqparam.imtls.array)
         rparams = {'gidx', 'occurrence_rate', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
@@ -258,19 +257,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0
-
-        # estimate max memory per core
-        max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
-        max_num_grp_ids = max(
-            len(grp_ids) for grp_ids in self.datastore['grp_ids'])
-        pmapbytes = self.N * num_levels * max_num_gsims * max_num_grp_ids * 8
-        if pmapbytes > TWO32:
-            logging.warning(
-                TOOBIG % (self.N, num_levels, max_num_gsims, max_num_grp_ids,
-                          humansize(pmapbytes)))
-        logging.info(MAXMEMORY % (self.N, num_levels, max_num_gsims,
-                                  max_num_grp_ids, humansize(pmapbytes)))
-
         self.Ns = len(self.csm.source_info)
         if self.oqparam.disagg_by_src:
             sources = self.get_source_ids()
@@ -420,9 +406,23 @@ class ClassicalCalculator(base.HazardCalculator):
             self.N / oq.max_sites_per_tile)
         srcfilters = self.src_filter().split_in_tiles(hint)
         ntiles = len(srcfilters)
+        T = len(srcfilters[0].sitecol)
         if ntiles > 1:
-            logging.info('Generated %d tiles with %d sites each', ntiles,
-                         len(srcfilters[0].sitecol))
+            logging.info('Generated %d tiles with %d sites each', ntiles, T)
+
+        # estimate max memory per core
+        max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
+        max_num_grp_ids = max(
+            len(grp_ids) for grp_ids in self.datastore['grp_ids'])
+        num_levels = len(oq.imtls.array)
+        pmapbytes = T * num_levels * max_num_gsims * max_num_grp_ids * 8
+        if pmapbytes > TWO32:
+            logging.warning(
+                TOOBIG % (T, num_levels, max_num_gsims, max_num_grp_ids,
+                          humansize(pmapbytes)))
+        logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
+                                  max_num_grp_ids, humansize(pmapbytes)))
+
         C = oq.concurrent_tasks // ntiles or 1
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
