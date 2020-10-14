@@ -38,7 +38,6 @@ from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs, readinput
-from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -73,18 +72,12 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def classical_(srcs, gsims, params, monitor):
-    srcfilter = monitor.read('srcfilter')
-    return classical(srcs, srcfilter, gsims, params, monitor)
-
-
-def classical_split_filter(srcs, gsims, params, monitor):
+def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
-    srcfilter = monitor.read('srcfilter')
     # NB: splitting all the sources improves the distribution significantly,
     # compared to splitting only the big sources
     with monitor("splitting/filtering sources"):
@@ -102,7 +95,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     blocks = list(block_splitter(sources, maxw, weight))
     subtasks = len(blocks) - 1
     for block in blocks[:-1]:
-        yield classical_, block, gsims, params
+        yield classical, block, gsims, params
     if monitor.calc_id and subtasks:
         msg = 'produced %d subtask(s) with mean weight %d' % (
             subtasks, numpy.mean([b.weight for b in blocks[:-1]]))
@@ -115,14 +108,13 @@ def classical_split_filter(srcs, gsims, params, monitor):
     yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
-def preclassical(srcs, gsims, params, monitor):
+def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
     with monitor("splitting/filtering sources"):
-        srcfilter = monitor.read('srcfilter')
         splits, _stime = split_sources(srcs)
     totrups = 0
     maxradius = 0
@@ -424,16 +416,23 @@ class ClassicalCalculator(base.HazardCalculator):
                            'ruptures with complex_fault_mesh_spacing={} km')
                     spc = oq.complex_fault_mesh_spacing
                     logging.warning(msg.format(src, src.num_ruptures, spc))
-        C = oq.concurrent_tasks or 1
+        hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
+            self.N / oq.max_sites_per_tile)
+        srcfilters = self.src_filter().split_in_tiles(hint)
+        ntiles = len(srcfilters)
+        if ntiles > 1:
+            logging.info('Generated %d tiles with %d sites each', ntiles,
+                         len(srcfilters[0].sitecol))
+        C = oq.concurrent_tasks // ntiles or 1
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
             C *= 50  # use more tasks because there will be slow tasks
         elif oq.disagg_by_src or oq.is_ucerf() or oq.split_sources is False:
             # do not split the sources
             C *= 5  # use more tasks, especially in UCERF
-            f1, f2 = classical_, classical_
+            f1, f2 = classical, classical
         else:
-            f1, f2 = classical_, classical_split_filter
+            f1, f2 = classical, classical_split_filter
         max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
@@ -452,7 +451,8 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic:
                 # do not split atomic groups
                 nb = 1
-                smap.submit((sg, gsims, param), f1)
+                for sf in srcfilters:
+                    smap.submit((sg, sf, gsims, param), f1)
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
@@ -464,7 +464,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block),
                                   sum(srcweight(src) for src in block))
-                    smap.submit((block, gsims, param), f2)
+                    for sf in srcfilters:
+                        smap.submit((block, sf, gsims, param), f2)
 
             w = sum(srcweight(src) for src in sg)
             logging.info('TRT = %s', sg.trt)
