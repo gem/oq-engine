@@ -78,10 +78,10 @@ RM       4_000
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
 
-        # check avg_damages-rlzs
-        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
+        # check damages-rlzs
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        df = self.calc.datastore.read_df('avg_damages-rlzs', 'asset_id')
+        df = self.calc.datastore.read_df('damages-rlzs', 'asset_id')
         self.assertEqual(list(df.columns),
                          ['rlz', 'loss_type', 'dmg_state', 'value'])
 
@@ -155,8 +155,8 @@ RM       4_000
         self.assert_ok(case_7, 'job_h.ini,job_r.ini', exports='csv')
 
         # just run the npz export
-        [npz] = export(('avg_damages-rlzs', 'npz'), self.calc.datastore)
-        self.assertEqual(strip_calc_id(npz), 'avg_damages-rlzs.npz')
+        [npz] = export(('damages-rlzs', 'npz'), self.calc.datastore)
+        self.assertEqual(strip_calc_id(npz), 'damages-rlzs.npz')
 
     def test_case_8(self):
         # case with a shakemap
@@ -176,8 +176,8 @@ RM       4_000
         nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
         self.assertEqual(nodamage, 1086437.0)
 
-        [fname] = export(('avg_damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_damages.csv', fname)
+        [fname] = export(('damages-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/damages.csv', fname)
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_asset.csv', fname)

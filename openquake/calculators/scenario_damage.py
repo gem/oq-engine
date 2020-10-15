@@ -193,11 +193,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         d_asset = numpy.zeros((A, R, L, D), F32)
         for (l, r, a, tot) in result['d_asset']:
             d_asset[a, r, l] = tot * avg_ratio[r]
-        self.datastore['avg_damages-rlzs'] = d_asset
+        self.datastore['damages-rlzs'] = d_asset
         set_rlzs_stats(self.datastore,
-                       'avg_damages',
+                       'damages',
                        asset_id=self.assetcol['id'],
-                       loss_type=oq.loss_names,
+                       loss_types=oq.loss_names,
                        dmg_state=dstates)
         logging.info('\n' + views.view('portfolio_damage', self.datastore))
         self.sanity_check()
@@ -238,10 +238,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Sanity check on the total number of assets
         """
         if self.R == 1:
-            avgdamages = self.datastore.sel('avg_damages-rlzs')
+            avgdamages = self.datastore.sel('damages-rlzs')
         else:
             avgdamages = self.datastore.sel(
-                'avg_damages-stats', stat='mean')
+                'damages-stats', stat='mean')
         num_assets = avgdamages.sum(axis=(0, 1, 3))  # by loss_type
         expected = self.assetcol['number'].sum()
         nums = set(num_assets) | {expected}
