@@ -100,19 +100,19 @@ def classical_split_filter(srcs, gsims, params, monitor):
         n = 10 * numpy.sqrt(src.nsites / N)
         return src.weight * params['rescale_weight'] * n
     blocks = list(block_splitter(sources, maxw, weight))
-    subtasks = len(blocks) - 1
-    for block in blocks[:-1]:
+    if len(blocks) == 1:
+        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
+        return
+    for block in blocks:
         yield classical_, block, gsims, params
-    if monitor.calc_id and subtasks:
-        msg = 'produced %d subtask(s) with mean weight %d' % (
-            subtasks, numpy.mean([b.weight for b in blocks[:-1]]))
-        try:
-            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                       'classical_split_filter#%d' % monitor.task_no, msg)
-        except Exception:
-            # a foreign key error in case of `oq run` is expected
-            print(msg)
-    yield classical(blocks[-1], srcfilter, gsims, params, monitor)
+    msg = 'produced %d subtask(s) with mean weight %d' % (
+        len(blocks), numpy.mean([b.weight for b in blocks]))
+    try:
+        logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                   'classical_split_filter#%d' % monitor.task_no, msg)
+    except Exception:
+        # a foreign key error in case of `oq run` is expected
+        print(msg)
 
 
 def preclassical(srcs, gsims, params, monitor):
@@ -360,6 +360,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
+        G_ = sum(len(vals) for vals in rlzs_by_grp.values())
+        size = self.N * len(oq.imtls.array) * G_
+        logging.info('Required %s for the ProbabilityMaps', humansize(size))
         self.datastore['rlzs_by_grp'] = rlzs_by_grp
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
