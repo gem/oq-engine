@@ -88,6 +88,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         return src.weight * params['rescale_weight'] * n
 
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
+    nt = len(sf_tiles)
     for sf in sf_tiles:
         sources = [src for src, _idx in sf.filter(splits)]
         if not sources:
@@ -95,11 +96,15 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             continue
         maxw = params['max_weight']
         blocks = list(block_splitter(sources, maxw, weight))
-        if len(sf_tiles) == 1 and len(blocks) == 1:
+        if nt == 1 and len(blocks) == 1:
             yield classical(blocks[-1], sf, gsims, params, monitor)
             break
         for block in blocks:
-            yield classical, block, sf, gsims, params
+            if nt > 1 and block.weight < maxw / nt:
+                # avoid small tasks
+                yield classical(block, sf, gsims, params, monitor)
+            else:
+                yield classical, block, sf, gsims, params
         msg = 'produced %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
@@ -463,8 +468,8 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, totweight/C*ntiles, srcweight,
-                                            sort=True))
+                        else block_splitter(sg, max_weight * ntiles,
+                                            srcweight, sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
                 for block in blocks:
