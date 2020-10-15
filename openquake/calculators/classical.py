@@ -83,30 +83,31 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     with monitor("splitting/filtering sources"):
         splits, _stime = split_sources(srcs)
 
-    def weight(src):
+    def weight(src, N=len(srcfilter.sitecol.complete)):
         n = 10 * numpy.sqrt(src.nsites / N)
         return src.weight * params['rescale_weight'] * n
-    for sf in srcfilter.split_in_tiles(params['hint']):
+
+    sf_tiles = srcfilter.split_in_tiles(params['hint'])
+    for sf in sf_tiles:
         sources = [src for src, _idx in sf.filter(splits)]
         if not sources:
             yield {'pmap': {}}
             continue
         maxw = params['max_weight']
-        N = len(srcfilter.sitecol.complete)
         blocks = list(block_splitter(sources, maxw, weight))
-        subtasks = len(blocks) - 1
-        for block in blocks[:-1]:
+        if len(sf_tiles) == 1 and len(blocks) == 1:
+            yield classical(blocks[-1], sf, gsims, params, monitor)
+            break
+        for block in blocks:
             yield classical, block, sf, gsims, params
-        if monitor.calc_id and subtasks:
-            msg = 'produced %d subtask(s) with mean weight %d' % (
-                subtasks, numpy.mean([b.weight for b in blocks[:-1]]))
-            try:
-                logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                           'classical_split_filter#%d' % monitor.task_no, msg)
-            except Exception:
-                # a foreign key error in case of `oq run` is expected
-                print(msg)
-        yield classical(blocks[-1], sf, gsims, params, monitor)
+        msg = 'produced %d subtask(s) with mean weight %d' % (
+            len(blocks), numpy.mean([b.weight for b in blocks]))
+        try:
+            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                       'classical_split_filter#%d' % monitor.task_no, msg)
+        except Exception:
+            # a foreign key error in case of `oq run` is expected
+            print(msg)
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
@@ -339,6 +340,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
+        G_ = sum(len(vals) for vals in rlzs_by_grp.values())
+        size = self.N * len(oq.imtls.array) * G_ * 8
+        logging.info('Required %s for the ProbabilityMaps', humansize(size))
         self.datastore['rlzs_by_grp'] = rlzs_by_grp
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -427,7 +431,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
                                   max_num_grp_ids, humansize(pmapbytes)))
 
-        C = 2 * oq.concurrent_tasks // ntiles or 1
+        C = oq.concurrent_tasks or 1
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
             C *= 50  # use more tasks because there will be slow tasks
@@ -459,7 +463,7 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, totweight/C, srcweight,
+                        else block_splitter(sg, totweight/C*ntiles, srcweight,
                                             sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
