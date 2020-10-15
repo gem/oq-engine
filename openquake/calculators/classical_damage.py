@@ -71,9 +71,9 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         damages = numpy.zeros((self.A, self.R, self.L, D), numpy.float32)
         for a in result:
             damages[a] = result[a]
-        self.datastore['damages-rlzs'] = damages
-        stats.set_rlzs_stats(self.datastore, 'damages',
+        self.datastore['avg_damages-rlzs'] = damages
+        stats.set_rlzs_stats(self.datastore, 'avg_damages',
                              assets=self.assetcol['id'],
-                             loss_types=self.oqparam.loss_names,
+                             loss_type=self.oqparam.loss_names,
                              dmg_state=self.crmodel.damage_states)
         logging.info('\n' + views.view('portfolio_damage', self.datastore))
