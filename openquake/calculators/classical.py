@@ -38,7 +38,6 @@ from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs, readinput
-from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -73,56 +72,51 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def classical_(srcs, gsims, params, monitor):
-    srcfilter = monitor.read('srcfilter')
-    return classical(srcs, srcfilter, gsims, params, monitor)
-
-
-def classical_split_filter(srcs, gsims, params, monitor):
+def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
-    srcfilter = monitor.read('srcfilter')
     # NB: splitting all the sources improves the distribution significantly,
     # compared to splitting only the big sources
-    with monitor("splitting/filtering sources"):
+    with monitor("splitting sources"):
         splits, _stime = split_sources(srcs)
-        sources = [src for src, _idx in srcfilter.filter(splits)]
-    if not sources:
-        yield {'pmap': {}}
-        return
-    maxw = params['max_weight']
-    N = len(srcfilter.sitecol.complete)
 
-    def weight(src):
+    def weight(src, N=len(srcfilter.sitecol.complete)):
         n = 10 * numpy.sqrt(src.nsites / N)
         return src.weight * params['rescale_weight'] * n
-    blocks = list(block_splitter(sources, maxw, weight))
-    subtasks = len(blocks) - 1
-    for block in blocks[:-1]:
-        yield classical_, block, gsims, params
-    if monitor.calc_id and subtasks:
+
+    sf_tiles = srcfilter.split_in_tiles(params['hint'])
+    for sf in sf_tiles:
+        sources = [src for src, _idx in sf.filter(splits)]
+        if not sources:
+            yield {'pmap': {}}
+            continue
+        maxw = params['max_weight']
+        blocks = list(block_splitter(sources, maxw, weight))
+        if len(sf_tiles) == 1 and len(blocks) == 1:
+            yield classical(blocks[-1], sf, gsims, params, monitor)
+            break
+        for block in blocks:
+            yield classical, block, sf, gsims, params
         msg = 'produced %d subtask(s) with mean weight %d' % (
-            subtasks, numpy.mean([b.weight for b in blocks[:-1]]))
+            len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
             logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
                        'classical_split_filter#%d' % monitor.task_no, msg)
         except Exception:
             # a foreign key error in case of `oq run` is expected
             print(msg)
-    yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
-def preclassical(srcs, gsims, params, monitor):
+def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
     with monitor("splitting/filtering sources"):
-        srcfilter = monitor.read('srcfilter')
         splits, _stime = split_sources(srcs)
     totrups = 0
     maxradius = 0
@@ -230,7 +224,6 @@ class ClassicalCalculator(base.HazardCalculator):
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
         zd = AccumDict()
-        num_levels = len(self.oqparam.imtls.array)
         rparams = {'gidx', 'occurrence_rate', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
@@ -266,19 +259,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0
-
-        # estimate max memory per core
-        max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
-        max_num_grp_ids = max(
-            len(grp_ids) for grp_ids in self.datastore['grp_ids'])
-        pmapbytes = self.N * num_levels * max_num_gsims * max_num_grp_ids * 8
-        if pmapbytes > TWO32:
-            logging.warning(
-                TOOBIG % (self.N, num_levels, max_num_gsims, max_num_grp_ids,
-                          humansize(pmapbytes)))
-        logging.info(MAXMEMORY % (self.N, num_levels, max_num_gsims,
-                                  max_num_grp_ids, humansize(pmapbytes)))
-
         self.Ns = len(self.csm.source_info)
         if self.oqparam.disagg_by_src:
             sources = self.get_source_ids()
@@ -360,6 +340,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
+        G_ = sum(len(vals) for vals in rlzs_by_grp.values())
+        size = self.N * len(oq.imtls.array) * G_ * 8
+        logging.info('Required %s for the ProbabilityMaps', humansize(size))
         self.datastore['rlzs_by_grp'] = rlzs_by_grp
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -423,7 +406,31 @@ class ClassicalCalculator(base.HazardCalculator):
                     msg = ('{} is suspiciously large, containing {:_d} '
                            'ruptures with complex_fault_mesh_spacing={} km')
                     spc = oq.complex_fault_mesh_spacing
-                    logging.warning(msg.format(src, src.num_ruptures, spc))
+                    logging.info(msg.format(src, src.num_ruptures, spc))
+        assert oq.max_sites_per_tile > oq.max_sites_disagg, (
+            oq.max_sites_per_tile, oq.max_sites_disagg)
+        hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
+            self.N / oq.max_sites_per_tile)
+        sf = self.src_filter()
+        srcfilters = sf.split_in_tiles(hint)
+        ntiles = len(srcfilters)
+        T = len(srcfilters[0].sitecol)
+        if ntiles > 1:
+            logging.info('Generated %d tiles with %d sites each', ntiles, T)
+
+        # estimate max memory per core
+        max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
+        max_num_grp_ids = max(
+            len(grp_ids) for grp_ids in self.datastore['grp_ids'])
+        num_levels = len(oq.imtls.array)
+        pmapbytes = T * num_levels * max_num_gsims * max_num_grp_ids * 8
+        if pmapbytes > TWO32:
+            logging.warning(
+                TOOBIG % (T, num_levels, max_num_gsims, max_num_grp_ids,
+                          humansize(pmapbytes)))
+        logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
+                                  max_num_grp_ids, humansize(pmapbytes)))
+
         C = oq.concurrent_tasks or 1
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
@@ -431,9 +438,9 @@ class ClassicalCalculator(base.HazardCalculator):
         elif oq.disagg_by_src or oq.is_ucerf() or oq.split_sources is False:
             # do not split the sources
             C *= 5  # use more tasks, especially in UCERF
-            f1, f2 = classical_, classical_
+            f1, f2 = classical, classical
         else:
-            f1, f2 = classical_, classical_split_filter
+            f1, f2 = classical, classical_split_filter
         max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
@@ -443,7 +450,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=getattr(oq.pointsource_distance, 'ddic', {}),
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
-            collapse_level=oq.collapse_level,
+            collapse_level=oq.collapse_level, hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
             af=self.af)
         for sg in src_groups:
@@ -452,11 +459,11 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic:
                 # do not split atomic groups
                 nb = 1
-                smap.submit((sg, gsims, param), f1)
+                smap.submit((sg, sf, gsims, param), f1)
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, totweight/C, srcweight,
+                        else block_splitter(sg, totweight/C*ntiles, srcweight,
                                             sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
@@ -464,7 +471,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block),
                                   sum(srcweight(src) for src in block))
-                    smap.submit((block, gsims, param), f2)
+                    smap.submit((block, sf, gsims, param), f2)
 
             w = sum(srcweight(src) for src in sg)
             logging.info('TRT = %s', sg.trt)

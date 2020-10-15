@@ -373,8 +373,12 @@ def view_portfolio_damage(token, dstore):
     extracted from the average damages
     """
     # dimensions assets, stat, loss_types, dmg_state
-    attrs = dstore.getitem('damages-stats').attrs
-    arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
+    if 'damages-stats' in dstore:
+        attrs = dstore.getitem('damages-stats').attrs
+        arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
+    else:
+        attrs = dstore.getitem('damages-rlzs').attrs
+        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
     rows = [[lt] + list(row) for lt, row in zip(attrs['loss_types'], arr)]
     return rst_table(rows, ['loss_type'] + list(attrs['dmg_state']))
 
@@ -605,26 +609,17 @@ def view_task_ebrisk(token, dstore):
     return msg
 
 
-@view.add('global_hcurves')
-def view_global_hcurves(token, dstore):
+@view.add('global_hazard')
+def view_global_hazard(token, dstore):
     """
-    Display the global hazard curves for the calculation. They are
-    used for debugging purposes when comparing the results of two
-    calculations. They are the mean over the sites of the mean hazard
-    curves.
+    Display the global hazard for the calculation. This is used for
+    debugging purposes when comparing the results of two
+    calculations.
     """
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    nsites = len(sitecol)
-    rlzs = dstore['full_lt'].get_realizations()
-    weights = [rlz.weight for rlz in rlzs]
-    mean = getters.PmapGetter(
-        dstore, weights, sitecol.sids, oq.imtls).get_mean()
-    array = calc.convert_to_array(mean, nsites, oq.imtls)
-    res = numpy.zeros(1, array.dtype)
-    for name in array.dtype.names:
-        res[name] = array[name].mean()
-    return rst_table(res)
+    imtls = dstore['oqparam'].imtls
+    arr = dstore.sel('hcurves-stats', stat='mean')  # shape N, S, M, L
+    res = arr.mean(axis=(0, 1, 3))  # shape M
+    return rst_table([res], imtls)
 
 
 @view.add('global_poes')

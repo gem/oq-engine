@@ -280,15 +280,24 @@ class SourceFilter(object):
     based on numpy.
     """
     def __init__(self, sitecol, integration_distance):
-        if sitecol is not None and len(sitecol) < len(sitecol.complete):
-            raise ValueError('%s is not complete!' % sitecol)
-        elif sitecol is None:
+        if sitecol is None:
             integration_distance = {}
         self.sitecol = sitecol
         self.integration_distance = (
             integration_distance
             if isinstance(integration_distance, MagDepDistance)
             else MagDepDistance(integration_distance))
+
+    def split_in_tiles(self, hint):
+        """
+        Split the SourceFilter by splitting the site collection in tiles
+        """
+        if hint == 1:
+            return [self]
+        out = []
+        for tile in self.sitecol.split_in_tiles(hint):
+            out.append(self.__class__(tile, self.integration_distance))
+        return out
 
     def get_rectangle(self, src):
         """
