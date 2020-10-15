@@ -18,7 +18,6 @@
 
 import os
 import unittest
-import unittest.mock as mock
 import numpy
 from openquake.baselib import parallel, general
 from openquake.hazardlib import lt
