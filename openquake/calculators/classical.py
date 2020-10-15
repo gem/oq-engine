@@ -80,7 +80,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     # NB: splitting all the sources improves the distribution significantly,
     # compared to splitting only the big sources
-    with monitor("splitting/filtering sources"):
+    with monitor("splitting sources"):
         splits, _stime = split_sources(srcs)
 
     def weight(src, N=len(srcfilter.sitecol.complete)):
