@@ -361,7 +361,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
         G_ = sum(len(vals) for vals in rlzs_by_grp.values())
-        size = self.N * len(oq.imtls.array) * G_
+        size = self.N * len(oq.imtls.array) * G_ * 8
         logging.info('Required %s for the ProbabilityMaps', humansize(size))
         self.datastore['rlzs_by_grp'] = rlzs_by_grp
         self.datastore.swmr_on()
