@@ -35,44 +35,144 @@ class ChaoEtAl2020SInter(GMPE):
     Chao et al. (2020) for Subduction Interface.
     """
 
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    #: Supported intensity measure types are spectral acceleration,
+    #: peak ground acceleration and peak ground velocity
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
+        PGV,
+        PGA,
+        SA
+    ])
+
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT
     ])
 
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+    REQUIRES_DISTANCES = {'rrup', 'ztor'}
+
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
         """
         Input definition and size
-        T: period nt x 1
-        M: Magnitude nr x 1
-        Rrup: Distance in km unit nr x 1
-        Ztor: depth to top of rupture plane in km unit (-999 as default) nr x 1
-        Vs30: Vs30 in m/sec unit nr x 1
-        Z1.0: depth to Vs30 == 1000 m/s in m unit (-999 as default) nr x 1
-        FRO: flag for the R/RO fault of crustal earthquake (0/1) nr x 1
-        FSS: flag for the SS fault of crustal earthquake event (0/1) nr x 1
-        FNO: flag for the N/NO fault of crustal earthquake event (0/1) nr x 1
-        Finter: flag for the interface earthquake (0/1) nr x 1
-        Fintra: flag for the intraslab earthquake (0/1) nr x 1
-        Fas: flag for the aftershock (0/1) nr x 1
-        Fma: flag for the Manila Subduction (0/1) nr x 1
+        Fas: flag for the aftershock (0/1)
+        Fma: flag for the Manila Subduction (0/1)
         FVS30: flag for the source of Vs30 (0 for Kuo17 (measured), 1 for KS17
-        (inferred), 2 for Receiver Function (inferred)) 1 x 1
-    
-        Output
-        Sa: spectral acceleration in unit g nr x nt
-        tau: between event std. in ln(g) unit nr x nt
-        phis2s: between site std. in ln(g) unit nr x nt
-        phiss: single station std. in ln(g) unit nr x nt
+        (inferred), 2 for Receiver Function (inferred))
         """
+    Z10ref = np.exp(-4.08 / 2 * np.log((vs30 ** 2 + 355.4 ** 2)
+                                           / (1750 ** 2 + 355.4 ** 2)))
+        if np.isnan(z1pt0):
+            z1pt0 = Z10ref
 
-    period = [0, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4,
-              0.5, 0.75, 1, 1.5, 2, 3, 4, 5, -1, -2]
+        s = self.CONSTANTS
+        h = self._h(mag)
+        xt = np.zeros(len(mag))
+        xt += self._ftype(C, fault)
+        xt += (ztor - self.CONST_FAULT['href']) * C['c14' + self.SUFFIX]
+        xt += (mag - Mref) * C['c8' + self.SBCR]
+
+        # crustal only
+        xt += (mag - Mref) ** 2 - (mag - 7.6) ** 2 * heaviside(mag - 7.6) * C['c10']
+        xt += (5 - mag) * heaviside(5 - mag) * C['c11']
+        xt += np.log((rrup ** n + h ** n) ** (1 / n)
+                     / (Rrupref ** n + h ** n) ** (1 / n)) * C['c17' + self.SBCR]
+        xt += (mag - Mref) * np.log((rrup ** n + h ** n) ** (1 / n)
+                                    / (Rrupref ** n + h ** n) ** (1 / n)) \
+            * C['c19']
+        xt += (Rrup - Rrupref) * C['c21']
+        # subduction only
+        xt += (5 - mag) * heaviside(5 - mag) * C['c12']
+        xt += (6 - mag) * heaviside(6 - mag) * C['c13']
+        xt += np.log((rrup ** n + h ** n) ** (1 / n)
+                     / (Rrupref ** n + h ** n) ** (1 / n)) * C['c17' + self.SBCR]
+        xt += (min(mag, Mc) - Mref) * C['c20'] \
+            * np.log((rrup ** n + h ** n) ** (1 / n)
+                     / (Rrupref ** n + h ** n) ** (1 / n))
+        xt += (Rrup - Rrupref) * C['c22']
+        # subduction interface only
+        xt += (mag - Mc) * heaviside(mag - Mc) * C['c29']
+        # subduction slab only
+        xt += (mag - Mc) * heaviside(mag - Mc) * C['c30']
+
+        if Fas:
+            xt += C['c6']
+        if Fma:
+            xt += C['c7']
+
+        if FVS30 == 0:
+            xt += C['c26']
+        elif FVS30 == 1:
+            xt += C['c27']
+        elif FVS30 == 2:
+            xt += C['28']
+
+        sa1180 = np.exp(xt + math.log(1180/s['Vs30ref']) * C['c24'])
+        # Change c value for PGV prediction
+        # and pga??? which one is which? not documented
+        if imt.name != "SA":
+            c = 2400
+        else:
+            c = 2.4
+        xt += (-1.5 * np.log(vs30 / s['Vs30ref']) - np.log(sa1180 + c)
+               + np.log(sa1180 + c * (vs30 / s['Vs30ref']) ** 1.5)) \
+            * heaviside(s['Vs30ref'] - vs30) * C['c23']
+        xt += np.log(vs30 / s['Vs30ref'])
+        xt += np.log(z1pt0 / Z10ref) * C['c25']
+
+        stddevs = self.get_stddevs(C, rup.mag, stddev_types)
+
+        return xt, stddevs
+
+    def get_stddevs(self, C, mag, stddev_types):
+        """
+        Standard deviation.
+        tau: between event stddev ln(g)
+        phis2s: between site stddev in ln(g)
+        phiss: single station stddev in ln(g)
+        """
+        stddevs = []
+        f = self.SBCR
+        f_mag = 0.5 * (min(6.5, max(4.5, mag)) - 4.5)
+
+
+        tau = C[f'tau1{f}'] + (C[f'tau2{f}'] - C[f'tau1{f}']) * f_mag
+        phiss = C[f'phiss1{f}'] + (C[f'phiss2{f}'] - C[f'phiss1{f}']) * f_mag
+        phis2s = C['phis2s']
+        phi = math.sqrt(phis2s ** 2 + phiss ** 2)
+
+        for stddev in stddev_types:
+            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev == const.StdDev.TOTAL:
+                stddevs.append(math.sqrt(tau ** 2 + phi ** 2))
+            elif stddev == const.StdDev.INTER_EVENT:
+                stddevs.append(tau)
+            elif stddev == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi)
+
+        return stddevs
+
+    def _ftype(self, C, fault):
+        """
+        Factor based on the type of fault.
+        """
+        return C['c4' + self.SUFFIX]
+
+    def _h(self, mag):
+        """
+        H factor for coefficients 17-22.
+        """
+        mag_c = self.CONSTANTS['mag_c']
+
+        return 10 * np.exp(self.CONST_FAULT['C4'] * (mag - mag_c) \
+            * heaviside(mag - mag_c))
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    imt    c1                  c2                  c3                  c4                  c5                  c6                  c7                 c8                 c9                  c10                 c11                 c12                 c13                 c14                 c15                 c16                 c17                 c18                c19                c20                 c21                 c22                 c23                 c24                c25                 c26                 c27                 c28                 c29                 c30                tau1_cr            tau2_cr            tau1_sb            tau2_sb            phiss1_cr          phiss2_cr          phiss1_sb          phiss2_sb          phis2s
+    imt    c1                  c2                  c3                  c4_if               c4_is               c6                  c7                 c8_cr              c8_sb               c10                 c11                 c12                 c13                 c14_cr              c14_if              c14_is              c17_cr              c17_sb             c19                c20                 c21                 c22                 c23                 c24                c25                 c26                 c27                 c28                 c29                 c30                tau1_cr            tau2_cr            tau1_sb            tau2_sb            phiss1_cr          phiss2_cr          phiss1_sb          phiss2_sb          phis2s
     0     -0.5192892547128840 -0.6150055029113330 -0.6487900726643910 -0.5859618870941580  0.2995078226527580 -0.1252895878217900  0.1860213693406720 0.4128529204313240 0.6654099729223670 -0.1376176044286790 -0.0000003768045793 -0.0000002632651801 -0.0000003479033210  0.0325013808122898  0.0188003326071965  0.0066214814780273 -1.3033352051553600 -1.4222150700864700 0.3874353293578060 0.1816390684494260 -0.0034295741595448 -0.0034489780547407 -2.5525572055834000 -0.4820755783830470 0.0636111092153052 -0.5680621936097360 -0.6441908224323110 -0.6148407238174470 -0.4944663117848010 -0.4948250053327020 0.3674988948492440 0.3156766103555770 0.2747114934261350 0.5404436414423900 0.5284243730959070 0.4400249261948010 0.4358918335042310 0.4982604989025690 0.3435860891378130
     0.01  -0.5185435292277630 -0.6139978370809050 -0.6485291075803880 -0.5838899830711630  0.3025167286045810 -0.1244749736423930  0.1818440946548220 0.4133627969553290 0.6662082185566420 -0.1377874122648280 -0.0000016455914614 -0.0000010168484829 -0.0000015396189431  0.0325478379384533  0.0187424764459864  0.0065978989650052 -1.3050707375477800 -1.4244518028964800 0.3865358127626830 0.1799727376957520 -0.0034138067537784 -0.0034249196892139 -2.5491215932210800 -0.4817847143782920 0.0637979244436324 -0.5671019863928200 -0.6430624549208040 -0.6134855454872920 -0.4962061562087430 -0.5019638690208290 0.3672959719907850 0.3154146574183840 0.2733100640145130 0.5413688232186000 0.5279530156395120 0.4402345932395540 0.4366852410606870 0.4979773327789170 0.3437466383316600
     0.02  -0.4925935193382860 -0.5849494939894080 -0.6149768931486030 -0.5994558769715950  0.2896423927820520 -0.1255022048822760  0.1913815871815020 0.3989282252665750 0.6316076153041100 -0.1329759746961010 -0.0010277552092071 -0.0000007415198554 -0.0000009243529219  0.0330191056515263  0.0184348278192339  0.0069331416349393 -1.3381199569179700 -1.4144452691294700 0.3918303510961290 0.1909212976216070 -0.0031761225955272 -0.0036500842576487 -2.5020049297189400 -0.4722757215196650 0.0649888427251637 -0.5300330753401030 -0.6092543141804070 -0.5783932279622350 -0.4567832202723850 -0.4843335992997120 0.3672096025203770 0.3193604175283950 0.2727371846461310 0.5590662841638730 0.5212490565944880 0.4457229793375830 0.4284446929672800 0.4997055429236690 0.3492753254041860
@@ -97,112 +197,55 @@ class ChaoEtAl2020SInter(GMPE):
     pg?    2.4541041890538500  2.3782401415145500  2.2914153189502800  2.0838396593163400  1.9313699400126300 -0.2352916881091410  0.0713994939700537 1.5616444489691000 1.4936921369303000 -0.1676096441841540 -0.0000019923442846 -0.0000232740338163 -0.2069439338171460 -0.0032395363349413  0.0109930765184774  0.0052177204872172 -1.0191698911307200 -1.1559670502824900 0.2068132897445940 0.1789279177790470 -0.0018437138641425 -0.0013634189684089  0.0000000000000000 -0.7422544318623790 0.1490020084340320 -0.4228777481185350 -0.3833592619351370 -0.4612451842659720 -0.3050704862339770 -0.2043152093014790 0.6449844035380140 0.4977962177812710 0.5366022406101780 0.7130676587043830 0.7016130925807040 0.4750313723101500 0.5971604738380890 0.5707298418086840 0.3229783037503560
     """)
 
-    CONSTANTS = {'C4inter': 0.3, 'C4intra': 0.2, 'Mc': 7.1, 'Mref': 6.5,
-                 'n': 2, 'Vs30ref': 760, 'Rrupref': 0,
-                 'Hcrref': 0, 'Hinterref': 0, 'Hintraref': 35}
+    CONSTANTS = {'mag_c': 7.1, 'Mref': 6.5,
+                 'n': 2, 'Vs30ref': 760, 'Rrupref': 0}
 
-        Z10ref = np.exp(-4.08 / 2 * np.log((vs30 ** 2 + 355.4 ** 2)
-                                           / (1750 ** 2 + 355.4 ** 2)))
+    CONST_FAULT = {'C4': 0.3, 'href': 0}
 
-        Fcr = FRO + FSS + FNO
-        Fsb = Finter + Fintra
-        if Z10 == -999:
-            Z10 = Z10ref
-
-        s = self.CONSTANTS
-        h = Fcr * 10 + Finter * 10 \
-            * math.exp(s['C4inter'] * (mag - Mc) * heaviside(mag - Mc)) \
-            + s['Fintra'] * 10 \
-            * exp(s['C4intra'] * (mag - Mc) * heaviside(mag - Mc))
-
-        if FVS30 == 0:
-            Fvs30kuo17 = 1
-            Fvs30ks17 = 0
-            Fvs30rf = 0
-        elif FVS30 == 1:
-            Fvs30kuo17 = 0
-            Fvs30ks17 = 1
-            Fvs30rf = 0
-        elif FVS30 == 2:
-            Fvs30kuo17 = 0
-            Fvs30ks17 = 0
-            Fvs30rf = 1
-        else:
-            Fvs30kuo17 = 1
-            Fvs30ks17 = 0
-            Fvs30rf = 0
-            print('FVS30 Input Error ! Use Vs30 from Kuo17')
-
-        NR = len(mag)
-        xt = np.zeros(NR)
-
-        xt += FRO * C['c1']
-        xt += FSS * C['c2']
-        xt += FNO  * C['c3']
-        xt += Finter  * C['c4']
-        xt += Fintra  * C['c5']
-        xt += Fas  * C['c6']
-        xt += Fma  * C['c7']
-        xt += Fcr.*(mag-Mref)  * C['c8']
-        xt += Fsb.*(mag-Mref)  * C['c9']
-        xt += Fcr.*(mag-Mref).^2-Fcr.*(mag-7.6).^2.*heaviside(mag-7.6)  * C['c10']
-        xt += Fcr.*(5-mag).*heaviside(5-mag)  * C['c11']
-        xt += Fsb.*(5-mag).*heaviside(5-mag) * C['c12']
-        xt += Fsb.*(6-mag).*heaviside(6-mag) * C['c13']
-        xt += Fcr.*(Ztor-Hcrref) * C['c14']
-        xt += Finter.*(Ztor-Hinterref) * C['c15']
-        xt += Fintra.*(Ztor-Hintraref) * C['c16']
-        xt += Fcr.*log((Rrup.^n+h.^n).^(1/n) ./ (Rrupref.^n+h.^n).^(1/n) ) * C['c17']
-        xt += Fsb.*log((Rrup.^n+h.^n).^(1/n) ./ (Rrupref.^n+h.^n).^(1/n) ) * C['c18']
-        xt += Fcr.*(          mag-Mref).*log((Rrup.^n+h.^n).^(1/n) ./ (Rrupref.^n+h.^n).^(1/n) ) * C['c19']
-        xt += Fsb.*(min(mag,Mc  )-Mref).*log((Rrup.^n+h.^n).^(1/n) ./ (Rrupref.^n+h.^n).^(1/n) ) * C['c20']
-        xt += Fcr.*(Rrup-Rrupref) * C['c21']
-        xt += Fsb.*(Rrup-Rrupref) * C['c22']
-        xt24 = log(1180/Vs30ref) * C['c24']
-        xt += Fvs30kuo17 * C['c26']
-        xt += Fvs30ks17 * C['c27']
-        xt += Fvs30rf * C['c28']
-
-        xt += Finter.*(mag-Mc).*heaviside(mag-Mc) * C['c29']
-        xt += Fintra.*(mag-Mc).*heaviside(mag-Mc) * C['c30']
-
-        sa1180 = np.exp(xt + xt24)
-
-        # Change c value for PGV prediction
-        # and pga??? which one is which? not documented
-        if imt.name != "SA":
-            c = 2400
-        else:
-            c = 2.4
-
-        xt += (-1.5 * np.log(vs30 / s['Vs30ref']) - math.log(sa1180 + c) + log(sa1180 + c * (vs30 / s['Vs30ref']) ** 1.5)) * heaviside(s['Vs30ref'] - vs30) * C['c23']
-        xt += np.log(vs30 / s['Vs30ref'])
-        xt += log(Z10 / Z10ref) * C['c25']
-
-        median = np.exp(xt)
-
-        
-
-        return median
-
-    def get_stddev(self, C, mag, stddev_types):
-        stddevs = []
-        f = self.SBCR
-        f_mag = 0.5 * (min(6.5, max(4.5, mag)) - 4.5)
+    # subduction or crustal
+    SBCR = "_sb"
+    SUFFIX = "_if"
 
 
-        tau = C[f'tau1{f}'] + (C[f'tau2{f}'] - C[f'tau1{f}']) * f_mag
-        phiss = C[f'phiss1{f}'] + (C[f'phiss2{f}'] - C[f'phiss1{f}']) * f_mag
-        phis2s = C['phis2s']
-        phi = math.sqrt(phis2s ** 2 + phiss ** 2)
-        
-        for stddev in stddev_types:
-            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev == const.StdDev.TOTAL:
-                stddevs.append(math.sqrt(tau ** 2 + phi ** 2))
-            elif stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
+class ChaoEtAl2020SSlab(ChaoEtAl2020SInter):
+    """
+    Chao et al. (2020) for Subduction Slab.
+    """
 
-        return stddevs
+    CONST_FAULT = {'C4': 0.2, 'href': 35}
+
+    SUFFIX = "_is"
+
+
+class ChaoEtAl2020Asc(ChaoEtAl2020SInter):
+    """
+    Chao et al. (2020) for Crustal.
+    """
+
+    # add rake to determine fault style in _ftype()
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
+
+    def _ftype(self, C, fault):
+        """
+        Factor based on the type of fault.
+        """
+        # use fault.rake to determine fault type
+        if reverse_fault:
+            return C['c1']
+        if strike_slip_fault:
+            return C['c2']
+        if normal_fault:
+            return C['c3']
+
+    def _h(self, mag):
+        """
+        H factor for coefficients 17-22.
+        """
+        # constant for crustal
+        return 10
+
+    CONST_FAULT = {'href': 0}
+
+    # subduction or crustal
+    SBCR = "_cr"
+    SUFFIX = "_cr"
