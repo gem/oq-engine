@@ -466,10 +466,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 nb = 1
                 smap.submit((sg, sf, gsims, param), f1)
             else:  # regroup the sources in blocks
-                maxw = max_weight if ntiles == 1 else max_weight * 2
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, maxw, srcweight, sort=True))
+                        else block_splitter(sg, max_weight * ntiles,
+                                            srcweight, sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
                 for block in blocks:
