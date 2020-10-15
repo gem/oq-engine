@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Restored tiling in large classical calculations
+
   [Marco Pagani]
   * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
 
