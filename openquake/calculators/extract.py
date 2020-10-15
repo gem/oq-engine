@@ -916,15 +916,15 @@ def build_damage_array(data, damage_dt):
 
 
 @extract.add('avg_damages-rlzs')
-def extract_avg_damages_npz(dstore, what):
+def extract_damages_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
     data = dstore['avg_damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
-        avg_damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
         yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
-            assets, avg_damages)
+            assets, damages)
 
 
 @extract.add('event_based_mfd')

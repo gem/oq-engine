@@ -33,17 +33,17 @@ class ClassicalDamageCase1TestCase(CalculatorTestCase):
 
     def test_continuous(self):
         self.run_calc(case_1.__file__, 'job_continuous.ini')
-        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_continuous.csv', fname)
 
     def test_discrete(self):
         self.run_calc(case_1.__file__, 'job_discrete.ini')
-        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)
 
     def test_interpolation(self):
         self.run_calc(case_1.__file__, 'job_interpolation.ini')
-        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_interpolation.csv', fname)
 
 
@@ -52,18 +52,18 @@ class ClassicalDamageCase2TestCase(CalculatorTestCase):
 
     def test_continuous(self):
         self.run_calc(case_2.__file__, 'job_continuous.ini')
-        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_continuous.csv', fname)
 
     def test_discrete(self):
         # a test producing NaNs
         self.run_calc(case_2.__file__, 'job_discrete.ini')
-        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)
 
     def test_interpolation(self):
         self.run_calc(case_2.__file__, 'job_interpolation.ini')
-        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_interpolation.csv', fname)
 
 
@@ -72,13 +72,13 @@ class ClassicalDamageCase8TestCase(CalculatorTestCase):
     def test_case_8a(self):
         self.run_calc(
             case_8a.__file__, 'job_haz.ini,job_risk.ini')
-        f1, f2 = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        f1, f2 = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
-            'expected/damages-rlzs-AkkarBommer2010().csv', f2)
+            'expected/avg_damages-rlzs-AkkarBommer2010().csv', f2)
         self.assertEqualFiles(
-            'expected/damages-rlzs-SadighEtAl1997().csv', f1)
-        [f] = export(('damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/damages-stats.csv', f)
+            'expected/avg_damages-rlzs-SadighEtAl1997().csv', f1)
+        [f] = export(('avg_damages-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_damages-stats.csv', f)
 
 
 class ClassicalDamageTestCase(CalculatorTestCase):
@@ -88,7 +88,7 @@ class ClassicalDamageTestCase(CalculatorTestCase):
         self.run_calc(case.__file__, 'job_haz.ini')
         self.run_calc(case.__file__, 'job_risk.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
-        fnames = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
         if len(fnames) == 1:
             self.assertEqualFiles('expected/damages.csv', fnames[0])
         else:
