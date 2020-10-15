@@ -322,11 +322,7 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
-# damages and damages require different DISPLAY_NAMEs, so they are
-# kept separated even if the exporter is the same; see Anirudh's comment
-# in https://github.com/gem/oq-engine/pull/5851
-@export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'),
-            ('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
+@export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
