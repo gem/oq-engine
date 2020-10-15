@@ -366,6 +366,19 @@ def view_portfolio_loss(token, dstore):
     return rst_table([means], oq.loss_names)
 
 
+@view.add('portfolio_damage')
+def view_portfolio_damage(token, dstore):
+    """
+    The mean full portfolio damage for each loss type,
+    extracted from the average damages
+    """
+    # dimensions assets, stat, loss_types, dmg_state
+    attrs = dstore.getitem('damages-stats').attrs
+    arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
+    rows = [[lt] + list(row) for lt, row in zip(attrs['loss_types'], arr)]
+    return rst_table(rows, ['loss_type'] + list(attrs['dmg_state']))
+
+
 def sum_table(records):
     """
     Used to compute summaries. The records are assumed to have numeric
