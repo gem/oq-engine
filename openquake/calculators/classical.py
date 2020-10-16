@@ -83,12 +83,15 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     if params['split_sources']:
         with monitor("splitting sources"):
             splits, _stime = split_sources(srcs)
+
+        def weight(src, N=len(srcfilter.sitecol.complete)):
+            n = 10 * numpy.sqrt(src.nsites / N)
+            return src.weight * params['rescale_weight'] * n
     else:
         splits = srcs
 
-    def weight(src, N=len(srcfilter.sitecol.complete)):
-        n = 10 * numpy.sqrt(src.nsites / N)
-        return src.weight * params['rescale_weight'] * n
+        def weight(src):
+            return src.weight
 
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
