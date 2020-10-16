@@ -778,9 +778,9 @@ def extract_agg_damages(dstore, what):
         for the given tags
     """
     loss_type, tags = get_loss_type_tags(what)
-    if 'avg_damages-rlzs' in dstore:  # scenario_damage
+    if 'damages-rlzs' in dstore:  # scenario_damage
         lti = dstore['oqparam'].lti[loss_type]
-        losses = dstore['avg_damages-rlzs'][:, :, lti]
+        losses = dstore['damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags)
@@ -915,11 +915,11 @@ def build_damage_array(data, damage_dt):
     return dmg
 
 
-@extract.add('avg_damages-rlzs')
+@extract.add('damages-rlzs')
 def extract_damages_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore['avg_damages-rlzs']
+    data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
         damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
