@@ -373,12 +373,12 @@ def view_portfolio_damage(token, dstore):
     extracted from the average damages
     """
     # dimensions assets, stat, loss_types, dmg_state
-    if 'avg_damages-stats' in dstore:
-        attrs = dstore.getitem('avg_damages-stats').attrs
-        arr = dstore.sel('avg_damages-stats', stat='mean').sum(axis=(0, 1))
+    if 'damages-stats' in dstore:
+        attrs = dstore.getitem('damages-stats').attrs
+        arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
     else:
-        attrs = dstore.getitem('avg_damages-rlzs').attrs
-        arr = dstore.sel('avg_damages-rlzs', rlz=0).sum(axis=(0, 1))
+        attrs = dstore.getitem('damages-rlzs').attrs
+        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
     rows = [[lt] + list(row) for lt, row in zip(attrs['loss_type'], arr)]
     return rst_table(rows, ['loss_type'] + list(attrs['dmg_state']))
 
