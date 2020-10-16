@@ -71,11 +71,14 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def classical1(srcs, gsims, params, slc, monitor):
+def classical1(srcs, gsims, params, slc, monitor=None):
     """
     Read the SourceFilter, get the current slice of it (if tiling is
     enabled) and then call the classical calculator in hazardlib
     """
+    if monitor is None:  # fix mispassed parameters (for disagg_by_src)
+        monitor = slc
+        slc = slice(None)
     srcfilter = monitor.read('srcfilter')[slc]
     return classical(srcs, srcfilter, gsims, params, monitor)
 
