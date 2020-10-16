@@ -1056,6 +1056,21 @@ def extract_event_info(dstore, eidx):
     yield 'gsim', repr(gsim)
 
 
+@extract.add('extreme_event')
+def extract_extreme_event(dstore, eidx):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/extreme_event
+    """
+    arr = dstore['gmf_data/gmv_0'][()]
+    idx = arr.argmax()
+    eid = dstore['gmf_data/eid'][idx]
+    dic = dict(extract_event_info(dstore, eid))
+    dic['gmv'] = arr[idx]
+    return dic
+
+
 @extract.add('ruptures_within')
 def get_ruptures_within(dstore, bbox):
     """
