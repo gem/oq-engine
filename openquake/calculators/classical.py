@@ -78,29 +78,26 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
-    # NB: splitting all the sources improves the distribution significantly,
-    # compared to splitting only the big sources
-    if params['split_sources']:
-        with monitor("splitting sources"):
-            splits, _stime = split_sources(srcs)
-
-        def weight(src, N=len(srcfilter.sitecol.complete)):
-            n = 10 * numpy.sqrt(src.nsites / N)
-            return src.weight * params['rescale_weight'] * n
-    else:
-        splits = srcs
-
-        def weight(src):
-            return src.weight
-
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
+
+    def weight(src, N=len(srcfilter.sitecol.complete)):
+        n = 10 * numpy.sqrt(src.nsites / N)
+        return src.weight * params['rescale_weight'] * n
+    
+    # NB: splitting all the sources improves the distribution significantly,
+    # compared to splitting only the big sources
+    if nt > 1 or param['split_sources'] is False:
+        splits = srcs
+    else:
+        with monitor("splitting sources"):
+            splits, _stime = split_sources(srcs)
     for sf in sf_tiles:
         sources = [src for src, _idx in sf.filter(splits)]
         if not sources:
             yield {'pmap': {}}
             continue
-        maxw = params['max_weight'] / nt
+        maxw = params['max_weight']
         blocks = list(block_splitter(sources, maxw, weight))
         if nt == 1 and len(blocks) == 1:
             yield classical(blocks[-1], sf, gsims, params, monitor)
