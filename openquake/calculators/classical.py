@@ -97,17 +97,13 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         if not sources:
             yield {'pmap': {}}
             continue
-        maxw = params['max_weight']
+        maxw = params['max_weight'] / nt
         blocks = list(block_splitter(sources, maxw, weight))
         if nt == 1 and len(blocks) == 1:
             yield classical(blocks[-1], sf, gsims, params, monitor)
             break
         for block in blocks:
-            if nt > 1 and block.weight < maxw / nt:
-                # avoid small tasks
-                yield classical(block, sf, gsims, params, monitor)
-            else:
-                yield classical, block, sf, gsims, params
+            yield classical, block, sf, gsims, params
         msg = 'produced %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
