@@ -80,8 +80,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     # NB: splitting all the sources improves the distribution significantly,
     # compared to splitting only the big sources
-    with monitor("splitting sources"):
-        splits, _stime = split_sources(srcs)
+    if params['split_sources']:
+        with monitor("splitting sources"):
+            splits, _stime = split_sources(srcs)
+    else:
+        splits = srcs
 
     def weight(src, N=len(srcfilter.sitecol.complete)):
         n = 10 * numpy.sqrt(src.nsites / N)
@@ -457,7 +460,7 @@ class ClassicalCalculator(base.HazardCalculator):
             shift_hypo=oq.shift_hypo, max_weight=max_weight,
             collapse_level=oq.collapse_level, hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
-            af=self.af)
+            split_sources=oq.split_sources, af=self.af)
         for sg in src_groups:
             gsims = gsims_by_trt[sg.trt]
             param['rescale_weight'] = len(gsims)
