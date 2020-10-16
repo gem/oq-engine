@@ -19,7 +19,7 @@
 import operator
 import unittest.mock as mock
 import numpy
-from openquake.baselib import hdf5, datastore, general
+from openquake.baselib import hdf5, datastore, general, performance
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
@@ -352,6 +352,15 @@ class GmfGetter(object):
             return []
         return numpy.concatenate(alldata)
 
+    # not called by the engine
+    def get_hazard(self, gsim=None):
+        """
+        :param gsim: ignored
+        :returns: a dictionary rlzi -> array
+        """
+        data = self.get_gmfdata(performance.Monitor())
+        return general.group_array(data, 'rlz')
+
     def get_hazard_by_sid(self, data=None):
         """
         :param data: if given, an iterator of records of dtype gmf_dt
@@ -417,6 +426,19 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
         proxies = [RuptureProxy(rec) for rec in block]
         yield RuptureGetter(proxies, dstore.filename, grp_id,
                             trt, rlzs_by_gsim[grp_id])
+
+
+def get_gmfgetter(dstore, rup_id):
+    """
+    :returns: GmfGetter associated to the given rupture
+    """
+    oq = dstore['oqparam']
+    srcfilter = calc.filters.SourceFilter(
+        dstore['sitecol'], oq.maximum_distance)
+    for rgetter in gen_rupture_getters(dstore, slc=slice(rup_id, rup_id+1)):
+        gg = GmfGetter(rgetter, srcfilter, oq)
+        break
+    return gg
 
 
 def get_ebruptures(dstore):
