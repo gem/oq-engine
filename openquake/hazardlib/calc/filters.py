@@ -287,6 +287,7 @@ class SourceFilter(object):
             integration_distance
             if isinstance(integration_distance, MagDepDistance)
             else MagDepDistance(integration_distance))
+        self.slc = slice(None)
 
     def split_in_tiles(self, hint):
         """
@@ -296,7 +297,9 @@ class SourceFilter(object):
             return [self]
         out = []
         for tile in self.sitecol.split_in_tiles(hint):
-            out.append(self.__class__(tile, self.integration_distance))
+            sf = self.__class__(tile, self.integration_distance)
+            sf.slc = slice(tile.sids[0], tile.sids[-1] + 1)
+            out.append(sf)
         return out
 
     def get_rectangle(self, src):
@@ -415,6 +418,14 @@ class SourceFilter(object):
                 'The bounding box of the sources is larger than half '
                 'the globe: %d degrees' % (bbox[2] - bbox[0]))
         return self.sitecol.within_bbox(bbox)
+
+    def __getitem__(self, slc):
+        if slc.start is None and slc.stop is None:
+            return self
+        sitecol = object.__new__(self.sitecol.__class__)
+        sitecol.array = self.sitecol[slc]
+        sitecol.complete = self.sitecol.complete
+        return self.__class__(sitecol, self.integration_distance)
 
 
 nofilter = SourceFilter(None, {})
