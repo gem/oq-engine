@@ -78,7 +78,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
 
     def test_calculation_addition_args(self):
         avg_periods = [0.05, 0.15, 1.0, 2.0, 4.0]
-        gmm = GenericGmpeAvgSA(gmpe_name="KothaEtAl2020SERA",
+        gmm = GenericGmpeAvgSA(gmpe_name="KothaEtAl2020ESHM20",
                                avg_periods=avg_periods,
                                corr_func="akkar", sigma_mu_epsilon=1.0)
 
@@ -91,9 +91,10 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         sctx = SitesContext()
         sctx.vs30 = 500.0 * np.ones(4)
         sctx.vs30measured = np.ones(4, dtype="bool")
+        sctx.eshm20_region = np.zeros(4, dtype=int)
         stdt = [const.StdDev.TOTAL]
-        expected_mean = np.array([-1.54075829, -2.0354957,
-                                  -3.01841966, -4.01658804])
+        expected_mean = np.array([-1.72305707, -2.2178751,
+                                  -3.20100306, -4.19948242])
         expected_stddev = np.array([0.5532021, 0.5532021,
                                     0.5532021, 0.5532021])
         imtype = imt.AvgSA()
