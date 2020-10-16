@@ -18,21 +18,483 @@
 
 """
 Module exports :class:`KothaEtAl2020`,
-               :class:`KothaEtAl2020SERA`,
                :class:`KothaEtAl2020Site`,
                :class:`KothaEtAl2020Slope`,
-               :class:`KothaEtAl2020SERASlopeGeology`
+               :class:`KothaEtAl2020ESHM20`,
+               :class:`KothaEtAl2020ESHM20SlopeGeology`
 """
-import os
-import h5py
 import numpy as np
 from scipy.constants import g
-from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
-from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile,
+from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile, ITPL,
                                                TAU_EXECUTION, TAU_SETUP)
+
+
+# The large-magnitude statistical standard deviation values are taken from data
+# supplied by Kotha et al. (2020)
+SIGMA_MU_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    imt     sigma_mu_m8_shallow   sigma_mu_m8_intermediate   sigma_mu_m8_deep   sigma_mu_m7p4_shallow   sigma_mu_m7p4_intermediate   sigma_mu_m7p4_deep
+    pgv                  0.2865                     0.2829             0.2814                  0.2108                       0.2072               0.2057
+    pga                  0.3040                     0.3003             0.2986                  0.2250                       0.2213               0.2197
+    0.010                0.3039                     0.3002             0.2986                  0.2250                       0.2213               0.2197
+    0.025                0.3026                     0.2988             0.2972                  0.2243                       0.2205               0.2189
+    0.040                0.3010                     0.2972             0.2955                  0.2241                       0.2203               0.2186
+    0.050                0.3053                     0.3014             0.2997                  0.2278                       0.2239               0.2222
+    0.070                0.3133                     0.3093             0.3076                  0.2340                       0.2301               0.2284
+    0.100                0.3219                     0.3179             0.3162                  0.2403                       0.2364               0.2346
+    0.150                0.3199                     0.3159             0.3141                  0.2377                       0.2337               0.2319
+    0.200                0.3174                     0.3134             0.3117                  0.2343                       0.2303               0.2285
+    0.250                0.3118                     0.3078             0.3061                  0.2297                       0.2257               0.2240
+    0.300                0.3094                     0.3055             0.3038                  0.2275                       0.2236               0.2220
+    0.350                0.3038                     0.2999             0.2982                  0.2230                       0.2191               0.2174
+    0.400                0.2989                     0.2950             0.2933                  0.2197                       0.2157               0.2140
+    0.450                0.2964                     0.2926             0.2909                  0.2180                       0.2142               0.2125
+    0.500                0.2916                     0.2878             0.2861                  0.2145                       0.2106               0.2090
+    0.600                0.2897                     0.2860             0.2844                  0.2131                       0.2094               0.2078
+    0.700                0.2888                     0.2852             0.2836                  0.2124                       0.2088               0.2072
+    0.750                0.2902                     0.2867             0.2851                  0.2134                       0.2098               0.2083
+    0.800                0.2923                     0.2888             0.2873                  0.2147                       0.2112               0.2097
+    0.900                0.2948                     0.2915             0.2900                  0.2165                       0.2132               0.2117
+    1.000                0.2964                     0.2932             0.2918                  0.2175                       0.2142               0.2128
+    1.200                0.2961                     0.2930             0.2917                  0.2170                       0.2139               0.2126
+    1.400                0.3019                     0.2990             0.2977                  0.2211                       0.2182               0.2169
+    1.600                0.3041                     0.3013             0.3000                  0.2225                       0.2197               0.2184
+    1.800                0.3060                     0.3032             0.3020                  0.2235                       0.2207               0.2195
+    2.000                0.3094                     0.3067             0.3055                  0.2258                       0.2231               0.2219
+    2.500                0.3121                     0.3095             0.3083                  0.2275                       0.2249               0.2237
+    3.000                0.3279                     0.3254             0.3243                  0.2392                       0.2366               0.2355
+    3.500                0.3256                     0.3230             0.3219                  0.2378                       0.2351               0.2339
+    4.000                0.3269                     0.3243             0.3232                  0.2386                       0.2359               0.2348
+    4.500                0.3483                     0.3456             0.3444                  0.2537                       0.2510               0.2498
+    5.000                0.3525                     0.3498             0.3486                  0.2567                       0.2539               0.2527
+    6.000                0.3458                     0.3422             0.3406                  0.2514                       0.2478               0.2462
+    7.000                0.3453                     0.3417             0.3402                  0.2513                       0.2477               0.2461
+    8.000                0.3428                     0.3392             0.3376                  0.2497                       0.2460               0.2444
+    """)
+
+
+class KothaEtAl2020(GMPE):
+    """
+    Implements the first complete version of the newly derived GMPE
+    for Shallow Crustal regions using the Engineering Strong Motion Flatfile.
+
+    Kotha, S. R., Weatherill, G., Bindi, D., Cotton F. (2020) "A regionally-
+    adaptable ground-motion model for shallow crustal earthquakes in Europe.
+    Bulletin of Earthquake Engineering, 18:4091-4125
+
+    The GMPE is desiged for regional adaptation within a logic-tree framework,
+    and as such contains several parameters that can be calibrated on input:
+
+    1) Source-region scaling, a simple scalar factor that defines how much
+    to increase or decrease the "regional average" ground motion in the region.
+    This value is taken as the maximum of the source-region variability term
+    (tau_l2l) and the statistical uncertainty (sigma_mu). The latter defines
+    the within-model uncertainty owing to the data set from which the model is
+    derived and only exceeds the former at large magnitudes
+
+    2) Residual attenuation scaling "c3", a factor that controls the residual
+    attenuation part of the model to make the ground motion decay more or less
+    rapidly with distance than the regional average.
+
+    Both factors are period dependent.
+
+    The two adaptable factors can be controlled either by direct specification
+    at input (in the form of an imt-dependent dictionary) or by a number of
+    standard deviations multiplying the existing variance terms. The two
+    approaches are mutually exclusive, with the directly specified parameters
+    always being used if defined on input.
+
+    In the core form of the GMPE no site term is included. This is added in the
+    subclasses.
+
+    :param float sigma_mu_epsilon:
+        Parameter to control the source-region scaling as a number of
+        standard deviations by which to multiply the source-region to source-
+        region variance, max(tau_l2l, sigma_mu)
+
+    :param float c3_epsilon:
+        Parameter to control the residual attenuation scaling as a number
+        of standard deviations by which to multiply the attenuation-region
+        variance, tau_c3.
+        User supplied table for the coefficient c3 controlling the anelastic
+        attenuation as an instance of :class:
+        `openquake.hazardlib.gsim.base.CoeffsTable`. If absent, the value is
+        taken from the normal coefficients table.
+
+    :param bool ergodic:
+        Use the ergodic standard deviation (True) or non-ergodic standard
+        deviation (False)
+
+    :param dict dl2l:
+        If specifying the source-region scaling directly, defines the
+        increase or decrease of the ground motion in the form of an imt-
+        dependent dictionary of delta L2L factors
+
+    :param dict c3:
+        If specifying the residual attenuation scaling directly, defines the
+        apparent anelastic attenuation term, c3, as an imt-dependent
+        dictionary
+    """
+    experimental = True
+
+    #: Supported tectonic region type is 'active shallow crust'
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+
+    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
+    #: this GSIM can calculate. A set should contain classes from module
+    #: :mod:`openquake.hazardlib.imt`.
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
+
+    #: Supported intensity measure component is the geometric mean of two
+    #: horizontal components
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
+
+    #: Supported standard deviation types are inter-event, intra-event
+    #: and total
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL,
+        const.StdDev.INTER_EVENT,
+        const.StdDev.INTRA_EVENT
+    }
+
+    #: Required site parameter is not set
+    REQUIRES_SITES_PARAMETERS = set()
+
+    #: Required rupture parameters are magnitude and hypocentral depth
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
+
+    #: Required distance measure is Rjb (eq. 1).
+    REQUIRES_DISTANCES = {'rjb'}
+
+    def __init__(self, sigma_mu_epsilon=0.0, c3_epsilon=0.0, ergodic=True,
+                 dl2l=None, c3=None, **kwargs):
+        """
+        Instantiate setting the sigma_mu_epsilon and c3 terms
+        """
+        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon,
+                         c3_epsilon=c3_epsilon, ergodic=ergodic, **kwargs)
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+        self.c3_epsilon = c3_epsilon
+        self.ergodic = ergodic
+        if dl2l:
+            # Check that the input is a dictionary and p
+            if not isinstance(dl2l, dict):
+                raise IOError("For Kotha et al. (2020) GMM, source-region "
+                              "scaling parameter (dl2l) must be input in the "
+                              "form of a dictionary, if specified")
+            self.dl2l = {}
+            for key in dl2l:
+                self.dl2l[from_string(key)] = {"dl2l": dl2l[key]}
+            self.dl2l = CoeffsTable(sa_damping=5, table=self.dl2l)
+        else:
+            self.dl2l = None
+        if c3:
+            if not isinstance(c3, dict):
+                raise IOError("For Kotha et al. (2020) GMM, residual "
+                              "attenuation scaling (c3) must be input in the "
+                              "form of a dictionary, if specified")
+            self.c3 = {}
+            for key in c3:
+                self.c3[from_string(key)] = {"c3": c3[key]}
+            self.c3 = CoeffsTable(sa_damping=5, table=self.c3)
+        else:
+            self.c3 = None
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
+        C = self.COEFFS[imt]
+
+        mean = (self.get_magnitude_scaling(C, rup.mag) +
+                self.get_distance_term(C, rup, dists.rjb, imt, sites) +
+                self.get_site_amplification(C, sites, imt))
+        # GMPE originally in cm/s/s - convert to g
+        if imt.name in "PGA SA":
+            mean -= np.log(100.0 * g)
+        stddevs = self.get_stddevs(C, dists.rjb.shape, stddev_types,
+                                   sites, imt, rup.mag)
+        if self.dl2l:
+            # The source-region parameter is specified explicity
+            return mean + self.dl2l[imt]["dl2l"], stddevs
+
+        if self.sigma_mu_epsilon:
+            # Apply the epistemic uncertainty factor (sigma_mu) multiplied by
+            # the number of standard deviations
+            sigma_mu = self.get_sigma_mu_adjustment(C, imt, rup)
+            mean += (self.sigma_mu_epsilon * sigma_mu)
+        return mean, stddevs
+
+    @staticmethod
+    def get_sigma_mu_adjustment(C, imt, rup):
+        """
+        Returns the sigma_mu adjusment factor, which is taken as the
+        maximum of tau_L2L and the sigma_mu. For M < 7.4
+        the sigma statistical does not exceed tau_L2L at any period or
+        distance. For M > 7.4, sigma_mu is approximately linear up to M 8.0
+        so we interpolate between the two values and cap sigma statistical
+        at M 8.0
+        """
+        if rup.mag < 7.4:
+            # Below M 7.4 tau_L2L is always larger than sigma mu
+            return C["tau_l2l"]
+
+        C_SIG_MU = SIGMA_MU_COEFFS[imt]
+        if rup.hypo_depth < 10.0:
+            uf, lf = C_SIG_MU["sigma_mu_m8_shallow"],\
+                C_SIG_MU["sigma_mu_m7p4_shallow"]
+        elif rup.hypo_depth >= 20.0:
+            uf, lf = C_SIG_MU["sigma_mu_m8_deep"],\
+                C_SIG_MU["sigma_mu_m7p4_deep"]
+        else:
+            uf, lf = C_SIG_MU["sigma_mu_m8_intermediate"],\
+                C_SIG_MU["sigma_mu_m7p4_intermediate"]
+        if rup.mag >= 8.0:
+            # Cap the sigma mu as the value for M 8.0
+            return max(C["tau_l2l"], uf)
+        return max(C["tau_l2l"], ITPL(rup.mag, uf, lf, 7.4, 0.6))
+
+    def get_magnitude_scaling(self, C, mag):
+        """
+        Returns the magnitude scaling term
+        """
+        d_m = mag - self.CONSTANTS["Mh"]
+        if mag <= self.CONSTANTS["Mh"]:
+            return C["e1"] + C["b1"] * d_m + C["b2"] * (d_m ** 2.0)
+        else:
+            return C["e1"] + C["b3"] * d_m
+
+    def get_distance_term(self, C, rup, rjb, imt, sites):
+        """
+        Returns the distance attenuation factor
+        """
+        h = self._get_h(C, rup.hypo_depth)
+        rval = np.sqrt(rjb ** 2. + h ** 2.)
+        rref_val = np.sqrt(self.CONSTANTS["Rref"] ** 2. + h ** 2.)
+        c3 = self.get_distance_coefficients(C, imt, sites)
+        f_r = (C["c1"] + C["c2"] * (rup.mag - self.CONSTANTS["Mref"])) *\
+            np.log(rval / rref_val) + (c3 * (rval - rref_val) / 100.)
+        return f_r
+
+    def _get_h(self, C, hypo_depth):
+        """
+        Returns the depth-specific coefficient
+        """
+        if hypo_depth <= 10.0:
+            return self.CONSTANTS["h_D10"]
+        elif hypo_depth > 20.0:
+            return self.CONSTANTS["h_D20"]
+        else:
+            return self.CONSTANTS["h_10D20"]
+
+    def get_distance_coefficients(self, C, imt, sctx):
+        """
+        Returns either the directly specified c3 value or the c3 from the
+        existing tau_c3 distribution
+        """
+        if self.c3:
+            # Use the c3 that has been defined on input
+            return self.c3
+        else:
+            # Define the c3 as a number of standard deviation multiplied
+            # by tau_c3
+            return C["c3"] + (self.c3_epsilon * C["tau_c3"])
+
+    def get_site_amplification(self, C, sites, imt):
+        """
+        In base model no site amplification is used
+        """
+        return 0.0
+
+    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
+        """
+        Returns the homoskedastic standard deviation model
+        """
+        stddevs = []
+        tau = C["tau_event_0"]
+        phi = C["phi_0"]
+        if self.ergodic:
+            phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
+                               np.zeros(stddev_shape))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi + np.zeros(stddev_shape))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(tau + np.zeros(stddev_shape))
+        return stddevs
+
+    # Coefficients obtained direclty from the regression outputs of
+    # Kotha et al. (2020)
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    imt                   e1                 b1                  b2                  b3                  c1                   c2                   c3              tau_c3              phis2s         tau_event_0             tau_l2l               phi_0              g0_vs30              g1_vs30               g2_vs30         phi_s2s_vs30              g0_slope              g1_slope               g2_slope       phi_s2s_slope
+    pgv     1.11912161648479   2.55771078860152   0.353267224391297   0.879839839344054   -1.41931258132547   0.2706807258213520   -0.304426142175370   0.178233997535235   0.560627759977840   0.422935885699239   0.258560350227890   0.446525247049620   -0.232891265610189   -0.492356618589364    0.0247963168536102    0.366726744441574   -0.0550827970556740   -0.1469535974165200   -0.00893120461876375   0.434256033254051
+    pga     3.93782347219377   2.06573167101440   0.304988012209292   0.444773874960317   -1.49787542346412   0.2812414746313380   -0.609876182476899   0.253818777234181   0.606771946180224   0.441761487685862   0.355279206886721   0.467151252053241   -0.222196028066344   -0.558848724731566   -0.1330148640403130    0.389712940326169   -0.0267105106085816   -0.1098813702713090   -0.01742373265620930   0.506725958082485
+    0.010   3.94038760011295   2.06441772899445   0.305294151898347   0.444352974827805   -1.50006146971318   0.2816120431678390   -0.608869451197394   0.253797652143759   0.607030265833062   0.441635449735044   0.356047209347534   0.467206938011971   -0.221989239810027   -0.558181442039516   -0.1330144520414310    0.391254585814764   -0.0266572723455345   -0.1097145490975510   -0.01741863169765470   0.506706245975056
+    0.025   3.97499686979384   2.04519749120013   0.308841647142436   0.439374383710060   -1.54376149680542   0.2830031280602480   -0.573207556417252   0.252734624432000   0.610030865927204   0.437676505154608   0.368398604288111   0.468698397037258   -0.218745638720123   -0.546810177342948   -0.1315295091425130    0.395303566681041   -0.0254040142855204   -0.1072422064249640   -0.01765069385301560   0.506705856554187
+    0.040   4.08702279605872   1.99149766561616   0.319673428428720   0.418531185104657   -1.63671359040283   0.2984823762486280   -0.535139204130152   0.244894143623498   0.626413180170373   0.429637401735540   0.412921240156940   0.473730661220076   -0.206923687805771   -0.525141264234585   -0.1368798835282360    0.415116874033842   -0.0222919270649348   -0.1024278275345350   -0.01847074311083690   0.515812197849121
+    0.050   4.18397570399970   1.96912968528742   0.328982074841989   0.389853296189063   -1.66358950776148   0.3121928913488560   -0.555191107011420   0.260330694464557   0.638967955474841   0.433639923327438   0.444324049044753   0.479898166019243   -0.205629239209508   -0.514739138349666   -0.1368385040078350    0.422549340781658   -0.0209153599570857   -0.0989203779863760   -0.01851248498790100   0.526875631632610
+    0.070   4.38176649786342   1.92450788134500   0.321182873495225   0.379581373255289   -1.64352914575492   0.3138101953091510   -0.641089475725666   0.286976037026550   0.661064599433347   0.444338223383705   0.470938801038256   0.487060899687138   -0.209348356311787   -0.506896476331228   -0.1456117952510990    0.443318525820235   -0.0188838682625869   -0.0951010574545904   -0.01880576764531640   0.553542604942032
+    0.100   4.60722959404894   1.90125096928647   0.298805051330753   0.393002352641809   -1.54339428982169   0.2849395739776680   -0.744270750619733   0.321927482439715   0.663309669119995   0.458382304191096   0.478737965504940   0.496152397155402   -0.193509476649993   -0.521463491048192   -0.1824674441457950    0.437214022468042   -0.0165212272103937   -0.0871969707343552   -0.01674749313351450   0.537128822815826
+    0.150   4.78583314367062   1.92620172077838   0.249893333649662   0.435396192976506   -1.38136438628699   0.2254113422224680   -0.815688997995934   0.322145126407981   0.655406109737959   0.459702777214781   0.414046169030935   0.497805936702476   -0.215418461095753   -0.579757224642522   -0.2016525247813580    0.457311836251173   -0.0153013615272199   -0.0898557092287409   -0.01820533201066010   0.548306674706135
+    0.200   4.81847463780069   1.97006598187863   0.218722883323200   0.469713318293785   -1.30697558633587   0.1826533194804230   -0.773372802995208   0.301795870071949   0.643585009231006   0.464006126996261   0.321975745683642   0.494075956910651   -0.232802520913539   -0.646162914187111   -0.2102452066359760    0.449595599604904   -0.0185432743074803   -0.1091715402153590   -0.02203326475372750   0.542391858770537
+    0.250   4.75134747347049   2.01097445156370   0.195062831156806   0.532210412551561   -1.26259484078950   0.1551575007473110   -0.722012122448262   0.274998157533509   0.623240061418664   0.457687642192569   0.293329526713994   0.488950837091220   -0.238646255489286   -0.649028548718928   -0.1965317433344580    0.449701754122993   -0.0268512786854638   -0.1177223461809770   -0.01990310375762760   0.514759188358396
+    0.300   4.65252285968525   2.09278551802016   0.194929941231544   0.557034893811231   -1.24071282395616   0.1370008066985060   -0.660466290850886   0.260774631679394   0.609748615552919   0.457514283978959   0.266836791529257   0.482157450259502   -0.246093988657936   -0.645741652187205   -0.1720972685448300    0.429850112026890   -0.0356644839782008   -0.1265719157414280   -0.01728437065375890   0.490014753971745
+    0.350   4.53350897671045   2.14179725762371   0.189511462582876   0.609892595327716   -1.21514531872583   0.1247122464559250   -0.618593385936676   0.254261888951322   0.609506191611413   0.450960093750492   0.231614185359720   0.480254056040507   -0.254026518879524   -0.648402249765170   -0.1446513637358710    0.397602725132059   -0.0423519589829896   -0.1401638874897640   -0.01672203482354180   0.483807852643816
+    0.400   4.44193244811952   2.22862498827440   0.200305171692326   0.614767001033243   -1.18897228839914   0.1156387616270450   -0.591574546068960   0.243643375298288   0.615477199296824   0.441122908694716   0.240825814626397   0.475193646646757   -0.263328502132230   -0.653476851717702   -0.1186474533289450    0.439991306965322   -0.0452239204802930   -0.1514100096093150   -0.01778303668068960   0.500388492016146
+    0.450   4.33697728548038   2.29103572171716   0.209573442606565   0.634252522127606   -1.18013993982454   0.1100834686500940   -0.555234498707119   0.245883260391068   0.619384591074073   0.436294164198843   0.249245758570064   0.469672671050266   -0.264631841951527   -0.638852650094042   -0.0836039291412020    0.424224393510765   -0.0543649832422398   -0.1588148016645050   -0.01500762961938830   0.492980996451707
+    0.500   4.23507897753587   2.35399193121686   0.218088423514177   0.658541873692286   -1.17726165949601   0.1026978146186720   -0.519413341065942   0.238559829231160   0.624993564560933   0.428500398327627   0.243778652813106   0.463165027132890   -0.269124654561252   -0.626175743644433   -0.0537720540773490    0.423230860170143   -0.0610661425543540   -0.1647334612739770   -0.01304441434577370   0.495138633047097
+    0.600   4.02306439391925   2.42753387249929   0.218787915039312   0.754615594874153   -1.16678688970027   0.0940582863096094   -0.454043559543982   0.216855298090451   0.635090711921061   0.426296731581312   0.246117069779268   0.451206692163190   -0.269626118151597   -0.582682427052082    0.0203225530214242    0.475220856944347   -0.0680919086636438   -0.1730542985615550   -0.00960057312582767   0.510149252547482
+    0.700   3.83201580121827   2.51268432884949   0.225024841305000   0.765438564882833   -1.16236278470164   0.0865917976706938   -0.397781532595396   0.215716276719833   0.633635835573626   0.425379430268476   0.246750734502549   0.446704739768374   -0.272441022824943   -0.558163103244591    0.0652728074463838    0.446489639181972   -0.0742129950461250   -0.1739452472381870   -0.00549504377749866   0.502939558871623
+    0.750   3.74614211993052   2.55840246083607   0.231604957273506   0.793480645885641   -1.15333203234665   0.0824927940948198   -0.376630503031279   0.209593410875067   0.637877956868669   0.428563811859323   0.245166749142241   0.444311331912854   -0.268471953245116   -0.546146873703377    0.0840210504832594    0.451727019248850   -0.0742883211225450   -0.1757280229442730   -0.00571924409424620   0.513908669690317
+    0.800   3.65168809980226   2.59467404437385   0.237334498546207   0.828241777740572   -1.14645090256437   0.0837439530041729   -0.363246464853852   0.192106714053294   0.638753820813416   0.433880652259324   0.240072953116796   0.439300059540554   -0.268043587730749   -0.528310722806634    0.1053131905955920    0.476641301777151   -0.0733362133528447   -0.1769632805164950   -0.00623439334393725   0.516534123477592
+    0.900   3.51228638217709   2.68810225072750   0.251716558693382   0.845561170244942   -1.13599614124436   0.0834018259445213   -0.333908265367165   0.177456610405390   0.640328521929993   0.438913972406961   0.247662698012904   0.433043490235851   -0.270747888599204   -0.498749188701101    0.1514549282913290    0.492678009609922   -0.0705690120386147   -0.1842212802961380   -0.00948523310240806   0.508758129697782
+    1.000   3.36982044793917   2.74249776483975   0.256784133033388   0.896648260528882   -1.12443352348542   0.0854384622609198   -0.317465939881623   0.171997778367260   0.638429444564638   0.444086895369946   0.238111905941701   0.426703815544157   -0.268682366673877   -0.472355589159814    0.1912725393732170    0.486349823748500   -0.0730202296385978   -0.1861995093276410   -0.00833302021378029   0.499129039268700
+    1.200   3.10224418952824   2.82683484364226   0.262683442221073   0.982921357727718   -1.12116148624672   0.0973231293288241   -0.275616235541070   0.160445653296358   0.640086303643832   0.446121165446841   0.226825215617356   0.416539877732589   -0.263517582328224   -0.465411813875967    0.2014565230611100    0.460802894674431   -0.0761329216007339   -0.1923688484322410   -0.00790676960410267   0.494333782654409
+    1.400   2.84933745949861   2.89911332547612   0.272065572034688   1.040000637056720   -1.12848926976065   0.1002887249133400   -0.234977212668109   0.150949141990859   0.649359928046388   0.457011583377380   0.231922092201736   0.409641113489270   -0.253077954003716   -0.450716220871832    0.1900019177957120    0.520330220947425   -0.0777847149574368   -0.1977821544457880   -0.00694977055552574   0.521824672837616
+    1.600   2.63503429015231   2.98365736561984   0.289670716036571   1.073002118658300   -1.14064711059980   0.1100788214866130   -0.198050139347725   0.148738498099927   0.650540540696659   0.462781403376806   0.223897549097876   0.404985162254916   -0.246009048662975   -0.427498542497053    0.2013164560891230    0.498576704112864   -0.0808481108779988   -0.1956817304755080   -0.00420478503206788   0.520676267977361
+    1.800   2.43032254290751   3.06358840071518   0.316828766785138   1.109809835991900   -1.15419967841818   0.1131278831612640   -0.167123738873435   0.156141593013035   0.656949311785981   0.468432106332010   0.205207971335941   0.399057812399511   -0.259365145858505   -0.436165813138372    0.2103523943478280    0.494419960120798   -0.0866501788741884   -0.1968633287340960    0.00084917955133917   0.521315249011902
+    2.000   2.24716354703519   3.11067747935049   0.326774527695550   1.132479221218060   -1.16620971948721   0.1162990300931710   -0.140731664063789   0.155054491423268   0.647763389017009   0.476577198889343   0.196850466599025   0.396502973620567   -0.255846430844076   -0.425096032934296    0.2073318834508050    0.484354097558551   -0.0881098607385541   -0.1980665849538590    0.00178776027496752   0.509385313956226
+    2.500   1.83108464781202   3.23289020747997   0.374214285707986   1.226390493979360   -1.17531326311999   0.1395412164588280   -0.120745041347963   0.176744551716694   0.629481669044830   0.479859874942997   0.190867925368865   0.393288023064441   -0.257425360830402   -0.394240493031487    0.2135940556445740    0.460612029226665   -0.0842255772225518   -0.1909303606402940    0.00128428761198652   0.505686965707424
+    3.000   1.58259215964414   3.44640772476285   0.454951810817816   1.313954219909490   -1.15664484431459   0.1494902905791280   -0.149050671035371   0.174876785480317   0.616446588503561   0.488309107285476   0.220914253465451   0.390859427279163   -0.251876760182310   -0.364653376508969    0.2122004191615380    0.407986805228384   -0.0784780440908414   -0.1844510105227600   -0.00047381737627311   0.485603444879608
+    3.500   1.32153652077149   3.56445182133655   0.518610571029448   1.394984393379380   -1.16368470057735   0.1543445278711660   -0.142873831246493   0.193619214137258   0.600202108018105   0.479187019962682   0.237281350236338   0.388102875218375   -0.242628051593659   -0.322323015714785    0.2138248326399060    0.396737062193148   -0.0787732613082041   -0.1718918693565610    0.00223831455352896   0.479608514060425
+    4.000   1.10607064193676   3.64336885536264   0.555331865800278   1.418144933323620   -1.17757508691221   0.1730832048262120   -0.142053716741244   0.193571789393738   0.593046407283143   0.482524831704549   0.233827536969510   0.386956009422453   -0.239634395956042   -0.294311486158724    0.2268951652965890    0.396113359026388   -0.0764209712209348   -0.1648847320168560    0.00295327439998048   0.475041314185757
+    4.500   1.05987610378773   3.82152567982841   0.666476453600402   1.430548279466630   -1.17323633891422   0.1936210609543320   -0.156076448842833   0.152553585766189   0.581331910387036   0.456765160173852   0.196697785051230   0.372827866334900   -0.246998133746262   -0.241579092689847    0.2474533712720740    0.397717123177902   -0.0668746312766319   -0.1735273164380950   -0.00530669973001712   0.473200567096548
+    5.000   0.82373381739570   3.84747968562771   0.684665144355361   1.496536314224210   -1.20969230916539   0.2213041109459350   -0.126052481240424   0.137919529808920   0.558954997903623   0.464229101930025   0.195572800413952   0.377458812369736   -0.234334071379258   -0.208962718979667    0.2332755435126690    0.338344656676906   -0.0617201190392144   -0.1636990315777190   -0.00649134386415973   0.450949884766277
+    6.000   0.50685354955206   3.80040950285788   0.700805222359295   1.625591116375650   -1.22440411739130   0.2292764533844400   -0.113766839623945   0.141669390606605   0.538973145096788   0.439059204276786   0.190680023411634   0.384862538848542   -0.205342867591920   -0.166350345553781    0.2189842473229210    0.338688052762081   -0.0568786587375636   -0.1519590377762100   -0.00580039515645921   0.439827391985479
+    7.000   0.19675504234642   3.78431011962409   0.716569352050671   1.696310364814470   -1.28517895409644   0.2596896867469380   -0.070585399916418   0.146488759166368   0.523331606096182   0.434396029381517   0.208231539543981   0.385850838707000   -0.204046508080049   -0.155173106999605    0.2164856914333770    0.339211265835413   -0.0541313319257671   -0.1393109833551150   -0.00443019667996698   0.432359150492787
+    8.000  -0.08979569600589   3.74815514351616   0.726493405776986   1.695347146909250   -1.32882937608962   0.2849197966362740   -0.051296439369391   0.150981191615944   0.508537123776905   0.429104860654150   0.216201318346277   0.387633769846605   -0.193908824182191   -0.148759113452472    0.2094261301289650    0.337650861518699   -0.0507933301386227   -0.1365792860813190   -0.00532310915144333   0.411101516213337
+    """)
+
+    CONSTANTS = {"Mref": 4.5, "Rref": 30., "Mh": 5.7,
+                 "h_D10": 4.0, "h_10D20": 8.0, "h_D20": 12.0}
+
+
+class KothaEtAl2020Site(KothaEtAl2020):
+    """
+    Preliminary adaptation of the Kotha et al. (2020) GMPE using
+    a polynomial site amplification function dependent on Vs30 (m/s)
+    """
+    #: Required site parameter is not set
+    REQUIRES_SITES_PARAMETERS = set(("vs30",))
+
+    def get_site_amplification(self, C, sites, imt):
+        """
+        Defines a second order polynomial site amplification model
+        """
+        # Render with respect to 800 m/s reference Vs30
+        sref = np.log(sites.vs30 / 800.)
+        return C["g0_vs30"] + C["g1_vs30"] * sref + C["g2_vs30"] * (sref ** 2.)
+
+    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
+        """
+        Returns the standard deviations
+        """
+        stddevs = []
+        # Adopts homoskedastic tau and phi0 values
+        tau = C["tau_event_0"]
+        phi = C["phi_0"]
+        if self.ergodic:
+            phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
+                               np.zeros(stddev_shape))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi + np.zeros(stddev_shape))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(tau + np.zeros(stddev_shape))
+        return stddevs
+
+
+class KothaEtAl2020Slope(KothaEtAl2020):
+    """
+    Preliminary adaptation of the Kotha et al. (2020) GMPE using
+    a polynomial site amplification function dependent on slope (m/m)
+    """
+    #: Required site parameter is not set
+    REQUIRES_SITES_PARAMETERS = set(("slope",))
+
+    def get_site_amplification(self, C, sites, imt):
+        """
+        Defines a second order polynomial site amplification model
+        """
+        # Render with respect to 0.1 m/m reference slope
+        sref = np.log(sites.slope / 0.1)
+        return C["g0_slope"] + C["g1_slope"] * sref +\
+            C["g2_slope"] * (sref ** 2.)
+
+    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
+        """
+        Returns the standard deviations
+        """
+        stddevs = []
+        # Adopts homoskedastic tau and phi0 values
+        tau = C["tau_event_0"]
+        phi = C["phi_0"]
+        if self.ergodic:
+            phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
+                               np.zeros(stddev_shape))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi + np.zeros(stddev_shape))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(tau + np.zeros(stddev_shape))
+        return stddevs
+
+
+# Defines the c3 distribution (expected and variance [tau]) for each of the
+# residual attenuation regions shown in Weatherill et al. (2020)
+C3_REGIONS = CoeffsTable(sa_damping=5, table="""\
+    imt        region_1   tau_region_1       region_2   tau_region_2       region_3   tau_region_3       region_4   tau_region_4       region_5   tau_region_5
+    pga     -0.45763990     0.12162060    -0.67064060     0.07538030    -0.94171710     0.10869170    -0.58146760     0.06361280    -0.06978450     0.11077130
+    0.010   -0.45625230     0.12146360    -0.67063220     0.07654980    -0.93989760     0.10676080    -0.58019070     0.06459080    -0.09103080     0.12710680
+    0.025   -0.42309710     0.11756810    -0.63522410     0.07630320    -0.90689690     0.11038900    -0.54050790     0.07589760    -0.12747550     0.16806130
+    0.040   -0.39097280     0.11707830    -0.59696790     0.07228980    -0.85504400     0.12076280    -0.50717210     0.07771300    -0.14249730     0.18893460
+    0.050   -0.39513900     0.11826330    -0.61908410     0.07248790    -0.89234840     0.12109140    -0.53160100     0.07993880    -0.13942630     0.18369880
+    0.070   -0.45957040     0.10764180    -0.71040880     0.09406360    -1.00552160     0.13724410    -0.63070410     0.10958830    -0.13291470     0.17896380
+    0.100   -0.52099420     0.13029080    -0.82289280     0.09869630    -1.15422780     0.13169510    -0.75266100     0.11450560    -0.08288840     0.11615220
+    0.150   -0.59200740     0.12319070    -0.89972030     0.08844380    -1.24255770     0.16734440    -0.82179530     0.08966500    -0.21028500     0.16064740
+    0.200   -0.57153280     0.13489290    -0.84916880     0.07358340    -1.19208340     0.15783590    -0.76891860     0.05839290    -0.21648230     0.17399630
+    0.250   -0.55014010     0.14351500    -0.78444460     0.07522180    -1.10829210     0.17141070    -0.70329730     0.06207950    -0.18984460     0.18522660
+    0.300   -0.50509870     0.14583000    -0.71748520     0.07218780    -1.02348990     0.16273460    -0.63133950     0.06122670    -0.13991660     0.19909820
+    0.350   -0.48056150     0.14950310    -0.67675880     0.06622260    -0.95401710     0.14718070    -0.57059020     0.09801470    -0.11083090     0.20642470
+    0.400   -0.46882610     0.15182940    -0.64969270     0.06447500    -0.90303360     0.15704530    -0.53491330     0.11598100    -0.09551250     0.21549390
+    0.450   -0.44202290     0.15440110    -0.60495950     0.06457860    -0.86315180     0.14679390    -0.49352160     0.13364080    -0.10089570     0.20926840
+    0.500   -0.42273000     0.14456970    -0.56473220     0.07014270    -0.81550440     0.13322880    -0.45404570     0.14251830    -0.07437870     0.20839480
+    0.600   -0.37260270     0.11837610    -0.49811720     0.07395310    -0.70844270     0.13133940    -0.39191570     0.13619340    -0.04463750     0.18552380
+    0.700   -0.32647710     0.11447010    -0.44770750     0.07916100    -0.64266210     0.11883890    -0.32374040     0.14591360    -0.00538170     0.16207570
+    0.750   -0.31212810     0.10504110    -0.42376660     0.07993050    -0.61865170     0.11495330    -0.30231640     0.14234970    -0.00657300     0.15210100
+    0.800   -0.30885360     0.09543160    -0.40634850     0.07581030    -0.58033210     0.09944790    -0.28537540     0.12282200    -0.01381650     0.15335160
+    0.900   -0.29346380     0.09175490    -0.37405220     0.07021550    -0.53477520     0.09812570    -0.24896750     0.10985930    -0.02411190     0.17978300
+    1.000   -0.28336210     0.09792990    -0.35762020     0.07145350    -0.50242310     0.10013390    -0.23100550     0.10572390    -0.01772240     0.17872480
+    1.200   -0.25305440     0.08181450    -0.31606630     0.08745020    -0.43732660     0.09978290    -0.18635810     0.09066140     0.01266630     0.16111360
+    1.400   -0.22429860     0.08927280    -0.27056900     0.09790690    -0.37099700     0.08939350    -0.14771960     0.06408710     0.01575050     0.17588430
+    1.600   -0.20453730     0.08994080    -0.23500030     0.09531560    -0.32625390     0.14451300    -0.09812040     0.06719240     0.06392270     0.14553870
+    1.800   -0.18202610     0.09563320    -0.21138570     0.09154740    -0.29356600     0.13625630    -0.05090820     0.06169050     0.14456010     0.09006530
+    2.000   -0.16424010     0.09879570    -0.18541590     0.09221880    -0.26361980     0.14820630    -0.01584600     0.03570300     0.13974470     0.11070380
+    2.500   -0.15855170     0.13226060    -0.17398540     0.11824340    -0.23076620     0.12647370     0.02472620     0.05698800     0.19515140     0.09070650
+    3.000   -0.19290470     0.12142990    -0.20313660     0.11317040    -0.23228890     0.07428720    -0.00302590     0.08495680     0.14726330     0.16269230
+    3.500   -0.20613910     0.14784030    -0.19631370     0.12839930    -0.21001250     0.06708210     0.01380630     0.11764140     0.14993210     0.11916760
+    4.000   -0.21595710     0.16486300    -0.20044260     0.12168210    -0.19922260     0.09732930     0.00398580     0.12362070     0.19772940     0.08648060
+    4.500   -0.22996680     0.14376190    -0.18437470     0.13098060    -0.18127450     0.09355350    -0.03302300     0.12887510    -0.01661270     0.20710350
+    5.000   -0.19078450     0.12716500    -0.17112740     0.15092340    -0.13823220     0.09430520    -0.02007680     0.12041280    -0.00218690     0.20707570
+    6.000   -0.18627470     0.12265290    -0.15729310     0.15258570    -0.12751980     0.07698390    -0.02685550     0.12260700    -0.00063180     0.19921860
+    7.000   -0.13330430     0.13230600    -0.10941040     0.16592930    -0.09001300     0.08303110    -0.00013490     0.12385470     0.05526720     0.19002620
+    8.000   -0.11027270     0.14320590    -0.07803880     0.16456320    -0.06784910     0.06704120     0.01757900     0.12861430     0.06941030     0.18559830
+    """)
 
 
 # Heteroskedastic values for single-station phi from measured and smoothed
@@ -104,382 +566,78 @@ def get_phi_ss(imt, mag):
     return phi
 
 
-BASE_PATH = os.path.join(os.path.dirname(__file__), "kotha_2020_tables")
-
-
-class KothaEtAl2020(GMPE):
+class KothaEtAl2020ESHM20(KothaEtAl2020):
     """
-    Implements the first complete version of the newly derived GMPE
-    for Shallow Crustal regions using the Engineering Strong Motion Flatfile.
+    Adaptation of the Kotha et al. (2020) GMPE for application to the
+    2020 European Seismic Hazard Model, as described in Weatherill et al.
+    (2020)
 
-    (Working Title)
-    Kotha, S. R., Weatherill, G., Bindi, D., Cotton F. (2020) A Regionally
-    Adaptable Ground Motion Model for Shallow Crustal Earthquakes in
-    Europe, Bulletin of Earthquake Engineering, under review
+    Weatherill, G., Kotha, S. R. and Cotton, F. (2020) "A regionally-adaptable
+    'scaled-backbone' ground motion logic tree for shallow seismicity in
+    Europe: application to the 2020 European seismic hazard model". Bulletin
+    of Earthquake Engineering, 18:5087 - 5117
 
-    The GMPE is desiged for calibration of the stress parameter term
-    (a multiple of the fault-to-fault variability, tau_f) an attenuation
-    scaling term (c3) and a statistical uncertainty term (sigma_mu). The
-    statistical uncertainty is a scalar factor dependent on period, magnitude
-    and distance. These are read in from hdf5 upon instantiation and
-    interpolated to the necessary values.
+    There are three key adaptations of the original Kotha et al. (2020) GMM:
 
-    In the core form of the GMPE no site term is included. This will be
-    added in the subclasses.
+    1) The use of the residual attenuation regions, which represent the five
+    main sub-regions of Europe with similar attenuation characteristics. The
+    assignment to a particular group is now a site-dependent property,
+    requiring the definition of the "eshm20_region", an integer value between
+    0 and 5 indicating the residual attenuation region to which the site
+    belongs (1 - 5) or else the default values (0). For each region an expected
+    c3 and variance, tau_c3, are defined from which the resulting c3 is taken
+    as a multiple of the number of standard deviations of tau_c3.
 
-    :param c3:
-        User supplied table for the coefficient c3 controlling the anelastic
-        attenuation as an instance of :class:
-        `openquake.hazardlib.gsim.base.CoeffsTable`. If absent, the value is
-        taken from the normal coefficients table.
+    2) The site amplification is defined using a two-segment piecewise linear
+    linear function. This form of the GMPE defines the site in terms of a
+    measured or inferred Vs30, with the total aleatory variability adjusted
+    accordingly.
 
-    :param sigma_mu_epsilon:
-        The number by which to multiply the epistemic uncertainty (sigma_mu)
-        for the adjustment of the mean ground motion.
-    """
-    experimental = True
+    3) A magnitude-dependent heteroskedastic aleatroy uncertainty model is
+    used for the region-corrected between-event residuals and the site-
+    corrected within event residuals. The former taken from the "global" tau
+    model of Al Atik (2015), while the later is adapted from the "global" phi0
+    model of Al Atik (2015) adapted to the distribution of site-corrected
+    within-event residuals determined by the original regression of Kotha et
+    al. (2020).
 
-    #: Supported tectonic region type is 'active shallow crust'
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-
-    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
-    #: this GSIM can calculate. A set should contain classes from module
-    #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
-
-    #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
-
-    #: Supported standard deviation types are inter-event, intra-event
-    #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    }
-
-    #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set()
-
-    #: Required rupture parameters are magnitude and hypocentral depth
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
-
-    #: Required distance measure is Rjb (eq. 1).
-    REQUIRES_DISTANCES = {'rjb'}
-
-    def __init__(self, sigma_mu_epsilon=0.0, c3=None, ergodic=True, **kwargs):
-        """
-        Instantiate setting the sigma_mu_epsilon and c3 terms
-        """
-        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, c3=c3,
-                         ergodic=ergodic, **kwargs)
-        if isinstance(c3, dict):
-            # Inputing c3 as a dictionary sorted by the string representation
-            # of the IMT
-            c3in = {}
-            for c3key in c3:
-                c3in[from_string(c3key)] = {"c3": c3[c3key]}
-            self.c3 = CoeffsTable(sa_damping=5, table=c3in)
-        else:
-            self.c3 = c3
-
-        self.sigma_mu_epsilon = sigma_mu_epsilon
-        self.ergodic = ergodic
-        if self.sigma_mu_epsilon:
-            # Connect to hdf5 and load tables into memory
-            self.retrieve_sigma_mu_data()
-        else:
-            # No adjustments, so skip this step
-            self.mags = None
-            self.dists = None
-            self.s_a = None
-            self.pga = None
-            self.pgv = None
-            self.periods = None
-
-    def retrieve_sigma_mu_data(self):
-        """
-        For the general form of the GMPE this retrieves the sigma mu
-        values from the hdf5 file using the "general" model, i.e. sigma mu
-        factors that are independent of the choice of region or depth
-        """
-        fle = h5py.File(os.path.join(BASE_PATH,
-                                     "KothaEtAl2020_SigmaMu_Fixed.hdf5"), "r")
-        self.mags = fle["M"][:]
-        self.dists = fle["R"][:]
-        self.periods = fle["T"][:]
-        self.pga = fle["PGA"][:]
-        self.pgv = fle["PGV"][:]
-        self.s_a = fle["SA"][:]
-        fle.close()
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-
-        mean = (self.get_magnitude_scaling(C, rup.mag) +
-                self.get_distance_term(C, rup, dists.rjb, imt) +
-                self.get_site_amplification(C, sites, imt))
-        # GMPE originally in cm/s/s - convert to g
-        if imt.name in "PGA SA":
-            mean -= np.log(100.0 * g)
-        stddevs = self.get_stddevs(C, dists.rjb.shape, stddev_types,
-                                   sites, imt, rup.mag)
-        if self.sigma_mu_epsilon:
-            # Apply the epistemic uncertainty factor (sigma_mu) multiplied by
-            # the number of standard deviations
-            sigma_mu = self.get_sigma_mu_adjustment(C, imt, rup, dists)
-            # Cap sigma_mu at 0.5 ln units
-            sigma_mu[sigma_mu > 0.5] = 0.5
-            # Sigma mu should not be less than the standard deviation of the
-            # fault-to-fault variability
-            sigma_mu[sigma_mu < C["tau_l2l"]] = C["tau_l2l"]
-            mean += (self.sigma_mu_epsilon * sigma_mu)
-        return mean, stddevs
-
-    def get_magnitude_scaling(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        d_m = mag - self.CONSTANTS["Mh"]
-        if mag <= self.CONSTANTS["Mh"]:
-            return C["e1"] + C["b1"] * d_m + C["b2"] * (d_m ** 2.0)
-        else:
-            return C["e1"] + C["b3"] * d_m
-
-    def get_distance_term(self, C, rup, rjb, imt):
-        """
-        Returns the distance attenuation factor
-        """
-        h = self._get_h(C, rup.hypo_depth)
-        rval = np.sqrt(rjb ** 2. + h ** 2.)
-        rref_val = np.sqrt(self.CONSTANTS["Rref"] ** 2. + h ** 2.)
-        c3 = self.get_distance_coefficients(C, imt)
-
-        f_r = (C["c1"] + C["c2"] * (rup.mag - self.CONSTANTS["Mref"])) *\
-            np.log(rval / rref_val) + (c3 * (rval - rref_val) / 100.)
-        return f_r
-
-    def _get_h(self, C, hypo_depth):
-        """
-        Returns the depth-specific coefficient
-        """
-        if hypo_depth <= 10.0:
-            return self.CONSTANTS["h_D10"]
-        elif hypo_depth > 20.0:
-            return self.CONSTANTS["h_D20"]
-        else:
-            return self.CONSTANTS["h_10D20"]
-
-    def get_distance_coefficients(self, C, imt):
-        """
-        Returns the c3 term
-        """
-        c3 = self.c3[imt]["c3"] if self.c3 else C["c3"]
-        return c3
-
-    def get_site_amplification(self, C, sites, imt):
-        """
-        In base model no site amplification is used
-        """
-        return 0.0
-
-    def get_sigma_mu_adjustment(self, C, imt, rup, dists):
-        """
-        Returns the sigma mu adjustment factor
-        """
-        if imt.name in "PGA PGV":
-            # PGA and PGV are 2D arrays of dimension [nmags, ndists]
-            sigma_mu = getattr(self, imt.name.lower())
-            if rup.mag <= self.mags[0]:
-                sigma_mu_m = sigma_mu[0, :]
-            elif rup.mag >= self.mags[-1]:
-                sigma_mu_m = sigma_mu[-1, :]
-            else:
-                intpl1 = interp1d(self.mags, sigma_mu, axis=0)
-                sigma_mu_m = intpl1(rup.mag)
-            # Linear interpolation with distance
-            intpl2 = interp1d(self.dists, sigma_mu_m, bounds_error=False,
-                              fill_value=(sigma_mu_m[0], sigma_mu_m[-1]))
-            return intpl2(dists.rjb)
-        # In the case of SA the array is of dimension [nmags, ndists, nperiods]
-        # Get values for given magnitude
-        if rup.mag <= self.mags[0]:
-            sigma_mu_m = self.s_a[0, :, :]
-        elif rup.mag >= self.mags[-1]:
-            sigma_mu_m = self.s_a[-1, :, :]
-        else:
-            intpl1 = interp1d(self.mags, self.s_a, axis=0)
-            sigma_mu_m = intpl1(rup.mag)
-        # Get values for period - N.B. ln T, linear sigma mu interpolation
-        if imt.period <= self.periods[0]:
-            sigma_mu_t = sigma_mu_m[:, 0]
-        elif imt.period >= self.periods[-1]:
-            sigma_mu_t = sigma_mu_m[:, -1]
-        else:
-            intpl2 = interp1d(np.log(self.periods), sigma_mu_m, axis=1)
-            sigma_mu_t = intpl2(np.log(imt.period))
-        intpl3 = interp1d(self.dists, sigma_mu_t, bounds_error=False,
-                          fill_value=(sigma_mu_t[0], sigma_mu_t[-1]))
-        return intpl3(dists.rjb)
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the standard deviations
-        """
-        stddevs = []
-        tau = get_tau(imt, mag)
-        phi = get_phi_ss(imt, mag)
-        if self.ergodic:
-            phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
-
-    COEFFS = CoeffsTable(sa_damping=5, table="""\
-    imt                 e1               b1               b2                b3                c1               c2                c3           tau_c3           phis2s        tau_event          tau_l2l             phi0              g0_vs30              g1_vs30              g2_vs30        phi_s2s_vs30             g0_slope             g1_slope             g2_slope       phi_s2s_slope
-    pgv     1.986297847767   2.278515925276   0.172184178053    0.299544503900   -1.419871787778   0.270864702674   -0.303453527552   0.179928856360   0.560214787771   0.430621988652   0.279217449810   0.446536749421   -0.231077354280506   -0.493957951802596    0.024957396415867   0.365614160325143   -0.055278165876675   -0.146520388963317   -0.008584052062615   0.433946476723565
-    pga     4.593600817502   1.806328676733   0.144764965899   -0.187664517098   -1.498595099847   0.281454363399   -0.608840589420   0.254501921365   0.606285802404   0.449637491699   0.368682450293   0.467191048339   -0.220611183943551   -0.561602687510659   -0.133980848644021   0.388263986170585   -0.027081220086203   -0.109683817165521   -0.017167709027252   0.507083778984519
-    0.010   4.595831841359   1.805720064378   0.145203067800   -0.187853401989   -1.500785325936   0.281826029391   -0.607836921386   0.254473840849   0.606540945437   0.449511849989   0.369530025591   0.467246778966   -0.220407105515350   -0.560739244518243   -0.133822566324568   0.391294103015453   -0.027029303894035   -0.109518851675393   -0.017164529064930   0.507647182479991
-    0.025   4.625178798002   1.794292615521   0.150033923813   -0.187172831518   -1.544504636982   0.283200216216   -0.572198448811   0.253266193047   0.609478297455   0.445517217217   0.383781890123   0.468739331200   -0.217234656391890   -0.549669366194560   -0.132422097361002   0.394393060441682   -0.025736227212091   -0.107098982191857   -0.017425516876989   0.507034880250357
-    0.040   4.722447583759   1.761676216451   0.163644691708   -0.199095303420   -1.637542321107   0.298686311412   -0.534112656153   0.245054022905   0.625714780107   0.437333696331   0.430292749853   0.473766331531   -0.205567556225473   -0.528777395378919   -0.138287921055099   0.412491306427046   -0.022557806807548   -0.102370504214299   -0.018294397899200   0.516450416080127
-    0.050   4.804502449486   1.739937888686   0.170300151677   -0.219411777440   -1.664377529574   0.312428747006   -0.554344743057   0.260199667680   0.638254309793   0.441516738857   0.460524334450   0.479945223969   -0.204312873549905   -0.518186607805250   -0.138039287961884   0.419111467695475   -0.021269844261771   -0.098897830859855   -0.018326112585389   0.524530960968232
-    0.070   4.991633222166   1.706553346455   0.168745580437   -0.213340469096   -1.644248691403   0.314012606725   -0.640526595472   0.286956317682   0.660284949711   0.452277718801   0.482487985372   0.487092836506   -0.207611889061548   -0.509564047493291   -0.146589159457830   0.440054072401786   -0.019170291863061   -0.095115940396699   -0.018653750469469   0.550500261235956
-    0.100   5.216725999474   1.685519997832   0.153695785712   -0.204807294178   -1.544031349660   0.285148522630   -0.743396259134   0.322309553915   0.662735917380   0.465579412757   0.480973092170   0.496181528747   -0.192931726444399   -0.525578768052468   -0.183495608072230   0.446080480049729   -0.016813836872792   -0.087261228811468   -0.016604164803633   0.539340788770085
-    0.150   5.409547877051   1.678363948934   0.108964259966   -0.189890325563   -1.381902206554   0.225689831260   -0.815043098860   0.322007237429   0.654720113336   0.466509140156   0.417460279625   0.497838049779   -0.214194229924967   -0.581529840384920   -0.201990736791951   0.455358185254245   -0.015554158630302   -0.089810009587356   -0.018014820777837   0.547775377589848
-    0.200   5.453890202270   1.689438303007   0.076992089883   -0.153502646971   -1.307510701800   0.182940816317   -0.772880020737   0.301572220795   0.643153063650   0.470050836760   0.324515411666   0.494091741457   -0.231483359554058   -0.648018888888013   -0.210851713462973   0.443009935904118   -0.018874082314837   -0.109048616846721   -0.021794841049725   0.538783067860204
-    0.250   5.411971846531   1.719357494611   0.056936402466   -0.096882602431   -1.263089491625   0.155409119964   -0.721417443819   0.274901019805   0.622862866230   0.463722804830   0.298346506228   0.488946620721   -0.237412839274978   -0.650666391566593   -0.196891703508675   0.446042945916869   -0.027143094075199   -0.117484624734672   -0.019626975376044   0.518516643420853
-    0.300   5.339975712573   1.786378891274   0.053245731458   -0.098663301545   -1.241241570029   0.137235308693   -0.659797998230   0.261180806047   0.609434612997   0.462823521005   0.275386022961   0.482173998888   -0.244503716196265   -0.647386909849244   -0.172606826076631   0.428275840618894   -0.035831384061132   -0.126401303626803   -0.017092719333357   0.491028529060573
-    0.350   5.245031598707   1.831650711430   0.048429888707   -0.035148822891   -1.215628172562   0.124916267250   -0.617942668472   0.254737453226   0.609391922679   0.456749384828   0.243074261426   0.480246325971   -0.252605292409522   -0.649894292484875   -0.144640406078841   0.401274800895868   -0.042424065056186   -0.139968511173383   -0.016555040218554   0.490358839320492
-    0.400   5.172478034239   1.895942168737   0.049858426143   -0.039080879414   -1.189517733110   0.115875870187   -0.590763475754   0.244367107710   0.615351146488   0.448758077757   0.255382872509   0.475149460687   -0.261700878877309   -0.655928988832784   -0.119230958425086   0.434044180231674   -0.045474518987588   -0.151112200510891   -0.017477486312685   0.500359399676765
-    0.450   5.084466738157   1.944571514150   0.051712882438   -0.031025330564   -1.180661600660   0.110338135521   -0.554433746532   0.246565073080   0.619024594684   0.444336103250   0.264492801723   0.469668176199   -0.262803686082410   -0.641283423740159   -0.084382501664206   0.416693133040647   -0.054504155894867   -0.158433972667347   -0.014699759226245   0.495927448757934
-    0.500   4.997951964959   1.990170872429   0.052104332867   -0.004593285736   -1.177723569167   0.102936390188   -0.518700657967   0.239580664585   0.624726936080   0.436707512229   0.258906103862   0.463184820845   -0.267494200696851   -0.628224179998946   -0.053616926922775   0.420229918007586   -0.061221630697767   -0.164317325803277   -0.012703360059700   0.496200883437177
-    0.600   4.821460385119   2.063102481959   0.052488866603    0.117270851639   -1.167185092157   0.094270555357   -0.453602302389   0.217919431330   0.634947226995   0.433297884320   0.265768656453   0.451229616810   -0.268140357369656   -0.585435859294930    0.020153665466998   0.475689455824438   -0.068503431096073   -0.172692448118099   -0.009221760971171   0.506289325583946
-    0.700   4.650874453016   2.126986704093   0.051778511140    0.120976499985   -1.162794994152   0.086764496441   -0.397369836147   0.216884654674   0.633121909658   0.432670860724   0.274180569758   0.446717273621   -0.271077817298483   -0.559883392128881    0.066291539266807   0.453944172029534   -0.074233094656159   -0.173564996429183   -0.005262341801681   0.505704006971710
-    0.750   4.580870529797   2.166636035270   0.054444522760    0.159198932290   -1.153741511196   0.082709852357   -0.376202497137   0.211017683167   0.637549459649   0.435994625372   0.273343997189   0.444283762342   -0.266529681492224   -0.547373596925130    0.085239196755405   0.462108057803813   -0.074496812667098   -0.175360565960122   -0.005433771452332   0.512554147992876
-    0.800   4.497603764971   2.195468114219   0.055851944127    0.214945824678   -1.146853808225   0.083957213881   -0.362739820962   0.193658451006   0.638406037308   0.441665448007   0.269316725748   0.439302983387   -0.266033533484732   -0.530796360150866    0.105834564490773   0.474270662756106   -0.073279829544726   -0.176647564649954   -0.005983980615392   0.517658386603091
-    0.900   4.372780254749   2.259226501052   0.057725868653    0.243584010275   -1.136554168196   0.083559304602   -0.333308869969   0.179232974308   0.640053399804   0.448275692043   0.273544894553   0.433011855491   -0.268925198150758   -0.501872457621322    0.152434105046546   0.489795918410426   -0.070521299078690   -0.184005561252889   -0.009231460997641   0.507049772283348
-    1.000   4.255539415762   2.314814900323   0.061598261165    0.288848394594   -1.124817963757   0.085698397408   -0.316824095141   0.174173178526   0.638043742056   0.453370642316   0.262695165808   0.426660877769   -0.266466719108452   -0.474442250837531    0.191902161843052   0.491598121148994   -0.073147366886850   -0.185515681790388   -0.007928703582317   0.500036528398695
-    1.200   4.038599595326   2.413732093230   0.069991626760    0.369266408381   -1.121368599080   0.097564258606   -0.274783316235   0.163249277591   0.639395647808   0.453417592399   0.257117589119   0.416472588508   -0.261741301653183   -0.468173010057581    0.200978818815827   0.471578598976065   -0.076292565963820   -0.191718200439291   -0.007557022853542   0.492320424017099
-    1.400   3.815947355550   2.479964334173   0.074509347805    0.445566078826   -1.128767790619   0.100523683037   -0.234349930531   0.153501938280   0.648910293044   0.466113494834   0.263334123938   0.409571407808   -0.250997358470485   -0.452375748174702    0.190624868046166   0.511099586454834   -0.077864783321444   -0.197122651270617   -0.006543983160426   0.520938940378748
-    1.600   3.631646560196   2.559663313300   0.085101029487    0.460566449431   -1.140937389837   0.110319345222   -0.197546621568   0.150851270249   0.649738124629   0.472690014103   0.252120577182   0.404939609587   -0.244724645158367   -0.427750364224493    0.203275743351652   0.492840049391064   -0.081042659716350   -0.194753676316974   -0.003693171578408   0.524314148903611
-    1.800   3.459724392382   2.650290580770   0.107675261134    0.455981136562   -1.154459813177   0.113516198465   -0.166778722563   0.157733949899   0.655942138094   0.477315304326   0.238457136523   0.399046345798   -0.257358042672462   -0.436347731484410    0.211718085815373   0.496454897044341   -0.086932115618659   -0.195828543984984    0.001334265249543   0.521682867835024
-    2.000   3.289052190839   2.690118527117   0.112598356463    0.489296858106   -1.166418273993   0.116678434812   -0.140417710429   0.156493287404   0.646925330835   0.486249114926   0.231543933787   0.396483198980   -0.253887092682547   -0.426848881500208    0.208441482263887   0.474445846977249   -0.088488159102521   -0.197216098829870    0.002328159410275   0.507490959577411
-    2.500   2.936473383149   2.857769625873   0.160897057712    0.545092895748   -1.175520686035   0.139980229243   -0.120374488710   0.178207969780   0.628898821285   0.488212793617   0.215164835150   0.393293172095   -0.255954981716856   -0.397304297599626    0.213653670092794   0.451934655437954   -0.084752948744130   -0.190531648835506    0.001786278769957   0.500971872354277
-    3.000   2.772015641952   3.103623207489   0.227949145568    0.607228251145   -1.156752134438   0.150053019616   -0.148534265023   0.175955415496   0.615630529159   0.497280231565   0.229320445467   0.390850272410   -0.250805121199420   -0.368462110456447    0.213829341094000   0.417865051347770   -0.078347578064021   -0.184038495872259   -0.000328331875429   0.486409406127982
-    3.500   2.550306389498   3.234115206129   0.275697742205    0.704199586033   -1.163732516411   0.154956829284   -0.142560085634   0.192759182459   0.599224713100   0.489117033253   0.247687790856   0.388075167947   -0.241010333806051   -0.325538649156754    0.214824460474638   0.401528691091061   -0.078358061998557   -0.171600067705098    0.002253014011067   0.482809801537462
-    4.000   2.352929414968   3.310357136230   0.300931330210    0.729865592495   -1.177718479274   0.173699671898   -0.141789103905   0.192905670114   0.591874392925   0.493886994741   0.247444911315   0.386955162338   -0.237440863136386   -0.296727854846452    0.227451558534291   0.391576245308447   -0.076116438798639   -0.164516343183801    0.002924897294648   0.475839146102743
-    4.500   2.339517782000   3.464574018363   0.362671054888    0.775124154936   -1.172989084907   0.194344947085   -0.155260019763   0.154450733985   0.580249366526   0.467632240734   0.222127895033   0.372830297647   -0.245285606381372   -0.248426599869749    0.246971516699644   0.392529514611620   -0.066396835970665   -0.173899175092314   -0.005544686845989   0.472037440632925
-    5.000   2.125081971333   3.513252751909   0.382599171515    0.861508135975   -1.209544942675   0.221973829002   -0.125368353163   0.139412564761   0.557973798141   0.475772516421   0.220292403287   0.377432067281   -0.232148132971693   -0.217363330154369    0.231488972422077   0.352724652422622   -0.061388115977658   -0.163999607690241   -0.006787304301947   0.447841024453769
-    6.000   1.789669612797   3.467032240903   0.390672960654    1.071637690955   -1.224759159711   0.230159180846   -0.112670397633   0.144727555167   0.537858947825   0.449550499950   0.211281351794   0.384943159783   -0.203366115104074   -0.172388588991144    0.216955944441405   0.339638377577193   -0.056513309760614   -0.152056358419027   -0.005859253152988   0.439633129906047
-    7.000   1.486846474799   3.474332494304   0.408363526227    1.227180966945   -1.285471191423   0.260498715762   -0.069644614376   0.148649539627   0.522468807073   0.444894957763   0.234268694156   0.385888378683   -0.203227850072267   -0.160800461123655    0.215058518716830   0.331405036821493   -0.053809564599965   -0.139582550281575   -0.004508132242376   0.432518975385726
-    8.000   1.186154376927   3.447858314030   0.418038426054    1.258318646654   -1.329185530776   0.285751511968   -0.050512729714   0.152958209816   0.507682898129   0.440122399653   0.246895677579   0.387676375770   -0.193425426029436   -0.153079085712522    0.209345832047528   0.332011646534902   -0.050524974867254   -0.136743999821539   -0.005424899352572   0.409504428895680
-    """)
-
-    CONSTANTS = {"Mref": 4.5, "Rref": 30., "Mh": 6.2,
-                 "h_D10": 4.0, "h_10D20": 8.0, "h_D20": 12.0}
-
-
-class KothaEtAl2020Site(KothaEtAl2020):
-    """
-    Preliminary adaptation of the Kotha et al. (2020) GMPE using
-    a polynomial site amplification function dependent on Vs30 (m/s)
-    """
-    #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("vs30",))
-
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Defines a second order polynomial site amplification model
-        """
-        # Render with respect to 800 m/s reference Vs30
-        sref = np.log(sites.vs30 / 800.)
-        return C["g0_vs30"] + C["g1_vs30"] * sref + C["g2_vs30"] * (sref ** 2.)
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the standard deviations
-        """
-        stddevs = []
-        tau = get_tau(imt, mag)
-        phi = get_phi_ss(imt, mag)
-        if self.ergodic:
-            phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
-
-
-class KothaEtAl2020Slope(KothaEtAl2020):
-    """
-    Preliminary adaptation of the Kotha et al. (2020) GMPE using
-    a polynomial site amplification function dependent on slope (m/m)
-    """
-    #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("slope",))
-
-    def get_site_amplification(self, C, sites, imt):
-        """
-        Defines a second order polynomial site amplification model
-        """
-        # Render with respect to 0.1 m/m reference slope
-        sref = np.log(sites.slope / 0.1)
-        return C["g0_slope"] + C["g1_slope"] * sref +\
-            C["g2_slope"] * (sref ** 2.)
-
-    def get_stddevs(self, C, stddev_shape, stddev_types, sites, imt, mag):
-        """
-        Returns the standard deviations
-        """
-        stddevs = []
-        tau = get_tau(imt, mag)
-        phi = get_phi_ss(imt, mag)
-        if self.ergodic:
-            phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(stddev_shape))
-        return stddevs
-
-
-class KothaEtAl2020SERA(KothaEtAl2020):
-    """
-    Implementation of the Kotha et al. (2020) GMPE with the site
-    amplification components included using a two-segment piecewise
-    linear function. This form of the GMPE defines the
-    site in terms of a measured or inferred Vs30, with the total
-    aleatory variability adjusted accordingly.
+    Al Atik, L. (2015) NGA-East: Ground-Motion Standard Deviation Models for
+    Central and Eastern North America, PEER Technical Report, No 2015/07
     """
 
-    #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("vs30", "vs30measured"))
+    #: Required site parameters are vs30, vs30measured and the eshm20_region
+    REQUIRES_SITES_PARAMETERS = set(("eshm20_region", "vs30", "vs30measured"))
+
+    def get_distance_coefficients(self, C, imt, sctx):
+        """
+        Returns the c3 term. If c3 was input directly into the GMPE then
+        this over-rides the c3 regionalisation. Otherwise the c3 and tau_c3
+        are determined according to the region to which each site is assigned.
+
+        Note that no regionalisation is defined for PGV and hence the
+        default values from Kotha et al. (2020) are taken unless defined
+        otherwise in the input c3
+        """
+        if self.c3:
+            # If c3 is input then this over-rides the regionalisation
+            # assumed within this model
+            return self.c3[imt]["c3"] * np.ones(sctx.eshm20_region.shape)
+
+        # Default c3 and tau values to the original GMPE c3 and tau
+        c3 = C["c3"] + np.zeros(sctx.eshm20_region.shape)
+        tau_c3 = C["tau_c3"] + np.zeros(sctx.eshm20_region.shape)
+        if not np.any(sctx.eshm20_region) or ("PGV" in str(imt)):
+            # No regionalisation - take the default C3 and multiply tau_c3
+            # by the original epsilon
+            return (c3 + self.c3_epsilon * tau_c3) +\
+                np.zeros(sctx.eshm20_region.shape)
+        # Some sites belong to the calibrated regions - loop through them
+        C3_R = C3_REGIONS[imt]
+        for i in range(1, 6):
+            idx = sctx.eshm20_region == i
+            c3[idx] = C3_R["region_{:s}".format(str(i))]
+            tau_c3[idx] = C3_R["tau_region_{:s}".format(str(i))]
+        return c3 + self.c3_epsilon * tau_c3
 
     def get_site_amplification(self, C, sites, imt):
         """
@@ -504,6 +662,7 @@ class KothaEtAl2020SERA(KothaEtAl2020):
         or and inferred vs30. Relevant only in the ergodic case.
         """
         stddevs = []
+        # Get the heteroskedastic tau and phi0
         tau = get_tau(imt, mag)
         phi = get_phi_ss(imt, mag)
         if self.ergodic:
@@ -523,55 +682,57 @@ class KothaEtAl2020SERA(KothaEtAl2020):
         return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    imt                 e1               b1               b2                b3                c1               c2                c3           tau_c3           phis2s        tau_event          tau_l2l             phi0        d0_obs        d1_obs   phi_s2s_obs       d0_inf        d1_inf   phi_s2s_inf
-    pgv     1.986297847767   2.278515925276   0.172184178053    0.299544503900   -1.419871787778   0.270864702674   -0.303453527552   0.179928856360   0.560214787771   0.430621988652   0.279217449810   0.446536749421    3.30975201   -0.53326451    0.36257068   2.78401517   -0.43790954    0.42677529
-    pga     4.593600817502   1.806328676733   0.144764965899   -0.187664517098   -1.498595099847   0.281454363399   -0.608840589420   0.254501921365   0.606285802404   0.449637491699   0.368682450293   0.467191048339    2.65261454   -0.43301831    0.38806156   1.88258216   -0.29656277    0.51606938
-    0.010   4.595831841359   1.805720064378   0.145203067800   -0.187853401989   -1.500785325936   0.281826029391   -0.607836921386   0.254473840849   0.606540945437   0.449511849989   0.369530025591   0.467246778966    2.56961762   -0.41981270    0.40044760   1.82057082   -0.28687880    0.51867018
-    0.025   4.625178798002   1.794292615521   0.150033923813   -0.187172831518   -1.544504636982   0.283200216216   -0.572198448811   0.253266193047   0.609478297455   0.445517217217   0.383781890123   0.468739331200    2.52820436   -0.41328371    0.40623719   1.79206766   -0.28244435    0.52160624
-    0.040   4.722447583759   1.761676216451   0.163644691708   -0.199095303420   -1.637542321107   0.298686311412   -0.534112656153   0.245054022905   0.625714780107   0.437333696331   0.430292749853   0.473766331531    2.42784360   -0.39762162    0.41977221   1.72300482   -0.27169228    0.53093819
-    0.050   4.804502449486   1.739937888686   0.170300151677   -0.219411777440   -1.664377529574   0.312428747006   -0.554344743057   0.260199667680   0.638254309793   0.441516738857   0.460524334450   0.479945223969    2.30956730   -0.37937894    0.43465421   1.64224336   -0.25906654    0.54404664
-    0.070   4.991633222166   1.706553346455   0.168745580437   -0.213340469096   -1.644248691403   0.314012606725   -0.640526595472   0.286956317682   0.660284949711   0.452277718801   0.482487985372   0.487092836506    2.21859665   -0.36551691    0.44921838   1.56920377   -0.24754055    0.55532276
-    0.100   5.216725999474   1.685519997832   0.153695785712   -0.204807294178   -1.544031349660   0.285148522630   -0.743396259134   0.322309553915   0.662735917380   0.465579412757   0.480973092170   0.496181528747    2.22143266   -0.36624939    0.46432610   1.53915732   -0.24268225    0.56118134
-    0.150   5.409547877051   1.678363948934   0.108964259966   -0.189890325563   -1.381902206554   0.225689831260   -0.815043098860   0.322007237429   0.654720113336   0.466509140156   0.417460279625   0.497838049779    2.35118737   -0.38662423    0.47703588   1.59963888   -0.25206957    0.55911690
-    0.200   5.453890202270   1.689438303007   0.076992089883   -0.153502646971   -1.307510701800   0.182940816317   -0.772880020737   0.301572220795   0.643153063650   0.470050836760   0.324515411666   0.494091741457    2.55240529   -0.41806691    0.48025344   1.75423282   -0.27634242    0.54824186
-    0.250   5.411971846531   1.719357494611   0.056936402466   -0.096882602431   -1.263089491625   0.155409119964   -0.721417443819   0.274901019805   0.622862866230   0.463722804830   0.298346506228   0.488946620721    2.74904047   -0.44882046    0.46891833   1.96527860   -0.30954933    0.53109975
-    0.300   5.339975712573   1.786378891274   0.053245731458   -0.098663301545   -1.241241570029   0.137235308693   -0.659797998230   0.261180806047   0.609434612997   0.462823521005   0.275386022961   0.482173998888    2.93212957   -0.47759683    0.44983953   2.19913556   -0.34634476    0.51454301
-    0.350   5.245031598707   1.831650711430   0.048429888707   -0.035148822891   -1.215628172562   0.124916267250   -0.617942668472   0.254737453226   0.609391922679   0.456749384828   0.243074261426   0.480246325971    3.12993498   -0.50873128    0.43569377   2.44212272   -0.38459154    0.50459028
-    0.400   5.172478034239   1.895942168737   0.049858426143   -0.039080879414   -1.189517733110   0.115875870187   -0.590763475754   0.244367107710   0.615351146488   0.448758077757   0.255382872509   0.475149460687    3.33033435   -0.54013326    0.43045602   2.67707249   -0.42163058    0.50107926
-    0.450   5.084466738157   1.944571514150   0.051712882438   -0.031025330564   -1.180661600660   0.110338135521   -0.554433746532   0.246565073080   0.619024594684   0.444336103250   0.264492801723   0.469668176199    3.50290267   -0.56696060    0.43223316   2.88578405   -0.45456492    0.50146998
-    0.500   4.997951964959   1.990170872429   0.052104332867   -0.004593285736   -1.177723569167   0.102936390188   -0.518700657967   0.239580664585   0.624726936080   0.436707512229   0.258906103862   0.463184820845    3.65227902   -0.58990263    0.43887979   3.06576841   -0.48290522    0.50314566
-    0.600   4.821460385119   2.063102481959   0.052488866603    0.117270851639   -1.167185092157   0.094270555357   -0.453602302389   0.217919431330   0.634947226995   0.433297884320   0.265768656453   0.451229616810    3.78937389   -0.61070144    0.44724118   3.20894580   -0.50535303    0.50313816
-    0.700   4.650874453016   2.126986704093   0.051778511140    0.120976499985   -1.162794994152   0.086764496441   -0.397369836147   0.216884654674   0.633121909658   0.432670860724   0.274180569758   0.446717273621    3.90172707   -0.62754331    0.45268279   3.29999705   -0.51955858    0.50200072
-    0.750   4.580870529797   2.166636035270   0.054444522760    0.159198932290   -1.153741511196   0.082709852357   -0.376202497137   0.211017683167   0.637549459649   0.435994625372   0.273343997189   0.444283762342    3.97560847   -0.63847685    0.45583313   3.34616641   -0.52673049    0.50236259
-    0.800   4.497603764971   2.195468114219   0.055851944127    0.214945824678   -1.146853808225   0.083957213881   -0.362739820962   0.193658451006   0.638406037308   0.441665448007   0.269316725748   0.439302983387    4.01969394   -0.64478309    0.46384687   3.37966751   -0.53196741    0.50266660
-    0.900   4.372780254749   2.259226501052   0.057725868653    0.243584010275   -1.136554168196   0.083559304602   -0.333308869969   0.179232974308   0.640053399804   0.448275692043   0.273544894553   0.433011855491    4.05410191   -0.64939631    0.47448247   3.42678904   -0.53940883    0.49912472
-    1.000   4.255539415762   2.314814900323   0.061598261165    0.288848394594   -1.124817963757   0.085698397408   -0.316824095141   0.174173178526   0.638043742056   0.453370642316   0.262695165808   0.426660877769    4.07365692   -0.65153510    0.48134887   3.49473194   -0.55015995    0.49404787
-    1.200   4.038599595326   2.413732093230   0.069991626760    0.369266408381   -1.121368599080   0.097564258606   -0.274783316235   0.163249277591   0.639395647808   0.453417592399   0.257117589119   0.416472588508    4.05048971   -0.64704214    0.48708350   3.57270165   -0.56244631    0.49375397
-    1.400   3.815947355550   2.479964334173   0.074509347805    0.445566078826   -1.128767790619   0.100523683037   -0.234349930531   0.153501938280   0.648910293044   0.466113494834   0.263334123938   0.409571407808    3.99349305   -0.63756820    0.49596280   3.64615783   -0.57391983    0.49885402
-    1.600   3.631646560196   2.559663313300   0.085101029487    0.460566449431   -1.140937389837   0.110319345222   -0.197546621568   0.150851270249   0.649738124629   0.472690014103   0.252120577182   0.404939609587    3.94048869   -0.62914699    0.50237219   3.70614492   -0.58319956    0.50427003
-    1.800   3.459724392382   2.650290580770   0.107675261134    0.455981136562   -1.154459813177   0.113516198465   -0.166778722563   0.157733949899   0.655942138094   0.477315304326   0.238457136523   0.399046345798    3.90126474   -0.62332928    0.49599967   3.73733460   -0.58797931    0.50406486
-    2.000   3.289052190839   2.690118527117   0.112598356463    0.489296858106   -1.166418273993   0.116678434812   -0.140417710429   0.156493287404   0.646925330835   0.486249114926   0.231543933787   0.396483198980    3.84084468   -0.61459972    0.47661567   3.71781492   -0.58487198    0.49679447
-    2.500   2.936473383149   2.857769625873   0.160897057712    0.545092895748   -1.175520686035   0.139980229243   -0.120374488710   0.178207969780   0.628898821285   0.488212793617   0.215164835150   0.393293172095    3.71684077   -0.59605682    0.44991701   3.63149526   -0.57133201    0.48588889
-    3.000   2.772015641952   3.103623207489   0.227949145568    0.607228251145   -1.156752134438   0.150053019616   -0.148534265023   0.175955415496   0.615630529159   0.497280231565   0.229320445467   0.390850272410    3.54176439   -0.56936072    0.42220113   3.49013277   -0.54916732    0.47625314
-    3.500   2.550306389498   3.234115206129   0.275697742205    0.704199586033   -1.163732516411   0.154956829284   -0.142560085634   0.192759182459   0.599224713100   0.489117033253   0.247687790856   0.388075167947    3.34546112   -0.53906501    0.39951709   3.34520093   -0.52645323    0.47012445
-    4.000   2.352929414968   3.310357136230   0.300931330210    0.729865592495   -1.177718479274   0.173699671898   -0.141789103905   0.192905670114   0.591874392925   0.493886994741   0.247444911315   0.386955162338    3.13392178   -0.50620694    0.38303088   3.23169516   -0.50870031    0.46555128
-    4.500   2.339517782000   3.464574018363   0.362671054888    0.775124154936   -1.172989084907   0.194344947085   -0.155260019763   0.154450733985   0.580249366526   0.467632240734   0.222127895033   0.372830297647    2.90740942   -0.47082887    0.36840706   3.13020974   -0.49278809    0.46035806
-    5.000   2.125081971333   3.513252751909   0.382599171515    0.861508135975   -1.209544942675   0.221973829002   -0.125368353163   0.139412564761   0.557973798141   0.475772516421   0.220292403287   0.377432067281    2.68344324   -0.43562070    0.35254196   2.99932475   -0.47213713    0.45347349
-    6.000   1.789669612797   3.467032240903   0.390672960654    1.071637690955   -1.224759159711   0.230159180846   -0.112670397633   0.144727555167   0.537858947825   0.449550499950   0.211281351794   0.384943159783    2.50354874   -0.40714992    0.33854229   2.83412987   -0.44598168    0.44328149
-    7.000   1.486846474799   3.474332494304   0.408363526227    1.227180966945   -1.285471191423   0.260498715762   -0.069644614376   0.148649539627   0.522468807073   0.444894957763   0.234268694156   0.385888378683    2.39499327   -0.38989994    0.33074643   2.69365804   -0.42370171    0.43214765
-    8.000   1.186154376927   3.447858314030   0.418038426054    1.258318646654   -1.329185530776   0.285751511968   -0.050512729714   0.152958209816   0.507682898129   0.440122399653   0.246895677579   0.387676375770    2.35979253   -0.38432385    0.32874669   2.64017872   -0.41521615    0.42722298
+    imt                   e1                 b1                  b2                  b3                  c1                   c2                   c3              tau_c3             phi_s2s         tau_event_0             tau_l2l               phi_0       d0_obs        d1_obs   phi_s2s_obs       d0_inf        d1_inf   phi_s2s_inf
+    pgv     1.11912161648479   2.55771078860152   0.353267224391297   0.879839839344054   -1.41931258132547   0.2706807258213520   -0.304426142175370   0.178233997535235   0.560627759977840   0.422935885699239   0.258560350227890   0.446525247049620   3.30975201   -0.53326451    0.36257068   2.78401517   -0.43790954    0.42677529
+    pga     3.93782347219377   2.06573167101440   0.304988012209292   0.444773874960317   -1.49787542346412   0.2812414746313380   -0.609876182476899   0.253818777234181   0.606771946180224   0.441761487685862   0.355279206886721   0.467151252053241   2.65261454   -0.43301831    0.38806156   1.88258216   -0.29656277    0.51606938
+    0.010   3.94038760011295   2.06441772899445   0.305294151898347   0.444352974827805   -1.50006146971318   0.2816120431678390   -0.608869451197394   0.253797652143759   0.607030265833062   0.441635449735044   0.356047209347534   0.467206938011971   2.56961762   -0.41981270    0.40044760   1.82057082   -0.28687880    0.51867018
+    0.025   3.97499686979384   2.04519749120013   0.308841647142436   0.439374383710060   -1.54376149680542   0.2830031280602480   -0.573207556417252   0.252734624432000   0.610030865927204   0.437676505154608   0.368398604288111   0.468698397037258   2.52820436   -0.41328371    0.40623719   1.79206766   -0.28244435    0.52160624
+    0.040   4.08702279605872   1.99149766561616   0.319673428428720   0.418531185104657   -1.63671359040283   0.2984823762486280   -0.535139204130152   0.244894143623498   0.626413180170373   0.429637401735540   0.412921240156940   0.473730661220076   2.42784360   -0.39762162    0.41977221   1.72300482   -0.27169228    0.53093819
+    0.050   4.18397570399970   1.96912968528742   0.328982074841989   0.389853296189063   -1.66358950776148   0.3121928913488560   -0.555191107011420   0.260330694464557   0.638967955474841   0.433639923327438   0.444324049044753   0.479898166019243   2.30956730   -0.37937894    0.43465421   1.64224336   -0.25906654    0.54404664
+    0.070   4.38176649786342   1.92450788134500   0.321182873495225   0.379581373255289   -1.64352914575492   0.3138101953091510   -0.641089475725666   0.286976037026550   0.661064599433347   0.444338223383705   0.470938801038256   0.487060899687138   2.21859665   -0.36551691    0.44921838   1.56920377   -0.24754055    0.55532276
+    0.100   4.60722959404894   1.90125096928647   0.298805051330753   0.393002352641809   -1.54339428982169   0.2849395739776680   -0.744270750619733   0.321927482439715   0.663309669119995   0.458382304191096   0.478737965504940   0.496152397155402   2.22143266   -0.36624939    0.46432610   1.53915732   -0.24268225    0.56118134
+    0.150   4.78583314367062   1.92620172077838   0.249893333649662   0.435396192976506   -1.38136438628699   0.2254113422224680   -0.815688997995934   0.322145126407981   0.655406109737959   0.459702777214781   0.414046169030935   0.497805936702476   2.35118737   -0.38662423    0.47703588   1.59963888   -0.25206957    0.55911690
+    0.200   4.81847463780069   1.97006598187863   0.218722883323200   0.469713318293785   -1.30697558633587   0.1826533194804230   -0.773372802995208   0.301795870071949   0.643585009231006   0.464006126996261   0.321975745683642   0.494075956910651   2.55240529   -0.41806691    0.48025344   1.75423282   -0.27634242    0.54824186
+    0.250   4.75134747347049   2.01097445156370   0.195062831156806   0.532210412551561   -1.26259484078950   0.1551575007473110   -0.722012122448262   0.274998157533509   0.623240061418664   0.457687642192569   0.293329526713994   0.488950837091220   2.74904047   -0.44882046    0.46891833   1.96527860   -0.30954933    0.53109975
+    0.300   4.65252285968525   2.09278551802016   0.194929941231544   0.557034893811231   -1.24071282395616   0.1370008066985060   -0.660466290850886   0.260774631679394   0.609748615552919   0.457514283978959   0.266836791529257   0.482157450259502   2.93212957   -0.47759683    0.44983953   2.19913556   -0.34634476    0.51454301
+    0.350   4.53350897671045   2.14179725762371   0.189511462582876   0.609892595327716   -1.21514531872583   0.1247122464559250   -0.618593385936676   0.254261888951322   0.609506191611413   0.450960093750492   0.231614185359720   0.480254056040507   3.12993498   -0.50873128    0.43569377   2.44212272   -0.38459154    0.50459028
+    0.400   4.44193244811952   2.22862498827440   0.200305171692326   0.614767001033243   -1.18897228839914   0.1156387616270450   -0.591574546068960   0.243643375298288   0.615477199296824   0.441122908694716   0.240825814626397   0.475193646646757   3.33033435   -0.54013326    0.43045602   2.67707249   -0.42163058    0.50107926
+    0.450   4.33697728548038   2.29103572171716   0.209573442606565   0.634252522127606   -1.18013993982454   0.1100834686500940   -0.555234498707119   0.245883260391068   0.619384591074073   0.436294164198843   0.249245758570064   0.469672671050266   3.50290267   -0.56696060    0.43223316   2.88578405   -0.45456492    0.50146998
+    0.500   4.23507897753587   2.35399193121686   0.218088423514177   0.658541873692286   -1.17726165949601   0.1026978146186720   -0.519413341065942   0.238559829231160   0.624993564560933   0.428500398327627   0.243778652813106   0.463165027132890   3.65227902   -0.58990263    0.43887979   3.06576841   -0.48290522    0.50314566
+    0.600   4.02306439391925   2.42753387249929   0.218787915039312   0.754615594874153   -1.16678688970027   0.0940582863096094   -0.454043559543982   0.216855298090451   0.635090711921061   0.426296731581312   0.246117069779268   0.451206692163190   3.78937389   -0.61070144    0.44724118   3.20894580   -0.50535303    0.50313816
+    0.700   3.83201580121827   2.51268432884949   0.225024841305000   0.765438564882833   -1.16236278470164   0.0865917976706938   -0.397781532595396   0.215716276719833   0.633635835573626   0.425379430268476   0.246750734502549   0.446704739768374   3.90172707   -0.62754331    0.45268279   3.29999705   -0.51955858    0.50200072
+    0.750   3.74614211993052   2.55840246083607   0.231604957273506   0.793480645885641   -1.15333203234665   0.0824927940948198   -0.376630503031279   0.209593410875067   0.637877956868669   0.428563811859323   0.245166749142241   0.444311331912854   3.97560847   -0.63847685    0.45583313   3.34616641   -0.52673049    0.50236259
+    0.800   3.65168809980226   2.59467404437385   0.237334498546207   0.828241777740572   -1.14645090256437   0.0837439530041729   -0.363246464853852   0.192106714053294   0.638753820813416   0.433880652259324   0.240072953116796   0.439300059540554   4.01969394   -0.64478309    0.46384687   3.37966751   -0.53196741    0.50266660
+    0.900   3.51228638217709   2.68810225072750   0.251716558693382   0.845561170244942   -1.13599614124436   0.0834018259445213   -0.333908265367165   0.177456610405390   0.640328521929993   0.438913972406961   0.247662698012904   0.433043490235851   4.05410191   -0.64939631    0.47448247   3.42678904   -0.53940883    0.49912472
+    1.000   3.36982044793917   2.74249776483975   0.256784133033388   0.896648260528882   -1.12443352348542   0.0854384622609198   -0.317465939881623   0.171997778367260   0.638429444564638   0.444086895369946   0.238111905941701   0.426703815544157   4.07365692   -0.65153510    0.48134887   3.49473194   -0.55015995    0.49404787
+    1.200   3.10224418952824   2.82683484364226   0.262683442221073   0.982921357727718   -1.12116148624672   0.0973231293288241   -0.275616235541070   0.160445653296358   0.640086303643832   0.446121165446841   0.226825215617356   0.416539877732589   4.05048971   -0.64704214    0.48708350   3.57270165   -0.56244631    0.49375397
+    1.400   2.84933745949861   2.89911332547612   0.272065572034688   1.040000637056720   -1.12848926976065   0.1002887249133400   -0.234977212668109   0.150949141990859   0.649359928046388   0.457011583377380   0.231922092201736   0.409641113489270   3.99349305   -0.63756820    0.49596280   3.64615783   -0.57391983    0.49885402
+    1.600   2.63503429015231   2.98365736561984   0.289670716036571   1.073002118658300   -1.14064711059980   0.1100788214866130   -0.198050139347725   0.148738498099927   0.650540540696659   0.462781403376806   0.223897549097876   0.404985162254916   3.94048869   -0.62914699    0.50237219   3.70614492   -0.58319956    0.50427003
+    1.800   2.43032254290751   3.06358840071518   0.316828766785138   1.109809835991900   -1.15419967841818   0.1131278831612640   -0.167123738873435   0.156141593013035   0.656949311785981   0.468432106332010   0.205207971335941   0.399057812399511   3.90126474   -0.62332928    0.49599967   3.73733460   -0.58797931    0.50406486
+    2.000   2.24716354703519   3.11067747935049   0.326774527695550   1.132479221218060   -1.16620971948721   0.1162990300931710   -0.140731664063789   0.155054491423268   0.647763389017009   0.476577198889343   0.196850466599025   0.396502973620567   3.84084468   -0.61459972    0.47661567   3.71781492   -0.58487198    0.49679447
+    2.500   1.83108464781202   3.23289020747997   0.374214285707986   1.226390493979360   -1.17531326311999   0.1395412164588280   -0.120745041347963   0.176744551716694   0.629481669044830   0.479859874942997   0.190867925368865   0.393288023064441   3.71684077   -0.59605682    0.44991701   3.63149526   -0.57133201    0.48588889
+    3.000   1.58259215964414   3.44640772476285   0.454951810817816   1.313954219909490   -1.15664484431459   0.1494902905791280   -0.149050671035371   0.174876785480317   0.616446588503561   0.488309107285476   0.220914253465451   0.390859427279163   3.54176439   -0.56936072    0.42220113   3.49013277   -0.54916732    0.47625314
+    3.500   1.32153652077149   3.56445182133655   0.518610571029448   1.394984393379380   -1.16368470057735   0.1543445278711660   -0.142873831246493   0.193619214137258   0.600202108018105   0.479187019962682   0.237281350236338   0.388102875218375   3.34546112   -0.53906501    0.39951709   3.34520093   -0.52645323    0.47012445
+    4.000   1.10607064193676   3.64336885536264   0.555331865800278   1.418144933323620   -1.17757508691221   0.1730832048262120   -0.142053716741244   0.193571789393738   0.593046407283143   0.482524831704549   0.233827536969510   0.386956009422453   3.13392178   -0.50620694    0.38303088   3.23169516   -0.50870031    0.46555128
+    4.500   1.05987610378773   3.82152567982841   0.666476453600402   1.430548279466630   -1.17323633891422   0.1936210609543320   -0.156076448842833   0.152553585766189   0.581331910387036   0.456765160173852   0.196697785051230   0.372827866334900   2.90740942   -0.47082887    0.36840706   3.13020974   -0.49278809    0.46035806
+    5.000   0.82373381739570   3.84747968562771   0.684665144355361   1.496536314224210   -1.20969230916539   0.2213041109459350   -0.126052481240424   0.137919529808920   0.558954997903623   0.464229101930025   0.195572800413952   0.377458812369736   2.68344324   -0.43562070    0.35254196   2.99932475   -0.47213713    0.45347349
+    6.000   0.50685354955206   3.80040950285788   0.700805222359295   1.625591116375650   -1.22440411739130   0.2292764533844400   -0.113766839623945   0.141669390606605   0.538973145096788   0.439059204276786   0.190680023411634   0.384862538848542   2.50354874   -0.40714992    0.33854229   2.83412987   -0.44598168    0.44328149
+    7.000   0.19675504234642   3.78431011962409   0.716569352050671   1.696310364814470   -1.28517895409644   0.2596896867469380   -0.070585399916418   0.146488759166368   0.523331606096182   0.434396029381517   0.208231539543981   0.385850838707000   2.39499327   -0.38989994    0.33074643   2.69365804   -0.42370171    0.43214765
+    8.000  -0.08979569600589   3.74815514351616   0.726493405776986   1.695347146909250   -1.32882937608962   0.2849197966362740   -0.051296439369391   0.150981191615944   0.508537123776905   0.429104860654150   0.216201318346277   0.387633769846605   2.35979253   -0.38432385    0.32874669   2.64017872   -0.41521615    0.42722298
+
     """)
 
 
-class KothaEtAl2020SERASlopeGeology(KothaEtAl2020SERA):
+class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     """
-    Adaptation of the Kotha et al. (2020) GMPE for use with slope and geology
-    in place of inferred/measured Vs30.
+    Adaptation of the ESHM20-implemented Kotha et al. (2020) model for use when
+    defining site amplification based on with slope and geology rather than
+    inferred/measured Vs30.
     """
     experimental = True
 
     #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("slope", "geology"))
+    REQUIRES_SITES_PARAMETERS = set(("eshm20_region", "slope", "geology"))
 
     #: Geological Units
     GEOLOGICAL_UNITS = [b"CENOZOIC", b"HOLOCENE", b"MESOZOIC",
@@ -610,6 +771,7 @@ class KothaEtAl2020SERASlopeGeology(KothaEtAl2020SERA):
         that of the inferred Vs30
         """
         stddevs = []
+        # Uses the heteroskedastic tau and phi0 values
         tau = get_tau(imt, mag)
         phi = get_phi_ss(imt, mag)
         if self.ergodic:
