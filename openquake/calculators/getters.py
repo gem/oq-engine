@@ -336,7 +336,7 @@ class GmfGetter(object):
     def imts(self):
         return list(self.oqparam.imtls)
 
-    def get_gmfdata(self, mon):
+    def get_gmfdata(self, mon=performance.Monitor()):
         """
         :returns: an array of the dtype (sid, eid, gmv)
         """
@@ -358,7 +358,7 @@ class GmfGetter(object):
         :param gsim: ignored
         :returns: a dictionary rlzi -> array
         """
-        data = self.get_gmfdata(performance.Monitor())
+        data = self.get_gmfdata()
         return general.group_array(data, 'rlz')
 
     def get_hazard_by_sid(self, data=None):
