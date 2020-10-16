@@ -428,6 +428,7 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
                             trt, rlzs_by_gsim[grp_id])
 
 
+# NB: amplification is missing
 def get_gmfgetter(dstore, rup_id):
     """
     :returns: GmfGetter associated to the given rupture
