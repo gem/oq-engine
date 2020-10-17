@@ -24,6 +24,7 @@ import operator
 import functools
 import collections
 import numpy
+import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
@@ -693,11 +694,12 @@ def view_gmf_error(token, dstore):
     """
     Display a gmf relative error for seed dependency
     """
+    eids = dstore['gmf_data/eid'][:]
     gmvs = dstore['gmf_data/gmv_0'][:]
-    gmvs = gmvs[gmvs > gmvs.mean() + gmvs.std()]
-    vals = [gmvs[idxs].sum() for idxs in _indices(len(gmvs), 10)]
-    return 'On %d large values: %s' % (
-        len(gmvs), numpy.std(vals) / numpy.mean(vals))
+    sids = dstore['gmf_data/sid'][:]
+    df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
+    res = df.groupby(eids % 10)['gmv_0'].sum()
+    return res.std() / res.mean()
 
 
 @view.add('mean_disagg')

@@ -34,7 +34,7 @@ from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.geo.mesh import surface_to_array
 from openquake.commonlib import calc, util, logs, readinput, logictree
 from openquake.risklib.riskinput import str2rsi
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.getters import (
     GmfGetter, gen_rupture_getters, sig_eps_dt, time_dt)
 from openquake.calculators.classical import ClassicalCalculator
@@ -342,7 +342,13 @@ class EventBasedCalculator(base.HazardCalculator):
         M = len(oq.imtls)  # 0 in scenario
         L = len(oq.imtls.array)
         L1 = L // (M or 1)
-        if result and oq.hazard_curves_from_gmfs:
+        assert result
+        # check seed dependency
+        err = views.view('gmf_error', self.datastore)
+        if err > .01:
+            logging.warning('Your results are expected to have a large '
+                            'ses_seed dependency: use more years')
+        if oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
