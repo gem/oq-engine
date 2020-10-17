@@ -373,7 +373,7 @@ def view_portfolio_loss(token, dstore):
     sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]
     errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
     rows = [['mean'] + list(means), ['error'] + list(errors)]
-    print(rst_table(rows, ['loss'] + oq.loss_names))
+    return(rst_table(rows, ['loss'] + oq.loss_names))
     return rst_table([means], oq.loss_names)
 
 
