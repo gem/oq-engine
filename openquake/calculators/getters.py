@@ -19,7 +19,7 @@
 import operator
 import unittest.mock as mock
 import numpy
-from openquake.baselib import hdf5, datastore, general
+from openquake.baselib import hdf5, datastore, general, performance
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
 from openquake.hazardlib.source.rupture import (
@@ -75,13 +75,14 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, weights, sids=None, poes=()):
-        self.dstore = dstore
-        self.sids = dstore['sitecol'].sids if sids is None else sids
+    def __init__(self, dstore, weights, sids, imtls=(), poes=()):
+        self.filename = dstore if isinstance(dstore, str) else dstore.filename
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
             self.weights = weights
+        self.sids = sids
+        self.imtls = imtls
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
@@ -114,23 +115,16 @@ class PmapGetter(object):
         """
         if hasattr(self, '_pmap_by_grp'):  # already initialized
             return self._pmap_by_grp
-        if isinstance(self.dstore, str):
-            self.dstore = hdf5.File(self.dstore, 'r')
-        else:
-            self.dstore.open('r')  # if not
-        if self.sids is None:
-            self.sids = self.dstore['sitecol'].sids
-        oq = self.dstore['oqparam']
-        self.imtls = oq.imtls
-        self.poes = self.poes or oq.poes
-        self.rlzs_by_grp = self.dstore['full_lt'].get_rlzs_by_grp()
+        dstore = hdf5.File(self.filename, 'r')
+        self.rlzs_by_grp = {grp: dset[()] for grp, dset in
+                            dstore['rlzs_by_grp'].items()}
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
-        if 'poes' in self.dstore:
+        if 'poes' in dstore:
             # build probability maps restricted to the given sids
             ok_sids = set(self.sids)
-            for grp, dset in self.dstore['poes'].items():
+            for grp, dset in dstore['poes'].items():
                 ds = dset['array']
                 L, G = ds.shape[1:]
                 pmap = probability_map.ProbabilityMap(L, G)
@@ -139,6 +133,7 @@ class PmapGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
+        dstore.close()
         return self._pmap_by_grp
 
     # used in risk calculation where there is a single site per getter
@@ -200,35 +195,6 @@ class PmapGetter(object):
                     for rlz in rlzis:
                         res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
         return res.reshape(self.N, self.R, self.M, -1)
-
-    def items(self, kind=''):
-        """
-        Extract probability maps from the datastore, possibly generating
-        on the fly the ones corresponding to the individual realizations.
-        Yields pairs (tag, pmap).
-
-        :param kind:
-            the kind of PoEs to extract; if not given, returns the realization
-            if there is only one or the statistics otherwise.
-        """
-        num_rlzs = len(self.weights)
-        if not kind or kind == 'all':  # use default
-            if 'hcurves' in self.dstore:
-                for k in sorted(self.dstore['hcurves']):
-                    yield k, self.dstore['hcurves/' + k][()]
-            elif num_rlzs == 1:
-                yield 'mean', self.get(0)
-            return
-        if 'poes' in self.dstore and kind in ('rlzs', 'all'):
-            for rlzi in range(num_rlzs):
-                hcurves = self.get(rlzi)
-                yield 'rlz-%03d' % rlzi, hcurves
-        elif 'poes' in self.dstore and kind.startswith('rlz-'):
-            yield kind, self.get(int(kind[4:]))
-        if 'hcurves' in self.dstore and kind == 'stats':
-            for k in sorted(self.dstore['hcurves']):
-                if not k.startswith('rlz'):
-                    yield k, self.dstore['hcurves/' + k][()]
 
     def get_mean(self, grp=None):
         """
@@ -370,7 +336,7 @@ class GmfGetter(object):
     def imts(self):
         return list(self.oqparam.imtls)
 
-    def get_gmfdata(self, mon):
+    def get_gmfdata(self, mon=performance.Monitor()):
         """
         :returns: an array of the dtype (sid, eid, gmv)
         """
@@ -385,6 +351,15 @@ class GmfGetter(object):
         if not alldata:
             return []
         return numpy.concatenate(alldata)
+
+    # not called by the engine
+    def get_hazard(self, gsim=None):
+        """
+        :param gsim: ignored
+        :returns: a dictionary rlzi -> array
+        """
+        data = self.get_gmfdata()
+        return general.group_array(data, 'rlz')
 
     def get_hazard_by_sid(self, data=None):
         """
@@ -451,6 +426,20 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
         proxies = [RuptureProxy(rec) for rec in block]
         yield RuptureGetter(proxies, dstore.filename, grp_id,
                             trt, rlzs_by_gsim[grp_id])
+
+
+# NB: amplification is missing
+def get_gmfgetter(dstore, rup_id):
+    """
+    :returns: GmfGetter associated to the given rupture
+    """
+    oq = dstore['oqparam']
+    srcfilter = calc.filters.SourceFilter(
+        dstore['sitecol'], oq.maximum_distance)
+    for rgetter in gen_rupture_getters(dstore, slc=slice(rup_id, rup_id+1)):
+        gg = GmfGetter(rgetter, srcfilter, oq)
+        break
+    return gg
 
 
 def get_ebruptures(dstore):

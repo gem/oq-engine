@@ -2,6 +2,7 @@ from typing import Union
 
 import numpy as np
 
+g: float = 9.81
 
 def newmark_critical_accel(
     factor_of_safety: Union[float, np.ndarray], slope: Union[float, np.ndarray]
@@ -20,7 +21,7 @@ def newmark_critical_accel(
         Critical acceleration in terms of g (9.81 m s^-2)
     """
 
-    crit_accel = (factor_of_safety - 1) * np.sin(np.radians(slope))
+    crit_accel = (factor_of_safety - 1) * np.sin(np.radians(slope)) * g
     if np.isscalar(crit_accel):
         return max([0., crit_accel])
     else:

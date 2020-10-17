@@ -382,7 +382,7 @@ def _extract(hmap, imt, j):
 
 
 @export.add(('hcurves', 'npz'), ('hmaps', 'npz'), ('uhs', 'npz'),
-            ('losses_by_asset', 'npz'), ('avg_damages-rlzs', 'npz'))
+            ('losses_by_asset', 'npz'), ('damages-rlzs', 'npz'))
 def export_hazard_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     out = extract(dstore, ekey[0])

@@ -36,6 +36,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
+    nsites = 1  # set when filtering the source
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
@@ -58,19 +59,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 self.hypocenter_distribution.data)
             return self.num_ruptures / rescale
         return self.num_ruptures
-
-    @property
-    def nsites(self):
-        """
-        :returns: the number of sites affected by this source
-        """
-        try:
-            # the engine sets self.indices when filtering the sources
-            return len(self.indices)
-        except AttributeError:
-            # this happens in several hazardlib tests, therefore we return
-            # a fake number of affected sites to avoid changing all tests
-            return 1
 
     @property
     def grp_ids(self):

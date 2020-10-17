@@ -161,6 +161,7 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
+    max_sites_per_tile = valid.Param(valid.positiveint, 500_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
@@ -205,6 +206,7 @@ class OqParam(valid.ParamSet):
     save_disk_space = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
+    sensitivity_analysis = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -255,6 +257,31 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
+        if '_job_id' in names_vals:
+            # assume most attributes already validated
+            vars(self).update(names_vals)
+            if 'hazard_calculation_id' in names_vals:
+                self.hazard_calculation_id = int(
+                    names_vals['hazard_calculation_id'])
+            if 'maximum_distance' in names_vals:
+                self.maximum_distance = valid.MagDepDistance.new(
+                            str(names_vals['maximum_distance']))
+            if 'pointsource_distance' in names_vals:
+                self.pointsource_distance = valid.MagDepDistance.new(
+                    str(names_vals['pointsource_distance']))
+            if 'region_constraint' in names_vals:
+                self.region = valid.wkt_polygon(
+                    names_vals['region_constraint'])
+            if 'minimum_magnitude' in names_vals:
+                self.minimum_magnitude = valid.floatdict(
+                    str(names_vals['minimum_magnitude']))
+            if 'minimum_intensity' in names_vals:
+                self.minimum_intensity = valid.floatdict(
+                    str(names_vals['minimum_intensity']))
+            if 'sites' in names_vals:
+                self.sites = valid.coordinates(names_vals['sites'])
+            return
+
         # support legacy names
         for name in list(names_vals):
             if name == 'quantile_hazard_curves':
@@ -264,6 +291,8 @@ class OqParam(valid.ParamSet):
             elif name == 'max':
                 names_vals['max'] = names_vals.pop(name)
         super().__init__(**names_vals)
+        if 'job_ini' not in self.inputs:
+            self.inputs['job_ini'] = '<in-memory>'
         job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
             raise InvalidFile('Missing calculation_mode in %s' % job_ini)
@@ -313,7 +342,6 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         self._risk_files = get_risk_files(self.inputs)
 
-        self.check_source_model()
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'debug')
             self.check_missing('gsim_logic_tree', 'debug')
@@ -937,8 +965,8 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-            'multi_peril' in self.inputs or 'rupture_model' in self.inputs
-            or 'scenario' in self.calculation_mode):
+                'multi_peril' in self.inputs or 'rupture_model' in self.inputs
+                or 'scenario' in self.calculation_mode):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and

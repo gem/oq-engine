@@ -31,7 +31,7 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util, calc
+from openquake.commonlib import util
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
 from openquake.calculators import getters
@@ -377,6 +377,23 @@ def view_portfolio_loss(token, dstore):
     return rst_table([means], oq.loss_names)
 
 
+@view.add('portfolio_damage')
+def view_portfolio_damage(token, dstore):
+    """
+    The mean full portfolio damage for each loss type,
+    extracted from the average damages
+    """
+    # dimensions assets, stat, loss_types, dmg_state
+    if 'damages-stats' in dstore:
+        attrs = dstore.getitem('damages-stats').attrs
+        arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
+    else:
+        attrs = dstore.getitem('damages-rlzs').attrs
+        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
+    rows = [[lt] + list(row) for lt, row in zip(attrs['loss_type'], arr)]
+    return rst_table(rows, ['loss_type'] + list(attrs['dmg_state']))
+
+
 def sum_table(records):
     """
     Used to compute summaries. The records are assumed to have numeric
@@ -603,24 +620,17 @@ def view_task_ebrisk(token, dstore):
     return msg
 
 
-@view.add('global_hcurves')
-def view_global_hcurves(token, dstore):
+@view.add('global_hazard')
+def view_global_hazard(token, dstore):
     """
-    Display the global hazard curves for the calculation. They are
-    used for debugging purposes when comparing the results of two
-    calculations. They are the mean over the sites of the mean hazard
-    curves.
+    Display the global hazard for the calculation. This is used for
+    debugging purposes when comparing the results of two
+    calculations.
     """
-    oq = dstore['oqparam']
-    nsites = len(dstore['sitecol'])
-    rlzs = dstore['full_lt'].get_realizations()
-    weights = [rlz.weight for rlz in rlzs]
-    mean = getters.PmapGetter(dstore, weights).get_mean()
-    array = calc.convert_to_array(mean, nsites, oq.imtls)
-    res = numpy.zeros(1, array.dtype)
-    for name in array.dtype.names:
-        res[name] = array[name].mean()
-    return rst_table(res)
+    imtls = dstore['oqparam'].imtls
+    arr = dstore.sel('hcurves-stats', stat='mean')  # shape N, S, M, L
+    res = arr.mean(axis=(0, 1, 3))  # shape M
+    return rst_table([res], imtls)
 
 
 @view.add('global_poes')
@@ -752,7 +762,8 @@ def view_pmap(token, dstore):
     pmap = {}
     rlzs = dstore['full_lt'].get_realizations()
     weights = [rlz.weight for rlz in rlzs]
-    pgetter = getters.PmapGetter(dstore, weights)
+    pgetter = getters.PmapGetter(dstore, weights, dstore['sitecol'].sids,
+                                 dstore['oqparam'].imtls)
     pmap = pgetter.get_mean(grp)
     return str(pmap)
 

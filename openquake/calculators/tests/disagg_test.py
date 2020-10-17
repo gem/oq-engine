@@ -68,10 +68,13 @@ class DisaggregationTestCase(CalculatorTestCase):
         # disaggregation by source group
         rlzs = self.calc.datastore['full_lt'].get_realizations()
         ws = [rlz.weight for rlz in rlzs]
-        pgetter = getters.PmapGetter(self.calc.datastore, ws)
+        sids = self.calc.sitecol.sids
+        oq = self.calc.oqparam
+        pgetter = getters.PmapGetter(self.calc.datastore, ws, sids,
+                                     oq.imtls, oq.poes)
         pgetter.init()
         pmaps = []
-        for grp in sorted(pgetter.dstore['poes']):
+        for grp in sorted(self.calc.datastore['poes']):
             pmaps.append(pgetter.get_mean(grp))
         # make sure that the combination of the contributions is okay
         pmap = pgetter.get_mean()  # total mean map

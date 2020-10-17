@@ -18,7 +18,6 @@
 
 import os
 import unittest
-import unittest.mock as mock
 import numpy
 from openquake.baselib import parallel, general
 from openquake.hazardlib import lt
@@ -34,7 +33,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51, case_52)
+    case_50, case_51, case_52, case_53, case_54, case_55)
 
 aac = numpy.testing.assert_allclose
 
@@ -205,7 +204,8 @@ class ClassicalTestCase(CalculatorTestCase):
             case_11.__file__)
 
         # checking PmapGetter.get_pcurve
-        pgetter = PmapGetter(self.calc.datastore, self.calc.weights)
+        pgetter = PmapGetter(self.calc.datastore, self.calc.weights,
+                             self.calc.sitecol.sids, self.calc.oqparam.imtls)
         poes = pgetter.get_hcurves(pgetter.init())[0]
         mean = self.calc.datastore.sel('hcurves-stats', stat='mean', sid=0)
         mean2 = poes.T @ numpy.array([w['weight'] for w in self.calc.weights])
@@ -259,11 +259,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # the poes datasets which have shape (N, L, G)
         G = 1  # and not 2
         self.calc.datastore['poes/grp-00'].array.shape[-1] == G
-
-        # test preclassical and OQ_SAMPLE_SOURCES
-        with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
-            self.run_calc(
-                case_14.__file__, 'job.ini', calculation_mode='preclassical')
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
@@ -555,22 +550,12 @@ hazard_uhs-std.csv
         self.assertEqual(self.calc.R, 9)  # there are 9 realizations
 
     def test_case_37(self):
-        # test with amplification function == 1
-        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_37.__file__)
-        hc_id = str(self.calc.datastore.calc_id)
-        # test with amplification function == 2
-        self.run_calc(case_37.__file__, 'job.ini',
-                      hazard_calculation_id=hc_id,
-                      amplification_csv='amplification2.csv')
-        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ampl_curve-PGA.csv', fname)
-
-        # test with amplification function == 2 and no levels
-        self.run_calc(case_37.__file__, 'job.ini',
-                      hazard_calculation_id=hc_id,
-                      amplification_csv='amplification2bis.csv')
-        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
+        # Christchurch
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "quantile_curve-0.16-PGA.csv",
+                               "quantile_curve-0.5-PGA.csv",
+                               "quantile_curve-0.84-PGA.csv"],
+                              case_37.__file__)
 
     def test_case_38(self):
         # BC Hydro GMPEs with epistemic adjustments
@@ -728,3 +713,50 @@ hazard_uhs-std.csv
         aac(haz, 0.558779, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         aac(ws, [0.1] * 10)  # equal weights
+
+    def test_case_53(self):
+        # Test case with 4-branch scaled backbone logic tree
+        # (2 median, 2 stddev adjustments) using the ModifiableGMPE and the
+        # period-independent adjustment factors
+        self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
+                               "hazard_curve-rlz-000-SA(0.5).csv",
+                               "hazard_curve-rlz-001-PGA.csv",
+                               "hazard_curve-rlz-001-SA(0.5).csv",
+                               "hazard_curve-rlz-002-PGA.csv",
+                               "hazard_curve-rlz-002-SA(0.5).csv",
+                               "hazard_curve-rlz-003-PGA.csv",
+                               "hazard_curve-rlz-003-SA(0.5).csv"],
+                              case_53.__file__)
+
+    def test_case_54(self):
+        # Test case with 4-branch scaled backbone logic tree
+        # (2 median, 2 stddev adjustments) using the ModifiableGMPE and the
+        # period-dependent adjustment factors
+        self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
+                               "hazard_curve-rlz-000-SA(0.5).csv",
+                               "hazard_curve-rlz-001-PGA.csv",
+                               "hazard_curve-rlz-001-SA(0.5).csv",
+                               "hazard_curve-rlz-002-PGA.csv",
+                               "hazard_curve-rlz-002-SA(0.5).csv",
+                               "hazard_curve-rlz-003-PGA.csv",
+                               "hazard_curve-rlz-003-SA(0.5).csv"],
+                              case_54.__file__)
+
+    def test_case_55(self):
+        # test with amplification function == 1
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_55.__file__)
+        hc_id = str(self.calc.datastore.calc_id)
+
+        # test with amplification function == 2
+        self.run_calc(case_55.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      amplification_csv='amplification2.csv')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ampl_curve-PGA.csv', fname)
+
+        # test with amplification function == 2 and no levels
+        self.run_calc(case_55.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,
+                      amplification_csv='amplification2bis.csv')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)

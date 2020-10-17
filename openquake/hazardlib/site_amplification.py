@@ -242,11 +242,18 @@ class Amplifier(object):
                 self.ialphas[code, imt], self.isigmas[code, imt] = (
                     self._interp(code, imt, self.midlevels, df))
 
-    def check(self, vs30, vs30_tolerance):
+    def check(self, vs30, vs30_tolerance, gsims_by_trt):
         """
         Raise a ValueError if some vs30 is different from vs30_ref
         within the tolerance. Called by the engine.
         """
+        for gsims in gsims_by_trt.values():
+            for gsim in gsims:
+                gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
+                if gsim_ref and self.vs30_ref > gsim_ref:
+                    raise ValueError(
+                        '%s.DEFINED_FOR_REFERENCE_VELOCITY=%s < %s'
+                        % (gsim.__class__.__name__, gsim_ref, self.vs30_ref))
         if (numpy.abs(vs30 - self.vs30_ref) > vs30_tolerance).any():
             raise ValueError('Some vs30 in the site collection is different '
                              'from vs30_ref=%d over the tolerance of %d' %

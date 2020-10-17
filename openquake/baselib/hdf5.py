@@ -21,6 +21,7 @@ import ast
 import csv
 import inspect
 import tempfile
+import warnings
 import importlib
 import itertools
 from urllib.parse import quote_plus, unquote_plus
@@ -706,7 +707,7 @@ def _fix_array(arr, key):
         # for extract_assets d[0] is the pair
         # ('id', ('|S50', {'h5py_encoding': 'ascii'}))
         # this is a horrible workaround for the h5py 2.10.0 issue
-        # https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
+        # https://github.com/numpy/numpy/issues/14142
         dtlist = []
         for i, n in enumerate(arr.dtype.names):
             if isinstance(arr.dtype.descr[i][1], tuple):
@@ -740,4 +741,7 @@ def save_npz(obj, path):
             a[key] = val.encode('utf-8')
         else:
             a[key] = _fix_array(val, key)
-    numpy.savez_compressed(path, **a)
+    # turn into an error https://github.com/numpy/numpy/issues/14142
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=UserWarning)
+        numpy.savez_compressed(path, **a)

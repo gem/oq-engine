@@ -170,6 +170,14 @@ base
     :undoc-members:
     :show-inheritance:
 
+baumont_2018
+------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.baumont_2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 bchydro_2016_epistemic
 ------------------------------------------------
 .. automodule:: openquake.hazardlib.gsim.bchydro_2016_epistemic
@@ -190,6 +198,14 @@ bindi_2011
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bindi_2011
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bindi_2011_ipe
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bindi_2011_ipe
     :members:
     :undoc-members:
     :show-inheritance:
@@ -474,6 +490,14 @@ drouet_alpes_2015
     :undoc-members:
     :show-inheritance:
 
+ecos_2009
+-------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.ecos_2009
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 edwards_fah_2013a
 -------------------------------------------------
 
@@ -510,6 +534,14 @@ faccioli_2010
 ---------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.faccioli_2010
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+faccioli_cauzzi_2006
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.faccioli_cauzzi_2006
     :members:
     :undoc-members:
     :show-inheritance:

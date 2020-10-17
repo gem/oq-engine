@@ -30,13 +30,14 @@ import tempfile
 import functools
 import configparser
 import collections
+
 import numpy
 import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, AccumDict)
-from openquake.baselib.python3compat import decode, zip
+from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
@@ -204,68 +205,50 @@ def _update(params, items, base_path):
         else:
             params[key] = value
 
+    if 'reqv' in params['inputs']:
+        params['pointsource_distance'] = '0'
 
-def get_params(job_inis, **kw):
+
+def get_params(job_ini, **kw):
     """
-    Parse one or more INI-style config files.
+    Parse a .ini file or a .zip archive
 
-    :param job_inis:
-        List of configuration files (or list containing a single zip archive)
+    :param job_ini:
+        Configuration file or zip archive
     :param kw:
         Optionally override some parameters
     :returns:
         A dictionary of parameters
     """
+    # directory containing the config files we're parsing
+    job_ini = os.path.abspath(job_ini)
+    base_path = os.path.dirname(job_ini)
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     input_zip = None
-    if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
-        input_zip = job_inis[0]
+    if job_ini.endswith('.zip'):
+        input_zip = job_ini
         job_inis = extract_from_zip(
-            job_inis[0], ['job_hazard.ini', 'job_haz.ini',
-                          'job.ini', 'job_risk.ini'])
+            job_ini, ['job_hazard.ini', 'job_haz.ini',
+                      'job.ini', 'job_risk.ini'])
         if not job_inis:
             raise NameError('Could not find job.ini inside %s' % input_zip)
+        job_ini = job_inis[0]
 
-    not_found = [ini for ini in job_inis if not os.path.exists(ini)]
-    if not_found:  # something was not found
-        raise IOError('File not found: %s' % not_found[0])
+    if not os.path.exists(job_ini):
+        raise IOError('File not found: %s' % job_ini)
 
-    cp = configparser.ConfigParser()
-    cp.read(job_inis, encoding='utf8')
-
-    # directory containing the config files we're parsing
-    job_ini = os.path.abspath(job_inis[0])
-    base_path = decode(os.path.dirname(job_ini))
+    base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
-    if input_zip:
-        params['inputs']['input_zip'] = os.path.abspath(input_zip)
-
+    cp = configparser.ConfigParser()
+    cp.read([job_ini], encoding='utf8')
     for sect in cp.sections():
         _update(params, cp.items(sect), base_path)
+
+    if input_zip:
+        params['inputs']['input_zip'] = os.path.abspath(input_zip)
     _update(params, kw.items(), base_path)  # override on demand
 
-    if params['inputs'].get('reqv'):
-        # using pointsource_distance=0 because of the reqv approximation
-        params['pointsource_distance'] = '0'
-
     return params
-
-
-def get_oq(text):
-    """
-    Returns an OqParam instance from a configuration string. For instance:
-
-    >>> get_oq('maximum_distance=200')
-    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': [(1, 200), (10, 200)]}, risk_investigation_time=None>
-    """
-    # UGLY: this is here to avoid circular imports
-    from openquake.calculators import base
-    OqParam.calculation_mode.validator.choices = tuple(base.calculators)
-    cp = configparser.ConfigParser()
-    cp.read_string('[general]\ncalculation_mode=classical\n' + text)
-    dic = dict(cp['general'])
-    dic['inputs'] = dict(job_ini='<in-memory>')
-    oq = OqParam(**dic)
-    return oq
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
@@ -300,12 +283,13 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
         calculators or base.calculators)
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        job_ini = get_params([os.path.join(basedir, job_ini)])
+        job_ini = get_params(os.path.join(basedir, job_ini))
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
     job_ini.update(kw)
     oqparam = OqParam(**job_ini)
-    if validate:
+    if validate and '_job_id' not in job_ini:
+        oqparam.check_source_model()
         oqparam.validate()
     return oqparam
 
@@ -404,7 +388,7 @@ def get_mesh(oqparam, h5=None):
                               'nor a site model, nor an exposure in %s' %
                               oqparam.inputs['job_ini'])
         try:
-            logging.info('Inferring the hazard grid from the exposure')
+            logging.info('Inferring the hazard grid')
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))

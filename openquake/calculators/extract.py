@@ -305,7 +305,7 @@ def extract_assets(dstore, what):
             tagidx, = numpy.where(dic[tag] == val)
             cond |= arr[tag] == tagidx
         arr = arr[cond]
-    return ArrayWrapper(arr, dic)
+    return ArrayWrapper(arr, dict(json=dumps(dic)))
 
 
 @extract.add('asset_risk')
@@ -778,9 +778,9 @@ def extract_agg_damages(dstore, what):
         for the given tags
     """
     loss_type, tags = get_loss_type_tags(what)
-    if 'avg_damages-rlzs' in dstore:  # scenario_damage
+    if 'damages-rlzs' in dstore:  # scenario_damage
         lti = dstore['oqparam'].lti[loss_type]
-        losses = dstore['avg_damages-rlzs'][:, :, lti]
+        losses = dstore['damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags)
@@ -915,16 +915,16 @@ def build_damage_array(data, damage_dt):
     return dmg
 
 
-@extract.add('avg_damages-rlzs')
-def extract_avg_damages_npz(dstore, what):
+@extract.add('damages-rlzs')
+def extract_damages_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore['avg_damages-rlzs']
+    data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
-        avg_damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
         yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
-            assets, avg_damages)
+            assets, damages)
 
 
 @extract.add('event_based_mfd')
@@ -1054,6 +1054,21 @@ def extract_event_info(dstore, eidx):
         yield key, val
     yield 'rlzi', rlzi
     yield 'gsim', repr(gsim)
+
+
+@extract.add('extreme_event')
+def extract_extreme_event(dstore, eidx):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/extreme_event
+    """
+    arr = dstore['gmf_data/gmv_0'][()]
+    idx = arr.argmax()
+    eid = dstore['gmf_data/eid'][idx]
+    dic = dict(extract_event_info(dstore, eid))
+    dic['gmv'] = arr[idx]
+    return dic
 
 
 @extract.add('ruptures_within')

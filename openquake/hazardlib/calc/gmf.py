@@ -136,7 +136,6 @@ class GmfComputer(object):
             self.distribution = scipy.stats.truncnorm(
                 - truncation_level, truncation_level)
 
-
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
         :returns: [(sid, eid, gmv), ...], dt
