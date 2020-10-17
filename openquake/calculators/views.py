@@ -353,6 +353,12 @@ def view_portfolio_losses(token, dstore):
     return rst_table(array, fmt='%.5E')
 
 
+def _indices(N, n):
+    # returns n blocks of indices in the range 0 .. N-1
+    for i in range(n):
+        yield numpy.arange(i, N, n)
+
+
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
@@ -362,8 +368,12 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     G = getattr(oq, 'number_of_ground_motion_fields', 1)
     R = dstore['full_lt'].get_num_rlzs()
-    means = dstore['losses_by_event']['loss'].sum(axis=0) / R / G
-    return rst_table([means], oq.loss_names)
+    loss = dstore['losses_by_event']['loss']  # shape (E, L)
+    means = loss.sum(axis=0) / R / G
+    sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]
+    errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
+    rows = [['mean'] + list(means), ['error'] + list(errors)]
+    return(rst_table(rows, ['loss'] + oq.loss_names))
 
 
 @view.add('portfolio_damage')
@@ -676,6 +686,18 @@ def view_gmf(token, dstore):
     df = dstore.read_df('gmf_data', 'sid')
     gmf = df.groupby(df.index).mean()
     return str(gmf)
+
+
+@view.add('gmf_error')
+def view_gmf_error(token, dstore):
+    """
+    Display a gmf relative error for seed dependency
+    """
+    gmvs = dstore['gmf_data/gmv_0'][:]
+    gmvs = gmvs[gmvs > gmvs.mean() + gmvs.std()]
+    vals = [gmvs[idxs].sum() for idxs in _indices(len(gmvs), 10)]
+    return 'On %d large values: %s' % (
+        len(gmvs), numpy.std(vals) / numpy.mean(vals))
 
 
 @view.add('mean_disagg')
