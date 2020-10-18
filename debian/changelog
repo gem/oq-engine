@@ -11,7 +11,7 @@ python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
   * Extended the ModifiableGMPE class to allow amplification of the
     intensity of the parent IPE based on the ‘amplfactor’ site parameter
 
-  [Aniruh Rao]
+  [Anirudh Rao]
   * Fixed the glossary in the manual
 
   [Michele Simionato]
