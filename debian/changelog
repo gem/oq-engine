@@ -4,6 +4,11 @@
   [Marco Pagani]
   * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
 
+python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi]
+  * Add info to doc about OpenQuake manual path for linux and mac installers
+
   [Laurentiu Danciu and Athanasios Papadopoulos]
   * Implemented intensity prediction equations for use in the Swiss Risk Model.
     The new IPEs refer to models obtained from the ECOS (2009), Faccioli and
@@ -44,6 +49,8 @@
   [Michele Simionato]
   * Changed event based full enumeration to be consistent with sampling
   * Changed the GMF storage to be more pandas-friendly
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Sun, 18 Oct 2020 19:55:40 +0000
 
 python3-oq-engine (3.10.0-1~xenial01) xenial; urgency=low
 
