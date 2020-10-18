@@ -45,7 +45,7 @@ Do you want to make the 'oq' command available by default? [y/n]: y
 Installation completed. To enable it run 'source /Users/auser/openquake/env.sh'
 ```
 
-The demo files are located in `~/openquake/demos`.
+The demo files are located in `~/openquake/share/demos` for standard installations or `_your_custom_folder_/share/demos` if a different folder was specified during installation.
 
 
 ### Upgrade from a previous installation
