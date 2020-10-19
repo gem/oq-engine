@@ -60,12 +60,13 @@ class HassaniAtkinson2020SInter(GMPE):
 
     REQUIRES_SITES_PARAMETERS = {'fpeak', 'vs30', 'z2pt5'}
 
-    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0):
+    def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0,
+                 **kwargs):
         """
         Aditional parameters.
         """
         super().__init__(kappa=kappa, backarc=backarc, forearc_ne=forearc_ne,
-                         forearc_sw=forearc_sw)
+                         forearc_sw=forearc_sw, **kwargs)
         # kappa parameter
         self.kappa = kappa
         # set proportion of rrups in backarc, forearc_ne and forearc_sw
