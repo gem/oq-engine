@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed scenario calculations to depend on the `ses_seed`, not the
+    `random_seed`
   * Added check on the versions of numpy, scipy and pandas between master and
     workers
   * Added a check for large seed dependency in the GMFs and an estimate of the

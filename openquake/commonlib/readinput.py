@@ -623,7 +623,7 @@ def get_rupture(oqparam):
     else:
         raise ValueError('Unrecognized ruptures model %s' % rup_model)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.rup_id = oqparam.random_seed
+    rup.rup_id = oqparam.ses_seed
     return rup
 
 
