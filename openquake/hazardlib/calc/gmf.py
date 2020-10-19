@@ -148,6 +148,8 @@ class GmfComputer(object):
         No = sum(len(sp.outputs) for sp in self.sec_perils)
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
+            if num_events == 0:  # it may happen
+                continue
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
             # it is better to have few calls producing big arrays
