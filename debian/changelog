@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Added check on the versions of numpy, scipy and pandas between master and
+    workers
+
   [Viktor Polak]
   * Added fpeak site parameter
   * Added the Hassani and Atkinson (2020) GMPE
