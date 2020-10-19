@@ -230,9 +230,8 @@ class EventBasedCalculator(base.HazardCalculator):
             ngmfs = oq.number_of_ground_motion_fields
             self.gsims = readinput.get_gsims(oq)
             self.cmaker = ContextMaker(
-                '*', self.gsims,
-                {'maximum_distance': oq.maximum_distance,
-                 'filter_distance': oq.filter_distance})
+                '*', self.gsims, {'maximum_distance': oq.maximum_distance,
+                                  'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
             mesh = surface_to_array(rup.surface).transpose(1, 2, 0).flatten()
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
