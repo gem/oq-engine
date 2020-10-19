@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
-import os
 import re
 import time
 import copy
@@ -72,41 +71,51 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
+def classical1(srcs, gsims, params, slc, monitor=None):
+    """
+    Read the SourceFilter, get the current slice of it (if tiling is
+    enabled) and then call the classical calculator in hazardlib
+    """
+    if monitor is None:  # fix mispassed parameters (for disagg_by_src)
+        monitor = slc
+        slc = slice(None)
+    srcfilter = monitor.read('srcfilter')[slc]
+    return classical(srcs, srcfilter, gsims, params, monitor)
+
+
+def classical_split_filter(srcs, gsims, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
-    # NB: splitting all the sources improves the distribution significantly,
-    # compared to splitting only the big sources
-    if params['split_sources']:
-        with monitor("splitting sources"):
-            splits, _stime = split_sources(srcs)
-
-        def weight(src, N=len(srcfilter.sitecol.complete)):
-            n = 10 * numpy.sqrt(src.nsites / N)
-            return src.weight * params['rescale_weight'] * n
-    else:
-        splits = srcs
-
-        def weight(src):
-            return src.weight
-
+    srcfilter = monitor.read('srcfilter')
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
+
+    def weight(src, N=len(srcfilter.sitecol.complete)):
+        n = 10 * numpy.sqrt(src.nsites / N)
+        return src.weight * params['rescale_weight'] * n
+
+    # NB: splitting all the sources improves the distribution significantly,
+    # compared to splitting only the big sources
+    if nt > 1 or params['split_sources'] is False:
+        splits = srcs
+    else:
+        with monitor("splitting sources"):
+            splits, _stime = split_sources(srcs)
     for sf in sf_tiles:
         sources = [src for src, _idx in sf.filter(splits)]
         if not sources:
             yield {'pmap': {}}
             continue
-        maxw = params['max_weight'] / nt
+        maxw = params['max_weight']
         blocks = list(block_splitter(sources, maxw, weight))
         if nt == 1 and len(blocks) == 1:
-            yield classical(blocks[-1], sf, gsims, params, monitor)
+            yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
             break
         for block in blocks:
-            yield classical, block, sf, gsims, params
+            yield classical1, block, gsims, params, sf.slc
         msg = 'produced %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
@@ -117,13 +126,14 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             print(msg)
 
 
-def preclassical(srcs, srcfilter, gsims, params, monitor):
+def preclassical(srcs, gsims, params, monitor):
     """
     Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
     with monitor("splitting/filtering sources"):
+        srcfilter = monitor.read('srcfilter')
         splits, _stime = split_sources(srcs)
     totrups = 0
     maxradius = 0
@@ -444,9 +454,9 @@ class ClassicalCalculator(base.HazardCalculator):
             C *= 50  # use more tasks because there will be slow tasks
         elif oq.disagg_by_src or oq.is_ucerf():
             C *= 5  # use more tasks, especially in UCERF
-            f1, f2 = classical, classical
+            f1, f2 = classical1, classical1
         else:
-            f1, f2 = classical, classical_split_filter
+            f1, f2 = classical1, classical_split_filter
         max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
@@ -465,7 +475,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic:
                 # do not split atomic groups
                 nb = 1
-                smap.submit((sg, sf, gsims, param), f1)
+                smap.submit((sg, gsims, param), f1)
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
@@ -477,7 +487,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block),
                                   sum(srcweight(src) for src in block))
-                    smap.submit((block, sf, gsims, param), f2)
+                    smap.submit((block, gsims, param), f2)
 
             w = sum(srcweight(src) for src in sg)
             logging.info('TRT = %s', sg.trt)

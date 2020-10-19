@@ -258,8 +258,8 @@ def get_outputs(db, job_id):
 DISPLAY_NAME = {
     'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
-    'avg_damages-rlzs': 'Asset Damage Distributions',
-    'avg_damages-stats': 'Asset Damage Statistics',
+    'damages-rlzs': 'Asset Damage Distributions',
+    'damages-stats': 'Asset Damage Statistics',
     'dmg_by_event': 'Aggregate Event Damages',
     'losses_by_event': 'Aggregate Event Losses',
     'events': 'Events',

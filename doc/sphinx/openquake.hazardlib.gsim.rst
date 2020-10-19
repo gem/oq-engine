@@ -618,6 +618,14 @@ gupta_2010
     :undoc-members:
     :show-inheritance:
 
+hassani_atkinson_2020
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.hassani_atkinson_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 hong_goda_2007
 ----------------------------------------------
 

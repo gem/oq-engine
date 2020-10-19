@@ -96,7 +96,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # test event_based_damage
         self.run_calc(case_1.__file__, 'job_damage.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
-        fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
+        fnames = export(('damages-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
         fnames = export(('dmg_by_event', 'csv'), self.calc.datastore)

@@ -322,7 +322,7 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
-@export.add(('avg_damages-rlzs', 'csv'), ('avg_damages-stats', 'csv'))
+@export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
