@@ -711,6 +711,21 @@ def view_gmf_error(token, dstore):
     return res.std() / res.mean()
 
 
+class GmpeExtractor(object):
+    def __init__(self, dstore):
+        full_lt = dstore['full_lt']
+        self.trt_by_grp = full_lt.trt_by_grp
+        self.gsim_by_trt = full_lt.gsim_by_trt
+        self.rlzs = full_lt.get_realizations()
+
+    def extract(self, grp_ids, rlz_ids):
+        out = []
+        for grp_id, rlz_id in zip(grp_ids, rlz_ids):
+            trt = self.trt_by_grp[grp_id]
+            out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
+        return out
+
+
 @view.add('extreme_gmvs')
 def view_extreme_gmvs(token, dstore):
     """
@@ -722,11 +737,14 @@ def view_extreme_gmvs(token, dstore):
         maxgmv = 10  # 10g is default value defining extreme GMVs
     imt0 = list(dstore['oqparam'].imtls)[0]
     if imt0.startswith(('PGA', 'SA(')):
+        gmpe = GmpeExtractor(dstore)
         df = get_gmv0(dstore)
         extreme_df = df[df.gmv_0 > maxgmv].copy()
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
+        grp_ids = dstore['ruptures']['grp_id'][extreme_df.rup]
+        extreme_df['gmpe'] = gmpe.extract(grp_ids, ev['rlz_id'])
         return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
     return 'Could not do anything for ' + imt0
 
