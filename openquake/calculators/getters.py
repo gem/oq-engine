@@ -314,7 +314,7 @@ class GmfGetter(object):
                 sitecol = self.sitecol.filtered(sids)
                 try:
                     computer = calc.gmf.GmfComputer(
-                        ebr, sitecol, self.oqparam.imtls, self.cmaker,
+                        ebr, sitecol, self.cmaker,
                         self.oqparam.truncation_level, self.correl_model,
                         self.amplifier, self.sec_perils)
                 except FarAwayRupture:

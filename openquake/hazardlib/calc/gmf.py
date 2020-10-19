@@ -99,16 +99,16 @@ class GmfComputer(object):
     # a matrix of size (I, N, E) is returned, where I is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sitecol, imts, cmaker,
+    def __init__(self, rupture, sitecol, cmaker,
                  truncation_level=None, correlation_model=None,
                  amplifier=None, sec_perils=()):
         if len(sitecol) == 0:
             raise ValueError('No sites')
-        elif len(imts) == 0:
+        elif len(cmaker.imtls) == 0:
             raise ValueError('No IMTs')
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
-        self.imts = [from_string(imt) for imt in imts]
+        self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
@@ -337,9 +337,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim])
+    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim],
+                          dict(imtls={str(imt): [1] for imt in imts}))
     rupture.rup_id = seed
-    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
-                     cmaker, truncation_level, correlation_model)
+    gc = GmfComputer(rupture, sites, cmaker, truncation_level,
+                     correlation_model)
     res, _sig, _eps = gc.compute(gsim, realizations)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}
