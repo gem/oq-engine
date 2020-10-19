@@ -33,6 +33,7 @@ __version__ = '3.11.0'
 __version__ += git_suffix(__file__)
 
 version = dict(engine=__version__,
+               python='%d.%d' % sys.version_info[:2],
                numpy=numpy.__version__,
                scipy=scipy.__version__,
                pandas=pandas.__version__)
