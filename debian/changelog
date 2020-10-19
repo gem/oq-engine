@@ -1,9 +1,12 @@
+  [Michele Simionato]
+  * Added check on the versions of numpy, scipy and pandas between master and
+    workers
+  * Added a check for large seed dependency in the GMFs and an estimate of the
+    portfolio error due to the seed dependency
+
   [Viktor Polak]
   * Added fpeak site parameter
   * Added the Hassani and Atkinson (2020) GMPE
-
-  [Michele Simionato]
-  * Restored tiling in large classical calculations
 
   [Marco Pagani]
   * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
