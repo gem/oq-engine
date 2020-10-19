@@ -689,19 +689,46 @@ def view_gmf(token, dstore):
     return str(gmf)
 
 
+def get_gmv0(dstore):
+    # returns dict gmf_error, extreme_ruptures
+    eids = dstore['gmf_data/eid'][:]
+    gmvs = dstore['gmf_data/gmv_0'][:]
+    sids = dstore['gmf_data/sid'][:]
+    df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
+    return df
+
+
 @view.add('gmf_error')
 def view_gmf_error(token, dstore):
     """
     Display a gmf relative error for seed dependency
     """
-    eids = dstore['gmf_data/eid'][:]
-    gmvs = dstore['gmf_data/gmv_0'][:]
-    sids = dstore['gmf_data/sid'][:]
-    df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
+    df = get_gmv0(dstore)
     numpy.random.seed(42)  # default_rng does not work with numpy 1.16
+    eids = numpy.array(df.index)
     numpy.random.shuffle(eids)
     res = df.groupby(eids % 10)['gmv_0'].sum()
     return res.std() / res.mean()
+
+
+@view.add('extreme_gmvs')
+def view_extreme_gmvs(token, dstore):
+    """
+    Display table of extreme GMVs with fields (eid, gmv_0, sid, rlz. rup)
+    """
+    if ':' in token:
+        maxgmv = float(token.split(':')[1])
+    else:
+        maxgmv = 10
+    imt0 = list(dstore['oqparam'].imtls)[0]
+    if imt0.startswith(('PGA', 'SA(')):
+        df = get_gmv0(dstore)
+        extreme_df = df[df.gmv_0 > maxgmv].copy()
+        ev = dstore['events'][()][extreme_df.index]
+        extreme_df['rlz'] = ev['rlz_id']
+        extreme_df['rup'] = ev['rup_id']
+        return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
+    return 'Could not do anything for ' + imt0
 
 
 @view.add('mean_disagg')
