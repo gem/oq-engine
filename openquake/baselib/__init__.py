@@ -20,6 +20,7 @@ import os
 import sys
 import numpy
 import scipy
+import pandas
 import configparser
 
 # disable OpenBLAS threads before the first numpy import
@@ -33,7 +34,8 @@ __version__ += git_suffix(__file__)
 
 version = dict(engine=__version__,
                numpy=numpy.__version__,
-               scipy=scipy.__version__)
+               scipy=scipy.__version__,
+               pandas=pandas.__version__)
 
 
 class InvalidFile(Exception):
