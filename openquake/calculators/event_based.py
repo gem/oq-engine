@@ -348,7 +348,7 @@ class EventBasedCalculator(base.HazardCalculator):
             err = views.view('gmf_error', self.datastore)
             if err > .05:
                 logging.warning('Your results are expected to have a large '
-                                'dependency from ses_seed')
+                                'seed dependency')
         if oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
