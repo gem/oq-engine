@@ -719,7 +719,7 @@ def view_extreme_gmvs(token, dstore):
     if ':' in token:
         maxgmv = float(token.split(':')[1])
     else:
-        maxgmv = 10
+        maxgmv = 10  # 10g is default value defining extreme GMVs
     imt0 = list(dstore['oqparam'].imtls)[0]
     if imt0.startswith(('PGA', 'SA(')):
         df = get_gmv0(dstore)
