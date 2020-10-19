@@ -698,8 +698,8 @@ def view_gmf_error(token, dstore):
     gmvs = dstore['gmf_data/gmv_0'][:]
     sids = dstore['gmf_data/sid'][:]
     df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
-    numpy.random.seed(42)
-    numpy.random.shuffle(eids)
+    rng = numpy.random.default_rng(42)
+    rng.shuffle(eids)
     res = df.groupby(eids % 10)['gmv_0'].sum()
     return res.std() / res.mean()
 
