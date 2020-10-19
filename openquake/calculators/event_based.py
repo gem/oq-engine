@@ -336,13 +336,13 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def post_execute(self, result):
         oq = self.oqparam
-        if not oq.ground_motion_fields and not oq.hazard_curves_from_gmfs:
+        if (not result or not oq.ground_motion_fields and not
+                oq.hazard_curves_from_gmfs):
             return
         N = len(self.sitecol.complete)
         M = len(oq.imtls)  # 0 in scenario
         L = len(oq.imtls.array)
         L1 = L // (M or 1)
-        assert result
         # check seed dependency
         if 'gmf_data' in self.datastore:
             err = views.view('gmf_error', self.datastore)
