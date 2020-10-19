@@ -1,3 +1,7 @@
+  [Viktor Polak]
+  * Added fpeak site parameter
+  * Added the Hassani and Atkinson (2020) GMPE
+
   [Michele Simionato]
   * Restored tiling in large classical calculations
 
