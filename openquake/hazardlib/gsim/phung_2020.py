@@ -1,44 +1,197 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2015-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Input Variables
-mag     = Moment Magnitude
-T     = Period (sec); 
-Rrup  = Closest distance (km) to the ruptured plane
-Rjb   = Joyner-Boore distance (km); closest distance (km) to surface
-        projection of rupture plane
-Rx    = Horizontal distance from top of rupture measured perpendicular 
-        to fault strike (km). See Figures a, b and c for illustation% Ztor  = Depth(km) to the top of ruptured plane
-delta = Fault dip angle (in degree)
-region= 1 for Taiwan
-      = 2 for California
-      = 4 for Japan
-      = 3 for others 
-Z10   = Basin depth (m); depth from the groundsurface to the
-        1km/s shear-wave horizon.
-      = -999 if unknown
-      = 'na' if unknow
-  Vs30= shear wave velocity averaged over top 30 m in m/s
-      = ref: 1130
-  Ztor= depth to top of rupture , [km]
-      =-999 if specify average Ztor
-
-Output Variables
-Sa: Median spectral acceleration prediction
-sigma: logarithmic standard deviation of spectral acceleration
+Module exports :class:`PhungEtAl2020SInter`
+               :class:`PhungEtAl2020SSlab`
+               :class:`PhungEtAl2020Asc`
 """
+import math
 
-def Phung_2020_TWGMM(mag, T, Rrup, Rjb, Rx, Ztor, Fhw, Vs30, Z10, rgn, flg_AS):
-    dip = math.radians(dip)
-    reverse_fault = 30 <= rake <= 150
-    normal_fault = -120 <= rake <= -60
+import numpy as np
+from scipy.special import erf
 
-    def __init__(d_dpp = 0, hanging_wall=None):
-        if hanging_wall is None:
-            self.hw = dists.rx >= 0
-        else: 
-            hanging_wall = self.hw
-        # 0 for median calcualation
+from openquake.hazardlib import const
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.imt import PGA, SA, PGV
+
+
+class PhungEtAl2020Asc(GMPE):
+    """
+    Implements Phung et al. (2020) for crustal.
+    """
+
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
+
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL,
+        const.StdDev.INTER_EVENT,
+        const.StdDev.INTRA_EVENT
+    ])
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+
+    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'mag', 'rake', 'ztor'}
+
+    # rx for hanging wall
+    REQUIRES_DISTANCES = {'rjb', 'rrup', 'rx'}
+
+    def __init__(region='glb', aftershocks=False, d_dpp=0, **kwargs):
+        super().__init__(region=region, aftershocks=aftershocks, d_dpp=d_dpp, \
+                         **kwargs)
+
+        # region options:
+        # 'glb', 'tw', 'ca', 'jp' (global, Taiwan, California, Japan)
+        self.region = region
+        # only for Taiwan region
+        self.aftershocks = aftershocks and region == 'tw'
+        # direct point parameter for directivity effect
         self.d_ddp = d_ddp
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extract dictionaries of coefficients specific to IM type
+        C = self.COEFFS[imt]
+
+        lnmed, ztor = self._fsof_ztor(C, rup.mag, rup.rake, rup.ztor)
+        # main shock [1]
+        lnmed += C['c1']
+        # dip term [5]
+        lnmed += (C['c11'] + C['c11_b'] / math.cosh(2 * max(mag - 4.5, 0))) \
+            * (math.cos(math.radians(rup.dip)) ** 2)
+        # hanging wall term [12]
+        lnmed += (dists.rx >= 0) * C['c9'] * math.cos(math.radians(rup.dip)) \
+            * (C['c9_a'] + (1 - C['c9_a']) * np.tanh(dists.rx / C['c9_b'])) \
+            * (1 - np.sqrt(dists.rjb ** 2 + ztor ** 2) / (dists.rrup + 1))
+        # directivity [11]
+        lnmed += C['c8'] * max(1 - max(dists.rrup - 40, 0) / 30, 0) \
+            * min(max(mag - 5.5, 0) / 0.8, 1) \
+            * exp(self.CONSTANTS['c8_a'] * (mag - C['c8_b']) ** 2) * self.d_ddp
+        # fmag [6, 7]
+        lnmed += self.CONSTANTS['c2'] * (mag - 6)
+        lnmed += (self.CONSTANTS['c2'] - C['c3']) / C['c_n'] \
+            * math.log(1 + math.exp(C['c_n'] * (C['c_m'] - mag)))
+        lnmed += self._distance_attenuation(C, rup.mag, ztor)
+
+        sa1130 = exp(lnmed)
+        # site response [14, 15]
+        lnmed += C['phi1' + self.region] * min(np.log(sites.vs30 / 1130), 0)
+        lnmed += C['phi2'] * (exp(C['phi3'] * (min(sites.vs30, 1130) - 360)) \
+            - exp(C['phi3'] * (1130 - 360))) * log((sa1130 + C['phi4']) / C['phi4'])
+        # basin term [16]
+        lnmed += self._basin_term(C, sites.vs30, sites.z1pt0)
+
+        stddevs = self.get_stddevs(C, stddev_types)
+
+        return lnmed, stddevs
+
+    def get_stddevs(self, C, stddev_types):
+        """
+        Return standard deviations.
+        """
+        # variance Model-2 for Taiwan
+        # why is tau mixed with ss/s2s?
+        sig_ss = math.sqrt(C['tau'] ** 2 + C['phiss'] ** 2)
+        sig_t = math.sqrt(C['tau'] ** 2 + C['phiss'] ** 2 + C['phis2s'] ** 2)
+
+        for stddev in stddev_types:
+            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev == const.StdDev.TOTAL:
+                stddevs.append(np.sqrt(C["Tau"] ** 2 + phi_tot ** 2))
+            elif stddev == const.StdDev.INTER_EVENT:
+                stddevs.append(C["tau"])
+            elif stddev == const.StdDev.INTRA_EVENT:
+                stddevs.append(phi_tot)
+
+        return stddevs
+
+    def _basin_term(self, C, vs30, z1pt0):
+        """
+        Basin term [16].
+        """
+        if self.region == 'glb':
+            return 0
+
+        if self.region == 'tw':
+            ez_1 = np.exp(-3.73 / 2 * np.log((vs30 ** 2 + 290.53 ** 2)
+                                             / (1750 ** 2 + 290.53 ** 2)))
+            phi6 = 300
+        elif self.region in ['ca', 'jp']:
+            ez_1 = np.exp(-5.23 / 2 * np.log((vs30 ** 2 + 412.39 ** 2)
+                                             / (1360 ** 2 + 412.39 ** 2)))
+            if region == 'ca':
+                phi6 = 300
+            else:
+                phi6 = 800
+
+        d_z1 = z1pt0 - ez_1
+        return np.where(np.isnan(sites.z1pt0), 0,
+                        C['phi5' + self.region] * (1 - np.exp(-d_z1 / phi6)))
+
+    def _distance_attenuation(self, C, mag, ztor):
+        """
+        Distance scaling and attenuation term [8, 9, 10].
+        """
+        del_c5 = C['dp'] * max(ztor / 50 - 20 / 50, 0) \
+            * (ztor > 20) * (mag < 7.0)
+        cns = (C['c5'] + del_c5) * math.cosh(C['c6'] * max(mag - C['c_hm'], 0))
+        s = self.CONSTANTS
+
+        f8 = s['c4'] * np.log(dists.rrup + CNS)
+        f9 = (s['c4_a'] - s['c4']) * np.log(np.sqrt(dists.rrup ** 2 \
+                                                    + C['c_rb'] ** 2))
+        f10 = (C['c_g1' + self.region] + self.aftershocks * C['dc_g1as'] \
+            + C['c_g2'] / (math.cosh(max(mag - C['c_g3'], 0)))) * dists.rrup
+
+        return f8 + f9 + f10
+
+    def _fsof_ztor(C, mag, rake, ztor):
+            """
+            Factors requiring type of fault.
+            """
+            f234 = 0
+            if 30 <= rake <= 150:
+                e_ztor = (max(3.5384 - 2.60 * max(mag - 5.8530, 0), 0)) ** 2
+                # reverse fault [2]
+                f234 += C['c1_a'] \
+                    + C['c1_c'] / math.cosh(2 * max(mag - 4.5, 0))
+            else:
+                e_ztor = max(2.7482 - 1.7639 * max(mag - 5.5210, 0), 0) ** 2
+                if -120 <= rake <= -60:
+                    # normal fault [3]
+                    f234 += C['c1_b'] \
+                        + C['c1_d'] / math.cosh(2 * max(mag - 4.5, 0))
+
+            ztor = np.where(np.isnan(ztor), e_ztor, ztor
+            delta_ztor = ztor - e_ztor
+            # [4]
+            f234 += (C['c7'] + C['c7_b'] / math.cosh(2 * max(mag - 4.5, 0))) \
+                * delta_ztor
+
+            return f234, ztor
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
      imt    c1     c1_a         c1_b        c1_c         c1_d        c3     c5     c6      c7           c7_b        c8     c8_b   c9     c9_a   c9_b    c11         c11_b        c12         c12_b        c_n         c_m      c_g2        c_g3        c_hm    dp           phi2    phi3     phi4      c_g1tw     phi1tw       dc_g1as      c_g1ca       phi1ca      c_g1jp        phi1jp       c_g1glb      phi1glb     phi5tw  phi5ca      phi5jp      tau         phiss  phis2s
@@ -69,96 +222,8 @@ def Phung_2020_TWGMM(mag, T, Rrup, Rjb, Rx, Ztor, Fhw, Vs30, Z10, rgn, flg_AS):
     10.0   -4.5075 0.053953075 -0.218956446 0            0           3.0012 7.5818 0.4500 -0.006203311  0.04195315  0.2154 7.7700 0.0000 0.1000 6.5000 -0.478010668 1.443597529 -4.33514388  0            1.5265      6.84353 -0.012633296 3.074948086 3.8380  0            0.0000 -0.001361 0.000515 -0.0007423 -0.770092758  0           -0.001243607 -0.555405551  0.001144285 -0.464975616 -0.000207365 -0.710919477 0.14062 0.228563922 0.689143919 0.448423418 0.3926 0.3717
     """)
 
-    CONSTANTS = {'c2': 1.06, 'c4': -2.1, 'c4_a': -0.5, 'c8_a': 0.2695, 'c_rb': 50}
-    REGION = 'glb' # or 'tw', 'ca', 'jp'
-    
-    if rgn == 1:
-       c_g1 = C['c_g1tw'] + (flg_AS == 0) * C['dc_g1as']
-       phi1 = C['phi1tw']
-    elif rgn == 2:
-       c_g1 = C['c_g1ca']
-       phi1 = C['phi1ca']
-    elif rgn == 4:
-       c_g1 = C['c_g1jp']
-       phi1 = C['phi1jp']
-    else:
-       c_g1 = C['c_g1glb']
-       phi1 = C['phi1glb']
-    
-    # fSOF
-    if reverse_fault:
-        term2 = (C['c1_a'] + C['c1_c'] / (cosh(2 * max(mag - 4.5, 0))))
-    elif normal_fault:
-        term3 = (C['c1_b'] + C['c1_d'] / cosh(2 * max(mag - 4.5, 0)))
-    # Ztor term
-    if reverse_fault:
-       E_Ztor = (max(3.5384 - 2.60 * max(mag - 5.8530, 0), 0)) ** 2
-    else:
-       E_Ztor = (max(2.7482 - 1.7639 * max(mag - 5.5210, 0), 0)) ** 2
-    
-    if np.isnan(Ztor)
-       Ztor = E_Ztor
-       delta_ZTOR = 0
-    else:
-       delta_ZTOR = Ztor - E_Ztor
-    
-    term4 = (C['c7'] + C['c7_b'] / cosh(2 * max(mag - 4.5, 0))) * delta_ZTOR
-    # Dip term
-    term5 = (C['c11'] + C['c11_b'] / cosh(2 * max(mag - 4.5, 0))) * (cos(dip) ** 2)
-    # Hanging wall term
-    term12 = C['c9'] * HW * cos(dip) * (C['c9_a'] + (1 - C['c9_a']) * tanh(Rx / C['c9_b'])) \
-        * (1 - np.sqrt(dists.rjb ** 2 + ztor ** 2)/(dists.rrup + 1))
-    # Directivity
-    term11 = C['c8'] * max(1 - max(dists.rrup - 40, 0) / 30, 0) * min(max(mag - 5.5, 0) / 0.8, 1) \
-        * exp(-self.CONSTANTS['c8_a'] * (mag - C['c8_b']) ** 2) * d_DPP
-    # fmag
-    term6 = self.CONSTANTS['c2'] * (mag - 6)
-    term7 = (self.CONSTANTS['c2'] - C['c3']) / C['c_n'] * log(1 + exp(C['c_n'] * (C['c_m'] - mag)))
-    # Distance Scaling and attenuation term
-    del_c5 = C['dp'] * max(ztor / 50 - 20 / 50, 0) * (ztor > 20) * (mag < 7.0)
-    CNS = (C['c5'] + del_c5) * cosh(C['c6'] * max(mag - C['c_hm'], 0))
-    
-    term8 =  self.CONSTANTS['c4'] * log(dists.rrup + CNS)
-    term9 =  (self.CONSTANTS['c4_a'] - self.CONSTANTS['c4']) * np.log(np.sqrt(dists.rrup ** 2 + C['c_rb'] ** 2))
-    term10 = (C['c_g1'] + C['c_g2'] / (cosh(max(mag - C['c_g3'], 0)))) * dists.rrup
-    # main shock
-    term1 = C['c1']
-    ln_yrefij = term1 + term2 + term3 + term4 +  term5 + term6 + term7 + term8 + term9 + term10 + term11 + term12
-    Sa1130 = exp(ln_yrefij)
-    # Site response
-    term14 = phi1 * min(log(sites.vs30 / 1130), 0)
-    term15 = C['phi2'] * (exp(C['phi3'] * (min(sites.vs30, 1130) - 360)) - exp(C['phi3'] * (1130 - 360))) * log((Sa1130 + C['phi4']) / C['phi4'])
-    
-    # Basin Depth
-    if rgn == 1:
-        Ez_1 = exp(-3.73 / 2 * log((Vs30 ** 2 + 290.53 ** 2) / (1750 ** 2 + 290.53 ** 2)))
-        phi5 = C['phi5tw']
-        phi6 = 300
-    elif rgn == 2:
-        Ez_1 = exp(-5.23 / 2 * log((Vs30 ** 2 + 412.39 ** 2) / (1360 ** 2 + 412.39 ** 2)))
-        phi5 = C['phi5ca']
-        phi6 = 300
-    elif rgn == 4:
-        Ez_1 = exp(-5.23 / 2 * log((Vs30 ** 2 + 412.39 ** 2) / (1360 ** 2 + 412.39 ** 2)))
-        phi5 = C['phi5jp']
-        phi6 = 800
-    else:
-        # global
-        Z10 = np.nan
-    
-    if np.isnan(Z10):
-       term16 = 0
-    else:
-       d_Z1 = Z10 - Ez_1
-       term16 = phi5 * (1 - exp(- d_Z1 / phi6))
-    
-    # median prediction
-    Sa = Sa1130 * exp(term14 + term15 + term16)
-    # Variance Model-2 for Taiwan
-    Sig_SS = math.sqrt(C['tau'] ** 2 + C['phiss'] ** 2)
-    Sig_T = math.sqrt(C['tau'] ** 2 + C['phiss'] ** 2 + C['phis2s'] ** 2)
-    
-    return Sa, Sa1130, Sig_SS, Sig_T
+    CONSTANTS = {'c2': 1.06, 'c4': -2.1, 'c4_a': -0.5, 'c8_a': -0.2695, 'c_rb': 50}
+
 
 
 """
@@ -216,104 +281,102 @@ def Phung_2020_TWsubGMM(T, M, Ztor, Rrup, Vs30, Z1, flag, eqt):
     end
     
     return Sa,SigT,SigSS
-    
-    
-def Phung2020_TWsubGMM(M, Ztor, Rrup, Vs30, Z10, ip, flag, eqt):
+
+
+class PhungEtAl2020SInter(GMPE):
+
+    def get_mean_and_stddevs(M, Ztor, Rrup, Vs30, Z10, ip, flag, eqt):
+        pass
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    imt   a1      a1_del       a2          a4           a4_del      a5          a6_jp        a6_tw        a7           a8_jp   a8_tw   a10         a11          a12_jp  a12_tw  a13        a14          b     mref vlin   
-    PGA   4.4234  1.141899742 -1.552846733 0.441987425  0.328613796 0.03849929 -0.006794362 -0.000639314  0.681875399 -0.0075 -0.06276 0.016025291 0.014951807  0.8725  0.9321 -0.0256568 -0.011876681 -1.186 7.68  865.1 
-    0.01  4.4415  1.152006702 -1.554174269 0.442328411  0.352192886 0.04033665 -0.006817094 -0.000607826  0.679916748 -0.0083 -0.06296 0.017193978 0.014930723  0.8733  0.9327 -0.0259617 -0.012409284 -1.186 7.68  865.1 
-    0.02  4.4657  1.154339185 -1.555152194 0.436082809  0.367677006 0.04190178 -0.006816137 -0.000577165  0.697566565 -0.0083 -0.06325 0.01828222  0.01491224   0.8851  0.9395 -0.0262528 -0.016872732 -1.186 7.68  865.1 
-    0.05  4.5788  1.515303155 -1.556049687 0.363261281  0.452541112 0.04509359 -0.007285287 -0.000490096  1.036117503 -0.0212 -0.08865 0.020842842 0.01487185   1.2671  1.2819 -0.0270426 -0.08510905  -1.346 7.71 1053.5 
-    0.075 4.7290  1.904431142 -1.554562252 0.319469336  0.513739193 0.04623140 -0.007702243 -0.00042309   1.229932174 -0.0278 -0.09405 0.022162011 0.014854753  1.4426  1.4458 -0.0276048 -0.118005772 -1.471 7.77 1085.7 
-    0.1   4.8676  1.945456526 -1.551165488 0.325896968  0.499522237 0.04819708 -0.007674043 -0.000361045  1.534436374 -0.0308 -0.09783 0.022757257 0.014852358  1.5605  1.5761 -0.0280794 -0.171218187 -1.624 7.77 1032.5 
-    0.15  5.0388  1.787100626 -1.539140832 0.350561168  0.45427803  0.04325090 -0.00782682  -0.000251542  1.263659339 -0.0193 -0.08546 0.021797461 0.014893477  1.6752  1.7975 -0.0287650 -0.124720279 -1.931 7.78  877.6 
-    0.2   5.1375  1.562515125 -1.520764226 0.401101385  0.363869484 0.03692059 -0.007547403 -0.000161014  1.177341019 -0.0087 -0.07070 0.020180594 0.015004213  1.8029  2.0219 -0.0291017 -0.120958201 -2.188 7.72  748.2 
-    0.25  5.1106  1.356740101 -1.489051706 0.440779304  0.314270529 0.06597319 -0.007323965 -0.0000890    1.046187707 -0.0062 -0.06045 0.018556649 0.015194298  1.8843  2.2014 -0.0290970 -0.116255248 -2.381 7.62  654.3 
-    0.3   5.0573  1.206013896 -1.464118878 0.486141867  0.282854636 0.06197944 -0.006976346 -0.0000354    0.783076472 -0.0045 -0.05366 0.016978648 0.01540766   1.9457  2.3240 -0.0287552 -0.077408811 -2.518 7.54  587.1 
-    0.4   4.9001  0.760110718 -1.414761429 0.593885499  0.176621233 0.06979644 -0.006143907  0.0000145    0.56945524   0.0240 -0.01430 0.014555899 0.015952307  2.1491  2.4684 -0.0269993 -0.054966213 -2.657 7.42  503   
-    0.5   4.7813  0.431629072 -1.383170353 0.719248494  0.077343234 0.08783791 -0.005504091 -0.0000421    0.437054838  0.0488  0.02962 0.012627818 0.016437613  2.2064  2.4869 -0.0235859 -0.034173086 -2.669 7.38  456.6 
-    0.6   4.6503  0.214072689 -1.360022278 0.848115514  0.044354701 0.09612877 -0.004739568 -0.0000726    0.497762038  0.0640  0.06271 0.011191399 0.01652538   2.1559  2.3983 -0.0180673 -0.06069315  -2.599 7.36  430.3 
-    0.75  4.3917 -0.01782956  -1.313716982 0.96522535  -0.012346815 0.10612877 -0.004285202 -0.000119483  0.262897537  0.0720  0.08935 0.009211979 0.016212382  1.9770  2.0760 -0.0150673 -0.039053473 -2.401 7.32  410.5 
-    1.0   3.7367 -0.204991951 -1.236841977 1.174894012 -0.083175191 0.22744484 -0.003957479 -0.000199116 -0.126754198  0.0791  0.12475 0.006851124 0.015784785  1.4834  1.4846 -0.0031849  0.017806808 -1.955 7.25  400   
-    1.5   2.8030 -0.382378342 -1.100570482 1.360979471 -0.226959428 0.16136621 -0.003379651 -0.000362196 -0.121313834  0.0864  0.16430 0.003814084 0.01399451   0.5185  0.3763 -0.0031849 -0.005705423 -1.025 7.25  400   
-    2.0   1.8695 -0.352611734 -0.990254902 1.38307024  -0.206168741 0.22767232 -0.003469497 -0.000611716 -0.496676074  0.0905  0.17542 0.001733925 0.011927777 -0.3208 -0.4191 -0.0031849  0.053155037 -0.299 7.25  400   
-    2.5   1.0159 -0.228719047 -0.896093506 1.382803719 -0.163340854 0.27153377 -0.003409644 -0.000869846 -0.513466165  0.0976  0.16991 0           0.009749305 -0.6999 -0.7674 -0.0031849  0.068765677  0     7.25  400   
-    3.0   0.4461 -0.16534756  -0.818199517 1.391730855 -0.154799226 0.28822087 -0.003614492 -0.00106641  -0.600511124  0.0987  0.16367 0           0.007785629 -0.6077 -0.7527 -0.0031849  0.071577687  0     7.25  400   
-    4.0  -0.4692  0.010400184 -0.730697376 1.36799257  -0.112793712 0.32589322 -0.003749858 -0.001185004 -0.425097306  0.0890  0.15060 0           0.00494863  -0.5689 -0.7088 -0.0031849  0.042405486  0     7.25  400   
-    5.0  -0.8403  0.135306871 -0.734817372 1.379913313 -0.003105582 0.30383949 -0.003243671 -0.0009885   -0.528599974  0.0758  0.15646 0           0.003408571 -0.4942 -0.7305 -0.0031849  0.054712361  0     7.25  400   
+    imt   a1      a1_del       a2          a4           a4_del      a5          a6_jp        a6_tw        a7           a8_jp   a8_tw   a10         a11          a12_jp  a12_tw  a13        a14          b     mref vlin   tau4tj      phiss4tj    phis2s4tj   tau_tw      phiss_tw phis2s_tw
+    PGA   4.4234  1.141899742 -1.552846733 0.441987425  0.328613796 0.03849929 -0.006794362 -0.000639314  0.681875399 -0.0075 -0.06276 0.016025291 0.014951807  0.8725  0.9321 -0.0256568 -0.011876681 -1.186 7.68  865.1 0.426469333 0.420489356 0.364038777 0.352252822 0.4130   0.3443
+    0.01  4.4415  1.152006702 -1.554174269 0.442328411  0.352192886 0.04033665 -0.006817094 -0.000607826  0.679916748 -0.0083 -0.06296 0.017193978 0.014930723  0.8733  0.9327 -0.0259617 -0.012409284 -1.186 7.68  865.1 0.424670673 0.420220542 0.364065617 0.349216437 0.4126   0.3441
+    0.02  4.4657  1.154339185 -1.555152194 0.436082809  0.367677006 0.04190178 -0.006816137 -0.000577165  0.697566565 -0.0083 -0.06325 0.01828222  0.01491224   0.8851  0.9395 -0.0262528 -0.016872732 -1.186 7.68  865.1 0.429099403 0.418935068 0.364403496 0.344782755 0.4113   0.3434
+    0.05  4.5788  1.515303155 -1.556049687 0.363261281  0.452541112 0.04509359 -0.007285287 -0.000490096  1.036117503 -0.0212 -0.08865 0.020842842 0.01487185   1.2671  1.2819 -0.0270426 -0.08510905  -1.346 7.71 1053.5 0.477262493 0.419356601 0.417921293 0.355375576 0.4095   0.3907
+    0.075 4.7290  1.904431142 -1.554562252 0.319469336  0.513739193 0.04623140 -0.007702243 -0.00042309   1.229932174 -0.0278 -0.09405 0.022162011 0.014854753  1.4426  1.4458 -0.0276048 -0.118005772 -1.471 7.77 1085.7 0.516365961 0.41012804  0.469674634 0.380828528 0.4003   0.4405
+    0.1   4.8676  1.945456526 -1.551165488 0.325896968  0.499522237 0.04819708 -0.007674043 -0.000361045  1.534436374 -0.0308 -0.09783 0.022757257 0.014852358  1.5605  1.5761 -0.0280794 -0.171218187 -1.624 7.77 1032.5 0.512863781 0.420066336 0.469076147 0.388526115 0.4094   0.4499
+    0.15  5.0388  1.787100626 -1.539140832 0.350561168  0.45427803  0.04325090 -0.00782682  -0.000251542  1.263659339 -0.0193 -0.08546 0.021797461 0.014893477  1.6752  1.7975 -0.0287650 -0.124720279 -1.931 7.78  877.6 0.461620132 0.433030041 0.437340846 0.368100637 0.4280   0.4104
+    0.2   5.1375  1.562515125 -1.520764226 0.401101385  0.363869484 0.03692059 -0.007547403 -0.000161014  1.177341019 -0.0087 -0.07070 0.020180594 0.015004213  1.8029  2.0219 -0.0291017 -0.120958201 -2.188 7.72  748.2 0.441284014 0.446059203 0.397161802 0.368643954 0.4438   0.3782
+    0.25  5.1106  1.356740101 -1.489051706 0.440779304  0.314270529 0.06597319 -0.007323965 -0.0000890    1.046187707 -0.0062 -0.06045 0.018556649 0.015194298  1.8843  2.2014 -0.0290970 -0.116255248 -2.381 7.62  654.3 0.434871493 0.456165064 0.384511586 0.375291842 0.4503   0.3559
+    0.3   5.0573  1.206013896 -1.464118878 0.486141867  0.282854636 0.06197944 -0.006976346 -0.0000354    0.783076472 -0.0045 -0.05366 0.016978648 0.01540766   1.9457  2.3240 -0.0287552 -0.077408811 -2.518 7.54  587.1 0.417105574 0.459407794 0.373773022 0.365828808 0.4532   0.3460
+    0.4   4.9001  0.760110718 -1.414761429 0.593885499  0.176621233 0.06979644 -0.006143907  0.0000145    0.56945524   0.0240 -0.01430 0.014555899 0.015952307  2.1491  2.4684 -0.0269993 -0.054966213 -2.657 7.42  503   0.412231943 0.452177558 0.372643333 0.383635154 0.4428   0.3546
+    0.5   4.7813  0.431629072 -1.383170353 0.719248494  0.077343234 0.08783791 -0.005504091 -0.0000421    0.437054838  0.0488  0.02962 0.012627818 0.016437613  2.2064  2.4869 -0.0235859 -0.034173086 -2.669 7.38  456.6 0.396422531 0.443446716 0.369406327 0.378521294 0.4383   0.3589
+    0.6   4.6503  0.214072689 -1.360022278 0.848115514  0.044354701 0.09612877 -0.004739568 -0.0000726    0.497762038  0.0640  0.06271 0.011191399 0.01652538   2.1559  2.3983 -0.0180673 -0.06069315  -2.599 7.36  430.3 0.403512982 0.4378372   0.397812841 0.369787955 0.4426   0.3812
+    0.75  4.3917 -0.01782956  -1.313716982 0.96522535  -0.012346815 0.10612877 -0.004285202 -0.000119483  0.262897537  0.0720  0.08935 0.009211979 0.016212382  1.9770  2.0760 -0.0150673 -0.039053473 -2.401 7.32  410.5 0.409058414 0.446095737 0.419424271 0.375567859 0.4556   0.3856
+    1.0   3.7367 -0.204991951 -1.236841977 1.174894012 -0.083175191 0.22744484 -0.003957479 -0.000199116 -0.126754198  0.0791  0.12475 0.006851124 0.015784785  1.4834  1.4846 -0.0031849  0.017806808 -1.955 7.25  400   0.428087961 0.44128784  0.408446403 0.375762655 0.4518   0.3692
+    1.5   2.8030 -0.382378342 -1.100570482 1.360979471 -0.226959428 0.16136621 -0.003379651 -0.000362196 -0.121313834  0.0864  0.16430 0.003814084 0.01399451   0.5185  0.3763 -0.0031849 -0.005705423 -1.025 7.25  400   0.440164103 0.42093392  0.420315802 0.39959416  0.4305   0.3703
+    2.0   1.8695 -0.352611734 -0.990254902 1.38307024  -0.206168741 0.22767232 -0.003469497 -0.000611716 -0.496676074  0.0905  0.17542 0.001733925 0.011927777 -0.3208 -0.4191 -0.0031849  0.053155037 -0.299 7.25  400   0.451402135 0.425797447 0.416797894 0.411391314 0.4413   0.3713
+    2.5   1.0159 -0.228719047 -0.896093506 1.382803719 -0.163340854 0.27153377 -0.003409644 -0.000869846 -0.513466165  0.0976  0.16991 0           0.009749305 -0.6999 -0.7674 -0.0031849  0.068765677  0     7.25  400   0.461009777 0.419978946 0.404296599 0.428877733 0.4379   0.3578
+    3.0   0.4461 -0.16534756  -0.818199517 1.391730855 -0.154799226 0.28822087 -0.003614492 -0.00106641  -0.600511124  0.0987  0.16367 0           0.007785629 -0.6077 -0.7527 -0.0031849  0.071577687  0     7.25  400   0.457681279 0.413207757 0.362727332 0.432913094 0.4302   0.3500
+    4.0  -0.4692  0.010400184 -0.730697376 1.36799257  -0.112793712 0.32589322 -0.003749858 -0.001185004 -0.425097306  0.0890  0.15060 0           0.00494863  -0.5689 -0.7088 -0.0031849  0.042405486  0     7.25  400   0.470193371 0.36936182  0.354026172 0.435941037 0.4268   0.3234
+    5.0  -0.8403  0.135306871 -0.734817372 1.379913313 -0.003105582 0.30383949 -0.003243671 -0.0009885   -0.528599974  0.0758  0.15646 0           0.003408571 -0.4942 -0.7305 -0.0031849  0.054712361  0     7.25  400   0.461834624 0.349936999 0.300771328 0.415321618 0.4286   0.3040
     """)
 
-    
-    # Period-independent coefficients
     CONSTANTS = {'a3': 0.1, 'a9': 0.25, 'c': 1.88, 'c4': 10, 'n': 1.18}
-    # Standard Deviation 
-    tau4tj = [0.426469333 0.424670673 0.429099403 0.477262493 0.516365961 0.512863781 0.461620132 0.441284014 0.434871493 0.417105574 0.412231943 0.396422531 0.403512982 0.409058414 0.428087961 0.440164103 0.451402135 0.461009777 0.457681279 0.470193371 0.461834624];
-    phiss4tj = [0.420489356 0.420220542 0.418935068 0.419356601 0.41012804 0.420066336 0.433030041 0.446059203 0.456165064 0.459407794 0.452177558 0.443446716 0.4378372 0.446095737 0.44128784 0.42093392 0.425797447 0.419978946 0.413207757 0.36936182 0.349936999];
-    phis2s4tj = [0.364038777 0.364065617 0.364403496 0.417921293 0.469674634 0.469076147 0.437340846 0.397161802 0.384511586 0.373773022 0.372643333 0.369406327 0.397812841 0.419424271 0.408446403 0.420315802 0.416797894 0.404296599 0.362727332 0.354026172 0.300771328];
-    tau4tw = [0.352252822 0.349216437 0.344782755 0.355375576 0.380828528 0.388526115 0.368100637 0.368643954 0.375291842 0.365828808 0.383635154 0.378521294 0.369787955 0.375567859 0.375762655 0.39959416 0.411391314 0.428877733 0.432913094 0.435941037 0.415321618];
-    phiss4tw = [0.4130 0.4126 0.4113 0.4095 0.4003 0.4094 0.4280 0.4438 0.4503 0.4532 0.4428 0.4383 0.4426 0.4556 0.4518 0.4305 0.4413 0.4379 0.4302 0.4268 0.4286];
-    phis2s4tw = [0.3443 0.3441 0.3434 0.3907 0.4405 0.4499 0.4104 0.3782 0.3559 0.3460 0.3546 0.3589 0.3812 0.3856 0.3692 0.3703 0.3713 0.3578 0.3500 0.3234 0.3040];
-    # Regional term
-    if flag == 0:
-       a1ip = a1(ip) + del_a1(ip)
-       a4 = a4(ip) + del_a4(ip)
+    # regional term
+    if jptw:
+        a1ip = C['a1'] + C['a1_del']
+        a4 = C['a4'] + C['a4_del']
 
-       a6 = a6_jp(ip)
-       a12ip = a12jp(ip)
-    
-       SigSS = tau4tj(ip)
-       phi_SS = phiss4tj(ip)
-       phi_S2S = phis2s4tj(ip)
-    else:
-       a1ip = a1(ip)
-       a4 = a4(ip)
-       a6 = a6(ip)
-       a12ip = a12(ip)
+        a6 = C['a6_jp']
+        a12ip = C['a12_jp']
 
-       SigSS = tau4tw(ip)
-       phi_SS = phiss4tw(ip)
-       phi_S2S = phis2s4tw(ip)
-    # Magnitude term
-    if M <= Mref(ip):
-       fmag =  a4*(M - Mref(ip)) + a13(ip)*(10-M)^2;
+        SigSS = C['tau4tj']
+        phi_SS = C['phiss4tj']
+        phi_S2S = C['phis2s4tj']
+    elif tw:
+        a1ip = C['a1']
+        a4 = C['a4']
+        a6 = C['a6']
+        a12ip = C['a12']
+
+        SigSS = C['tau4_tw']
+        phi_SS = C['phiss4_tw']
+        phi_S2S = C['phis2s4_tw']
+    # magnitude term
+    if mag <= C['mref']:
+       fmag =  a4 * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
     else:
-       fmag =  a5(ip)*(M - Mref(ip)) + a13(ip)*(10-M)^2;
-    # Ztor term
+       fmag =  C['a5'] * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
+    # ztor term
     if eqt == 0:
-       f_ztor = a10(ip)*(min(Ztor,40)-20);
+       f_ztor = C['a10'] * (min(ztor, 40) - 20)
     else:
-       f_ztor = a11(ip)*(min(Ztor,80)-40); 
-    # Path term
-    X = a1ip + a7(ip)*(eqt==1) + (a2(ip) + a14(ip)*(eqt==1) + a3*(M -7.8))*log(Rrup + c4*exp(a9*(M-6)))+ a6*Rrup;
+       f_ztor = C['a11'] * (min(ztor, 80) - 40)
+    # path term
+    if subduction_interface:
+        X = a1ip + (C['a2'] + a3 * (mag - 7.8)) * log(rrup + c4 * exp(a9 * (mag - 6))) + a6 * rrup
+    elif subduction_intraslab:
+        X = a1ip + C['a7'] + (C['a2'] + C['a14'] + a3 * (mag - 7.8)) * log(rrup + c4 * exp(a9 * (mag - 6))) + a6 * rrup
     # PGA at rock with Vs30 = 1000 m/s
-    PGA1000 = PGAatrock(eqt,M,Rrup,Ztor,1000,Mref,a1,a2,a3,a4,a5,a6,a7,a9,a10,a11,a12,a13,a14,c4,Vlin,n,b);
-    # Site Effect 
-    Vs30 = min(Vs30,1000);
-    # Nonlinear component
-    if (Vs30 < Vlin(ip)):
-        fsite = a12ip*log(Vs30/Vlin(ip)) - b(ip)*log(PGA1000+c)+b(ip)*log(PGA1000+c*(Vs30/Vlin(ip))^n);
+    pga_1000 = PGAatrock(eqt, mag, rrup, ztor, 1000)
+    # site Effect 
+    Vs30 = min(Vs30, 1000);
+    # nonlinear component
+    if (Vs30 < C['vlin']):
+        fsite = a12ip * log(vs30 / C['vlin']) - C['b'] * log(pga_1000 + s['c']) \
+            + C['b'] * log(pga_1000 + s['c'] * (vs30/C['vlin']) ** s['n'])
     else:
-        fsite = a12ip*log(Vs30/Vlin(ip)) + b(ip)*n*log(Vs30/Vlin(ip));
+        fsite = a12ip * log(vs30 / C['vlin']) + C['b'] * s['n'] * log(vs30 / C['vlin'])
     # Basin Depth term
-    if flag == 1:
-        Ez_1 = exp(-3.96/2*log((Vs30^2+352.7^2)/(1750^2+352.7^2)));   
-        if Z10 == -999:
+    if tw:
+        Ez_1 = exp(-3.96 / 2 * log((vs30 ** 2 + 352.7 ** 2) / (1750 ** 2 + 352.7 ** 2)))
+        if np.isnan(Z10):
             f_z10 = 0
         else:
-              f_z10 = a8(ip)*(min(log(Z10./Ez_1),1))
-    else:
-       Ez_1 = exp(-5.23/2*log((Vs30.^2 + 412.39^2)/(1360^2 + 412.39^2)))
-       if Z10 == -999:
+            f_z10 = C['a8'] * (min(log(Z10 / Ez_1), 1))
+    elif jptw:
+       Ez_1 = exp(-5.23 / 2 * log((vs30 ** 2 + 412.39 ** 2) / (1360 ** 2 + 412.39 ** 2)))
+       if np.isnan(Z10):
           f_z10 = 0
        else:
-          f_z10 = a8_jp(ip)*(min(log(Z10./Ez_1),1))
-    # Median Prediction 
-    Sa = exp(fmag + X  + f_ztor + fsite + f_z10);
-    # Standard deviation 
-    SigT = sqrt(SigSS.^2+  phi_SS.^2 + phi_S2S.^2);
-    SigSS = sqrt(SigSS.^2+  phi_SS.^2);
+          f_z10 = C['a8_jp'] * (min(log(Z10 / Ez_1), 1))
+    # median
+    Sa = fmag + X  + f_ztor + fsite + f_z10
+    # standard deviation 
+    SigT = sqrt(SigSS ** 2 + phi_SS ** 2 + phi_S2S ** 2)
+    SigSS = sqrt(SigSS ** 2 + phi_SS ** 2)
 
     def PGAatrock(self, C_PGA, mag, rrup, ztor, vs30):
         s = self.CONSTANTS
