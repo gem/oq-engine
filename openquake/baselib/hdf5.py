@@ -716,15 +716,6 @@ def _fix_array(arr, key):
                 dtlist.append((n, arr.dtype[n]))
         arr.dtype = dtlist
     return arr
-    if arr.ndim == 1:
-        return numpy.array([s.encode('utf8') for s in arr])
-    elif arr.ndim == 2:
-        return numpy.array([[col.encode('utf8') for col in row]
-                            for row in arr])
-    else:
-        raise NotImplementedError('The array for %s has shape %s' %
-                                  (key, arr.shape))
-    return arr
 
 
 def save_npz(obj, path):

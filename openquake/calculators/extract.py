@@ -63,8 +63,12 @@ def dumps(dic):
     for k, v in dic.items():
         if isinstance(v, numpy.ndarray):
             new[k] = v.tolist()
+        elif isinstance(v, list) and v and isinstance(v[0], INT):
+            v = [int(x) for x in v]
+        elif isinstance(v, list) and v and isinstance(v[0], FLOAT):
+            v = [float(x) for x in v]
         elif isinstance(v, FLOAT):
-            new[k] = int(v)
+            new[k] = float(v)
         elif isinstance(v, INT):
             new[k] = int(v)
         else:
@@ -731,12 +735,12 @@ def extract_agg_curves(dstore, what):
     attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
     attrs['return_period'] = list(rps)
     attrs['kind'] = kinds
-    attrs['units'] = units  # used by the QGIS plugin
+    attrs['units'] = list(units)  # used by the QGIS plugin
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
         arr = arr.reshape(arr.shape + (1,) * len(tagnames))
-    return ArrayWrapper(arr, attrs)
+    return ArrayWrapper(arr, dict(json=dumps(attrs)))
 
 
 @extract.add('agg_losses')
