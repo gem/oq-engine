@@ -1087,7 +1087,7 @@ def import_gmfs(dstore, oqparam, sids):
     :param dstore: the datastore
     :param oqparam: an OqParam instance
     :param sids: the complete site IDs
-    :returns: event_ids, num_rlzs
+    :returns: event_ids
     """
     fname = oqparam.inputs['gmfs']
     array = hdf5.read_csv(fname, {'sid': U32, 'eid': U32, None: F32},
