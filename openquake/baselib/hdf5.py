@@ -445,6 +445,8 @@ class ArrayWrapper(object):
         return cls(array, attrs, (extra,))
 
     def __init__(self, array, attrs, extra=('value',)):
+        if 'json' in attrs:
+            vars(self).update(json.loads(attrs['json']))
         vars(self).update(attrs)
         self._extra = tuple(extra)
         if len(array):

@@ -64,9 +64,9 @@ def dumps(dic):
         if isinstance(v, numpy.ndarray):
             new[k] = v.tolist()
         elif isinstance(v, list) and v and isinstance(v[0], INT):
-            v = [int(x) for x in v]
+            new[k] = [int(x) for x in v]
         elif isinstance(v, list) and v and isinstance(v[0], FLOAT):
-            v = [float(x) for x in v]
+            new[k] = [float(x) for x in v]
         elif isinstance(v, FLOAT):
             new[k] = float(v)
         elif isinstance(v, INT):
@@ -1187,7 +1187,7 @@ def extract_disagg_by_src(dstore, what):
     arr['src_id'] = src_id
     arr['poe'] = poe
     arr.sort(order='poe')
-    return ArrayWrapper(arr[::-1], dict(json=json.dumps(f)))
+    return ArrayWrapper(arr[::-1], dict(json=dumps(f)))
 
 
 @extract.add('disagg_layer')
