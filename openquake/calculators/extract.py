@@ -63,9 +63,9 @@ def dumps(dic):
     for k, v in dic.items():
         if isinstance(v, numpy.ndarray):
             new[k] = v.tolist()
-        elif isinstance(v, list) and isinstance(v[0], INT):
+        elif isinstance(v, list) and v and isinstance(v[0], INT):
             v = [int(x) for x in v]
-        elif isinstance(v, list) and isinstance(v[0], FLOAT):
+        elif isinstance(v, list) and v and isinstance(v[0], FLOAT):
             v = [float(x) for x in v]
         elif isinstance(v, FLOAT):
             new[k] = float(v)
