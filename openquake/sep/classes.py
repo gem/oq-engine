@@ -62,9 +62,12 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
         """Add attributes to sites"""
 
     @abc.abstractmethod
-    def compute(self, mag, imt, gmf, sites):
-        # gmv is an array with (N, M) elements
-        return gmf[:, 0] * .1,  # fake formula
+    def compute(self, mag, imt_gmf, sites):
+        """
+        :param mag: magnitude
+        :param imt_gmf: a list of pairs (imt, gmf)
+        :param sites: a filtered site collection
+        """
 
     def __repr__(self):
         return '<%s %s>' % self.__class__.__name__
@@ -77,9 +80,9 @@ class _FakePeril(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, mag, imt, gmf, sites):
+    def compute(self, mag, imt_gmf, sites):
         # gmv is an array with (N, M) elements
-        return [gmf * .1]  # fake formula
+        return [imt_gmf[0][1] * .1]  # fake formula
 
 
 class NewmarkDisplacement(SecondaryPeril):
@@ -103,14 +106,17 @@ class NewmarkDisplacement(SecondaryPeril):
         sites.add_col('crit_accel', float,
                       newmark_critical_accel(sites.Fs, sites.slope))
 
-    def compute(self, mag, imt, gmf, sites):
-        if imt.name == 'PGA':
-            nd = newmark_displ_from_pga_M(
-                gmf, sites.crit_accel, mag,
-                self.c1, self.c2, self.c3, self.c4, self.crit_accel_threshold)
-            return nd, prob_failure_given_displacement(nd)
-        else:
-            raise NotImplementedError('NewmarkDisplacement for %s' % imt)
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for imt, gmf in imt_gmf:
+            if imt.name == 'PGA':
+                nd = newmark_displ_from_pga_M(
+                    gmf, sites.crit_accel, mag,
+                    self.c1, self.c2, self.c3, self.c4,
+                    self.crit_accel_threshold)
+            out.append(nd)
+            out.append(prob_failure_given_displacement(nd))
+        return out
 
 
 class HazusLiquefaction(SecondaryPeril):
@@ -122,14 +128,15 @@ class HazusLiquefaction(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, mag, imt, gmf, sites):
-        if imt.name == 'PGA':
-            return [hazus_liquefaction_probability(
-                pga=gmf, mag=mag, liq_susc_cat=sites.liq_susc_cat,
-                groundwater_depth=sites.gwd,
-                do_map_proportion_correction=self.map_proportion_flag)]
-        else:
-            raise NotImplementedError('HazusLiquefaction for %s' % imt)
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for imt, gmf in imt_gmf:
+            if imt.name == 'PGA':
+                out.append(hazus_liquefaction_probability(
+                    pga=gmf, mag=mag, liq_susc_cat=sites.liq_susc_cat,
+                    groundwater_depth=sites.gwd,
+                    do_map_proportion_correction=self.map_proportion_flag))
+        return out
 
 
 class HazusLateralSpreading(SecondaryPeril):
@@ -141,14 +148,14 @@ class HazusLateralSpreading(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, mag, imt, gmf, sites):
-        if imt.name == 'PGA':
-            return [hazus_lateral_spreading_displacement(
-                mag=mag, pga=gmf, liq_susc_cat=sites.liq_susc_cat,
-                return_unit=self.return_unit
-            )]
-        else:
-            raise NotImplementedError('HazusLateralSpreading for %s' % imt)
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for imt, gmf in imt_gmf:
+            if imt.name == 'PGA':
+                out.append(hazus_lateral_spreading_displacement(
+                    mag=mag, pga=gmf, liq_susc_cat=sites.liq_susc_cat,
+                    return_unit=self.return_unit))
+        return out
 
 
 class ZhuLiquefactionGeneral(SecondaryPeril):
@@ -162,13 +169,12 @@ class ZhuLiquefactionGeneral(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, mag, imt, gmf, sites):
-        if imt.name == 'PGA':
-            return [zhu_liquefaction_probability_general(
-                pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30)]
-        else:
-            raise NotImplementedError(
-                'Zhu Liquefaction not implemented for %s' % imt)
-
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for imt, gmf in imt_gmf:
+            if imt.name == 'PGA':
+                out.append(zhu_liquefaction_probability_general(
+                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
+        return out
 
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]

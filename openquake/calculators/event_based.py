@@ -184,10 +184,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 for m in range(M):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 data['gmv'][:, m])
-                for m in range(M):
-                    for sec_out in sec_outputs:
-                        hdf5.extend(self.datastore[f'gmf_data/{sec_out}_{m}'],
-                                    data[sec_out][:, m])
+                for sec_out in sec_outputs:
+                    hdf5.extend(self.datastore[f'gmf_data/{sec_out}'],
+                                data[sec_out])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(data)

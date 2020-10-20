@@ -1158,10 +1158,10 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
         dstore.create_dset('gmf_data/' + col, F32)
         if data is not None:
             dstore[f'gmf_data/' + col] = data['gmv'][:, m]
-        for peril in secperils:
-            for out in peril.outputs:
-                dstore.create_dset(f'gmf_data/{out}_{m}', F32)
-                cols.append(f'{out}_{m}')
+    for peril in secperils:
+        for out in peril.outputs:
+            dstore.create_dset(f'gmf_data/{out}', F32)
+            cols.append(f'{out}')
     dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
 
 
