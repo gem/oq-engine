@@ -716,10 +716,10 @@ def _get_cachedir(oq, full_lt, h5=None):
     smap = parallel.Starmap(calc_weight, h5=h5)
     for g, sg in enumerate(csm.src_groups):
         for s, src in enumerate(sg):
-            if src.code in b'PX':  # fast sources
-                src.weight
-            else:  # other source, submit
+            if src.code in b'AC':  # slow source
                 smap.submit((g, s, src))
+            else:  # fast source
+                src.weight
     for (g, s), src in smap.reduce().items():
         csm.src_groups[g].sources[s] = src
     logging.info('Saving %s', fname)
