@@ -83,7 +83,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # make sure the tot_curves-stats has the right attrs
         self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
-        self.check_attr('units', [b'EUR', b'EUR'])
+        self.check_attr('units', ['EUR', 'EUR'])
 
         # test portfolio loss
         tmp = gettemp(view('portfolio_loss', self.calc.datastore))
