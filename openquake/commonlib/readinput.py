@@ -689,7 +689,7 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def calc_weight(g, s, src):
+def calc_weight(g, s, src, mon):
     """
     Compute the weight of source `s` belonging to group `g`
     """
@@ -710,12 +710,17 @@ def _get_cachedir(oq, full_lt, h5=None):
             csm.full_lt = full_lt
             return csm
     csm = get_csm(oq, full_lt, h5)
+    if not csm.src_groups:  # everything was filtered away
+        return csm
     logging.info('Weighting the sources')
-    allargs = [(g, s, src)
-               for g, sg in enumerate(csm.src_groups)
-               for s, src in enumerate(sg)]
-    res = parallel.Starmap(calc_weight, allargs, h5=h5).reduce()
-    for (g, s), src in res.items():
+    smap = parallel.Starmap(calc_weight, h5=h5)
+    for g, sg in enumerate(csm.src_groups):
+        for s, src in enumerate(sg):
+            if hasattr(src, 'loc'):  # point source, fast
+                src.weight
+            else:  # other source, submit
+                smap.submit((g, s, src))
+    for (g, s), src in smap.reduce().items():
         csm.src_groups[g].sources[s] = src
     logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
